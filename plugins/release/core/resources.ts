@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 
+// WHY a run was cut. `candidate` is packed and built for a named platform — a
+// bundle `ship` can pick; `staged` is a `--dev` run that claims no
+// `latest-<platform>` pointer and is previewable only. A closed set private to
+// the release engine, so it is also the `release_runs.kind` column's decoder
+// (see server/internal/tables.ts) — an outsider is a bug, not a value to widen
+// for.
+export const ReleaseRunKindSchema = z.enum(["staged", "candidate"]);
+
+// Where a run stands. Same closed-set policy as `ReleaseRunKindSchema`, and it
+// likewise decodes the `release_runs.status` column.
+export const ReleaseRunStatusSchema = z.enum([
+  "running",
+  "succeeded",
+  "failed",
+]);
+
 // One release run as seen by the client. Mirrors the `release_runs` table EXCEPT
 // `pid` — that is an internal liveness marker (see tables.ts), never part of the
 // public resource payload.
@@ -9,13 +25,11 @@ export const ReleaseRunSchema = z.object({
   composition: z.string(),
   target: z.string(),
   namespace: z.string(),
-  // WHY this run was cut, stamped from the request's `ReleaseIntent` at claim
-  // time. `candidate` is packed and built for a named platform — a bundle `ship`
-  // can pick; `staged` is a `--dev` run that claims no `latest-<platform>`
-  // pointer and is previewable only. Never null: pre-existing rows read `staged`
-  // through the column default, which is what they were.
-  kind: z.enum(["staged", "candidate"]),
-  status: z.enum(["running", "succeeded", "failed"]),
+  // Stamped from the request's `ReleaseIntent` at claim time. Never null:
+  // pre-existing rows read `staged` through the column default, which is what
+  // they were.
+  kind: ReleaseRunKindSchema,
+  status: ReleaseRunStatusSchema,
   startedAt: z.coerce.date(),
   finishedAt: z.coerce.date().nullable(),
   exitCode: z.number().int().nullable(),
@@ -38,11 +52,10 @@ export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 // server half (`server/internal/release-run-resource.ts`) is `mode:"push"` with
 // no `identityTable`, so a status flip on that run re-pushes automatically. It
 // replaces scanning the old ambient 50-row window to resolve a run by id.
-export const releaseRunResource = resourceDescriptor<ReleaseRun | null, { id: string }>(
-  "release.run",
-  ReleaseRunSchema.nullable(),
-  null,
-);
+export const releaseRunResource = resourceDescriptor<
+  ReleaseRun | null,
+  { id: string }
+>("release.run", ReleaseRunSchema.nullable(), null);
 
 // Scalar invalidation tick: a cheap `{ rev }` hash the server pushes only when a
 // real change lands (new run / status flip). The composition-scoped release-history

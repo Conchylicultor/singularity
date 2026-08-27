@@ -3,12 +3,17 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { BlockSchema, PageRowSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { Rank, withRank } from "@plugins/primitives/plugins/rank/core";
+import {
+  BlockSchema,
+  PageRowSchema,
+  PAGE_BLOCK_TYPE,
+} from "../../core/schemas";
 import { pagesResource, blocksResource } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { docOrderPaths } from "./page-doc-order";
 import { _blocks } from "./tables";
+import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
 
 // Element-wise rank-path comparison — the document-order comparator. Sorting in
 // JS with `Rank.compare` is deliberate and load-bearing: see the collation note
@@ -49,13 +54,15 @@ function comparePaths(a: readonly string[], b: readonly string[]): number {
 export async function loadPages(
   executor: NodePgDatabase = db,
 ): Promise<PageRow[]> {
-  const rows = (await executor
-    .select()
-    .from(_blocks)
-    // Trashed pages disappear from the sidebar; the change-feed re-runs this on
-    // the trash/restore UPDATE, so the exclusion is membership-correct.
-    .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)))
-    .orderBy(asc(_blocks.rank), asc(_blocks.createdAt))) as unknown as Block[];
+  const rows = (
+    await executor
+      .select(BLOCK_WIRE_COLUMNS)
+      .from(_blocks)
+      // Trashed pages disappear from the sidebar; the change-feed re-runs this on
+      // the trash/restore UPDATE, so the exclusion is membership-correct.
+      .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)))
+      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt))
+  ).map(withRank);
 
   const paths = await docOrderPaths(executor);
 
@@ -122,10 +129,12 @@ export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
   key: blocksResource.key,
   mode: "push",
   schema: z.array(BlockSchema),
-  loader: async ({ pageId }) =>
-    db
-      .select()
+  loader: async ({ pageId }): Promise<Block[]> => {
+    const rows = await db
+      .select(BLOCK_WIRE_COLUMNS)
       .from(_blocks)
       .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)))
-      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
+      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
+    return rows.map(withRank);
+  },
 });

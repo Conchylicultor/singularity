@@ -278,6 +278,7 @@ here.
     - `resource.declare` "release.previews"
   - Uses:
     - `database.db`
+    - `database/sql-column.parsedText`
     - `fields/server-capabilities-loader`
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
@@ -382,8 +383,6 @@ here.
   - Imported by:
     - `apps/deploy/deployments`
     - `auth/apple-signing`
-- Shared:
-  - Exports (types): `ReleaseStatus`
 - Sub-plugins:
   - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
 

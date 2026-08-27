@@ -8243,6 +8243,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.rankAdjacentTo`
           - `primitives/rank.rankAfterSibling`
+          - `primitives/rank.withRank`
           - `tasks/task-category.setTaskCategory`
           - `tasks/task-category.TaskCategory`
           - `tasks/tasks-core.conversationCascadeSignatures`
@@ -11420,6 +11421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs`
           - `infra/trash`
           - `page/editor`
+          - `release`
           - `reports`
           - `search/engine`
           - `shell/notifications`
@@ -27158,6 +27160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`
         - Exports (types):
           - `RankAdjacentRow`
+          - `Ranked`
           - `RankExecutor`
         - Exports (values):
           - `nextRankIn`
@@ -27165,6 +27168,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `rankAdjacentTo`
           - `rankAfterSibling`
           - `rankText`
+          - `withRank`
       - Cross-plugin:
         - Imported by:
           - `apps/story/story-core`
@@ -27183,12 +27187,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Rank`
           - `RankSchema`
       - Core:
-        - Exports (types): `RankedItem`
+        - Exports (types):
+          - `Ranked`
+          - `RankedItem`
         - Exports (values):
           - `computeFlatReorder`
           - `Rank`
           - `RankSchema`
           - `rankText`
+          - `withRank`
     - **`rank-reorder`** — Flat rank-based drag-reorder primitive: a RankReorderProvider (lifted DnD shell + computeFlatReorder drop resolution, group-by aware) and useRankReorderItem (per-row draggable + before/after droppables). Shared by the tree's sibling zones and the data-view manual-order; depends only on rank + dnd-kit.
       - Web:
         - Uses: `primitives/css/text.Text`
@@ -28178,6 +28185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resource.declare` "release.previews"
     - Uses:
       - `database.db`
+      - `database/sql-column.parsedText`
       - `fields/server-capabilities-loader`
       - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
@@ -28282,8 +28290,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `apps/deploy/deployments`
       - `auth/apple-signing`
-  - Shared:
-    - Exports (types): `ReleaseStatus`
   - Plugins:
     - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
       - Server:
@@ -30427,6 +30433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/commit-list.runGit`
           - `primitives/rank.nextRankUnder`
           - `primitives/rank.RankExecutor`
+          - `primitives/rank.withRank`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`

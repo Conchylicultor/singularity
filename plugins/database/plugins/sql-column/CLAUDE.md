@@ -282,6 +282,7 @@ hand-written jsonb columns, where the rule closes).
     - `infra/jobs`
     - `infra/trash`
     - `page/editor`
+    - `release`
     - `reports`
     - `search/engine`
     - `shell/notifications`

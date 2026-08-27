@@ -4,6 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { listBlocks } from "../../core/endpoints";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
+import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
 
 export const handleListBlocks = implement(listBlocks, async ({ params }) => {
   const [page] = await db
@@ -22,7 +23,7 @@ export const handleListBlocks = implement(listBlocks, async ({ params }) => {
   // cannot see. A sub-page is a leaf here — its own content is keyed
   // `page_id = <the sub-page>`, a different partition.
   const rows = await db
-    .select()
+    .select(BLOCK_WIRE_COLUMNS)
     .from(_blocks)
     .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
     .orderBy(asc(_blocks.rank));

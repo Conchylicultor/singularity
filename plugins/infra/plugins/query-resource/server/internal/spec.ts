@@ -30,20 +30,32 @@ export type SelectMap = Record<string, PgColumn | SQL.Aliased>;
 // optional where/orderBy/limit → await rows`. Kept deliberately small so
 // neither the production default (the real drizzle `db`, cast once at the
 // default-db boundary in `compile.ts`) nor the unit-test fake needs drizzle's
-// full generics. `QueryStep` is a `PromiseLike<unknown[]>`, so a loader can
-// `return` a built step and let the runtime `await` it (the same pattern the
-// hand-written tasks-core loaders use).
-export interface QueryStep extends PromiseLike<unknown[]> {
-  where(predicate: SQL): QueryStep;
-  orderBy(...order: SQL[]): QueryStep;
-  limit(count: number): QueryStep;
+// full generics.
+//
+// The row shape is the CALLER's declaration, stated ONCE at the call that opens
+// the query (`db.select<Row>(map)`) and flowing through `where`/`orderBy`/
+// `limit` to the `await`. A compiler therefore never re-states it, and no query
+// result needs an assertion to reach its declared type.
+//
+// Nothing about `Row` is guessed. The public entry points are
+// `queryResource(descriptor, spec)` and `windowQueryResource(contract, spec)`,
+// so a compiled resource's `Row` is pinned to the contract's `ZodParser<Row>` —
+// and the runtime parses EVERY loader output against that same schema before
+// the value is broadcast or cached
+// (`plugins/framework/plugins/resource-runtime/core/runtime.ts`:
+// `entry.schema.parse(await entry.loader(params, ctx))`). The seam declares the
+// shape; the runtime is what verifies it, at one chokepoint, on every load.
+export interface QueryStep<Row = unknown> extends PromiseLike<Row[]> {
+  where(predicate: SQL): QueryStep<Row>;
+  orderBy(...order: SQL[]): QueryStep<Row>;
+  limit(count: number): QueryStep<Row>;
 }
-export interface QueryFrom {
-  from(source: PgTable | PgView): QueryStep;
+export interface QueryFrom<Row = unknown> {
+  from(source: PgTable | PgView): QueryStep<Row>;
 }
 export interface QueryDb {
-  select(fields?: SelectMap): QueryFrom;
-  selectDistinct(fields: SelectMap): QueryFrom;
+  select<Row = unknown>(fields?: SelectMap): QueryFrom<Row>;
+  selectDistinct<Row = unknown>(fields: SelectMap): QueryFrom<Row>;
 }
 
 /**

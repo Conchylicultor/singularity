@@ -123,20 +123,18 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       spec.select,
     );
 
-    const from = (): QueryStep =>
-      (selectMap ? db.select(selectMap) : db.select()).from(rel);
+    const from = (): QueryStep<Row> =>
+      (selectMap ? db.select<Row>(selectMap) : db.select<Row>()).from(rel);
 
-    const loader = (
+    const loader = async (
       params: P,
       ctx?: { affectedIds: readonly string[] },
-    ): Promise<Row[]> | Row[] => {
+    ): Promise<Row[]> => {
       const ids = ctx?.affectedIds ?? codec.decode(params);
       if (ids.length === 0) return [];
       const w = resolveWhere(params);
       const pred = inArray(pkColumn, [...ids]);
-      return from().where(w ? and(w, pred)! : pred) as unknown as Promise<
-        Row[]
-      >;
+      return await from().where(w ? and(w, pred)! : pred);
     };
 
     const membership: KeyedMembership<P> = {
@@ -246,13 +244,13 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   const limitOf = (params: P): number =>
     Math.min(codec.decode(params).limit, maxLimit);
 
-  const from = (): QueryStep =>
-    (selectMap ? db.select(selectMap) : db.select()).from(rel);
+  const from = (): QueryStep<Row> =>
+    (selectMap ? db.select<Row>(selectMap) : db.select<Row>()).from(rel);
 
   // FULL loader = the windowed query — bounded by construction, so the runtime's
   // FULL branches (no snapshot, sticky-FULL, evicted-snapshot self-heal) can
   // never sweep the whole collection.
-  function buildFull(params: P): QueryStep {
+  function buildFull(params: P): QueryStep<Row> {
     let q = from();
     const w = resolveWhere(params);
     if (w) q = q.where(w);
@@ -261,29 +259,30 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
 
   // Scoped refill: `where ∧ pk IN affectedIds`, NO order/limit — a partial
   // refill of only the changed rows (the membership diff owns placement).
-  function buildScoped(params: P, affectedIds: readonly string[]): QueryStep {
+  function buildScoped(
+    params: P,
+    affectedIds: readonly string[],
+  ): QueryStep<Row> {
     const w = resolveWhere(params);
     const pred = inArray(pkColumn, [...affectedIds]);
     return from().where(w ? and(w, pred)! : pred);
   }
 
-  const loader = (
+  const loader = async (
     params: P,
     ctx?: { affectedIds: readonly string[] },
   ): Promise<Row[]> =>
-    (ctx
-      ? buildScoped(params, ctx.affectedIds)
-      : buildFull(params)) as unknown as Promise<Row[]>;
+    await (ctx ? buildScoped(params, ctx.affectedIds) : buildFull(params));
 
   // The ids-only bounded ordered id list — the membership authority. Same
   // where/order/limit as the FULL loader, projecting ONLY the pk.
   const windowIdsOf = async (params: P): Promise<string[]> => {
-    let q: QueryStep = db.select({ [keyField]: pkColumn }).from(rel);
+    let q: QueryStep<Record<string, unknown>> = db
+      .select<Record<string, unknown>>({ [keyField]: pkColumn })
+      .from(rel);
     const w = resolveWhere(params);
     if (w) q = q.where(w);
-    const rows = (await q
-      .orderBy(...orderSql)
-      .limit(limitOf(params))) as Record<string, unknown>[];
+    const rows = await q.orderBy(...orderSql).limit(limitOf(params));
     return rows.map((r) => String(r[keyField]));
   };
 

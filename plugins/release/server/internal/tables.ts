@@ -8,7 +8,15 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
+// Straight to the file, not through `../../core`: drizzle-kit's schema loader
+// evaluates this module on its own to read the DDL, and the core barrel also
+// carries the endpoint and resource descriptors it has no business pulling in.
+import {
+  ReleaseRunKindSchema,
+  ReleaseRunStatusSchema,
+} from "../../core/resources";
 
 export const _releaseRuns = pgTable(
   "release_runs",
@@ -27,9 +35,13 @@ export const _releaseRuns = pgTable(
     // at claim time. NOT NULL with a `staged` default so every row that existed
     // before candidates reads as what it actually was, and no consumer has to
     // handle a null third state.
-    kind: text("kind").notNull().default("staged"), // staged|candidate
-    status: text("status").notNull().default("running"), // running|succeeded|failed
-    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    kind: parsedText("kind", ReleaseRunKindSchema).notNull().default("staged"),
+    status: parsedText("status", ReleaseRunStatusSchema)
+      .notNull()
+      .default("running"),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     exitCode: integer("exit_code"),
     platform: text("platform"),

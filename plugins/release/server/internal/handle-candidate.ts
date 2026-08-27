@@ -2,8 +2,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
-import { compareToHead, resolveBundle } from "@plugins/release/plugins/bundles/server";
-import type { ReleaseCandidateResponse, ReleaseRun } from "../../core";
+import {
+  compareToHead,
+  resolveBundle,
+} from "@plugins/release/plugins/bundles/server";
+import type { ReleaseCandidateResponse } from "../../core";
 import { releaseCandidateEndpoint } from "../../core";
 import { _releaseRuns } from "./tables";
 import { RELEASE_RUN_WIRE_COLUMNS } from "./wire-columns";
@@ -63,7 +66,7 @@ export const handleReleaseCandidate = implement(
 
     return {
       resolution,
-      run: (row as unknown as ReleaseRun | undefined) ?? null,
+      run: row ?? null,
       staleness,
     };
   },

@@ -15,9 +15,7 @@ export function rowToNode(row: BlockRow): BlockNode {
     parentId: row.parentId,
     type: row.type,
     data: row.data,
-    // drizzle types rank as the branded rankText; the reducer/diff treat it as a
-    // plain string.
-    rank: row.rank as unknown as string,
+    rank: row.rank,
     expanded: row.expanded,
   };
 }
@@ -79,7 +77,10 @@ export interface ReconcileResult {
  * deep-equal so re-serialized-but-equal payloads don't produce spurious writes.
  * Pure — no DB access — so it is independently unit-testable.
  */
-export function reconcileBlocks(before: BlockNode[], after: BlockNode[]): ReconcileResult {
+export function reconcileBlocks(
+  before: BlockNode[],
+  after: BlockNode[],
+): ReconcileResult {
   const beforeById = new Map(before.map((b) => [b.id, b]));
   const afterById = new Map(after.map((b) => [b.id, b]));
 

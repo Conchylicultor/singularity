@@ -23,7 +23,11 @@ import {
   updateBlockFields,
   runOnDelete,
 } from "./forest-writer";
-import { withPageForest, pageScopesOf, type PageForestCtx } from "./page-forest";
+import {
+  withPageForest,
+  pageScopesOf,
+  type PageForestCtx,
+} from "./page-forest";
 import { blocksChanged } from "./tables-events";
 
 /**
@@ -33,8 +37,7 @@ import { blocksChanged } from "./tables-events";
  * hard delete — there is nothing to restore, and that is the honest answer.
  */
 export type DeleteBlocksOutcome =
-  | { trashed: true; entryIds: string[] }
-  | { trashed: false };
+  { trashed: true; entryIds: string[] } | { trashed: false };
 
 /**
  * Any drizzle handle these paths can OPEN their locked transaction on: the
@@ -94,10 +97,10 @@ export async function deleteBlocksSubtree(
   const { value } = await withPageForest(
     scopes,
     async (ctx): Promise<DeleteBlocksOutcome> => {
-      const rows = (await ctx.tx
+      const rows = await ctx.tx
         .select()
         .from(_blocks)
-        .where(inArray(_blocks.id, subtreeIds))) as BlockRow[];
+        .where(inArray(_blocks.id, subtreeIds));
       const rowById = new Map(rows.map((r) => [r.id, r]));
       const existingRootIds = rootIds.filter((id) => rowById.has(id));
       if (existingRootIds.length === 0) return { trashed: false };
@@ -135,7 +138,8 @@ export async function deleteBlocksSubtree(
           const id = stack.pop()!;
           if (!rowById.has(id)) continue;
           out.push(id);
-          for (const child of childrenByParent.get(id) ?? []) stack.push(child.id);
+          for (const child of childrenByParent.get(id) ?? [])
+            stack.push(child.id);
         }
         return out;
       };
@@ -221,7 +225,10 @@ export async function untrashBlocks(
   // the workspace root — a root whose original parent is gone is reparented
   // there, so it is always a possible destination.
   const scopes = [
-    ...(await pageScopesOf(executor, flaggedIdRows.map((r) => r.id))),
+    ...(await pageScopesOf(
+      executor,
+      flaggedIdRows.map((r) => r.id),
+    )),
     null,
   ];
 
@@ -230,10 +237,10 @@ export async function untrashBlocks(
     async (ctx) => {
       const restoredIds: string[] = [];
       const affectedPageIds = new Set<string>();
-      const flagged = (await ctx.tx
+      const flagged = await ctx.tx
         .select()
         .from(_blocks)
-        .where(eq(_blocks.trashEntryId, entry.id))) as BlockRow[];
+        .where(eq(_blocks.trashEntryId, entry.id));
       if (flagged.length === 0) return { restoredIds, affectedPageIds };
       for (const r of flagged) restoredIds.push(r.id);
 
@@ -287,7 +294,12 @@ export async function untrashBlocks(
             .limit(1);
           if (collision) {
             targetRank = (
-              await nextRankUnder(_blocks, _blocks.parentId, targetParentId, ctx.tx)
+              await nextRankUnder(
+                _blocks,
+                _blocks.parentId,
+                targetParentId,
+                ctx.tx,
+              )
             ).toJSON();
           }
         }
@@ -308,7 +320,10 @@ export async function untrashBlocks(
 
       const nonRootRows = flagged.filter((r) => !rootIdSet.has(r.id));
       if (nonRootRows.length > 0) {
-        await untrashBlockRoots(ctx.tx, nonRootRows.map((r) => r.id));
+        await untrashBlockRoots(
+          ctx.tx,
+          nonRootRows.map((r) => r.id),
+        );
         for (const r of nonRootRows) {
           if (r.pageId !== null) affectedPageIds.add(r.pageId);
         }

@@ -125,6 +125,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.rankAdjacentTo`
     - `primitives/rank.rankAfterSibling`
+    - `primitives/rank.withRank`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
     - `tasks/tasks-core.conversationCascadeSignatures`

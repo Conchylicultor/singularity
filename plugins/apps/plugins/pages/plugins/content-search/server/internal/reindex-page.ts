@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _blocks, PAGE_BLOCK_TYPE, pageData } from "@plugins/page/plugins/editor/server";
-import { textOf, type Block } from "@plugins/page/plugins/editor/core";
-import { upsertSearchDocs, deleteSearchDocs } from "@plugins/search/plugins/engine/server";
+import {
+  _blocks,
+  PAGE_BLOCK_TYPE,
+  pageData,
+} from "@plugins/page/plugins/editor/server";
+import { textOf } from "@plugins/page/plugins/editor/core";
+import {
+  upsertSearchDocs,
+  deleteSearchDocs,
+} from "@plugins/search/plugins/engine/server";
 import type { SearchDoc } from "@plugins/search/plugins/engine/core";
 
 // The search source id this plugin owns. Exported so the backfill reads back the
@@ -34,9 +41,13 @@ export interface BuiltPageSearchDoc {
 // title, body, and the icon SVG nodes carried in metadata — so ANY change that
 // would alter the stored doc (content edit, title rename, icon swap) changes the
 // hash, and nothing else does. This is the skip-if-unchanged signal.
-export async function buildPageSearchDoc(pageId: string): Promise<BuiltPageSearchDoc | null> {
+export async function buildPageSearchDoc(
+  pageId: string,
+): Promise<BuiltPageSearchDoc | null> {
+  // Only `data` is read (the page's title + icon), so that is all this projects:
+  // a narrower read AND a checked assignment, where `select()` needed a cast.
   const pageRows = await db
-    .select()
+    .select({ data: _blocks.data })
     .from(_blocks)
     .where(
       and(
@@ -45,7 +56,7 @@ export async function buildPageSearchDoc(pageId: string): Promise<BuiltPageSearc
         isNull(_blocks.deletedAt),
       ),
     );
-  const pageBlock = pageRows[0] as Block | undefined;
+  const pageBlock = pageRows[0];
 
   // A trashed page reads as gone here, so the caller wipes its search doc — the
   // trash-time deindex (OnTrash) plus this steady-state path both drop it.

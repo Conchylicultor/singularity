@@ -6,9 +6,10 @@ import {
   queryResource,
   rel,
 } from "@plugins/infra/plugins/query-resource/server";
+import { withRank } from "@plugins/primitives/plugins/rank/server";
 import { _attempts, _conversations, pushes } from "./tables";
 import { attempts, conversations, tasks } from "./views";
-import type { Task, TaskListItem } from "./schema";
+import type { TaskListItem } from "./schema";
 // `key` / `schema` / keyed-ness come from the shared client descriptors — the
 // single source of truth both runtimes read. The server adds only the DB half
 // (loader + cascade), so these keyed contracts can't drift from the client.
@@ -335,6 +336,6 @@ export const taskDetailResource = defineResource(taskDetailDescriptor, {
       .from(tasks)
       .where(eq(tasks.id, id))
       .limit(1);
-    return (row as unknown as Task | undefined) ?? null;
+    return row ? withRank(row) : null;
   },
 });

@@ -76,11 +76,11 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   const resolveWhere = (params: P): SQL | undefined =>
     typeof spec.where === "function" ? spec.where(params) : spec.where;
 
-  const from = (): QueryStep =>
-    (selectMap ? db.select(selectMap) : db.select()).from(rel);
+  const from = (): QueryStep<Row> =>
+    (selectMap ? db.select<Row>(selectMap) : db.select<Row>()).from(rel);
 
   // FULL query: select + where + orderBy + limit.
-  function buildFull(params: P): QueryStep {
+  function buildFull(params: P): QueryStep<Row> {
     let q = from();
     const w = resolveWhere(params);
     if (w) q = q.where(w);
@@ -92,7 +92,10 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   // Scoped refill: same select/where composed with `pk IN (affectedIds)` and
   // NO orderBy/limit — a partial refill of only the changed rows (a limit would
   // truncate it; the merge preserves the snapshot's order).
-  function buildScoped(params: P, affectedIds: readonly string[]): QueryStep {
+  function buildScoped(
+    params: P,
+    affectedIds: readonly string[],
+  ): QueryStep<Row> {
     const w = resolveWhere(params);
     const scopePred = inArray(pkColumn, [...affectedIds]);
     return from().where(w ? and(w, scopePred)! : scopePred);
@@ -102,7 +105,7 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   // the loader always runs the FULL query and ignores `ctx.affectedIds`.
   const scoped = spec.recompute === undefined;
 
-  const loader = (
+  const loader = async (
     params: P,
     ctx?: { affectedIds: readonly string[] },
   ): Promise<Row[]> => {
@@ -110,9 +113,11 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
       ctx?.affectedIds && scoped
         ? buildScoped(params, ctx.affectedIds)
         : buildFull(params);
-    // The step is a `PromiseLike<unknown[]>`; the runtime awaits it and validates
-    // the rows against the resource schema (mirrors the hand-written loaders).
-    return query as unknown as Promise<Row[]>;
+    // The step is a `PromiseLike<Row[]>`, not a `Promise`, so it is awaited here
+    // to hand the runtime the `Promise<Row[]>` a `loader` returns. `Row` was
+    // declared once at `db.select<Row>(…)`; the runtime then validates the rows
+    // against the resource schema (see the seam comment in `spec.ts`).
+    return await query;
   };
 
   // M5 orderOf: the ids-only "full ORDER BY'd id list for these params" query the
@@ -121,11 +126,13 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   // loader but projecting ONLY the pk (never a limit), through the same `QueryDb`
   // seam so it is fake-db unit-testable. Rows map to `String(row[keyField])`.
   const orderOf = async (params: P): Promise<string[]> => {
-    let q: QueryStep = db.select({ [keyField]: pkColumn }).from(rel);
+    let q: QueryStep<Record<string, unknown>> = db
+      .select<Record<string, unknown>>({ [keyField]: pkColumn })
+      .from(rel);
     const w = resolveWhere(params);
     if (w) q = q.where(w);
     if (orderBy) q = q.orderBy(...orderBy);
-    const rows = (await q) as Record<string, unknown>[];
+    const rows = await q;
     return rows.map((r) => String(r[keyField]));
   };
 

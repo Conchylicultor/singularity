@@ -19,6 +19,6 @@ export const releaseRunResource = defineResource(releaseRunDescriptor, {
       .from(_releaseRuns)
       .where(eq(_releaseRuns.id, id))
       .limit(1);
-    return (row as unknown as ReleaseRun | undefined) ?? null;
+    return row ?? null;
   },
 });

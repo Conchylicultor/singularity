@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   nextRankUnder,
+  withRank,
   type RankExecutor,
 } from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -14,19 +15,16 @@ import { TaskGraph } from "../../../core";
 import type { DbExecutor } from "../status-batch";
 
 export async function listTasks(exec: DbExecutor = db): Promise<Task[]> {
-  return (await exec
+  const rows = await exec
     .select()
     .from(tasks)
-    .orderBy(asc(tasks.rank), asc(tasks.createdAt))) as unknown as Task[];
+    .orderBy(asc(tasks.rank), asc(tasks.createdAt));
+  return rows.map(withRank);
 }
 
 export async function getTask(id: string): Promise<Task | null> {
-  const [row] = (await db
-    .select()
-    .from(tasks)
-    .where(eq(tasks.id, id))
-    .limit(1)) as unknown as Task[];
-  return row ?? null;
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  return row ? withRank(row) : null;
 }
 
 // True iff any task in `taskId`'s TRANSITIVE dependency closure is unresolved —

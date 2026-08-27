@@ -1,6 +1,7 @@
 import { asc, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { withRank } from "@plugins/primitives/plugins/rank/server";
 import {
   compileEdges,
   rel,
@@ -26,13 +27,13 @@ import {
 
 export const agentsResource = defineResource(agentsDescriptor, {
   mode: "push",
-  loader: async () =>
-    db
+  loader: async (): Promise<Agent[]> => {
+    const rows = await db
       .select()
       .from(agents)
-      .orderBy(asc(agents.rank), asc(agents.createdAt)) as unknown as Promise<
-      Agent[]
-    >,
+      .orderBy(asc(agents.rank), asc(agents.createdAt));
+    return rows.map(withRank);
+  },
 });
 
 export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {

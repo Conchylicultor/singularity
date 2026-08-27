@@ -2,7 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
-import type { ReleaseLatestRunResponse, ReleaseRun } from "../../core";
+import type { ReleaseLatestRunResponse } from "../../core";
 import { releaseLatestRunEndpoint } from "../../core";
 import { _releaseRuns } from "./tables";
 import { RELEASE_RUN_WIRE_COLUMNS } from "./wire-columns";
@@ -38,6 +38,6 @@ export const handleLatestRun = implement(
     // `null` is an answer, not a failure: a composition that has never been
     // released in this namespace has no newest run. Returned INSIDE the response
     // object so it stays a 200 — see ReleaseLatestRunResponseSchema.
-    return { run: (row as unknown as ReleaseRun | undefined) ?? null };
+    return { run: row ?? null };
   },
 );

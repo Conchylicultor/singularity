@@ -55,12 +55,10 @@ export function compileEdge(edge: Edge, db: QueryDb): DependsOnEntry {
       for (const hop of edge.hops) {
         if (current.length === 0) return [];
         const rows = await db
-          .selectDistinct({ v: hop.to })
+          .selectDistinct<{ v: unknown }>({ v: hop.to })
           .from(hop.via)
           .where(inArray(hop.from, current));
-        current = [
-          ...new Set(rows.map((r) => String((r as { v: unknown }).v))),
-        ];
+        current = [...new Set(rows.map((r) => String(r.v)))];
       }
       return current;
     },

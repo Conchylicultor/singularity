@@ -185,6 +185,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `primitives/commit-list.runGit`
     - `primitives/rank.nextRankUnder`
     - `primitives/rank.RankExecutor`
+    - `primitives/rank.withRank`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
