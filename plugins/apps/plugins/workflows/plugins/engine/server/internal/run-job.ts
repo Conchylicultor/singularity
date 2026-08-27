@@ -52,7 +52,12 @@ export const workflowRunJob = defineJob({
 
         return {
           definitionId: execution.definitionId,
-          stepsMap: (definition.steps ?? {}) as Record<string, DefinitionStep>,
+          // No `?? {}` and no cast: the column is `parsedJson(…,
+          // z.record(z.string(), DefinitionStepSchema)).notNull().default({})`,
+          // so the decoder already produced exactly this type and never a null.
+          // A cast here would re-assert a shape that now really is verified —
+          // and would silently absorb the mismatch if that schema ever narrowed.
+          stepsMap: definition.steps,
           entryStepId: definition.entryStepId,
         };
       },
