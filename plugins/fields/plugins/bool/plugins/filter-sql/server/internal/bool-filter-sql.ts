@@ -1,4 +1,4 @@
-import { sql, type AnyColumn } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
@@ -15,10 +15,10 @@ function asBool(operand: unknown): boolean {
 }
 
 export const boolFilterSql = {
-  is(col: AnyColumn, operand: unknown) {
-    return sql`COALESCE(${col}, false) = ${asBool(operand)}`;
+  is(target, operand) {
+    return sql`COALESCE(${target}, false) = ${asBool(operand)}`;
   },
-  "is-not"(col: AnyColumn, operand: unknown) {
-    return sql`COALESCE(${col}, false) <> ${asBool(operand)}`;
+  "is-not"(target, operand) {
+    return sql`COALESCE(${target}, false) <> ${asBool(operand)}`;
   },
 } satisfies Record<string, FilterSqlBuilder>;

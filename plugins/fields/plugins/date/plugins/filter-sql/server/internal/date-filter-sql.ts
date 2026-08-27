@@ -1,4 +1,4 @@
-import { and, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, sql, type SQL } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   addUnits,
@@ -44,62 +44,62 @@ function nextDay(ms: number): number {
 }
 
 export const dateFilterSql = {
-  is(col: AnyColumn, operand: unknown) {
+  is(target, operand) {
     const b = resolveAnchorDay(operand);
     if (b === null) return undefined;
-    return sql`(${col} >= ${dayTs(b)} AND ${col} < ${dayTs(nextDay(b))})`;
+    return sql`(${target} >= ${dayTs(b)} AND ${target} < ${dayTs(nextDay(b))})`;
   },
-  "is-before"(col: AnyColumn, operand: unknown) {
+  "is-before"(target, operand) {
     const b = resolveAnchorDay(operand);
     if (b === null) return undefined;
     // day(col) < b  ⟺  col < start-of-day(b)
-    return sql`${col} < ${dayTs(b)}`;
+    return sql`${target} < ${dayTs(b)}`;
   },
-  "is-after"(col: AnyColumn, operand: unknown) {
+  "is-after"(target, operand) {
     const b = resolveAnchorDay(operand);
     if (b === null) return undefined;
     // day(col) > b  ⟺  col >= start-of-next-day(b)
-    return sql`${col} >= ${dayTs(nextDay(b))}`;
+    return sql`${target} >= ${dayTs(nextDay(b))}`;
   },
-  "is-on-or-before"(col: AnyColumn, operand: unknown) {
+  "is-on-or-before"(target, operand) {
     const b = resolveAnchorDay(operand);
     if (b === null) return undefined;
     // day(col) <= b  ⟺  col < start-of-next-day(b)
-    return sql`${col} < ${dayTs(nextDay(b))}`;
+    return sql`${target} < ${dayTs(nextDay(b))}`;
   },
-  "is-on-or-after"(col: AnyColumn, operand: unknown) {
+  "is-on-or-after"(target, operand) {
     const b = resolveAnchorDay(operand);
     if (b === null) return undefined;
     // day(col) >= b  ⟺  col >= start-of-day(b)
-    return sql`${col} >= ${dayTs(b)}`;
+    return sql`${target} >= ${dayTs(b)}`;
   },
-  "is-between"(col: AnyColumn, operand: unknown) {
+  "is-between"(target, operand) {
     const range = (operand ?? {}) as DateRange;
     const from = resolveAnchorDay(range.from);
     const to = resolveAnchorDay(range.to);
     if (from === null && to === null) return undefined;
     const parts: SQL[] = [];
-    if (from !== null) parts.push(sql`${col} >= ${dayTs(from)}`);
+    if (from !== null) parts.push(sql`${target} >= ${dayTs(from)}`);
     // `to` is inclusive of the whole day → strictly before the next day.
-    if (to !== null) parts.push(sql`${col} < ${dayTs(nextDay(to))}`);
+    if (to !== null) parts.push(sql`${target} < ${dayTs(nextDay(to))}`);
     return and(...parts);
   },
-  "is-within-past"(col: AnyColumn, operand: unknown) {
-    return within(col, operand, "past");
+  "is-within-past"(target, operand) {
+    return within(target, operand, "past");
   },
-  "is-within-next"(col: AnyColumn, operand: unknown) {
-    return within(col, operand, "next");
+  "is-within-next"(target, operand) {
+    return within(target, operand, "next");
   },
-  "is-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`${col} IS NULL`;
+  "is-empty"(target, _operand) {
+    return sql`${target} IS NULL`;
   },
-  "is-not-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`${col} IS NOT NULL`;
+  "is-not-empty"(target, _operand) {
+    return sql`${target} IS NOT NULL`;
   },
 } satisfies Record<string, FilterSqlBuilder>;
 
 function within(
-  col: AnyColumn,
+  col: SQL,
   operand: unknown,
   direction: "past" | "next",
 ): SQL | undefined {

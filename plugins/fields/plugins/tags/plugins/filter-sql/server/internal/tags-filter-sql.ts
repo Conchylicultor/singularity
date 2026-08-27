@@ -1,4 +1,4 @@
-import { or, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { or, sql, type SQL } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
@@ -25,13 +25,13 @@ import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabiliti
  *  to `[]` — the SQL twin of the JS `Array.isArray(v) ? v : []`. Load-bearing:
  *  `jsonb_array_length` RAISES on a non-array, so an emptiness predicate over a
  *  corrupt row would 500 the whole query rather than skip the row. */
-function tagArray(col: AnyColumn): SQL {
+function tagArray(col: SQL): SQL {
   return sql`(CASE WHEN jsonb_typeof(${col}) = 'array' THEN ${col} ELSE '[]'::jsonb END)`;
 }
 
 /** `col @> [<tags>]` — jsonb containment is SUPERSET semantics, so one
  *  fragment covers "has every tag in the list". */
-function containsAll(col: AnyColumn, tags: string[]): SQL {
+function containsAll(col: SQL, tags: string[]): SQL {
   return sql`${col} @> ${JSON.stringify(tags)}::jsonb`;
 }
 
@@ -46,34 +46,34 @@ function asList(operand: unknown): string[] {
 }
 
 export const tagsFilterSql = {
-  contains(col: AnyColumn, operand: unknown) {
+  contains(target, operand) {
     const tag = asString(operand);
     if (tag === "") return undefined;
-    return containsAll(col, [tag]);
+    return containsAll(target, [tag]);
   },
-  "does-not-contain"(col: AnyColumn, operand: unknown) {
+  "does-not-contain"(target, operand) {
     const tag = asString(operand);
     if (tag === "") return undefined;
     // The JS predicate reads a missing value as `[]`, which does not contain
     // the tag ⇒ true. `NOT (NULL @> x)` is NULL, so keep the null branch.
-    return sql`(${col} IS NULL OR NOT (${containsAll(col, [tag])}))`;
+    return sql`(${target} IS NULL OR NOT (${containsAll(target, [tag])}))`;
   },
-  "contains-any-of"(col: AnyColumn, operand: unknown) {
+  "contains-any-of"(target, operand) {
     const list = asList(operand);
     if (list.length === 0) return undefined;
     // No single-operator "intersects" for jsonb (`?|` is text-key only and
     // conflicts with the driver's placeholder) — OR one containment per tag.
-    return or(...list.map((tag) => containsAll(col, [tag])));
+    return or(...list.map((tag) => containsAll(target, [tag])));
   },
-  "contains-all-of"(col: AnyColumn, operand: unknown) {
+  "contains-all-of"(target, operand) {
     const list = asList(operand);
     if (list.length === 0) return undefined;
-    return containsAll(col, list);
+    return containsAll(target, list);
   },
-  "is-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`jsonb_array_length(${tagArray(col)}) = 0`;
+  "is-empty"(target, _operand) {
+    return sql`jsonb_array_length(${tagArray(target)}) = 0`;
   },
-  "is-not-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`jsonb_array_length(${tagArray(col)}) > 0`;
+  "is-not-empty"(target, _operand) {
+    return sql`jsonb_array_length(${tagArray(target)}) > 0`;
   },
 } satisfies Record<string, FilterSqlBuilder>;

@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export type {
+  ColumnExpr,
   KeysetColumnBinding,
   KeysetColumnMap,
   SortKey,

@@ -73,6 +73,16 @@ the caller. The error says which direction failed, because the fix differs — a
 that should have parsed. The encoder runs on INSERT `.values()`, UPDATE `.set()`,
 and every bound comparison param (`eq`, `inArray`, …).
 
+A **user-authored filter operand is deliberately not one of them.** It briefly
+was, and a comparison is the one place the claim does not hold: a strict column
+threw on a saved view naming a retired option, and a tolerant one quietly
+*normalized* the operand and answered a question nobody asked. An operand is not
+a stored value — comparing a column against a value it can never hold is how you
+say "nothing matches" — so `server-query` hands each filter builder the column as
+a plain expression and the encoder never sees it. See
+`primitives/data-view/server-query/CLAUDE.md` and
+`research/2026-08-27-global-filter-operand-domain.md`.
+
 ## `parsedJson` — and why it normalizes
 
 `parsedJson` is `parsedText`'s sibling: same `this`-bound `table.column` label,

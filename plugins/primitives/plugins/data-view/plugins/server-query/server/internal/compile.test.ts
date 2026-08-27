@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { sql, type SQL } from "drizzle-orm";
+import { Column, is, SQL, sql } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -66,6 +66,29 @@ const group = (
 ): FilterGroup => ({ kind: "group", id: "g", conjunction, children });
 
 describe("compileWhere", () => {
+  it("hands the builder the column as an expression, never the column", () => {
+    let received: unknown;
+    const capture: OperatorSqlResolver = () => (target) => {
+      received = target;
+      return sql`${target} IS NOT NULL`;
+    };
+    const f = group("and", {
+      kind: "rule",
+      id: "r",
+      fieldId: "status",
+      operatorId: "is",
+      value: "open",
+    });
+    // Renders textually identically to interpolating the column itself…
+    expect(render(compileWhere(f, map, capture)!).sql).toBe(
+      `"things"."status" IS NOT NULL`,
+    );
+    // …but it is not the column, so an operand bound against it can never reach
+    // the column's write-side encoder (see `OperatorSqlBuilder`).
+    expect(is(received, SQL)).toBe(true);
+    expect(is(received, Column)).toBe(false);
+  });
+
   it("returns undefined for a null filter", () => {
     expect(compileWhere(null, map, resolve)).toBeUndefined();
   });

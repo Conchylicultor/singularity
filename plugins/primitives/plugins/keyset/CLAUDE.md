@@ -15,6 +15,7 @@
     - `release`
 - Server:
   - Exports (types):
+    - `ColumnExpr`
     - `KeysetColumnBinding`
     - `KeysetColumnMap`
     - `SortKey`

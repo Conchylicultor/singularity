@@ -1,14 +1,19 @@
 import { and, or, sql, type AnyColumn, type SQL } from "drizzle-orm";
 import type { KeysetSortRule } from "@plugins/primitives/plugins/keyset/core";
 
+/** A physical column, or a SQL expression standing in for one (a cast, a computed
+ *  projection). Everything here only interpolates it into a `sql` template, so the
+ *  two are interchangeable. */
+export type ColumnExpr = AnyColumn | SQL;
+
 /**
- * Binds one keyset-orderable field to its physical column. `nullable` drives the
+ * Binds one keyset-orderable field to its column. `nullable` drives the
  * null-aware seek terms (default `false`). Consumers that also compile filters
  * extend this with their own field-type token (e.g. server-query's
  * `ColumnBinding`) — the keyset seek reads only `col` + `nullable`.
  */
 export interface KeysetColumnBinding {
-  col: AnyColumn;
+  col: ColumnExpr;
   nullable?: boolean;
 }
 
@@ -22,7 +27,7 @@ export type KeysetColumnMap = Record<string, KeysetColumnBinding>;
  */
 export interface SortKey {
   fieldId: string;
-  col: AnyColumn;
+  col: ColumnExpr;
   dir: "asc" | "desc";
   nullable: boolean;
 }
@@ -32,7 +37,7 @@ export interface SortKey {
  * fieldId under which its value appears on a result row.
  */
 export interface Tiebreaker {
-  col: AnyColumn;
+  col: ColumnExpr;
   fieldId: string;
 }
 

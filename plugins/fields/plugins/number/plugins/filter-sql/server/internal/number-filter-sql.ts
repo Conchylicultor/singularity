@@ -1,4 +1,4 @@
-import { and, sql, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, sql, type SQL } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
@@ -19,9 +19,7 @@ function asNumber(operand: unknown): number | null {
 }
 
 /** A binary comparison op: empty operand → undefined (incomplete rule). */
-function binary(
-  render: (col: AnyColumn, b: number) => SQL,
-): FilterSqlBuilder {
+function binary(render: (col: SQL, b: number) => SQL): FilterSqlBuilder {
   return (col, operand) => {
     const b = asNumber(operand);
     if (b === null) return undefined;
@@ -41,20 +39,20 @@ export const numberFilterSql = {
   "<": binary((col, b) => sql`${col} < ${b}`),
   "≥": binary((col, b) => sql`${col} >= ${b}`),
   "≤": binary((col, b) => sql`${col} <= ${b}`),
-  between(col: AnyColumn, operand: unknown) {
+  between(target, operand) {
     const range = (operand ?? {}) as NumberRange;
     const min = asNumber(range.min);
     const max = asNumber(range.max);
     if (min === null && max === null) return undefined;
     const parts: SQL[] = [];
-    if (min !== null) parts.push(sql`${col} >= ${min}`);
-    if (max !== null) parts.push(sql`${col} <= ${max}`);
+    if (min !== null) parts.push(sql`${target} >= ${min}`);
+    if (max !== null) parts.push(sql`${target} <= ${max}`);
     return and(...parts);
   },
-  "is-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`${col} IS NULL`;
+  "is-empty"(target, _operand) {
+    return sql`${target} IS NULL`;
   },
-  "is-not-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`${col} IS NOT NULL`;
+  "is-not-empty"(target, _operand) {
+    return sql`${target} IS NOT NULL`;
   },
 } satisfies Record<string, FilterSqlBuilder>;

@@ -1,11 +1,15 @@
 import { useState, type ReactNode } from "react";
-import { MdExpandMore } from "react-icons/md";
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { MdExpandMore, MdHelpOutline } from "react-icons/md";
+import {
+  Button,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { FilterValueInputProps } from "../../../core";
+import { selectChoices } from "../../internal/select-choices";
 
 /**
  * The shared option-select operand editor for enum/tags-style filters. Instead of
@@ -21,6 +25,14 @@ import type { FilterValueInputProps } from "../../../core";
  * (contains-any/all, is-any-of/none-of) vs. a single `string` (contains /
  * is / is-not). Single-select closes the popover on pick; multi stays open so
  * several can be toggled in one pass.
+ *
+ * A selected value the field does not list gets a chip too. A saved view
+ * outlives the option set that produced it, and some field types deliberately
+ * keep a persisted value out of the picker (`model` hides the print-only
+ * models) — so an operand missing from `options` is not necessarily wrong, it is
+ * merely unlisted, and the chip says exactly that rather than calling it
+ * invalid. Without one it is unreachable: the trigger counts it in "2 selected"
+ * while the grid shows nothing to click off.
  */
 export function ChipSelectFilterInput(
   props: FilterValueInputProps & { multiple: boolean },
@@ -61,14 +73,16 @@ export function ChipSelectFilterInput(
         ? labelFor(first)
         : `${selected.length} selected`;
 
+  const choices = selectChoices(options, selected);
+
   const q = query.trim().toLowerCase();
   const visible = q
-    ? options.filter(
-        (o) =>
-          o.label.toLowerCase().includes(q) ||
-          o.value.toLowerCase().includes(q),
+    ? choices.filter(
+        ({ option }) =>
+          option.label.toLowerCase().includes(q) ||
+          option.value.toLowerCase().includes(q),
       )
-    : options;
+    : choices;
 
   return (
     <InlinePopover
@@ -87,7 +101,7 @@ export function ChipSelectFilterInput(
       }
     >
       <Stack gap="sm">
-        {options.length > 6 && (
+        {choices.length > 6 && (
           <Input
             autoFocus
             className="h-6 px-xs py-none"
@@ -98,14 +112,20 @@ export function ChipSelectFilterInput(
         )}
         {visible.length > 0 ? (
           <Stack direction="row" gap="xs" wrap>
-            {visible.map((o) => (
+            {visible.map(({ option, listed }) => (
               <ToggleChip
-                key={o.value}
-                active={selected.includes(o.value)}
+                key={option.value}
+                active={selected.includes(option.value)}
                 variant="ghost"
-                onClick={() => pick(o.value)}
+                icon={listed ? undefined : <MdHelpOutline />}
+                title={
+                  listed
+                    ? undefined
+                    : `${option.value} — not one of this field's listed options`
+                }
+                onClick={() => pick(option.value)}
               >
-                {o.label}
+                {option.label}
               </ToggleChip>
             ))}
           </Stack>

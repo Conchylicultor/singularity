@@ -1,4 +1,4 @@
-import { sql, type AnyColumn } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
@@ -28,33 +28,33 @@ function escapeLike(value: string): string {
 const WHITESPACE_ONLY = "^[[:space:]]*$";
 
 export const textFilterSql = {
-  contains(col: AnyColumn, operand: unknown) {
+  contains(target, operand) {
     const q = asText(operand);
     if (q === "") return undefined;
-    return sql`${col} ILIKE ${`%${escapeLike(q)}%`}`;
+    return sql`${target} ILIKE ${`%${escapeLike(q)}%`}`;
   },
-  "does-not-contain"(col: AnyColumn, operand: unknown) {
+  "does-not-contain"(target, operand) {
     const q = asText(operand);
     if (q === "") return undefined;
     // Keep null rows: a null projection reads as "" in JS, which does not
     // contain a non-empty needle → the JS predicate keeps it.
-    return sql`(${col} IS NULL OR ${col} NOT ILIKE ${`%${escapeLike(q)}%`})`;
+    return sql`(${target} IS NULL OR ${target} NOT ILIKE ${`%${escapeLike(q)}%`})`;
   },
-  is(col: AnyColumn, operand: unknown) {
+  is(target, operand) {
     const q = asText(operand);
     if (q === "") return undefined;
-    return sql`lower(${col}) = lower(${q})`;
+    return sql`lower(${target}) = lower(${q})`;
   },
-  "is-not"(col: AnyColumn, operand: unknown) {
+  "is-not"(target, operand) {
     const q = asText(operand);
     if (q === "") return undefined;
     // Keep null rows (JS: "" !== q is true for a non-empty q).
-    return sql`(${col} IS NULL OR lower(${col}) <> lower(${q}))`;
+    return sql`(${target} IS NULL OR lower(${target}) <> lower(${q}))`;
   },
-  "is-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`(${col} IS NULL OR ${col} ~ ${WHITESPACE_ONLY})`;
+  "is-empty"(target, _operand) {
+    return sql`(${target} IS NULL OR ${target} ~ ${WHITESPACE_ONLY})`;
   },
-  "is-not-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`(${col} IS NOT NULL AND ${col} !~ ${WHITESPACE_ONLY})`;
+  "is-not-empty"(target, _operand) {
+    return sql`(${target} IS NOT NULL AND ${target} !~ ${WHITESPACE_ONLY})`;
   },
 } satisfies Record<string, FilterSqlBuilder>;

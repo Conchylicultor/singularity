@@ -2,17 +2,32 @@ import {
   defineServerContribution,
   type ServerContributionToken,
 } from "@plugins/framework/plugins/server-core/core";
-import type { AnyColumn, SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { FieldType } from "@plugins/fields/core";
 import { Fields as StorageFields } from "./storage";
 import { ValueTextCast } from "./value-cast";
 
 /** Builds a SQL predicate fragment for one (field-type, operator) pair, or
  *  `undefined` when the operand is INCOMPLETE (no-op rule → dropped),
- *  reproducing each web predicate's "empty operand ⇒ keep all" rule. Operands
- *  must be bound as drizzle params (never interpolated) — no injection. */
+ *  reproducing each web predicate's "empty operand ⇒ keep all" rule.
+ *
+ *  `target` is the field's column rendered as a plain SQL **expression** — not
+ *  the column object — because a comparison operand is not a stored value. A
+ *  real column is a drizzle `DriverValueEncoder`, and every drizzle helper binds
+ *  its operand through the column it compares against (`bindIfParam(value, col)`
+ *  → `new Param(value, col)`), which runs the column's WRITE-side schema: on a
+ *  strict decoded column that throws `SqlColumnError` and 500s the whole query,
+ *  and on a tolerant one it silently NORMALIZES the operand, so the surface
+ *  answers a question the user did not ask. An `SQL` is not an encoder, so an
+ *  operand compared against a target stays an ordinary param. The rendered
+ *  statement is unchanged either way — only the encoder differs. See
+ *  `research/2026-08-27-global-filter-operand-domain.md`.
+ *
+ *  A builder binds its own operands as drizzle params (never interpolated — no
+ *  injection), and must not read column metadata (`col.name`, `col.enumValues`,
+ *  …); none does. */
 export type FilterSqlBuilder = (
-  col: AnyColumn,
+  target: SQL,
   operand: unknown,
 ) => SQL | undefined;
 

@@ -1,4 +1,4 @@
-import { inArray, notInArray, sql, type AnyColumn } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
@@ -22,32 +22,38 @@ function asList(operand: unknown): string[] {
 }
 
 export const enumFilterSql = {
-  is(col: AnyColumn, operand: unknown) {
+  is(target, operand) {
     const want = asString(operand);
     if (want === "") return undefined;
-    return sql`${col} = ${want}`;
+    return sql`${target} = ${want}`;
   },
-  "is-not"(col: AnyColumn, operand: unknown) {
+  "is-not"(target, operand) {
     const want = asString(operand);
     if (want === "") return undefined;
-    return sql`(${col} IS NULL OR ${col} <> ${want})`;
+    return sql`(${target} IS NULL OR ${target} <> ${want})`;
   },
-  "is-any-of"(col: AnyColumn, operand: unknown) {
+  "is-any-of"(target, operand) {
     const list = asList(operand);
     if (list.length === 0) return undefined;
-    return inArray(col, list);
+    // Spelled out rather than `inArray(target, list)`, which does not accept an
+    // `SQL` — that rejection is what keeps the operands off the column's
+    // encoder. It renders exactly what drizzle renders: an array chunk becomes
+    // `($1, $2)`, and the keyword is drizzle's own lowercase `" in "`. Its
+    // empty-list branch (a literal `false`) was never reachable from here — an
+    // empty list is short-circuited to `undefined` above.
+    return sql`${target} in ${list}`;
   },
-  "is-none-of"(col: AnyColumn, operand: unknown) {
+  "is-none-of"(target, operand) {
     const list = asList(operand);
     if (list.length === 0) return undefined;
-    // `notInArray` alone drops null rows (NOT IN NULL → NULL); the JS predicate
+    // `not in` alone drops null rows (NOT IN NULL → NULL); the JS predicate
     // keeps them, so OR the null branch back in.
-    return sql`(${col} IS NULL OR ${notInArray(col, list)})`;
+    return sql`(${target} IS NULL OR ${target} not in ${list})`;
   },
-  "is-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`(${col} IS NULL OR ${col} = '')`;
+  "is-empty"(target, _operand) {
+    return sql`(${target} IS NULL OR ${target} = '')`;
   },
-  "is-not-empty"(col: AnyColumn, _operand?: unknown) {
-    return sql`(${col} IS NOT NULL AND ${col} <> '')`;
+  "is-not-empty"(target, _operand) {
+    return sql`(${target} IS NOT NULL AND ${target} <> '')`;
   },
 } satisfies Record<string, FilterSqlBuilder>;

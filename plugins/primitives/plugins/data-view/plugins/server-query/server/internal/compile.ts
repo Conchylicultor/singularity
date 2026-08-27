@@ -1,4 +1,4 @@
-import { and, or, type AnyColumn, type SQL } from "drizzle-orm";
+import { and, or, sql, type SQL } from "drizzle-orm";
 import type {
   FilterGroup,
   FilterNode,
@@ -6,10 +6,11 @@ import type {
 import type { KeysetColumnBinding } from "@plugins/primitives/plugins/keyset/server";
 
 /**
- * Binds one filterable/sortable field to its physical column. `type` is the
- * field-type id (e.g. `"text"`, `"enum"`, `"date"`, `"bool"`, `"number"`) used
- * to resolve an operator's SQL builder; `nullable` (from the keyset binding)
- * drives null-aware keyset seek terms (default `false`).
+ * Binds one filterable/sortable field to its column — a physical column, or a
+ * SQL expression standing in for one (`ColumnExpr`, from the keyset binding).
+ * `type` is the field-type id (e.g. `"text"`, `"enum"`, `"date"`, `"bool"`,
+ * `"number"`) used to resolve an operator's SQL builder; `nullable` (also from
+ * the keyset binding) drives null-aware keyset seek terms (default `false`).
  */
 export interface ColumnBinding extends KeysetColumnBinding {
   type: string;
@@ -22,9 +23,15 @@ export type FieldColumnMap = Record<string, ColumnBinding>;
  * Builds the SQL fragment for one (field-type, operator) pair. Returns
  * `undefined` when the rule is *incomplete* (e.g. a value-taking operator with
  * no operand) — that fragment is dropped, never emitted, never a 400.
+ *
+ * `target` is the field's column as a plain SQL expression, never the column
+ * object: a comparison operand is not a stored value, and a column is a drizzle
+ * encoder that would run its WRITE-side schema over every bound operand (see
+ * `comparisonTarget` below, and `fields/server-capabilities`' structurally
+ * identical `FilterSqlBuilder`).
  */
 export type OperatorSqlBuilder = (
-  col: AnyColumn,
+  target: SQL,
   operand: unknown,
 ) => SQL | undefined;
 
@@ -60,7 +67,20 @@ function compileNode(
   if (!binding) return undefined;
   const builder = resolve(binding.type, node.operatorId);
   if (!builder) return undefined;
-  return builder(binding.col, node.value);
+  return builder(comparisonTarget(binding), node.value);
+}
+
+/**
+ * The field's column as a plain expression — what a builder compares an operand
+ * against. A `SQL` chunk flattens inside a `sql` template before drizzle's
+ * parenthesising `isSQLWrapper` branch is reached, so this renders TEXTUALLY
+ * identically to interpolating the column itself: same qualified
+ * `"table"."column"`, same `$n` placeholders, same params, same plan. Only the
+ * param *encoder* differs — and that is the whole point, since an operand is not
+ * a stored value (see `OperatorSqlBuilder`).
+ */
+function comparisonTarget(binding: ColumnBinding): SQL {
+  return sql`${binding.col}`;
 }
 
 /**
