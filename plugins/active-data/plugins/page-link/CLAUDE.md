@@ -43,9 +43,10 @@ read-surface chip for a bare id written anywhere active-data renders.
 
 - Description: Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
 - Web:
-  - Contributes: `ActiveData.Tag` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?![/.])\b" → `PageLinkChip`
+  - Contributes: `ActiveData.Tag` "page-link" → `PageLinkChip`
   - Uses:
     - `active-data.ActiveData`
+    - `active-data.inlineChip`
     - `apps/pages/page-tree.pageDetailPane`
     - `infra/endpoints.useEndpoint`
     - `page/editor.PageIcon`

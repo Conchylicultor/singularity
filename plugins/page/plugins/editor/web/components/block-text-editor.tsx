@@ -13,6 +13,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { LinkNode } from "@lexical/link";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import { announceCaretCrossing } from "@plugins/primitives/plugins/text-editor/plugins/caret-motion/web";
+import { TokenPastePlugin } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
 import {
   $getRoot,
   $getSelection,
@@ -49,6 +50,7 @@ import { BlockClipboardInsertPlugin } from "./block-clipboard-insert-plugin";
 import { BlockForestPastePlugin } from "./block-forest-paste-plugin";
 import {
   blockTextNodes,
+  blockTextTokenExtensions,
   getBlockTextExtensions,
   serializeBlockRuns,
 } from "../internal/block-text-extensions";
@@ -442,6 +444,40 @@ export function BlockTextEditor({
           <ext.Plugin key={ext.id} block={block} editor={editor} />
         ) : null,
       )}
+      {/* Pasting single-line text that carries a registered token materializes
+          it as its node. Without this the token lands as literal characters and
+          stays literal FOREVER — `@lexical/yjs` rebuilds nodes from the doc's own
+          `__type` metadata and nothing ever re-scans text already in a document.
+
+          Its place in the `PASTE_COMMAND` chain is the whole of its behaviour:
+
+            1 BlockPastePlugin       NORMAL  a pasted FILE (an upload, never text)
+            2 BlockForestPastePlugin NORMAL  forest MIME, or any multi-line text
+            3 UrlPastePlugin         LOW     a bare URL into an EMPTY block
+            4 TokenPastePlugin       LOW     single-line text carrying a token
+            5 RichText default       EDITOR  everything else
+
+          BELOW NORMAL, because a file paste is an upload and a multi-line paste
+          is STRUCTURAL — a token inside either must not hijack them. Which also
+          means this only ever sees single-line text, so a plain inline insert is
+          the whole of what it has to do.
+
+          NOT above `UrlPastePlugin`: "paste a URL into an empty block → bookmark"
+          is a shipped affordance. Within one priority Lexical runs listeners in
+          REGISTRATION order, which here is JSX order — hence this mount site,
+          after the contributed `ext.Plugin`s that `UrlPastePlugin` is one of.
+          Belt and braces, the two gates are provably disjoint: `inlineBoundary`'s
+          `(?<!\/)` means an id sitting inside a URL path matches nothing.
+
+          ABOVE EDITOR, so a token that would otherwise land as literal characters
+          materializes instead.
+
+          No CRDT surgery helper, deliberately. `collab-text-surgery.ts` is for
+          edits driven from OUTSIDE a Lexical command; a `PASTE_COMMAND` listener
+          already runs inside `editor.update()`, so `selection.insertNodes` syncs
+          through the `@lexical/yjs` binding exactly like typing and lands on the
+          block's own `Y.UndoManager` for free. */}
+      <TokenPastePlugin extensions={blockTextTokenExtensions()} />
       <EditorRefPlugin editorRef={lexicalEditorRef} />
     </LexicalComposer>
   );

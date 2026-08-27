@@ -2573,6 +2573,24 @@ that look wrong until you know why:
   `Editor.InlineToken` contribution. They cannot drift: each token plugin
   contributes the same `core/` regex constant to both, only the Lexical
   (de)serialization halves being web-only.
+- **Which families it holds is a SECOND declaration, not `pattern` again.** A
+  token family states two independent things, and one regex can answer both,
+  which is why they were one field for a while: `pattern` is the LOCATOR (find my
+  token, so it can be built, serialized, re-materialized — every family has one),
+  and `markdownSpan` (`"protect" | "transparent"`, `core/inline-markdown.ts`)
+  says whether those bytes must be masked from this scan. Only `"protect"`
+  families reach `blockTextProtectedSpans()`, on both runtimes.
+
+  **Masking is not free, which is the whole reason it is a separate statement.**
+  A masked span becomes its own run carrying NO MARKS, so protecting a span that
+  did not need it silently DELETES the marks a person put on it. That is what a
+  registered-token-gets-masking rule cost: `` `att-1787654245-y41m` `` pasted as
+  markdown parsed with no `code` mark, and the id a person wrote as documentation
+  came back as a live chip. Required rather than defaulted-off, because the two
+  failure modes point opposite ways — an unprotected LaTeX token is corrupted,
+  an over-protected bare id loses its marks — so there is no safe default and
+  only the family that owns the bytes knows. `[[page:…]]`, `[[date:…]]` and
+  `\(latex\)` protect; the four active-data bare-id chips do not.
 - **The parser mirrors `matchInlineFormat`'s two whitespace rules**, so what the
   user can type and what pasted text parses as cannot diverge — which is why the
   serializer hoists boundary whitespace OUT of a marked group (`**a **` →
@@ -2754,6 +2772,109 @@ the whole document lives in React state and is discarded on unmount.
   (today: into a sub-page, re-partitioning `page_id` across a page boundary). The
   block-actions menu renders that whole zone only when `serverSync`.
 
+## The inline-token registry exists in BOTH runtimes
+
+A token family (`[[page:…]]`, `[[date:…]]`, `\(latex\)`, an active-data chip)
+declares its node ONCE in its own `core/` through `defineInlineTokenNode`, then
+registers the browser's decorated twin with `registerBlockTextExtension` and
+contributes the SAME core spec object to the server's `Editor.InlineToken`
+alongside its pattern. One object, so the two runtimes cannot name a different
+type string, fields or token format.
+
+- **`registerBlockTextExtensionSource(() => [...])`** takes a LOOKUP for a
+  contributor whose token set is itself a registry (active-data's chips, which
+  fill in as the tiers load). A finished list handed over at module eval freezes
+  whatever had loaded, and the seed and the doc-sourced projection then read two
+  different sets — which round-trips a decorator into plain characters. A source
+  must hand back STABLE objects while unchanged: the derived
+  `InlineTokenExtension` is cached on object identity, and these walks run at
+  caret frequency.
+- **Server side**: `blockTextServerExtensions()` / `blockTextServerNodes()`, read
+  at call time like `blockTextProtectedSpans()`. They are what let
+  `markdown-apply` read and rewrite a block whose doc holds a decorator; a type
+  with no server node is still refused there, loudly.
+- Two contributions may share a node `type` only by naming the SAME spec object
+  (that is how four active-data sub-plugins feed one node); two different
+  objects for one type throw, naming both.
+
+### A token family declares its READ-ONLY rendering too
+
+`renderToken` sits on the SAME discriminated arm of `BlockTextExtension` as
+`node` and `pattern`, so it is required exactly when there is a token to render
+and unspellable when there is not. That is what makes `read-only-view` a total
+function over the registry rather than a hand-maintained list of two types —
+which is what it was, and why `[[date:…]]` painted as literal brackets on every
+read surface for as long as inline dates existed.
+
+`blockTextTokenExtension({ id, pattern, node, renderToken, Plugin })` is THE way
+to build one. It exists to erase `renderToken` safely: a contributor writes the
+typed `(fields: F) => ReactNode`, and what the registry stores takes the regex
+MATCH and runs the family's own `fieldsOf` on it — the same erasure
+`InlineTokenNodeRef.createFromMatch` performs, sound for the same reason (a
+family is only ever handed a field record it produced itself). Without it every
+contributor would read erased `string | null | undefined` fields and narrow them
+back by hand.
+
+- **Returning `null` means "not mine after all"** — a match `fieldsOf` rejects,
+  or a union node whose chip is absent from this composition. The read surface
+  paints the RAW TOKEN TEXT then, exactly as the Lexical decorator's own
+  unclaimed arm does. It is never a way to render nothing, which would silently
+  delete a token the document still holds.
+- **`blockTextRenderableExtensions()`** is the read a surface with no Lexical
+  takes: the registered extensions AS THEMSELVES, renderer included. `matchTokens`
+  is generic in its extension type, so a match hands back the very registration
+  that produced it — no join back by `id`, which is a string key nothing checks.
+  Read at CALL time like every other registry read here.
+
+**And no consumer may name a family**, which is the half a type cannot state:
+`./singularity check page.editor:no-token-identity-outside-owner` fails any file
+outside a family's own plugin that IMPORTS its `pattern:` constant or its
+`defineInlineTokenNode` spec. It is the rung under the paragraph above — the
+renderer that raced two hardcoded token patterns is exactly how `[[date:…]]`
+shipped as literal brackets — and the governed set is discovered from the
+registrations themselves, so a new family is covered with no edit. A family's
+identity is co-owned by the plugin that declares the shape and the plugin that
+registers it as a token, which is what leaves `improve/element-picker` free to
+build a chip out of `ui-context`'s own `UI_CONTEXT_RE`.
+
+### Pasting a token materializes it
+
+`TokenPastePlugin` (from `primitives/text-editor/token-extension/node`) is mounted
+in `block-text-editor.tsx` AFTER the contributed `ext.Plugin`s. Its place in the
+`PASTE_COMMAND` chain is the whole of its behaviour, and the mount site is part of
+that place — within one Lexical priority, listeners run in REGISTRATION order,
+which here is JSX order:
+
+| # | handler | priority | claims |
+| --- | --- | --- | --- |
+| 1 | `BlockPastePlugin` | NORMAL | a pasted FILE (an upload, never text) |
+| 2 | `BlockForestPastePlugin` | NORMAL | forest MIME, or any multi-line text |
+| 3 | `UrlPastePlugin` | LOW (an `ext.Plugin`, so registered first) | a bare URL into an EMPTY block |
+| 4 | **`TokenPastePlugin`** | LOW | single-line text carrying a token |
+| 5 | RichText default | EDITOR | everything else |
+
+BELOW NORMAL because a file paste is an upload and a multi-line paste is
+STRUCTURAL — a token inside either must not hijack them. Which also means this
+only ever sees single-line text, so a plain inline insert is all it does. NOT
+above `UrlPastePlugin`, because "URL into an empty block → bookmark" is a shipped
+affordance; belt and braces, the two gates are provably disjoint
+(`inlineBoundary`'s `(?<!\/)` means an id inside a URL path matches nothing).
+ABOVE EDITOR, so a token that would otherwise land as literal characters — and
+stay literal forever, since nothing re-scans an existing doc — materializes.
+
+**No CRDT surgery helper, deliberately.** `collab-text-surgery.ts` is for edits
+driven from OUTSIDE a Lexical command; a `PASTE_COMMAND` listener already runs
+inside `editor.update()`, so `selection.insertNodes` syncs through the
+`@lexical/yjs` binding exactly like typing and lands on the block's own
+`Y.UndoManager` for free.
+
+**Typing an id into an existing block leaves plain text**, and that is the
+declared behaviour — there is no convert-as-you-type transform and no typeahead.
+An id is only briefly complete while being typed (the classic autoformat trap),
+here on top of a CRDT with hand-written caret-offset math. A raw id already in a
+seeded doc self-heals the other way: any `edit_page` that rebuilds the block's
+middle materializes it, and read-only surfaces chip it from `data.text` today.
+
 ## Markdown is a LOSSLESS PROJECTION of the forest
 
 > Lenient on parse (foreign markdown pastes as it always did), CANONICAL on
@@ -2924,6 +3045,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/text-editor/caret-trigger.useCaretQuery`
     - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+    - `primitives/text-editor/token-extension/node.TokenPastePlugin`
     - `primitives/undo-redo.surfaceUndoProps`
     - `primitives/undo-redo.useScopedUndoRedo`
     - `reorder.isNodeData`
@@ -2946,6 +3068,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockSection`
     - `BlockTextExtension`
     - `BlockTextPluginProps`
+    - `BlockTextTokenExtension`
     - `CaretFlightAbortReason`
     - `CaretFlightAbortReport`
     - `CaretSurface`
@@ -2964,7 +3087,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
     - `BlockEditor`
+    - `blockTextRenderableExtensions`
     - `BlockTextRenderer`
+    - `blockTextTokenExtension`
+    - `blockTextTokenExtensions`
     - `BlockTypeList`
     - `caretFlightReportSink`
     - `collabHydrationReportSink`
@@ -2984,6 +3110,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `readTransferText`
     - `registerBlockPasteHandler`
     - `registerBlockTextExtension`
+    - `registerBlockTextExtensionSource`
     - `TextBlockLayout`
     - `useBlockActivate`
     - `useBlockAnchors`
@@ -3037,6 +3164,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockSchema`
     - `blocksLiveResource`
     - `blockTextProtectedSpans`
+    - `blockTextServerExtensions`
+    - `blockTextServerNodes`
     - `deleteBlocksSubtree`
     - `Editor`
     - `PAGE_BLOCK_TYPE`
@@ -3070,6 +3199,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/live-state.resourceDescriptor`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`
+    - `primitives/text-editor/token-extension.InlineTokenExtension`
+    - `primitives/text-editor/token-extension.matchTokens`
+    - `primitives/text-editor/token-extension.tokenExtension`
+    - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
     - `primitives/tree.isDescendant`
     - `primitives/tree.selectionRoots`
     - `primitives/tree.subtreeIds`
@@ -3102,6 +3235,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Mark`
     - `MarkdownContext`
     - `MarkdownNode`
+    - `MarkdownSpan`
     - `MdParseCtx`
     - `MdSerializeCtx`
     - `MoveBlockBody`
@@ -3110,7 +3244,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageRow`
     - `RichText`
     - `RowData`
-    - `RunsTokenExtension`
     - `RunsXmlTextOptions`
     - `SerializedBlock`
     - `TextBearingSchema`
@@ -3217,7 +3350,12 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `xmlTextToRuns`
 - Cross-plugin:
   - Imported by:
+    - `active-data`
+    - `active-data/attempt`
+    - `active-data/conv`
     - `active-data/page-link`
+    - `active-data/prototype`
+    - `active-data/task-link`
     - `apps/pages/agent-origin`
     - `apps/pages/content-search`
     - `apps/pages/history`

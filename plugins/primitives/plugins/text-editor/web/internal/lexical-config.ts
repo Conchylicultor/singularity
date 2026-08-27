@@ -14,7 +14,7 @@ export function buildInitialConfig(opts: {
   return {
     namespace: opts.namespace,
     theme: TEXT_EDITOR_THEME,
-    nodes: opts.extensions.map((ext) => ext.node),
+    nodes: opts.extensions.map((ext) => ext.node.Node),
     onError: opts.onError,
   };
 }

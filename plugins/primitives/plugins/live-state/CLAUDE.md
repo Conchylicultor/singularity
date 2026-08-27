@@ -780,7 +780,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `page/page-link`
     - `page/prompt/block`
     - `page/prompt/link`
-    - `page/read-only-view`
     - `plugin-meta/plugin-health`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-order`

@@ -13,6 +13,10 @@ import {
 } from "lexical";
 import { $createLinkNode, $isLinkNode } from "@lexical/link";
 import {
+  matchTokens,
+  type InlineTokenExtension,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import {
   coalesce,
   MARK_ORDER,
   type ColorToken,
@@ -36,22 +40,14 @@ import {
  */
 
 /**
- * The (de)serialization surface of an inline token extension — the narrow slice
- * of the editor's `BlockTextExtension` the node-walk needs. Inline decorator
- * nodes persist as text tokens (e.g. `[[<pageId>]]`) embedded in run text:
- * `serializeNode` writes the token, `deserializePattern` +
- * `createNodeFromMatch` parse it back. Marks/color/link are a parallel concern
- * layered on the surrounding `TextNode`s; decorator nodes are always emitted as
- * unmarked runs.
+ * Inline token extensions reach this walk as the SHARED
+ * {@link InlineTokenExtension} — the same declaration the prompt editor and the
+ * read-only renderer read, so what a token IS is stated once. A decorator node
+ * persists as a text token embedded in run text (`[[page:<id>]]`); the
+ * extension's node descriptor writes it and reads it back. Marks/color/link are
+ * a parallel concern layered on the surrounding `TextNode`s; decorator nodes are
+ * always emitted as unmarked runs.
  */
-export interface RunsTokenExtension {
-  /** Non-global regex matching this extension's token within a single line. */
-  deserializePattern?: RegExp;
-  /** Build the inline node for a regex match (return null to skip). */
-  createNodeFromMatch?: (match: RegExpExecArray) => LexicalNode | null;
-  /** Serialize a custom node to its token (return null if not this node). */
-  serializeNode?: (node: LexicalNode) => string | null;
-}
 
 // ---------------------------------------------------------------------------
 // runs → Lexical
@@ -86,13 +82,17 @@ function styleTextNode(node: TextNode, run: TextRun): void {
 /**
  * Build the inline leaf nodes for one line segment of a run's text (no `\n`),
  * materializing extension tokens as their decorator nodes and styling the
- * remaining text spans with the run's marks/color. Mirrors the old
- * `appendLineNodes` token loop (overlap guard + sort by start).
+ * remaining text spans with the run's marks/color.
+ *
+ * The token scan is the SHARED one (`token-extension`'s `matchTokens`), so this
+ * editor, the prompt editor and the read-only renderer agree about where a token
+ * starts and which of two overlapping candidates wins — and a `code`-marked run
+ * yields no tokens at all, so `` `att-…` `` written as inline code stays code.
  */
 function lineNodes(
   line: string,
   run: TextRun,
-  extensions: readonly RunsTokenExtension[],
+  extensions: readonly InlineTokenExtension[],
 ): LexicalNode[] {
   const out: LexicalNode[] = [];
   const pushText = (text: string) => {
@@ -102,30 +102,16 @@ function lineNodes(
     out.push(node);
   };
 
-  if (extensions.length === 0) {
-    pushText(line);
-    return out;
-  }
-
-  type TokenMatch = { start: number; end: number; node: LexicalNode };
-  const matches: TokenMatch[] = [];
-  for (const ext of extensions) {
-    if (!ext.deserializePattern || !ext.createNodeFromMatch) continue;
-    const re = new RegExp(ext.deserializePattern.source, "g");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(line)) !== null) {
-      const node = ext.createNodeFromMatch(m);
-      if (node)
-        matches.push({ start: m.index, end: m.index + m[0].length, node });
-    }
-  }
-  matches.sort((a, b) => a.start - b.start);
   let lastIdx = 0;
-  for (const match of matches) {
-    if (match.start < lastIdx) continue;
+  for (const match of matchTokens(line, run.marks, extensions)) {
     pushText(line.slice(lastIdx, match.start));
-    // Decorator nodes are always unmarked.
-    out.push(match.node);
+    // Decorator nodes are always unmarked. Built from the MATCH, so the erased
+    // scan never hands a field record back to the family that owns its type;
+    // `null` ("not a token after all") is already ruled out by `matchTokens`,
+    // and falling back to the literal text keeps the characters either way.
+    const node = match.extension.createNodeFromMatch(match.match);
+    if (node) out.push(node);
+    else pushText(match.text);
     lastIdx = match.end;
   }
   pushText(line.slice(lastIdx));
@@ -136,7 +122,7 @@ function lineNodes(
 function appendRun(
   parent: ElementNode,
   run: TextRun,
-  extensions: readonly RunsTokenExtension[],
+  extensions: readonly InlineTokenExtension[],
 ): void {
   const lines = run.text.split("\n");
   const built: LexicalNode[] = [];
@@ -164,7 +150,7 @@ function appendRun(
  */
 export function runsToLexical(
   runs: RichText,
-  extensions: readonly RunsTokenExtension[] = [],
+  extensions: readonly InlineTokenExtension[] = [],
 ): void {
   const root = $getRoot();
   root.clear();
@@ -187,7 +173,7 @@ export function runsToLexical(
  */
 export function $appendRuns(
   runs: RichText,
-  extensions: readonly RunsTokenExtension[] = [],
+  extensions: readonly InlineTokenExtension[] = [],
 ): void {
   const root = $getRoot();
   const elements = root.getChildren().filter($isElementNode);
@@ -241,7 +227,7 @@ function runFromTextNode(node: TextNode, link: string | undefined): TextRun {
 /** Serialize a decorator (non-text, non-element) node to its token text. */
 export function tokenOf(
   node: LexicalNode,
-  extensions: readonly RunsTokenExtension[],
+  extensions: readonly InlineTokenExtension[],
 ): string {
   for (const ext of extensions) {
     if (!ext.serializeNode) continue;
@@ -256,7 +242,7 @@ function walkNode(
   node: LexicalNode,
   link: string | undefined,
   out: RichText,
-  extensions: readonly RunsTokenExtension[],
+  extensions: readonly InlineTokenExtension[],
 ): void {
   if ($isLineBreakNode(node)) {
     out.push({ text: "\n", ...(link ? { link } : {}) });
@@ -283,7 +269,7 @@ function walkNode(
  */
 export function serializeBlockRuns(
   editor: LexicalEditor,
-  extensions: readonly RunsTokenExtension[] = [],
+  extensions: readonly InlineTokenExtension[] = [],
 ): RichText {
   const runs: RichText = [];
   editor.getEditorState().read(() => {

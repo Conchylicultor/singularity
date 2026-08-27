@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { getBlockTextExtensions } from "@plugins/page/plugins/editor/web";
+import { blockTextTokenExtensions } from "@plugins/page/plugins/editor/web";
 import {
   coalesce,
   newBlockId,
@@ -23,10 +23,10 @@ import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
 import { pageLinkToken } from "../../core";
 import "./register";
 
-const extensions = getBlockTextExtensions();
+const extensions = blockTextTokenExtensions();
 const opts: RunsXmlTextOptions = {
   extensions,
-  nodes: extensions.flatMap((e) => (e.node ? [e.node] : [])),
+  nodes: extensions.map((e) => e.node.Node),
 };
 
 /** Ids of materialized decorator nodes of `type` in the doc's editor state. */

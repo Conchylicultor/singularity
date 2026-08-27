@@ -1,10 +1,5 @@
-import { useState, type ReactNode } from "react";
-import {
-  $getNodeByKey,
-  DecoratorNode,
-  type LexicalNode,
-  type NodeKey,
-} from "lexical";
+import { useState } from "react";
+import { $getNodeByKey, type LexicalNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -13,92 +8,34 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { inlineMathNode } from "../../core";
 
 // Bare-string mono metric for the LaTeX-source field. Kept as a standalone const
 // (not inlined into a cn(...) class context) so the typography rule treats it as
 // the sanctioned out-of-scope mono/code metric rather than an ad-hoc size.
 const MONO_FIELD = textVariantClass("code");
 
-type SerializedInlineMathNode = {
-  type: "inline-math";
-  version: 1;
-  expression: string;
-};
-
 /**
- * An inline, non-editable-in-place LaTeX expression rendered with KaTeX. Lives
- * inside a text block's Lexical tree; persists as a `\(<latex>\)` token in the
- * block's text (see core's token helpers). Its own `getTextContent()` stays empty
- * so the token never leaks into live root-text reads (slash menu, the `$$` query
- * scan) — serialization happens via the extension's `serializeNode`.
- *
- * Clicking the rendered math opens a popover with a LaTeX source field + live
- * preview; edits update the node by key via the Lexical editor.
+ * The browser half of the inline-math token: the SAME family declared in
+ * `core/node.ts`, with rendering added. Clicking the rendered math opens a
+ * popover with a LaTeX source field + live preview; edits rewrite the node's
+ * `expression` field.
  */
-export class InlineMathNode extends DecoratorNode<ReactNode> {
-  __expression: string;
+export const inlineMathWebNode = inlineMathNode.decorated({
+  className: "inline-flex align-baseline",
+  render: ({ expression }, node) => (
+    <InlineMathView nodeKey={node.getKey()} expression={expression} />
+  ),
+});
 
-  static getType(): string {
-    return "inline-math";
-  }
-
-  static clone(node: InlineMathNode): InlineMathNode {
-    return new InlineMathNode(node.__expression, node.__key);
-  }
-
-  constructor(expression: string, key?: NodeKey) {
-    super(key);
-    this.__expression = expression;
-  }
-
-  static importJSON(json: SerializedInlineMathNode): InlineMathNode {
-    return new InlineMathNode(json.expression);
-  }
-
-  exportJSON(): SerializedInlineMathNode {
-    return { type: "inline-math", version: 1, expression: this.__expression };
-  }
-
-  isInline(): true {
-    return true;
-  }
-
-  // Keep the token out of root-text reads — serialization is via the extension.
-  getTextContent(): "" {
-    return "";
-  }
-
-  createDOM(): HTMLElement {
-    const span = document.createElement("span");
-    span.className = "inline-flex align-baseline";
-    return span;
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  getExpression(): string {
-    return this.__expression;
-  }
-
-  setExpression(expression: string): void {
-    const writable = this.getWritable();
-    writable.__expression = expression;
-  }
-
-  decorate(): ReactNode {
-    return (
-      <InlineMathView nodeKey={this.__key} expression={this.__expression} />
-    );
-  }
-}
+/** The Lexical class to register in a block editor's `nodes` config. */
+export const InlineMathNode = inlineMathWebNode.Node;
 
 function InlineMathView({
   nodeKey,
   expression,
 }: {
-  nodeKey: NodeKey;
+  nodeKey: string;
   expression: string;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
@@ -109,7 +46,9 @@ function InlineMathView({
     setDraft(value);
     lexicalEditor.update(() => {
       const node = $getNodeByKey(nodeKey);
-      if ($isInlineMathNode(node)) node.setExpression(value);
+      if (node && inlineMathNode.is(node)) {
+        inlineMathNode.setFields(node, { expression: value });
+      }
     });
   }
 
@@ -167,12 +106,6 @@ function InlineMathView({
   );
 }
 
-export function $createInlineMathNode(expression: string): InlineMathNode {
-  return new InlineMathNode(expression);
-}
-
-export function $isInlineMathNode(
-  node: LexicalNode | null | undefined,
-): node is InlineMathNode {
-  return node instanceof InlineMathNode;
+export function $createInlineMathNode(expression: string): LexicalNode {
+  return inlineMathWebNode.create({ expression });
 }

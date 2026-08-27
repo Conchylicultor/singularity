@@ -5,9 +5,7 @@ import {
   $isLineBreakNode,
   $isRangeSelection,
   $isTextNode,
-  $createLineBreakNode,
   $createParagraphNode,
-  $createTextNode,
   $createRangeSelection,
   $setSelection,
   SKIP_DOM_SELECTION_TAG,
@@ -16,6 +14,11 @@ import {
   type LexicalNode,
   type PointType,
 } from "lexical";
+import { hasToken } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import {
+  $insertTokenizedText,
+  $tokenizedLineNodes,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
 import { getNodeExtensions, type NodeExtension } from "./node-extensions";
 
 export function serializeEditorToMarkdown(
@@ -57,36 +60,15 @@ export function serializeEditorToMarkdown(
 // The single deserialization path — shared by the whole-value apply below and
 // the caret insert — so a snippet dropped at the cursor yields the same nodes
 // as the same snippet arriving through the value round-trip.
+//
+// The scan itself is the shared one (`token-extension`), so this editor and the
+// page editor agree byte-for-byte about where a token starts and which of two
+// overlapping candidates wins.
 function $lineToNodes(
   line: string,
   extensions: readonly NodeExtension[],
 ): LexicalNode[] {
-  if (extensions.length === 0) return line ? [$createTextNode(line)] : [];
-
-  type Match = { start: number; end: number; node: LexicalNode };
-  const matches: Match[] = [];
-  for (const ext of extensions) {
-    const re = new RegExp(ext.deserializePattern.source, "g");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(line)) !== null) {
-      const node = ext.createNodeFromMatch(m);
-      if (node) matches.push({ start: m.index, end: m.index + m[0].length, node });
-    }
-  }
-  matches.sort((a, b) => a.start - b.start);
-
-  const nodes: LexicalNode[] = [];
-  let lastIdx = 0;
-  for (const match of matches) {
-    if (match.start < lastIdx) continue;
-    const before = line.slice(lastIdx, match.start);
-    if (before) nodes.push($createTextNode(before));
-    nodes.push(match.node);
-    lastIdx = match.end;
-  }
-  const tail = line.slice(lastIdx);
-  if (tail) nodes.push($createTextNode(tail));
-  return nodes;
+  return $tokenizedLineNodes(line, extensions);
 }
 
 // Does this raw snippet carry at least one node-extension token? The gate the
@@ -97,11 +79,7 @@ export function hasNodeExtensionToken(
   text: string,
   extensions: readonly NodeExtension[] = getNodeExtensions(),
 ): boolean {
-  // Fresh, flagless RegExp per test: `deserializePattern` may carry /g, whose
-  // `lastIndex` is stateful across calls.
-  return extensions.some((ext) =>
-    new RegExp(ext.deserializePattern.source).test(text),
-  );
+  return hasToken(text, extensions);
 }
 
 export function applyMarkdownToEditor(
@@ -230,18 +208,7 @@ export function $insertMarkdownSnippet(
   snippet: string,
   extensions: readonly NodeExtension[] = getNodeExtensions(),
 ): void {
-  let selection = $getSelection();
-  if (!$isRangeSelection(selection)) {
-    $getRoot().selectEnd();
-    selection = $getSelection();
-    if (!$isRangeSelection(selection)) return;
-  }
-  const nodes: LexicalNode[] = [];
-  snippet.split("\n").forEach((line, i) => {
-    if (i > 0) nodes.push($createLineBreakNode());
-    nodes.push(...$lineToNodes(line, extensions));
-  });
-  selection.insertNodes(nodes);
+  $insertTokenizedText(snippet, extensions);
 }
 
 // --- Selection mapping ------------------------------------------------------
@@ -296,7 +263,8 @@ function pointInParagraph(
     } else {
       const len = rawNodeLength(child, extensions);
       if (rem <= 0) return { key: para.getKey(), offset: i, type: "element" };
-      if (rem < len) return { key: para.getKey(), offset: i + 1, type: "element" };
+      if (rem < len)
+        return { key: para.getKey(), offset: i + 1, type: "element" };
       rem -= len;
     }
   }
@@ -318,7 +286,11 @@ function locatePoint(
     rem -= lineLen + 1; // consume the line plus its trailing "\n" separator
   }
   if (!lastPara) return null;
-  return pointInParagraph(lastPara, rawLineLength(lastPara, extensions), extensions);
+  return pointInParagraph(
+    lastPara,
+    rawLineLength(lastPara, extensions),
+    extensions,
+  );
 }
 
 // Set the editor selection to the raw-string character range [start, end].

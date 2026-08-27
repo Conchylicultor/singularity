@@ -6,3 +6,5 @@ export {
   isAttachmentUrl,
   rewriteAttachmentMarkdown,
 } from "./internal/markdown";
+export { imageNode } from "./node";
+export type { ImageFields } from "./node";

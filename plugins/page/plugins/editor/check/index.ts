@@ -21,6 +21,7 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import noTokenIdentityOutsideOwner from "./no-token-identity-outside-owner";
 
 // Canonical slot tokens (see plugins/page/plugins/editor/{web/slots.ts,
 // server/internal/block-registry.ts}). Both sides carry the block TYPE as their
@@ -627,4 +628,5 @@ export default [
   markdownTagNamesUnique,
   blockPrefixesUnique,
   splitTargetsAreTextBearing,
+  noTokenIdentityOutsideOwner,
 ];

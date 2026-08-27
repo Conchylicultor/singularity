@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { getBlockTextExtensions } from "@plugins/page/plugins/editor/web";
+import { blockTextTokenExtensions } from "@plugins/page/plugins/editor/web";
 import {
   coalesce,
   runsToXmlText,
@@ -23,10 +23,10 @@ import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
 import { inlineMathToken } from "../../core";
 import "./register";
 
-const extensions = getBlockTextExtensions();
+const extensions = blockTextTokenExtensions();
 const opts: RunsXmlTextOptions = {
   extensions,
-  nodes: extensions.flatMap((e) => (e.node ? [e.node] : [])),
+  nodes: extensions.map((e) => e.node.Node),
 };
 
 /** `field` values of materialized decorator nodes of `type` in the doc. */
@@ -41,11 +41,17 @@ function decoratorFields(
       const out: unknown[] = [];
       const walk = (n: Record<string, unknown>) => {
         if (n.type === type) out.push(n[field]);
-        for (const c of (n.children as Record<string, unknown>[] | undefined) ?? []) {
+        for (const c of (n.children as Record<string, unknown>[] | undefined) ??
+          []) {
           walk(c);
         }
       };
-      walk(editor.getEditorState().toJSON().root as unknown as Record<string, unknown>);
+      walk(
+        editor.getEditorState().toJSON().root as unknown as Record<
+          string,
+          unknown
+        >,
+      );
       return out;
     },
     { nodes: opts.nodes ? [...opts.nodes] : [] },
@@ -62,7 +68,9 @@ describe("inline-math node ↔ Y.XmlText", () => {
 
     // Materialized as a real InlineMathNode with its LaTeX source intact
     // (backslashes and braces survive the Yjs property sync).
-    expect(decoratorFields(xmlText, "inline-math", "expression")).toEqual([latex]);
+    expect(decoratorFields(xmlText, "inline-math", "expression")).toEqual([
+      latex,
+    ]);
 
     expect(xmlTextToRuns(xmlText, opts)).toEqual(coalesce(runs));
   });

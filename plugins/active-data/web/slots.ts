@@ -1,32 +1,22 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { CodeClaim, CodeResolver } from "./claim";
+import type { ActiveDataInlineContribution } from "./internal/inline-registry";
+
+// The `display:"inline"` arm is declared — and can ONLY be built — in
+// `./internal/inline-registry`, whose factory records the chip in the module
+// registry every headless reader uses. Re-exported here so the union below and
+// the plugin barrel name one type; see that module for why the two halves are
+// sealed together.
+export { inlineChip } from "./internal/inline-registry";
+export type {
+  ActiveDataInlineContribution,
+  ChipSurface,
+} from "./internal/inline-registry";
 
 export interface ActiveDataBlockContribution {
   display: "block";
   tag: string;
-  component: ComponentType<{
-    content: string;
-    attrs: Record<string, string>;
-  }>;
-}
-
-/**
- * INVARIANT — inline patterns must be SELF-CERTIFYING: the pattern alone is the
- * truth. An inline contribution renders unconditionally on every match (unknown
- * ids degrade in-chip), because the same registry drives three surfaces at once —
- * markdown, plain text, and the Lexical editor, where `node-extension-bridge.ts`
- * compiles every inline pattern into ONE union regex feeding a single
- * `ActiveDataInlineNode`. A "declined" token there would still be a committed node
- * in the user's document; there is no host to render a fallback.
- *
- * So: a pattern whose validity requires I/O belongs in `display:"code"`, which has
- * a real claim protocol (see `./claim`). Namespaced prefixes (`att-`, `conv-`,
- * `task-`, `block-`) are the shape that qualifies as inline.
- */
-export interface ActiveDataInlineContribution {
-  display: "inline";
-  pattern: RegExp;
   component: ComponentType<{
     content: string;
     attrs: Record<string, string>;
@@ -104,11 +94,6 @@ export type ActiveDataContribution =
 
 export const ActiveData = {
   Tag: defineSlot<ActiveDataContribution>({
-    docLabel: (p) =>
-      p.display === "block"
-        ? p.tag
-        : p.display === "code"
-          ? p.id
-          : p.pattern.source,
+    docLabel: (p) => (p.display === "block" ? p.tag : p.id),
   }),
 };

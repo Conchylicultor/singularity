@@ -3,3 +3,5 @@ export {
   pageLinkToken,
   scanPageLinkTokens,
 } from "./tokens";
+export { pageLinkInlineNode } from "./node";
+export type { PageLinkFields } from "./node";

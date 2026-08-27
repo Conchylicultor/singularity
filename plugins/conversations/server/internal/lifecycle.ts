@@ -17,9 +17,11 @@ import {
   normalizeModel,
   type ConversationModel,
 } from "@plugins/conversations/plugins/model-provider/core";
-import type {
-  Conversation,
-  ConversationKind,
+import {
+  newAttemptId,
+  newConversationId,
+  type Conversation,
+  type ConversationKind,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
@@ -52,16 +54,6 @@ async function resolveTaskEffort(
   if (!taskId) return undefined;
   return (await getTaskEffort(taskId))?.level;
 }
-
-// Three independent id namespaces, each self-describing in logs and URLs.
-// Legacy rows may still carry the pre-rename `claude-…` prefix; matchers that
-// surface live sessions accept both.
-const ATTEMPT_PREFIX = "att";
-const CONVERSATION_PREFIX = "conv";
-const newId = (prefix: string) => {
-  const suffix = Math.random().toString(36).slice(2, 6);
-  return `${prefix}-${Math.floor(Date.now() / 1000)}-${suffix}`;
-};
 
 export async function createConversation(
   opts: {
@@ -121,7 +113,7 @@ export async function createConversation(
 
   let worktreePath: string;
   let conversationId: string;
-  let newAttemptId: string | undefined;
+  let createdAttemptId: string | undefined;
   // The task this conversation belongs to, used to resolve a per-task preprompt
   // (baked into the first user turn as a <special_instructions> block). Derived
   // from the existing attempt when reusing a worktree, otherwise the task we
@@ -133,7 +125,7 @@ export async function createConversation(
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
     effectiveTaskId = attempt.taskId;
-    conversationId = newId(CONVERSATION_PREFIX);
+    conversationId = newConversationId();
   } else {
     let taskId = opts.taskId;
     if (!taskId) {
@@ -149,8 +141,8 @@ export async function createConversation(
     }
     effectiveTaskId = taskId;
 
-    newAttemptId = newId(ATTEMPT_PREFIX);
-    const thisAttemptId = newAttemptId;
+    createdAttemptId = newAttemptId();
+    const thisAttemptId = createdAttemptId;
     attemptId = thisAttemptId;
     // Derived purely from the id, so the path is known before the worktree dir
     // exists. `setupWorktree` (the multi-second `git worktree add` checkout) is
@@ -171,7 +163,7 @@ export async function createConversation(
       source: "singularity",
       target: thisAttemptId,
     });
-    conversationId = newId(CONVERSATION_PREFIX);
+    conversationId = newConversationId();
   }
 
   // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
@@ -194,11 +186,11 @@ export async function createConversation(
       kind: opts.kind ?? "user",
     });
   } catch (err) {
-    if (newAttemptId) {
+    if (createdAttemptId) {
       // eslint-disable-next-line promise-safety/no-bare-catch
-      await deleteAttempt(newAttemptId).catch((e) => {
+      await deleteAttempt(createdAttemptId).catch((e) => {
         console.error(
-          `[conversations] failed to delete orphaned attempt ${newAttemptId} during cleanup`,
+          `[conversations] failed to delete orphaned attempt ${createdAttemptId} during cleanup`,
           e,
         );
       });
@@ -259,7 +251,7 @@ export async function createConversation(
     prepromptId,
   });
 
-  if (newAttemptId) {
+  if (createdAttemptId) {
     // New-worktree branch: background the multi-second `git worktree add` +
     // `runtime.create` in a durable graphile job so the interactive Launch
     // response returns immediately with a `starting` row. Enqueued in parallel

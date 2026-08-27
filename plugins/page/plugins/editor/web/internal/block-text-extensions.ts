@@ -13,15 +13,22 @@ import {
   type LexicalEditor,
   type LexicalNode,
 } from "lexical";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
+import {
+  createSourcedRegistry,
+  tokenExtension,
+  type InlineTokenExtension,
+  type InlineTokenNode,
+  type InlineTokenNodeRef,
+  type TokenFields,
+} from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import {
   runsToLexical as runsToLexicalWith,
   serializeBlockRuns as serializeBlockRunsWith,
   tokenOf as tokenOfWith,
   type RichText,
-  type RunsTokenExtension,
 } from "../../core";
-import type { Block } from "../../core";
+import type { Block, MarkdownSpan } from "../../core";
 import type { BlockEditorAPI } from "../types";
 
 // The pure runs↔nodes walk lives in `core/runs-lexical.ts` (shared with the
@@ -37,73 +44,244 @@ export interface BlockTextPluginProps {
 }
 
 /**
- * An optional custom inline node for the block text editor, plus the
- * (de)serialization rules that round-trip it through the block's `data.text`,
- * and/or an invisible Lexical `Plugin` contributing behavior.
+ * One contribution to every block text editor.
  *
- * Two flavors share this interface:
- *  - **Node extensions** set `node` + `deserializePattern` + `createNodeFromMatch`
- *    + `serializeNode` (and usually a typeahead `Plugin`). They mirror the
- *    text-editor primitive's `NodeExtension` (see
- *    `plugins/primitives/plugins/text-editor/web/internal/node-extensions.ts`):
- *    inline nodes survive as text tokens (e.g. `[[<pageId>]]`) embedded in run
- *    text — `serializeNode` writes the token, `deserializePattern` +
- *    `createNodeFromMatch` parse it back. Marks/color/link are a parallel concern
- *    layered on the surrounding `TextNode`s; decorator nodes are always emitted
- *    as unmarked runs.
+ * Two flavors share this type, and the pair is DISCRIMINATED so only the two
+ * coherent shapes exist:
+ *  - **Token extensions** carry a `node` (declared through the shared
+ *    `defineInlineTokenNode`, so its token format, its field names and its
+ *    Lexical type string are one declaration) AND the `pattern` that finds its
+ *    token in a line — usually alongside a typeahead `Plugin`. Inline nodes
+ *    persist as text tokens embedded in run text (`[[page:<id>]]`); the node
+ *    descriptor writes the token and reads it back. Decorator nodes are always
+ *    emitted as unmarked runs.
  *  - **Plugin-only extensions** set just `Plugin` and contribute pure behavior
- *    (e.g. a paste handler) with no inline node. They omit every node field.
+ *    (e.g. a paste handler) with no inline node.
  *
- * The (de)serialization trio (`deserializePattern` / `createNodeFromMatch` /
- * `serializeNode`) is the `RunsTokenExtension` slice consumed by the shared
- * runs↔nodes walk in `core/runs-lexical.ts`.
+ * Pattern and node are separate fields because they are genuinely many-to-one —
+ * one node class can be fed by a UNION of patterns — but a `node` without a
+ * `pattern` (a token nothing could ever parse back) is a tsc error, not a
+ * convention. `renderToken` rides the same arm for the same reason: a family
+ * that can appear in a document must be able to paint itself on a surface that
+ * mounts no Lexical, and "somebody forgot" is exactly how `[[date:…]]` rendered
+ * as literal brackets on every read-only surface for as long as it existed.
  */
-export interface BlockTextExtension extends RunsTokenExtension {
+export type BlockTextExtension = {
   /** Stable id (used as a React key when rendering `Plugin`). */
   id: string;
-  /** Lexical node class registered in every block editor's config. */
-  node?: Klass<LexicalNode>;
   /** Optional invisible Lexical plugin rendered inside every block composer. */
   Plugin?: ComponentType<BlockTextPluginProps>;
+} & (
+  | {
+      node: InlineTokenNodeRef;
+      pattern: RegExp;
+      /**
+       * Whether this family's bytes must be MASKED from the marks-aware inline
+       * markdown scan — a SEPARATE question from `pattern`, which is only the
+       * locator. See {@link MarkdownSpan}, which states the whole argument.
+       *
+       * Required rather than defaulted-off: the two ways of getting it wrong
+       * point in opposite directions (an unprotected `\(a_1*b\)` is corrupted by
+       * the scan; an over-protected bare id loses the marks a person put on it,
+       * because a masked span becomes its own UNMARKED run), so there is no safe
+       * default and the family that owns the bytes is the only one that knows.
+       *
+       * It used to BE `pattern` — every registered token got masking whether it
+       * needed it or not — which is why `` `att-1787654245-y41m` `` pasted as
+       * markdown came back with no `code` mark and chipped itself.
+       */
+      markdownSpan: MarkdownSpan;
+      /**
+       * Paint one of this family's tokens OUTSIDE Lexical — the read-only
+       * renderer's half of the same declaration the decorator is.
+       *
+       * Field-type ERASED, like every other member a registry stores, and for
+       * the same reason (see `InlineTokenNodeRef`): it takes the regex MATCH and
+       * the family reads its own fields back out of it, so no family is ever
+       * handed a record it did not write. {@link blockTextTokenExtension} is
+       * where a contributor writes the typed `(fields: F) => ReactNode` this is
+       * erased from.
+       *
+       * Returning `null` means "these characters are not mine after all" — the
+       * two ways that happens being a match whose `fieldsOf` rejects it, and a
+       * union node whose chip is absent from this composition. The renderer
+       * paints the RAW TOKEN TEXT then, exactly as the Lexical decorator's own
+       * unclaimed arm does. It is never a way to render nothing: that would
+       * silently delete a token the document still holds.
+       */
+      renderToken: (match: RegExpExecArray) => ReactNode;
+    }
+  | {
+      node?: undefined;
+      pattern?: undefined;
+      markdownSpan?: undefined;
+      renderToken?: undefined;
+    }
+);
+
+/** The `BlockTextExtension` arm that carries a token. */
+export type BlockTextTokenExtension = Extract<
+  BlockTextExtension,
+  { node: InlineTokenNodeRef }
+>;
+
+/**
+ * THE way to declare a token-bearing block-text extension.
+ *
+ * It exists to erase `renderToken` safely. A registry is a homogeneous list, so
+ * what it stores cannot mention a family's own `F` — but a contributor writing
+ * `({ pageId }) => <PageLinkChip pageId={pageId} />` should not have to widen
+ * `pageId` to `string | null | undefined` and then narrow it back. So the typed
+ * renderer is written here against the family's `F`, and the stored one takes
+ * the MATCH and runs the family's own `fieldsOf` on it: the erasure is the same
+ * one `InlineTokenNodeRef.createFromMatch` performs, and it is sound for the
+ * same reason — the only field record a family receives is one it produced.
+ */
+export function blockTextTokenExtension<F extends TokenFields>(spec: {
+  id: string;
+  pattern: RegExp;
+  markdownSpan: MarkdownSpan;
+  node: InlineTokenNode<F>;
+  renderToken: (fields: F) => ReactNode;
+  Plugin?: ComponentType<BlockTextPluginProps>;
+}): BlockTextTokenExtension {
+  const { id, pattern, markdownSpan, node, renderToken, Plugin } = spec;
+  return {
+    id,
+    pattern,
+    markdownSpan,
+    node,
+    Plugin,
+    renderToken: (match) => {
+      const fields = node.fieldsOf(match);
+      return fields === null ? null : renderToken(fields);
+    },
+  };
 }
 
-const extensions: BlockTextExtension[] = [];
+/**
+ * The registry: items registered one by one, plus LAZY SOURCES folded in at
+ * read time. Both halves come from `token-extension`'s `createSourcedRegistry`,
+ * which is where the call-time rule is stated once for the two Lexical hosts
+ * that need it (the prompt editor's `registerNodeExtension` is the other).
+ */
+const registry = createSourcedRegistry<BlockTextExtension>();
+
+/**
+ * The derived {@link InlineTokenExtension} for one registered extension, keyed
+ * on the extension object's IDENTITY.
+ *
+ * The walks below run at caret frequency, so re-minting an extension per call
+ * would compile a `RegExp` per token family per keystroke. A directly-registered
+ * extension is a module constant and always hits; a SOURCE is asked to hand back
+ * stable objects for entries that have not changed (see `createSourcedRegistry`'s
+ * `registerSource` docblock), which is what makes its entries hit too.
+ *
+ * A `WeakMap`, so an unregistered extension's derivation is collectable with it.
+ */
+const derived = new WeakMap<BlockTextExtension, InlineTokenExtension>();
+
+function tokenOfExtension(
+  ext: BlockTextExtension,
+): InlineTokenExtension | null {
+  if (!ext.node || !ext.pattern) return null;
+  const cached = derived.get(ext);
+  if (cached) return cached;
+  const token = tokenExtension({
+    id: ext.id,
+    pattern: ext.pattern,
+    node: ext.node,
+  });
+  derived.set(ext, token);
+  return token;
+}
 
 export function registerBlockTextExtension(
   ext: BlockTextExtension,
 ): () => void {
-  extensions.push(ext);
-  return () => {
-    const idx = extensions.indexOf(ext);
-    if (idx >= 0) extensions.splice(idx, 1);
-  };
-}
-
-export function getBlockTextExtensions(): readonly BlockTextExtension[] {
-  return extensions;
+  return registry.register(ext);
 }
 
 /**
- * The registered token patterns, as the `MarkdownContext.protectedSpans` the
- * markdown conversion requires. An inline decorator token (`[[page:…]]`,
- * `[[date:…]]`, `\(latex\)`) is a plain substring inside `TextRun.text`, so the
- * marks-aware inline scan must be told to leave those bytes alone — inline LaTeX
- * is full of `_` and `*`.
+ * Register a LOOKUP called afresh on every read, rather than a finished list.
+ *
+ * For a contributor whose token set is itself a registry — active-data's inline
+ * chips, which fill in as the plugin tiers load. A finished list handed over at
+ * module eval would freeze whatever had loaded at that instant, and the rest of
+ * the chips would round-trip as plain characters with nothing failing.
+ *
+ * Hand back STABLE objects for entries that have not changed: the token
+ * extension each one derives is cached on object identity (see {@link derived}).
+ */
+export function registerBlockTextExtensionSource(
+  source: () => readonly BlockTextExtension[],
+): () => void {
+  return registry.registerSource(source);
+}
+
+export function getBlockTextExtensions(): readonly BlockTextExtension[] {
+  return registry.all();
+}
+
+/**
+ * The registered extensions that carry a token, AS THEMSELVES — renderer
+ * included.
+ *
+ * The read a surface with no Lexical takes. `matchTokens` is generic in its
+ * extension type, so a match made over these hands back the very registration
+ * that produced it and the renderer comes straight off it; joining back by `id`
+ * would be a string key nothing checks.
+ *
+ * Read at CALL time, never memoized — same rule as {@link blockTextProtectedSpans}.
+ */
+export function blockTextRenderableExtensions(): readonly BlockTextTokenExtension[] {
+  return registry
+    .all()
+    .filter((ext): ext is BlockTextTokenExtension => ext.node !== undefined);
+}
+
+/**
+ * The registered extensions that actually carry a token — the input every
+ * runs↔nodes walk takes. Read at CALL time, never memoized (see
+ * {@link blockTextProtectedSpans} for the same rule), which is also what folds
+ * a lazy source's current answer in.
+ */
+export function blockTextTokenExtensions(): readonly InlineTokenExtension[] {
+  const out: InlineTokenExtension[] = [];
+  for (const ext of registry.all()) {
+    const token = tokenOfExtension(ext);
+    if (token) out.push(token);
+  }
+  return out;
+}
+
+/**
+ * The patterns of the families that ASKED to be masked, as the
+ * `MarkdownContext.protectedSpans` the markdown conversion requires. An inline
+ * decorator token (`[[page:…]]`, `[[date:…]]`, `\(latex\)`) is a plain substring
+ * inside `TextRun.text` whose bytes markdown would read as syntax, so the
+ * marks-aware inline scan must be told to leave them alone — inline LaTeX is
+ * full of `_` and `*`.
+ *
+ * Only `markdownSpan: "protect"` families are here, which is why this reads the
+ * REGISTRY rather than mapping `blockTextTokenExtensions()`: an
+ * `InlineTokenExtension` carries the locator, not the masking statement, and a
+ * bare-id token needs the first without the second (see {@link MarkdownSpan}).
  *
  * Read at call time, never memoized: extensions register during plugin load, and
  * a snapshot taken too early would silently degrade to no protection.
  */
 export function blockTextProtectedSpans(): RegExp[] {
-  return extensions
-    .map((e) => e.deserializePattern)
-    .filter((p): p is RegExp => p !== undefined);
+  const out: RegExp[] = [];
+  for (const ext of registry.all()) {
+    if (ext.pattern && ext.markdownSpan === "protect") out.push(ext.pattern);
+  }
+  return out;
 }
 
 /** Node classes to feed into a block editor's `LexicalComposer` config. */
 export function blockTextNodes(): Klass<LexicalNode>[] {
-  return extensions
-    .map((e) => e.node)
-    .filter((node): node is Klass<LexicalNode> => node !== undefined);
+  return blockTextTokenExtensions().map((e) => e.node.Node);
 }
 
 /**
@@ -122,10 +300,10 @@ export function blockTextNodes(): Klass<LexicalNode>[] {
  * (see {@link blockTextProtectedSpans} for the same rule).
  */
 export function blockTextRunsOptions(): {
-  extensions: readonly BlockTextExtension[];
+  extensions: readonly InlineTokenExtension[];
   nodes: Klass<LexicalNode>[];
 } {
-  return { extensions: getBlockTextExtensions(), nodes: blockTextNodes() };
+  return { extensions: blockTextTokenExtensions(), nodes: blockTextNodes() };
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +315,7 @@ export function blockTextRunsOptions(): {
  * called inside an `editor.update()`. See `core/runs-lexical.ts` for the walk.
  */
 export function runsToLexical(runs: RichText): void {
-  runsToLexicalWith(runs, extensions);
+  runsToLexicalWith(runs, blockTextTokenExtensions());
 }
 
 /**
@@ -145,12 +323,12 @@ export function runsToLexical(runs: RichText): void {
  * extension. See `core/runs-lexical.ts` for the walk.
  */
 export function serializeBlockRuns(editor: LexicalEditor): RichText {
-  return serializeBlockRunsWith(editor, extensions);
+  return serializeBlockRunsWith(editor, blockTextTokenExtensions());
 }
 
 /** Serialize a decorator (non-text, non-element) node to its token text. */
 function tokenOf(node: LexicalNode): string {
-  return tokenOfWith(node, extensions);
+  return tokenOfWith(node, blockTextTokenExtensions());
 }
 
 /** Read the editor's content into runs (headless-friendly wrapper). */

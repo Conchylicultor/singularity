@@ -17,16 +17,13 @@
  * and silently stop testing the same inputs.
  */
 
-import {
-  $createParagraphNode,
-  $getRoot,
-  DecoratorNode,
-  type NodeKey,
-  type SerializedLexicalNode,
-} from "lexical";
+import { $createParagraphNode, $getRoot } from "lexical";
 import { LinkNode } from "@lexical/link";
 import type { XmlText } from "yjs";
-import { yDocContent, yDocFromLexical } from "@plugins/primitives/plugins/collab-doc/core";
+import {
+  yDocContent,
+  yDocFromLexical,
+} from "@plugins/primitives/plugins/collab-doc/core";
 import {
   COLOR_TOKENS,
   MARK_ORDER,
@@ -34,7 +31,9 @@ import {
   type Mark,
   type RichText,
 } from "./rich-text";
-import { $appendRuns, type RunsTokenExtension } from "./runs-lexical";
+import { tokenExtension } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import { defineInlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
+import { $appendRuns } from "./runs-lexical";
 import type { RunsXmlTextOptions } from "./runs-yjs";
 
 // ---------------------------------------------------------------------------
@@ -47,66 +46,36 @@ import type { RunsXmlTextOptions } from "./runs-yjs";
 // whose native `getTextContent()` is EMPTY, so its length is only ever recovered
 // from `serializeNode`.
 
-export class TokenNode extends DecoratorNode<null> {
-  __tokenId: string;
+type CorpusTokenFields = { tokenId: string };
 
-  static getType(): string {
-    return "test-token";
-  }
+/**
+ * The synthetic token family, declared through the SAME primitive the real ones
+ * use — so the corpus exercises the shipped node synthesis (zero-arg
+ * construction, generic clone/import/export, the empty `getTextContent`) rather
+ * than a hand-written imitation of it that could drift from it.
+ */
+export const corpusTokenNode = defineInlineTokenNode<CorpusTokenFields>({
+  type: "test-token",
+  fields: ["tokenId"],
+  token: ({ tokenId }) => `[[${tokenId}]]`,
+  fieldsOf: (m) => ({ tokenId: m[1]! }),
+  // Native text content stays empty, mirroring the real decorators: the token's
+  // length is only ever recovered from the extension's serializer.
+  textContent: "empty",
+});
 
-  static clone(node: TokenNode): TokenNode {
-    return new TokenNode(node.__tokenId, node.__key);
-  }
+/** The Lexical class, for a headless editor's `nodes` config. */
+export const TokenNode = corpusTokenNode.Node;
 
-  static importJSON(json: SerializedLexicalNode & { tokenId?: string }): TokenNode {
-    return new TokenNode(json.tokenId ?? "");
-  }
-
-  constructor(tokenId = "", key?: NodeKey) {
-    super(key);
-    this.__tokenId = tokenId;
-  }
-
-  exportJSON(): SerializedLexicalNode & { tokenId: string } {
-    return { type: "test-token", version: 1, tokenId: this.__tokenId };
-  }
-
-  isInline(): true {
-    return true;
-  }
-
-  // Mirrors the real decorators: native text content stays empty; the token is
-  // written by `serializeNode` only.
-  getTextContent(): string {
-    return "";
-  }
-
-  createDOM(): HTMLElement {
-    throw new Error("createDOM must never be called headless");
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  decorate(): null {
-    return null;
-  }
-
-  getTokenId(): string {
-    return this.__tokenId;
-  }
-}
-
-export const tokenExtension: RunsTokenExtension = {
-  deserializePattern: /\[\[(tok-[a-z0-9]+)\]\]/,
-  createNodeFromMatch: (m) => new TokenNode(m[1]!),
-  serializeNode: (n) => (n instanceof TokenNode ? `[[${n.getTokenId()}]]` : null),
-};
+export const corpusTokenExtension = tokenExtension({
+  id: "test-token",
+  pattern: /\[\[(tok-[a-z0-9]+)\]\]/,
+  node: corpusTokenNode,
+});
 
 /** The corpus's standard options: the synthetic token materialized as a node. */
 export const tokenOpts: RunsXmlTextOptions = {
-  extensions: [tokenExtension],
+  extensions: [corpusTokenExtension],
   nodes: [TokenNode],
 };
 
@@ -133,7 +102,17 @@ export function prng(seed: number): () => number {
  * breaks — the two shapes where the naive length bases diverge.
  */
 export function randomRuns(rand: () => number): RichText {
-  const pieces = ["a", "bc", "hello", " ", "x y", "\n", "z\nw", "[[tok-gen]]", "é✨"];
+  const pieces = [
+    "a",
+    "bc",
+    "hello",
+    " ",
+    "x y",
+    "\n",
+    "z\nw",
+    "[[tok-gen]]",
+    "é✨",
+  ];
   const colors = COLOR_TOKENS.filter(
     (c): c is Exclude<ColorToken, "default"> => c !== "default",
   );
@@ -141,7 +120,12 @@ export function randomRuns(rand: () => number): RichText {
   const runs: RichText = [];
   for (let i = 0; i < n; i++) {
     const text = pieces[Math.floor(rand() * pieces.length)]!;
-    const run: { text: string; marks?: Mark[]; color?: ColorToken; link?: string } = {
+    const run: {
+      text: string;
+      marks?: Mark[];
+      color?: ColorToken;
+      link?: string;
+    } = {
       text,
     };
     const marks = MARK_ORDER.filter(() => rand() < 0.3);

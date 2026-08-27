@@ -35,7 +35,6 @@
     - `debug/stall-monitor`
     - `page/inline-date`
     - `page/inline-page-link`
-    - `page/read-only-view`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/file-links`

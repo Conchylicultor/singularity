@@ -13,7 +13,7 @@ export interface CollectedEntry {
 }
 
 export const checkEntries: CollectedEntry[] = [
-  { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/check"), dependsOn: [] },
+  { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/check"), dependsOn: ["plugin-meta/plugins/facets"] },
   { pluginPath: "apps-core/plugins/app-icon", id: "apps-core.app-icon", loader: () => import("@plugins/apps-core/plugins/app-icon/check"), dependsOn: ["primitives/plugins/icon-picker"] },
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: [] },

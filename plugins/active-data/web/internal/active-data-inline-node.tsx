@@ -1,13 +1,7 @@
-import { createElement } from "react";
-import type { ReactNode } from "react";
 import { MdClose } from "react-icons/md";
-import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
+import { type LexicalNode, type NodeKey } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLexicalNodeSelection } from "@lexical/react/useLexicalNodeSelection";
-import {
-  UNSAFE_unsealSlotComponent,
-  type SealContributions,
-} from "@plugins/framework/plugins/web-sdk/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -16,88 +10,36 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { ActiveData, type ActiveDataInlineContribution } from "../slots";
-import { ChipBoundary } from "./chip-boundary";
+import { activeDataInlineNode } from "../../core";
+import { renderInlineChip } from "./render-inline-chip";
 
-type SerializedActiveDataInlineNode = {
-  type: "active-data-inline";
-  version: 1;
-  text: string;
-};
+/**
+ * The browser half: the SAME family declared in `core/node.ts`, with the chip
+ * rendering added. Extending the core spec rather than re-declaring one is what
+ * makes the browser's class and the server's the same token type by
+ * construction — see that module for why the declaration lives there.
+ */
+export const activeDataInlineWebNode = activeDataInlineNode.decorated({
+  className: "inline-flex align-middle mx-0.5",
+  render: ({ text }, node) => (
+    <ActiveDataInlineChip text={text} nodeKey={node.getKey()} />
+  ),
+});
 
-// One generic inline decorator for every active-data inline token. It stores the
-// raw matched substring and resolves which contribution renders it at decorate
-// time — so registering a `display:"inline"` contribution lights it up in the
-// editor with zero per-tag Lexical wiring. Round-trips the raw text on
-// serialize/copy (mirrors paste-images' ImageNode), so a chip pasted elsewhere
-// re-deserializes via the same union pattern.
-export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
-  __text: string;
+/** The Lexical class to register in an editor's `nodes` config. */
+export const ActiveDataInlineNode = activeDataInlineWebNode.Node;
 
-  static getType(): string {
-    return "active-data-inline";
-  }
-
-  static clone(node: ActiveDataInlineNode): ActiveDataInlineNode {
-    return new ActiveDataInlineNode(node.__text, node.__key);
-  }
-
-  constructor(text: string, key?: NodeKey) {
-    super(key);
-    this.__text = text;
-  }
-
-  static importJSON(
-    json: SerializedActiveDataInlineNode,
-  ): ActiveDataInlineNode {
-    return new ActiveDataInlineNode(json.text);
-  }
-
-  exportJSON(): SerializedActiveDataInlineNode {
-    return { type: "active-data-inline", version: 1, text: this.__text };
-  }
-
-  isInline(): true {
-    return true;
-  }
-
-  createDOM(): HTMLElement {
-    const span = document.createElement("span");
-    span.className = "inline-flex align-middle mx-0.5";
-    return span;
-  }
-
-  updateDOM(): false {
-    return false;
-  }
-
-  getText(): string {
-    return this.__text;
-  }
-
-  // Lexical builds the text/plain clipboard payload from each node's text
-  // content; a bare DecoratorNode contributes "", which would drop the chip on
-  // copy. Emitting the raw token lets any editor reconstruct it on paste.
-  getTextContent(): string {
-    return this.__text;
-  }
-
-  decorate(): ReactNode {
-    return <ActiveDataInlineChip text={this.__text} nodeKey={this.__key} />;
-  }
-}
-
-// Resolves the matching inline contribution and renders its component. Uses a
-// full-string match (anchored) so a shorter pattern that merely appears *inside*
-// a longer token (e.g. a `conv-…` id embedded in a `<ui-context …>` tag) never
-// wins over the token that actually produced the node.
+// Renders the chip that owns this token, through the one registry read that
+// also applies the boundary (`renderInlineChip`). An unclaimed token stays raw
+// text — which is what lets a document holding this node hydrate correctly in a
+// composition without the owning chip plugin.
 //
 // Only ever rendered from `decorate()`, i.e. inside a `LexicalComposer`, so it
 // can read the editor context. When the editor is editable it wraps the chip in
-// a generic hover-reveal × removal affordance — every inline contribution gets
-// it for free, with zero per-contributor wiring. Read surfaces render the
-// contribution component directly (via linkify/segments), never through this
-// node, so they never get the × (mirrors paste-images' ImageNode).
+// a generic hover-reveal × removal affordance — every inline chip gets it for
+// free, with zero per-chip wiring. Read surfaces render the chip directly (via
+// linkify/segments), never through this node, so they never get the × (mirrors
+// paste-images' ImageNode).
 function ActiveDataInlineChip({
   text,
   nodeKey,
@@ -111,30 +53,8 @@ function ActiveDataInlineChip({
   // suppress the native text highlight on its label below) so it reads as "the
   // chip is grabbed as an object", never "its inner characters are selected".
   const [isSelected] = useLexicalNodeSelection(nodeKey);
-  const contributions = ActiveData.Tag.useContributions();
-  const inline = contributions.filter(
-    (c): c is SealContributions<ActiveDataInlineContribution> =>
-      c.display === "inline",
-  );
-  const match = inline.find((c) =>
-    new RegExp(`^(?:${c.pattern.source})$`, stripGlobal(c.pattern.flags)).test(
-      text,
-    ),
-  );
-  if (!match) return <>{text}</>;
-  // UNSAFE: unseal the slot component to render it outside the slot pipeline.
-  // Unsealing drops the boundary `slot-render` would have applied, so the
-  // element is wrapped back up in <ChipBoundary> — otherwise one throwing chip
-  // is caught by Lexical's own boundary, which blanks the whole content region
-  // into a nameless "An error was thrown." box.
-  const chip = (
-    <ChipBoundary contribution={match} token={text}>
-      {createElement(UNSAFE_unsealSlotComponent(match.component), {
-        content: text,
-        attrs: {},
-      })}
-    </ChipBoundary>
-  );
+  const chip = renderInlineChip(text);
+  if (chip === null) return <>{text}</>;
 
   if (!editor.isEditable()) return chip;
 
@@ -177,18 +97,12 @@ function ActiveDataInlineChip({
   );
 }
 
-function stripGlobal(flags: string): string {
-  return flags.replace("g", "");
-}
-
-export function $createActiveDataInlineNode(
-  text: string,
-): ActiveDataInlineNode {
-  return new ActiveDataInlineNode(text);
+export function $createActiveDataInlineNode(text: string): LexicalNode {
+  return activeDataInlineWebNode.create({ text });
 }
 
 export function $isActiveDataInlineNode(
   node: LexicalNode | null | undefined,
-): node is ActiveDataInlineNode {
-  return node instanceof ActiveDataInlineNode;
+): boolean {
+  return activeDataInlineNode.is(node);
 }

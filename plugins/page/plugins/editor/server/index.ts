@@ -62,6 +62,8 @@ export type { PageContentSnapshot, StoredBlock } from "./internal/page-content";
 export {
   Editor,
   blockTextProtectedSpans,
+  blockTextServerExtensions,
+  blockTextServerNodes,
   resolveBlockAnnotations,
 } from "./internal/block-registry";
 

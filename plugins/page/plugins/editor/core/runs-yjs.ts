@@ -7,11 +7,8 @@ import {
   yDocFromLexical,
 } from "@plugins/primitives/plugins/collab-doc/core";
 import type { RichText } from "./rich-text";
-import {
-  runsToLexical,
-  serializeBlockRuns,
-  type RunsTokenExtension,
-} from "./runs-lexical";
+import type { InlineTokenExtension } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import { runsToLexical, serializeBlockRuns } from "./runs-lexical";
 
 /**
  * THE runs ↔ `Y.XmlText` bridge — the only place that converts a block's
@@ -31,7 +28,7 @@ import {
  */
 export interface RunsXmlTextOptions {
   /** Inline token (de)serializers — the editor passes its registered set. */
-  extensions?: readonly RunsTokenExtension[];
+  extensions?: readonly InlineTokenExtension[];
   /** Custom node classes the extensions materialize (decorator nodes). */
   nodes?: ReadonlyArray<Klass<LexicalNode>>;
   /**

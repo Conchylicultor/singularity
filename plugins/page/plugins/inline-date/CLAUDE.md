@@ -24,6 +24,7 @@
 - Web:
   - Uses:
     - `page/editor.BlockTextPluginProps`
+    - `page/editor.blockTextTokenExtension`
     - `page/editor.registerBlockTextExtension`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
@@ -44,7 +45,10 @@
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useCaretQuery`
 - Core:
+  - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+  - Exports (types): `DateMentionFields`
   - Exports (values):
+    - `dateMentionNode`
     - `dateToken`
     - `MENTION_TOKEN_PATTERN`
     - `REMINDER_TOKEN_PATTERN`

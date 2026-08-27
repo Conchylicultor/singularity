@@ -105,6 +105,7 @@ export type {
   InlineSyntax,
   InlineFormatMatch,
   InlineFormatContext,
+  MarkdownSpan,
 } from "./inline-markdown";
 
 export {
@@ -115,7 +116,6 @@ export {
   serializeBlockRuns,
   tokenOf,
 } from "./runs-lexical";
-export type { RunsTokenExtension } from "./runs-lexical";
 
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 export type { RunsXmlTextOptions } from "./runs-yjs";

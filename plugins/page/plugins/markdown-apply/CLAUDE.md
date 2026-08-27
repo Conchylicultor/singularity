@@ -261,10 +261,14 @@ doc is correct; different ⇒ a browser seeded first, so continue down the edit
 path against the winner's state. Nothing is merged blind.
 
 The server's seed `clientID` mirrors `use-collab-block-doc.ts`'s FNV-1a
-derivation with an EMPTY extension-set fingerprint, so it deliberately differs
-from a browser's for the same runs — that is the determinism contract working:
-different extension sets build structurally different seeds and must not share
-item ids.
+derivation over its OWN extension-set fingerprint — the token families that
+contributed a server node, ids taken from the contributing plugin. Those ids are
+not the web registrations' ids, so the fingerprint deliberately differs from a
+browser's for the same runs, and that is the determinism contract working rather
+than a gap: two seeds may share a clientID only when they are provably
+byte-identical, and two independently-derived id sets are not a proof. The cost
+is nil — `initBlockDoc` is first-writer-wins and hands back the authoritative
+state, so a loser adopts the winner's bytes instead of merging its own.
 
 ## The character-level trim is the binding's own diff
 
@@ -280,18 +284,32 @@ Everything else rebuilds just the middle through the SHARED `$appendRuns` walk.
 A doc that is not a single paragraph — a shape nothing in this system produces —
 is rebuilt wholesale: correct, not identity-preserving, stated not hidden.
 
-## Known gap: a doc holding an inline decorator node
+## A doc holding an inline decorator node
 
-`[[pageId]]` / `\(latex\)` are plain characters in `TextRun.text` (which is why
-`protectedSpans` alone made markdown conversion server-safe) — but in a doc a
-BROWSER wrote they are decorator NODES whose Lexical class lives in a web
-plugin. `readStateRuns` refuses such a doc up front, naming the token type
-(detected without hydrating: a decorator is the only thing `@lexical/yjs` stores
-as a `Y.XmlElement`). **Do not "fix" it with a stub class** — a synthesized node
-has no `getTextContent`, so the token would serialize to `""` and the splice
-would silently delete it. Closing it properly needs the server twin of
-`registerBlockTextExtension`'s NODE half. Bounded: `read_page` is unaffected, and
-only an EDIT to a block containing a token is refused.
+`[[page:…]]` / `\(latex\)` / a bare `att-…` chip are plain characters in
+`TextRun.text` — but in a doc a BROWSER wrote they are decorator NODES. The
+server reads and rewrites them: a family declares its node once in its own
+`core/` and contributes THAT object as `Editor.InlineToken`'s `node`, so
+`blockTextServerNodes()` registers the headless twin of the class the browser
+wrote the doc with and `blockTextServerExtensions()` serializes it back to its
+token. Both are read at call time, like `blockTextProtectedSpans()`.
+
+- **`readStateRuns` still refuses a decorator type with NO server node**, naming
+  it (detected without hydrating: a decorator is the only thing `@lexical/yjs`
+  stores as a `Y.XmlElement`). The refusal narrowed; it did not soften. **Do not
+  "fix" the remainder with a stub class** — a node with no `getTextContent`
+  serializes to `""` and the splice silently deletes the token.
+- **`runs-splice.ts` keys a registered token on its token TEXT**, and
+  `newUnitsOf` mirrors `lineNodes`' split through the same `matchTokens`. An
+  unchanged chip therefore aligns into the common prefix/suffix and keeps its
+  CRDT item; one inside a changed middle re-materializes, because the rebuild
+  gets the same extensions. The old unmatchable `opaque␀<nodeKey>` arm remains
+  for an unregistered decorator and is unreachable — `readStateRuns` refuses
+  first. Do not re-key a registered token on identity: every chip in an edited
+  block would fall into the middle, survive as characters, and lose its node
+  permanently (nothing re-scans an existing doc).
+- Free consequence: any `edit_page` that rebuilds a block's middle materializes
+  the chips in it — the migration path for legacy blocks, instead of a sweep.
 
 ## No MCP tools here: this plugin is the ENGINE
 
@@ -360,6 +378,8 @@ annotation in the key would make every status change look like a new block.
     - `page/editor._blocks`
     - `page/editor.applyPageBlockPatch`
     - `page/editor.blockTextProtectedSpans`
+    - `page/editor.blockTextServerExtensions`
+    - `page/editor.blockTextServerNodes`
     - `page/editor.Editor`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.resolveBlockAnnotations`

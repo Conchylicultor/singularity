@@ -54,16 +54,23 @@ tag later appears (the sent user message, assistant text) because it is just an
   stays `disabled` while armed on purpose: picking its own (non-hit-testable)
   button each e2e run is the live regression test for this.
 - **Rich chip.** `components/ui-context-tag.tsx` is an `active-data` **inline
-  contribution** (`ActiveData.Tag`, `display:"inline"`, pattern `UI_CONTEXT_RE`):
-  it parses the matched `<ui-context>…</ui-context>` substring back into metadata
-  and renders `UiContextChip`. This is the *only* registration — `active-data`
-  renders inline contributions on every text surface, including the Lexical
-  editor (via its generic `ActiveDataInlineNode` bridge into
-  `TextEditorSlots.NodeExtensions`) and read surfaces (markdown / user-text
-  `useActiveDataLinkify`). The token is single-line so it round-trips through the
-  editor's line-based markdown sync; copy/paste survives because the generic node
-  emits the raw tag as its text content. There is no element-picker-owned Lexical
-  node — registering the one inline contribution lights the chip up everywhere.
+  chip** (`ActiveData.Tag(inlineChip({ id: "ui-context", pattern: UI_CONTEXT_RE,
+  surfaces: ["transcript"], … }))`): it parses the matched
+  `<ui-context>…</ui-context>` substring back into metadata and renders
+  `UiContextChip`. This is the *only* registration — `active-data` renders
+  inline chips on every text surface of that kind, including the Lexical prompt
+  editor (via its generic `ActiveDataInlineNode`) and read surfaces (markdown /
+  user-text `useActiveDataLinkify`). The token is single-line so it round-trips
+  through the editor's line-based markdown sync; copy/paste survives because the
+  generic node emits the raw tag as its text content. There is no
+  element-picker-owned Lexical node — declaring the one chip lights it up
+  everywhere.
+
+  **`surfaces: ["transcript"]`, deliberately.** A `<ui-context>` tag points at a
+  live UI element captured for one agent turn; it is addressed to the model
+  reading that conversation and means nothing in a page a person wrote. The chip
+  declaring that is what keeps it out of Pages — no page-side consumer names
+  this plugin.
 
 ## Token format
 
@@ -93,9 +100,10 @@ Two of its fields are stamped by **this** plugin's build transform
   - Contributes:
     - `ActionBar.Item` → `ElementPickerButton`
     - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
-    - `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
+    - `ActiveData.Tag` "ui-context" → `UiContextTag`
   - Uses:
     - `active-data.ActiveData`
+    - `active-data.inlineChip`
     - `improve.insertIntoImproveDraft`
     - `primitives/css/coords.Placed`
     - `primitives/css/coords.placedClasses`

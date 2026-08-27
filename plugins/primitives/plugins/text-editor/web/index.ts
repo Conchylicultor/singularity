@@ -5,6 +5,7 @@ export { TextEditor } from "./components/text-editor";
 export { TextEditorSlots, type TextEditorPluginProps } from "./slots";
 export {
   registerNodeExtension,
+  registerNodeExtensionSource,
   type NodeExtension,
 } from "./internal/node-extensions";
 export { useInsertMarkdown } from "./internal/use-insert-markdown";

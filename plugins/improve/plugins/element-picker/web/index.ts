@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData } from "@plugins/active-data/web";
+import { ActiveData, inlineChip } from "@plugins/active-data/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { TaskDraftFormSlots } from "@plugins/tasks/plugins/task-draft-form/web";
 import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
@@ -18,7 +18,18 @@ export default {
       component: TaskDraftPickerButton,
     }),
     // The chip renders the same everywhere via the active-data inline registry:
-    // composing (editor node bridge) and on display (markdown / user-text linkify).
-    ActiveData.Tag({ display: "inline", pattern: UI_CONTEXT_RE, component: UiContextTag }),
+    // composing (the prompt editor's token extension) and on display (markdown /
+    // user-text linkify).
+    ActiveData.Tag(
+      inlineChip({
+        id: "ui-context",
+        pattern: UI_CONTEXT_RE,
+        // TRANSCRIPT ONLY. A `<ui-context>` tag is a pointer at a live UI
+        // element captured for one agent turn — it is addressed to the model
+        // reading that conversation, and means nothing in a page a person wrote.
+        surfaces: ["transcript"],
+        component: UiContextTag,
+      }),
+    ),
   ],
 } satisfies PluginDefinition;

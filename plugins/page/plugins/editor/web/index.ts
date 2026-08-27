@@ -65,7 +65,11 @@ export {
 export type { BlockSection } from "./components/block-type-list";
 export {
   registerBlockTextExtension,
+  registerBlockTextExtensionSource,
+  blockTextTokenExtension,
   getBlockTextExtensions,
+  blockTextRenderableExtensions,
+  blockTextTokenExtensions,
   colorCssValue,
 } from "./internal/block-text-extensions";
 export { registerBlockPasteHandler } from "./internal/block-paste-handlers";
@@ -79,6 +83,7 @@ export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
 export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";
 export type {
   BlockTextExtension,
+  BlockTextTokenExtension,
   BlockTextPluginProps,
 } from "./internal/block-text-extensions";
 export { usePageOptions, PageOptionsList } from "./components/page-options";

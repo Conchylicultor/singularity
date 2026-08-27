@@ -34,7 +34,11 @@ import {
   type RichText,
 } from "./rich-text";
 import { $appendRuns, runsToLexical, serializeBlockRuns } from "./runs-lexical";
-import { runsToXmlText, xmlTextToRuns, type RunsXmlTextOptions } from "./runs-yjs";
+import {
+  runsToXmlText,
+  xmlTextToRuns,
+  type RunsXmlTextOptions,
+} from "./runs-yjs";
 import { TokenNode, prng, randomRuns, tokenOpts } from "./runs-corpus";
 
 /**
@@ -44,7 +48,10 @@ import { TokenNode, prng, randomRuns, tokenOpts } from "./runs-corpus";
  * `data.text` always comes from `serializeBlockRuns`, so stored runs are always
  * already in this form).
  */
-function lexicalNormalize(runs: RichText, opts: RunsXmlTextOptions = {}): RichText {
+function lexicalNormalize(
+  runs: RichText,
+  opts: RunsXmlTextOptions = {},
+): RichText {
   const editor = createEditor({
     namespace: "normalize",
     nodes: [LinkNode, ...(opts.nodes ?? [])],
@@ -52,7 +59,9 @@ function lexicalNormalize(runs: RichText, opts: RunsXmlTextOptions = {}): RichTe
       throw error;
     },
   });
-  editor.update(() => runsToLexical(runs, opts.extensions ?? []), { discrete: true });
+  editor.update(() => runsToLexical(runs, opts.extensions ?? []), {
+    discrete: true,
+  });
   return serializeBlockRuns(editor, opts.extensions ?? []);
 }
 
@@ -95,7 +104,10 @@ describe("runs → xmlText → runs", () => {
   test("every mark combination (all 32 subsets)", () => {
     for (let bits = 0; bits < 1 << MARK_ORDER.length; bits++) {
       const marks = MARK_ORDER.filter((_, i) => bits & (1 << i));
-      const run = marks.length > 0 ? { text: "combo", marks: [...marks] } : { text: "combo" };
+      const run =
+        marks.length > 0
+          ? { text: "combo", marks: [...marks] }
+          : { text: "combo" };
       expectRoundTrip([run]);
     }
   });
@@ -111,7 +123,12 @@ describe("runs → xmlText → runs", () => {
   test("links, and link + marks + color together", () => {
     expectRoundTrip([{ text: "click", link: "https://example.com" }]);
     expectRoundTrip([
-      { text: "fancy", marks: ["bold", "code"], color: "green", link: "https://x" },
+      {
+        text: "fancy",
+        marks: ["bold", "code"],
+        color: "green",
+        link: "https://x",
+      },
     ]);
   });
 
@@ -157,7 +174,9 @@ describe("runs → xmlText → runs", () => {
           const json = editor.getEditorState().toJSON();
           const walk = (n: Record<string, unknown>) => {
             if (n.type === "test-token") ids.push(n.tokenId as string);
-            for (const c of (n.children as Record<string, unknown>[] | undefined) ?? []) walk(c);
+            for (const c of (n.children as
+              Record<string, unknown>[] | undefined) ?? [])
+              walk(c);
           };
           walk(json.root as unknown as Record<string, unknown>);
           return ids;
@@ -165,6 +184,39 @@ describe("runs → xmlText → runs", () => {
       { nodes: [TokenNode] },
     );
     expect(tokenIds).toEqual(["tok-a1"]);
+
+    expect(xmlTextToRuns(xmlText, tokenOpts)).toEqual(coalesce(runs));
+  });
+
+  test("a CODE-marked run keeps its token as literal text", () => {
+    // `` `[[tok-a1]]` `` written as inline code is documentation, not a widget:
+    // materializing it would both lose the code styling and assert a reference
+    // the author did not write. One rule in `matchTokens`, so the editor seed,
+    // the read-only renderer and every token family obey it at once.
+    const runs: RichText = [{ text: "use [[tok-a1]] here", marks: ["code"] }];
+    const xmlText = runsToXmlText(runs, tokenOpts);
+
+    const tokenIds = readYDoc(
+      xmlText.doc!,
+      (editor) => {
+        const ids: string[] = [];
+        const walk = (n: Record<string, unknown>) => {
+          if (n.type === "test-token") ids.push(n.tokenId as string);
+          for (const c of (n.children as
+            Record<string, unknown>[] | undefined) ?? [])
+            walk(c);
+        };
+        walk(
+          editor.getEditorState().toJSON().root as unknown as Record<
+            string,
+            unknown
+          >,
+        );
+        return ids;
+      },
+      { nodes: [TokenNode] },
+    );
+    expect(tokenIds).toEqual([]);
 
     expect(xmlTextToRuns(xmlText, tokenOpts)).toEqual(coalesce(runs));
   });
@@ -252,7 +304,9 @@ describe("editYDocState + $appendRuns (doc-level merge append)", () => {
     const merged = new Doc();
     applyUpdate(merged, state);
     applyUpdate(merged, incremental);
-    expect(xmlTextToRuns(yDocContent(merged), tokenOpts)).toEqual(mergeRuns(a, b));
+    expect(xmlTextToRuns(yDocContent(merged), tokenOpts)).toEqual(
+      mergeRuns(a, b),
+    );
   });
 
   test("appending into an empty doc state equals the appended runs", () => {

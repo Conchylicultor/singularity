@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { getBlockTextExtensions } from "@plugins/page/plugins/editor/web";
+import { blockTextTokenExtensions } from "@plugins/page/plugins/editor/web";
 import {
   coalesce,
   runsToXmlText,
@@ -22,10 +22,10 @@ import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
 import { dateToken, reminderToken } from "../../core";
 import "./register";
 
-const extensions = getBlockTextExtensions();
+const extensions = blockTextTokenExtensions();
 const opts: RunsXmlTextOptions = {
   extensions,
-  nodes: extensions.flatMap((e) => (e.node ? [e.node] : [])),
+  nodes: extensions.map((e) => e.node.Node),
 };
 
 /** `field` values of materialized decorator nodes of `type` in the doc. */
@@ -40,11 +40,17 @@ function decoratorFields(
       const out: unknown[] = [];
       const walk = (n: Record<string, unknown>) => {
         if (n.type === type) out.push(n[field]);
-        for (const c of (n.children as Record<string, unknown>[] | undefined) ?? []) {
+        for (const c of (n.children as Record<string, unknown>[] | undefined) ??
+          []) {
           walk(c);
         }
       };
-      walk(editor.getEditorState().toJSON().root as unknown as Record<string, unknown>);
+      walk(
+        editor.getEditorState().toJSON().root as unknown as Record<
+          string,
+          unknown
+        >,
+      );
       return out;
     },
     { nodes: opts.nodes ? [...opts.nodes] : [] },
@@ -62,7 +68,9 @@ describe("date-mention inline node ↔ Y.XmlText", () => {
     expect(decoratorFields(xmlText, "date-mention", "iso")).toEqual([iso]);
     // A plain date mention carries reminderId = null — the null field must
     // survive the Yjs property sync (not become undefined/"").
-    expect(decoratorFields(xmlText, "date-mention", "reminderId")).toEqual([null]);
+    expect(decoratorFields(xmlText, "date-mention", "reminderId")).toEqual([
+      null,
+    ]);
 
     expect(xmlTextToRuns(xmlText, opts)).toEqual(coalesce(runs));
   });

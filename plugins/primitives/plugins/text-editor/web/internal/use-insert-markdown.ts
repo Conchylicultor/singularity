@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useMergedNodeExtensions } from "../slots";
+import { getNodeExtensions } from "./node-extensions";
 import { $insertMarkdownSnippet } from "./markdown";
 
 /**
@@ -17,20 +16,20 @@ import { $insertMarkdownSnippet } from "./markdown";
  */
 export function useInsertMarkdown(): (text: string) => void {
   const [editor] = useLexicalComposerContext();
-  // Read fresh at insert time: the extension set is boot-stable but its array
-  // identity churns each render, and it must not re-key the callback.
-  const extensionsRef = useLatestRef(useMergedNodeExtensions());
   return useCallback(
     (text: string) => {
       editor.update(
         () => {
-          $insertMarkdownSnippet(text, extensionsRef.current);
+          // Read at insert time, not at render: the registry folds in lazy
+          // sources, so the set an early render would have captured can still
+          // be missing families that registered since.
+          $insertMarkdownSnippet(text, getNodeExtensions());
         },
         // The caret belongs in the editor after an insert, whichever affordance
         // did the inserting — a toolbar chip, a picker, a dictation button.
         { onUpdate: () => editor.focus() },
       );
     },
-    [editor, extensionsRef],
+    [editor],
   );
 }

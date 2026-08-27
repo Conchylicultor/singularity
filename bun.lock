@@ -4433,6 +4433,21 @@
       "name": "@singularity/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/text-editor/plugins/token-extension": {
+      "name": "@singularity/plugin-primitives-text-editor-token-extension",
+      "version": "0.0.1",
+      "dependencies": {
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node": {
+      "name": "@singularity/plugin-primitives-text-editor-token-extension-node",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/primitives/plugins/tooltip": {
       "name": "@singularity/plugin-primitives-tooltip",
       "version": "0.0.1",
@@ -7816,6 +7831,10 @@
     "@singularity/plugin-primitives-text-editor-decorator-nav": ["@singularity/plugin-primitives-text-editor-decorator-nav@workspace:plugins/primitives/plugins/text-editor/plugins/decorator-nav"],
 
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
+
+    "@singularity/plugin-primitives-text-editor-token-extension": ["@singularity/plugin-primitives-text-editor-token-extension@workspace:plugins/primitives/plugins/text-editor/plugins/token-extension"],
+
+    "@singularity/plugin-primitives-text-editor-token-extension-node": ["@singularity/plugin-primitives-text-editor-token-extension-node@workspace:plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node"],
 
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 

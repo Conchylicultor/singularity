@@ -17,6 +17,10 @@ import {
   mergeBlockDocUpdate,
 } from "@plugins/page/plugins/editor-collab/server";
 import {
+  blockTextServerExtensions,
+  blockTextServerNodes,
+} from "@plugins/page/plugins/editor/server";
+import {
   coalesce,
   runsToXmlText,
   xmlTextToRuns,
@@ -33,23 +37,26 @@ import { $spliceRunsInto } from "./runs-splice";
  * what happens here.
  *
  * ---------------------------------------------------------------------------
- * Extensions are empty, and that has one real consequence
+ * A decorator node is read and rewritten, not refused
  * ---------------------------------------------------------------------------
  *
- * Inline decorator tokens (`[[page:<pageId>]]`, `[[date:…]]`, `\(latex\)`) are stored
- * INSIDE `TextRun.text` as plain characters, so runs-level work needs no
- * extensions — which is why `protectedSpans` (pure data, contributed to
- * `Editor.InlineToken`) was enough to make markdown conversion server-safe.
+ * Inline decorator tokens (`[[page:<pageId>]]`, `[[date:…]]`, `\(latex\)`, a bare
+ * `att-…` chip) are stored INSIDE `TextRun.text` as plain characters, so
+ * runs-level work needs no extensions at all — which is why `protectedSpans`
+ * alone made markdown CONVERSION server-safe.
  *
- * A doc a BROWSER wrote is a different matter: there the token is materialized
- * as a decorator NODE whose Lexical class lives in a web plugin, and there is no
- * server-side class to construct it from. `readStateRuns` refuses such a doc up
- * front, naming the token type — see the note there for why a stub registration
- * would be worse than the refusal. This bounds the gap precisely: `read_page` is
- * unaffected (it reads `data.text`, where the token IS text), and only an EDIT
- * to a block that actually contains one is refused. Closing it needs the server
- * twin of `registerBlockTextExtension`'s NODE half — the same shape Step 1 built
- * for `protectedSpans`, which does not exist yet.
+ * A doc a BROWSER wrote is the other half: there the token is MATERIALIZED as a
+ * decorator node. That used to be refused outright, because the node's Lexical
+ * class existed only in the browser. It no longer does: a token family declares
+ * its node once in its own `core/` and contributes that same spec object to
+ * `Editor.InlineToken`, so the server registers the headless twin of exactly the
+ * class the browser wrote the doc with (`blockTextServerNodes`) and serializes
+ * it back to its token through the same derived extension
+ * (`blockTextServerExtensions`).
+ *
+ * The refusal in {@link readStateRuns} therefore NARROWS rather than
+ * disappearing: a decorator type with no registered server node still throws,
+ * naming it. Do not soften it into a stub registration — see the note there.
  */
 
 /**
@@ -61,12 +68,15 @@ import { $spliceRunsInto } from "./runs-splice";
  * different clientID so divergent seeds can only duplicate (a plain CRDT merge)
  * rather than corrupt by colliding item ids.
  *
- * The server's extension set is empty, so its fingerprint is `""` — and it
- * therefore deliberately does NOT match a browser's. That is the contract
- * working, not a bug: the two build structurally different seeds. It costs
- * nothing, because `initBlockDoc` is first-writer-wins and hands back the
- * AUTHORITATIVE state, so a loser adopts the winner's bytes instead of merging
- * its own (see {@link writeBlockText}).
+ * The server's extension set is a REAL one now (the families that contributed a
+ * server node), and its ids are the contributing plugin's — so its fingerprint
+ * still deliberately does NOT match a browser's, whose ids are the web
+ * registrations'. That is the contract working, not a bug: the two seeds must
+ * not share a clientID unless they are provably identical, and "provably" is not
+ * something two independently-derived id sets can supply. It costs nothing,
+ * because `initBlockDoc` is first-writer-wins and hands back the AUTHORITATIVE
+ * state, so a loser adopts the winner's bytes instead of merging its own (see
+ * {@link writeBlockText}).
  */
 function seedClientID(runsJson: string, extIds: string): number {
   let h = 0x811c9dc5;
@@ -82,10 +92,26 @@ function seedClientID(runsJson: string, extIds: string): number {
   return h >>> 0;
 }
 
-/** Full seed-state bytes for `runs` (see {@link seedClientID}). */
+/**
+ * Full seed-state bytes for `runs` (see {@link seedClientID}).
+ *
+ * The seed materializes every token it can, through the SAME extension set
+ * {@link readStateRuns} reads a doc back with — a block seeded under one set and
+ * read under another round-trips a decorator into plain characters, which is the
+ * silent data loss the web's `blockTextRunsOptions` exists to forbid.
+ */
 function buildSeedState(runs: RichText): Uint8Array {
+  const extensions = blockTextServerExtensions();
+  // Canonical fingerprint of the active extension set: sorted ids, so the
+  // clientID keys on the set's identity independent of contribution order.
+  const extIds = extensions
+    .map((e) => e.id)
+    .sort()
+    .join(",");
   const xmlText = runsToXmlText(runs, {
-    clientID: seedClientID(JSON.stringify(runs), ""),
+    extensions,
+    nodes: blockTextServerNodes(),
+    clientID: seedClientID(JSON.stringify(runs), extIds),
   });
   const doc = xmlText.doc;
   if (!doc) {
@@ -131,22 +157,34 @@ function opaqueNodeTypes(doc: Doc): string[] {
   return [...found];
 }
 
-/** The runs a stored doc state currently holds — the block's TRUE text. */
-function readStateRuns(state: Uint8Array, blockId: string): RichText {
+/**
+ * The runs a stored doc state currently holds — the block's TRUE text.
+ *
+ * Exported for its own co-located suite: it is the whole of "can the server read
+ * this block", and the two answers it gives (the runs, or the refusal) are what
+ * that suite pins.
+ */
+export function readStateRuns(state: Uint8Array, blockId: string): RichText {
   const doc = new Doc();
   applyUpdate(doc, state);
   try {
-    const opaque = opaqueNodeTypes(doc);
+    const extensions = blockTextServerExtensions();
+    const nodes = blockTextServerNodes();
+    const registered = new Set(extensions.map((e) => e.node.type));
+    // The refusal NARROWS to the types nothing registered a server node for; it
+    // does not soften. Everything else is now readable, so a remainder is a
+    // genuine "this composition cannot express that token".
+    const opaque = opaqueNodeTypes(doc).filter((t) => !registered.has(t));
     if (opaque.length > 0) {
       throw new Error(
         `block ${blockId}'s content doc holds inline decorator node(s) [${opaque.join(", ")}] ` +
-          `whose Lexical class exists only in the browser, so the server cannot read or ` +
-          `rewrite this block's text without dropping them. Edit it from the editor, or ` +
-          `give those token plugins a server-side node contribution (the NODE twin of the ` +
-          `Editor.InlineToken pattern contribution).`,
+          `with no server-side node, so the server cannot read or rewrite this block's ` +
+          `text without dropping them. Edit it from the editor, or give those token ` +
+          `plugins a \`node\` on their Editor.InlineToken contribution (the spec object ` +
+          `from their own core/, the one their browser class extends).`,
       );
     }
-    return xmlTextToRuns(yDocContent(doc));
+    return xmlTextToRuns(yDocContent(doc), { extensions, nodes });
   } finally {
     doc.destroy();
   }
@@ -211,8 +249,12 @@ export async function writeBlockText(
 
   if (runsEqual(readStateRuns(state, blockId), runs)) return;
 
-  const update = editYDocState(state, () => $spliceRunsInto(runs), {
-    nodes: [LinkNode],
+  // The extension set the splice aligns and rebuilds with, and the node classes
+  // the replica must be able to hydrate — the same pair `readStateRuns` just
+  // read the doc with, so the alignment sees the tokens it will write back.
+  const extensions = blockTextServerExtensions();
+  const update = editYDocState(state, () => $spliceRunsInto(runs, extensions), {
+    nodes: [LinkNode, ...blockTextServerNodes()],
   });
   await mergeBlockDocUpdate(db, blockId, update);
 }

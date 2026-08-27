@@ -13,6 +13,12 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
  * (a static render declares no page navigation), so `onClick` is a pure
  * `stopPropagation`. A consumer that wants navigation can wrap the rendered
  * output in its own click handler; the preview layer stays inert by design.
+ *
+ * It lives HERE, with the family that declares the token, rather than in
+ * `read-only-view` — which used to own it and to name this token type by hand.
+ * A read-only surface reaches it through `renderToken` on the registration in
+ * `../internal/register`, so the surface names no token family at all and a new
+ * one cannot be forgotten there.
  */
 export function PageLinkChip({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);

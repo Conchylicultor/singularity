@@ -1,15 +1,15 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { colorCssValue } from "@plugins/page/plugins/editor/web";
+import { matchTokens } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import {
+  blockTextRenderableExtensions,
+  colorCssValue,
+} from "@plugins/page/plugins/editor/web";
 import {
   runsOf,
   type RichText,
   type TextRun,
 } from "@plugins/page/plugins/editor/core";
-import { PAGE_LINK_TOKEN_PATTERN } from "@plugins/page/plugins/inline-page-link/core";
-import { INLINE_MATH_TOKEN_PATTERN } from "@plugins/page/plugins/math/plugins/inline/core";
-import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
-import { PageLinkChip } from "./page-link-chip";
 
 /**
  * Faithful, non-editable rendering of the editor's `RichText` runs model.
@@ -21,8 +21,8 @@ import { PageLinkChip } from "./page-link-chip";
  *    pixel-identical.
  *  - color: `colorCssValue(token)` → the shared `var(--rt-color-<token>)` CSS var.
  *  - link: a non-editable `<a>` styled like the editor's link theme.
- *  - inline `[[page:<pageId>]]` page-link tokens → a read-only `<PageLinkChip>`.
- *  - inline `\(latex\)` math tokens → `<KatexMath display={false}>`.
+ *  - inline TOKENS — a page link, a date mention, inline math, an agent id —
+ *    through the registry, never by name. See {@link segmentsOf}.
  *
  * The mark class strings are duplicated from the editor's Lexical `theme.text`
  * config rather than imported (they live inside a Lexical config object, not an
@@ -37,56 +37,54 @@ const MARK_CODE = "rounded-md bg-muted px-1 font-mono text-[0.9em]";
 // Lexical theme.link.
 const LINK_CLASS = "text-primary underline";
 
-/** One token recognized inside a run's text, in priority order. */
+/** One piece of a run: plain characters, or a token the registry recognized. */
 type Segment =
   | { kind: "text"; text: string }
-  | { kind: "page-link"; pageId: string }
-  | { kind: "math"; latex: string };
-
-const PAGE_LINK_RE = new RegExp(PAGE_LINK_TOKEN_PATTERN.source, "g");
-const INLINE_MATH_RE = new RegExp(INLINE_MATH_TOKEN_PATTERN.source, "g");
+  | { kind: "token"; text: string; render: () => ReactNode };
 
 /**
- * Split a run's text into plain spans + recognized inline tokens. Page-link and
- * inline-math tokens have non-overlapping, distinctive delimiters (`[[…]]` vs
- * `\(…\)`), so a single combined scan that prefers whichever token starts first
- * is unambiguous.
+ * Split a run's text into plain spans + recognized inline tokens.
+ *
+ * The scan is `matchTokens` — the very walk the editor's own runs→Lexical seed
+ * runs — over the very registry the editor reads, so the read-only split and the
+ * editable split are ONE function over ONE set. This file used to hardcode
+ * exactly two token types and race their two regexes, which is why `[[date:…]]`
+ * showed up as literal brackets on every read-only surface for as long as inline
+ * dates existed: nobody remembered to add the third case, and nothing could tell
+ * them. There is no third case to add any more.
+ *
+ * Two things come for free with the shared walk. A run carrying the `code` mark
+ * yields no tokens at all, so `` `att-…` `` written as inline code stays code
+ * here exactly as it does in the editor. And a token whose family renders
+ * `null` — the chip is not in this composition — falls back to its raw
+ * characters, which is what the Lexical decorator does too.
+ *
+ * A token family that is not registered at all is not matched, so its token
+ * stays plain text. That is the honest answer on a surface composed without it.
  */
-function segmentsOf(text: string): Segment[] {
+function segmentsOf(
+  text: string,
+  marks: readonly string[] | undefined,
+): Segment[] {
   const out: Segment[] = [];
   let cursor = 0;
-  while (cursor < text.length) {
-    PAGE_LINK_RE.lastIndex = cursor;
-    INLINE_MATH_RE.lastIndex = cursor;
-    const link = PAGE_LINK_RE.exec(text);
-    const math = INLINE_MATH_RE.exec(text);
-
-    // Pick the earliest-starting match (if any).
-    let next: { index: number; seg: Segment; length: number } | null = null;
-    if (link && (!math || link.index <= math.index)) {
-      next = {
-        index: link.index,
-        // Group 1 = the namespaced form, group 2 = the pre-namespace one.
-        seg: { kind: "page-link", pageId: link[1] ?? link[2]! },
-        length: link[0].length,
-      };
-    } else if (math) {
-      next = {
-        index: math.index,
-        seg: { kind: "math", latex: math[1]! },
-        length: math[0].length,
-      };
+  for (const match of matchTokens(
+    text,
+    marks,
+    blockTextRenderableExtensions(),
+  )) {
+    if (match.start > cursor) {
+      out.push({ kind: "text", text: text.slice(cursor, match.start) });
     }
-
-    if (!next) {
-      out.push({ kind: "text", text: text.slice(cursor) });
-      break;
-    }
-    if (next.index > cursor) {
-      out.push({ kind: "text", text: text.slice(cursor, next.index) });
-    }
-    out.push(next.seg);
-    cursor = next.index + next.length;
+    out.push({
+      kind: "token",
+      text: match.text,
+      render: () => match.extension.renderToken(match.match),
+    });
+    cursor = match.end;
+  }
+  if (cursor < text.length) {
+    out.push({ kind: "text", text: text.slice(cursor) });
   }
   return out;
 }
@@ -163,14 +161,14 @@ export function RunsRenderer({ value }: RunsRendererProps) {
   return (
     <>
       {runs.map((run, ri) => {
-        const segments = segmentsOf(run.text);
+        const segments = segmentsOf(run.text, run.marks);
         const children = segments.map((seg, si) => {
-          if (seg.kind === "page-link") {
-            return <PageLinkChip key={si} pageId={seg.pageId} />;
-          }
-          if (seg.kind === "math") {
+          if (seg.kind === "token") {
+            // A family answering `null` does not claim these characters after
+            // all — paint the raw token, never nothing.
+            const rendered = seg.render();
             return (
-              <KatexMath key={si} expression={seg.latex} display={false} />
+              <Fragment key={si}>{rendered ?? renderText(seg.text)}</Fragment>
             );
           }
           return <Fragment key={si}>{renderText(seg.text)}</Fragment>;

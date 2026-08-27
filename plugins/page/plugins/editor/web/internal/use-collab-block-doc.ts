@@ -36,7 +36,7 @@ import {
   $paragraphsPlainLength,
   blockTextNodes,
   blockTextRunsOptions,
-  getBlockTextExtensions,
+  blockTextTokenExtensions,
 } from "./block-text-extensions";
 import { projectableRunsOf, type ProjectTextFn } from "./doc-sourced-runs";
 import { $truncateFromLinearOffset } from "./collab-text-surgery";
@@ -989,7 +989,7 @@ export async function appendRunsToBlockDoc(
   dataText: unknown,
   runs: RichText,
 ): Promise<{ joinOffset: number }> {
-  const extensions = getBlockTextExtensions();
+  const extensions = blockTextTokenExtensions();
   const nodes = blockTextNodes();
   const { state } = await fetchEndpoint(
     blockDocInit,

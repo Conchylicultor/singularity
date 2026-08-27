@@ -606,6 +606,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
         - **`decorator-nav`** — Caret crossing over inline decorator nodes for Lexical editors: one ArrowLeft/ArrowRight steps to the far side instead of stalling on the contenteditable=false span.
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
+        - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
+          - Plugins:
+            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes).
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
     - **`ui-context`** — The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both improve/element-picker and reports/render-loop can ask 'what composed this element?' without either depending on the other.

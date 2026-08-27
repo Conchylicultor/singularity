@@ -6,3 +6,5 @@ export {
   scanReminderTokens,
   stripInlineTokens,
 } from "./tokens";
+export { dateMentionNode } from "./node";
+export type { DateMentionFields } from "./node";

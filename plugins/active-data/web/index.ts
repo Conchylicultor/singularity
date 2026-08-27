@@ -1,15 +1,24 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 import { InlineTextWalkerSlot } from "@plugins/primitives/plugins/inline-text/web";
-import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
+// Side-effect: registers the inline-chip union as a lazy source of the prompt
+// editor's token extensions, so a chip renders while composing too.
+import "./internal/register-node-source";
+// Side-effect: the same union, as a lazy source of the PAGE editor's block-text
+// extensions — so an id written in a page block is a chip there too.
+import "./internal/register-block-text-source";
 
-export { ActiveData, codeTag } from "./slots";
+export { ActiveData, codeTag, inlineChip } from "./slots";
 export type {
   ActiveDataContribution,
   ActiveDataBlockContribution,
   ActiveDataInlineContribution,
   ActiveDataCodeContribution,
+  ChipSurface,
 } from "./slots";
+export { inlineChips } from "./internal/inline-registry";
+export { renderInlineChip } from "./internal/render-inline-chip";
+export { activeDataInlineExtension } from "./internal/inline-extension";
 export { claimPending, declined, claimed } from "./claim";
 export type { CodeClaim, CodeResolver } from "./claim";
 export { useActiveDataSegments } from "./internal/segment-active-data";
@@ -26,7 +35,6 @@ export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding
 import { ActiveData as ActiveDataSlots } from "./slots";
 import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
 import { ActiveDataInlineWalker } from "./internal/inline-walker";
-import { useActiveDataNodeExtensions } from "./internal/node-extension-bridge";
 
 export default {
   collapsed: true,
@@ -46,12 +54,6 @@ export default {
       id: "active-data",
       order: 0,
       Component: ActiveDataInlineWalker,
-    }),
-    // Mirror inline tags into the Lexical editor so they render as chips while
-    // composing, not just on display.
-    TextEditorSlots.NodeExtensions({
-      id: "active-data-inline",
-      useExtensions: useActiveDataNodeExtensions,
     }),
   ],
   slots: ActiveDataSlots,

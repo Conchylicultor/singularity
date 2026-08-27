@@ -1,12 +1,21 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData } from "@plugins/active-data/web";
+import { ActiveData, inlineChip } from "@plugins/active-data/web";
+import { TASK_ID_RE } from "../core";
 import { TaskLinkChip } from "./components/task-link-chip";
-import { TASK_ID_RE } from "./internal/pattern";
 
 export { TaskLinkChip };
 
 export default {
   description:
     "Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.",
-  contributions: [ActiveData.Tag({ display: "inline", pattern: TASK_ID_RE, component: TaskLinkChip })],
+  contributions: [
+    ActiveData.Tag(
+      inlineChip({
+        id: "task-link",
+        pattern: TASK_ID_RE,
+        surfaces: ["transcript", "document"],
+        component: TaskLinkChip,
+      }),
+    ),
+  ],
 } satisfies PluginDefinition;

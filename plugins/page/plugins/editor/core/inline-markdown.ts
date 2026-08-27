@@ -286,6 +286,41 @@ export function matchInlineFormat(
 // is exactly the shape `runs-lexical.ts` reads back out of Lexical.
 
 /**
+ * Whether a token family's bytes must be MASKED from the inline scan.
+ *
+ * This is NOT the same question as "where is my token", even though one regex
+ * answers both and that is exactly why they were one field for a while. A token
+ * family declares two independent things:
+ *
+ *  - its **locator** (`pattern`) — how to FIND its token in a line, so it can be
+ *    built, serialized and re-materialized. Every token family has one, always.
+ *  - its **markdown span** (this) — whether the marks-aware inline scan
+ *    (`parseInlineMarkdown` / `serializeInlineMarkdown`) must be told to leave
+ *    those bytes alone. Only some families need it.
+ *
+ * Masking is NOT free, which is the whole reason it is a separate statement: a
+ * masked span becomes its OWN run carrying NO MARKS (`scanSpan`'s mask branch),
+ * because a decorator node cannot wear a `code` or `bold` mark. So protecting a
+ * span that did not need it silently DELETES the marks a person put on it —
+ * `` `att-1787654245-y41m` `` parses as an unmarked run instead of a code-marked
+ * one, and the id a person wrote as documentation comes back as a live widget.
+ *
+ *  - `"protect"` — the token text can contain characters the inline scan reads
+ *    as syntax (`_ * ~ \` [ ] < \\`), so leaving the scan to run over it
+ *    CORRUPTS the token. `\(a_1 * b\)` and `[[page:…]]` are the shape: inline
+ *    LaTeX is full of `_` and `*`, and a page link is made of brackets.
+ *  - `"transparent"` — the token text is markdown-inert (a bare id is digits,
+ *    lowercase letters and hyphens), so the scan running over it changes
+ *    nothing, and masking it would only cost the span its marks.
+ *
+ * Required, never defaulted: the two failure modes point opposite ways (an
+ * unprotected LaTeX token is corrupted; an over-protected id loses its marks),
+ * so there is no safe default to fall back on — the family that owns the bytes
+ * is the only one that knows.
+ */
+export type MarkdownSpan = "protect" | "transparent";
+
+/**
  * Stand-in character for a protected span's bytes while scanning. NUL cannot
  * appear in a delimiter tag, a link, or a tag name, so every `startsWith` test
  * fails inside a masked region BY CONSTRUCTION rather than by a range check

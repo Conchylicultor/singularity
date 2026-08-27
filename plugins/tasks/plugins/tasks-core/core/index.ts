@@ -28,6 +28,11 @@ export {
 } from "./internal/trailers";
 export type { TrailerCommit } from "./internal/trailers";
 
+// The mints for the ids this plugin's tables are keyed by. Exported (rather
+// than inlined at each call site) so the active-data chips that PARSE these
+// shapes can build their pattern fixtures from the real mint. See ./id-mint.ts.
+export { newTaskId, newAttemptId, newConversationId } from "./id-mint";
+
 export { ConversationStatusSchema } from "./conversation-status";
 export type { ConversationStatus } from "./conversation-status";
 export {

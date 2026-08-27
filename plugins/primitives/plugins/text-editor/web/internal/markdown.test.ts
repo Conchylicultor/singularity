@@ -1,15 +1,22 @@
 import { describe, it, expect } from "bun:test";
+import { tokenExtension } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import { defineInlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
 import { hasNodeExtensionToken } from "./markdown";
 import type { NodeExtension } from "./node-extensions";
 
-// Only the pattern matters to the gate; the node side is never touched.
+// Only the pattern matters to the gate, but there is no way to build an
+// extension without a real node declaration — which is the point: a pattern
+// that nothing can materialize is no longer expressible.
+const testNode = defineInlineTokenNode<{ raw: string }>({
+  type: "markdown-test-token",
+  fields: ["raw"],
+  token: ({ raw }) => raw,
+  fieldsOf: (m) => ({ raw: m[0] }),
+  textContent: "token",
+});
+
 function ext(pattern: RegExp): NodeExtension {
-  return {
-    node: null as unknown as NodeExtension["node"],
-    deserializePattern: pattern,
-    createNodeFromMatch: () => null,
-    serializeNode: () => null,
-  };
+  return tokenExtension({ id: pattern.source, pattern, node: testNode });
 }
 
 const UI_CONTEXT = ext(
@@ -19,15 +26,20 @@ const IMAGE = ext(/!\[[^\]]*\]\(\/api\/attachments\/[\w-]+\)/g);
 
 describe("hasNodeExtensionToken", () => {
   it("detects a token anywhere in the pasted text", () => {
-    const tag = '<ui-context url="http://x" plugin="improve"><hint>h</hint></ui-context>';
+    const tag =
+      '<ui-context url="http://x" plugin="improve"><hint>h</hint></ui-context>';
     expect(hasNodeExtensionToken(tag, [UI_CONTEXT])).toBe(true);
     expect(hasNodeExtensionToken(`fix ${tag} please`, [UI_CONTEXT])).toBe(true);
     expect(hasNodeExtensionToken(tag, [IMAGE, UI_CONTEXT])).toBe(true);
   });
 
   it("leaves ordinary text to the default paste", () => {
-    expect(hasNodeExtensionToken("just some text", [UI_CONTEXT, IMAGE])).toBe(false);
-    expect(hasNodeExtensionToken("<ui-context unclosed", [UI_CONTEXT])).toBe(false);
+    expect(hasNodeExtensionToken("just some text", [UI_CONTEXT, IMAGE])).toBe(
+      false,
+    );
+    expect(hasNodeExtensionToken("<ui-context unclosed", [UI_CONTEXT])).toBe(
+      false,
+    );
     expect(hasNodeExtensionToken("anything", [])).toBe(false);
   });
 

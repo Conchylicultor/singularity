@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
-import { TaskGraph } from "../../../core";
+import { TaskGraph, newTaskId } from "../../../core";
 import {
   findNextRankInFolder,
   isDescendant,
@@ -55,8 +55,7 @@ export async function createTask(
 }
 
 async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
-  const id =
-    input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const id = input.id ?? newTaskId();
   const folderId = input.folderId ?? null;
   const rank = input.rank ?? (await findNextRankInFolder(folderId, exec));
   // The scope brackets the INSERT: the task does not exist yet, so its entry

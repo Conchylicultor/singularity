@@ -12,9 +12,12 @@ import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "@plugins/primitives/plugins/text-editor/plugins/decorator-nav/web";
 import { DecoratorBlockPlugin } from "../internal/decorator-block-plugin";
-import { ExtensionPastePlugin } from "../internal/extension-paste-plugin";
-import { TextEditorSlots, useMergedNodeExtensions } from "../slots";
-import type { NodeExtension } from "../internal/node-extensions";
+import { TokenPastePlugin } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/web";
+import { TextEditorSlots } from "../slots";
+import {
+  getNodeExtensions,
+  type NodeExtension,
+} from "../internal/node-extensions";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
@@ -60,11 +63,13 @@ export function TextEditor({
   initialSelection,
   bottomSlot,
 }: TextEditorProps) {
-  const extensions = useMergedNodeExtensions();
+  // Read at render, never memoized: the registry folds in lazy sources whose
+  // families register as the plugin tiers load (see `getNodeExtensions`).
+  const extensions = getNodeExtensions();
   // The Lexical composer must know every node class up-front and must not be
   // rebuilt (that remounts the editor). The node-class set is fixed at boot, so
   // key the config on the node types — `extensions` identity churns each render.
-  const nodeKey = extensions.map((ext) => ext.node.getType()).join("|");
+  const nodeKey = extensions.map((ext) => ext.node.type).join("|");
   const initialConfig = useMemo(
     () =>
       buildInitialConfig({
@@ -102,7 +107,7 @@ export function TextEditor({
       <PluginSlot onError={onError} />
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
-      <ExtensionPastePlugin extensions={extensions} />
+      <TokenPastePlugin extensions={extensions} />
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}

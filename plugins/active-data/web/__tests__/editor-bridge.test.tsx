@@ -4,16 +4,22 @@ import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { TextEditor, TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
-import { ActiveData } from "../slots";
-import { useActiveDataNodeExtensions } from "../internal/node-extension-bridge";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+// The BARREL, not the internals: importing it is what registers active-data's
+// lazy node-extension source with the editor, which is exactly the wiring under
+// test. Declaring the chip below is then the only thing the fixture does.
+import { ActiveData, inlineChip } from "../index";
 
-// Proves the editor bridge: an active-data `display:"inline"` contribution
-// renders as a chip *inside the Lexical editor* (not just on read surfaces),
-// driven entirely by the generic union-pattern node — no per-tag Lexical wiring.
-// Uses a throwaway inline tag so the test doesn't couple active-data to any
-// specific contributor.
-function TestChip({ content }: { content: string; attrs: Record<string, string> }) {
+// Proves the editor bridge: an active-data inline chip renders as a chip
+// *inside the Lexical editor* (not just on read surfaces), driven entirely by
+// the generic union-pattern node — no per-chip Lexical wiring. Uses a throwaway
+// chip so the test doesn't couple active-data to any specific contributor.
+function TestChip({
+  content,
+}: {
+  content: string;
+  attrs: Record<string, string>;
+}) {
   return <button data-testid="chip">{content}</button>;
 }
 
@@ -21,11 +27,14 @@ const plugin = {
   id: "editor-bridge-test",
   description: "editor bridge fixture",
   contributions: [
-    ActiveData.Tag({ display: "inline", pattern: /@mention-\w+/g, component: TestChip }),
-    TextEditorSlots.NodeExtensions({
-      id: "active-data-inline",
-      useExtensions: useActiveDataNodeExtensions,
-    }),
+    ActiveData.Tag(
+      inlineChip({
+        id: "editor-bridge-test-chip",
+        pattern: /@mention-\w+/g,
+        surfaces: ["transcript"],
+        component: TestChip,
+      }),
+    ),
   ],
 } as unknown as LoadedPlugin;
 
@@ -63,7 +72,11 @@ describe("active-data inline tags render as chips in the Lexical editor", () => 
   it("omits the Remove affordance when the editor is read-only", async () => {
     render(
       <PluginProvider plugins={[plugin]}>
-        <TextEditor value="hi @mention-bob there" onChange={() => {}} disabled />
+        <TextEditor
+          value="hi @mention-bob there"
+          onChange={() => {}}
+          disabled
+        />
       </PluginProvider>,
     );
     // The chip still renders, but no removal × in a non-editable editor (mirrors

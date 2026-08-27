@@ -13,7 +13,7 @@ import type { CaretLandOptions } from "../caret-surface";
 import {
   $paragraphsPlainLength,
   $placeCaretAtLinearOffset,
-  getBlockTextExtensions,
+  blockTextTokenExtensions,
 } from "./block-text-extensions";
 
 /**
@@ -81,7 +81,10 @@ export function $truncateFromLinearOffset(offset: number): void {
  * focus back into the origin and stranding the caret there (the new block's
  * caret placement then bails on its activeElement guard).
  */
-export function truncateBlockTextFrom(editor: LexicalEditor, offset: number): void {
+export function truncateBlockTextFrom(
+  editor: LexicalEditor,
+  offset: number,
+): void {
   editor.update(
     () => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG);
@@ -246,7 +249,9 @@ export function focusHydratingAware(
   scroll = false,
   land?: Pick<CaretLandOptions, "onLanded" | "onLandingLost">,
 ): void {
-  const empty = editor.getEditorState().read(() => $getRoot().getChildrenSize() === 0);
+  const empty = editor
+    .getEditorState()
+    .read(() => $getRoot().getChildrenSize() === 0);
   if (!empty) {
     // Non-empty at focus time — since Stage 4a's instant pre-seed this is the
     // NORMAL path both for a freshly-split block (the tail is already in, no
@@ -258,14 +263,18 @@ export function focusHydratingAware(
   }
   editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
   const unregister = editor.registerUpdateListener(() => {
-    const ready = editor.getEditorState().read(() => $getRoot().getChildrenSize() > 0);
+    const ready = editor
+      .getEditorState()
+      .read(() => $getRoot().getChildrenSize() > 0);
     if (!ready) return;
     unregister();
     if (document.activeElement !== editor.getRootElement()) {
       land?.onLandingLost?.();
       return;
     }
-    const hasSelection = editor.getEditorState().read(() => $getSelection() !== null);
+    const hasSelection = editor
+      .getEditorState()
+      .read(() => $getSelection() !== null);
     if (!hasSelection) focusRestoringSelection(editor, scroll);
     land?.onLanded?.();
   });
@@ -295,7 +304,7 @@ export function appendRunsAtJoin(
   editor.update(
     () => {
       const join = $paragraphsPlainLength();
-      $appendRuns(runs, getBlockTextExtensions());
+      $appendRuns(runs, blockTextTokenExtensions());
       $placeCaretAtLinearOffset(join);
     },
     scroll ? { discrete: true } : { discrete: true, tag: SKIP_SCROLL_TAG },

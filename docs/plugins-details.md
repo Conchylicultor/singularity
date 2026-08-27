@@ -10,10 +10,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes:
       - `MarkdownEnhancerSlot`
       - `InlineTextWalkerSlot`
-      - `TextEditorSlots.NodeExtensions`
     - Uses:
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
+      - `page/editor.blockTextTokenExtension`
+      - `page/editor.registerBlockTextExtensionSource`
       - `primitives/css/center.Center`
       - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
@@ -31,7 +32,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/markdown.MarkdownEnhancementContext`
       - `primitives/markdown.MarkdownEnhancerSlot`
       - `primitives/markdown.useMarkdownEnhancement`
-      - `primitives/text-editor.TextEditorSlots`
+      - `primitives/text-editor.registerNodeExtensionSource`
     - Exports (types):
       - `ActiveDataBindingHandle`
       - `ActiveDataBlockContribution`
@@ -40,15 +41,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ActiveDataIdentity`
       - `ActiveDataInlineContribution`
       - `ActiveDataSegment`
+      - `ChipSurface`
       - `CodeClaim`
       - `CodeResolver`
     - Exports (values):
       - `ActiveData`
       - `ActiveDataIdentityProvider`
+      - `activeDataInlineExtension`
       - `claimed`
       - `claimPending`
       - `codeTag`
       - `declined`
+      - `inlineChip`
+      - `inlineChips`
+      - `renderInlineChip`
       - `useActiveDataBinding`
       - `useActiveDataIdentity`
       - `useActiveDataLinkify`
@@ -72,14 +78,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `primitives/live-state.resourceDescriptor`
+      - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
     - Exports (types):
       - `ActiveDataBinding`
       - `ActiveDataBindingsPayload`
+      - `ActiveDataInlineFields`
       - `PutBindingBody`
     - Exports (values):
       - `ActiveDataBindingSchema`
       - `ActiveDataBindingsPayloadSchema`
       - `activeDataBindingsResource`
+      - `activeDataInlineNode`
       - `deleteBinding`
       - `inlineBoundary`
       - `putBinding`
@@ -97,11 +106,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
       - `improve/element-picker`
   - Plugins:
-    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
+    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b" → `AttemptChip`
+        - Contributes: `ActiveData.Tag` "attempt" → `AttemptChip`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/live-state.matchResource`
@@ -111,6 +121,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-status.attemptStatusLabel`
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
+      - Server:
+        - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses: `active-data.inlineBoundary`
+        - Exports (values): `ATTEMPT_ID_RE`
     - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's object database and declines when it names no commit.
       - Web:
         - Contributes: `ActiveData.Tag` "commit-link"
@@ -130,11 +146,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.formatRelativeTime`
           - `primitives/tooltip.WithTooltip`
-    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
+    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b" → `ConvChip`
+        - Contributes: `ActiveData.Tag` "conv" → `ConvChip`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItem`
@@ -143,11 +160,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/status-dot.StatusDot`
           - `primitives/pane.useOpenPane`
         - Exports (values): `ConvChip`
+      - Server:
+        - Contributes: `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses: `active-data.inlineBoundary`
+        - Exports (values): `CONV_ID_RE`
     - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])(?![/.])\b" → `PageLinkChip`
+        - Contributes: `ActiveData.Tag` "page-link" → `PageLinkChip`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `apps/pages/page-tree.pageDetailPane`
           - `infra/endpoints.useEndpoint`
           - `page/editor.PageIcon`
@@ -181,17 +205,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
-    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed.
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)proto-\d+-[a-z0-9]{4}(?![/.])\b" → `PrototypeChip`
+        - Contributes: `ActiveData.Tag` "prototype" → `PrototypeChip`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `apps/prototypes/gallery.prototypeDetailPane`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
         - Exports (values): `PrototypeChip`
+      - Server:
+        - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses:
+          - `active-data.inlineBoundary`
+          - `apps/prototypes/files.PROTOTYPE_ID_RE`
+        - Exports (values): `PROTOTYPE_INLINE_RE`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
@@ -215,11 +248,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor.TextEditor`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
-    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
+    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
-        - Contributes: `ActiveData.Tag` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b" → `TaskLinkChip`
+        - Contributes: `ActiveData.Tag` "task-link" → `TaskLinkChip`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/live-state.matchResource`
@@ -228,6 +262,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.taskDetailPane`
           - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
+      - Server:
+        - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b"
+        - Uses: `page/editor.Editor`
+      - Core:
+        - Uses: `active-data.inlineBoundary`
+        - Exports (values): `TASK_ID_RE`
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
@@ -2642,7 +2682,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
           - Cross-plugin:
-            - Imported by: `apps/prototypes/thumbnails`
+            - Imported by:
+              - `active-data/prototype`
+              - `apps/prototypes/thumbnails`
         - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
           - Web:
             - Slots:
@@ -15930,9 +15972,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `ActionBar.Item` → `ElementPickerButton`
           - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
-          - `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
+          - `ActiveData.Tag` "ui-context" → `UiContextTag`
         - Uses:
           - `active-data.ActiveData`
+          - `active-data.inlineChip`
           - `improve.insertIntoImproveDraft`
           - `primitives/css/coords.Placed`
           - `primitives/css/coords.placedClasses`
@@ -18705,6 +18748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretQuery`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+          - `primitives/text-editor/token-extension/node.TokenPastePlugin`
           - `primitives/undo-redo.surfaceUndoProps`
           - `primitives/undo-redo.useScopedUndoRedo`
           - `reorder.isNodeData`
@@ -18727,6 +18771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockSection`
           - `BlockTextExtension`
           - `BlockTextPluginProps`
+          - `BlockTextTokenExtension`
           - `CaretFlightAbortReason`
           - `CaretFlightAbortReport`
           - `CaretSurface`
@@ -18745,7 +18790,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
           - `BlockEditor`
+          - `blockTextRenderableExtensions`
           - `BlockTextRenderer`
+          - `blockTextTokenExtension`
+          - `blockTextTokenExtensions`
           - `BlockTypeList`
           - `caretFlightReportSink`
           - `collabHydrationReportSink`
@@ -18765,6 +18813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readTransferText`
           - `registerBlockPasteHandler`
           - `registerBlockTextExtension`
+          - `registerBlockTextExtensionSource`
           - `TextBlockLayout`
           - `useBlockActivate`
           - `useBlockAnchors`
@@ -18818,6 +18867,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockSchema`
           - `blocksLiveResource`
           - `blockTextProtectedSpans`
+          - `blockTextServerExtensions`
+          - `blockTextServerNodes`
           - `deleteBlocksSubtree`
           - `Editor`
           - `PAGE_BLOCK_TYPE`
@@ -18851,6 +18902,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.resourceDescriptor`
           - `primitives/rank.Rank`
           - `primitives/rank.RankSchema`
+          - `primitives/text-editor/token-extension.InlineTokenExtension`
+          - `primitives/text-editor/token-extension.matchTokens`
+          - `primitives/text-editor/token-extension.tokenExtension`
+          - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
           - `primitives/tree.isDescendant`
           - `primitives/tree.selectionRoots`
           - `primitives/tree.subtreeIds`
@@ -18883,6 +18938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Mark`
           - `MarkdownContext`
           - `MarkdownNode`
+          - `MarkdownSpan`
           - `MdParseCtx`
           - `MdSerializeCtx`
           - `MoveBlockBody`
@@ -18891,7 +18947,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageRow`
           - `RichText`
           - `RowData`
-          - `RunsTokenExtension`
           - `RunsXmlTextOptions`
           - `SerializedBlock`
           - `TextBearingSchema`
@@ -18998,7 +19053,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `xmlTextToRuns`
       - Cross-plugin:
         - Imported by:
+          - `active-data`
+          - `active-data/attempt`
+          - `active-data/conv`
           - `active-data/page-link`
+          - `active-data/prototype`
+          - `active-data/task-link`
           - `apps/pages/agent-origin`
           - `apps/pages/content-search`
           - `apps/pages/history`
@@ -19316,6 +19376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `page/editor.BlockTextPluginProps`
+          - `page/editor.blockTextTokenExtension`
           - `page/editor.registerBlockTextExtension`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
@@ -19336,7 +19397,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useCaretQuery`
       - Core:
+        - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+        - Exports (types): `DateMentionFields`
         - Exports (values):
+          - `dateMentionNode`
           - `dateToken`
           - `MENTION_TOKEN_PATTERN`
           - `REMINDER_TOKEN_PATTERN`
@@ -19355,6 +19419,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.BlockTextPluginProps`
+          - `page/editor.blockTextTokenExtension`
           - `page/editor.PageIcon`
           - `page/editor.PageOption`
           - `page/editor.PageOptionsList`
@@ -19370,8 +19435,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useCaretQuery`
       - Core:
+        - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+        - Exports (types): `PageLinkFields`
         - Exports (values):
           - `PAGE_LINK_TOKEN_PATTERN`
+          - `pageLinkInlineNode`
           - `pageLinkToken`
           - `scanPageLinkTokens`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
@@ -19443,6 +19511,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor._blocks`
           - `page/editor.applyPageBlockPatch`
           - `page/editor.blockTextProtectedSpans`
+          - `page/editor.blockTextServerExtensions`
+          - `page/editor.blockTextServerNodes`
           - `page/editor.Editor`
           - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.resolveBlockAnnotations`
@@ -19540,6 +19610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `page/editor.BlockTextPluginProps`
+              - `page/editor.blockTextTokenExtension`
               - `page/editor.registerBlockTextExtension`
               - `page/math/render.KatexMath`
               - `primitives/css/center.Center`
@@ -19555,8 +19626,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `INLINE_MATH_TOKEN_PATTERN`
               - `inlineMathToken`
           - Core:
+            - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+            - Exports (types): `InlineMathFields`
             - Exports (values):
               - `INLINE_MATH_TOKEN_PATTERN`
+              - `inlineMathNode`
               - `inlineMathToken`
         - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
           - Web:
@@ -19566,7 +19640,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `page/math/equation`
               - `page/math/inline`
-              - `page/read-only-view`
     - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
@@ -19849,19 +19922,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BLOCK_INDENT`
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockAnchorProps`
+          - `page/editor.blockTextRenderableExtensions`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
           - `page/editor.PageIcon`
           - `page/editor.TextBlockLayout`
           - `page/editor.useBlockAnchors`
           - `page/editor.useFramedBlockTypes`
-          - `page/math/render.KatexMath`
-          - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
-          - `primitives/css/link-chip.LinkChip`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/selection-indicator.CheckboxIndicator`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.insetClass`
@@ -19870,7 +19940,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/text.TextVariant`
           - `primitives/css/ui-kit.cn`
-          - `primitives/live-state.useResource`
           - `primitives/syntax-highlight.HighlightedCode`
           - `primitives/text-editor/paste-images.attachmentUrl`
         - Exports (types):
@@ -21654,7 +21723,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/math/inline`
               - `page/page-link`
               - `page/place`
-              - `page/read-only-view`
               - `page/sub-page`
               - `page/video`
               - `plugin-meta/plugin-view`
@@ -22405,7 +22473,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/stall-monitor`
               - `page/inline-date`
               - `page/inline-page-link`
-              - `page/read-only-view`
               - `plugin-meta/contributions-table`
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/file-links`
@@ -22571,7 +22638,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/inline-page-link`
               - `page/page-link`
               - `page/place`
-              - `page/read-only-view`
               - `primitives/cursor-pagination`
               - `primitives/data-view`
               - `primitives/diff-view`
@@ -25818,6 +25884,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `primitives/text-editor`
           - `primitives/text-editor/caret-trigger`
+          - `primitives/text-editor/token-extension/node`
           - `primitives/undo-redo`
           - `reorder`
           - `screenshot`
@@ -26104,7 +26171,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/page-link`
           - `page/prompt/block`
           - `page/prompt/link`
-          - `page/read-only-view`
           - `plugin-meta/plugin-health`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/view-order`
@@ -27636,9 +27702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversation-view/terminal-pane`
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
-        - Slots:
-          - `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
-          - `TextEditorSlots.NodeExtensions` ← `active-data`
+        - Slots: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`
         - Uses:
           - `primitives/css/ui-kit.cn`
           - `primitives/css/yield.yieldClass`
@@ -27646,12 +27710,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/lazy-component.lazyComponent`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
+          - `primitives/text-editor/token-extension/node.TokenPastePlugin`
           - `primitives/undo-redo.localUndoProps`
         - Exports (types):
           - `NodeExtension`
           - `TextEditorPluginProps`
         - Exports (values):
           - `registerNodeExtension`
+          - `registerNodeExtensionSource`
           - `TextEditor`
           - `TextEditorSlots`
           - `useInsertMarkdown`
@@ -27739,6 +27805,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isAttachmentUrl`
               - `Lightbox`
               - `rewriteAttachmentMarkdown`
+          - Core:
+            - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+            - Exports (types): `ImageFields`
+            - Exports (values):
+              - `ATTACHMENT_MARKDOWN_RE`
+              - `attachmentMarkdown`
+              - `attachmentUrl`
+              - `extractAttachmentIds`
+              - `imageNode`
+              - `isAttachmentUrl`
+              - `rewriteAttachmentMarkdown`
           - Cross-plugin:
             - Imported by:
               - `apps/pages/page-tree`
@@ -27752,14 +27829,56 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot/draw-on-app`
               - `tasks/task-description`
               - `tasks/task-draft-form`
+        - **`token-extension`** — The inline-token primitive's synchronously-loadable half: the declaration TYPES of a token family, the tokenExtension pairing of pattern and node, THE line scan, and the lazy-source host registry. Imports lexical for types only — the class factory lives in the `node` sub-plugin.
+          - Cross-plugin:
+            - Imported by:
+              - `page/editor`
+              - `primitives/text-editor/token-extension/node`
           - Core:
+            - Exports (types):
+              - `InlineTokenDecoration`
+              - `InlineTokenExtension`
+              - `InlineTokenNode`
+              - `InlineTokenNodeRef`
+              - `InlineTokenNodeSpec`
+              - `SourcedRegistry`
+              - `TokenFields`
+              - `TokenFieldValue`
+              - `TokenMatch`
+              - `TokenScanExtension`
+              - `UnbrandedInlineTokenNode`
             - Exports (values):
-              - `ATTACHMENT_MARKDOWN_RE`
-              - `attachmentMarkdown`
-              - `attachmentUrl`
-              - `extractAttachmentIds`
-              - `isAttachmentUrl`
-              - `rewriteAttachmentMarkdown`
+              - `brandInlineTokenNode`
+              - `CODE_MARK`
+              - `createSourcedRegistry`
+              - `hasToken`
+              - `matchTokens`
+              - `tokenExtension`
+          - Plugins:
+            - **`node`** — The inline-token node factory's browser half: TokenPastePlugin, the registry-driven paste that materializes a pasted token as its node and declines an intra-app copy (which already carries the materialized nodes).
+              - Web:
+                - Uses: `primitives/latest-ref.useLatestRef`
+                - Exports (values): `TokenPastePlugin`
+              - Core:
+                - Uses:
+                  - `primitives/text-editor/token-extension.brandInlineTokenNode`
+                  - `primitives/text-editor/token-extension.InlineTokenDecoration`
+                  - `primitives/text-editor/token-extension.InlineTokenExtension`
+                  - `primitives/text-editor/token-extension.InlineTokenNode`
+                  - `primitives/text-editor/token-extension.InlineTokenNodeSpec`
+                  - `primitives/text-editor/token-extension.matchTokens`
+                  - `primitives/text-editor/token-extension.TokenFields`
+                  - `primitives/text-editor/token-extension.TokenFieldValue`
+                - Exports (values): `defineInlineTokenNode`
+              - Cross-plugin:
+                - Imported by:
+                  - `active-data`
+                  - `page/editor`
+                  - `page/inline-date`
+                  - `page/inline-page-link`
+                  - `page/math/inline`
+                  - `primitives/text-editor`
+                  - `primitives/text-editor/paste-images`
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
       - Web:
         - Uses:
@@ -30485,6 +30604,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConversationSummarySchema`
           - `isBlockedStatus`
           - `isSettled`
+          - `newAttemptId`
+          - `newConversationId`
+          - `newTaskId`
           - `parseTrailerLog`
           - `PUSH_TRAILER_KEY`
           - `pushesByAttemptResource`

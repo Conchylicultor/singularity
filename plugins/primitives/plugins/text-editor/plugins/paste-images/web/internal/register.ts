@@ -1,21 +1,12 @@
 import { registerNodeExtension } from "@plugins/primitives/plugins/text-editor/web";
-import { ImageNode, $createImageNode, $isImageNode } from "./image-node";
-import {
-  ATTACHMENT_MARKDOWN_RE,
-  isAttachmentUrl,
-  attachmentMarkdown,
-} from "./markdown";
+import { imageWebNode } from "./image-node";
+import { ATTACHMENT_MARKDOWN_RE } from "./markdown";
 
+// Side-effect: teach the text editor about pasted attachment images. The token
+// format and the fields it carries are declared once in `core/node.ts`, so the
+// markdown this writes and the markdown it reads back cannot disagree.
 registerNodeExtension({
-  node: ImageNode,
-  serializeNode: (node) => {
-    if (!$isImageNode(node)) return null;
-    return attachmentMarkdown(node.getAttachmentId(), node.getAlt());
-  },
-  deserializePattern: ATTACHMENT_MARKDOWN_RE,
-  createNodeFromMatch: (match) => {
-    const id = isAttachmentUrl(match[2]!);
-    if (!id) return null;
-    return $createImageNode({ attachmentId: id, alt: match[1] ?? "" });
-  },
+  id: "paste-image",
+  node: imageWebNode,
+  pattern: ATTACHMENT_MARKDOWN_RE,
 });

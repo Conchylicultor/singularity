@@ -18,16 +18,14 @@ import {
   $isTextNode,
   $setSelection,
   createEditor,
-  DecoratorNode,
   type CreateEditorArgs,
   type LexicalEditor,
   type LexicalNode,
-  type NodeKey,
-  type SerializedLexicalNode,
 } from "lexical";
 import { $isLinkNode, LinkNode } from "@lexical/link";
 import type { XmlText } from "yjs";
 import { readYDoc } from "@plugins/primitives/plugins/collab-doc/core";
+import { defineInlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/plugins/node/core";
 import type { RichText } from "../../core";
 import { runsLength } from "../../core/rich-text";
 import {
@@ -49,13 +47,20 @@ import {
   $placeCaretAtLinearOffset,
   $xmlBasisContentLength,
   nodePlainLength,
+  blockTextTokenExtension,
   registerBlockTextExtension,
   runsToLexical,
   serializeBlockRuns,
 } from "./block-text-extensions";
 
 function roundTrip(runs: RichText): RichText {
-  const editor = createEditor({ namespace: "test", nodes: [LinkNode], onError: (e) => { throw e; } });
+  const editor = createEditor({
+    namespace: "test",
+    nodes: [LinkNode],
+    onError: (e) => {
+      throw e;
+    },
+  });
   editor.update(() => runsToLexical(runs), { discrete: true });
   return serializeBlockRuns(editor);
 }
@@ -65,7 +70,13 @@ function makeEditor(
   runs: RichText,
   nodes: NonNullable<CreateEditorArgs["nodes"]> = [LinkNode],
 ): LexicalEditor {
-  const editor = createEditor({ namespace: "test", nodes, onError: (e) => { throw e; } });
+  const editor = createEditor({
+    namespace: "test",
+    nodes,
+    onError: (e) => {
+      throw e;
+    },
+  });
   editor.update(() => runsToLexical(runs), { discrete: true });
   return editor;
 }
@@ -73,7 +84,12 @@ function makeEditor(
 /** Run `fn` inside a discrete update on `editor`. */
 function update<T>(editor: LexicalEditor, fn: () => T): T {
   let out!: T;
-  editor.update(() => { out = fn(); }, { discrete: true });
+  editor.update(
+    () => {
+      out = fn();
+    },
+    { discrete: true },
+  );
   return out;
 }
 
@@ -115,7 +131,9 @@ function $selectRoot(index: number): void {
 
 describe("runs↔Lexical round-trip", () => {
   test("plain text", () => {
-    expect(roundTrip([{ text: "hello world" }])).toEqual([{ text: "hello world" }]);
+    expect(roundTrip([{ text: "hello world" }])).toEqual([
+      { text: "hello world" },
+    ]);
   });
 
   test("single mark", () => {
@@ -172,7 +190,10 @@ describe("runs↔Lexical round-trip", () => {
 describe("$linearCaretOffset / $placeCaretAtLinearOffset", () => {
   test("multi-TextNode paragraph: offset spans both runs (not text-node-relative)", () => {
     // "Hello " (6) + bold "world" (5) → total 11.
-    const runs: RichText = [{ text: "Hello " }, { text: "world", marks: ["bold"] }];
+    const runs: RichText = [
+      { text: "Hello " },
+      { text: "world", marks: ["bold"] },
+    ];
     const editor = makeEditor(runs);
 
     expect(read(editor, () => $paragraphsPlainLength())).toBe(11);
@@ -197,7 +218,10 @@ describe("$linearCaretOffset / $placeCaretAtLinearOffset", () => {
   });
 
   test("text/text boundary resolves to END of the earlier run (merge seam)", () => {
-    const runs: RichText = [{ text: "Hello " }, { text: "world", marks: ["bold"] }];
+    const runs: RichText = [
+      { text: "Hello " },
+      { text: "world", marks: ["bold"] },
+    ];
     const editor = makeEditor(runs);
     // Offset 6 sits exactly at the seam; `<=` rule lands at the end of "Hello "
     // (the earlier run), so a Backspace-merge caret sits on the seam.
@@ -316,46 +340,21 @@ describe("$linearCaretOffset / $placeCaretAtLinearOffset", () => {
 // Token-aware decorator length
 // ---------------------------------------------------------------------------
 
-/** A minimal inline decorator used to exercise token-aware length counting. */
-class TestTokenNode extends DecoratorNode<null> {
-  __id: string;
-  static getType(): string {
-    return "test-token";
-  }
-  static clone(node: TestTokenNode): TestTokenNode {
-    return new TestTokenNode(node.__id, node.__key);
-  }
-  static importJSON(json: SerializedLexicalNode & { id?: string }): TestTokenNode {
-    return new TestTokenNode(json.id ?? "");
-  }
-  constructor(id = "", key?: NodeKey) {
-    super(key);
-    this.__id = id;
-  }
-  exportJSON(): SerializedLexicalNode & { id: string } {
-    return { type: "test-token", version: 1, id: this.__id };
-  }
-  isInline(): true {
-    return true;
-  }
+/**
+ * A minimal inline decorator used to exercise token-aware length counting.
+ * Declared through the shared primitive, so what this test asserts about a
+ * decorator's length is asserted about the node synthesis that actually ships.
+ */
+const testTokenNode = defineInlineTokenNode<{ id: string }>({
+  type: "test-token-length",
+  fields: ["id"],
+  token: ({ id }) => `[[${id}]]`,
+  fieldsOf: (m) => ({ id: m[1]! }),
   // Native text content is empty (mirrors PageLinkInlineNode) — the token length
   // must come from the serializer, not getTextContent().
-  getTextContent(): string {
-    return "";
-  }
-  createDOM(): HTMLElement {
-    return globalThis.document?.createElement("span") ?? ({} as HTMLElement);
-  }
-  updateDOM(): false {
-    return false;
-  }
-  decorate(): null {
-    return null;
-  }
-  getId(): string {
-    return this.__id;
-  }
-}
+  textContent: "empty",
+});
+const TestTokenNode = testTokenNode.Node;
 
 function tokenFor(id: string): string {
   return `[[${id}]]`;
@@ -381,11 +380,19 @@ describe("nodePlainLength", () => {
 
   test("decorator node counts its serialized token length, not getTextContent()", () => {
     // Register a token extension so `tokenOf` (and thus nodePlainLength) sees it.
-    const unregister = registerBlockTextExtension({
-      id: "test-token",
-      node: TestTokenNode,
-      serializeNode: (n) => (n instanceof TestTokenNode ? tokenFor(n.getId()) : null),
-    });
+    const unregister = registerBlockTextExtension(
+      blockTextTokenExtension({
+        id: "test-token-length",
+        node: testTokenNode,
+        pattern: /\[\[([a-z0-9]+)\]\]/,
+        // Both of these are irrelevant to THIS suite, which asserts LENGTH, and
+        // both are required on purpose: a token family that cannot paint itself
+        // outside Lexical is a tsc error, and so is one that leaves "do my bytes
+        // need masking from the markdown inline scan?" unanswered.
+        markdownSpan: "transparent",
+        renderToken: ({ id }) => id,
+      }),
+    );
     try {
       const editor = createEditor({
         namespace: "test",
@@ -400,7 +407,7 @@ describe("nodePlainLength", () => {
         root.clear();
         const para = $createParagraphNode();
         para.append($createTextNode("x"));
-        para.append(new TestTokenNode("p1"));
+        para.append(testTokenNode.create({ id: "p1" }));
         para.append($createTextNode("y"));
         root.append(para);
       });
@@ -410,7 +417,9 @@ describe("nodePlainLength", () => {
         let decorator: LexicalNode | undefined;
         const para = $getRoot().getChildren()[0]!;
         if ($isElementNode(para)) {
-          decorator = para.getChildren().find((n) => n instanceof TestTokenNode);
+          decorator = para
+            .getChildren()
+            .find((n) => n instanceof TestTokenNode);
         }
         expect(decorator).toBeTruthy();
         expect(nodePlainLength(decorator!)).toBe(token.length);
@@ -493,7 +502,10 @@ describe("$xmlBasisContentLength", () => {
     expect(xmlTextContentLength(link)).toBe(6);
 
     // Paragraph join: 0 in the Yjs basis, +1 per join in the runs basis.
-    const twoParas = paragraphsToXmlText([[{ text: "ab" }], [{ text: "cde" }]], tokenOpts);
+    const twoParas = paragraphsToXmlText(
+      [[{ text: "ab" }], [{ text: "cde" }]],
+      tokenOpts,
+    );
     expect(editorBasisLength(twoParas)).toBe(7);
     expect(xmlTextContentLength(twoParas)).toBe(7);
     expect(runsBasisLength(twoParas)).toBe(6);
@@ -514,7 +526,8 @@ describe("$xmlBasisContentLength", () => {
       const single = runsToXmlText(runs, tokenOpts);
       expect(editorBasisLength(single)).toBe(xmlTextContentLength(single));
       cases++;
-      if (runsBasisLength(single) !== xmlTextContentLength(single)) divergentFromRunsBasis++;
+      if (runsBasisLength(single) !== xmlTextContentLength(single))
+        divergentFromRunsBasis++;
 
       // Multi-paragraph blocks — the join divergence `runsToLexical` cannot make.
       const paras = randomParagraphs(rand);
@@ -522,7 +535,8 @@ describe("$xmlBasisContentLength", () => {
       expect(editorBasisLength(many)).toBe(xmlTextContentLength(many));
       cases++;
       if (paras.length > 1) multiParagraph++;
-      if (runsBasisLength(many) !== xmlTextContentLength(many)) divergentFromRunsBasis++;
+      if (runsBasisLength(many) !== xmlTextContentLength(many))
+        divergentFromRunsBasis++;
     }
 
     expect(cases).toBe(240);

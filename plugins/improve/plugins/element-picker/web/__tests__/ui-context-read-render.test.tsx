@@ -4,8 +4,15 @@ import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData, useActiveDataLinkify } from "@plugins/active-data/web";
-import { FileLinkText, linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
+import {
+  ActiveData,
+  inlineChip,
+  useActiveDataLinkify,
+} from "@plugins/active-data/web";
+import {
+  FileLinkText,
+  linkifyChildren,
+} from "@plugins/primitives/plugins/file-links/web";
 import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
 import { UiContextTag } from "../components/ui-context-tag";
 
@@ -19,7 +26,16 @@ const plugin = {
   id: "ui-context-read-test",
   description: "ui-context read-render fixture",
   contributions: [
-    ActiveData.Tag({ display: "inline", pattern: UI_CONTEXT_RE, component: UiContextTag }),
+    ActiveData.Tag(
+      inlineChip({
+        // A fixture id of its own: the real barrel declares "ui-context", and two
+        // chips sharing an id is (rightly) an error.
+        id: "ui-context-read-test-chip",
+        pattern: UI_CONTEXT_RE,
+        surfaces: ["transcript"],
+        component: UiContextTag,
+      }),
+    ),
   ],
 } as unknown as LoadedPlugin;
 
@@ -45,7 +61,9 @@ function ComposedView({ text }: { text: string }) {
 // seen, and the tag prints raw. Pinned so the broken order can't silently return.
 function BrokenOrderView({ text }: { text: string }) {
   const linkify = useActiveDataLinkify();
-  return <div data-testid="broken">{linkify(<FileLinkText text={text} />)}</div>;
+  return (
+    <div data-testid="broken">{linkify(<FileLinkText text={text} />)}</div>
+  );
 }
 
 afterEach(cleanup);

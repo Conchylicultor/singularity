@@ -12,7 +12,7 @@ import {
   useInlineTextWalker,
 } from "@plugins/primitives/plugins/inline-text/web";
 import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { ActiveData } from "../slots";
+import { ActiveData, inlineChip } from "../index";
 import { ActiveDataInlineWalker } from "../internal/inline-walker";
 
 // End-to-end pin for the order-dependent footgun this primitive eliminates: a
@@ -47,9 +47,24 @@ const plugin = {
   id: "inline-text-active-data-test",
   description: "active-data + file-links inline-text composition fixture",
   contributions: [
-    ActiveData.Tag({ display: "inline", pattern: /chip-\w+/g, component: Chip }),
-    InlineTextWalkerSlot({ id: "active-data", order: 0, Component: ActiveDataInlineWalker }),
-    InlineTextWalkerSlot({ id: "file-links", order: 10, Component: FileLinksTestWalker }),
+    ActiveData.Tag(
+      inlineChip({
+        id: "inline-text-walker-test-chip",
+        pattern: /chip-\w+/g,
+        surfaces: ["transcript"],
+        component: Chip,
+      }),
+    ),
+    InlineTextWalkerSlot({
+      id: "active-data",
+      order: 0,
+      Component: ActiveDataInlineWalker,
+    }),
+    InlineTextWalkerSlot({
+      id: "file-links",
+      order: 10,
+      Component: FileLinksTestWalker,
+    }),
   ],
 } as unknown as LoadedPlugin;
 
@@ -68,6 +83,8 @@ describe("InlineText composes the active-data + file-links walkers", () => {
     // file path survived the composition and linkified into a button.
     expect(container.textContent).toContain("dir/file.md");
     // both the chip and the file link render as buttons.
-    expect(container.querySelectorAll("button").length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelectorAll("button").length).toBeGreaterThanOrEqual(
+      2,
+    );
   });
 });

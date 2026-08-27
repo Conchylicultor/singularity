@@ -13,6 +13,10 @@ export interface CollectedEntry {
 }
 
 export const serverEntries: CollectedEntry[] = [
+  { pluginPath: "active-data/plugins/attempt", id: "active-data.attempt", loader: () => import("@plugins/active-data/plugins/attempt/server"), dependsOn: ["active-data", "page/plugins/editor"] },
+  { pluginPath: "active-data/plugins/conv", id: "active-data.conv", loader: () => import("@plugins/active-data/plugins/conv/server"), dependsOn: ["active-data", "page/plugins/editor"] },
+  { pluginPath: "active-data/plugins/prototype", id: "active-data.prototype", loader: () => import("@plugins/active-data/plugins/prototype/server"), dependsOn: ["active-data", "page/plugins/editor"] },
+  { pluginPath: "active-data/plugins/task-link", id: "active-data.task-link", loader: () => import("@plugins/active-data/plugins/task-link/server"), dependsOn: ["active-data", "page/plugins/editor"] },
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/server"), dependsOn: ["database", "infra/plugins/endpoints", "tasks/plugins/tasks-core"] },
   { pluginPath: "apps-core/plugins/app-rail-framing", id: "apps-core.app-rail-framing", loader: () => import("@plugins/apps-core/plugins/app-rail-framing/server"), dependsOn: ["ui/plugins/variant-region"] },
   { pluginPath: "apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse", id: "apps-core.surface.floating.wallpaper.openverse", loader: () => import("@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse/server"), dependsOn: ["apps-core/plugins/surface/plugins/floating/plugins/wallpaper", "infra/plugins/endpoints", "infra/plugins/safe-fetch"] },

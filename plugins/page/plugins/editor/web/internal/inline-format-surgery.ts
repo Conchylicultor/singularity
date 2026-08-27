@@ -17,7 +17,7 @@ import {
   type InlineFormatMatch,
   type Mark,
 } from "../../core";
-import { getBlockTextExtensions } from "./block-text-extensions";
+import { blockTextTokenExtensions } from "./block-text-extensions";
 import { INLINE_FORMAT_TAG } from "./inline-format-tag";
 import type { DelimiterDeletion } from "./mark-boundary";
 import { $setCaretMarks } from "./mark-depth";
@@ -133,7 +133,7 @@ function flankChar(
   if ($isLineBreakNode(leaf)) return undefined;
   const text = $isTextNode(leaf)
     ? leaf.getTextContent()
-    : tokenOf(leaf, getBlockTextExtensions());
+    : tokenOf(leaf, blockTextTokenExtensions());
   if (text.length === 0) return undefined;
   return side === "last" ? text[text.length - 1] : text[0];
 }

@@ -1,5 +1,27 @@
 # tasks-core
 
+## The id mints are exported, because the ids are also PARSED
+
+`core/id-mint.ts` owns `newTaskId` / `newAttemptId` / `newConversationId`. They
+used to be inline expressions at their two call sites (`createTaskOn`,
+`conversations`' `lifecycle.ts`), which was fine right up until something else
+started reading the shape back: a bare `task-…` / `att-…` / `conv-…` written in
+assistant prose is recognised by an active-data chip and rendered as a clickable
+widget, so each chip's `pattern.ts` is a SECOND, independent declaration of a
+format only the mint really owns.
+
+That pair drifts silently — the mint keeps minting, the chips just stop
+matching — and it has already happened once here (the retired
+`block-\d+-[a-z0-9]{4,8}` shape). Exporting the mints is what lets each chip's
+`pattern.test.ts` build every fixture from the REAL mint instead of a hand-typed
+literal that looks right, so a change to either half fails a test.
+
+KNOWN WART, stated at the mint and not fixed there: `Math.random().toString(36)`
+can yield fewer characters than the slice asks for, so a mint can rarely emit a
+suffix shorter than the four its chip pattern requires. `newPrototypeId` shows
+the fix; applying it changes the bytes of every id the app mints, which is not a
+change to make in passing.
+
 ## Schema layer
 
 The five-table FK cluster (`tasks` self-ref folder/group, `attempts`,
@@ -341,6 +363,9 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `ConversationSummarySchema`
     - `isBlockedStatus`
     - `isSettled`
+    - `newAttemptId`
+    - `newConversationId`
+    - `newTaskId`
     - `parseTrailerLog`
     - `PUSH_TRAILER_KEY`
     - `pushesByAttemptResource`
