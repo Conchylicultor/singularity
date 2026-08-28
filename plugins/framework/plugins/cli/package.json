@@ -1,5 +1,6 @@
 {
   "name": "@singularity/plugin-framework-cli",
+  "description": "The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).",
   "private": true,
   "type": "module",
   "bin": {
@@ -11,5 +12,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "~6.0.3"
+  },
+  "singularity": {
+    "collapsed": true
   }
 }

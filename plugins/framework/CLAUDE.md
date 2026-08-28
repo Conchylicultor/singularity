@@ -7,7 +7,7 @@
 - Description: Umbrella for framework primitives: web plugin SDK, server, central
 - Sub-plugins:
   - **`central-core`**
-  - **`cli`**
+  - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
   - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
   - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
   - **`resource-runtime`**

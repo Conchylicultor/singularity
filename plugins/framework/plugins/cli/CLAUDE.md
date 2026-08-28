@@ -398,6 +398,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 
 ## Plugin reference
 
+- Description: The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):

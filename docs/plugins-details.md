@@ -14813,7 +14813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineResource`
           - `handleResourceHttp`
           - `notificationsWsHandler`
-    - **`cli`**
+    - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
