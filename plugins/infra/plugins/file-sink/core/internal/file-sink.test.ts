@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineFileSink, getFileSinks, openDynamicSink } from "./file-sink";
@@ -42,7 +48,10 @@ describe("defineFileSink rotation", () => {
     sink.append("line-1");
     sink.append("line-2");
 
-    expect(readFileSync(path, "utf8").trim().split("\n")).toEqual(["line-1", "line-2"]);
+    expect(readFileSync(path, "utf8").trim().split("\n")).toEqual([
+      "line-1",
+      "line-2",
+    ]);
     expect(existsSync(path + ".1")).toBe(false);
   });
 
@@ -59,9 +68,9 @@ describe("defineFileSink rotation", () => {
     sink.append("line-2"); // 7 + 7 > 10 → rotate, then fresh write
 
     // Live file holds only the post-rotation line.
-    expect(readFileSync(path, "utf8").trim().split("\n").filter(Boolean)).toEqual([
-      "line-2",
-    ]);
+    expect(
+      readFileSync(path, "utf8").trim().split("\n").filter(Boolean),
+    ).toEqual(["line-2"]);
     // The rotated file exists and holds the pre-rotation content.
     expect(existsSync(path + ".1")).toBe(true);
     expect(readFileSync(path + ".1", "utf8").trim()).toBe("line-1");
@@ -98,7 +107,227 @@ describe("defineFileSink rotation", () => {
       description: "t",
       path: join(dir, "f.jsonl"),
     });
-    expect(sink.bound).toEqual({ kind: "rotate", maxBytes: 128 * 1024 * 1024, keep: 3 });
+    expect(sink.bound).toEqual({
+      kind: "rotate",
+      maxBytes: 128 * 1024 * 1024,
+      keep: 3,
+    });
+  });
+});
+
+describe("appendAll", () => {
+  // The batch form shares ONE implementation (and one size gate) with `append`,
+  // so these assert the observable invariants that sharing must preserve. No
+  // syscall counting: `appendFileSync` is a bound ESM import, and mocking it
+  // would be more fragile than the test is worth.
+
+  test("writes a whole batch under the cap in order, into one file", () => {
+    const path = join(dir, "ba.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 1 << 20,
+      keep: 3,
+    });
+    sink.appendAll(["b0", "b1", "b2", "b3", "b4"]);
+
+    expect(readFileSync(path, "utf8")).toBe("b0\nb1\nb2\nb3\nb4\n");
+    expect(existsSync(path + ".1")).toBe(false);
+  });
+
+  test("an empty batch creates neither the file nor its directory", () => {
+    // Asking for nothing must not bring a file — or a whole dir tree — into
+    // existence as a side effect.
+    const nested = join(dir, "nope", "deeper");
+    const path = join(nested, "bb.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 1 << 20,
+      keep: 3,
+    });
+    sink.appendAll([]);
+
+    expect(existsSync(path)).toBe(false);
+    expect(existsSync(nested)).toBe(false);
+    expect(existsSync(join(dir, "nope"))).toBe(false);
+  });
+
+  test("a batch crossing the cap splits BETWEEN lines, never inside one", () => {
+    // The invariant every reader depends on: rotation happens between two whole
+    // lines, so `.1` followed by the live file reads back as the input verbatim.
+    const path = join(dir, "bc.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 12, // "L0\n" is 3 bytes → 4 lines fill the file exactly
+      keep: 3,
+    });
+    const lines = ["L0", "L1", "L2", "L3", "L4", "L5"];
+    sink.appendAll(lines);
+
+    const rotated = readFileSync(path + ".1", "utf8");
+    const live = readFileSync(path, "utf8");
+    // Every written byte is part of a "\n"-terminated line, in both files.
+    expect(rotated.endsWith("\n")).toBe(true);
+    expect(live.endsWith("\n")).toBe(true);
+    expect((rotated + live).split("\n").filter(Boolean)).toEqual(lines);
+    expect(rotated.split("\n").filter(Boolean)).toEqual([
+      "L0",
+      "L1",
+      "L2",
+      "L3",
+    ]);
+    expect(live.split("\n").filter(Boolean)).toEqual(["L4", "L5"]);
+  });
+
+  test("the gate is `>`, not `>=`: exactly maxBytes does not rotate", () => {
+    const exact = join(dir, "bd.jsonl");
+    const exactSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: exact,
+      maxBytes: 12, // 3 × "aaa\n" = 12 bytes exactly
+      keep: 3,
+    });
+    exactSink.appendAll(["aaa", "aaa", "aaa"]);
+    expect(existsSync(exact + ".1")).toBe(false);
+    expect(readFileSync(exact, "utf8")).toBe("aaa\naaa\naaa\n");
+
+    // One byte less of budget and the same batch must rotate.
+    const over = join(dir, "be.jsonl");
+    const overSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: over,
+      maxBytes: 11,
+      keep: 3,
+    });
+    overSink.appendAll(["aaa", "aaa", "aaa"]);
+    expect(readFileSync(over + ".1", "utf8")).toBe("aaa\naaa\n");
+    expect(readFileSync(over, "utf8")).toBe("aaa\n");
+  });
+
+  test("a batch far past maxBytes × (keep + 1) still respects `keep`", () => {
+    // Several rotations inside the ONE call; `keep` stays a hard cap and the live
+    // file holds the batch's tail.
+    const path = join(dir, "bf.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 6, // 2 lines per rotation group
+      keep: 2,
+    });
+    sink.appendAll([
+      "L0",
+      "L1",
+      "L2",
+      "L3",
+      "L4",
+      "L5",
+      "L6",
+      "L7",
+      "L8",
+      "L9",
+    ]);
+
+    expect(rotatedFiles("bf\\.jsonl")).toEqual(["bf.jsonl.1", "bf.jsonl.2"]);
+    expect(readFileSync(path, "utf8")).toBe("L8\nL9\n");
+    expect(readFileSync(path + ".1", "utf8")).toBe("L6\nL7\n");
+    expect(readFileSync(path + ".2", "utf8")).toBe("L4\nL5\n");
+  });
+
+  test("a single line larger than maxBytes is written whole, after its predecessors", () => {
+    const path = join(dir, "bg.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 10,
+      keep: 3,
+    });
+    const big = "X".repeat(50);
+    sink.appendAll(["aa", "bb", big]);
+
+    // The group in hand belongs to the pre-rotation file…
+    expect(readFileSync(path + ".1", "utf8")).toBe("aa\nbb\n");
+    // …and the oversized line lands whole, never split or truncated to the cap.
+    expect(readFileSync(path, "utf8")).toBe(big + "\n");
+  });
+
+  test("an oversized line into an empty file burns no rotation slot", () => {
+    // Deliberate difference from the old per-line gate: rotating first would
+    // evict real history to make room for a line that overflows either way.
+    const path = join(dir, "bh.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 10,
+      keep: 3,
+    });
+    const big = "Y".repeat(50);
+    sink.appendAll([big]);
+
+    expect(readFileSync(path, "utf8")).toBe(big + "\n");
+    expect(rotatedFiles("bh\\.jsonl")).toEqual([]);
+  });
+
+  test("appendAll(lines) is byte-identical to looping append(line)", () => {
+    // The anti-drift test: if the two forms are ever re-split into two size
+    // gates, this is what fails.
+    const loopPath = join(dir, "bi.jsonl");
+    const batchPath = join(dir, "bj.jsonl");
+    const opts = { maxBytes: 12, keep: 3 } as const;
+    const loopSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: loopPath,
+      ...opts,
+    });
+    const batchSink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path: batchPath,
+      ...opts,
+    });
+
+    // 10 × 3 bytes over a 12-byte cap → two rotations.
+    const lines = ["L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9"];
+    for (const line of lines) loopSink.append(line);
+    batchSink.appendAll(lines);
+
+    expect(rotatedFiles("bi\\.jsonl")).toEqual(["bi.jsonl.1", "bi.jsonl.2"]);
+    expect(rotatedFiles("bj\\.jsonl")).toEqual(["bj.jsonl.1", "bj.jsonl.2"]);
+    for (const suffix of ["", ".1", ".2"]) {
+      expect(readFileSync(batchPath + suffix, "utf8")).toBe(
+        readFileSync(loopPath + suffix, "utf8"),
+      );
+    }
+  });
+
+  test("recreates the parent dir if it disappeared under a live sink", () => {
+    // The mkdir moved from "before every write" to "on the write's ENOENT", so
+    // the self-healing has to survive the move: a worktree teardown that removes
+    // the logs dir must not wedge a sink that is still being written to.
+    const path = join(dir, "bk.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 1 << 20,
+      keep: 3,
+    });
+    sink.append("before");
+    rmSync(dir, { recursive: true, force: true });
+    expect(existsSync(dir)).toBe(false);
+
+    sink.appendAll(["after-1", "after-2"]);
+    expect(readFileSync(path, "utf8")).toBe("after-1\nafter-2\n");
   });
 });
 
@@ -113,7 +342,11 @@ describe("defineFileSink / getFileSinks registry", () => {
 
   test("getFileSinks returns a copy, not the live map", () => {
     const id = uniqueId();
-    const sink = defineFileSink({ id, description: "t", path: join(dir, "e.jsonl") });
+    const sink = defineFileSink({
+      id,
+      description: "t",
+      path: join(dir, "e.jsonl"),
+    });
     const first = getFileSinks() as Map<string, unknown>;
     first.delete(id);
     first.set("intruder", {});

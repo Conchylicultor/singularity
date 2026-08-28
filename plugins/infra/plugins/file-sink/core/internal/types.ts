@@ -38,6 +38,20 @@ export interface FileSink {
   bound: RotateBound;
   append(line: string): void;
   /**
+   * Append MANY lines as ONE write — the batch form of `append`, and the reason a
+   * caller holding an array never has to loop. Semantics are byte-for-byte what
+   * `for (const l of lines) append(l)` produces: the size gate runs per ROTATION
+   * GROUP, so every `appendFileSync` payload is a whole number of `\n`-terminated
+   * lines and a rotation only ever happens BETWEEN two of them. An empty array
+   * writes nothing (and creates neither file nor directory).
+   *
+   * SINGLE-WRITER FILES ONLY. One batched write is not covered by the `O_APPEND`
+   * whole-line atomicity that host-global files (`op-log`, `build-progress`,
+   * `check-progress`) rely on to interleave lines from concurrent processes —
+   * those must keep using `append`, one line per call.
+   */
+  appendAll(lines: readonly string[]): void;
+  /**
    * Bounded tail read of this sink's own file — the read counterpart of `append`.
    * Binding it to the sink removes the chance of reading a sink from the wrong
    * path. Same semantics as the free `readTail(path, opts)`; the read budget comes

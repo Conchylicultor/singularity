@@ -1,4 +1,10 @@
-import { appendFileSync, mkdirSync, renameSync, statSync, unlinkSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 // Relative sibling import, not the `@plugins/infra/plugins/file-sink/core` alias:
 // this file now lives INSIDE that barrel's plugin, so the alias form would cycle
@@ -12,7 +18,7 @@ import { readJsonlTail, readTail } from "./read";
 // NO `db`, NO `jobs` — so a short-lived CLI process (no server, no DB) can import
 // it and still get a size-bounded file. The caller supplies an ABSOLUTE path; the
 // JSON envelope (or any other line encoding) is the caller's concern — `append`
-// is generic and writes `line + "\n"` verbatim.
+// and `appendAll` are generic and write `line + "\n"` verbatim.
 
 // Defaults match persist.ts's historical constants: the live-state.jsonl channel
 // grew to ~4 GB with zero size management, so every sink caps at 128 MB and keeps
@@ -71,41 +77,122 @@ function rotateFile(path: string, keep: number): void {
 // path. Process-global so repeated `append`s to the same path stay cheap.
 const fileBytes = new Map<string, number>();
 
-function appendLine(path: string, line: string, maxBytes: number, keep: number): void {
-  mkdirSync(dirname(path), { recursive: true });
-  const payload = line + "\n";
-  const lineBytes = Buffer.byteLength(payload, "utf8");
-
-  let size = fileBytes.get(path);
-  if (size === undefined) {
-    try {
-      size = statSync(path).size;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      size = 0;
-    }
+// The live file's current size: the in-memory counter, seeded from disk the first
+// time this process touches the path. A file that isn't there yet is 0 bytes;
+// anything other than ENOENT is a real error and rethrows.
+function currentSize(path: string): number {
+  const known = fileBytes.get(path);
+  if (known !== undefined) return known;
+  try {
+    return statSync(path).size;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return 0;
   }
-
-  if (size + lineBytes > maxBytes) {
-    // Rotate first, then write into the fresh file; the counter restarts at this line.
-    rotateFile(path, keep);
-    appendFileSync(path, payload);
-    fileBytes.set(path, lineBytes);
-    return;
-  }
-
-  appendFileSync(path, payload);
-  fileBytes.set(path, size + lineBytes);
 }
 
-function makeSink(id: string, path: string, maxBytes: number, keep: number): FileSink {
+// Append `payload`, creating the parent dir only if it turns out to be missing.
+// For a file opened with flag "a", ENOENT means EXACTLY one thing: a missing path
+// component. So this is behaviourally identical to the unconditional `mkdirSync`
+// that used to run before every write — self-healing included, if a live
+// backend's logs dir is deleted under it — minus the mkdir syscall in the steady
+// state, which is every write after the first. Deliberately NOT memoized with a
+// Set of already-ensured dirs: that caches a belief about the world which a
+// worktree teardown can falsify. A second ENOENT rethrows — loud.
+function writeAppend(path: string, payload: string): void {
+  try {
+    appendFileSync(path, payload);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    mkdirSync(dirname(path), { recursive: true });
+    appendFileSync(path, payload);
+  }
+}
+
+// THE one write path: `append(line)` is `appendLines(path, [line], …)` and
+// `appendAll(lines)` is `appendLines(path, lines, …)`. One implementation, one
+// size gate — two copies of the gate is exactly how the "a line is never split
+// across a rotation" invariant would drift between the singular and the batch
+// form.
+//
+// The gate runs per ROTATION GROUP — not per batch, not per line. Lines
+// accumulate until the next one would cross `maxBytes`; that group goes out as
+// ONE `appendFileSync`, and only then does the file rotate. Byte-for-byte what
+// `for (const l of lines) append(l)` produces, with the writes coalesced. Four
+// properties follow, and readers depend on them:
+//
+//   - Every `appendFileSync` payload is a whole number of "\n"-terminated lines,
+//     and a rotation only ever happens BETWEEN two of them. That is precisely
+//     what `readTail({ includeRotated: true })`'s stitching relies on: a line is
+//     never split across a rotation, batch or no batch.
+//   - A batch larger than `maxBytes` performs several rotations inside the one
+//     call and `keep` stays a hard cap — identical to looping `append` today.
+//   - `fileBytes` is updated immediately after each successful write and zeroed
+//     immediately after each rotation, so a mid-batch ENOSPC leaves the counter
+//     describing exactly what is on disk.
+//   - The `size + groupBytes > 0` half of the gate is a DELIBERATE behaviour
+//     change from the old per-line gate: a single line larger than `maxBytes`
+//     going into an empty (or absent) live file is written whole, without first
+//     burning a rotation slot on a no-op rename chain that would evict real
+//     history to make room for nothing. Reachable only in that degenerate case —
+//     the line is oversized either way, so the choice is whether to also lose a
+//     rotation.
+function appendLines(
+  path: string,
+  lines: readonly string[],
+  maxBytes: number,
+  keep: number,
+): void {
+  // No lines ⇒ no write, no mkdir, no file. A caller holding an empty array must
+  // not bring the file into existence as a side effect of asking for nothing.
+  if (lines.length === 0) return;
+
+  let size = currentSize(path);
+  let group: string[] = [];
+  let groupBytes = 0;
+
+  // One appendFileSync per rotation group.
+  const flush = (): void => {
+    if (group.length === 0) return;
+    writeAppend(path, group.join("\n") + "\n");
+    size += groupBytes;
+    fileBytes.set(path, size);
+    group = [];
+    groupBytes = 0;
+  };
+
+  for (const line of lines) {
+    const lineBytes = Buffer.byteLength(line, "utf8") + 1; // + the "\n"
+    if (size + groupBytes + lineBytes > maxBytes && size + groupBytes > 0) {
+      // Write what fits, THEN rotate: the group already in hand belongs to the
+      // pre-rotation file, and this line starts the fresh one.
+      flush();
+      rotateFile(path, keep);
+      size = 0;
+      fileBytes.set(path, 0);
+    }
+    group.push(line);
+    groupBytes += lineBytes;
+  }
+  flush();
+}
+
+function makeSink(
+  id: string,
+  path: string,
+  maxBytes: number,
+  keep: number,
+): FileSink {
   const bound: RotateBound = { kind: "rotate", maxBytes, keep };
   return {
     id,
     path,
     bound,
     append(line: string): void {
-      appendLine(path, line, maxBytes, keep);
+      appendLines(path, [line], maxBytes, keep);
+    },
+    appendAll(lines: readonly string[]): void {
+      appendLines(path, lines, maxBytes, keep);
     },
     // The read budget is deliberately NOT derived from `maxBytes`: a default sink
     // is 128 MB × 3, so `bound`-derived defaults would mean a 512 MB read. The

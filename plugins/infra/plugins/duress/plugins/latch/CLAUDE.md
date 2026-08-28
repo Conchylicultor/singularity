@@ -30,6 +30,7 @@ shed engine's test.
   - Imported by:
     - `debug/sentinel`
     - `infra/duress`
+    - `primitives/log-channels`
 - Server:
   - Exports (types): `DuressLatch`
   - Exports (values):

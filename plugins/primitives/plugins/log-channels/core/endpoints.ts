@@ -28,4 +28,10 @@ export type EmitLogsBody = z.infer<typeof EmitLogsBodySchema>;
 export const emitLogs = defineEndpoint({
   route: "POST /api/logs/emit",
   body: EmitLogsBodySchema,
+  // One batch is one ring trim plus one file write, so this route has no honest
+  // reason to take even a fraction of a second. Declaring the bar means a future
+  // regression here NAMES this route in slow-ops instead of surfacing as an
+  // anonymous event-loop stall in a profile — which is exactly how the per-line
+  // write loop this batching replaced was found.
+  slowThresholdMs: 300,
 });

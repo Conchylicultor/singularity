@@ -1,7 +1,10 @@
 import { join } from "node:path";
-import { defineFileSink, openDynamicSink } from "@plugins/infra/plugins/file-sink/core";
+import {
+  defineFileSink,
+  openDynamicSink,
+} from "@plugins/infra/plugins/file-sink/core";
 import { getOrCreateChannel } from "./registry";
-import type { LogStream } from "./registry";
+import type { EmitLogsBody } from "../../core/endpoints";
 import { logsDir } from "./persist";
 
 // The browser `clientLog` ingress. This is the ONE genuinely open-ended sink
@@ -40,21 +43,29 @@ function ensureFamilyBound(): void {
 }
 
 /**
- * Ingest one browser-supplied log line. Route-internal ONLY (the `/api/logs/emit`
- * handler) — NOT exported from the plugin barrel. Persistence here is inherent to
- * the ingress (client logs must survive to disk), which is exactly why this can't
- * be a general `Log.emit` callable from arbitrary server code: durable sinks are
- * declared, and the one open-ended family is declared above.
+ * Ingest ONE `POST /api/logs/emit` body. Route-internal ONLY (the emit handler) —
+ * NOT exported from the plugin barrel. Persistence here is inherent to the ingress
+ * (client logs must survive to disk), which is exactly why this can't be a general
+ * `Log.emit` callable from arbitrary server code: durable sinks are declared, and
+ * the one open-ended family is declared above.
+ *
+ * It takes the whole validated body rather than one line, because this function
+ * exists for exactly one route: the wire type IS its domain type, so the zod
+ * `.min(1).max(MAX_EMIT_LINES)` that bounds the array is the same type the ingress
+ * consumes, and there is no singular form left for a handler to loop over. The
+ * family bound is ensured once, the channel resolved once, and the batch reaches
+ * the sink as ONE write.
+ *
+ * The `map` below is the layer boundary where the wire's `t` becomes the
+ * registry's `timestamp` — one name per concept, renamed in exactly one place.
  */
-export function emitClientLog(
-  channelId: string,
-  line: string,
-  stream?: LogStream,
-  t?: number,
-): void {
+export function emitClientLogs(body: EmitLogsBody): void {
   ensureFamilyBound();
+  const { channel: channelId } = body;
   const channel = getOrCreateChannel(channelId, () =>
     openDynamicSink(logsDir(), channelId),
   );
-  channel.publish(line, stream, t);
+  channel.publishAll(
+    body.lines.map((l) => ({ line: l.line, stream: l.stream, timestamp: l.t })),
+  );
 }

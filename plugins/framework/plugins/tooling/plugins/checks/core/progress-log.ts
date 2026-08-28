@@ -105,16 +105,18 @@ function worktreeName(): string {
 /**
  * Append one record through the sink. Every property this log depends on survives
  * the move: `FileSink.append` is a single SYNCHRONOUS, unbuffered `appendFileSync`
- * (`file-sink/core/internal/file-sink.ts:appendLine`), which matters because both
+ * (`file-sink/core/internal/file-sink.ts:appendLines`), which matters because both
  * real incidents ended in a hard kill — a record that is merely *queued* when the
  * signal lands is a record we never see. That one `O_APPEND` write, well under
  * 4KB, is atomic on macOS, so concurrent worktrees interleave whole lines rather
  * than corrupting each other.
  *
- * Write failures still propagate: `append` wraps nothing in a `try`, and the only
- * errors it swallows are `ENOENT` on the rotation renames (a slot that does not
- * exist yet). A full disk failing check runs loudly is the better trade against
- * silently losing the one diagnostic this file exists to provide.
+ * Write failures still propagate: the only errors `append` swallows are `ENOENT`
+ * on the rotation renames (a slot that does not exist yet) and one `ENOENT` on
+ * the write itself, which it answers by creating the parent dir and retrying
+ * once — a second `ENOENT` throws. A full disk failing check runs loudly is the
+ * better trade against silently losing the one diagnostic this file exists to
+ * provide.
  */
 function writeRecord(record: ProgressRecord): void {
   progressSink.append(JSON.stringify(record));

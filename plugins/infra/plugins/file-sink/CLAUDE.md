@@ -20,6 +20,7 @@ const buildLog = defineFileSink({
   // maxBytes? default 128 MB   keep? default 3
 });
 buildLog.append(JSON.stringify(record)); // rotates at the cap, atomically
+buildLog.appendAll(records.map((r) => JSON.stringify(r))); // …or a whole batch, as ONE write
 ```
 
 ## Bound is true by construction
@@ -30,7 +31,9 @@ per-file byte counter** (not a `statSync` per line — that would double the sys
 cost on this synchronous hot path) and, when the next line would cross `maxBytes`,
 rotates `path` → `path.1`, `path.1` → `path.2`, …, drops `path.keep`, then writes
 the line into a fresh live file. So a sink that *exists* is a sink whose file is
-bounded; there is no "declared but unbounded" state. This is why
+bounded; there is no "declared but unbounded" state. `appendAll` shares that one
+implementation and one gate — see below — so a batch is bounded identically. This
+is why
 `retention.getGrowthBounds()` can merge every registered sink's `bound` in as a
 real growth bound without verifying anything (see `../retention/CLAUDE.md`).
 
@@ -40,6 +43,26 @@ filter naturally excludes the rotations.
 
 ## API
 
+- **`sink.append(line)` / `sink.appendAll(lines)`** — one line, or a whole batch as
+  ONE `appendFileSync`. Both are the *same* function (`appendLines`) with one size
+  gate, so `appendAll(lines)` is byte-for-byte `for (const l of lines) append(l)`.
+  Keep it that way: two gates is how "a line is never split across a rotation"
+  would drift apart between the two forms.
+  - The gate runs **per rotation group**, not per batch (a batch has no length or
+    byte cap — the browser supplies it) and not per line. Lines accumulate until
+    the next one would cross `maxBytes`; that group goes out as one write, *then*
+    the file rotates. So a batch bigger than `maxBytes` rotates several times
+    inside the one call and `keep` stays a hard cap.
+  - **`appendAll` is for SINGLE-WRITER files only.** One batched write is not
+    covered by the `O_APPEND` whole-line atomicity that a host-global file
+    (`op-log`, `build-progress`, `check-progress`) relies on to interleave lines
+    from concurrent processes — those must keep using `append`, one line per call.
+  - An empty batch writes nothing and creates neither the file nor its directory.
+  - The parent dir is created **on the write's `ENOENT`**, not before every write
+    (for flag `"a"`, `ENOENT` means only "a path component is missing"). Same
+    self-healing if a live backend's logs dir is deleted, zero `mkdir` syscalls in
+    the steady state, and no `Set` of "already ensured" dirs — that would cache a
+    belief a worktree teardown can falsify.
 - **`defineFileSink(spec) → FileSink`** — registers the sink and returns it. A sink
   is **declared exactly once**: a duplicate `id` throws (mirroring
   `declareGrowthBound`), because two owners claiming one id is an authoring bug.
@@ -103,8 +126,10 @@ type TailResult =
 - **`includeRotated` is opt-in, default off.** A tail wants the live file; a
   *reconstructing* reader wants history. Stitching concatenates **oldest-first** so
   line order stays chronological, dropping the leading partial line only for the
-  oldest file actually opened. Safe because `append()` writes whole lines and
-  rotation happens *between* appends — **a line is never split across a rotation**.
+  oldest file actually opened. Safe because every write — `append` and `appendAll`
+  alike — puts down a whole number of `\n`-terminated lines and rotation happens
+  *between* two of them, so **a line is never split across a rotation**, batch or
+  not.
 
 ## Boundaries
 

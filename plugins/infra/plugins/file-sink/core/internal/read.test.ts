@@ -75,7 +75,9 @@ describe("readTail", () => {
       filesRead: 1,
     });
     // Not truncated when the cap is not actually reached.
-    expect(readTail(path, { maxLines: 99 })).toMatchObject({ truncated: false });
+    expect(readTail(path, { maxLines: 99 })).toMatchObject({
+      truncated: false,
+    });
   });
 
   test("includeRotated stitches oldest-first across a forced rotation", () => {
@@ -105,6 +107,28 @@ describe("readTail", () => {
       lines: ["L0", "L1", "L2", "L3"],
       truncated: false,
       filesRead: 4,
+    });
+  });
+
+  test("includeRotated stitches an appendAll batch that crossed a rotation", () => {
+    // The direct guard on the documented invariant: a batch rotates BETWEEN two
+    // whole lines, so the reader stitches it back oldest-first with nothing torn
+    // — the batch write is invisible to the reader.
+    const path = join(dir, "d2.jsonl");
+    const sink = defineFileSink({
+      id: uniqueId(),
+      description: "t",
+      path,
+      maxBytes: 12, // "L0\n" is 3 bytes → 4 lines per rotation group
+      keep: 3,
+    });
+    sink.appendAll(["L0", "L1", "L2", "L3", "L4", "L5"]);
+
+    expect(readTail(path, { includeRotated: true })).toEqual({
+      kind: "read",
+      lines: ["L0", "L1", "L2", "L3", "L4", "L5"],
+      truncated: false,
+      filesRead: 2,
     });
   });
 

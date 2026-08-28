@@ -16253,6 +16253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `debug/sentinel`
               - `infra/duress`
+              - `primitives/log-channels`
           - Server:
             - Exports (types): `DuressLatch`
             - Exports (values):
@@ -26378,6 +26379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses:
+          - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/auto-scroll.JumpToBottomButton`
           - `primitives/auto-scroll.useStickyScroll`
@@ -26403,6 +26405,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LogEntryList`
       - Server:
         - Uses:
+          - `infra/duress/latch.isUnderDuress`
+          - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/paths.worktreeDataDir`
         - Exports (types):

@@ -9,6 +9,18 @@ export interface LogEntry {
   timestamp: number;
 }
 
+/**
+ * One line as a CALLER states it, before the channel stamps a `seq` on it. The
+ * registry's own vocabulary — `timestamp`, matching `publish`'s parameter name,
+ * not the `t` the on-disk envelope and the emit wire use. The rename happens once,
+ * at the ingress boundary (`client-ingress.ts`).
+ */
+export interface PublishLine {
+  line: string;
+  stream?: LogStream;
+  timestamp?: number;
+}
+
 interface InternalChannel {
   id: string;
   entries: LogEntry[];
@@ -27,30 +39,75 @@ interface InternalChannel {
 
 export interface LogChannel {
   publish(line: string, stream?: LogStream, timestamp?: number): void;
+  /**
+   * Publish MANY lines as ONE durable write — the batch form of `publish`, and
+   * the reason a caller holding an array (the browser ingress, whose POST carries
+   * up to `MAX_EMIT_LINES`) never has to loop. Per-line WS delivery is unchanged:
+   * one listener callback per line, in array order.
+   */
+  publishAll(items: readonly PublishLine[]): void;
 }
 
 const registry = new Map<string, InternalChannel>();
-const MAX_HISTORY = 10_000;
+/** Ring-buffer depth per channel. Exported for the tests that pin the trim. */
+export const MAX_HISTORY = 10_000;
 
-function makePublisher(internal: InternalChannel): LogChannel["publish"] {
-  return (line: string, stream: LogStream = "stdout", timestamp?: number) => {
-    const t = timestamp ?? Date.now();
-    const entry: LogEntry = {
-      seq: internal.nextSeq++,
-      line,
-      stream,
-      timestamp: t,
-    };
-    internal.entries.push(entry);
-    if (internal.entries.length > MAX_HISTORY) internal.entries.shift();
-    for (const fn of internal.listeners) fn(entry);
+function makeChannel(internal: InternalChannel): LogChannel {
+  const publishAll = (items: readonly PublishLine[]): void => {
+    if (items.length === 0) return;
+
+    // Build the whole batch first, so the ring, the sink and the listeners all
+    // see exactly the same entries. The JSON envelope is minted HERE: file-sink
+    // is a generic bounded-append primitive that writes a plain string verbatim,
+    // so log-channels owns the `{t,stream,line}` wire format the read path
+    // parses back.
+    const built: LogEntry[] = [];
+    const envelopes: string[] = [];
+    for (const item of items) {
+      const stream = item.stream ?? "stdout";
+      const t = item.timestamp ?? Date.now();
+      built.push({
+        seq: internal.nextSeq++,
+        line: item.line,
+        stream,
+        timestamp: t,
+      });
+      envelopes.push(JSON.stringify({ t, stream, line: item.line }));
+    }
+
+    // ORDER: ring → sink → listeners. "Durable before broadcast" then holds per
+    // batch — strictly stronger than the old per-line interleave, where it held
+    // nowhere.
+    //
+    // Push one at a time rather than `entries.push(...built)`: `publishAll` is
+    // public and takes a caller-supplied array, and spreading a large one blows
+    // the stack. Then trim ONCE for the whole batch — a single ~76 KB `splice`
+    // instead of 500 `shift()`s (~40 MB of memmove per POST against a full
+    // 10 k ring). `entries` stays a plain oldest-first array, so `subscribe()`
+    // is untouched.
+    for (const entry of built) internal.entries.push(entry);
+    const overflow = internal.entries.length - MAX_HISTORY;
+    if (overflow > 0) internal.entries.splice(0, overflow);
+
     // Resolve the durable sink on first publish (deferred so declaration is
-    // import-safe — see InternalChannel.makeSink). The JSON envelope lives HERE:
-    // file-sink is a generic bounded-append primitive that writes a plain string
-    // verbatim, so log-channels owns the `{t,stream,line}` wire format the read
-    // path parses back.
-    if (!internal.sink && internal.makeSink) internal.sink = internal.makeSink();
-    if (internal.sink) internal.sink.append(JSON.stringify({ t, stream, line }));
+    // import-safe — see InternalChannel.makeSink). One write for the batch.
+    if (!internal.sink && internal.makeSink)
+      internal.sink = internal.makeSink();
+    if (internal.sink) internal.sink.appendAll(envelopes);
+
+    for (const entry of built) {
+      for (const fn of internal.listeners) fn(entry);
+    }
+  };
+
+  return {
+    // `publishAll` is the SINGLE implementation; `publish` delegates with a
+    // one-element array. Same anti-drift argument as file-sink's
+    // `append`/`appendAll`: two copies is exactly how the envelope format, the
+    // ring trim and the ring→sink→listeners order would silently diverge.
+    publish: (line, stream, timestamp) =>
+      publishAll([{ line, stream, timestamp }]),
+    publishAll,
   };
 }
 
@@ -75,7 +132,7 @@ export function createChannel(
   };
   registry.set(id, internal);
 
-  return { publish: makePublisher(internal) };
+  return makeChannel(internal);
 }
 
 /**
@@ -100,7 +157,7 @@ export function getOrCreateChannel(
     registry.set(id, internal);
   }
 
-  return { publish: makePublisher(internal) };
+  return makeChannel(internal);
 }
 
 export function getChannelIds(): string[] {
