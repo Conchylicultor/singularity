@@ -1,12 +1,19 @@
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  SHIPPED_RUNTIME_FOLDERS,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import type { EdgeGraph, Edge } from "./types";
 
-function pushUnique(map: Map<PluginId, PluginId[]>, key: PluginId, value: PluginId): void {
+function pushUnique(
+  map: Map<PluginId, PluginId[]>,
+  key: PluginId,
+  value: PluginId,
+): void {
   const list = map.get(key)!;
   if (!list.includes(value)) list.push(value);
 }
@@ -15,8 +22,11 @@ function pushUnique(map: Map<PluginId, PluginId[]>, key: PluginId, value: Plugin
  * Build the hard/soft cross-plugin dependency graph from facet data already
  * serialized into the tree. Pure and browser-safe — reads only `node.facets`.
  *
- * Hard edges come from `cross-refs.apiUses` imports (unioned across runtimes,
- * self-edges dropped — precise & nested-aware after the cross-refs rework). Note
+ * Hard edges come from `cross-refs.apiUses` imports, unioned across the runtimes
+ * that SHIP (`SHIPPED_RUNTIME_FOLDERS` — the deployed app's own folders; `e2e`,
+ * `provision` and `cli` are developer surfaces and are not reasons to bundle
+ * anything), self-edges dropped — precise & nested-aware after the cross-refs
+ * rework. Note
  * these are *import* edges only: importing a parent umbrella's barrel does NOT
  * pull in its children (the barrel re-exports the umbrella's own symbols, not the
  * sub-plugins). Parent→child *containment* is therefore deliberately NOT a hard
@@ -56,12 +66,20 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
     }
   }
 
-  // ── Hard edges: union apiUses across runtimes, drop self ───────────────
+  // ── Hard edges: union apiUses across the SHIPPED runtimes, drop self ───
+  //
+  // Only the runtimes the deployed app executes (`SHIPPED_RUNTIME_FOLDERS`).
+  // This loop used to walk `Object.values(apiUses)` — every runtime — which made
+  // an import written in a developer-only folder a reason to bundle its target:
+  // `reorder/e2e` imports the shared Playwright harness, whose `provision/`
+  // imports `browser-fetch`, so every composition's backend closure contained
+  // Playwright and the website release failed to compile on a `chromium-bidi`
+  // require inside playwright-core that nothing ever executes.
   for (const node of tree.byDir.values()) {
     const crossRefs = getFacet(node, crossRefsFacetDef);
     if (!crossRefs) continue;
-    for (const uses of Object.values(crossRefs.apiUses)) {
-      for (const use of uses) {
+    for (const rt of SHIPPED_RUNTIME_FOLDERS) {
+      for (const use of crossRefs.apiUses[rt]) {
         if (use.plugin === node.id) continue; // self-edge
         if (!hardForward.has(use.plugin)) continue; // unknown target — inert
         pushUnique(hardForward, node.id, use.plugin);
@@ -77,7 +95,8 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
     const slots = getFacet(node, slotsFacetDef) ?? [];
     for (const slot of slots) {
       if ((slot as { _runtimeOnly?: boolean })._runtimeOnly) continue;
-      if (!groupOwner.has(slot.groupName)) groupOwner.set(slot.groupName, node.id);
+      if (!groupOwner.has(slot.groupName))
+        groupOwner.set(slot.groupName, node.id);
     }
   }
 
@@ -100,8 +119,10 @@ export function classifyEdges(tree: PluginTree): EdgeGraph {
 
   // ── Derived flat edge list ────────────────────────────────────────────
   const edges: Edge[] = [];
-  for (const [from, tos] of hardForward) for (const to of tos) edges.push({ from, to, kind: "hard" });
-  for (const [from, tos] of softForward) for (const to of tos) edges.push({ from, to, kind: "soft" });
+  for (const [from, tos] of hardForward)
+    for (const to of tos) edges.push({ from, to, kind: "hard" });
+  for (const [from, tos] of softForward)
+    for (const to of tos) edges.push({ from, to, kind: "soft" });
 
   return { hardForward, hardReverse, softForward, softReverse, subtree, edges };
 }

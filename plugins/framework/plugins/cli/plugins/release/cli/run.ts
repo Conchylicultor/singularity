@@ -434,9 +434,23 @@ function parcelWatcherPkg(tag: PlatformTag): string {
     : `@parcel/watcher-${tag}`;
 }
 
+/**
+ * A native the release needs is not on disk.
+ *
+ * A CLASS, not a bare Error, because one caller asks this as a QUESTION rather
+ * than suffering it as a failure: {@link stagedNativesComplete} resolves the
+ * three natives to find out whether a cached staged tree is usable, and must
+ * distinguish "that file is missing" from any other throw out of the resolvers.
+ */
+class MissingNativeError extends Error {}
+
 /** A missing native is fatal, but the remedy differs by where we looked. */
-function missingNative(what: string, path: string, src: NativeSource): Error {
-  return new Error(
+function missingNative(
+  what: string,
+  path: string,
+  src: NativeSource,
+): MissingNativeError {
+  return new MissingNativeError(
     src.kind === "repo"
       ? `release: ${what} not found at ${path}; run \`bun install\` first`
       : `release: ${what} not found at ${path}; the staged target-platform install did not provide it`,
@@ -518,9 +532,22 @@ async function stageForeignNatives(opts: {
     "equin-release-natives",
     `${tag}-${hasher.digest("hex").slice(0, 12)}`,
   );
-  if (existsSync(join(cacheDir, "node_modules"))) {
+  if (stagedNativesComplete(root, tag, cacheDir)) {
     console.log(`  • ${tag} native packages (cached): ${cacheDir}`);
     return cacheDir;
+  }
+  // Not complete but present ⇒ a poisoned cache: the install half-succeeded, or
+  // (the case actually seen) macOS's periodic /var/folders sweep reclaimed the
+  // FILES and left the directory skeleton, so a `node_modules` existence test
+  // said "cached" over a tree of 0 files. Re-stage over it rather than serving
+  // it — the previous test could never recover, and the failure surfaced three
+  // steps later as "pgbouncer native binary not found", which reads as a broken
+  // release rather than a stale cache.
+  if (existsSync(cacheDir)) {
+    console.log(
+      `  • ${tag} native packages: discarding incomplete ${cacheDir}`,
+    );
+    rmSync(cacheDir, { recursive: true, force: true });
   }
 
   // bun's install overrides take npm's own `os`/`cpu` spelling, which is exactly
@@ -546,6 +573,13 @@ async function stageForeignNatives(opts: {
     await run(["bun", "install", `--os=${os}`, `--cpu=${cpu}`], {
       cwd: staging,
     });
+    // Prove the tree before publishing it. `bun install` exiting 0 is not the
+    // same claim: these packages ship their binaries via postinstall, which a
+    // foreign `--os`/`--cpu` install can skip silently. Checking here means a
+    // bad install fails HERE, naming the missing binary, instead of renaming
+    // itself into the cache and failing two steps later — for every release
+    // after it, too.
+    assertStagedNativesComplete(root, tag, staging);
     renameSync(staging, cacheDir);
   } catch (err) {
     rmSync(staging, { recursive: true, force: true });
@@ -555,6 +589,43 @@ async function stageForeignNatives(opts: {
     if (!existsSync(join(cacheDir, "node_modules"))) throw err;
   }
   return cacheDir;
+}
+
+/**
+ * Does a staged tree actually hold the three natives the release will read?
+ *
+ * Asked by RESOLVING them exactly as the copy steps later do, so there is one
+ * statement of what a complete staged tree is and a cache hit cannot mean
+ * something weaker than a successful build. The resolvers throw a
+ * {@link missingNative} naming the file; here that is an answer, so it is caught
+ * — {@link assertStagedNativesComplete} is the arm that wants the throw.
+ */
+function stagedNativesComplete(
+  root: string,
+  tag: PlatformTag,
+  dir: string,
+): boolean {
+  try {
+    assertStagedNativesComplete(root, tag, dir);
+    return true;
+  } catch (err) {
+    if (err instanceof MissingNativeError) return false;
+    throw err;
+  }
+}
+
+/** The three natives a staged tree must provide, or a loud failure naming the
+ *  first one missing. The resolvers ARE the specification — see
+ *  {@link stagedNativesComplete}. */
+function assertStagedNativesComplete(
+  root: string,
+  tag: PlatformTag,
+  dir: string,
+): void {
+  const src: NativeSource = { kind: "staged", dir };
+  embeddedNativeDir(root, tag, src);
+  pgbouncerNativeBin(root, tag, src);
+  parcelWatcherNativeNode(root, tag, src);
 }
 
 /** Resolve the embedded-postgres native dir for the target platform. */
@@ -573,7 +644,11 @@ function embeddedNativeDir(
           "native",
         )
       : join(src.dir, "node_modules", pkg, "native");
-  if (!existsSync(dir)) {
+  // Probe the SERVER BINARY, not the directory. A directory can exist and hold
+  // nothing — macOS's periodic /var/folders sweep reclaims files and leaves the
+  // skeleton — and "the dir is there" was exactly the weaker claim that let a
+  // 0-file staged tree be served from cache as a complete install.
+  if (!existsSync(join(dir, "bin/postgres"))) {
     throw missingNative("embedded-postgres native dir", dir, src);
   }
   return dir;

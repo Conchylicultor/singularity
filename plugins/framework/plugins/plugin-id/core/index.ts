@@ -6,4 +6,5 @@ export {
   pluginIdSegments,
   RUNTIME_FOLDERS,
   UNDOCUMENTED_RUNTIME_FOLDERS,
+  SHIPPED_RUNTIME_FOLDERS,
 } from "./plugin-id";

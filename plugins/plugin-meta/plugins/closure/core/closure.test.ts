@@ -17,6 +17,8 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
+import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
+import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { classifyEdges } from "./classify-edges";
 import {
   resolveComposition,
@@ -902,4 +904,44 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
     expect(comp.bundle.has(adapter)).toBe(false);
     expect(comp.negatedTargets.has(adapter)).toBe(false);
   }
+});
+
+// ── Developer-only runtimes are not closure edges ─────────────────────────────
+//
+// The regression this pins: `classifyEdges` used to union `apiUses` across EVERY
+// runtime, so an import written in a folder the deployed app never executes was a
+// reason to bundle its target. The live chain was `reorder/e2e` → the shared
+// Playwright harness → (its `provision/`) → `browser-fetch` → `playwright`, which
+// put Chromium in every composition's backend closure and broke the website
+// release's `bun build --compile` on an unresolvable `chromium-bidi` require.
+//
+// Asserted against the REAL tree rather than a fixture: the whole failure mode was
+// an edge nobody had drawn on purpose, so the test has to see the real edges.
+test("e2e / provision / cli imports are not hard closure edges", () => {
+  const BROWSER_FETCH = asPluginId("infra.safe-fetch.browser-fetch");
+  const E2E_HARNESS = asPluginId("framework.tooling.e2e-harness");
+  const REORDER = asPluginId("reorder");
+  const URL_EXTRACT = asPluginId("apps.events.sources.url-extract");
+  for (const id of [BROWSER_FETCH, E2E_HARNESS, REORDER, URL_EXTRACT]) {
+    expect(hasNode(id)).toBe(true);
+  }
+
+  // `reorder/e2e` really does import the harness — without this the assertion
+  // below would pass for the wrong reason the day that script is deleted.
+  const reorderNode = [...tree.byDir.values()].find((n) => n.id === REORDER)!;
+  const reorderE2eUses = getFacet(
+    reorderNode,
+    crossRefsFacetDef,
+  )!.apiUses.e2e.map((u) => u.plugin);
+  expect(reorderE2eUses).toContain(E2E_HARNESS);
+
+  // …and that import buys the harness no place in anyone's bundle.
+  expect(graph.hardForward.get(REORDER)).not.toContain(E2E_HARNESS);
+  // The harness's `provision/` import of browser-fetch, likewise.
+  expect(graph.hardForward.get(E2E_HARNESS)).not.toContain(BROWSER_FETCH);
+
+  // The consequence: Playwright is reachable ONLY from the one plugin that
+  // genuinely imports it from a runtime the app runs, so it lands only in the
+  // compositions that ship that plugin.
+  expect(graph.hardReverse.get(BROWSER_FETCH)).toEqual([URL_EXTRACT]);
 });

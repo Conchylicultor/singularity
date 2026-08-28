@@ -15056,6 +15056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `asPluginId`
           - `pluginIdSegments`
           - `RUNTIME_FOLDERS`
+          - `SHIPPED_RUNTIME_FOLDERS`
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
@@ -20089,6 +20090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `framework/plugin-id.asPluginId`
           - `framework/plugin-id.PluginId`
+          - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
           - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `plugin-meta/facets.getFacet`
           - `plugin-meta/facets/contributions.contributionsFacetDef`

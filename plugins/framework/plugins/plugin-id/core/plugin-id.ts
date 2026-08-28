@@ -94,3 +94,42 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
 export const UNDOCUMENTED_RUNTIME_FOLDERS: ReadonlySet<string> = new Set(
   RUNTIME_FOLDERS.filter((rt) => !RUNTIME_FOLDER_DOCUMENTED[rt]),
 );
+
+/** Whether a runtime folder's imports SHIP — whether an import written there is
+ *  a reason to put its target inside a composition's bundled closure.
+ *
+ *  This is the question "does the deployed app execute this folder?", and it is a
+ *  property of the runtime, so it is declared here beside the runtime set — the
+ *  edge classifier consumes the derived allowlist below and never names a folder
+ *  itself. `Record<RuntimeFolder, boolean>` is exhaustive by construction: adding
+ *  a runtime folder is a type error until it declares whether it ships.
+ *
+ *  It is spelled as the full map rather than a bare allowlist array ON PURPOSE.
+ *  An array would let a NEW shipping runtime default silently to "does not ship",
+ *  which does not fail — it quietly drops plugins out of every composition's
+ *  registry and surfaces as a missing feature at runtime. The map makes the new
+ *  runtime's author answer.
+ *
+ *  `e2e`, `provision` and `cli` are developer surfaces that run on a developer's
+ *  machine and are never compiled into a release. Counting their imports as
+ *  closure edges is not merely wasteful, it is how a plugin's throwaway Playwright
+ *  script drags Chromium into every shipped backend: `reorder/e2e` imports the
+ *  shared harness, whose `provision/` imports `browser-fetch`, which imports
+ *  `playwright` — and the website release's `bun build --compile` then died on a
+ *  `chromium-bidi` require inside playwright-core that nothing ever executes. */
+const RUNTIME_FOLDER_SHIPPED: Record<RuntimeFolder, boolean> = {
+  web: true,
+  server: true,
+  central: true,
+  core: true,
+  shared: true,
+  "data-dirs": true,
+  e2e: false,
+  provision: false,
+  cli: false,
+};
+
+/** The runtimes whose imports define the shipped closure — the ALLOWLIST the
+ *  edge classifier walks instead of every runtime's `apiUses`. */
+export const SHIPPED_RUNTIME_FOLDERS: readonly RuntimeFolder[] =
+  RUNTIME_FOLDERS.filter((rt) => RUNTIME_FOLDER_SHIPPED[rt]);
