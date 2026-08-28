@@ -7473,7 +7473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -13864,7 +13864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
             - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
             - Uses:
               - `config_v2/fields.defineFieldShape`
@@ -21255,23 +21255,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/tabs`
           - `primitives/app-shell`
           - `primitives/pane`
-    - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
+    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
       - Web:
+        - Slots: `BreadcrumbSlots.Separator` ← `ui.breadcrumb-separator`
         - Uses:
+          - `primitives/css/fill.fillClasses`
+          - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/yield.yieldClass`
+          - `primitives/css/ui-kit.DropdownMenu`
+          - `primitives/css/ui-kit.DropdownMenuContent`
+          - `primitives/css/ui-kit.DropdownMenuItem`
+          - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/element-size.useResizeObserver`
           - `primitives/row-actions.RowActions`
+          - `primitives/slot-render.renderIsolated`
         - Exports (types):
           - `BreadcrumbProps`
           - `BreadcrumbSegment`
-        - Exports (values): `Breadcrumb`
+          - `BreadcrumbSeparatorContribution`
+        - Exports (values):
+          - `Breadcrumb`
+          - `BreadcrumbSlots`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
           - `plugin-meta/plugin-view`
           - `primitives/filepath-breadcrumb`
+          - `ui/breadcrumb-separator`
+      - Core:
+        - Exports (types): `BreadcrumbSeparatorProps`
     - **`collab-doc`** — Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state, on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.
       - Cross-plugin:
         - Imported by:
@@ -22128,6 +22143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/routes/render-detail`
               - `primitives/action-presentation`
               - `primitives/adaptive-bar`
+              - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/data-view/list`
@@ -22424,6 +22440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/resources/render-detail`
               - `plugin-meta/facets/routes/render-detail`
               - `primitives/bar`
+              - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/row`
@@ -22754,6 +22771,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/attempt-view`
               - `tasks/task-events`
               - `tasks/task-status`
+              - `ui/breadcrumb-separator/chevron`
+              - `ui/breadcrumb-separator/slash`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
@@ -24302,6 +24321,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `tasks/task-header`
               - `tasks/task-list`
               - `tasks/task-status`
+              - `ui/breadcrumb-separator/chevron`
+              - `ui/breadcrumb-separator/slash`
               - `ui/segmented-progress-bar/segmented`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
@@ -24367,7 +24388,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/dialog`
               - `primitives/adaptive-bar`
               - `primitives/app-shell`
-              - `primitives/breadcrumb`
               - `primitives/css/fill`
               - `primitives/prompt-editor`
               - `primitives/text-editor`
@@ -25352,6 +25372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/piano-roll`
           - `apps/sonata/primitives/keyboard`
           - `primitives/adaptive-bar`
+          - `primitives/breadcrumb`
           - `primitives/collapsible-wrap`
           - `primitives/css/sticky/stack`
           - `primitives/css/ui-kit`
@@ -27545,6 +27566,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/page-reference`
           - `primitives/adaptive-bar`
           - `primitives/app-shell`
+          - `primitives/breadcrumb`
           - `primitives/data-view`
           - `primitives/detail-sections`
           - `primitives/error-boundary`
@@ -30698,6 +30720,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
+    - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
+      - Web:
+        - Slots: `BreadcrumbSeparator.Variant` ← `ui.breadcrumb-separator.chevron`, `ui.breadcrumb-separator.slash`
+        - Contributes:
+          - `ConfigV2.WebRegister` "breadcrumb-separator"
+          - `DynamicEnum.Options` "Breadcrumb separator variant"
+          - `ThemeEngine.VariantGroup` "Breadcrumb separator" → `Picker`
+          - `BreadcrumbSlots.Separator` "Separator" → `Region`
+        - Uses:
+          - `primitives/breadcrumb.BreadcrumbSlots`
+          - `ui/variant-region.defineVariantRegionWeb`
+        - Exports (values): `BreadcrumbSeparator`
+      - Server:
+        - Contributes: `ConfigV2.Register` "breadcrumb-separator"
+        - Uses: `ui/variant-region.variantRegionServerContribution`
+      - Core:
+        - Uses: `ui/variant-region.defineVariantRegion`
+        - Exports (values): `breadcrumbSeparator`
+      - Cross-plugin:
+        - Imported by:
+          - `ui/breadcrumb-separator/chevron`
+          - `ui/breadcrumb-separator/slash`
+      - Plugins:
+        - **`chevron`** — Chevron breadcrumb separator — a dimmed caret pointing along the path (the default).
+          - Web:
+            - Contributes: `BreadcrumbSeparator.Variant` "Chevron" → `ChevronSeparator`
+            - Uses:
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/ui-kit.cn`
+              - `ui/breadcrumb-separator.BreadcrumbSeparator`
+        - **`slash`** — Slash breadcrumb separator — the path spelling, dimmed so it reads as a mark rather than as a character of the words beside it.
+          - Web:
+            - Contributes: `BreadcrumbSeparator.Variant` "Slash" → `SlashSeparator`
+            - Uses:
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/ui-kit.cn`
+              - `ui/breadcrumb-separator.BreadcrumbSeparator`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.segmented`
@@ -30903,7 +30962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Web:
         - Slots:
-          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.GlobalPreset` ← `ui.tokens`
           - `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`
@@ -31668,6 +31727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-rail-framing`
+          - `ui/breadcrumb-separator`
           - `ui/sidebar-framing`
           - `ui/tree-disclosure`
 

@@ -74,6 +74,7 @@ attribute type carries.
     - `plugin-meta/facets/resources/render-detail`
     - `plugin-meta/facets/routes/render-detail`
     - `primitives/bar`
+    - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/row`

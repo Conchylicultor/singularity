@@ -1,4 +1,4 @@
-// @hash 4da0fc6f107e
+// @hash 9062817ddacf
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "apps-core.app-rail-framing:app-rail-framing",
     "apps-core.surface.floating:floating-titlebar",
+    "ui.breadcrumb-separator:breadcrumb-separator",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.sidebar-framing:sidebar-framing",
     "ui.tab-bar.customizer:tab-bar",

@@ -161,6 +161,7 @@ primitive exists to name.
     - `plugin-meta/facets/routes/render-detail`
     - `primitives/action-presentation`
     - `primitives/adaptive-bar`
+    - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/data-view/list`

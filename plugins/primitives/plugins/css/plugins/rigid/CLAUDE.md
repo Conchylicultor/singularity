@@ -129,6 +129,8 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `tasks/attempt-view`
     - `tasks/task-events`
     - `tasks/task-status`
+    - `ui/breadcrumb-separator/chevron`
+    - `ui/breadcrumb-separator/slash`
     - `ui/tokens/shadow`
     - `ui/tweakcn/community-browser`
 

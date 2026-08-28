@@ -456,7 +456,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
     - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
-    - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
+    - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
     - **`collab-doc`** — Server presence of collab-doc: the bytea drizzle column type for persisted Yjs doc state, on a lean barrel that schema files (drizzle-kit's sync loader) can import without the Lexical bridge.
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
@@ -683,6 +683,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
+    - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
+      - Plugins:
+        - **`chevron`** — Chevron breadcrumb separator — a dimmed caret pointing along the path (the default).
+        - **`slash`** — Slash breadcrumb separator — the path spelling, dimmed so it reads as a mark rather than as a character of the words beside it.
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.

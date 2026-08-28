@@ -61,6 +61,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/keyboard`
     - `primitives/adaptive-bar`
+    - `primitives/breadcrumb`
     - `primitives/collapsible-wrap`
     - `primitives/css/sticky/stack`
     - `primitives/css/ui-kit`

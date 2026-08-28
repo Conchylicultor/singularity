@@ -76,7 +76,6 @@ declared as its main axis. The disagreement is the design, not an oversight.
     - `history/dialog`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
-    - `primitives/breadcrumb`
     - `primitives/css/fill`
     - `primitives/prompt-editor`
     - `primitives/text-editor`

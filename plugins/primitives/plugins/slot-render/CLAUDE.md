@@ -300,6 +300,7 @@ the outcome too, with no separate code path.
     - `page/page-reference`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
+    - `primitives/breadcrumb`
     - `primitives/data-view`
     - `primitives/detail-sections`
     - `primitives/error-boundary`

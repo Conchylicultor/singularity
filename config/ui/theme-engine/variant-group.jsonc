@@ -1,4 +1,4 @@
-// @hash 4da0fc6f107e
+// @hash 9062817ddacf
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -8,6 +8,7 @@
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.tab-bar.customizer:tab-bar",
     "ui.tree-disclosure:tree-disclosure",
+    "ui.breadcrumb-separator:breadcrumb-separator",
     "apps-core.surface.floating:floating-titlebar",
     "ui.tokens.shape:shape",
     "ui.tokens.sidebar-palette:sidebar-palette",

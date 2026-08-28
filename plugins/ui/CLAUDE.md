@@ -6,6 +6,7 @@
 
 - Description: Umbrella for pluggable UI components with switchable visual variants.
 - Sub-plugins:
+  - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.
   - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
   - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
   - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.

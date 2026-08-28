@@ -36,6 +36,7 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-rail-framing`
+    - `ui/breadcrumb-separator`
     - `ui/sidebar-framing`
     - `ui/tree-disclosure`
 

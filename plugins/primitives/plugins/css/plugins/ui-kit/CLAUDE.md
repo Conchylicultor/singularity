@@ -714,6 +714,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `tasks/task-header`
     - `tasks/task-list`
     - `tasks/task-status`
+    - `ui/breadcrumb-separator/chevron`
+    - `ui/breadcrumb-separator/slash`
     - `ui/segmented-progress-bar/segmented`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`
