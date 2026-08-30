@@ -10,6 +10,7 @@
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/floating/wallpaper/openverse`
     - `apps/browser/proxy`
+    - `apps/events/sources/coworkmeet`
     - `apps/events/sources/dmda`
     - `apps/events/sources/salsanueva`
     - `apps/events/sources/url-extract`

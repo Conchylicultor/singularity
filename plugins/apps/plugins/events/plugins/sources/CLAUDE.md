@@ -13,7 +13,7 @@ the umbrella for the *source types* themselves.
 - **`plugins/source-field/`** — the `source` dimension of the *events* DataView.
 - **`plugins/refresh-all/`** — the pane's Refresh-all button.
 - **`plugins/url-extract/`, `plugins/manual/`, `plugins/dmda/`,
-  `plugins/salsanueva/`** — the source types.
+  `plugins/salsanueva/`, `plugins/coworkmeet/`** — the source types.
 
 Naming: a **source** is a configured instance (a row in `event_sources`); a
 **source type** is the plugin that knows how to read that kind of thing.
@@ -225,6 +225,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/sources/source-detail/settings`
     - `apps/events/sources/source-detail/status`
 - Sub-plugins:
+  - **`coworkmeet`** — CoworkMeet source type in the Events `+` menu: contributes the `coworkmeet` type with its session-type / district / ambiance / noise / power-outlet filters. CoworkMeet event source type: probe reads the association's own Supabase listing of free coworking sessions (SSRF-guarded) and fingerprints every column it maps; extract turns each session into an event with no model call, tagging it with the association's own venue vocabulary and filtering on the same words.
   - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
   - **`manual`** — Manual event source type: contributes the hand-entry option to the Events `+` source menu. Zero-config — the user is the extractor, so there is nothing to point it at. Hand-entry event source type: probe reports a constant fingerprint (nothing upstream can change) and extract vouches for the source's own live rows, so a refresh can never bury events the user typed.
   - **`refresh-all`** — Refresh-all action in the Events sources pane toolbar: one request that enqueues a run for every ENABLED source, with the enqueued / already-running / skipped tally rendered arm by arm as a toast. Contributed into the pane's Actions, so the sources pane knows nothing about it.

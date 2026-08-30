@@ -1264,7 +1264,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-field`
         - **`events-core`** — Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
           - Web:
-            - Slots: `EventSources.Type` ← `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
+            - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
             - Uses:
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
@@ -1422,6 +1422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/refresh`
               - `apps/events/sources`
+              - `apps/events/sources/coworkmeet`
               - `apps/events/sources/dmda`
               - `apps/events/sources/manual`
               - `apps/events/sources/refresh-all`
@@ -1581,6 +1582,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-detail/status`
           - Plugins:
+            - **`coworkmeet`** — CoworkMeet source type in the Events `+` menu: contributes the `coworkmeet` type with its session-type / district / ambiance / noise / power-outlet filters. CoworkMeet event source type: probe reads the association's own Supabase listing of free coworking sessions (SSRF-guarded) and fingerprints every column it maps; extract turns each session into an event with no model call, tagging it with the association's own venue vocabulary and filtering on the same words.
+              - Web:
+                - Contributes: `EventSources.Type` "CoworkMeet"
+                - Uses: `apps/events/events-core.EventSources`
+              - Server:
+                - Uses:
+                  - `apps/events/events-core.defineEventSourceType`
+                  - `infra/jobs.NonRetryableError`
+                  - `infra/safe-fetch.parsePublicUrl`
+                  - `infra/safe-fetch.safeFetch`
+                - Register: `defineEventSourceType('coworkmeet')`
+              - Core:
+                - Uses: `fields/tags/config.tagsField`
+                - Exports (types):
+                  - `CoworkmeetFacet`
+                  - `CoworkmeetFilterKey`
+                  - `CoworkmeetSourceConfig`
+                - Exports (values):
+                  - `COWORKMEET_AMBIANCES`
+                  - `COWORKMEET_DISTRICTS`
+                  - `COWORKMEET_FILTER_KEYS`
+                  - `COWORKMEET_ORIGIN`
+                  - `COWORKMEET_POWER_OUTLETS`
+                  - `COWORKMEET_QUIET_LEVELS`
+                  - `COWORKMEET_SESSION_TYPES`
+                  - `COWORKMEET_SOURCE_TYPE_ID`
+                  - `coworkmeetSessionUrl`
+                  - `coworkmeetSourceConfigFields`
+                  - `facetLabelOf`
+                  - `facetLabels`
             - **`dmda`** — Des Mots et Des Arts source type in the Events `+` menu: contributes the `dmda` type with its generic category picker. Des Mots et Des Arts event source type: probe reads the site's own paginated JSON listing (SSRF-guarded) and fingerprints its identity fields; extract maps the rows to events with no model call, resolving the year the site omits from the weekday it publishes.
               - Web:
                 - Contributes: `EventSources.Type` "Des Mots et Des Arts"
@@ -14677,7 +14708,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TagsOptionInput`
             - Exports (values): `tagsField`
           - Cross-plugin:
-            - Imported by: `apps/events/sources/salsanueva`
+            - Imported by:
+              - `apps/events/sources/coworkmeet`
+              - `apps/events/sources/salsanueva`
         - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "tags"
@@ -17212,6 +17245,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/events/refresh`
+          - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`
           - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
@@ -17702,6 +17736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper`
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/proxy`
+          - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`
           - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
@@ -18315,6 +18350,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `backgroundArgv`
           - `backgroundPrefix`
+    - **`wall-clock`** — Wall clock → UTC instant for an IANA zone, without a timezone database: the offset is read back out of Intl at the candidate instant and iterated to a fixed point, so DST is handled by the platform's own zone data rather than by a shipped table.
+      - Core:
+        - Exports (types): `WallClock`
+        - Exports (values):
+          - `isRealWallClock`
+          - `wallClockToInstant`
+          - `zoneOffsetMs`
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
       - Core:
         - Exports (types): `ZodParser`

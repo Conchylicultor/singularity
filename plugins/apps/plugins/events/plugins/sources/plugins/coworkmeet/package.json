@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-events-sources-coworkmeet",
+  "description": "CoworkMeet event source type: read the association's own Supabase listing of free coworking sessions and map each one to an event.",
+  "private": true,
+  "version": "0.0.1"
+}

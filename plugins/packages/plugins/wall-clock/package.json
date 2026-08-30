@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-packages-wall-clock",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Wall clock → UTC instant for an IANA zone, without a timezone database: the offset is read back out of Intl at the candidate instant and iterated to a fixed point, so DST is handled by the platform's own zone data rather than by a shipped table."
+}

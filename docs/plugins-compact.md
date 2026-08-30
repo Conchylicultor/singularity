@@ -12,7 +12,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [11 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
-    - **`events`** [20 sub-plugins] — Events — track events from pluggable sources in one database.
+    - **`events`** [21 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
@@ -206,6 +206,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`sink`**
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
+    - **`wall-clock`** — Wall clock → UTC instant for an IANA zone, without a timezone database: the offset is read back out of Intl at the candidate instant and iterated to a fixed point, so DST is handled by the platform's own zone data rather than by a shipped table.
     - **`zod-parser`** — ZodParser<T> — the type of a schema that parses untrusted input into a T — and its enforcing lint rule (no-narrow-zodtype), which bans the one-argument ZodType<T> whose Input silently defaults to Output.
 
 - **`page`** [60 sub-plugins] — Block-based page editor.

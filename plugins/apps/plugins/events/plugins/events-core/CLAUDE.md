@@ -127,7 +127,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 
 - Description: Contract layer for the Events app, web half: the EventSources.Type source-type slot plus the live sources / events-revision hooks and the source-CRUD mutations. Contract layer for the Events app: the event_sources / events / event_source_runs entities, the defineEventSourceType two-phase registry, source CRUD endpoints, and the live sources window + events revision tick.
 - Web:
-  - Slots: `EventSources.Type` ← `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
+  - Slots: `EventSources.Type` ← `apps.events.sources.coworkmeet`, `apps.events.sources.dmda`, `apps.events.sources.manual`, `apps.events.sources.salsanueva`, `apps.events.sources.url-extract`
   - Uses:
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
@@ -285,6 +285,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/event-list`
     - `apps/events/refresh`
     - `apps/events/sources`
+    - `apps/events/sources/coworkmeet`
     - `apps/events/sources/dmda`
     - `apps/events/sources/manual`
     - `apps/events/sources/refresh-all`

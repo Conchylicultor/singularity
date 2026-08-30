@@ -318,6 +318,10 @@
       "name": "@singularity/plugin-apps-events-sources",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/sources/plugins/coworkmeet": {
+      "name": "@singularity/plugin-apps-events-sources-coworkmeet",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/sources/plugins/dmda": {
       "name": "@singularity/plugin-apps-events-sources-dmda",
       "version": "0.0.1",
@@ -3279,6 +3283,10 @@
       "name": "@singularity/plugin-packages-spawn-priority",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/wall-clock": {
+      "name": "@singularity/plugin-packages-wall-clock",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/zod-parser": {
       "name": "@singularity/plugin-packages-zod-parser",
       "version": "0.0.1",
@@ -5930,6 +5938,8 @@
 
     "@singularity/plugin-apps-events-sources": ["@singularity/plugin-apps-events-sources@workspace:plugins/apps/plugins/events/plugins/sources"],
 
+    "@singularity/plugin-apps-events-sources-coworkmeet": ["@singularity/plugin-apps-events-sources-coworkmeet@workspace:plugins/apps/plugins/events/plugins/sources/plugins/coworkmeet"],
+
     "@singularity/plugin-apps-events-sources-dmda": ["@singularity/plugin-apps-events-sources-dmda@workspace:plugins/apps/plugins/events/plugins/sources/plugins/dmda"],
 
     "@singularity/plugin-apps-events-sources-manual": ["@singularity/plugin-apps-events-sources-manual@workspace:plugins/apps/plugins/events/plugins/sources/plugins/manual"],
@@ -7347,6 +7357,8 @@
     "@singularity/plugin-packages-signal-origin-sink": ["@singularity/plugin-packages-signal-origin-sink@workspace:plugins/packages/plugins/signal-origin/plugins/sink"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
+
+    "@singularity/plugin-packages-wall-clock": ["@singularity/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
 
     "@singularity/plugin-packages-zod-parser": ["@singularity/plugin-packages-zod-parser@workspace:plugins/packages/plugins/zod-parser"],
 

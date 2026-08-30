@@ -47,6 +47,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/events/plugins/event-list",
   "apps/plugins/events/plugins/events-core",
   "apps/plugins/events/plugins/sources",
+  "apps/plugins/events/plugins/sources/plugins/coworkmeet",
   "apps/plugins/events/plugins/sources/plugins/dmda",
   "apps/plugins/events/plugins/sources/plugins/manual",
   "apps/plugins/events/plugins/sources/plugins/refresh-all",

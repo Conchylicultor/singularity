@@ -1,4 +1,8 @@
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
+import {
+  isRealWallClock,
+  wallClockToInstant,
+} from "@plugins/packages/plugins/wall-clock/core";
 import type { EventDate } from "@plugins/apps/plugins/events/plugins/event-date/core";
 
 // `"Dimanche 09 Août à 10h00"` → an exact UTC instant.
@@ -15,27 +19,27 @@ import type { EventDate } from "@plugins/apps/plugins/events/plugins/event-date/
 //
 //  2. **The time is Paris wall-clock, and `startsAt` is a UTC instant.** August
 //     is UTC+2 and November is UTC+1, so reading `10h00` as UTC puts every
-//     summer walk two hours early. There is no timezone database in this repo
-//     (`event-date/CLAUDE.md` documents that on purpose), so the offset is
-//     resolved through `Intl` at the candidate instant.
+//     summer walk two hours early. The conversion is
+//     `packages/wall-clock`'s job, not this file's.
 //
 // Pure and `Date`-injected so the whole thing is unit-testable without a clock.
 
 const PARIS = "Europe/Paris";
 
+/** 1-based, matching `WallClock#month`. */
 const MONTHS: Readonly<Record<string, number>> = {
-  janvier: 0,
-  février: 1,
-  mars: 2,
-  avril: 3,
-  mai: 4,
-  juin: 5,
-  juillet: 6,
-  août: 7,
-  septembre: 8,
-  octobre: 9,
-  novembre: 10,
-  décembre: 11,
+  janvier: 1,
+  février: 2,
+  mars: 3,
+  avril: 4,
+  mai: 5,
+  juin: 6,
+  juillet: 7,
+  août: 8,
+  septembre: 9,
+  octobre: 10,
+  novembre: 11,
+  décembre: 12,
 };
 
 /** Sunday-first, because this is compared against `Date#getUTCDay`. */
@@ -70,78 +74,6 @@ const PAST_TOLERANCE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** How many years forward to consider. A weekday matches at most one of any two. */
 const YEAR_CANDIDATES = 3;
-
-/**
- * The offset of `zone` at a given instant, in ms (positive east of Greenwich).
- *
- * Read by formatting the instant *in* the zone and diffing the resulting wall
- * clock against the instant — the standard trick, and the only one available
- * without a tz database.
- */
-function zoneOffsetMs(instant: number, zone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: zone,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(new Date(instant));
-
-  const read = (type: Intl.DateTimeFormatPartTypes): number => {
-    const part = parts.find((p) => p.type === type);
-    if (part === undefined) {
-      throw new Error(`Intl gave no "${type}" part for ${zone}`);
-    }
-    return Number(part.value);
-  };
-
-  const wallClock = Date.UTC(
-    read("year"),
-    read("month") - 1,
-    read("day"),
-    // `hour12: false` renders midnight as "24" in some ICU versions.
-    read("hour") % 24,
-    read("minute"),
-    read("second"),
-  );
-  return wallClock - instant;
-}
-
-/**
- * The UTC instant at which the clock in `zone` reads the given wall time.
- *
- * Iterated rather than solved: the offset depends on the instant, which is what
- * we are computing. One correction settles every ordinary date; the second
- * settles a wall time that lands near a DST transition. A wall time inside the
- * spring-forward gap does not exist — the loop converges on the instant just
- * after it, which is the conventional resolution.
- */
-function wallClockToUtc(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  zone: string,
-): number {
-  const naive = Date.UTC(year, month, day, hour, minute);
-  let instant = naive;
-  for (let pass = 0; pass < 2; pass++) {
-    const corrected = naive - zoneOffsetMs(instant, zone);
-    if (corrected === instant) break;
-    instant = corrected;
-  }
-  return instant;
-}
-
-/** Whether `year-month-day` is a real calendar date (rejects "31 février"). */
-function isRealCalendarDate(year: number, month: number, day: number): boolean {
-  const probe = new Date(Date.UTC(year, month, day));
-  return probe.getUTCMonth() === month && probe.getUTCDate() === day;
-}
 
 /**
  * Parse one published visit date.
@@ -186,14 +118,23 @@ export function parseFrenchVisitDate(text: string, today: Date): EventDate {
   const firstYear = today.getUTCFullYear();
   for (let i = 0; i < YEAR_CANDIDATES; i++) {
     const year = firstYear + i;
-    if (!isRealCalendarDate(year, month, day)) continue;
+    // Pre-checked rather than caught: `wallClockToInstant` throws on 30 February,
+    // and a candidate year that does not have the published day is an ordinary
+    // "try the next year", not an error.
+    if (!isRealWallClock({ year, month, day })) continue;
     // The weekday of the published CIVIL date — not of the resolved instant,
-    // which for an evening event can fall on the previous UTC day.
-    if (new Date(Date.UTC(year, month, day)).getUTCDay() !== weekday) continue;
+    // which for an evening event can fall on the previous UTC day. `Date.UTC`
+    // stays 0-based, unlike `WallClock#month`.
+    if (new Date(Date.UTC(year, month - 1, day)).getUTCDay() !== weekday) {
+      continue;
+    }
 
-    const instant = wallClockToUtc(year, month, day, hour, minute, PARIS);
-    if (instant < floor) continue;
-    return { kind: "once", startsAt: new Date(instant) };
+    const startsAt = wallClockToInstant(
+      { year, month, day, hour, minute },
+      PARIS,
+    );
+    if (startsAt.getTime() < floor) continue;
+    return { kind: "once", startsAt };
   }
 
   throw new NonRetryableError(
