@@ -53,9 +53,9 @@ const out = arg("out", "/tmp/annotations");
 const r = report();
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 /**
@@ -422,7 +422,7 @@ await withBrowser(async (h) => {
     page,
     pageId,
     MEMBERS.map((m): [string, string] => [m.type, m.child]),
-  ).catch((err: unknown): never =>
+  ).catch((err: unknown): Promise<never> =>
     bail(
       "seed: the fixture posts through the write boundary",
       `${err instanceof Error ? err.message : String(err)} — nothing below is checkable`,
@@ -636,5 +636,5 @@ await withBrowser(async (h) => {
     JSON.stringify({ wrapper: wrapper?.id, typedRow }),
   );
 
-  r.finish();
+  await r.finish();
 });

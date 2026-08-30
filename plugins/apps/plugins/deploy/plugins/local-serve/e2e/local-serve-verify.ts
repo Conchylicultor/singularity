@@ -17,6 +17,7 @@ import {
   pathUrl,
   report,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const r = report("deploy local-serve section");
@@ -25,7 +26,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   const deployments = (await (
-    await fetch(pathUrl("/api/deploy/deployments"))
+    await agentFetch("/api/deploy/deployments")
   ).json()) as { id: string; serverId: string; compositionId: string }[];
 
   const deployment = deployments[0];
@@ -34,7 +35,7 @@ await withBrowser(async (h) => {
       "a deployment exists",
       "no deployment rows — add one in the Deploy app first",
     );
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -42,10 +43,8 @@ await withBrowser(async (h) => {
   //    branches on. Asked directly because the served arm is the one a laptop
   //    with nothing served cannot show on screen.
   const status = (await (
-    await fetch(
-      pathUrl(
-        `/api/build/serve/status?composition=${encodeURIComponent(deployment.compositionId)}`,
-      ),
+    await agentFetch(
+      `/api/build/serve/status?composition=${encodeURIComponent(deployment.compositionId)}`,
     )
   ).json()) as {
     namespace: string;
@@ -115,5 +114,5 @@ await withBrowser(async (h) => {
   });
   r.ok("the row carries a serve shortcut", (await serveAction.count()) > 0);
 
-  r.finish();
+  await r.finish();
 });

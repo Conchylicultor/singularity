@@ -19,10 +19,13 @@ await withBrowser(async (h) => {
 
   const result = await page.evaluate(async () => {
     const nextFrame = (): Promise<void> =>
-      new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(() => res())));
+      new Promise((res) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => res())),
+      );
     const tick = (ms: number): Promise<void> =>
       new Promise((res) => setTimeout(() => res(), ms));
-    const pulled = (el: HTMLElement): boolean => /translate/.test(el.style.transform || "");
+    const pulled = (el: HTMLElement): boolean =>
+      /translate/.test(el.style.transform || "");
 
     // --- POSITIVE: a non-scrollable scroll viewport ---
     // Build a small overflow-y:auto container whose content fits (not scrollable).
@@ -76,9 +79,15 @@ await withBrowser(async (h) => {
     return { positivePulled, keepsMoving, negativePulled };
   });
 
-  r.ok("positive (wasted gesture rubber-banded)", result.positivePulled === true);
+  r.ok(
+    "positive (wasted gesture rubber-banded)",
+    result.positivePulled === true,
+  );
   r.ok("live follow (second push moves further)", result.keepsMoving === true);
-  r.ok("negative (real scroll did NOT bounce)", result.negativePulled === false);
+  r.ok(
+    "negative (real scroll did NOT bounce)",
+    result.negativePulled === false,
+  );
 
-  r.finish();
+  await r.finish();
 });

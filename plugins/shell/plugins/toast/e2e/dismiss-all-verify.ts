@@ -350,4 +350,4 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();

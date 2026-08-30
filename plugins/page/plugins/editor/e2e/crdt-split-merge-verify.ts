@@ -311,5 +311,5 @@ await withBrowser(async (h) => {
   console.log("BLOCK2_ID:", tailBlockId);
   console.log("PAGE_URL:", pageUrl);
 
-  r.finish();
+  await r.finish();
 });

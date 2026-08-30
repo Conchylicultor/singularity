@@ -142,7 +142,7 @@ await withBrowser(async (h) => {
   const pageId = await mintPage(h);
   if (!pageId) {
     r.fail("mint a page", "the Blank page tile did not land on /page/<id>");
-    r.finish();
+    await r.finish();
   }
   const outside = `/agents/page/${pageId}`;
   const home = `/pages/page/${pageId}`;
@@ -203,4 +203,4 @@ await withBrowser(async (h) => {
   await checkConversationLeavesForeignApps(h);
 });
 
-r.finish();
+await r.finish();

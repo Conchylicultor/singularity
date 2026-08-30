@@ -64,3 +64,34 @@ export function jsoncConfigProxy(filePath: string): ConfigProxy {
     },
   };
 }
+
+/**
+ * Write exact bytes to `filePath`, atomically — the same temp-file + rename the
+ * proxy's `write` uses, without the parse/serialise round trip.
+ *
+ * For restoring a config document from a captured snapshot. Bytes rather than
+ * parsed content is the whole point: the `// @hash` header and any comment
+ * legend come back byte-identical, where re-serialising a parsed document would
+ * drop the comments and could produce a file the reader rejects as corrupt.
+ */
+export function writeRawAtomic(filePath: string, bytes: string): void {
+  const tmp = `${filePath}.tmp-${randomUUID()}`;
+  try {
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(tmp, bytes, "utf-8");
+    renameSync(tmp, filePath);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch (unlinkErr: unknown) {
+      if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT")
+        throw unlinkErr;
+    }
+    throw err;
+  }
+}
+
+/** Exact bytes of `filePath`, or `null` when it does not exist. */
+export function readRawOrNull(filePath: string): string | null {
+  return existsSync(filePath) ? readFileSync(filePath, "utf-8") : null;
+}

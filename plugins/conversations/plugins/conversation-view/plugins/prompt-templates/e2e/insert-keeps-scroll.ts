@@ -124,7 +124,7 @@ await withBrowser(async (h) => {
   });
   if (target === null) {
     r.fail("no clickable template chip found");
-    r.finish();
+    await r.finish();
     return;
   }
   r.note(`clicked chip: ${target.label}`);
@@ -168,5 +168,5 @@ await withBrowser(async (h) => {
     after.scrollTop >= before.scrollTop - 40,
     `scrollTop ${before.scrollTop} → ${after.scrollTop} (max ${after.maxScroll})`,
   );
-  r.finish();
+  await r.finish();
 });

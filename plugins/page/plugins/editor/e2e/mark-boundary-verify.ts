@@ -125,7 +125,7 @@ const OP_MS = 1500;
 // --- persisted-row reads ------------------------------------------------------
 
 /** Shared with `format-shortcuts-verify.ts` — see `support/runs.ts`. */
-const { fetchRows, settledRuns } = makeRunsReader(base);
+const { fetchRows, settledRuns } = makeRunsReader();
 
 // --- DOM reads ----------------------------------------------------------------
 
@@ -1467,5 +1467,5 @@ await withBrowser(async (h) => {
     }),
   );
 
-  r.finish();
+  await r.finish();
 });

@@ -178,7 +178,7 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();
 
 interface BandReading {
   /** Sortable items anywhere in the header band. */

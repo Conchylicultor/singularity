@@ -73,16 +73,33 @@ await withBrowser(async (h) => {
   const chipsAfterClosed = await chips().count();
 
   const r = report("element-picker: picks add to the draft, never replace it");
-  r.note(`after open-popover pick:  ${JSON.stringify(afterOpen)} (chips=${chipsAfterOpen})`);
-  r.note(`after closed-popover pick: ${JSON.stringify(afterClosed)} (chips=${chipsAfterClosed})`);
-  r.ok("draft survives a pick with the popover open", afterOpen.includes(DRAFT));
-  r.ok("that pick added a chip", chipsAfterOpen === 1, `chips=${chipsAfterOpen}`);
-  r.ok("draft survives a pick with the popover closed", afterClosed.includes(DRAFT));
+  r.note(
+    `after open-popover pick:  ${JSON.stringify(afterOpen)} (chips=${chipsAfterOpen})`,
+  );
+  r.note(
+    `after closed-popover pick: ${JSON.stringify(afterClosed)} (chips=${chipsAfterClosed})`,
+  );
+  r.ok(
+    "draft survives a pick with the popover open",
+    afterOpen.includes(DRAFT),
+  );
+  r.ok(
+    "that pick added a chip",
+    chipsAfterOpen === 1,
+    `chips=${chipsAfterOpen}`,
+  );
+  r.ok(
+    "draft survives a pick with the popover closed",
+    afterClosed.includes(DRAFT),
+  );
   r.ok(
     "that pick added a second chip",
     chipsAfterClosed === 2,
     `chips=${chipsAfterClosed}`,
   );
-  r.ok("no literal tag text leaked into the editor", !afterClosed.includes("<ui-context"));
-  r.finish();
+  r.ok(
+    "no literal tag text leaked into the editor",
+    !afterClosed.includes("<ui-context"),
+  );
+  await r.finish();
 });

@@ -61,5 +61,5 @@ await withBrowser(async (h) => {
 
   r.eq("every keystroke landed in the block the Enter created", texts, LINES);
 
-  r.finish();
+  await r.finish();
 });

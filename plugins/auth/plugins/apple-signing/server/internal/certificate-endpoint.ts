@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { setConfig } from "@plugins/config_v2/server";
+import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { setAppleCertificateEndpoint } from "../../core/endpoints";
 import { appleSigningConfig } from "../../shared/config";
@@ -82,7 +83,8 @@ async function deriveSigningIdentity(
 
 export const handleSetAppleCertificate = implement(
   setAppleCertificateEndpoint,
-  async ({ body }) => {
+  async ({ body, req }) => {
+    const writer = originOf(req);
     const tmpDir = mkdtempSync(join(tmpdir(), "apple-cert-"));
     try {
       const p12Path = join(tmpDir, "cert.p12");
@@ -106,10 +108,21 @@ export const handleSetAppleCertificate = implement(
       // Persist through the same config path the setConfigField handler uses:
       // secret fields hit the encrypted store (and notify the secret-meta
       // resource); the text field lands in config_v2 JSONC.
-      await setConfig(appleSigningConfig, "p12Cert", body.p12Base64);
-      await setConfig(appleSigningConfig, "p12Password", body.password);
+      await setConfig(appleSigningConfig, "p12Cert", body.p12Base64, {
+        writer,
+      });
+      await setConfig(appleSigningConfig, "p12Password", body.password, {
+        writer,
+      });
       if (signingIdentity) {
-        await setConfig(appleSigningConfig, "signingIdentity", signingIdentity);
+        await setConfig(
+          appleSigningConfig,
+          "signingIdentity",
+          signingIdentity,
+          {
+            writer,
+          },
+        );
       }
 
       return { signingIdentity };

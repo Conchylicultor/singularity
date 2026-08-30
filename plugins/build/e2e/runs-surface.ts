@@ -300,27 +300,13 @@ await withBrowser(async (h) => {
       `aria-expanded elements ${before} → ${after}`,
     );
 
-    // TEARDOWN, and not optional. A DataView writes per-instance sort / filter /
-    // groupBy straight back through the config layer, so selecting a grouping
-    // above actually MUTATED the running app — it left `groupBy` on the `recent`
-    // instance in the user-layer config, where the next person to open the
-    // surface would find it. A verification script that changes the thing it is
-    // verifying is not a verification script, so put it back and assert it went.
-    await settings.first().click();
-    await page.waitForTimeout(800);
-    await page
-      .locator("[role=radio],[role=menuitemradio],button")
-      .filter({ hasText: /^None$/ })
-      .first()
-      .click();
-    await page.waitForTimeout(1500);
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(1200);
-    r.eq(
-      "grouping is restored to None (the surface is left as found)",
-      await page.locator("[aria-expanded]").count(),
-      before,
-    );
+    // No teardown here, deliberately. Selecting a grouping above really did
+    // mutate the running app — a DataView writes per-instance sort / filter /
+    // groupBy straight back through the config layer — but the harness now
+    // records every config document an agent-origin request overwrites and
+    // restores it at both ends of the run (`e2e/agent-writes.ts`). A
+    // hand-written restore here would be discipline standing in for structure,
+    // and it never covered a run that was killed before reaching it.
   }
 
   // Grant access cannot render against this worktree's data — no backup run
@@ -336,4 +322,4 @@ await withBrowser(async (h) => {
   );
 });
 
-r.finish();
+await r.finish();

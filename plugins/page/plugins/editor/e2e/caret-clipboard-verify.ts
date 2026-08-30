@@ -211,5 +211,5 @@ await withBrowser(async (h) => {
     ["text/plain", "text/html"],
   );
 
-  r.finish();
+  await r.finish();
 });

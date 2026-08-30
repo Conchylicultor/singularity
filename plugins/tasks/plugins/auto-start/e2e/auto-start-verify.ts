@@ -69,4 +69,4 @@ r.ok(
   consoleErrors.length === 0,
   consoleErrors.join(" | "),
 );
-r.finish();
+await r.finish();

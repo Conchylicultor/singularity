@@ -76,7 +76,7 @@ await withBrowser(async (h) => {
   const target = events.find((e) => e.url === null) ?? events[0];
   if (target === undefined) {
     r.note("no events in this worktree — nothing to verify");
-    r.finish();
+    await r.finish();
   }
 
   const source = sourceById.get(target!.sourceId);
@@ -124,4 +124,4 @@ await withBrowser(async (h) => {
   );
 });
 
-r.finish();
+await r.finish();

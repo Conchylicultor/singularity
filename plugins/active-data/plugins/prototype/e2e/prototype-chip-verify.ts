@@ -80,4 +80,4 @@ await withBrowser(async (h) => {
   r.ok("the conversation stayed open beside it", ids.includes("conversation"));
 });
 
-r.finish();
+await r.finish();

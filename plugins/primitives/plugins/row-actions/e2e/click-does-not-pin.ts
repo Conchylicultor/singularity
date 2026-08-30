@@ -122,7 +122,7 @@ await withBrowser(async (h) => {
       "the row has a hover-revealed action cluster",
       `no faded cluster under ${ROW_SELECTOR} — every assertion below would be vacuous`,
     );
-    r.finish();
+    await r.finish();
   }
   const probeIdx = clusterIdx[0]!;
 
@@ -194,7 +194,7 @@ await withBrowser(async (h) => {
     r.note(
       "the cluster never reveals — the assertions below cannot mean anything",
     );
-    r.finish();
+    await r.finish();
   }
 
   // --- 2. A click on the row body must not pin it -----------------------------
@@ -282,5 +282,5 @@ await withBrowser(async (h) => {
   // design on teardown, so it is noise here, not a defect.
   const errors = [...captured.pageErrors, ...captured.consoleErrors];
   r.ok("no page or console errors", errors.length === 0, errors.join("\n"));
-  r.finish();
+  await r.finish();
 });

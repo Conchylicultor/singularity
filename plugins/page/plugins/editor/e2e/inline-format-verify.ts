@@ -38,6 +38,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
@@ -76,10 +77,12 @@ interface NormRun {
 }
 
 async function fetchRows(pageId: string): Promise<Map<string, BlockRow>> {
-  const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+  const res = await agentFetch(`/api/pages/${pageId}/blocks`);
   if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
   const rows = (await res.json()) as BlockRow[];
-  return new Map(rows.filter((row) => row.type !== "page").map((row) => [row.id, row]));
+  return new Map(
+    rows.filter((row) => row.type !== "page").map((row) => [row.id, row]),
+  );
 }
 
 /**
@@ -90,9 +93,13 @@ async function fetchRows(pageId: string): Promise<Map<string, BlockRow>> {
  * (and `marks: []` an explicit claim rather than a missing key).
  */
 const runsOf = (row: BlockRow | undefined): NormRun[] =>
-  (row?.data?.text ?? []).map((run) => ({ text: run.text, marks: run.marks ?? [] }));
+  (row?.data?.text ?? []).map((run) => ({
+    text: run.text,
+    marks: run.marks ?? [],
+  }));
 
-const textOfRuns = (runs: NormRun[]): string => runs.map((run) => run.text).join("");
+const textOfRuns = (runs: NormRun[]): string =>
+  runs.map((run) => run.text).join("");
 
 // --- DOM reads ----------------------------------------------------------------
 
@@ -113,11 +120,15 @@ const editableOf = (page: Page, blockId: string) =>
  * the `theme.text` mapping. NBSP is normalized because Chromium renders a
  * model-level space as one at a text-node edge.
  */
-async function markedTexts(page: Page, blockId: string, tag: string): Promise<string[]> {
+async function markedTexts(
+  page: Page,
+  blockId: string,
+  tag: string,
+): Promise<string[]> {
   return page.evaluate(
     ([id, sel]) =>
-      [...document.querySelectorAll(`[data-block-id="${id}"] ${sel}`)].map((el) =>
-        (el.textContent ?? "").replace(/ /g, " "),
+      [...document.querySelectorAll(`[data-block-id="${id}"] ${sel}`)].map(
+        (el) => (el.textContent ?? "").replace(/ /g, " "),
       ),
     [blockId, tag] as [string, string],
   );
@@ -163,7 +174,8 @@ async function enterNewBlock(page: Page, pageId: string): Promise<string> {
   const deadline = Date.now() + 20_000;
   for (;;) {
     if ((await fetchRows(pageId)).has(id)) break;
-    if (Date.now() > deadline) throw new Error(`block ${id} never reached the server`);
+    if (Date.now() > deadline)
+      throw new Error(`block ${id} never reached the server`);
     await page.waitForTimeout(250);
   }
   // The row is confirmed, so doc-init is now unblocked; give its round trip a
@@ -175,7 +187,11 @@ async function enterNewBlock(page: Page, pageId: string): Promise<string> {
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
 
-  const { pageUrl, pageId, blockId: firstId } = await openBlankPage(page, base, {
+  const {
+    pageUrl,
+    pageId,
+    blockId: firstId,
+  } = await openBlankPage(page, base, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);
@@ -193,8 +209,14 @@ await withBrowser(async (h) => {
     // `MARK_ORDER` is bold → italic → underline → strikethrough → code, so
     // these two are the canonical-sort assertion: `["bold","italic"]`, never
     // the table's declaration order reversed.
-    { typed: "***bi***", expected: [{ text: "bi", marks: ["bold", "italic"] }] },
-    { typed: "___bi2___", expected: [{ text: "bi2", marks: ["bold", "italic"] }] },
+    {
+      typed: "***bi***",
+      expected: [{ text: "bi", marks: ["bold", "italic"] }],
+    },
+    {
+      typed: "___bi2___",
+      expected: [{ text: "bi2", marks: ["bold", "italic"] }],
+    },
     { typed: "~~s~~", expected: [{ text: "s", marks: ["strikethrough"] }] },
     { typed: "`c`", expected: [{ text: "c", marks: ["code"] }] },
   ];
@@ -221,7 +243,9 @@ await withBrowser(async (h) => {
     // No delimiter char survives ANYWHERE in the transformed rows — the
     // aggregate form of "the delimiters were removed", which a per-row equality
     // could still pass if one row silently kept a stray char in a second run.
-    const allText = syntaxIds.map((id) => textOfRuns(runsOf(rows.get(id)))).join("|");
+    const allText = syntaxIds
+      .map((id) => textOfRuns(runsOf(rows.get(id))))
+      .join("|");
     r.ok(
       "P1 no delimiter char survives in any row",
       !/[*_~`]/.test(allText),
@@ -275,9 +299,17 @@ await withBrowser(async (h) => {
     // The DOM dual: ` tail` sits OUTSIDE the `<strong>`, which is also the proof
     // the caret landed AFTER the content rather than inside it or before it.
     const strongs = await markedTexts(page, tailId, "strong");
-    r.eq("P2 <strong> holds only 'b' (caret landed after the content)", strongs, ["b"]);
+    r.eq(
+      "P2 <strong> holds only 'b' (caret landed after the content)",
+      strongs,
+      ["b"],
+    );
     const visible = await blockText(editableOf(page, tailId));
-    r.ok("P2 visible text is 'b tail'", visible === "b tail", JSON.stringify(visible));
+    r.ok(
+      "P2 visible text is 'b tail'",
+      visible === "b tail",
+      JSON.stringify(visible),
+    );
   }
 
   // --- Phase 3: THE undo requirement -----------------------------------------
@@ -289,7 +321,8 @@ await withBrowser(async (h) => {
     const visible = await blockText(editableOf(page, undoId));
     r.ok(
       "P3 **again** bolded",
-      visible === "again" && JSON.stringify(strongs) === JSON.stringify(["again"]),
+      visible === "again" &&
+        JSON.stringify(strongs) === JSON.stringify(["again"]),
       `text=${JSON.stringify(visible)} strong=${JSON.stringify(strongs)}`,
     );
   }
@@ -303,8 +336,16 @@ await withBrowser(async (h) => {
   {
     const visible = await blockText(editableOf(page, undoId));
     const strongs = await markedTexts(page, undoId, "strong");
-    r.ok("P3 undo restores the literal '**again**'", visible === "**again**", JSON.stringify(visible));
-    r.ok("P3 undo leaves no <strong>", strongs.length === 0, JSON.stringify(strongs));
+    r.ok(
+      "P3 undo restores the literal '**again**'",
+      visible === "**again**",
+      JSON.stringify(visible),
+    );
+    r.ok(
+      "P3 undo leaves no <strong>",
+      strongs.length === 0,
+      JSON.stringify(strongs),
+    );
   }
 
   // NO RE-FIRE. The restored text still ENDS in `**`, so a transform that did
@@ -319,7 +360,11 @@ await withBrowser(async (h) => {
       visible === "**again**",
       JSON.stringify(visible),
     );
-    r.ok("P3 no re-fire: still no <strong>", strongs.length === 0, JSON.stringify(strongs));
+    r.ok(
+      "P3 no re-fire: still no <strong>",
+      strongs.length === 0,
+      JSON.stringify(strongs),
+    );
   }
 
   // Undoing PAST the format entry reaches the typing behind it and empties the
@@ -338,24 +383,39 @@ await withBrowser(async (h) => {
   // Each entry is `<visible text>/<number of <strong>s>` after one press.
   const undoStates: string[] = [];
   let typingUndos = 0;
-  while ((await blockText(editableOf(page, undoId))) !== "" && typingUndos < 4) {
+  while (
+    (await blockText(editableOf(page, undoId))) !== "" &&
+    typingUndos < 4
+  ) {
     await page.keyboard.press(UNDO);
     await page.waitForTimeout(800);
     typingUndos += 1;
     const visible = await blockText(editableOf(page, undoId));
-    undoStates.push(`${visible}/${(await markedTexts(page, undoId, "strong")).length}`);
+    undoStates.push(
+      `${visible}/${(await markedTexts(page, undoId, "strong")).length}`,
+    );
   }
-  r.note(`P3 the typing run occupied ${typingUndos} undo entr${typingUndos === 1 ? "y" : "ies"}`);
+  r.note(
+    `P3 the typing run occupied ${typingUndos} undo entr${typingUndos === 1 ? "y" : "ies"}`,
+  );
   {
     const visible = await blockText(editableOf(page, undoId));
-    r.ok("P3 undoing past the format empties the block", visible === "", JSON.stringify(visible));
+    r.ok(
+      "P3 undoing past the format empties the block",
+      visible === "",
+      JSON.stringify(visible),
+    );
     r.ok(
       "P3 bold never returned while undoing the typing",
       undoStates.every((state) => state.endsWith("/0")),
       JSON.stringify(undoStates),
     );
     const ids = await editableIds(page);
-    r.ok("P3 undoing the typing did not delete the block", ids.includes(undoId), JSON.stringify(ids));
+    r.ok(
+      "P3 undoing the typing did not delete the block",
+      ids.includes(undoId),
+      JSON.stringify(ids),
+    );
   }
 
   // Redo the same number of typing entries → back to the literal, still unbolded.
@@ -366,8 +426,16 @@ await withBrowser(async (h) => {
   {
     const visible = await blockText(editableOf(page, undoId));
     const strongs = await markedTexts(page, undoId, "strong");
-    r.ok("P3 redo #1 restores the literal '**again**'", visible === "**again**", JSON.stringify(visible));
-    r.ok("P3 redo #1 leaves no <strong>", strongs.length === 0, JSON.stringify(strongs));
+    r.ok(
+      "P3 redo #1 restores the literal '**again**'",
+      visible === "**again**",
+      JSON.stringify(visible),
+    );
+    r.ok(
+      "P3 redo #1 leaves no <strong>",
+      strongs.length === 0,
+      JSON.stringify(strongs),
+    );
   }
 
   await page.keyboard.press(REDO);
@@ -379,7 +447,11 @@ await withBrowser(async (h) => {
     // "exactly one" is the no-re-fire check on the redo side: a second
     // application would split the run and leave two `<strong>`s (or re-strip
     // nothing and leave the text wrong).
-    r.ok("P3 redo #2 re-applies bold", visible === "again", JSON.stringify(visible));
+    r.ok(
+      "P3 redo #2 re-applies bold",
+      visible === "again",
+      JSON.stringify(visible),
+    );
     r.eq("P3 redo #2 leaves exactly one <strong>", strongs, ["again"]);
   }
 
@@ -404,18 +476,27 @@ await withBrowser(async (h) => {
   // format merged into the typing item, `**x**` would appear instead.
   const mergeStates: string[] = [];
   let tailUndos = 0;
-  while ((await blockText(editableOf(page, mergeId))) !== "x" && tailUndos < 4) {
+  while (
+    (await blockText(editableOf(page, mergeId))) !== "x" &&
+    tailUndos < 4
+  ) {
     await page.keyboard.press(UNDO);
     await page.waitForTimeout(800);
     tailUndos += 1;
     mergeStates.push(await blockText(editableOf(page, mergeId)));
   }
   await snap(page, out, "4-no-merge");
-  r.note(`P4 the trailing typing occupied ${tailUndos} undo entr${tailUndos === 1 ? "y" : "ies"}`);
+  r.note(
+    `P4 the trailing typing occupied ${tailUndos} undo entr${tailUndos === 1 ? "y" : "ies"}`,
+  );
   {
     const visible = await blockText(editableOf(page, mergeId));
     const strongs = await markedTexts(page, mergeId, "strong");
-    r.ok("P4 undoing the trailing typing lands on 'x'", visible === "x", JSON.stringify(visible));
+    r.ok(
+      "P4 undoing the trailing typing lands on 'x'",
+      visible === "x",
+      JSON.stringify(visible),
+    );
     r.ok(
       "P4 the format never reverted (no delimiter reappeared)",
       mergeStates.every((state) => !state.includes("*")),
@@ -451,9 +532,11 @@ await withBrowser(async (h) => {
   {
     const rows = await fetchRows(pageId);
     for (const [i, typed] of negatives.entries()) {
-      r.eq(`P5 ${JSON.stringify(typed)} stays literal`, runsOf(rows.get(negativeIds[i]!)), [
-        { text: typed, marks: [] },
-      ]);
+      r.eq(
+        `P5 ${JSON.stringify(typed)} stays literal`,
+        runsOf(rows.get(negativeIds[i]!)),
+        [{ text: typed, marks: [] }],
+      );
     }
   }
 
@@ -476,7 +559,11 @@ await withBrowser(async (h) => {
   {
     const rows = await fetchRows(pageId);
     const type = rows.get(fenceId)?.type;
-    r.ok("P6 ``` still converts the block to a code block", type === "code-block", `type=${type}`);
+    r.ok(
+      "P6 ``` still converts the block to a code block",
+      type === "code-block",
+      `type=${type}`,
+    );
   }
 
   await page.waitForTimeout(2000); // let every doc flush land before the cold read
@@ -488,7 +575,10 @@ await withBrowser(async (h) => {
   await pageB.goto(pageUrl, { waitUntil: "domcontentloaded" });
   // NOT `networkidle`: the app holds a notifications WebSocket open, so it never
   // settles. Wait on the block instead, then give hydration a beat.
-  await editableOf(pageB, syntaxIds[0]!).waitFor({ state: "visible", timeout: 30_000 });
+  await editableOf(pageB, syntaxIds[0]!).waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
   await pageB.waitForTimeout(5000);
   await snap(pageB, out, "7-context-b");
   {
@@ -500,7 +590,16 @@ await withBrowser(async (h) => {
 
   console.log("PAGE_URL:", pageUrl);
   console.log("SYNTAX_IDS:", JSON.stringify(syntaxIds));
-  console.log("TAIL_ID:", tailId, "UNDO_ID:", undoId, "MERGE_ID:", mergeId, "FENCE_ID:", fenceId);
+  console.log(
+    "TAIL_ID:",
+    tailId,
+    "UNDO_ID:",
+    undoId,
+    "MERGE_ID:",
+    mergeId,
+    "FENCE_ID:",
+    fenceId,
+  );
 
-  r.finish();
+  await r.finish();
 });

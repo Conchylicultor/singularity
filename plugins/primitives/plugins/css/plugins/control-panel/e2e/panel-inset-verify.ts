@@ -336,7 +336,7 @@ await withBrowser(async (h) => {
       await page.waitForTimeout(400);
     }
     if (out) await page.screenshot({ path: `${out}.png` });
-    r.finish();
+    await r.finish();
   }
 
   for (const step of steps
@@ -474,5 +474,5 @@ await withBrowser(async (h) => {
   if (geo) verdict(r, geo, path);
 
   if (out) await page.screenshot({ path: `${out}.png` });
-  r.finish();
+  await r.finish();
 });

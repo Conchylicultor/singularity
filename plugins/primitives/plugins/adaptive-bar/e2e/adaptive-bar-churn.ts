@@ -332,5 +332,5 @@ await withBrowser(async (h) => {
       "Check Debug → Reports, or query_db: select * from reports where kind = 'adaptive-bar';",
   );
 
-  r.finish();
+  await r.finish();
 });

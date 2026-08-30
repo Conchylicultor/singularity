@@ -36,7 +36,7 @@ const ROW_MARKER = '[data-ui-owner^="ListView@"]';
 await withBrowser(async (h) => {
   if (!SOURCE_ID) {
     r.fail("--source <sourceId> is required (an enabled source)");
-    r.finish();
+    await r.finish();
   }
 
   const { page } = await h.session({ viewport: { width: 1600, height: 900 } });
@@ -93,5 +93,5 @@ await withBrowser(async (h) => {
   );
 
   await snap(page, OUT, "after");
-  r.finish();
+  await r.finish();
 });

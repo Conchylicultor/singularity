@@ -104,7 +104,7 @@ await withBrowser(async (h) => {
       false,
       "none on this page — pass --url a page with a small widget in a row slot",
     );
-    r.finish();
+    await r.finish();
     return;
   }
   r.note(
@@ -125,5 +125,5 @@ await withBrowser(async (h) => {
     !best.boxless,
     `boxless=${best.boxless}`,
   );
-  r.finish();
+  await r.finish();
 });

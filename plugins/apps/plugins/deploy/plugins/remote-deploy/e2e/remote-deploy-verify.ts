@@ -16,6 +16,7 @@ import {
   pathUrl,
   report,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const r = report("deploy remote-deploy section");
@@ -24,7 +25,7 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
 
   const deployments = (await (
-    await fetch(pathUrl("/api/deploy/deployments"))
+    await agentFetch("/api/deploy/deployments")
   ).json()) as { id: string; serverId: string; compositionId: string }[];
 
   const deployment = deployments[0];
@@ -33,7 +34,7 @@ await withBrowser(async (h) => {
       "a deployment exists",
       "no deployment rows — add one in the Deploy app first",
     );
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -90,5 +91,5 @@ await withBrowser(async (h) => {
     (await page.getByText(/across ALL compositions/).count()) > 0,
   );
 
-  r.finish();
+  await r.finish();
 });

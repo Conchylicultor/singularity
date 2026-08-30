@@ -144,5 +144,5 @@ await withBrowser(async (h) => {
     true,
   );
 
-  r.finish();
+  await r.finish();
 });

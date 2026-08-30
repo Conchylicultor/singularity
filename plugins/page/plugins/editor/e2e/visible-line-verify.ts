@@ -31,7 +31,10 @@ const out = arg("out", "/tmp/visible-line");
 const r = report();
 
 // Poll the base URL until the backend serves (build/boot may still be finishing).
-async function waitForServer(url: string, deadlineMs: number): Promise<boolean> {
+async function waitForServer(
+  url: string,
+  deadlineMs: number,
+): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < deadlineMs) {
     try {
@@ -50,7 +53,7 @@ async function waitForServer(url: string, deadlineMs: number): Promise<boolean> 
 console.log(`waiting for ${base} ...`);
 const up = await waitForServer(base, 60_000);
 r.ok("server is serving", up);
-if (!up) r.finish();
+if (!up) await r.finish();
 
 // BLOCK_GUTTER / BLOCK_INDENT from plugins/page/plugins/editor/web/internal/page-column.ts.
 // Kept as local literals on purpose: the `e2e` runtime may not import `web`.
@@ -74,16 +77,18 @@ interface RowSnapshot {
 async function getRows(page: Page): Promise<RowSnapshot[]> {
   return page.evaluate<RowSnapshot[], { gutter: number; indent: number }>(
     ({ gutter, indent }) => {
-      const rows = [...document.querySelectorAll<HTMLElement>("[data-block-id]")].filter((el) =>
-        el.querySelector('[contenteditable="true"]'),
-      );
+      const rows = [
+        ...document.querySelectorAll<HTMLElement>("[data-block-id]"),
+      ].filter((el) => el.querySelector('[contenteditable="true"]'));
       return rows.map((el) => {
         const paddingLeft = parseFloat(el.style.paddingLeft || "0");
         const depth = Math.round((paddingLeft - gutter) / indent);
-        const markerSpan = [...el.querySelectorAll('span[aria-hidden="true"]')].find(
-          (s) => s.textContent === "•",
+        const markerSpan = [
+          ...el.querySelectorAll('span[aria-hidden="true"]'),
+        ].find((s) => s.textContent === "•");
+        const checkbox = el.querySelector<HTMLInputElement>(
+          'input[type="checkbox"]',
         );
-        const checkbox = el.querySelector<HTMLInputElement>('input[type="checkbox"]');
         const editable = el.querySelector('[contenteditable="true"]');
         return {
           id: el.getAttribute("data-block-id"),
@@ -99,7 +104,9 @@ async function getRows(page: Page): Promise<RowSnapshot[]> {
 }
 
 function editableFor(page: Page, blockId: string | null | undefined): Locator {
-  return page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first();
+  return page
+    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .first();
 }
 
 /**
@@ -114,7 +121,9 @@ async function caretToStart(page: Page, editable: Locator): Promise<void> {
   await editable.click({ position: { x: 2, y: 12 } });
   await page.waitForTimeout(200);
   for (let guard = 0; guard < 20; guard++) {
-    const offset = await page.evaluate(() => window.getSelection()?.anchorOffset ?? -1);
+    const offset = await page.evaluate(
+      () => window.getSelection()?.anchorOffset ?? -1,
+    );
     if (offset <= 0) break;
     await page.keyboard.press("ArrowLeft");
     await page.waitForTimeout(40);
@@ -146,8 +155,16 @@ await withBrowser(async (h) => {
 
     const beforeSplit = await getRows(page);
     console.log("before split:", JSON.stringify(beforeSplit));
-    r.ok("A: setup — two rows (AAACCC, BBB@depth1)", beforeSplit.length === 2, `count=${beforeSplit.length}`);
-    r.ok("A: setup — BBB indented under AAACCC", beforeSplit[1]?.depth === 1, `depth=${beforeSplit[1]?.depth}`);
+    r.ok(
+      "A: setup — two rows (AAACCC, BBB@depth1)",
+      beforeSplit.length === 2,
+      `count=${beforeSplit.length}`,
+    );
+    r.ok(
+      "A: setup — BBB indented under AAACCC",
+      beforeSplit[1]?.depth === 1,
+      `depth=${beforeSplit[1]?.depth}`,
+    );
 
     // Caret to start of AAACCC, then 3x ArrowRight -> between "AAA" and "CCC".
     // The per-arrow pause is the selectionchange lag Lexical absorbs caret moves
@@ -166,7 +183,11 @@ await withBrowser(async (h) => {
 
     const afterSplit = await getRows(page);
     console.log("after split:", JSON.stringify(afterSplit));
-    r.ok("A: three rows after split", afterSplit.length === 3, `count=${afterSplit.length}`);
+    r.ok(
+      "A: three rows after split",
+      afterSplit.length === 3,
+      `count=${afterSplit.length}`,
+    );
     if (afterSplit.length === 3) {
       r.ok(
         "A: row0 = AAA @ depth0",
@@ -191,10 +212,14 @@ await withBrowser(async (h) => {
   // ===========================================================================
   // B. Backspace ladder on a nested bullet
   // ===========================================================================
-  console.log("\n=== Scenario B: Backspace ladder (marker -> outdent -> merge) ===");
+  console.log(
+    "\n=== Scenario B: Backspace ladder (marker -> outdent -> merge) ===",
+  );
   {
     const { context, page } = await h.session();
-    const { block: first } = await openBlankPage(page, base, { settleMs: 3000 });
+    const { block: first } = await openBlankPage(page, base, {
+      settleMs: 3000,
+    });
     await first.click();
     // "* " is the markdown prefix that converts the block to a bulleted-list.
     await typeLines(page, ["parent", { text: "* item", indent: "in" }]);
@@ -205,9 +230,21 @@ await withBrowser(async (h) => {
     let rows = await getRows(page);
     console.log("B setup:", JSON.stringify(rows));
     r.ok("B: setup — two rows", rows.length === 2, `count=${rows.length}`);
-    r.ok("B: setup — item is a bullet", rows[1]?.hasBulletMarker === true, JSON.stringify(rows[1]));
-    r.ok("B: setup — item is indented (depth1)", rows[1]?.depth === 1, `depth=${rows[1]?.depth}`);
-    r.ok("B: setup — item text is 'item'", rows[1]?.text === "item", rows[1]?.text);
+    r.ok(
+      "B: setup — item is a bullet",
+      rows[1]?.hasBulletMarker === true,
+      JSON.stringify(rows[1]),
+    );
+    r.ok(
+      "B: setup — item is indented (depth1)",
+      rows[1]?.depth === 1,
+      `depth=${rows[1]?.depth}`,
+    );
+    r.ok(
+      "B: setup — item text is 'item'",
+      rows[1]?.text === "item",
+      rows[1]?.text,
+    );
     const itemDepthBefore = rows[1]?.depth;
 
     const itemId = rows[1]?.id;
@@ -222,8 +259,16 @@ await withBrowser(async (h) => {
     rows = await getRows(page);
     console.log("B after backspace 1:", JSON.stringify(rows));
     r.ok("B1: still two rows", rows.length === 2, `count=${rows.length}`);
-    r.ok("B1: bullet marker is GONE", rows[1]?.hasBulletMarker === false, JSON.stringify(rows[1]));
-    r.ok("B1: still indented (unchanged depth)", rows[1]?.depth === itemDepthBefore, `depth=${rows[1]?.depth}`);
+    r.ok(
+      "B1: bullet marker is GONE",
+      rows[1]?.hasBulletMarker === false,
+      JSON.stringify(rows[1]),
+    );
+    r.ok(
+      "B1: still indented (unchanged depth)",
+      rows[1]?.depth === itemDepthBefore,
+      `depth=${rows[1]?.depth}`,
+    );
     r.ok("B1: text still 'item'", rows[1]?.text === "item", rows[1]?.text);
 
     // --- Backspace #2: outdents to top level ---
@@ -232,8 +277,16 @@ await withBrowser(async (h) => {
     await snap(page, `${out}/b`, "2-outdented");
     rows = await getRows(page);
     console.log("B after backspace 2:", JSON.stringify(rows));
-    r.ok("B2: still two separate rows", rows.length === 2, `count=${rows.length}`);
-    r.ok("B2: outdented to top level (depth0)", rows[1]?.depth === 0, `depth=${rows[1]?.depth}`);
+    r.ok(
+      "B2: still two separate rows",
+      rows.length === 2,
+      `count=${rows.length}`,
+    );
+    r.ok(
+      "B2: outdented to top level (depth0)",
+      rows[1]?.depth === 0,
+      `depth=${rows[1]?.depth}`,
+    );
     r.ok("B2: text still 'item'", rows[1]?.text === "item", rows[1]?.text);
 
     // --- Backspace #3: merges into previous line ---
@@ -255,10 +308,14 @@ await withBrowser(async (h) => {
   // ===========================================================================
   // C. Empty-Enter escape ladder on a nested bullet
   // ===========================================================================
-  console.log("\n=== Scenario C: Empty-Enter escape ladder (outdent -> convertTo) ===");
+  console.log(
+    "\n=== Scenario C: Empty-Enter escape ladder (outdent -> convertTo) ===",
+  );
   {
     const { context, page } = await h.session();
-    const { block: first } = await openBlankPage(page, base, { settleMs: 3000 });
+    const { block: first } = await openBlankPage(page, base, {
+      settleMs: 3000,
+    });
     await first.click();
     // "* " converts to a bulleted-list and leaves the block EMPTY — the state the
     // empty-Enter ladder acts on.
@@ -275,7 +332,11 @@ await withBrowser(async (h) => {
       rows[1]?.hasBulletMarker === true && rows[1]?.depth === 1,
       JSON.stringify(rows[1]),
     );
-    r.ok("C: setup — text is empty", rows[1]?.text === "", JSON.stringify(rows[1]?.text));
+    r.ok(
+      "C: setup — text is empty",
+      rows[1]?.text === "",
+      JSON.stringify(rows[1]?.text),
+    );
 
     const emptyId = rows[1]?.id;
     const emptyEditable = editableFor(page, emptyId);
@@ -288,9 +349,21 @@ await withBrowser(async (h) => {
     await snap(page, `${out}/c`, "1-outdented");
     rows = await getRows(page);
     console.log("C after enter 1:", JSON.stringify(rows));
-    r.ok("C1: still two rows (no split)", rows.length === 2, `count=${rows.length}`);
-    r.ok("C1: outdented to top level", rows[1]?.depth === 0, `depth=${rows[1]?.depth}`);
-    r.ok("C1: still a bullet", rows[1]?.hasBulletMarker === true, JSON.stringify(rows[1]));
+    r.ok(
+      "C1: still two rows (no split)",
+      rows.length === 2,
+      `count=${rows.length}`,
+    );
+    r.ok(
+      "C1: outdented to top level",
+      rows[1]?.depth === 0,
+      `depth=${rows[1]?.depth}`,
+    );
+    r.ok(
+      "C1: still a bullet",
+      rows[1]?.hasBulletMarker === true,
+      JSON.stringify(rows[1]),
+    );
 
     // --- Enter #2 (empty, depth0): convert to plain text, marker gone ---
     await page.keyboard.press("Enter");
@@ -298,9 +371,21 @@ await withBrowser(async (h) => {
     await snap(page, `${out}/c`, "2-converted");
     rows = await getRows(page);
     console.log("C after enter 2:", JSON.stringify(rows));
-    r.ok("C2: still two rows (no split)", rows.length === 2, `count=${rows.length}`);
-    r.ok("C2: bullet marker GONE (converted to text)", rows[1]?.hasBulletMarker === false, JSON.stringify(rows[1]));
-    r.ok("C2: stayed at top level", rows[1]?.depth === 0, `depth=${rows[1]?.depth}`);
+    r.ok(
+      "C2: still two rows (no split)",
+      rows.length === 2,
+      `count=${rows.length}`,
+    );
+    r.ok(
+      "C2: bullet marker GONE (converted to text)",
+      rows[1]?.hasBulletMarker === false,
+      JSON.stringify(rows[1]),
+    );
+    r.ok(
+      "C2: stayed at top level",
+      rows[1]?.depth === 0,
+      `depth=${rows[1]?.depth}`,
+    );
 
     await context.close();
   }
@@ -320,15 +405,29 @@ await withBrowser(async (h) => {
 
     let rows = await getRows(page);
     console.log("D setup:", JSON.stringify(rows));
-    r.ok("D: setup — one to-do row, unchecked", rows.length === 1 && rows[0]?.checked === false, JSON.stringify(rows));
-    r.ok("D: setup — text is 'done it'", rows[0]?.text === "done it", rows[0]?.text);
+    r.ok(
+      "D: setup — one to-do row, unchecked",
+      rows.length === 1 && rows[0]?.checked === false,
+      JSON.stringify(rows),
+    );
+    r.ok(
+      "D: setup — text is 'done it'",
+      rows[0]?.text === "done it",
+      rows[0]?.text,
+    );
 
     // Check the checkbox.
-    const checkbox = page.locator(`[data-block-id="${firstId}"] input[type="checkbox"]`).first();
+    const checkbox = page
+      .locator(`[data-block-id="${firstId}"] input[type="checkbox"]`)
+      .first();
     await checkbox.click();
     await page.waitForTimeout(500);
     rows = await getRows(page);
-    r.ok("D: checkbox is now checked", rows[0]?.checked === true, JSON.stringify(rows[0]));
+    r.ok(
+      "D: checkbox is now checked",
+      rows[0]?.checked === true,
+      JSON.stringify(rows[0]),
+    );
     await snap(page, `${out}/d`, "1-checked");
 
     // Caret mid-text ("done| it") -> after "done" (4 chars) from the start. The
@@ -347,15 +446,31 @@ await withBrowser(async (h) => {
 
     rows = await getRows(page);
     console.log("D after split:", JSON.stringify(rows));
-    r.ok("D: two to-do rows after split", rows.length === 2, `count=${rows.length}`);
+    r.ok(
+      "D: two to-do rows after split",
+      rows.length === 2,
+      `count=${rows.length}`,
+    );
     r.ok("D: head text 'done'", rows[0]?.text === "done", rows[0]?.text);
-    r.ok("D: tail text ' it' / 'it'", (rows[1]?.text ?? "").trim() === "it", JSON.stringify(rows[1]?.text));
-    r.ok("D: head STAYS checked", rows[0]?.checked === true, JSON.stringify(rows[0]));
-    r.ok("D: tail is UNCHECKED", rows[1]?.checked === false, JSON.stringify(rows[1]));
+    r.ok(
+      "D: tail text ' it' / 'it'",
+      (rows[1]?.text ?? "").trim() === "it",
+      JSON.stringify(rows[1]?.text),
+    );
+    r.ok(
+      "D: head STAYS checked",
+      rows[0]?.checked === true,
+      JSON.stringify(rows[0]),
+    );
+    r.ok(
+      "D: tail is UNCHECKED",
+      rows[1]?.checked === false,
+      JSON.stringify(rows[1]),
+    );
 
     await context.close();
   }
 
   console.log("\n=== SUMMARY ===");
-  r.finish();
+  await r.finish();
 });

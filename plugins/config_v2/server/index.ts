@@ -1,30 +1,87 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { forkScope as forkScopeEndpoint, deleteScope as deleteScopeEndpoint, forkDescriptorScope as forkDescriptorScopeEndpoint, removeDescriptorScope as removeDescriptorScopeEndpoint, configSnapshot as configSnapshotEndpoint } from "../core";
-import { initConfigWatcher, shutdownConfigWatcher } from "./internal/config-watcher";
+import {
+  forkScope as forkScopeEndpoint,
+  deleteScope as deleteScopeEndpoint,
+  forkDescriptorScope as forkDescriptorScopeEndpoint,
+  removeDescriptorScope as removeDescriptorScopeEndpoint,
+  configSnapshot as configSnapshotEndpoint,
+  agentWriteLedger as agentWriteLedgerEndpoint,
+  revertAgentWrites as revertAgentWritesEndpoint,
+} from "../core";
+import {
+  initConfigWatcher,
+  shutdownConfigWatcher,
+} from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
-import { configV2ServerResource, configV2ConflictServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource } from "./internal/resource";
-import { handleForkScope, handleDeleteScope, handleForkDescriptorScope, handleRemoveDescriptorScope } from "./internal/scope-handlers";
+import {
+  configV2ServerResource,
+  configV2ConflictServerResource,
+  configV2ScopesServerResource,
+  configV2ConflictPathsServerResource,
+  configV2ModifiedCountsServerResource,
+  configV2TiersServerResource,
+} from "./internal/resource";
+import {
+  handleForkScope,
+  handleDeleteScope,
+  handleForkDescriptorScope,
+  handleRemoveDescriptorScope,
+} from "./internal/scope-handlers";
 import { handleConfigSnapshot } from "./internal/snapshot-handler";
+import {
+  handleAgentWrites,
+  handleRevertAgentWrites,
+} from "./internal/agent-write-handlers";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
-export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, mergeConflictByPath, getRawFileContent } from "./internal/registry";
+export {
+  getConfig,
+  setConfig,
+  setConfigByPath,
+  resetConfigByPath,
+  watchConfig,
+  acknowledgeConflictByPath,
+  deleteOverrideByPath,
+  mergeConflictByPath,
+  getRawFileContent,
+  revertAgentConfigWrites,
+} from "./internal/registry";
+export type { ConfigWriteOpts } from "./internal/registry";
 export { getAllDescriptors, getScopedDescriptors } from "./internal/resource";
 export { auditUserConfigOrphans } from "./internal/orphan-audit";
-export { forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope } from "./internal/scope-fork";
-export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageProvider } from "./internal/field-storage-providers";
+export {
+  forkScope,
+  deleteScope,
+  forkDescriptorScope,
+  removeDescriptorScope,
+} from "./internal/scope-fork";
+export {
+  registerFieldStorageProvider,
+  getFieldStorageProvider,
+  hasFieldStorageProvider,
+} from "./internal/field-storage-providers";
 export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
   description: "Typed JSONC config handles for server plugins.",
-  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictServerResource), Resource.Declare(configV2ScopesServerResource), Resource.Declare(configV2ConflictPathsServerResource), Resource.Declare(configV2ModifiedCountsServerResource), Resource.Declare(configV2TiersServerResource)],
+  contributions: [
+    Resource.Declare(configV2ServerResource),
+    Resource.Declare(configV2ConflictServerResource),
+    Resource.Declare(configV2ScopesServerResource),
+    Resource.Declare(configV2ConflictPathsServerResource),
+    Resource.Declare(configV2ModifiedCountsServerResource),
+    Resource.Declare(configV2TiersServerResource),
+  ],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,
     [forkDescriptorScopeEndpoint.route]: handleForkDescriptorScope,
     [removeDescriptorScopeEndpoint.route]: handleRemoveDescriptorScope,
     [configSnapshotEndpoint.route]: handleConfigSnapshot,
+    [agentWriteLedgerEndpoint.route]: handleAgentWrites,
+    [revertAgentWritesEndpoint.route]: handleRevertAgentWrites,
   },
   // Blocking: the config registry must be built before resources resolve, so
   // config-driven loaders don't briefly serve empty during a hot-swap.

@@ -15,9 +15,15 @@ import {
   type BrowserContext,
   type Page,
 } from "playwright";
+import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
 import { flag } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
+import { onBeforeFinish } from "./report";
+import {
+  repairAgentConfigWrites,
+  settleAgentConfigWrites,
+} from "./agent-writes";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -159,12 +165,43 @@ function launchFailure(cause: unknown): Error {
 export async function withBrowser<T>(
   fn: (h: Harness) => Promise<T>,
 ): Promise<T> {
+  // START REPAIR, before the browser exists. A previous run killed by Ctrl-C, a
+  // SIGKILL or a Playwright timeout never reached its own revert, and its ledger
+  // is still on disk — so this is the half no teardown can provide, and the
+  // reason the poisoned-baseline bug cannot come back: every baseline this run
+  // reads is taken after the user's real config has been restored.
+  //
+  // On the normal path, not in a `finally`, so `process.exit` cannot skip it.
+  await repairAgentConfigWrites("start");
+
   let browser: Browser;
   try {
     browser = await chromium.launch({ headless: !flag("headed") });
   } catch (err) {
     throw launchFailure(err);
   }
+
+  let torndown = false;
+  const teardown = async (): Promise<void> => {
+    if (torndown) return;
+    torndown = true;
+    // ORDER IS LOAD-BEARING. Close first: a pending DataView write lives in a
+    // `setTimeout` inside the page, so closing the context kills the timer and
+    // bounds what can still reach the server to what is already dispatched.
+    // Then drain those. Only then revert, or the revert races a write.
+    await browser.close();
+    await settleAgentConfigWrites();
+    await repairAgentConfigWrites("end");
+  };
+
+  // `finish()` ends in `process.exit()`, which skips `finally` — and 86 of the
+  // 136 scripts here call `finish()` INSIDE this callback. So the `finally`
+  // below is not reachable for most of the fleet, and registering the teardown
+  // is what makes it run for them. (That is also why `browser.close()` moved in
+  // here: it was being skipped for those same scripts, leaking a Chromium
+  // process per run, despite this file's docblock claiming otherwise.)
+  const release = onBeforeFinish(teardown);
+
   try {
     return await fn({
       browser,
@@ -176,13 +213,14 @@ export async function withBrowser<T>(
           // applies to EVERY request the context issues — including the SPA's
           // own `fetch` calls — so this single line marks all existing scripts,
           // every future script, and ad-hoc `screenshot.ts --click` drives, with
-          // nothing to opt into and nothing to remember. Server-side, the
-          // agent-origin plugin turns the mark into a swept, segregated page.
-          // See research/2026-07-29-global-agent-origin-provenance-for-pages.md.
-          extraHTTPHeaders: {
-            "x-singularity-origin": "agent",
-            "x-singularity-origin-source": originSource(),
-          },
+          // nothing to opt into and nothing to remember. Server-side the mark
+          // drives two things: the agent-origin plugin turns it into a swept,
+          // segregated page, and config_v2 records every config document a
+          // marked request overwrites so this harness can put it back (see
+          // `agent-writes.ts`).
+          // research/2026-07-29-global-agent-origin-provenance-for-pages.md
+          // research/2026-08-30-global-agent-config-write-revert-ledger.md
+          extraHTTPHeaders: agentOriginHeaders(originSource()),
         });
         const page = await context.newPage();
         const label = opts.label ?? "";
@@ -198,7 +236,9 @@ export async function withBrowser<T>(
       },
     });
   } finally {
-    await browser.close();
+    // Deregister first: whichever path fires, the teardown runs exactly once.
+    release();
+    await teardown();
   }
 }
 

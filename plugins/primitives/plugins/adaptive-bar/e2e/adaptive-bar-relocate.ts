@@ -177,5 +177,5 @@ await withBrowser(async (h) => {
   if (captured.pageErrors.length > 0) {
     r.fail("page errors", captured.pageErrors.join(" | "));
   }
-  r.finish();
+  await r.finish();
 });

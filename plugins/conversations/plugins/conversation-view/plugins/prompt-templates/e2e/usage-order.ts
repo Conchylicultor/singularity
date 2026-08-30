@@ -122,5 +122,5 @@ await withBrowser(async (h) => {
   r.eq(`"${target}" leads after a resnapshot`, afterReload[0], target);
   r.eq("the pinned set is the same size", afterReload.length, before.length);
 
-  r.finish();
+  await r.finish();
 });

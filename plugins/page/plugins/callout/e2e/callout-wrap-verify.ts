@@ -33,7 +33,11 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
-import { blockText, caretState, openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import {
+  blockText,
+  caretState,
+  openBlankPage,
+} from "@plugins/page/plugins/editor/e2e";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/callout-wrap");
@@ -43,7 +47,9 @@ const r = report();
 /** A block row's content-edge inset, in px — one BLOCK_INDENT deeper per level. */
 async function contentEdge(page: Page, id: string): Promise<number> {
   return page.evaluate((blockId) => {
-    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"]`,
+    );
     return el ? parseFloat(getComputedStyle(el).paddingLeft) : -1;
   }, id);
 }
@@ -51,7 +57,11 @@ async function contentEdge(page: Page, id: string): Promise<number> {
 /** The block ids of every row currently painting a callout decoration. */
 async function anchorIds(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    [...document.querySelectorAll('button[aria-label="Callout icon and color"]')]
+    [
+      ...document.querySelectorAll(
+        'button[aria-label="Callout icon and color"]',
+      ),
+    ]
       .map((el) => el.closest("[data-block-id]")?.getAttribute("data-block-id"))
       .filter((id): id is string => id !== null && id !== undefined),
   );
@@ -68,7 +78,11 @@ async function blockIdsInOrder(page: Page): Promise<string[]> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const { pageUrl, block, blockId: originId } = await openBlankPage(page, base, {
+  const {
+    pageUrl,
+    block,
+    blockId: originId,
+  } = await openBlankPage(page, base, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);
@@ -79,7 +93,10 @@ await withBrowser(async (h) => {
   // Let the doc flush (300ms) + the ~1s data.text projection land.
   await page.waitForTimeout(2500);
   await snap(page, out, "1-composed");
-  r.ok("compose: the origin holds 'wrap me'", (await blockText(block)) === "wrap me");
+  r.ok(
+    "compose: the origin holds 'wrap me'",
+    (await blockText(block)) === "wrap me",
+  );
 
   const idsBefore = await blockIdsInOrder(page);
   const edgeBefore = await contentEdge(page, originId);
@@ -117,11 +134,15 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "wrap: the anchor is a NEW row, not the origin retyped",
-    anchors.length === 1 && anchors[0] !== originId && !idsBefore.includes(anchors[0]!),
+    anchors.length === 1 &&
+      anchors[0] !== originId &&
+      !idsBefore.includes(anchors[0]!),
     `anchor=${anchors[0]} origin=${originId}`,
   );
 
-  const originEl = page.locator(`[data-block-id="${originId}"] [contenteditable="true"]`).first();
+  const originEl = page
+    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .first();
   r.ok(
     "wrap: the origin is still a TEXT block holding its text",
     (await blockText(originEl)) === "wrap me",
@@ -158,7 +179,10 @@ await withBrowser(async (h) => {
     typed,
   );
   const idsAfterTyping = await blockIdsInOrder(page);
-  r.ok("wrap: the origin id is still unchanged after typing", idsAfterTyping.includes(originId));
+  r.ok(
+    "wrap: the origin id is still unchanged after typing",
+    idsAfterTyping.includes(originId),
+  );
 
   // --- 6. the wrap is ONE undo entry ------------------------------------------
   //
@@ -230,5 +254,5 @@ await withBrowser(async (h) => {
 
   console.log("ORIGIN_ID:", originId);
   console.log("PAGE_URL:", pageUrl);
-  r.finish();
+  await r.finish();
 });

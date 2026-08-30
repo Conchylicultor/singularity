@@ -247,5 +247,5 @@ await withBrowser(async (h) => {
     await destroyScratchPage();
   }
 
-  r.finish();
+  await r.finish();
 });

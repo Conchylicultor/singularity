@@ -44,14 +44,20 @@ await withBrowser(async (h) => {
   //    before, since arming it used to disable (and so de-hit-test) it. Approach
   //    from a neighbouring point so a real `mousemove` is guaranteed to fire.
   await page.mouse.move(target.x - 40, target.y + target.height / 2);
-  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  await page.mouse.move(
+    target.x + target.width / 2,
+    target.y + target.height / 2,
+  );
   await page.waitForTimeout(200);
   await snap(page, OUT, "hover");
 
   const label = (await overlay.innerText()).replace(/\s+/g, " ").trim();
 
   // 3. Completing the pick hands the metadata to the Improve popover as a chip.
-  await page.mouse.click(target.x + target.width / 2, target.y + target.height / 2);
+  await page.mouse.click(
+    target.x + target.width / 2,
+    target.y + target.height / 2,
+  );
   await page.waitForTimeout(600);
   await snap(page, OUT, "picked");
 
@@ -71,5 +77,5 @@ await withBrowser(async (h) => {
     `label=${JSON.stringify(label)}`,
   );
   r.ok("pick produced a ui-context chip", chips > 0, `chips=${chips}`);
-  r.finish();
+  await r.finish();
 });

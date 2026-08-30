@@ -103,4 +103,4 @@ r.ok(
   outcome.consoleErrors.length === 0,
   outcome.consoleErrors.join(" | "),
 );
-r.finish();
+await r.finish();

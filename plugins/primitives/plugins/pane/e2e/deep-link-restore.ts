@@ -117,5 +117,5 @@ await withBrowser(async (h) => {
     `pathname=${bare.pathname}`,
   );
 
-  r.finish();
+  await r.finish();
 });

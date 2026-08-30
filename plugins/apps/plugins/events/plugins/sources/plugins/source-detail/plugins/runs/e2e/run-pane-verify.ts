@@ -41,7 +41,7 @@ const ROW_MARKER = `${RUNS_SECTION} [data-ui-owner^="ListView@"]`;
 await withBrowser(async (h) => {
   if (!SOURCE_ID) {
     r.fail("--source <sourceId> is required (a source with at least one run)");
-    r.finish();
+    await r.finish();
   }
 
   const { page } = await h.session({ viewport: { width: 1600, height: 900 } });
@@ -83,5 +83,5 @@ await withBrowser(async (h) => {
   );
 
   await snap(page, OUT, "run-pane");
-  r.finish();
+  await r.finish();
 });

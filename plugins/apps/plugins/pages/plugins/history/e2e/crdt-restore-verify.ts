@@ -21,6 +21,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   blockDocText,
@@ -53,7 +54,8 @@ interface VersionRow {
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`GET ${url}: HTTP ${res.status} ${res.statusText}`);
+  if (!res.ok)
+    throw new Error(`GET ${url}: HTTP ${res.status} ${res.statusText}`);
   return (await res.json()) as T;
 }
 
@@ -113,14 +115,17 @@ await withBrowser(async (h) => {
   // the stale-projection probe later.
   const preRows = await fetchBlocks(pageId);
   const preBlock = preRows.find((row) =>
-    (row.data?.text ?? []).some((run) => (run.text ?? "").includes("version one")),
+    (row.data?.text ?? []).some((run) =>
+      (run.text ?? "").includes("version one"),
+    ),
   );
   r.ok("pre-restore block found", !!preBlock, preBlock?.id);
 
   // --- RESTORE v1 while the editor is open --------------------------------------
-  if (!v1Version) throw new Error("no history version recorded — nothing to restore");
-  const res = await fetch(
-    `${base}/api/history/pages/${pageId}/versions/${v1Version.id}/restore`,
+  if (!v1Version)
+    throw new Error("no history version recorded — nothing to restore");
+  const res = await agentFetch(
+    `/api/history/pages/${pageId}/versions/${v1Version.id}/restore`,
     { method: "POST" },
   );
   r.ok("restore endpoint 2xx", res.ok, `status=${res.status}`);
@@ -149,7 +154,11 @@ await withBrowser(async (h) => {
   );
   const restored = contentRows[0];
   const restoredText = rowText(restored);
-  r.ok("restored data.text is v1", restoredText === V1, JSON.stringify(restoredText));
+  r.ok(
+    "restored data.text is v1",
+    restoredText === V1,
+    JSON.stringify(restoredText),
+  );
   r.ok(
     "restored row has a FRESH id",
     restored?.id !== preBlock?.id,
@@ -160,7 +169,7 @@ await withBrowser(async (h) => {
   // The restored block's content doc re-seeded from the restored data.text
   // (the open editor mounted it → doc-init).
   if (!restored) throw new Error("no restored text row to inspect");
-  const docRow = await fetchBlockDoc(base, restored.id);
+  const docRow = await fetchBlockDoc(restored.id);
   r.ok("restored block has a page_block_docs row", !!docRow);
   if (docRow) {
     r.ok(
@@ -172,7 +181,7 @@ await withBrowser(async (h) => {
 
   // The old block's doc row FK-cascaded away.
   if (!preBlock) throw new Error("no pre-restore block found to probe");
-  const oldDoc = await fetchBlockDoc(base, preBlock.id);
+  const oldDoc = await fetchBlockDoc(preBlock.id);
   r.ok("old block's doc row cascaded", oldDoc === undefined);
 
   // The open editor is LIVE on the restored doc: type into it and expect sync.
@@ -180,7 +189,7 @@ await withBrowser(async (h) => {
   await pageA.keyboard.press("End");
   await pageA.keyboard.type(" post-restore", { delay: 15 });
   await pageA.waitForTimeout(2500);
-  const syncedText = await fetchBlockDocText(base, restored.id);
+  const syncedText = await fetchBlockDocText(restored.id);
   r.ok(
     "editor re-bound: post-restore typing syncs",
     syncedText.trim() === `${V1} post-restore`,
@@ -192,7 +201,11 @@ await withBrowser(async (h) => {
   await pageB.goto(pageUrl);
   await pageB.waitForTimeout(5000);
   const bText = await blockText(editableBlocks(pageB).first());
-  r.ok("context B converges", bText === `${V1} post-restore`, JSON.stringify(bText));
+  r.ok(
+    "context B converges",
+    bText === `${V1} post-restore`,
+    JSON.stringify(bText),
+  );
   await snap(pageB, out, "context-b");
 
   // --- Server-half of the resurrect race: a stale projection UPDATE ------------
@@ -202,17 +215,23 @@ await withBrowser(async (h) => {
   // the dead row is skipped rather than resurrected. No flag: the patch's shape
   // is the guarantee.
   const postPatch = (body: unknown) =>
-    fetch(`${base}/api/pages/${pageId}/blocks/patch`, {
+    agentFetch(`/api/pages/${pageId}/blocks/patch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
   const patchRes = await postPatch({
     creates: [],
-    updates: [{ id: preBlock.id, changes: { data: { text: [{ text: "ZOMBIE" }] } } }],
+    updates: [
+      { id: preBlock.id, changes: { data: { text: [{ text: "ZOMBIE" }] } } },
+    ],
     deleteIds: [],
   });
-  r.ok("stale projection update accepted (2xx)", patchRes.ok, `status=${patchRes.status}`);
+  r.ok(
+    "stale projection update accepted (2xx)",
+    patchRes.ok,
+    `status=${patchRes.status}`,
+  );
   const rowsAfter = await fetchBlocks(pageId);
   r.ok(
     "stale projection did NOT resurrect the old block",
@@ -256,5 +275,5 @@ await withBrowser(async (h) => {
   );
   await postPatch({ creates: [], updates: [], deleteIds: [preBlock.id] });
 
-  r.finish();
+  await r.finish();
 });

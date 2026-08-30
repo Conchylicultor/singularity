@@ -65,5 +65,5 @@ await withBrowser(async (h) => {
 
   const errors = [...captured.pageErrors, ...captured.consoleErrors];
   r.ok("no page or console errors", errors.length === 0, errors.join("\n"));
-  r.finish();
+  await r.finish();
 });

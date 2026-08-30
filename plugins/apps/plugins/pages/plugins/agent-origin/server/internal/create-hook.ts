@@ -1,19 +1,7 @@
 import type { BlockCreateHook } from "@plugins/page/plugins/editor/server";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
+import { originOf } from "@plugins/infra/plugins/request-origin/core";
 import { pageBlocksOrigin } from "./tables";
-
-// The provenance signal, set by the e2e harness on every request its browser
-// context issues (`e2e-harness/e2e/browser.ts`). Duplicated as literals there
-// rather than imported: the harness is generic build tooling and must not take
-// a dependency on a Pages sub-plugin. See
-// research/2026-07-29-global-agent-origin-provenance-for-pages.md.
-const ORIGIN_HEADER = "x-singularity-origin";
-const ORIGIN_SOURCE_HEADER = "x-singularity-origin-source";
-const AGENT_ORIGIN = "agent";
-// A request that declares itself agent-written but names no script is still
-// agent-written — the mark is what matters, the attribution is a nicety. The
-// reverse is NOT true: a missing origin header means DO NOT stamp.
-const UNKNOWN_SOURCE = "agent";
 
 /**
  * `BlockLifecycle.AfterCreate` contributor: stamps a marker row on every page
@@ -32,9 +20,12 @@ const UNKNOWN_SOURCE = "agent";
  */
 export const agentOriginCreateHook: BlockCreateHook = {
   async afterCreate(block, req) {
-    if (req.headers.get(ORIGIN_HEADER) !== AGENT_ORIGIN) return;
+    // `originOf` owns the "declares itself agent-written but names no script"
+    // case: the mark is what matters, the attribution is a nicety. The reverse
+    // is NOT true — a missing origin header means DO NOT stamp.
+    const origin = originOf(req);
+    if (origin.kind !== "agent") return;
     if (block.type !== PAGE_BLOCK_TYPE) return;
-    const source = req.headers.get(ORIGIN_SOURCE_HEADER) ?? UNKNOWN_SOURCE;
-    await pageBlocksOrigin.upsert(block.id, { source });
+    await pageBlocksOrigin.upsert(block.id, { source: origin.source });
   },
 };

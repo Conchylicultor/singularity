@@ -7629,7 +7629,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/paths.MAIN_WORKTREE_NAME`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.repoConfigDir`
-    - Exports (types): `FieldStorageProvider`
+    - Exports (types):
+      - `ConfigWriteOpts`
+      - `FieldStorageProvider`
     - Exports (values):
       - `acknowledgeConflictByPath`
       - `auditUserConfigOrphans`
@@ -7649,6 +7651,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `registerFieldStorageProvider`
       - `removeDescriptorScope`
       - `resetConfigByPath`
+      - `revertAgentConfigWrites`
       - `setConfig`
       - `setConfigByPath`
       - `watchConfig`
@@ -7691,6 +7694,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `OrphanReport`
       - `OrphanRiskClass`
     - Exports (values):
+      - `agentWriteEntrySchema`
+      - `agentWriteLedger`
       - `APP_SCOPE_DIR`
       - `appScopeId`
       - `codeConfigProxy`
@@ -7730,6 +7735,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `readonlyProxy`
       - `readTypedConfig`
       - `removeDescriptorScope`
+      - `revertAgentWrites`
       - `REVIEW_MARKER`
       - `scopeAppId`
       - `setConfigField`
@@ -15815,6 +15821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `lintCollectedDir`
               - `lintToolkit`
           - Plugins:
+            - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
@@ -17652,6 +17659,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/auto-start`
           - `tasks/task-category`
           - `tasks/tasks-core`
+    - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
+      - Core:
+        - Exports (types): `WriteOrigin`
+        - Exports (values):
+          - `AGENT_ORIGIN`
+          - `agentOriginHeaders`
+          - `ORIGIN_HEADER`
+          - `ORIGIN_SOURCE_HEADER`
+          - `originOf`
+          - `systemOrigin`
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
         - Uses:

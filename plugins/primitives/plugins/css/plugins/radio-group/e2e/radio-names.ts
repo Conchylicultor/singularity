@@ -56,4 +56,4 @@ await withBrowser(async (h) => {
   r.eq("exactly one option checked", radios.filter((x) => x.checked).length, 1);
 });
 
-r.finish();
+await r.finish();

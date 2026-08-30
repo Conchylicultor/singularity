@@ -22,6 +22,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { blockDocText, fetchBlockDoc } from "./support/ydoc";
@@ -121,7 +122,7 @@ await withBrowser(async (h) => {
     for (const b of domBlocks) {
       // fetchBlockDoc (not fetchBlockDocText) — this assertion needs to tell
       // "no row at all" apart from "row whose text is empty".
-      const stored = await fetchBlockDoc(base, b.id);
+      const stored = await fetchBlockDoc(b.id);
       if (!stored) {
         problems.push(
           `DOC MISSING for block ${b.id} ("${b.text}") — page_block_docs row never created`,
@@ -148,7 +149,7 @@ await withBrowser(async (h) => {
   // Server truth 2: the data.text projection converged too.
   const checkProjection = async (): Promise<string[]> => {
     const rows = (await (
-      await fetch(`${base}/api/pages/${pageId}/blocks`)
+      await agentFetch(`/api/pages/${pageId}/blocks`)
     ).json()) as {
       id: string;
       data?: { text?: { text?: string }[] };
@@ -216,5 +217,5 @@ await withBrowser(async (h) => {
   );
   r.ok("NO PAGE ERRORS", pageErrors.length === 0, pageErrors.join("; "));
 
-  r.finish();
+  await r.finish();
 });

@@ -16,6 +16,50 @@ import {
   notifyDescriptorScopeChange,
 } from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
+import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
+import {
+  recordAgentWrite,
+  noteAgentWriteComplete,
+  type TrioPaths,
+} from "./agent-write-ledger";
+
+// The trio of files a scoped document is made of. Computed from the scope dir
+// rather than read off a CacheEntry, because a fork writes files BEFORE the
+// entry exists — which is exactly the state the ledger has to capture.
+function scopedTrioPaths(
+  hierarchyPath: string,
+  scopeId: string,
+  name: string,
+): TrioPaths {
+  const dir = userScopedDir(hierarchyPath, scopeId);
+  return {
+    origin: join(dir, `${name}.origin.jsonc`),
+    override: join(dir, `${name}.jsonc`),
+    ancestor: join(dir, `${name}.ancestor.jsonc`),
+  };
+}
+
+// Snapshot one scoped document before a fork/unfork touches it. A fork writes
+// the scoped ORIGIN as well as the override, and an unfork deletes both and
+// rmdirs the scope — none of which the override alone would capture, which is
+// why the ledger always records the whole trio.
+function recordScopeWrite(
+  writer: WriteOrigin,
+  hierarchyPath: string,
+  name: string,
+  scopeId: string,
+  operation: string,
+): { done: () => void } {
+  const storePath = `${hierarchyPath}/${name}.jsonc`;
+  recordAgentWrite(
+    writer,
+    storePath,
+    scopeId,
+    scopedTrioPaths(hierarchyPath, scopeId, name),
+    operation,
+  );
+  return { done: () => noteAgentWriteComplete(writer, storePath, scopeId) };
+}
 
 // Fork ONE descriptor into a scope: snapshot its scope-effective value set into
 // the scope's @app/<id> origin + override files (same content + hash → zero
@@ -27,7 +71,15 @@ async function forkDescriptor(
   descriptor: ConfigDescriptor,
   hierarchyPath: string,
   scopeId: string,
+  writer: WriteOrigin,
 ): Promise<void> {
+  const write = recordScopeWrite(
+    writer,
+    hierarchyPath,
+    descriptor.name,
+    scopeId,
+    "fork-descriptor-scope",
+  );
   const { snapshot, hash, dir } = buildScopeSnapshot(
     descriptor,
     hierarchyPath,
@@ -43,6 +95,7 @@ async function forkDescriptor(
   );
 
   await ensureScopeEntry(descriptor, scopeId);
+  write.done();
 }
 
 // Whether a scope's config is backed by a committed git override
@@ -71,7 +124,15 @@ async function removeDescriptor(
   descriptor: ConfigDescriptor,
   hierarchyPath: string,
   scopeId: string,
+  writer: WriteOrigin,
 ): Promise<void> {
+  const write = recordScopeWrite(
+    writer,
+    hierarchyPath,
+    descriptor.name,
+    scopeId,
+    "remove-descriptor-scope",
+  );
   const dir = userScopedDir(hierarchyPath, scopeId);
   const overridePath = join(dir, `${descriptor.name}.jsonc`);
   if (existsSync(overridePath)) unlinkSync(overridePath);
@@ -81,6 +142,7 @@ async function removeDescriptor(
     // committed scope rather than the stale cached override values.
     disposeScopeEntry(descriptor, scopeId);
     await ensureScopeEntry(descriptor, scopeId);
+    write.done();
     return;
   }
 
@@ -96,6 +158,7 @@ async function removeDescriptor(
       if ((err as NodeJS.ErrnoException).code !== "ENOTEMPTY") throw err;
     }
   }
+  write.done();
 }
 
 // Look up a descriptor + its hierarchyPath from a storePath, failing loudly when
@@ -122,9 +185,10 @@ function resolveDescriptor(storePath: string): {
 export async function forkDescriptorScope(
   storePath: string,
   scopeId: string,
+  opts: { writer: WriteOrigin },
 ): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
-  await forkDescriptor(descriptor, hierarchyPath, scopeId);
+  await forkDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
   notifyDescriptorScopeChange(storePath, scopeId);
 }
 
@@ -135,9 +199,10 @@ export async function forkDescriptorScope(
 export async function removeDescriptorScope(
   storePath: string,
   scopeId: string,
+  opts: { writer: WriteOrigin },
 ): Promise<void> {
   const { descriptor, hierarchyPath } = resolveDescriptor(storePath);
-  await removeDescriptor(descriptor, hierarchyPath, scopeId);
+  await removeDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
   notifyDescriptorScopeChange(storePath, scopeId);
 }
 
@@ -146,9 +211,12 @@ export async function removeDescriptorScope(
 // ensureScopeEntry's watcher) so the per-descriptor and scope-level paths never
 // drift. Membership notify via the per-descriptor scopes resource covers the read
 // side — the deleted scope-forked resource is no longer needed.
-export async function forkScope(scopeId: string): Promise<void> {
+export async function forkScope(
+  scopeId: string,
+  opts: { writer: WriteOrigin },
+): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
-    await forkDescriptor(descriptor, hierarchyPath, scopeId);
+    await forkDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
     notifyDescriptorScopeChange(
       `${hierarchyPath}/${descriptor.name}.jsonc`,
       scopeId,
@@ -159,9 +227,12 @@ export async function forkScope(scopeId: string): Promise<void> {
 // Un-fork all `scope: "app"` descriptors. Delegates each descriptor to
 // removeDescriptor and notifies its scopes/values resources so the read side
 // (membership) reflects the drop immediately.
-export async function deleteScope(scopeId: string): Promise<void> {
+export async function deleteScope(
+  scopeId: string,
+  opts: { writer: WriteOrigin },
+): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
-    await removeDescriptor(descriptor, hierarchyPath, scopeId);
+    await removeDescriptor(descriptor, hierarchyPath, scopeId, opts.writer);
     notifyDescriptorScopeChange(
       `${hierarchyPath}/${descriptor.name}.jsonc`,
       scopeId,

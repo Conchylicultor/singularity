@@ -13,6 +13,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
@@ -25,7 +26,7 @@ const TOKEN = `zebraquux${Date.now().toString(36)}`;
 
 // Target page for the backlink, created out-of-band.
 const targetTitle = `LinkTarget-${Date.now().toString(36)}`;
-const createRes = await fetch(`${base}/api/blocks`, {
+const createRes = await agentFetch(`/api/blocks`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   // `icon` is REQUIRED (nullable, no default) by the page block's data schema —
@@ -74,7 +75,7 @@ await withBrowser(async (h) => {
   // demand below is exactly what it was.
   const fetchRowText = async (): Promise<string> => {
     const rows = (await (
-      await fetch(`${base}/api/pages/${pageId}/blocks`)
+      await agentFetch(`/api/pages/${pageId}/blocks`)
     ).json()) as {
       id: string;
       data?: { text?: { text?: string }[] };
@@ -118,9 +119,7 @@ await withBrowser(async (h) => {
   // 2. Full-text search finds the fresh text.
   const searched = await waitFor(
     async () =>
-      (await (
-        await fetch(`${base}/api/search?q=${TOKEN}`)
-      ).json()) as unknown[],
+      (await (await agentFetch(`/api/search?q=${TOKEN}`)).json()) as unknown[],
     (hits) =>
       Array.isArray(hits) &&
       hits.some((hit) => JSON.stringify(hit).includes(pageId)),
@@ -137,7 +136,7 @@ await withBrowser(async (h) => {
   const linked = await waitFor(
     async () => {
       const backlinks = (await (
-        await fetch(`${base}/api/resources/page-backlinks?pageId=${linkedId}`)
+        await agentFetch(`/api/resources/page-backlinks?pageId=${linkedId}`)
       ).json()) as { value?: unknown[] };
       return backlinks.value ?? [];
     },
@@ -151,6 +150,6 @@ await withBrowser(async (h) => {
   );
 
   // Clean up the target page.
-  await fetch(`${base}/api/blocks/${targetId}`, { method: "DELETE" });
-  r.finish();
+  await agentFetch(`/api/blocks/${targetId}`, { method: "DELETE" });
+  await r.finish();
 });

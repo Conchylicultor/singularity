@@ -10,13 +10,14 @@
  */
 export { arg, numArg, flag, requireArg, usage } from "./args";
 export { baseUrl, pathUrl } from "./target";
+export { agentFetch } from "./app-fetch";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
 export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
 export type { Settled } from "./wait";
 export type { Harness, Session, SessionOptions, BootOptions } from "./browser";
 export { capture } from "./capture";
 export type { Captured } from "./capture";
-export { report } from "./report";
+export { report, onBeforeFinish } from "./report";
 export type { Report } from "./report";
 export { stallRoute } from "./stall";
 export type { StalledRoute, StallRouteOptions } from "./stall";

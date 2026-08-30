@@ -39,6 +39,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 // This script lives inside the editor plugin, which declares `yjs` as a
 // dependency — so the bare specifier resolves by ordinary walk-up. (Before the
@@ -75,7 +76,7 @@ async function fetchBlockText(
   blockId: string,
 ): Promise<string> {
   const rows = (await (
-    await fetch(`${base}/api/pages/${pageId}/blocks`)
+    await agentFetch(`/api/pages/${pageId}/blocks`)
   ).json()) as BlockRow[];
   const row = rows.find((r) => r.id === blockId);
   const runs = row?.data?.text ?? [];
@@ -97,7 +98,7 @@ async function fetchDocText(blockId: string): Promise<string> {
   // Copy into an ArrayBuffer-backed view: yjs types its output as
   // Uint8Array<ArrayBufferLike>, which BodyInit rejects (it could be shared).
   const emptyUpdate = new Uint8Array(Y.encodeStateAsUpdate(new Y.Doc()));
-  const res = await fetch(`${base}/api/blocks/${blockId}/doc-init`, {
+  const res = await agentFetch(`/api/blocks/${blockId}/doc-init`, {
     method: "POST",
     headers: { "content-type": "application/octet-stream" },
     body: emptyUpdate,
@@ -216,5 +217,5 @@ await withBrowser(async (h) => {
   await reopenAndVerify(1);
   await reopenAndVerify(2); // must not compound
 
-  r.finish();
+  await r.finish();
 });

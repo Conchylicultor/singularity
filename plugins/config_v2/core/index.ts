@@ -56,6 +56,12 @@ export {
   forkDescriptorScope,
   removeDescriptorScope,
   configSnapshot,
+  // The e2e harness imports these two from HERE — `core` is the only barrel its
+  // runtime may reach, which is why the contracts live in core rather than
+  // beside their handlers.
+  agentWriteLedger,
+  revertAgentWrites,
+  agentWriteEntrySchema,
 } from "./internal/endpoints";
 export { REVIEW_MARKER, hasReviewMarker } from "./internal/review-marker";
 export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";

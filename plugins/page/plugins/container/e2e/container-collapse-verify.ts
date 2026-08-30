@@ -56,16 +56,20 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
-import { caretState, openBlankPage, pageIdFromUrl } from "@plugins/page/plugins/editor/e2e";
+import {
+  caretState,
+  openBlankPage,
+  pageIdFromUrl,
+} from "@plugins/page/plugins/editor/e2e";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/collapse");
 const r = report();
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 interface ChevronProbe {
@@ -82,7 +86,13 @@ async function chevron(page: Page, blockId: string): Promise<ChevronProbe> {
   return page.evaluate((id) => {
     const row = document.querySelector<HTMLElement>(`[data-block-id="${id}"]`);
     const btn = row?.querySelector<HTMLElement>("[data-chevron-for]") ?? null;
-    if (!btn) return { target: null, opacity: 0, pointerEvents: "none", clickable: false };
+    if (!btn)
+      return {
+        target: null,
+        opacity: 0,
+        pointerEvents: "none",
+        clickable: false,
+      };
     const style = getComputedStyle(btn);
     const rect = btn.getBoundingClientRect();
     const hit = document.elementFromPoint(
@@ -108,9 +118,14 @@ async function rendered(page: Page): Promise<string[]> {
 }
 
 /** A row's top edge and height, or null when it is not rendered. */
-async function rect(page: Page, id: string): Promise<{ top: number; height: number } | null> {
+async function rect(
+  page: Page,
+  id: string,
+): Promise<{ top: number; height: number } | null> {
   return page.evaluate((blockId) => {
-    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"]`,
+    );
     if (!el) return null;
     const box = el.getBoundingClientRect();
     return { top: box.top, height: box.height };
@@ -144,18 +159,24 @@ async function boxHeight(page: Page): Promise<number | null> {
  */
 async function hoverText(page: Page, id: string): Promise<void> {
   const box = await page.evaluate((blockId) => {
-    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"]`,
+    );
     if (!el) return null;
     const b = el.getBoundingClientRect();
     return { x: b.left + b.width * 0.6, y: b.top + Math.min(12, b.height / 2) };
   }, id);
-  if (!box) bail(`hover: ${id} is on screen`, "no such row in the DOM");
+  if (!box)
+    return await bail(`hover: ${id} is on screen`, "no such row in the DOM");
   await page.mouse.move(box.x, box.y);
   await page.waitForTimeout(200);
 }
 
 async function clickChevron(page: Page, rowId: string): Promise<void> {
-  await page.locator(`[data-block-id="${rowId}"] [data-chevron-for]`).first().click();
+  await page
+    .locator(`[data-block-id="${rowId}"] [data-chevron-for]`)
+    .first()
+    .click();
   await page.waitForTimeout(900);
 }
 
@@ -174,9 +195,15 @@ async function splitBackFromEnd(
   blockId: string,
   fromEnd: number,
 ): Promise<{ offset: number; length: number }> {
-  const editable = page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first();
+  const editable = page
+    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .first();
   const box = await editable.boundingBox();
-  if (!box) bail(`split: ${blockId} exposes an editable surface`, "no bounding box");
+  if (!box)
+    return await bail(
+      `split: ${blockId} exposes an editable surface`,
+      "no bounding box",
+    );
   await page.mouse.click(box.x + box.width * 0.6, box.y + box.height / 2);
   await page.waitForTimeout(400);
   for (let i = 0; i < fromEnd; i++) await page.keyboard.press("ArrowLeft");
@@ -185,8 +212,15 @@ async function splitBackFromEnd(
   const caret = await caretState(editable);
   const offset = caret.anchorOffset ?? -1;
   const length = caret.anchorTextLength ?? -1;
-  if (!caret.hasSelection || caret.insideBlock !== true || offset !== length - fromEnd) {
-    bail(`split: the caret is mid-text in ${blockId} before Enter`, JSON.stringify(caret));
+  if (
+    !caret.hasSelection ||
+    caret.insideBlock !== true ||
+    offset !== length - fromEnd
+  ) {
+    return await bail(
+      `split: the caret is mid-text in ${blockId} before Enter`,
+      JSON.stringify(caret),
+    );
   }
   await page.keyboard.press("Enter");
   await page.waitForTimeout(1500);
@@ -194,20 +228,28 @@ async function splitBackFromEnd(
 }
 
 /** The visible text of every rendered row, in document order. */
-async function texts(page: Page): Promise<{ id: string | null; text: string }[]> {
+async function texts(
+  page: Page,
+): Promise<{ id: string | null; text: string }[]> {
   return page.evaluate(() =>
-    [...document.querySelectorAll<HTMLElement>("[data-block-id]")].map((el) => ({
-      id: el.getAttribute("data-block-id"),
-      text: el.innerText.trim(),
-    })),
+    [...document.querySelectorAll<HTMLElement>("[data-block-id]")].map(
+      (el) => ({
+        id: el.getAttribute("data-block-id"),
+        text: el.innerText.trim(),
+      }),
+    ),
   );
 }
 
 /** Did `whole` end up split into a visible head and a visible tail? */
 function bothHalvesVisible(rows: { text: string }[], whole: string): boolean {
   const seen = rows.map((b) => b.text);
-  const head = seen.some((t) => t.length > 0 && t !== whole && whole.startsWith(t));
-  const tail = seen.some((t) => t.length > 0 && t !== whole && whole.endsWith(t));
+  const head = seen.some(
+    (t) => t.length > 0 && t !== whole && whole.startsWith(t),
+  );
+  const tail = seen.some(
+    (t) => t.length > 0 && t !== whole && whole.endsWith(t),
+  );
   return head && tail;
 }
 
@@ -227,7 +269,10 @@ await withBrowser(async (h) => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+        if (!res.ok)
+          throw new Error(
+            `POST /api/blocks ${res.status}: ${await res.text()}`,
+          );
         return (await res.json()) as { id: string };
       };
       const box = await post({
@@ -272,7 +317,9 @@ await withBrowser(async (h) => {
   const openIds = await rendered(page);
   r.ok(
     "expanded: every child of the box is on screen",
-    [seeded.first, seeded.second, seeded.third].every((id) => openIds.includes(id)),
+    [seeded.first, seeded.second, seeded.third].every((id) =>
+      openIds.includes(id),
+    ),
     JSON.stringify(openIds),
   );
 
@@ -375,7 +422,10 @@ await withBrowser(async (h) => {
   const openCaret = await splitBackFromEnd(page, seeded.third, 5); // "third| line"
   const afterOpenSplit = await texts(page);
   console.log("control (open box) caret:", JSON.stringify(openCaret));
-  console.log("control (open box) after split:", JSON.stringify(afterOpenSplit));
+  console.log(
+    "control (open box) after split:",
+    JSON.stringify(afterOpenSplit),
+  );
   r.ok(
     "CONTROL: a mid-line Enter inside an OPEN box splits the line in two",
     bothHalvesVisible(afterOpenSplit, "third line"),
@@ -402,7 +452,6 @@ await withBrowser(async (h) => {
     afterSplit.some((b) => b.id === seeded.second),
     JSON.stringify(afterSplit.map((b) => b.id)),
   );
-
 
   // --- 6. The fold is persisted structure ------------------------------------
   await hoverText(page, seeded.first);
@@ -433,4 +482,4 @@ await withBrowser(async (h) => {
   await second.context.close();
 });
 
-r.finish();
+await r.finish();

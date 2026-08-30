@@ -257,5 +257,5 @@ await withBrowser(async (h) => {
     0,
   );
 
-  r.finish();
+  await r.finish();
 });

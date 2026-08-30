@@ -255,5 +255,5 @@ await withBrowser(async (h) => {
   } else {
     for (const f of failures) r.fail(f);
   }
-  r.finish();
+  await r.finish();
 });

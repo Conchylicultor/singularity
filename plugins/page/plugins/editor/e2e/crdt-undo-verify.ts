@@ -26,6 +26,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator } from "playwright";
 import { openBlankPage } from "./support/blank-page";
@@ -47,7 +48,7 @@ interface BlockRow {
 }
 
 async function fetchRows(pageId: string): Promise<BlockRow[]> {
-  const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+  const res = await agentFetch(`/api/pages/${pageId}/blocks`);
   if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
   const rows = (await res.json()) as BlockRow[];
   return rows.filter((row) => row.type !== "page");
@@ -369,5 +370,5 @@ await withBrowser(async (h) => {
   console.log("PAGE_ID:", pageId);
   console.log("PAGE_URL:", pageUrl);
 
-  r.finish();
+  await r.finish();
 });

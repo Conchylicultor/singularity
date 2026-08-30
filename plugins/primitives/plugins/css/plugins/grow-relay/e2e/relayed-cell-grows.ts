@@ -108,5 +108,5 @@ await withBrowser(async (h) => {
       `${String(found.barWidth)}px holding ${String(found.chipsWidth)}px of chips — its width follows its content`,
     );
   }
-  r.finish();
+  await r.finish();
 });

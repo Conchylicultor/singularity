@@ -159,7 +159,7 @@ await withBrowser(async (h) => {
   const card = rows.find((b) => b.type === "todo");
   if (!card) {
     r.fail("a `todo` card was minted by typing `TODO `", JSON.stringify(rows));
-    r.finish();
+    await r.finish();
   }
   const cardId = card!.id;
 
@@ -305,5 +305,5 @@ await withBrowser(async (h) => {
     );
   }
 
-  r.finish();
+  await r.finish();
 });

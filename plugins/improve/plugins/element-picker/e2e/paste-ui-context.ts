@@ -48,7 +48,11 @@ await withBrowser(async (h) => {
     const data = new DataTransfer();
     data.setData("text/plain", tag);
     el.dispatchEvent(
-      new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+      new ClipboardEvent("paste", {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
     );
   }, TAG);
   await page.waitForTimeout(600);
@@ -64,7 +68,10 @@ await withBrowser(async (h) => {
   r.note(`editor text: ${JSON.stringify(editorText)}`);
   r.note(`editor html: ${await editor.innerHTML()}`);
   r.ok("chip rendered", chips > 0, `chips=${chips}`);
-  r.ok("no literal tag left in the editor", !editorText.includes("<ui-context"));
+  r.ok(
+    "no literal tag left in the editor",
+    !editorText.includes("<ui-context"),
+  );
   r.ok("surrounding text preserved", editorText.startsWith("please fix"));
-  r.finish();
+  await r.finish();
 });

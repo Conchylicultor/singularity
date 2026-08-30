@@ -66,6 +66,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { caretState, openBlankPage } from "./support/blank-page";
@@ -276,7 +277,7 @@ async function blockRowExists(
   pageId: string,
   blockId: string,
 ): Promise<boolean> {
-  const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+  const res = await agentFetch(`/api/pages/${pageId}/blocks`);
   if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
   const rows = (await res.json()) as { id: string }[];
   return rows.some((row) => row.id === blockId);
@@ -608,5 +609,5 @@ await withBrowser(async (h) => {
   console.log("PAGE_URL:", pageUrl);
   console.log("BLOCK_IDS:", JSON.stringify({ p1, p3, p4, p5, p6, p7, p8 }));
 
-  r.finish();
+  await r.finish();
 });

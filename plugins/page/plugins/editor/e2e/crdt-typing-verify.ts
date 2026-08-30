@@ -133,5 +133,5 @@ await withBrowser(async (h) => {
     `A ${JSON.stringify(finalA)} / B ${JSON.stringify(finalB)}`,
   );
 
-  r.finish();
+  await r.finish();
 });

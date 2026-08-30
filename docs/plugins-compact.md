@@ -111,7 +111,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
-        - **`lint`** [28 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
+        - **`lint`** [29 sub-plugins] — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
         - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error.
@@ -166,6 +166,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
+    - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
     - **`runtime-profiler`** [load-bearing]
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.

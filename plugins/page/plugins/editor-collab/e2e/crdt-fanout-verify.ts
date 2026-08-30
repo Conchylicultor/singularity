@@ -48,6 +48,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
@@ -95,7 +96,7 @@ function domBlocks(page: Page): Promise<DomBlock[]> {
 
 /** The server-side `data.text` projection for every block of a page, by block id. */
 async function projectedTexts(pageId: string): Promise<Map<string, string>> {
-  const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+  const res = await agentFetch(`/api/pages/${pageId}/blocks`);
   if (!res.ok) {
     throw new Error(`GET /api/pages/${pageId}/blocks: HTTP ${res.status}`);
   }
@@ -143,7 +144,7 @@ await withBrowser(async (h) => {
   );
   if (!authored.ok) {
     await snap(pageA, out, "fail-authored");
-    r.finish();
+    await r.finish();
   }
   const blocks = authored.value;
   const blockIds = idsOf(blocks);
@@ -174,7 +175,7 @@ await withBrowser(async (h) => {
     async () => {
       const missing: string[] = [];
       for (const b of blocks) {
-        const stored = await fetchBlockDoc(base, b.id);
+        const stored = await fetchBlockDoc(b.id);
         if (!stored) missing.push(`${b.id} ("${b.text}")`);
       }
       return missing;
@@ -338,5 +339,5 @@ await withBrowser(async (h) => {
     capturedB.pageErrors.join("; "),
   );
 
-  r.finish();
+  await r.finish();
 });

@@ -322,7 +322,7 @@ await withBrowser(async (h) => {
         "point --path at a route with a crowded bar, or widen the sweep with --to",
     );
     // `finish()` exits the process; the `return` is what tells the compiler so.
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -340,7 +340,7 @@ await withBrowser(async (h) => {
     filled.ok ? undefined : filled.reason,
   );
   if (!filled.ok) {
-    r.finish();
+    await r.finish();
     return;
   }
   r.note(`over-filled row: ${filled.row}`);
@@ -372,7 +372,7 @@ await withBrowser(async (h) => {
   );
   if (!wentToZero) {
     await removeOverfill();
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -394,7 +394,7 @@ await withBrowser(async (h) => {
     `bar "${barId}" is no longer tracked`,
   );
   if (after === undefined) {
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -473,5 +473,5 @@ await withBrowser(async (h) => {
       "Check Debug → Reports, or query_db: select * from reports where kind = 'adaptive-bar';",
   );
 
-  r.finish();
+  await r.finish();
 });

@@ -68,5 +68,5 @@ await withBrowser(async (h) => {
     captured.pageErrors.length === 0,
     captured.pageErrors.join("; "),
   );
-  r.finish();
+  await r.finish();
 });

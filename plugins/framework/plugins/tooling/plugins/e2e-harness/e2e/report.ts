@@ -41,6 +41,31 @@ import { drainDiagnostics } from "./diagnostics";
 const asyncFailures: string[] = [];
 let watchingAsyncFailures = false;
 
+/**
+ * Async work that must happen before the verdict prints — and the ONLY place it
+ * can happen.
+ *
+ * `finish()` ends in `process.exit()`, which skips `finally`. That is not an
+ * edge case here: 86 of the 136 `withBrowser` scripts call `finish()` INSIDE the
+ * `withBrowser` callback, so for two thirds of the fleet a `finally` in
+ * `withBrowser` never runs at all. Today that already means `await
+ * browser.close()` is skipped and those runs leak a Chromium process, despite
+ * `browser.ts` claiming the `finally` "fixes that for every caller at once".
+ *
+ * So teardown registers here instead, and `finish()` drains it before printing.
+ * A registrant that also has a reachable `finally` deregisters via the returned
+ * handle and runs it there — whichever path fires first, the work happens once.
+ */
+const beforeFinish: Array<() => Promise<void>> = [];
+
+export function onBeforeFinish(fn: () => Promise<void>): () => void {
+  beforeFinish.push(fn);
+  return () => {
+    const i = beforeFinish.indexOf(fn);
+    if (i >= 0) beforeFinish.splice(i, 1);
+  };
+}
+
 function watchAsyncFailures(): void {
   if (watchingAsyncFailures) return;
   watchingAsyncFailures = true;
@@ -69,8 +94,17 @@ export interface Report {
   /** A transcript line that is not itself an assertion. */
   note(line: string): void;
   readonly failures: readonly string[];
-  /** Print the summary and exit 0 (all passed) or 1 (any failed). Never returns. */
-  finish(): never;
+  /**
+   * Drain registered teardown, print the summary, and exit 0 (all passed) or 1
+   * (any failed). Never returns.
+   *
+   * `await` it. The promise is what makes teardown (see `onBeforeFinish`) run
+   * before the verdict; a bare call would print and exit while the revert was
+   * still in flight. `no-floating-promises` enforces the `await` repo-wide, and
+   * `await` on `Promise<never>` still narrows to `never`, so control flow after
+   * a call site is unchanged.
+   */
+  finish(): Promise<never>;
 }
 
 export function report(title?: string): Report {
@@ -118,7 +152,26 @@ export function report(title?: string): Report {
       console.log(`      ${line}`);
     },
 
-    finish(): never {
+    async finish(): Promise<never> {
+      // Registered teardown first, and its failures are FAILURES. A revert that
+      // could not restore the user's config must not be followed by ALL CHECKS
+      // PASSED — same reasoning as asyncFailures below: a green verification
+      // script gets cited as evidence, so it must not be able to go green with
+      // the app left in a state it changed.
+      //
+      // `splice(0)` so a teardown that itself registers one cannot loop, and so
+      // a second finish() (a script with two reports) drains nothing twice.
+      for (const teardown of beforeFinish.splice(0)) {
+        try {
+          await teardown();
+        } catch (err) {
+          record(
+            "harness teardown",
+            err instanceof Error ? err.message : String(err),
+          );
+        }
+      }
+
       // Fold in anything that threw outside the script's own await chain. These
       // already printed a FAIL line when they were caught; adding them here is
       // what stops the run exiting 0 with an error in flight.

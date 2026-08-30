@@ -59,9 +59,9 @@ const out = arg("out", "/tmp/container-selection");
 const r = report();
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 interface Row {
@@ -93,7 +93,10 @@ async function editableIndexOf(page: Page, blockId: string): Promise<number> {
     blockId,
   );
   if (index < 0)
-    bail(`editable row for ${blockId}`, "no editable row with that id");
+    return await bail(
+      `editable row for ${blockId}`,
+      "no editable row with that id",
+    );
   return index;
 }
 
@@ -223,7 +226,10 @@ await withBrowser(async (h) => {
   );
   const copy = callouts.find((b) => b.id !== seeded.box);
   if (!copy) {
-    bail("paste: the pasted callout is identifiable", JSON.stringify(callouts));
+    return await bail(
+      "paste: the pasted callout is identifiable",
+      JSON.stringify(callouts),
+    );
   }
   const copyKids = after.filter((b) => b.parentId === copy.id);
   r.eq(
@@ -243,4 +249,4 @@ await withBrowser(async (h) => {
   );
 });
 
-r.finish();
+await r.finish();

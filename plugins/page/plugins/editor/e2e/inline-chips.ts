@@ -35,6 +35,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator, Page } from "playwright";
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
@@ -48,7 +49,7 @@ const out = arg("out", "/tmp/inline-chips");
 const ATTEMPT = arg("attempt", "att-1787654245-y41m");
 
 const r = report("page editor — inline chips");
-const { settledRuns } = makeRunsReader(base);
+const { settledRuns } = makeRunsReader();
 
 /** Lexical stamps every decorator's host element with this. A chip IS one. */
 const DECORATOR = '[data-lexical-decorator="true"]';
@@ -141,7 +142,7 @@ async function awaitRow(
 ): Promise<void> {
   const deadline = Date.now() + 20_000;
   for (;;) {
-    const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+    const res = await agentFetch(`/api/pages/${pageId}/blocks`);
     const rows = (await res.json()) as { id: string }[];
     if (rows.some((row) => row.id === blockId)) break;
     if (Date.now() > deadline)
@@ -464,4 +465,4 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();

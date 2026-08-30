@@ -48,8 +48,13 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { blockIdOf, editableBlocks, openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import {
+  blockIdOf,
+  editableBlocks,
+  openBlankPage,
+} from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "@plugins/page/plugins/editor-collab/e2e";
 import { plainOf, type Block } from "@plugins/page/plugins/editor/core";
 
@@ -63,7 +68,8 @@ const CONVERSATION = "e2e-agent-access";
 const TITLE = "Parser notes";
 const LINES = ["alpha one", "bravo two", "charlie three"];
 const SECRET = "do not tell the agent";
-const NOTE_MD = "found two call sites\n\n- one in the parser\n- one in the writer";
+const NOTE_MD =
+  "found two call sites\n\n- one in the parser\n- one in the writer";
 const NOTE_FIRST = "found two call sites";
 const NOTE_EDITED = "found three call sites";
 const CARD_TAG = "agent-note";
@@ -71,9 +77,9 @@ const CARD_TAG = "agent-note";
 const r = report();
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 interface ToolCall {
@@ -90,7 +96,7 @@ interface ToolCall {
  * indistinguishable from the tool not existing.
  */
 async function callTool(name: string, args: unknown): Promise<ToolCall> {
-  const res = await fetch(`${base}/api/mcp/${CONVERSATION}`, {
+  const res = await agentFetch(`/api/mcp/${CONVERSATION}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -122,14 +128,15 @@ async function callTool(name: string, args: unknown): Promise<ToolCall> {
   };
   if (body.error) return { ok: false, text: body.error.message ?? "error" };
   const text = body.result?.content?.[0]?.text;
-  if (text === undefined) throw new Error(`MCP ${name}: no text content — ${raw}`);
+  if (text === undefined)
+    throw new Error(`MCP ${name}: no text content — ${raw}`);
   return { ok: body.result?.isError !== true, text };
 }
 
 /** A tool call that must succeed; its text, or a bail. */
 async function mustCall(name: string, args: unknown): Promise<string> {
   const call = await callTool(name, args);
-  if (!call.ok) bail(`${name} succeeds`, call.text);
+  if (!call.ok) return await bail(`${name} succeeds`, call.text);
   return call.text;
 }
 
@@ -160,12 +167,13 @@ function counts(summary: ApplySummary): Record<string, number | undefined> {
 
 /** The page's rows, straight off the live-state resource endpoint. */
 async function fetchBlocks(pageId: string): Promise<Block[]> {
-  const res = await fetch(
-    `${base}/api/resources/page-blocks?pageId=${encodeURIComponent(pageId)}`,
+  const res = await agentFetch(
+    `/api/resources/page-blocks?pageId=${encodeURIComponent(pageId)}`,
   );
   if (!res.ok) throw new Error(`page-blocks ${pageId}: HTTP ${res.status}`);
   const body = (await res.json()) as { value?: Block[] };
-  if (!body.value) throw new Error(`page-blocks ${pageId}: response carried no value`);
+  if (!body.value)
+    throw new Error(`page-blocks ${pageId}: response carried no value`);
   return body.value;
 }
 
@@ -195,7 +203,13 @@ type Snapshot = Map<string, string>;
 async function snapshot(pageId: string): Promise<Snapshot> {
   const rows = await fetchBlocks(pageId);
   return new Map(
-    rows.map((b) => [b.id, `${b.type}|${b.parentId ?? "-"}|${b.rank}|${rowText(b)}`] as const),
+    rows.map(
+      (b) =>
+        [
+          b.id,
+          `${b.type}|${b.parentId ?? "-"}|${b.rank}|${rowText(b)}`,
+        ] as const,
+    ),
   );
 }
 
@@ -207,12 +221,17 @@ function snapshotDiff(before: Snapshot, after: Snapshot): string[] {
     if (now === undefined) lines.push(`-${id} ${row}`);
     else if (now !== row) lines.push(`~${id} ${row} => ${now}`);
   }
-  for (const [id, row] of after) if (!before.has(id)) lines.push(`+${id} ${row}`);
+  for (const [id, row] of after)
+    if (!before.has(id)) lines.push(`+${id} ${row}`);
   return lines;
 }
 
 /** Set the page's own title, so the `# Title` banner is not an empty line. */
-async function setPageTitle(page: Page, pageId: string, title: string): Promise<void> {
+async function setPageTitle(
+  page: Page,
+  pageId: string,
+  title: string,
+): Promise<void> {
   await page.evaluate(
     async ({ id, value }) => {
       const res = await fetch(`/api/blocks/${id}`, {
@@ -220,7 +239,8 @@ async function setPageTitle(page: Page, pageId: string, title: string): Promise<
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ data: { title: value, icon: null } }),
       });
-      if (!res.ok) throw new Error(`PATCH /api/blocks ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`PATCH /api/blocks ${res.status}: ${await res.text()}`);
     },
     { id: pageId, value: title },
   );
@@ -240,10 +260,17 @@ async function seedPrivateCard(
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+        if (!res.ok)
+          throw new Error(
+            `POST /api/blocks ${res.status}: ${await res.text()}`,
+          );
         return (await res.json()) as { id: string };
       };
-      const card = await post({ parentId: parent, type: "private-note", data: {} });
+      const card = await post({
+        parentId: parent,
+        type: "private-note",
+        data: {},
+      });
       const child = await post({
         parentId: card.id,
         type: "text",
@@ -257,10 +284,11 @@ async function seedPrivateCard(
 
 /** The conversations recorded as authors of one agent-note card. */
 async function fetchAuthors(blockId: string): Promise<string[]> {
-  const res = await fetch(
-    `${base}/api/resources/agent-notes-authors?blockId=${encodeURIComponent(blockId)}`,
+  const res = await agentFetch(
+    `/api/resources/agent-notes-authors?blockId=${encodeURIComponent(blockId)}`,
   );
-  if (!res.ok) throw new Error(`agent-notes-authors ${blockId}: HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(`agent-notes-authors ${blockId}: HTTP ${res.status}`);
   const body = (await res.json()) as { value?: { conversationId: string }[] };
   return (body.value ?? []).map((a) => a.conversationId);
 }
@@ -283,7 +311,8 @@ await withBrowser(async (h) => {
 
   const blocks = editableBlocks(page);
   const proseIds: string[] = [];
-  for (let i = 0; i < LINES.length; i++) proseIds.push(await blockIdOf(blocks.nth(i)));
+  for (let i = 0; i < LINES.length; i++)
+    proseIds.push(await blockIdOf(blocks.nth(i)));
   r.ok(
     "three prose blocks typed",
     proseIds.length === 3 && new Set(proseIds).size === 3,
@@ -291,11 +320,12 @@ await withBrowser(async (h) => {
   );
 
   await setPageTitle(page, pageId, TITLE);
-  const priv = await seedPrivateCard(page, pageId, SECRET).catch((err: unknown): never =>
-    bail(
-      "seed: a /private card posts through the write boundary",
-      `${err instanceof Error ? err.message : String(err)} — nothing below is checkable`,
-    ),
+  const priv = await seedPrivateCard(page, pageId, SECRET).catch(
+    (err: unknown): Promise<never> =>
+      bail(
+        "seed: a /private card posts through the write boundary",
+        `${err instanceof Error ? err.message : String(err)} — nothing below is checkable`,
+      ),
   );
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2500);
@@ -311,7 +341,10 @@ await withBrowser(async (h) => {
   });
   const noteId = created.note_ids?.[0];
   if (noteId === undefined) {
-    bail("edit_page reports the card it minted", JSON.stringify(created));
+    return await bail(
+      "edit_page reports the card it minted",
+      JSON.stringify(created),
+    );
   }
 
   const rowsAfterCreate = await fetchBlocks(pageId);
@@ -326,7 +359,9 @@ await withBrowser(async (h) => {
     rowsAfterCreate.filter((b) => b.parentId === noteId).length === 3 &&
       rowsAfterCreate.every((b) => b.id === noteId || b.type !== CARD_TAG),
     JSON.stringify(
-      rowsAfterCreate.filter((b) => b.parentId === noteId).map((b) => [b.type, rowText(b)]),
+      rowsAfterCreate
+        .filter((b) => b.parentId === noteId)
+        .map((b) => [b.type, rowText(b)]),
     ),
   );
   r.ok(
@@ -362,7 +397,9 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "P7: the edit deleted nothing anywhere on the page",
-    snapshotDiff(beforeCreate, afterCreate).every((line) => !line.startsWith("-")),
+    snapshotDiff(beforeCreate, afterCreate).every(
+      (line) => !line.startsWith("-"),
+    ),
     JSON.stringify(snapshotDiff(beforeCreate, afterCreate)),
   );
 
@@ -370,7 +407,8 @@ await withBrowser(async (h) => {
   const markdown = await mustCall("read_page", { block_id: pageId });
   r.ok(
     "P1: read_page returns the page's prose and its title banner",
-    LINES.every((line) => markdown.includes(line)) && markdown.startsWith(`# ${TITLE}`),
+    LINES.every((line) => markdown.includes(line)) &&
+      markdown.startsWith(`# ${TITLE}`),
     JSON.stringify(markdown),
   );
   r.ok(
@@ -409,12 +447,16 @@ await withBrowser(async (h) => {
     old_string: markdown,
     new_string: `${markdown}\n`,
   });
-  r.eq("E4: feeding read_page's output back writes nothing", counts(roundTrip), {
-    created: 0,
-    deleted: 0,
-    moved: 0,
-    text_edited: 0,
-  });
+  r.eq(
+    "E4: feeding read_page's output back writes nothing",
+    counts(roundTrip),
+    {
+      created: 0,
+      deleted: 0,
+      moved: 0,
+      text_edited: 0,
+    },
+  );
   const afterRoundTrip = await snapshot(pageId);
   r.ok(
     "E4: and the five-column snapshot is byte-identical",
@@ -429,12 +471,16 @@ await withBrowser(async (h) => {
     block_id: noteId,
     content: cardMarkdown,
   });
-  r.eq("E4: write_agent_note of the card's own read is a fixed point too", counts(rewrite), {
-    created: 0,
-    deleted: 0,
-    moved: 0,
-    text_edited: 0,
-  });
+  r.eq(
+    "E4: write_agent_note of the card's own read is a fixed point too",
+    counts(rewrite),
+    {
+      created: 0,
+      deleted: 0,
+      moved: 0,
+      text_edited: 0,
+    },
+  );
 
   // --- P2 / P4 / P6. everything an agent may NOT do -------------------------
   // Every entry is an EDIT the tools accept the shape of; what refuses it is the
@@ -450,11 +496,20 @@ await withBrowser(async (h) => {
     JSON.stringify(markdown),
   );
 
-  const refusals: [name: string, tool: string, args: unknown, expect: RegExp][] = [
+  const refusals: [
+    name: string,
+    tool: string,
+    args: unknown,
+    expect: RegExp,
+  ][] = [
     [
       "P6/T3: re-indenting the page's prose INTO the card (a move, id preserved)",
       "edit_page",
-      { block_id: pageId, old_string: closeThenProse, new_string: proseIntoCard },
+      {
+        block_id: pageId,
+        old_string: closeThenProse,
+        new_string: proseIntoCard,
+      },
       /did not COME from inside/,
     ],
     [
@@ -540,7 +595,11 @@ await withBrowser(async (h) => {
   const beforeRefusals = await snapshot(pageId);
   for (const [name, tool, args, expect] of refusals) {
     const refused = await callTool(tool, args);
-    r.ok(`refused: ${name}`, !refused.ok && expect.test(refused.text), refused.text);
+    r.ok(
+      `refused: ${name}`,
+      !refused.ok && expect.test(refused.text),
+      refused.text,
+    );
   }
   const afterRefusals = await snapshot(pageId);
   r.ok(
@@ -554,7 +613,10 @@ await withBrowser(async (h) => {
     (b) => b.parentId === noteId && rowText(b) === NOTE_FIRST,
   )?.id;
   if (noteChildId === undefined) {
-    bail("the minted card has an addressable first line", JSON.stringify(NOTE_MD));
+    return await bail(
+      "the minted card has an addressable first line",
+      JSON.stringify(NOTE_MD),
+    );
   }
 
   const edit = await mustWrite("edit_page", {
@@ -562,12 +624,16 @@ await withBrowser(async (h) => {
     old_string: NOTE_FIRST,
     new_string: NOTE_EDITED,
   });
-  r.eq("a page-scoped edit INSIDE the card is exactly one text edit", counts(edit), {
-    created: 0,
-    deleted: 0,
-    moved: 0,
-    text_edited: 1,
-  });
+  r.eq(
+    "a page-scoped edit INSIDE the card is exactly one text edit",
+    counts(edit),
+    {
+      created: 0,
+      deleted: 0,
+      moved: 0,
+      text_edited: 1,
+    },
+  );
   r.ok(
     "the edit is attributed to the card it landed in",
     (edit.note_ids ?? []).includes(noteId),
@@ -591,11 +657,18 @@ await withBrowser(async (h) => {
     "E1: the private card and its contents are untouched, in all five columns",
     beforeRefusals.get(priv.card) === finalSnapshot.get(priv.card) &&
       beforeRefusals.get(priv.child) === finalSnapshot.get(priv.child),
-    JSON.stringify([finalSnapshot.get(priv.card), finalSnapshot.get(priv.child)]),
+    JSON.stringify([
+      finalSnapshot.get(priv.card),
+      finalSnapshot.get(priv.child),
+    ]),
   );
 
-  const docAfter = await fetchBlockDocText(base, noteChildId);
-  r.ok("E2: the content doc holds the edit", docAfter === NOTE_EDITED, JSON.stringify(docAfter));
+  const docAfter = await fetchBlockDocText(noteChildId);
+  r.ok(
+    "E2: the content doc holds the edit",
+    docAfter === NOTE_EDITED,
+    JSON.stringify(docAfter),
+  );
   const editedRow = rowsAfterEdit.find((b) => b.id === noteChildId);
   r.ok(
     "E2: data.text was projected from the doc",
@@ -621,12 +694,12 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "E3: the open editor shows the edited note",
-    (await page.locator(`[data-block-id="${noteChildId}"]`).first().innerText()).includes(
-      NOTE_EDITED,
-    ),
+    (
+      await page.locator(`[data-block-id="${noteChildId}"]`).first().innerText()
+    ).includes(NOTE_EDITED),
     NOTE_EDITED,
   );
 
   await snap(page, out, "after-notes");
-  r.finish();
+  await r.finish();
 });

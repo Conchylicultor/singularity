@@ -55,8 +55,16 @@ await withBrowser(async (h) => {
         headers: { accept: "application/json" },
       });
       if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
-      const rows = (await res.json()) as { id: string; type: string; rank: string }[];
-      return rows.map((b) => ({ id: b.id, type: b.type, rank: String(b.rank) }));
+      const rows = (await res.json()) as {
+        id: string;
+        type: string;
+        rank: string;
+      }[];
+      return rows.map((b) => ({
+        id: b.id,
+        type: b.type,
+        rank: String(b.rank),
+      }));
     }, pageId);
 
   const { pageId } = await openBlankPage(page, base, { settleMs: 3000 });
@@ -79,7 +87,11 @@ await withBrowser(async (h) => {
     // Document order over one flat sibling list; every row here is top-level.
     const ordered = [...rows].sort((x, y) => (x.rank < y.rank ? -1 : 1));
 
-    r.eq(`round ${round}: the split really produced a new row`, ordered.length, round + 1);
+    r.eq(
+      `round ${round}: the split really produced a new row`,
+      ordered.length,
+      round + 1,
+    );
     // THE assertion. Reordered, the split commits against a paragraph and the
     // tail is a `text` row — the bullet then "reverts" one push later.
     r.eq(
@@ -103,7 +115,9 @@ await withBrowser(async (h) => {
   // op that never confirmed would keep rendering its prediction forever under
   // the never-revert policy, so the DOM alone can never settle this.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await editableBlocks(page)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000);
 
   const finalRows = await authoritativeRows(pageId);
@@ -113,5 +127,5 @@ await withBrowser(async (h) => {
     ROUNDS,
   );
 
-  r.finish();
+  await r.finish();
 });

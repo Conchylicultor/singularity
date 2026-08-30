@@ -194,5 +194,5 @@ await withBrowser(async (h) => {
     cleared,
   );
 
-  r.finish();
+  await r.finish();
 });

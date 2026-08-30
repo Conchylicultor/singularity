@@ -67,12 +67,19 @@ await withBrowser(async (h) => {
         headers: { accept: "application/json" },
       });
       if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
-      const rows = (await res.json()) as { rank: string; data: { text?: unknown } }[];
+      const rows = (await res.json()) as {
+        rank: string;
+        data: { text?: unknown };
+      }[];
       const plain = (text: unknown): string => {
         if (typeof text === "string") return text.trim();
         if (Array.isArray(text)) {
           return text
-            .map((run) => (typeof run === "object" && run !== null ? String((run as { text?: unknown }).text ?? "") : ""))
+            .map((run) =>
+              typeof run === "object" && run !== null
+                ? String((run as { text?: unknown }).text ?? "")
+                : "",
+            )
             .join("")
             .trim();
         }
@@ -122,7 +129,9 @@ await withBrowser(async (h) => {
     await page.mouse.down();
     if (afterGrab) await afterGrab();
     // PointerSensor needs >4px before the drag starts at all.
-    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + 8, { steps: 3 });
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2 + 8, {
+      steps: 3,
+    });
 
     const dst = await rowBox(to);
     const dropY = dst.y + dst.height * 0.75; // lower half ⇒ "after"
@@ -156,8 +165,16 @@ await withBrowser(async (h) => {
   await dragRow(0, 2); // alpha, dropped after charlie
   await page.waitForTimeout(2500);
   const afterA = ["bravo", "charlie", "alpha", "delta", ""];
-  r.eq("A: the dragged block landed after its drop target", await blockTexts(), afterA);
-  r.eq("A: ... and in AUTHORITATIVE rows, not just the overlay", await serverTexts(pageId), afterA);
+  r.eq(
+    "A: the dragged block landed after its drop target",
+    await blockTexts(),
+    afterA,
+  );
+  r.eq(
+    "A: ... and in AUTHORITATIVE rows, not just the overlay",
+    await serverTexts(pageId),
+    afterA,
+  );
 
   // ---- B: a multi-selection --------------------------------------------------
   // bravo + charlie as one run, nudged below alpha. The selection must move as a
@@ -167,17 +184,29 @@ await withBrowser(async (h) => {
   await page.keyboard.press("Alt+Shift+ArrowDown");
   await page.waitForTimeout(2500);
   const afterB = ["alpha", "bravo", "charlie", "delta", ""];
-  r.eq("B: the selection moved as one body, order preserved", await blockTexts(), afterB);
+  r.eq(
+    "B: the selection moved as one body, order preserved",
+    await blockTexts(),
+    afterB,
+  );
   r.eq("B: ... in AUTHORITATIVE rows", await serverTexts(pageId), afterB);
 
   // ---- C: one gesture is ONE undo entry --------------------------------------
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(2500);
-  r.eq("C: Cmd+Z reverses the whole multi-block move at once", await blockTexts(), afterA);
+  r.eq(
+    "C: Cmd+Z reverses the whole multi-block move at once",
+    await blockTexts(),
+    afterA,
+  );
   await page.keyboard.press("Meta+Shift+z");
   await page.waitForTimeout(2500);
   r.eq("C: Cmd+Shift+Z replays it", await blockTexts(), afterB);
-  r.eq("C: ... and server truth followed the redo", await serverTexts(pageId), afterB);
+  r.eq(
+    "C: ... and server truth followed the redo",
+    await serverTexts(pageId),
+    afterB,
+  );
 
   // ---- D: optimism, on a fresh page ------------------------------------------
   // Latency alone proves nothing on a fast localhost, so stall the op endpoint
@@ -193,7 +222,9 @@ await withBrowser(async (h) => {
   }
   await page.waitForTimeout(2000);
 
-  const opRoute = await stallRoute(page, "**/api/pages/*/blocks/op", { ms: STALL_MS });
+  const opRoute = await stallRoute(page, "**/api/pages/*/blocks/op", {
+    ms: STALL_MS,
+  });
   const t0 = await dragRow(0, 1); // "one" after "two"; the clock starts at the DROP
   const want = ["two", "one", "three", ""];
 
@@ -212,12 +243,18 @@ await withBrowser(async (h) => {
   r.eq("D: the whole drag was ONE op POST", opRoute.count, 1);
 
   await page.waitForTimeout(STALL_MS + 3000);
-  r.eq("D: the confirming push neither reverts nor duplicates it", await blockTexts(), want);
+  r.eq(
+    "D: the confirming push neither reverts nor duplicates it",
+    await blockTexts(),
+    want,
+  );
   r.eq("D: ... and server truth agrees", await serverTexts(fresh.pageId), want);
   r.eq("D: still exactly one op POST after the push", opRoute.count, 1);
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await editableBlocks(page)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000);
   r.eq("D: the reorder survives a reload", await blockTexts(), want);
 
@@ -229,7 +266,14 @@ await withBrowser(async (h) => {
   // whatever A-D left behind would be a spec about the script rather than about
   // the editor.
   const multi = await openBlankPage(page, base, { settleMs: 3000 });
-  for (const word of ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot"]) {
+  for (const word of [
+    "alpha",
+    "bravo",
+    "charlie",
+    "delta",
+    "echo",
+    "foxtrot",
+  ]) {
     await page.keyboard.type(word);
     await page.waitForTimeout(250);
     await page.keyboard.press("Enter");
@@ -237,7 +281,11 @@ await withBrowser(async (h) => {
   }
   await page.waitForTimeout(2000); // the doc→data.text projection (~1s)
   const beforeE = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", ""];
-  r.eq("E: setup: six typed blocks on a fresh page", await blockTexts(), beforeE);
+  r.eq(
+    "E: setup: six typed blocks on a fresh page",
+    await blockTexts(),
+    beforeE,
+  );
 
   // charlie + delta. The run starts at row 2 rather than at the top of the
   // document because a LIVE selection bar is pinned over the first ~46px of the
@@ -245,14 +293,21 @@ await withBrowser(async (h) => {
   // reveal the gutter controls, and over rows 0-1 that centre lands on the bar
   // instead of on the row.
   await enterBlockSelection("E", 2, "Shift+ArrowDown");
-  r.eq("E: the gesture starts from a two-block selection", await selectedCount(), 2);
+  r.eq(
+    "E: the gesture starts from a two-block selection",
+    await selectedCount(),
+    2,
+  );
 
   // Count this gesture's writes. `stallRoute` is the harness's only request
   // observer and there is no count-only variant; `times: 0` stalls nothing, so
   // this is that counter with the stall turned off. Registered AFTER the seed, so
   // the typing's own splits are not in the tally, and last, so it — not phase D's
   // long-spent route on the same pattern — is the handler that answers.
-  const opsE = await stallRoute(page, "**/api/pages/*/blocks/op", { ms: 0, times: 0 });
+  const opsE = await stallRoute(page, "**/api/pages/*/blocks/op", {
+    ms: 0,
+    times: 0,
+  });
 
   // Grab charlie's handle (row 2, a member of the selection) and drop into
   // foxtrot's lower half.
@@ -294,7 +349,11 @@ await withBrowser(async (h) => {
 
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(2500);
-  r.eq("E: one Cmd+Z reverses the whole multi-block drag", await blockTexts(), beforeE);
+  r.eq(
+    "E: one Cmd+Z reverses the whole multi-block drag",
+    await blockTexts(),
+    beforeE,
+  );
 
-  r.finish();
+  await r.finish();
 });

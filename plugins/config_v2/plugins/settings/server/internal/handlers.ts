@@ -1,52 +1,122 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/core";
-import { setConfigByPath, resetConfigByPath, acknowledgeConflictByPath, deleteOverrideByPath, mergeConflictByPath, getRawFileContent } from "@plugins/config_v2/server";
+import {
+  setConfigByPath,
+  resetConfigByPath,
+  acknowledgeConflictByPath,
+  deleteOverrideByPath,
+  mergeConflictByPath,
+  getRawFileContent,
+} from "@plugins/config_v2/server";
 import { setConfigField } from "@plugins/config_v2/core";
-import { resetConfigField, acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
+import { originOf } from "@plugins/infra/plugins/request-origin/core";
+import {
+  resetConfigField,
+  acknowledgeConflict,
+  deleteOverride,
+  mergeConflict,
+  getConfigRawFile,
+} from "../../core";
 
-export const handleSetField = implement(setConfigField, async ({ body }) => {
-  try {
-    await setConfigByPath(body.storePath, body.key, body.value, body.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+// Every write below passes `originOf(req)` — NEVER a literal. A hardcoded
+// `{ kind: "user" }` here would compile and would silently make agent writes
+// unrevertible; `config-v2:write-origin-from-request` is the lint rule that
+// stops that.
 
-export const handleResetField = implement(resetConfigField, async ({ body }) => {
-  try {
-    await resetConfigByPath(body.storePath, body.key, body.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+export const handleSetField = implement(
+  setConfigField,
+  async ({ body, req }) => {
+    try {
+      await setConfigByPath(body.storePath, body.key, body.value, {
+        writer: originOf(req),
+        scopeId: body.scopeId,
+      });
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);
 
-export const handleAcknowledgeConflict = implement(acknowledgeConflict, async ({ body }) => {
-  try {
-    acknowledgeConflictByPath(body.storePath, body.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+export const handleResetField = implement(
+  resetConfigField,
+  async ({ body, req }) => {
+    try {
+      await resetConfigByPath(body.storePath, body.key, {
+        writer: originOf(req),
+        scopeId: body.scopeId,
+      });
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);
 
-export const handleDeleteOverride = implement(deleteOverride, async ({ body }) => {
-  try {
-    deleteOverrideByPath(body.storePath, body.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+export const handleAcknowledgeConflict = implement(
+  acknowledgeConflict,
+  async ({ body, req }) => {
+    try {
+      acknowledgeConflictByPath(body.storePath, {
+        writer: originOf(req),
+        scopeId: body.scopeId,
+      });
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);
 
-export const handleMergeConflict = implement(mergeConflict, async ({ body }) => {
-  try {
-    return mergeConflictByPath(body.storePath, body.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+export const handleDeleteOverride = implement(
+  deleteOverride,
+  async ({ body, req }) => {
+    try {
+      deleteOverrideByPath(body.storePath, {
+        writer: originOf(req),
+        scopeId: body.scopeId,
+      });
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);
 
-export const handleGetRawFile = implement(getConfigRawFile, async ({ query }) => {
-  try {
-    return getRawFileContent(query.storePath, query.scopeId);
-  } catch (err) {
-    throw new HttpError(400, err instanceof Error ? err.message : String(err));
-  }
-});
+export const handleMergeConflict = implement(
+  mergeConflict,
+  async ({ body, req }) => {
+    try {
+      return mergeConflictByPath(body.storePath, {
+        writer: originOf(req),
+        scopeId: body.scopeId,
+      });
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);
+
+export const handleGetRawFile = implement(
+  getConfigRawFile,
+  async ({ query }) => {
+    try {
+      return getRawFileContent(query.storePath, query.scopeId);
+    } catch (err) {
+      throw new HttpError(
+        400,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  },
+);

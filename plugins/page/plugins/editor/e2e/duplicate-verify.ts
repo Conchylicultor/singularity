@@ -50,7 +50,10 @@ const INDENT = 24;
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(page, r);
+  const { checkSelectionOwnsFocus, enterBlockSelection } = blockSelectionDriver(
+    page,
+    r,
+  );
 
   const blockTexts = (): Promise<string[]> => readBlockTexts(page);
 
@@ -59,8 +62,13 @@ await withBrowser(async (h) => {
   const blockIds = (): Promise<string[]> =>
     page.evaluate(() =>
       [
-        ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
-      ].map((el) => el.closest("[data-block-id]")?.getAttribute("data-block-id") ?? ""),
+        ...document.querySelectorAll(
+          '[data-block-id] [contenteditable="true"]',
+        ),
+      ].map(
+        (el) =>
+          el.closest("[data-block-id]")?.getAttribute("data-block-id") ?? "",
+      ),
     );
 
   // A block's indent depth is rendered as the ROW's own left padding, so the row's
@@ -128,7 +136,11 @@ await withBrowser(async (h) => {
   const idsAfterA = await blockIds();
   const fresh = idsAfterA.filter((id) => !idsBeforeA.includes(id));
   r.eq("A: exactly one NEW block id was minted", fresh.length, 1);
-  r.eq("A: and it sits right after the source", idsAfterA.indexOf(fresh[0] ?? ""), 4);
+  r.eq(
+    "A: and it sits right after the source",
+    idsAfterA.indexOf(fresh[0] ?? ""),
+    4,
+  );
 
   // ---- B: a multi-root selection, one root of which has a child --------------
   // alpha (+ its child bravo) and charlie are the two selection ROOTS; bravo is a
@@ -176,7 +188,11 @@ await withBrowser(async (h) => {
   // IDS, not just text: it is the only way to assert nothing else moved.
   await page.keyboard.press("Meta+z");
   await page.waitForTimeout(2000); // patch POST + push round-trip
-  r.eq("C: Cmd+Z removes exactly the duplicated blocks", await blockIds(), idsAfterA);
+  r.eq(
+    "C: Cmd+Z removes exactly the duplicated blocks",
+    await blockIds(),
+    idsAfterA,
+  );
   r.eq("C: ... and the earlier duplicate is untouched", await blockTexts(), [
     "alpha",
     "bravo",
@@ -190,7 +206,11 @@ await withBrowser(async (h) => {
   await page.keyboard.press("Meta+Shift+z");
   await page.waitForTimeout(2000);
   r.eq("D: Cmd+Shift+Z restores the clones", await blockTexts(), textsB);
-  r.eq("D: ... with the same ids the forward op minted", await blockIds(), idsAfterB);
+  r.eq(
+    "D: ... with the same ids the forward op minted",
+    await blockIds(),
+    idsAfterB,
+  );
 
   // ---- E: optimism, on a fresh page ------------------------------------------
   // Latency alone is a weak assertion — on a fast localhost a round-trip can beat
@@ -246,7 +266,11 @@ await withBrowser(async (h) => {
   // "optimistic" claim only covers empty boxes. `awaitDocument` states that rule
   // once (see ./support/optimistic.ts) — the deadline is the bound, so reaching
   // a milestone at all carries the timing claim.
-  const { rowsAt, textAt, last: optimistic } = await awaitDocument(page, blockTexts, {
+  const {
+    rowsAt,
+    textAt,
+    last: optimistic,
+  } = await awaitDocument(page, blockTexts, {
     grewBeyond: before.length,
     expected: doubled,
     timeoutMs: STALL_MS / 2,
@@ -278,9 +302,11 @@ await withBrowser(async (h) => {
   // MOUNT rather than for a fixed delay: a blind timeout reads an empty document
   // whenever hydration is a beat slow, which fails as loudly as a lost clone.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await editableBlocks(page)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000); // let the rest of the forest paint
   r.eq("E: the clones survive a reload", await blockTexts(), doubled);
 
-  r.finish();
+  await r.finish();
 });

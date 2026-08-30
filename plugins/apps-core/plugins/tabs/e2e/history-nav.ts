@@ -424,5 +424,5 @@ await withBrowser(async (h) => {
     await page.close();
   }
 
-  r.finish();
+  await r.finish();
 });

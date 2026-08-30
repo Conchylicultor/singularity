@@ -215,6 +215,37 @@ Design:
 
 - **`refreshEntry` (`registry.ts`) — the single "this entry's files changed" path** (re-read from disk → replace `CacheEntry.values` → notify subscribers + values/conflicts/tiers). Called from **both** the watcher (out-of-band writes) **and every in-process writer right after its own write** (`setConfig`, `acknowledgeConflictByPath`, `mergeConflictByPath`, `deleteOverrideByPath`). The second is NOT redundant: on a missed watcher event a writer that waited for its own event would leave `entry.values` stale indefinitely, so `getConfig` — and with it the `config-v2.values` push and the `/api/config-v2/snapshot` boot hydration — would keep serving the pre-write document while the correct value sits on disk. Any new file-mutating path must call it (scoped fork/unfork instead rebuilds via `ensureScopeEntry`/`disposeScopeEntry`). It carries provider-backed (secret) field values forward — they live outside the JSONC document.
 
+### Agent-write ledger (config an automated session overwrote)
+
+Every config write takes a **required** `writer: WriteOrigin` (`ConfigWriteOpts`,
+`registry.ts`) — `originOf(req)` at an HTTP boundary, `systemOrigin("…")` for a
+job or boot. It replaced the trailing optional `scopeId`, so omitting it is a
+`tsc` error rather than a silent downgrade. Named `writer`, not `origin`, for the
+same reason descriptors carry `source`: `origin` already means `.origin.jsonc`.
+
+When the writer is `agent`, the document's **whole trio** (origin / override /
+ancestor) is snapshotted before the write and held in a ledger under its own
+`agent-write-ledger` data dir — deliberately NOT under `configDir`, which
+`forkConfig` copies into every new worktree. The trio, not just the override,
+because `forkDescriptorScope` writes the scoped origin too and the conflict
+resolvers touch the ancestor.
+
+`POST /api/config-v2/agent-writes/revert` restores them and clears what it
+restored. It is idempotent, which is what lets the e2e harness call it at the
+start of every run to repair a previous run that was killed. Revert **skips any
+document whose bytes moved since the agent last wrote it** (reported as
+`diverged`): someone else owns it now, and restoring would destroy their edit.
+
+Why the revert goes through the server rather than the harness rewriting files:
+`refreshEntry` / `ensureScopeEntry` are what re-sync the in-memory cache and
+every subscribed browser. A filesystem restore would depend on the `CONFIG_DIR`
+watcher, which is push-latency, not correctness (see above).
+
+**Not covered:** provider-backed (secret) fields, which return before touching
+the JSONC layer at all — an agent write there is not revertible by a bytes
+ledger.
+[`research/2026-08-30-global-agent-config-write-revert-ledger.md`](../../research/2026-08-30-global-agent-config-write-revert-ledger.md)
+
 ### Derived aggregates (conflict-paths / scopes / modified-counts)
 
 Three aggregate live resources summarize all ~180 descriptors at once. They are cheap because none of them re-reads every config file per load — but they arrive at that in two *different* ways, and the difference is load-bearing.
@@ -262,7 +293,9 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/paths.MAIN_WORKTREE_NAME`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.repoConfigDir`
-  - Exports (types): `FieldStorageProvider`
+  - Exports (types):
+    - `ConfigWriteOpts`
+    - `FieldStorageProvider`
   - Exports (values):
     - `acknowledgeConflictByPath`
     - `auditUserConfigOrphans`
@@ -282,6 +315,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `registerFieldStorageProvider`
     - `removeDescriptorScope`
     - `resetConfigByPath`
+    - `revertAgentConfigWrites`
     - `setConfig`
     - `setConfigByPath`
     - `watchConfig`
@@ -324,6 +358,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `OrphanReport`
     - `OrphanRiskClass`
   - Exports (values):
+    - `agentWriteEntrySchema`
+    - `agentWriteLedger`
     - `APP_SCOPE_DIR`
     - `appScopeId`
     - `codeConfigProxy`
@@ -363,6 +399,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `readonlyProxy`
     - `readTypedConfig`
     - `removeDescriptorScope`
+    - `revertAgentWrites`
     - `REVIEW_MARKER`
     - `scopeAppId`
     - `setConfigField`

@@ -54,7 +54,7 @@ const out = arg("out", "/tmp/format-shortcuts");
 
 const r = report();
 
-const { fetchRows, settledRuns } = makeRunsReader(base);
+const { fetchRows, settledRuns } = makeRunsReader();
 
 // --- the table under test -----------------------------------------------------
 
@@ -305,5 +305,5 @@ await withBrowser(async (h) => {
   console.log("PAGE_URL:", pageUrl);
   console.log("BLOCK_IDS:", JSON.stringify(ids));
 
-  r.finish();
+  await r.finish();
 });

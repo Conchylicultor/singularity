@@ -92,7 +92,7 @@ await withBrowser(async (h) => {
     // `return` is what narrows moverId to string for the rest of the run —
     // finish() is typed `never`, but control-flow narrowing off a method call
     // needs the callee's reference to be explicitly typed, which `r` is not.
-    r.finish();
+    await r.finish();
     return;
   }
 
@@ -138,7 +138,11 @@ await withBrowser(async (h) => {
     .locator(`[data-block-id="${moverId}"] [contenteditable="true"]`)
     .first();
   const typed = await blockText(mover);
-  r.ok("indent: the next char lands at the caret", typed === "secondX line", typed);
+  r.ok(
+    "indent: the next char lands at the caret",
+    typed === "secondX line",
+    typed,
+  );
 
   // --- 4. outdent with the caret mid-text ------------------------------------
   const beforeOutdent = await readCaret(page);
@@ -165,5 +169,5 @@ await withBrowser(async (h) => {
     JSON.stringify(afterOutdent),
   );
 
-  r.finish();
+  await r.finish();
 });

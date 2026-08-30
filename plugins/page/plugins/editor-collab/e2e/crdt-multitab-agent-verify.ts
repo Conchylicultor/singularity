@@ -21,6 +21,7 @@ import {
   snap,
   waitFor,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   blockText,
@@ -164,7 +165,7 @@ await withBrowser(async (h) => {
   // at the end of the same block.
   const marker = "[AGENT] ";
   const agentWrite = (async () => {
-    const stored = await fetchBlockDoc(base, block1Id);
+    const stored = await fetchBlockDoc(block1Id);
     if (!stored) throw new Error(`no page_block_docs row for ${block1Id}`);
     const doc = new Y.Doc();
     Y.applyUpdate(doc, Uint8Array.from(Buffer.from(stored.state, "base64")));
@@ -178,7 +179,7 @@ await withBrowser(async (h) => {
     // Copy into an ArrayBuffer-backed view: yjs types its output as
     // Uint8Array<ArrayBufferLike>, which BodyInit rejects (it could be shared).
     const update = new Uint8Array(Y.encodeStateAsUpdate(doc, before));
-    const post = await fetch(`${base}/api/blocks/${block1Id}/doc-update`, {
+    const post = await agentFetch(`/api/blocks/${block1Id}/doc-update`, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: update,
@@ -218,5 +219,5 @@ await withBrowser(async (h) => {
   );
   await snap(tabA, out, "agent");
 
-  r.finish();
+  await r.finish();
 });

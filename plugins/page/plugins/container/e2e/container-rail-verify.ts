@@ -67,9 +67,9 @@ const PLUS = 'button[aria-label="Insert block below"]';
 const GLYPH = 'button[aria-label="Callout icon and color"]';
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 /** The ids currently rendered, in document order. */
@@ -89,11 +89,18 @@ async function rendered(page: Page): Promise<string[]> {
  * assertions immune to how the frame happens to be painted (and proves the move
  * was persisted rather than merely rendered).
  */
-async function parentage(page: Page, pageId: string): Promise<Record<string, string | null>> {
+async function parentage(
+  page: Page,
+  pageId: string,
+): Promise<Record<string, string | null>> {
   return page.evaluate(async (id: string) => {
     const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
-    const rows = (await res.json()) as { id: string; parentId: string | null }[];
+    if (!res.ok)
+      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+    const rows = (await res.json()) as {
+      id: string;
+      parentId: string | null;
+    }[];
     return Object.fromEntries(rows.map((b) => [b.id, b.parentId]));
   }, pageId);
 }
@@ -110,12 +117,15 @@ async function parentage(page: Page, pageId: string): Promise<Record<string, str
  */
 async function hoverText(page: Page, id: string): Promise<void> {
   const box = await page.evaluate((blockId) => {
-    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"]`,
+    );
     if (!el) return null;
     const b = el.getBoundingClientRect();
     return { x: b.left + b.width * 0.6, y: b.top + Math.min(12, b.height / 2) };
   }, id);
-  if (!box) bail(`hover: ${id} is on screen`, "no such row in the DOM");
+  if (!box)
+    return await bail(`hover: ${id} is on screen`, "no such row in the DOM");
   await page.mouse.move(box.x, box.y);
   await page.waitForTimeout(200);
 }
@@ -138,7 +148,8 @@ async function menuEntries(page: Page): Promise<string[]> {
   const popover = page.locator('[data-slot="popover-content"]');
   const seen: string[] = [];
   for (const name of names) {
-    if (await popover.getByText(name, { exact: true }).first().isVisible()) seen.push(name);
+    if (await popover.getByText(name, { exact: true }).first().isVisible())
+      seen.push(name);
   }
   return seen;
 }
@@ -172,15 +183,31 @@ async function openRailMenu(page: Page, rowId: string): Promise<string[]> {
  * dnd-kit's PointerSensor needs ~4px of movement before it activates, so the
  * gesture is a real down → nudge → travel → up, not a `dragTo`.
  */
-async function dragHandleOnto(page: Page, rowId: string, ontoId: string): Promise<void> {
+async function dragHandleOnto(
+  page: Page,
+  rowId: string,
+  ontoId: string,
+): Promise<void> {
   await hoverText(page, rowId);
-  const from = await page.locator(`[data-block-id="${rowId}"] ${HANDLE}`).first().boundingBox();
-  const target = await page.locator(`[data-block-id="${ontoId}"]`).first().boundingBox();
-  if (!from || !target) bail(`drag: ${rowId} and ${ontoId} both render`, `from=${!!from} to=${!!target}`);
+  const from = await page
+    .locator(`[data-block-id="${rowId}"] ${HANDLE}`)
+    .first()
+    .boundingBox();
+  const target = await page
+    .locator(`[data-block-id="${ontoId}"]`)
+    .first()
+    .boundingBox();
+  if (!from || !target)
+    return await bail(
+      `drag: ${rowId} and ${ontoId} both render`,
+      `from=${!!from} to=${!!target}`,
+    );
 
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
-  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 + 8, { steps: 5 });
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2 + 8, {
+    steps: 5,
+  });
   // The lower half resolves to "after this row" in the editor's drop handler.
   await page.mouse.move(
     target.x + target.width * 0.5,
@@ -208,7 +235,10 @@ await withBrowser(async (h) => {
           headers: { "content-type": "application/json" },
           body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+        if (!res.ok)
+          throw new Error(
+            `POST /api/blocks ${res.status}: ${await res.text()}`,
+          );
         return (await res.json()) as { id: string };
       };
       const box = await post({
@@ -222,7 +252,13 @@ await withBrowser(async (h) => {
       const second = await text(box.id, "second line");
       const third = await text(box.id, "third line");
       const after = await text(pageId, "after the box");
-      return { box: box.id, first: first.id, second: second.id, third: third.id, after: after.id };
+      return {
+        box: box.id,
+        first: first.id,
+        second: second.id,
+        third: third.id,
+        after: after.id,
+      };
     },
     { pageId },
   );
@@ -296,7 +332,10 @@ await withBrowser(async (h) => {
   await dismiss(page);
 
   // --- 3. The glyph is appearance, and only appearance ------------------------
-  await page.locator(`[data-block-id="${seeded.box}"] ${GLYPH}`).first().click();
+  await page
+    .locator(`[data-block-id="${seeded.box}"] ${GLYPH}`)
+    .first()
+    .click();
   await page.waitForTimeout(600);
   await snap(page, out, "3-glyph-menu");
   const glyphMenu = await menuEntries(page);
@@ -316,7 +355,10 @@ await withBrowser(async (h) => {
   // --- 4. `+` on the borrowed line lands a block AFTER the box ----------------
   const beforePlus = await rendered(page);
   await hoverText(page, seeded.first);
-  await page.locator(`[data-block-id="${seeded.first}"] ${PLUS}`).first().click();
+  await page
+    .locator(`[data-block-id="${seeded.first}"] ${PLUS}`)
+    .first()
+    .click();
   await page.waitForTimeout(1200);
   // `+` inserts the block immediately and opens the block-type menu over it;
   // Esc keeps the block and clears the draft (that is the documented contract).
@@ -326,9 +368,18 @@ await withBrowser(async (h) => {
 
   const afterPlus = await rendered(page);
   const minted = afterPlus.filter((id) => !beforePlus.includes(id));
-  console.log("minted by +:", JSON.stringify(minted), "order:", JSON.stringify(afterPlus));
+  console.log(
+    "minted by +:",
+    JSON.stringify(minted),
+    "order:",
+    JSON.stringify(afterPlus),
+  );
   const newId = minted.at(-1);
-  r.ok("plus: a new line was created", newId != null, `minted=${minted.length}`);
+  r.ok(
+    "plus: a new line was created",
+    newId != null,
+    `minted=${minted.length}`,
+  );
 
   if (newId) {
     const rows = await parentage(page, pageId);
@@ -348,7 +399,10 @@ await withBrowser(async (h) => {
   await dragHandleOnto(page, seeded.second, seeded.after);
   await snap(page, out, "5-line-2-dragged-out");
   const afterLineDrag = await parentage(page, pageId);
-  console.log("parentage after dragging line 2:", JSON.stringify(afterLineDrag));
+  console.log(
+    "parentage after dragging line 2:",
+    JSON.stringify(afterLineDrag),
+  );
   r.ok(
     "line 2: dragging its handle moves LINE 2 — it leaves the box",
     afterLineDrag[seeded.second] === pageId,
@@ -356,7 +410,8 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "line 2: ...and the box keeps the rest of its children",
-    afterLineDrag[seeded.first] === seeded.box && afterLineDrag[seeded.third] === seeded.box,
+    afterLineDrag[seeded.first] === seeded.box &&
+      afterLineDrag[seeded.third] === seeded.box,
     JSON.stringify({
       first: afterLineDrag[seeded.first],
       third: afterLineDrag[seeded.third],
@@ -375,7 +430,10 @@ await withBrowser(async (h) => {
   const orderAfter = await rendered(page);
   console.log("order before:", JSON.stringify(orderBefore));
   console.log("order after:", JSON.stringify(orderAfter));
-  console.log("parentage after dragging the box:", JSON.stringify(afterBoxDrag));
+  console.log(
+    "parentage after dragging the box:",
+    JSON.stringify(afterBoxDrag),
+  );
 
   r.ok(
     "box drag: the FIRST LINE did not leave the box — the handle moved the container, not the child",
@@ -384,7 +442,8 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "box drag: every child is still inside it — children follow their parent by parentId",
-    afterBoxDrag[seeded.first] === seeded.box && afterBoxDrag[seeded.third] === seeded.box,
+    afterBoxDrag[seeded.first] === seeded.box &&
+      afterBoxDrag[seeded.third] === seeded.box,
     JSON.stringify({
       first: afterBoxDrag[seeded.first],
       third: afterBoxDrag[seeded.third],
@@ -403,4 +462,4 @@ await withBrowser(async (h) => {
   );
 });
 
-r.finish();
+await r.finish();

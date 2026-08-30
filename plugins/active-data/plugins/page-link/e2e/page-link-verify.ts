@@ -22,6 +22,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const BASE = baseUrl();
@@ -99,7 +100,7 @@ await withBrowser(async (h) => {
   if (BLOCK_ID) {
     // A content block resolves to its OWNING page — the endpoint's answer, so
     // the expected id is read from it rather than assumed.
-    const res = await fetch(`${BASE}/api/blocks/${BLOCK_ID}/page`);
+    const res = await agentFetch(`/api/blocks/${BLOCK_ID}/page`);
     const body = (await res.json()) as { found: boolean; pageId?: string };
     r.ok(
       `content-block: endpoint resolved ${BLOCK_ID}`,
@@ -110,4 +111,4 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();

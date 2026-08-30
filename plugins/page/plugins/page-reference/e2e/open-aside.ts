@@ -76,7 +76,7 @@ await withBrowser(async (h) => {
       found,
       "pass --page <blockId> to name one directly",
     );
-    if (!found) r.finish();
+    if (!found) await r.finish();
   }
 
   const row = subPageRows().first();
@@ -160,5 +160,5 @@ await withBrowser(async (h) => {
   // sub-page row — the one just clicked — is still on screen.
   r.ok("the original page is still rendered", await row.isVisible());
 
-  r.finish();
+  await r.finish();
 });

@@ -50,7 +50,11 @@ interface PreEnterCaret {
 await withBrowser(async (h) => {
   const { page: pageA } = await h.session({ label: "A" });
 
-  const { pageUrl, block, blockId: originId } = await openBlankPage(pageA, base, {
+  const {
+    pageUrl,
+    block,
+    blockId: originId,
+  } = await openBlankPage(pageA, base, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);
@@ -62,7 +66,11 @@ await withBrowser(async (h) => {
   await pageA.waitForTimeout(2500);
   await snap(pageA, out, "1-composed");
   const composedText = await blockText(block);
-  r.ok("compose: origin holds 'hello world'", composedText === "hello world", composedText);
+  r.ok(
+    "compose: origin holds 'hello world'",
+    composedText === "hello world",
+    composedText,
+  );
 
   // --- 2. Enter at the very start ---------------------------------------------
   // Home / Cmd+ArrowLeft don't move the caret in headless Chromium on macOS —
@@ -72,7 +80,10 @@ await withBrowser(async (h) => {
   const preEnterCaret = await pageA.evaluate<PreEnterCaret | null>(() => {
     const sel = window.getSelection();
     return sel && sel.rangeCount > 0
-      ? { anchorText: sel.anchorNode?.textContent ?? null, anchorOffset: sel.anchorOffset }
+      ? {
+          anchorText: sel.anchorNode?.textContent ?? null,
+          anchorOffset: sel.anchorOffset,
+        }
       : null;
   });
   console.log("pre-Enter caret:", JSON.stringify(preEnterCaret));
@@ -82,13 +93,26 @@ await withBrowser(async (h) => {
 
   const idsAfter = await blockIdsInOrder(pageA);
   console.log("ids after Enter:", JSON.stringify(idsAfter));
-  r.ok("enter: two text blocks", idsAfter.length === 2, `count=${idsAfter.length}`);
-  r.ok("enter: origin id still present (no id churn)", idsAfter.includes(originId));
+  r.ok(
+    "enter: two text blocks",
+    idsAfter.length === 2,
+    `count=${idsAfter.length}`,
+  );
+  r.ok(
+    "enter: origin id still present (no id churn)",
+    idsAfter.includes(originId),
+  );
 
   // The origin keeps its full text under its ORIGINAL id.
-  const origin = pageA.locator(`[data-block-id="${originId}"] [contenteditable="true"]`).first();
+  const origin = pageA
+    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .first();
   const originText = await blockText(origin);
-  r.ok("enter: origin still holds 'hello world'", originText === "hello world", originText);
+  r.ok(
+    "enter: origin still holds 'hello world'",
+    originText === "hello world",
+    originText,
+  );
 
   // A NEW EMPTY block sits ABOVE the origin in document order.
   const originIdx = idsAfter.indexOf(originId);
@@ -99,9 +123,15 @@ await withBrowser(async (h) => {
     `above=${aboveId}`,
   );
   if (aboveId) {
-    const above = pageA.locator(`[data-block-id="${aboveId}"] [contenteditable="true"]`).first();
+    const above = pageA
+      .locator(`[data-block-id="${aboveId}"] [contenteditable="true"]`)
+      .first();
     const aboveText = await blockText(above);
-    r.ok("enter: the block above is EMPTY", aboveText === "", JSON.stringify(aboveText));
+    r.ok(
+      "enter: the block above is EMPTY",
+      aboveText === "",
+      JSON.stringify(aboveText),
+    );
   }
 
   // Caret stays in the ORIGIN at offset 0 (it never lost focus).
@@ -119,9 +149,16 @@ await withBrowser(async (h) => {
   await pageA.keyboard.type("Z", { delay: 15 });
   await pageA.waitForTimeout(800);
   const typedText = await blockText(origin);
-  r.ok("type: char lands at the start of the ORIGIN block", typedText === "Zhello world", typedText);
+  r.ok(
+    "type: char lands at the start of the ORIGIN block",
+    typedText === "Zhello world",
+    typedText,
+  );
   const idsAfterType = await blockIdsInOrder(pageA);
-  r.ok("type: origin id unchanged after typing", idsAfterType.includes(originId));
+  r.ok(
+    "type: origin id unchanged after typing",
+    idsAfterType.includes(originId),
+  );
 
   // --- 4. Undo the typing, then undo the split --------------------------------
   await pageA.keyboard.press("Meta+z"); // undo the "Z"
@@ -138,14 +175,22 @@ await withBrowser(async (h) => {
   await snap(pageA, out, "3-undone");
   const idsAfterUndo = await blockIdsInOrder(pageA);
   console.log("ids after undo:", JSON.stringify(idsAfterUndo));
-  r.ok("undo: empty block removed in one undo", idsAfterUndo.length === 1, `count=${idsAfterUndo.length}`);
+  r.ok(
+    "undo: empty block removed in one undo",
+    idsAfterUndo.length === 1,
+    `count=${idsAfterUndo.length}`,
+  );
   r.ok(
     "undo: the surviving block is the ORIGIN",
     idsAfterUndo[0] === originId,
     `id=${idsAfterUndo[0]}`,
   );
   const afterUndoText = await blockText(origin);
-  r.ok("undo: origin text intact", afterUndoText === "hello world", afterUndoText);
+  r.ok(
+    "undo: origin text intact",
+    afterUndoText === "hello world",
+    afterUndoText,
+  );
 
   // Let projections settle before the convergence read.
   await pageA.waitForTimeout(2000);
@@ -154,7 +199,9 @@ await withBrowser(async (h) => {
   const { page: pageB } = await h.session({ label: "B" });
   await pageB.goto(pageUrl);
   await pageB.waitForTimeout(5000);
-  const originB = pageB.locator(`[data-block-id="${originId}"] [contenteditable="true"]`).first();
+  const originB = pageB
+    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .first();
   await originB.waitFor({ state: "visible", timeout: 15000 });
   const textB = await blockText(originB);
   const countB = (await blockIdsInOrder(pageB)).length;
@@ -169,5 +216,5 @@ await withBrowser(async (h) => {
   console.log("ORIGIN_ID:", originId);
   console.log("PAGE_URL:", pageUrl);
 
-  r.finish();
+  await r.finish();
 });

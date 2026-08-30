@@ -62,7 +62,10 @@ await withBrowser(async (h) => {
         document.querySelector("[data-block-id]")?.parentElement ?? null;
       while (n) {
         const o = getComputedStyle(n).overflowY;
-        if ((o === "auto" || o === "scroll") && n.scrollHeight > n.clientHeight) {
+        if (
+          (o === "auto" || o === "scroll") &&
+          n.scrollHeight > n.clientHeight
+        ) {
           const isRoot = n === document.scrollingElement;
           const rect = n.getBoundingClientRect();
           return {
@@ -84,7 +87,8 @@ await withBrowser(async (h) => {
       };
     });
 
-  const scrollTop = async (): Promise<number> => (await probeScroller()).scrollTop;
+  const scrollTop = async (): Promise<number> =>
+    (await probeScroller()).scrollTop;
 
   const blockCount = (): Promise<number> =>
     page.evaluate(() => document.querySelectorAll("[data-block-id]").length);
@@ -151,7 +155,8 @@ await withBrowser(async (h) => {
 
   const requirePoint = async (y: number, what: string) => {
     const p = await backgroundPointAt(y);
-    if (!p) throw new Error(`no background press point found at y=${y} (${what})`);
+    if (!p)
+      throw new Error(`no background press point found at y=${y} (${what})`);
     return p;
   };
 
@@ -176,7 +181,10 @@ await withBrowser(async (h) => {
         document.querySelector("[data-block-id]")?.parentElement ?? null;
       while (n) {
         const o = getComputedStyle(n).overflowY;
-        if ((o === "auto" || o === "scroll") && n.scrollHeight > n.clientHeight) {
+        if (
+          (o === "auto" || o === "scroll") &&
+          n.scrollHeight > n.clientHeight
+        ) {
           n.scrollTop = target;
           return n.scrollTop;
         }
@@ -249,7 +257,10 @@ await withBrowser(async (h) => {
   // is that the doc is several viewports tall.
   r.ok(`setup: the fixture is long (${total} blocks)`, total >= 48);
   r.eq("setup: every block is a text block", editable, total);
-  r.ok("setup: a scroller exists and actually overflows", setup.found && setup.scrollTop >= 0);
+  r.ok(
+    "setup: a scroller exists and actually overflows",
+    setup.found && setup.scrollTop >= 0,
+  );
   r.ok(
     `setup: the doc is well past the viewport (maxScroll ${Math.round(setup.maxScroll)}px)`,
     setup.maxScroll > 800,
@@ -261,7 +272,10 @@ await withBrowser(async (h) => {
 
   const b0Before = await rowRect(0);
   if (!b0Before) throw new Error("no first block");
-  const press = await requirePoint(b0Before.centerY, "right gutter beside block 0");
+  const press = await requirePoint(
+    b0Before.centerY,
+    "right gutter beside block 0",
+  );
 
   await page.mouse.move(press.x, press.y);
   await page.mouse.down();
@@ -326,7 +340,11 @@ await withBrowser(async (h) => {
     `the loop drives the surface to the bottom (scrollTop ${Math.round(atBottom.scrollTop)} of ${Math.round(trueMax)})`,
     trueMax - atBottom.scrollTop <= 2,
   );
-  r.eq("the range reached every block", await selectedCount(), await blockCount());
+  r.eq(
+    "the range reached every block",
+    await selectedCount(),
+    await blockCount(),
+  );
 
   await page.mouse.up();
   const onRelease = await scrollTop();
@@ -346,13 +364,16 @@ await withBrowser(async (h) => {
 
   const t0 = await editableBlocks(page).nth(0).boundingBox();
   const t2 = await editableBlocks(page).nth(2).boundingBox();
-  if (!t0 || !t2) throw new Error("no bounding boxes for the text-drag fixture blocks");
+  if (!t0 || !t2)
+    throw new Error("no bounding boxes for the text-drag fixture blocks");
 
   await page.mouse.move(t0.x + t0.width * 0.3, t0.y + t0.height / 2);
   await page.mouse.down();
   // Crossing into block 2 promotes the gesture to a block range; only then may
   // auto-scroll engage (before that the BROWSER owns the drag).
-  await page.mouse.move(t2.x + t2.width * 0.5, t2.y + t2.height / 2, { steps: 10 });
+  await page.mouse.move(t2.x + t2.width * 0.5, t2.y + t2.height / 2, {
+    steps: 10,
+  });
   await page.mouse.move(t2.x + t2.width * 0.5, bottomEdgeY);
   const textBefore = await scrollTop();
   const textSelectedAtPark = await selectedCount();
@@ -381,7 +402,9 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(300);
 
   const nearEdgeRow = await page.evaluate((targetY) => {
-    const els = [...document.querySelectorAll('[data-block-id] [contenteditable="true"]')];
+    const els = [
+      ...document.querySelectorAll('[data-block-id] [contenteditable="true"]'),
+    ];
     let best: { left: number; right: number; centerY: number } | null = null;
     let bestDist = Infinity;
     for (const el of els) {
@@ -396,16 +419,25 @@ await withBrowser(async (h) => {
     return best;
   }, setup.bottom - 20);
   if (!nearEdgeRow) {
-    throw new Error("no block near the bottom edge for the intra-block control");
+    throw new Error(
+      "no block near the bottom edge for the intra-block control",
+    );
   }
 
   const intraWidth = nearEdgeRow.right - nearEdgeRow.left;
-  await page.mouse.move(nearEdgeRow.left + intraWidth * 0.2, nearEdgeRow.centerY);
+  await page.mouse.move(
+    nearEdgeRow.left + intraWidth * 0.2,
+    nearEdgeRow.centerY,
+  );
   await page.mouse.down();
   // Horizontal only: the gesture must never leave its own row, or it promotes.
-  await page.mouse.move(nearEdgeRow.left + intraWidth * 0.6, nearEdgeRow.centerY, {
-    steps: 8,
-  });
+  await page.mouse.move(
+    nearEdgeRow.left + intraWidth * 0.6,
+    nearEdgeRow.centerY,
+    {
+      steps: 8,
+    },
+  );
   const intraBefore = await scrollTop();
   await page.waitForTimeout(1000);
   const intraAfter = await scrollTop();
@@ -443,7 +475,9 @@ await withBrowser(async (h) => {
     gatePoint = await backgroundPointAt(bottomState.bottom - d);
   }
   if (!gatePoint) {
-    throw new Error("no background press point anywhere inside the bottom edge band");
+    throw new Error(
+      "no background press point anywhere inside the bottom edge band",
+    );
   }
   const gateDistanceFromEdge = bottomState.bottom - gatePoint.y;
   r.note(
@@ -473,7 +507,10 @@ await withBrowser(async (h) => {
     const el = document.activeElement;
     return el !== null && el.closest('[contenteditable="true"]') !== null;
   });
-  r.ok("click-to-edit still works there (the click was not eaten)", caretLanded);
+  r.ok(
+    "click-to-edit still works there (the click was not eaten)",
+    caretLanded,
+  );
 
   // ---- 6. Upward ------------------------------------------------------------
 
@@ -484,7 +521,10 @@ await withBrowser(async (h) => {
   const upState = await probeScroller();
   const lastNow = await rowRect((await blockCount()) - 1);
   if (!lastNow) throw new Error("no last block for the upward drag");
-  const upPress = await requirePoint(lastNow.centerY, "gutter beside the last block");
+  const upPress = await requirePoint(
+    lastNow.centerY,
+    "gutter beside the last block",
+  );
 
   await page.mouse.move(upPress.x, upPress.y);
   await page.mouse.down();
@@ -506,4 +546,4 @@ await withBrowser(async (h) => {
 
 // Outside `withBrowser`: `finish()` exits the process, which would jump straight
 // past the harness's browser teardown if it were called from inside the callback.
-r.finish();
+await r.finish();

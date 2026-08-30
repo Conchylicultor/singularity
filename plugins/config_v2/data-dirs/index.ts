@@ -47,4 +47,28 @@ export function userConfigRelativeToRoot(): string {
   return relativeToDataRoot(configDir);
 }
 
-export default [configDir];
+/**
+ * Pre-write snapshots of every config document an agent-origin request
+ * overwrote, pending revert. See
+ * `research/2026-08-30-global-agent-config-write-revert-ledger.md`.
+ *
+ * **Deliberately NOT inside `configDir`.** `forkConfig` recursively copies
+ * main's config tree into every new worktree, so a ledger living there would be
+ * inherited by a fresh worktree — whose first start-repair would then "revert"
+ * files that are legitimately in place, silently reverting the user's config to
+ * an unrelated worktree's pre-agent state.
+ */
+export const agentWriteLedgerDir = defineDataDir({
+  kind: "state",
+  name: "agent-write-ledger",
+  owner: "config_v2",
+  description:
+    "Pre-write snapshots of the config documents an automated session overwrote, held until the e2e harness reverts them",
+  reclaim: {
+    kind: "never",
+    reason:
+      "the only copy of the bytes an agent run overwrote; deleting it makes the pending revert impossible and freezes the agent's edit into the user's config",
+  },
+});
+
+export default [configDir, agentWriteLedgerDir];

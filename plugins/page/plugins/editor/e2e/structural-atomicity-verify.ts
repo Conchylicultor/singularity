@@ -51,7 +51,10 @@ await withBrowser(async (h) => {
         headers: { accept: "application/json" },
       });
       if (!res.ok) throw new Error(`GET blocks -> ${res.status}`);
-      const rows = (await res.json()) as { id: string; parentId: string | null }[];
+      const rows = (await res.json()) as {
+        id: string;
+        parentId: string | null;
+      }[];
       return rows.map((b) => ({ id: b.id, parentId: b.parentId }));
     }, pageId);
 
@@ -60,7 +63,9 @@ await withBrowser(async (h) => {
     page.evaluate(() => {
       const node = window.getSelection()?.anchorNode ?? null;
       const el = node instanceof Element ? node : node?.parentElement;
-      return el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null;
+      return (
+        el?.closest("[data-block-id]")?.getAttribute("data-block-id") ?? null
+      );
     });
 
   const { pageId } = await openBlankPage(page, base, { settleMs: 3000 });
@@ -109,16 +114,24 @@ await withBrowser(async (h) => {
   // keeps rendering its prediction under the never-revert policy, so the DOM
   // alone can never settle this.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await editableBlocks(page)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(3000);
 
   const finalRows = await authoritativeRows(pageId);
   const byId = new Map(finalRows.map((b) => [b.id, b]));
   const stillNested = indentedIds.filter((id) => {
     const row = byId.get(id);
-    return row !== undefined && row.parentId !== null && row.parentId !== pageId;
+    return (
+      row !== undefined && row.parentId !== null && row.parentId !== pageId
+    );
   });
-  r.eq("every indent survives a reload", stillNested.length, indentedIds.length);
+  r.eq(
+    "every indent survives a reload",
+    stillNested.length,
+    indentedIds.length,
+  );
 
-  r.finish();
+  await r.finish();
 });

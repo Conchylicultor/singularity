@@ -190,5 +190,5 @@ await withBrowser(async (h) => {
       `even though the surface was following when it unmounted`,
   );
 
-  return r.finish();
+  return await r.finish();
 });

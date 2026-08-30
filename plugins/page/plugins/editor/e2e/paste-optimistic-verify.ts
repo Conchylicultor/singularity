@@ -30,7 +30,11 @@ import {
   stallRoute,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import { blockTexts, editableBlocks, openBlankPage } from "./support/blank-page";
+import {
+  blockTexts,
+  editableBlocks,
+  openBlankPage,
+} from "./support/blank-page";
 import { awaitDocument } from "./support/optimistic";
 import { typeLines } from "./support/type-lines";
 
@@ -72,7 +76,11 @@ await withBrowser(async (h) => {
   const stolen = await page.evaluate(
     () => document.activeElement?.getAttribute("contenteditable") === "true",
   );
-  r.eq("block selection owns the clipboard (focus not stolen back)", stolen, false);
+  r.eq(
+    "block selection owns the clipboard (focus not stolen back)",
+    stolen,
+    false,
+  );
 
   await page.keyboard.press("Meta+c");
   await page.waitForTimeout(400);
@@ -101,7 +109,11 @@ await withBrowser(async (h) => {
   // seed in a passive effect. Both must beat the server, or the "optimistic"
   // claim only covers empty boxes. The wait's predicate is the assertion below,
   // so there is no second read to race (see ./support/optimistic.ts).
-  const { rowsAt, textAt, last: optimistic } = await awaitDocument(page, () => blockTexts(page), {
+  const {
+    rowsAt,
+    textAt,
+    last: optimistic,
+  } = await awaitDocument(page, () => blockTexts(page), {
     grewBeyond: before.length,
     expected: doubled,
     timeoutMs: STALL_MS / 2,
@@ -151,7 +163,9 @@ await withBrowser(async (h) => {
   // rather than for a fixed delay: a blind timeout reads a half-painted forest
   // whenever hydration is a beat slow, which fails as loudly as a lost paste.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await editableBlocks(page).first().waitFor({ state: "visible", timeout: 30_000 });
+  await editableBlocks(page)
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   const reloaded = await awaitDocument(page, () => blockTexts(page), {
     expected: doubled,
     timeoutMs: 30_000,
@@ -159,5 +173,5 @@ await withBrowser(async (h) => {
   });
   r.eq("the pasted blocks survive a reload", reloaded.last, doubled);
 
-  r.finish();
+  await r.finish();
 });

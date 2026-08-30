@@ -60,7 +60,7 @@ await withBrowser(async (h) => {
   // makes the later absence of the offline text a fact about the outage, rather
   // than about nothing having flushed yet.
   const preFlushed = await waitFor(
-    () => fetchBlockDocText(base, blockId),
+    () => fetchBlockDocText(blockId),
     (text) => text === PRE,
   );
   console.log(
@@ -102,7 +102,7 @@ await withBrowser(async (h) => {
   // fetchBlockDocText (not fetchBlockDoc) — a missing row reads as "" here, the
   // same way the pre-move `res.value?.[0]?.state ?? ""` did: this assertion only
   // asks whether the offline text has landed, not whether a row exists.
-  const during = await fetchBlockDocText(base, blockId);
+  const during = await fetchBlockDocText(blockId);
   r.ok(
     "offline: server doc does NOT yet contain the offline text",
     !during.includes("OFFLINE"),
@@ -118,7 +118,7 @@ await withBrowser(async (h) => {
   let serverText = "";
   for (let i = 0; i < 40; i++) {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    serverText = await fetchBlockDocText(base, blockId);
+    serverText = await fetchBlockDocText(blockId);
     if (serverText === FULL) {
       synced = true;
       break;
@@ -179,5 +179,5 @@ await withBrowser(async (h) => {
     JSON.stringify(convergedB.value),
   );
 
-  r.finish();
+  await r.finish();
 });

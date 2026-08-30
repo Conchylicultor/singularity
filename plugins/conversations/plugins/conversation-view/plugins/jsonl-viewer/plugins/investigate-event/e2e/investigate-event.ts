@@ -122,5 +122,5 @@ await withBrowser(async (h) => {
     captured.pageErrors.join(" | "),
   );
 
-  r.finish();
+  await r.finish();
 });

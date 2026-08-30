@@ -12,6 +12,7 @@ import {
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
@@ -23,14 +24,19 @@ const r = report();
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  const { pageId, blockId } = await openBlankPage(page, base, { settleMs: 2500 });
+  const { pageId, blockId } = await openBlankPage(page, base, {
+    settleMs: 2500,
+  });
   console.log("page:", pageId, "seed block:", blockId);
 
   // 1. Insert via the slash menu — the same surface the gutter `+` opens.
   await page.keyboard.type("/prompt", { delay: 40 });
   await page.waitForTimeout(1200);
   await snap(page, out, "menu");
-  const menuHit = await page.getByText("Prompt", { exact: true }).first().isVisible();
+  const menuHit = await page
+    .getByText("Prompt", { exact: true })
+    .first()
+    .isVisible();
   r.ok("slash menu offers Prompt", menuHit);
 
   await page.keyboard.press("Enter");
@@ -38,7 +44,7 @@ await withBrowser(async (h) => {
 
   // The block converted: its type is `prompt` in the row tree.
   const rowsAfterConvert = (await (
-    await fetch(`${base}/api/pages/${pageId}/blocks`)
+    await agentFetch(`/api/pages/${pageId}/blocks`)
   ).json()) as { id: string; type: string }[];
   const promptRow = rowsAfterConvert.find((b) => b.type === "prompt");
   r.ok("block converted to type=prompt", !!promptRow, promptRow?.id);
@@ -62,14 +68,21 @@ await withBrowser(async (h) => {
 
   const launchBtn = page.getByRole("button", { name: /^Launch / }).first();
   await launchBtn.waitFor({ state: "visible", timeout: 10_000 });
-  r.ok("launch control enabled once prompt has text", await launchBtn.isEnabled());
+  r.ok(
+    "launch control enabled once prompt has text",
+    await launchBtn.isEnabled(),
+  );
 
   // 3. Launch.
   await launchBtn.click();
   await page.waitForURL(/\/c\//, { timeout: 45_000 });
   await page.waitForTimeout(2500);
   await snap(page, out, "launched");
-  r.ok("conversation opened as a column beside the page", /\/c\//.test(page.url()), page.url());
+  r.ok(
+    "conversation opened as a column beside the page",
+    /\/c\//.test(page.url()),
+    page.url(),
+  );
   // The page column must still be in the chain — a push, not a replace.
   r.ok("page column retained (push, not replace)", page.url().includes(pageId));
 
@@ -79,9 +92,14 @@ await withBrowser(async (h) => {
   console.log("conversation:", convId);
 
   await page.waitForTimeout(1500);
-  const chipCount = await page.getByRole("button", { name: /Starting|ok|Reply/i }).count();
-  r.ok("block renders a chip for the launched conversation", chipCount > 0, String(chipCount));
-
+  const chipCount = await page
+    .getByRole("button", { name: /Starting|ok|Reply/i })
+    .count();
+  r.ok(
+    "block renders a chip for the launched conversation",
+    chipCount > 0,
+    String(chipCount),
+  );
 });
 
-r.finish();
+await r.finish();

@@ -99,5 +99,5 @@ await withBrowser(async (h) => {
     await ctx.close();
   }
 
-  r.finish();
+  await r.finish();
 });

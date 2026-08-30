@@ -31,8 +31,11 @@ await withBrowser(async (h) => {
 
   const result = await page.evaluate(
     ({ vh, tol }: { vh: number; tol: number }) => {
-      const container = document.querySelector('[data-slot="sidebar-container"]');
-      if (!container) return { ok: false, reason: "no sidebar-container found" };
+      const container = document.querySelector(
+        '[data-slot="sidebar-container"]',
+      );
+      if (!container)
+        return { ok: false, reason: "no sidebar-container found" };
       const cr = container.getBoundingClientRect();
 
       // 1) The sidebar must sit fully within the viewport — not overshoot the
@@ -46,21 +49,33 @@ await withBrowser(async (h) => {
       //    scroll past the container bottom, so exclude any button with a
       //    scrollable ancestor between it and the container.
       const isScrolled = (el: Element): boolean => {
-        for (let p = el.parentElement; p && p !== container; p = p.parentElement) {
+        for (
+          let p = el.parentElement;
+          p && p !== container;
+          p = p.parentElement
+        ) {
           const oy = getComputedStyle(p).overflowY;
           if (oy === "auto" || oy === "scroll" || oy === "hidden") return true;
         }
         return false;
       };
-      const items = [...container.querySelectorAll('[data-slot="sidebar-menu-button"]')]
-        .filter((el) => !isScrolled(el));
+      const items = [
+        ...container.querySelectorAll('[data-slot="sidebar-menu-button"]'),
+      ].filter((el) => !isScrolled(el));
       const clipped = items
         .map((el) => ({
           label: (el.textContent ?? "").trim().slice(0, 24),
           r: el.getBoundingClientRect(),
         }))
-        .filter(({ r: rect }) => rect.height > 0 && (rect.bottom > cr.bottom + tol || rect.top < cr.top - tol))
-        .map(({ label, r: rect }) => ({ label, bottom: Math.round(rect.bottom) }));
+        .filter(
+          ({ r: rect }) =>
+            rect.height > 0 &&
+            (rect.bottom > cr.bottom + tol || rect.top < cr.top - tol),
+        )
+        .map(({ label, r: rect }) => ({
+          label,
+          bottom: Math.round(rect.bottom),
+        }));
 
       return {
         ok: containerWithinViewport && clipped.length === 0,
@@ -86,5 +101,5 @@ await withBrowser(async (h) => {
       `${clipped?.length ? `, ${clipped.length} nav item(s) cut off: ${clipped.map((c) => c.label).join(", ")}` : ""}).`,
   );
 
-  r.finish();
+  await r.finish();
 });

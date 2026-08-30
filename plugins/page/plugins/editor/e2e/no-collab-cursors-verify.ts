@@ -128,5 +128,5 @@ await withBrowser(async (h) => {
 
   await snap(page, out, "final");
 
-  r.finish();
+  await r.finish();
 });

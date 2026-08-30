@@ -50,9 +50,9 @@ const out = arg("out", "/tmp/quote");
 const r = report();
 
 /** Record one failure and stop. Used where nothing further is checkable. */
-function bail(name: string, detail: string): never {
+async function bail(name: string, detail: string): Promise<never> {
   r.fail(name, detail);
-  return r.finish();
+  return await r.finish();
 }
 
 interface FrameBox {
@@ -293,7 +293,7 @@ await withBrowser(async (h) => {
   let g = await geometry(page);
   const originRow = g.rows[originId];
   if (!originRow)
-    bail("the origin survived the wrap", `no row for ${originId}`);
+    return await bail("the origin survived the wrap", `no row for ${originId}`);
   r.ok(
     "the origin block kept its id",
     originRow.editable,
@@ -324,7 +324,7 @@ await withBrowser(async (h) => {
   );
 
   const bar = barOwnedBy(g, quoteId);
-  if (!bar) bail("the quote paints a left bar", JSON.stringify(g.bars));
+  if (!bar) return await bail("the quote paints a left bar", JSON.stringify(g.bars));
   r.ok(
     "the anchor row itself renders NO line (zero height, no contenteditable)",
     (g.rows[quoteId]?.height ?? 99) <= 1 && g.rows[quoteId]?.editable === false,
@@ -388,5 +388,5 @@ await withBrowser(async (h) => {
     originId,
   );
 
-  r.finish();
+  await r.finish();
 });

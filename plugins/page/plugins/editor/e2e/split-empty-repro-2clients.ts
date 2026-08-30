@@ -53,7 +53,9 @@ await withBrowser(async (h) => {
     let vanished = false;
     for (let s = 0; s < 25; s++) {
       await a.page.waitForTimeout(200);
-      got = (await Promise.all((await editableBlocks(a.page).all()).map(blockText))).slice(-2);
+      got = (
+        await Promise.all((await editableBlocks(a.page).all()).map(blockText))
+      ).slice(-2);
       if (got[1] === tail) sawTail = true;
       else if (sawTail) vanished = true;
       if (vanished) break;
@@ -80,7 +82,9 @@ await withBrowser(async (h) => {
         // scratch against the same server state, so it separates the two.
         const badId = await editableBlocks(b.page)
           .last()
-          .evaluate((el) => el.closest("[data-block-id]")?.getAttribute("data-block-id"));
+          .evaluate((el) =>
+            el.closest("[data-block-id]")?.getAttribute("data-block-id"),
+          );
         await b.page.reload({ waitUntil: "domcontentloaded" });
         await editableBlocks(b.page).first().waitFor({ state: "visible" });
         await b.page.waitForTimeout(2500);
@@ -103,6 +107,10 @@ await withBrowser(async (h) => {
     await a.page.keyboard.press("End");
   }
 
-  r.ok(`${ROUNDS} two-client rounds converged`, failures.length === 0, failures.join("\n"));
-  r.finish();
+  r.ok(
+    `${ROUNDS} two-client rounds converged`,
+    failures.length === 0,
+    failures.join("\n"),
+  );
+  await r.finish();
 });

@@ -264,5 +264,5 @@ await withBrowser(async (h) => {
   );
   await snap(page, out, "back");
 
-  r.finish();
+  await r.finish();
 });

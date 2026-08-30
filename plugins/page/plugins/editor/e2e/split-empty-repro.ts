@@ -103,7 +103,9 @@ await withBrowser(async (h) => {
     `${failures.length} failed: ${JSON.stringify(failures, null, 2)}`,
   );
   if (captured.consoleErrors.length > 0) {
-    r.note(`console errors: ${JSON.stringify(captured.consoleErrors.slice(0, 10))}`);
+    r.note(
+      `console errors: ${JSON.stringify(captured.consoleErrors.slice(0, 10))}`,
+    );
   }
-  r.finish();
+  await r.finish();
 });

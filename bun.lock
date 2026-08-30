@@ -2840,6 +2840,10 @@
       "name": "@singularity/plugin-framework-tooling-lint",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-agent-origin-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-aria-safety",
       "version": "0.0.1",
@@ -3156,6 +3160,10 @@
     },
     "plugins/infra/plugins/query-resource": {
       "name": "@singularity/plugin-infra-query-resource",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/request-origin": {
+      "name": "@singularity/plugin-infra-request-origin",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/retention": {
@@ -7156,6 +7164,8 @@
 
     "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
 
+    "@singularity/plugin-framework-tooling-lint-agent-origin-safety": ["@singularity/plugin-framework-tooling-lint-agent-origin-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety"],
+
     "@singularity/plugin-framework-tooling-lint-aria-safety": ["@singularity/plugin-framework-tooling-lint-aria-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety"],
 
     "@singularity/plugin-framework-tooling-lint-bun-safety": ["@singularity/plugin-framework-tooling-lint-bun-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety"],
@@ -7297,6 +7307,8 @@
     "@singularity/plugin-infra-paths-display": ["@singularity/plugin-infra-paths-display@workspace:plugins/infra/plugins/paths/plugins/display"],
 
     "@singularity/plugin-infra-query-resource": ["@singularity/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
+
+    "@singularity/plugin-infra-request-origin": ["@singularity/plugin-infra-request-origin@workspace:plugins/infra/plugins/request-origin"],
 
     "@singularity/plugin-infra-retention": ["@singularity/plugin-infra-retention@workspace:plugins/infra/plugins/retention"],
 

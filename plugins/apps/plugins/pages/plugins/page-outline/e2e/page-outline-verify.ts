@@ -111,7 +111,7 @@ await withBrowser(async (h) => {
     headings.length >= 2,
     `found ${headings.length} — the rail hides itself below two, so pick a richer page via --page`,
   );
-  if (headings.length < 2) return r.finish();
+  if (headings.length < 2) return await r.finish();
   r.note(`${headings.length} headings rendered`);
 
   await openPanel(page);
@@ -179,5 +179,5 @@ await withBrowser(async (h) => {
     );
   }
 
-  return r.finish();
+  return await r.finish();
 });

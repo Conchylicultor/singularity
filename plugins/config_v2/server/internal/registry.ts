@@ -8,7 +8,7 @@ import {
   readTypedConfig,
   threeWayMerge,
 } from "../../core";
-import { jsoncConfigProxy } from "./jsonc-proxy";
+import { jsoncConfigProxy, writeRawAtomic } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
 import {
   userScopedDir,
@@ -37,7 +37,17 @@ import { getFieldStorageProvider } from "./field-storage-providers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT, repoConfigDir } from "@plugins/infra/plugins/paths/server";
+import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { CONFIG_DIR } from "./config-dir";
+import {
+  recordAgentWrite,
+  noteAgentWriteComplete,
+  revertAgentWrites as revertLedger,
+  type TrioPaths,
+  type LedgerEntry,
+  type RevertOutcome,
+  type FileSnapshot,
+} from "./agent-write-ledger";
 
 interface CacheEntry {
   scopeId: string;
@@ -47,6 +57,58 @@ interface CacheEntry {
   userOverwritesPath: string;
   userAncestorPath: string;
   disposables: Disposable[];
+}
+
+/**
+ * Options every config WRITE takes. `writer` is required on purpose.
+ *
+ * It replaces what used to be a trailing optional `scopeId`, rather than being
+ * appended after it: an added 5th positional parameter would compile while
+ * forcing every caller to restate `scopeId`, and a `writer` with a default
+ * would let a new handler silently record its agent writes as user writes. As
+ * an options object, omitting `writer` — or omitting the object — is a `tsc`
+ * error, and the positional-`scopeId` footgun goes away at the same time.
+ *
+ * Named `writer`, NOT `origin`: in config_v2 "origin" already means the
+ * `.origin.jsonc` layer (the same collision that made descriptors carry
+ * `source`).
+ */
+export interface ConfigWriteOpts {
+  /** `originOf(req)` at an HTTP boundary; `systemOrigin("…")` otherwise. */
+  writer: WriteOrigin;
+  scopeId?: string;
+}
+
+/** The trio of files a document is made of, for the agent-write ledger. */
+function trioPathsOf(entry: CacheEntry): TrioPaths {
+  return {
+    origin: entry.userOriginPath,
+    override: entry.userOverwritesPath,
+    ancestor: entry.userAncestorPath,
+  };
+}
+
+/**
+ * Snapshot this document before an agent-origin write touches it. A no-op for
+ * every other writer. Call immediately BEFORE the file mutation.
+ */
+function recordWrite(
+  opts: ConfigWriteOpts,
+  entry: CacheEntry,
+  operation: string,
+): void {
+  recordAgentWrite(
+    opts.writer,
+    entry.storePath,
+    entry.scopeId,
+    trioPathsOf(entry),
+    operation,
+  );
+}
+
+/** Refresh the ledger's "what the agent left" snapshot, after the write lands. */
+function noteWrite(opts: ConfigWriteOpts, entry: CacheEntry): void {
+  noteAgentWriteComplete(opts.writer, entry.storePath, entry.scopeId);
 }
 
 // 2D cache keyed by (descriptor × scopeId). Inner key "" (BASE_SCOPE) is the base
@@ -498,8 +560,9 @@ export async function setConfig<
   descriptor: ConfigDescriptor<F>,
   key: K,
   value: InferFieldValue<F[K]>,
-  scopeId: string = BASE_SCOPE,
+  opts: ConfigWriteOpts,
 ): Promise<void> {
+  const scopeId = opts.scopeId ?? BASE_SCOPE;
   const entry = scopeId
     ? await ensureScopeEntry(descriptor, scopeId)
     : getEntry(descriptor, BASE_SCOPE);
@@ -585,33 +648,38 @@ export async function setConfig<
     );
   }
 
+  recordWrite(opts, entry, `set-field:${key}`);
   base[key] = value;
   const normalized = normalizeCollectionItems(base, descriptor.fields);
   userOverwrites.write(normalized as JsonValue, hash);
   refreshEntry(descriptor, entry);
+  noteWrite(opts, entry);
 }
 
 export async function setConfigByPath(
   storePath: string,
   key: string,
   value: unknown,
-  scopeId?: string,
+  opts: ConfigWriteOpts,
 ): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+  // `opts` forwarded whole, never destructured and rebuilt — that is what stops
+  // the writer being dropped in the middle of the call chain.
   await setConfig(
     descriptor,
     key as keyof typeof descriptor.fields & string,
     value as never,
-    scopeId,
+    opts,
   );
 }
 
 export async function resetConfigByPath(
   storePath: string,
   key: string,
-  scopeId?: string,
+  opts: ConfigWriteOpts,
 ): Promise<void> {
+  const scopeId = opts.scopeId;
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
@@ -620,6 +688,10 @@ export async function resetConfigByPath(
 
   const provider = getFieldStorageProvider(field.type.id);
   if (provider) {
+    // KNOWN LIMIT, stated rather than papered over: a provider-backed (secret)
+    // field never touches the JSONC layer, so a bytes ledger cannot capture it
+    // and an agent write here is NOT revertible. Covering it would need a
+    // second, provider-side ledger. See the design doc's "known limits".
     await provider.clear(descriptor.name, key);
     const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
     if (entry) {
@@ -640,7 +712,7 @@ export async function resetConfigByPath(
     descriptor,
     key as keyof typeof descriptor.fields & string,
     defaultValue as never,
-    scopeId,
+    opts,
   );
 }
 
@@ -681,12 +753,12 @@ export function watchConfig<F extends FieldsRecord>(
 
 export function acknowledgeConflictByPath(
   storePath: string,
-  scopeId?: string,
+  opts: ConfigWriteOpts,
 ): void {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
-  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+  const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
   const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
@@ -701,6 +773,7 @@ export function acknowledgeConflictByPath(
   if (!originData) throw new Error(`Cannot read origin for "${storePath}"`);
 
   const newHash = computeHash(originData.content);
+  recordWrite(opts, entry, "acknowledge-conflict");
   userOverwrites.write(ow.content, newHash);
   // Terminal resolution — the override now wins against the current origin, so
   // the merge base is no longer needed. A stale ancestor would seed a wrong
@@ -709,6 +782,7 @@ export function acknowledgeConflictByPath(
   // The override just flipped from ignored (stale) to winning — the resolved
   // value changed even though no file content did.
   refreshEntry(descriptor, entry);
+  noteWrite(opts, entry);
 }
 
 // Three-way merge resolution: reconcile a stale override against its origin
@@ -721,12 +795,12 @@ export function acknowledgeConflictByPath(
 // finalizes it (idempotent — the same conflictKeys recur until resolved).
 export function mergeConflictByPath(
   storePath: string,
-  scopeId?: string,
+  opts: ConfigWriteOpts,
 ): { resolved: boolean; conflictKeys: string[] } {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
-  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+  const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
   const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
@@ -754,10 +828,12 @@ export function mergeConflictByPath(
 
   const resolved = conflicts.length === 0;
   const hash = resolved ? computeHash(originData.content) : ow.hash;
+  recordWrite(opts, entry, "merge-conflict");
   userOverwrites.write(normalized as JsonValue, hash);
   if (resolved && existsSync(entry.userAncestorPath))
     unlinkSync(entry.userAncestorPath);
   refreshEntry(descriptor, entry);
+  noteWrite(opts, entry);
 
   return { resolved, conflictKeys: conflicts };
 }
@@ -824,14 +900,15 @@ export function getRawFileContent(
 
 export function deleteOverrideByPath(
   storePath: string,
-  scopeId?: string,
+  opts: ConfigWriteOpts,
 ): void {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
-  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+  const entry = getEntry(descriptor, opts.scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
+  recordWrite(opts, entry, "delete-override");
   // Idempotent: an "invalid" conflict can surface with no override on disk
   // (the origin itself fails the current schema). Deleting a non-existent
   // override is a no-op — defaults are already in effect.
@@ -840,4 +917,69 @@ export function deleteOverrideByPath(
   // The override is gone, so any captured merge base is moot — drop it.
   if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
   refreshEntry(descriptor, entry);
+  noteWrite(opts, entry);
+}
+
+/** Put one captured file back: exact bytes, or gone if it did not exist. */
+function restoreFile(path: string, snapshot: FileSnapshot): void {
+  if (snapshot.present) {
+    writeRawAtomic(path, snapshot.bytes);
+    return;
+  }
+  if (existsSync(path)) unlinkSync(path);
+}
+
+/**
+ * Restore one ledgered document's files and re-sync the cache.
+ *
+ * The cache half is why the revert goes through the server at all rather than
+ * the harness rewriting files itself: `CONFIG_DIR`'s watcher is a push-latency
+ * mechanism, not a correctness one (an event can be missed), so a filesystem
+ * restore behind the server's back could leave `getConfig`, the
+ * `config-v2.values` push and every subscribed browser serving the agent's
+ * value indefinitely. Going through `refreshEntry` / `ensureScopeEntry` makes
+ * the update deterministic.
+ */
+async function applyRestore(entry: LedgerEntry): Promise<void> {
+  restoreFile(entry.paths.origin, entry.before.origin);
+  restoreFile(entry.paths.override, entry.before.override);
+  restoreFile(entry.paths.ancestor, entry.before.ancestor);
+
+  const descriptor = getDescriptorByStorePath(entry.storePath);
+  if (!descriptor) {
+    // Renamed or removed between the run and the revert. The bytes are back,
+    // which is the user-visible fact; there is no cache entry left to re-sync.
+    // Not an error — throwing here would strand a correctly-restored document
+    // in the ledger forever.
+    return;
+  }
+
+  if (!entry.scopeId) {
+    const base = getEntry(descriptor, BASE_SCOPE);
+    if (base) refreshEntry(descriptor, base);
+    return;
+  }
+
+  // A scoped document's entry is BUILT FROM the files, so a restore that
+  // created or destroyed them changes whether the entry should exist at all.
+  // Rebuild rather than refresh — the same dispose/ensure pair forkDescriptor
+  // and removeDescriptor use, so a reverted fork lands in the cache state those
+  // functions would have produced.
+  disposeScopeEntry(descriptor, entry.scopeId);
+  const stillExists =
+    existsSync(entry.paths.origin) || existsSync(entry.paths.override);
+  if (stillExists) await ensureScopeEntry(descriptor, entry.scopeId);
+  notifyDescriptorScopeChange(entry.storePath, entry.scopeId);
+}
+
+/**
+ * Restore every config document an agent-origin request overwrote, and clear
+ * what was restored.
+ *
+ * Idempotent — an empty ledger returns three empty arrays — which is what makes
+ * it safe as the e2e harness's start-of-run repair for a previous run killed
+ * before its own revert.
+ */
+export async function revertAgentConfigWrites(): Promise<RevertOutcome> {
+  return revertLedger(applyRestore);
 }

@@ -222,5 +222,5 @@ await withBrowser(async (h) => {
   );
   r.eq("F: the block's root still holds ONE paragraph", rootParagraphs, 1);
 
-  r.finish();
+  await r.finish();
 });

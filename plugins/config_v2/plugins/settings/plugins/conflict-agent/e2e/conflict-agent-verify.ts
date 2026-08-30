@@ -63,7 +63,7 @@ await withBrowser(async (h) => {
     onBanner,
     `is ${storePath} actually in conflict in this namespace?`,
   );
-  if (!onBanner) r.finish();
+  if (!onBanner) await r.finish();
 
   await trigger.first().click();
   // The popover's editor is code-split, so give it longer than a plain click
@@ -92,4 +92,4 @@ await withBrowser(async (h) => {
   );
 });
 
-r.finish();
+await r.finish();

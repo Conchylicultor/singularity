@@ -12,6 +12,7 @@
  * ordinary walk-up no matter which plugin's script imports this barrel.
  */
 import * as Y from "yjs";
+import { agentFetch } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 /** Decode a base64 Yjs update into the plain text of its lexical `root`. */
 export function blockDocText(stateB64: string): string {
@@ -38,11 +39,10 @@ export function blockDocText(stateB64: string): string {
  * callers distinguish "no row" from "row with empty text".
  */
 export async function fetchBlockDoc(
-  base: string,
   blockId: string,
 ): Promise<{ state: string } | undefined> {
-  const res = await fetch(
-    `${base}/api/resources/page-block-doc?blockId=${encodeURIComponent(blockId)}`,
+  const res = await agentFetch(
+    `/api/resources/page-block-doc?blockId=${encodeURIComponent(blockId)}`,
   );
   if (!res.ok) {
     throw new Error(
@@ -55,10 +55,7 @@ export async function fetchBlockDoc(
 }
 
 /** Convenience: server-side text for a block, `""` when no doc row exists yet. */
-export async function fetchBlockDocText(
-  base: string,
-  blockId: string,
-): Promise<string> {
-  const doc = await fetchBlockDoc(base, blockId);
+export async function fetchBlockDocText(blockId: string): Promise<string> {
+  const doc = await fetchBlockDoc(blockId);
   return doc ? blockDocText(doc.state) : "";
 }

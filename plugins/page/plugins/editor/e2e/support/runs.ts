@@ -8,12 +8,18 @@
  * from the DOM at all — so every claim about what a keystroke ARMED can only be
  * settled by what gets typed and persisted.
  *
- * A factory rather than free functions taking `base`: every script already has a
- * module-scope `base`, and binding it once keeps the call sites reading
+ * A factory rather than free functions: it keeps the call sites reading
  * `settledRuns(page, pageId, blockId)` — the shape the assertions in
  * `mark-boundary-verify.ts` were written against.
+ *
+ * It used to take `base` and every caller passed the same module-scope
+ * `baseUrl()`. `agentFetch` resolves the run's target itself, so the parameter
+ * was not just redundant but a way to get it wrong — and an unmarked `fetch`
+ * here would create rows no cleanup could attribute. Dropped rather than
+ * defaulted.
  */
 import type { Page } from "playwright";
+import { agentFetch } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 /** A run exactly as `data.text` stores it — `marks` is absent when empty. */
 export interface StoredRun {
@@ -58,9 +64,9 @@ export interface RunsReader {
   settledRuns(page: Page, pageId: string, blockId: string): Promise<NormRun[]>;
 }
 
-export function makeRunsReader(base: string): RunsReader {
+export function makeRunsReader(): RunsReader {
   const fetchRows = async (pageId: string): Promise<Map<string, BlockRow>> => {
-    const res = await fetch(`${base}/api/pages/${pageId}/blocks`);
+    const res = await agentFetch(`/api/pages/${pageId}/blocks`);
     if (!res.ok) throw new Error(`blocks fetch ${res.status}`);
     const rows = (await res.json()) as BlockRow[];
     return new Map(

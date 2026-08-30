@@ -905,5 +905,5 @@ await withBrowser(async (h) => {
   );
 
   console.log("PAGE_URL:", pageUrl);
-  r.finish();
+  await r.finish();
 });

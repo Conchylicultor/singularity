@@ -205,5 +205,5 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(400);
   }
 
-  r.finish();
+  await r.finish();
 });

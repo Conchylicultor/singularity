@@ -375,5 +375,5 @@ await withBrowser(async (h) => {
     "1 rule",
   );
 
-  r.finish();
+  await r.finish();
 });

@@ -13,7 +13,11 @@
 //     ArrowRight, landing on a caret position that is actually painted.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/soft-line-caret-verify.ts [--base <url>]
-import { baseUrl, report, withBrowser } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  baseUrl,
+  report,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { openBlankPage, editableBlocks } from "./support/blank-page";
 
@@ -36,14 +40,19 @@ interface CaretProbe {
 async function caretAt(page: Page): Promise<CaretProbe> {
   return page.evaluate(() => {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return { block: null, line: -1, painted: false };
+    if (!sel || sel.rangeCount === 0)
+      return { block: null, line: -1, painted: false };
     const range = sel.getRangeAt(0);
     const container = range.startContainer;
-    const el = container.nodeType === 1 ? (container as Element) : container.parentElement;
+    const el =
+      container.nodeType === 1
+        ? (container as Element)
+        : container.parentElement;
     const blockEl = el?.closest("[data-block-id]");
     const editable = el?.closest('[contenteditable="true"]');
 
-    const usable = (rc: DOMRect | undefined) => (rc && (rc.width !== 0 || rc.height !== 0) ? rc : null);
+    const usable = (rc: DOMRect | undefined) =>
+      rc && (rc.width !== 0 || rc.height !== 0) ? rc : null;
     const direct = usable(range.getClientRects()[0]);
     // Same borrow the editor performs: the child at the anchor offset is on the
     // caret's own line.
@@ -52,8 +61,14 @@ async function caretAt(page: Page): Promise<CaretProbe> {
       const rr = document.createRange();
       if (node.nodeType === Node.TEXT_NODE) rr.selectNodeContents(node);
       else rr.selectNode(node);
-      const rects = [...rr.getClientRects()].filter((x) => x.width !== 0 || x.height !== 0);
-      return rects.length ? (last ? rects[rects.length - 1]! : rects[0]!) : null;
+      const rects = [...rr.getClientRects()].filter(
+        (x) => x.width !== 0 || x.height !== 0,
+      );
+      return rects.length
+        ? last
+          ? rects[rects.length - 1]!
+          : rects[0]!
+        : null;
     };
     const caretRect =
       direct ??
@@ -78,7 +93,9 @@ async function caretAt(page: Page): Promise<CaretProbe> {
         }
       }
       const sorted = [...tops].sort((a, b) => a - b);
-      line = sorted.findIndex((t) => Math.abs(t - Math.round(caretRect.top)) <= 3);
+      line = sorted.findIndex(
+        (t) => Math.abs(t - Math.round(caretRect.top)) <= 3,
+      );
     }
     return {
       block: blockEl?.getAttribute("data-block-id") ?? null,
@@ -117,7 +134,11 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(400);
     const line4 = await caretAt(page);
     console.log("clicked last line:", JSON.stringify(line4));
-    r.ok("A: caret on block 1's last (empty) line", line4.line === 3, JSON.stringify(line4));
+    r.ok(
+      "A: caret on block 1's last (empty) line",
+      line4.line === 3,
+      JSON.stringify(line4),
+    );
 
     await page.keyboard.press("ArrowUp");
     await page.waitForTimeout(400);
@@ -186,7 +207,11 @@ await withBrowser(async (h) => {
       await page.waitForTimeout(200);
     }
     const beforeCross = await caretAt(page);
-    r.ok("C: setup — caret painted just after the chip", beforeCross.painted, JSON.stringify(beforeCross));
+    r.ok(
+      "C: setup — caret painted just after the chip",
+      beforeCross.painted,
+      JSON.stringify(beforeCross),
+    );
 
     await page.keyboard.press("ArrowLeft");
     await page.waitForTimeout(300);
@@ -200,20 +225,30 @@ await withBrowser(async (h) => {
     const textBefore = await page.evaluate(() => {
       const sel = window.getSelection();
       const rng = sel?.getRangeAt(0);
-      return rng ? `${rng.startContainer.textContent}@${rng.startOffset}` : "none";
+      return rng
+        ? `${rng.startContainer.textContent}@${rng.startOffset}`
+        : "none";
     });
     console.log("caret sits in:", textBefore);
-    r.ok("C: it landed in the text BEFORE the chip", textBefore.startsWith("pre "), textBefore);
+    r.ok(
+      "C: it landed in the text BEFORE the chip",
+      textBefore.startsWith("pre "),
+      textBefore,
+    );
 
     await page.keyboard.press("ArrowRight");
     await page.waitForTimeout(300);
     const backOver = await caretAt(page);
     console.log("one ArrowRight back:", JSON.stringify(backOver));
-    r.ok("C: ONE ArrowRight crosses back, caret painted", backOver.painted, JSON.stringify(backOver));
+    r.ok(
+      "C: ONE ArrowRight crosses back, caret painted",
+      backOver.painted,
+      JSON.stringify(backOver),
+    );
 
     await context.close();
   }
 
   console.log("\n=== SUMMARY ===");
-  r.finish();
+  await r.finish();
 });

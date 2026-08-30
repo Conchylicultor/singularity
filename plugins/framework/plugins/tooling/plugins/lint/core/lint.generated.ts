@@ -23,6 +23,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/sql-column", id: "database.sql-column", loader: () => import("@plugins/database/plugins/sql-column/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-projection", id: "database.sql-projection", loader: () => import("@plugins/database/plugins/sql-projection/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-rows", id: "database.sql-rows", loader: () => import("@plugins/database/plugins/sql-rows/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety", id: "framework.tooling.lint.agent-origin-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/aria-safety", id: "framework.tooling.lint.aria-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/aria-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/bun-safety", id: "framework.tooling.lint.bun-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/button-safety", id: "framework.tooling.lint.button-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety/lint"), dependsOn: [] },

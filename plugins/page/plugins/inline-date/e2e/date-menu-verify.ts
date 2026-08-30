@@ -59,7 +59,11 @@ function menuRows(page: Page): Locator {
 }
 
 /** Type `@…` into the focused block and let the menu derive itself. */
-async function typeQuery(page: Page, block: Locator, query: string): Promise<void> {
+async function typeQuery(
+  page: Page,
+  block: Locator,
+  query: string,
+): Promise<void> {
   await block.click();
   await page.keyboard.type(query, { delay: 25 });
   // Open-state is derived inside Lexical's update listener; the surface is
@@ -81,7 +85,9 @@ async function clearBlock(page: Page, block: Locator): Promise<void> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  const { block, pageUrl } = await openBlankPage(page, base, { settleMs: 3000 });
+  const { block, pageUrl } = await openBlankPage(page, base, {
+    settleMs: 3000,
+  });
   console.log("page url:", pageUrl);
 
   // ── 1. a prefix query keeps the preset pressable ───────────────────────────
@@ -151,7 +157,9 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(500);
     await snap(page, out, "picker");
 
-    const panel = await page.locator('[data-slot="popover-content"]').innerText();
+    const panel = await page
+      .locator('[data-slot="popover-content"]')
+      .innerText();
     r.ok(
       "the picker shows the relative presets",
       panel.includes("Today") &&
@@ -169,4 +177,4 @@ await withBrowser(async (h) => {
   }
 });
 
-r.finish();
+await r.finish();

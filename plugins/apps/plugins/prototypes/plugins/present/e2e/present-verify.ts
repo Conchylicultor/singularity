@@ -8,18 +8,18 @@
 
 import {
   arg,
-  baseUrl,
   boot,
   pathUrl,
   report,
   snap,
   withBrowser,
+  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const out = arg("out", "/tmp/present-verify");
 
 async function firstPrototypeName(): Promise<string> {
-  const res = await fetch(`${baseUrl()}/api/prototypes`);
+  const res = await agentFetch(`/api/prototypes`);
   if (!res.ok) throw new Error(`GET /api/prototypes → ${res.status}`);
   const rows = (await res.json()) as { name: string }[];
   const first = rows[0];
@@ -136,5 +136,5 @@ await withBrowser(async (h) => {
     captured.pageErrors.length === 0,
     captured.pageErrors.join(" | "),
   );
-  r.finish();
+  await r.finish();
 });
