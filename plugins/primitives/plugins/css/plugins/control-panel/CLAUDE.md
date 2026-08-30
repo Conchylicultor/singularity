@@ -2,14 +2,16 @@
 
 The vocabulary for a **data-control panel** — the body of a Filter popover, a
 Sort popover, a view-settings menu, a settings pane, a per-field editor. One
-compound namespace (`ControlPanel` plus `.Section` / `.Row` / `.Setting` /
-`.Block` / `.Group` / `.RuleList` / `.RuleRow` / `.Field` / `.Footer` / `.Empty`
-/ `.Stack`) and two surfaces (`ControlPanelPopover`, `ControlPanelPane`).
+compound namespace (`ControlPanel` plus `.Section` / `.Subhead` / `.Row` /
+`.Setting` / `.Block` / `.Group` / `.RuleList` / `.RuleRow` / `.Field` /
+`.Footer` / `.Empty` / `.Stack`) and two surfaces (`ControlPanelPopover`,
+`ControlPanelPane`).
 
 Read the members as a set: **four ways to be one field** — `Row` (the row *is*
 the control), `Setting` (the row *holds* the control), `Block` (the control is
 wider than a row), `Group` (the field is other fields) — plus the builder pair,
-plus the boxes and bands.
+plus the boxes and bands, plus `Subhead`, which names a *run* of rows rather
+than any one field.
 
 ## The five invariants
 
@@ -90,8 +92,10 @@ Four things there are one edit from being wrong:
 - **`ControlPanel.Stack` is `display: contents`** (and so has no `className`), so
   there is exactly one band container and one mask.
 
-`RuleList` and `Empty` are deliberately **not** bands: both are used *inside* a
-section, so marking either draws a rule through the middle of one.
+`RuleList`, `Empty` and `Subhead` are deliberately **not** bands: all three are
+used *inside* a section, so marking any of them draws a rule through the middle
+of one — and for a `Subhead`, that rule would land between a heading and the very
+rows it names.
 
 **`--border` is the right colour — do not add a surface-relative separator var.**
 Measured on `--popover`: distance 46 in dark, ≈39 in light. `--popover` and
@@ -257,6 +261,22 @@ group **throws** rather than dropping them: a silently swallowed reset button is
 a bug nobody finds, and the same policy `useControlPanelHost()` itself takes. A
 host that pushes is a host that adorns nothing, so in practice this fires only
 for a call site that has mixed the two up.
+
+## The three label rungs, and where each one starts
+
+A label either names the panel's **band** (`Section`'s eyebrow — small-caps, on
+the panel's content edge), a **run of rows inside one band** (`Subhead` —
+caption/muted, on that same edge) or **one control** (a `Row` / `Setting` /
+`Block` label — drawn in a row's label cell, on the text rail). Invariant #1's
+split is band-and-run versus field, not "heading versus body".
+
+`Subhead` is the middle rung, and it exists because the outer two are both wrong
+for it: a `Section` would rule a hairline between the heading and its own rows,
+and a field label would indent it an icon column past the eyebrow above it. It
+reaches its rail by carrying no class at all — the *inherit* half of the rail
+contract — so it is equally correct in a region that is not a panel. Gated by
+`subhead-rail` (a panel with an icon column, where the two rails are genuinely
+apart).
 
 ## The host owns the presentation, and throws when absent
 
@@ -442,10 +462,11 @@ reserved-padding construct and asserts the overlap check genuinely fails on it.
 
 Plus `setting-rail` (the two row grids' labels on one text rail, and the value
 rail across a panel mixing `Row`, `Setting fit="field"`, `Setting fit="inline"`
-and `Block` — the pair that can actually drift), `block-label-rail` (the
-eyebrow-vs-field-label decision above, gated in a panel with an icon column so
-the two rails are genuinely apart) and `group-nested-rail` (a nested group's
-republished rail against its children).
+and `Block` — the pair that can actually drift), `block-label-rail` and
+`subhead-rail` (the two sides of the label-rung split above — a field label on
+the text rail, a sub-head on the eyebrow's — each gated in a panel with an icon
+column so the two rails are genuinely apart) and `group-nested-rail` (a nested
+group's republished rail against its children).
 
 Plus `region` and `pane-region` — two **`RegionFixture`s**, which say only
 "`ControlPanel` / `ControlPanelPane` opens a region" and lets the harness fill it from `REGION_CHILDREN` (bare input, bare
@@ -489,7 +510,7 @@ The primitive needs **no** new lint exemptions: it inherits the
 
 ## Plugin reference
 
-- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+- Description: The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
 - Web:
   - Uses:
     - `primitives/css/rail.useRailGuard`
@@ -528,6 +549,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `ControlPanelSettingProps`
     - `ControlPanelSize`
     - `ControlPanelStackProps`
+    - `ControlPanelSubheadProps`
     - `PanelStackApi`
     - `PanelStackEntry`
   - Exports (values):

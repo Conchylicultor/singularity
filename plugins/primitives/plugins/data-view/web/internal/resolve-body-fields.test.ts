@@ -52,6 +52,27 @@ describe("resolveBodyFields", () => {
     expect(ids(FIELDS)).toEqual(["name", "status", "enabled"]);
   });
 
+  test("an explicit array comes back band by band, not in the order stored", () => {
+    // The Properties list draws one band per source and IS the body order, so a
+    // stored order that interleaves two bands is regrouped rather than obeyed
+    // — within a band the stored order still decides.
+    const sectioned: FieldDef<Row>[] = [
+      ...FIELDS,
+      { id: "build.status", label: "Build status", section: "Build" },
+      { id: "build.targets", label: "Targets", section: "Build" },
+    ];
+    expect(
+      ids(
+        resolveBodyFields(sectioned, [
+          "build.targets",
+          "name",
+          "build.status",
+          "status",
+        ]),
+      ),
+    ).toEqual(["name", "status", "build.targets", "build.status"]);
+  });
+
   test("an absent `visible` reads as true (custom columns need no change)", () => {
     const withCustom: FieldDef<Row>[] = [
       ...FIELDS,

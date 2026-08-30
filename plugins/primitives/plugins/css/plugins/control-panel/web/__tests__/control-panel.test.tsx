@@ -149,6 +149,7 @@ describe("ControlPanel — the container draws the hairline", () => {
           <ControlPanel.Row>Title</ControlPanel.Row>
         </ControlPanel.Section>
         <ControlPanel.Section label="Group by">
+          <ControlPanel.Subhead>Build</ControlPanel.Subhead>
           <ControlPanel.RuleList>
             <ControlPanel.Row>Status</ControlPanel.Row>
           </ControlPanel.RuleList>
@@ -161,9 +162,11 @@ describe("ControlPanel — the container draws the hairline", () => {
         </ControlPanel.Footer>
       </ControlPanel>,
     );
-    // Three bands: two sections and the footer. `RuleList` and `Empty` are NOT
-    // bands — both are used INSIDE a section (a filter is one sentence read down
-    // the page), so marking either would draw a rule in the middle of a band.
+    // Three bands: two sections and the footer. `RuleList`, `Empty` and
+    // `Subhead` are NOT bands — all three are used INSIDE a section (a filter is
+    // one sentence read down the page; a sub-head names the rows under it), so
+    // marking any of them would draw a rule in the middle of a band, and for the
+    // sub-head between a heading and its own rows.
     const bands = Array.from(container.querySelectorAll(".cp-band"));
     expect(bands.length).toBe(3);
     expect(container.querySelector("[data-cp-footer]")?.classList).toContain(
@@ -178,6 +181,25 @@ describe("ControlPanel — the container draws the hairline", () => {
       expect(classes).not.toContain("h-px");
       expect(classes).not.toContain("cp-body");
     }
+  });
+
+  it("draws a Subhead with no inset of its own, so it lands on the rail", () => {
+    render(
+      <ControlPanel>
+        <ControlPanel.Section label="Properties">
+          <ControlPanel.Subhead>Build</ControlPanel.Subhead>
+          <ControlPanel.Row>Duration</ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>,
+    );
+    // jsdom applies no stylesheet, so this reads what `useRailGuard` reads off a
+    // live panel: the classes the member DECLARES. A sub-head names a RUN, which
+    // is the eyebrow's rung, and it reaches the panel's content edge by carrying
+    // nothing at all — the same way `Empty` does. The rendered geometry is
+    // `fixtures/control-panel/subhead-rail`'s job.
+    const classes = screen.getByText("Build").className.split(/\s+/);
+    expect(classes.filter((c) => /^-?p[xls]-/.test(c))).toEqual([]);
+    expect(classes.filter((c) => c.startsWith("rail-"))).toEqual([]);
   });
 
   it("keeps the panel stack out of the layout, so ONE box spaces the bands", () => {

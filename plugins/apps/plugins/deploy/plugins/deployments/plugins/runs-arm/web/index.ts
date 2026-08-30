@@ -18,6 +18,10 @@ export default {
     // needs — at which point `open` is two lines here.
     Runs.Kind({ kind: DEPLOY_RUN_KIND, label: "Deploy" }),
     Runs.Row({ match: DEPLOY_RUN_KIND, component: DeployRunRow }),
-    Runs.Fields({ id: DEPLOY_RUN_KIND, component: DeployRunFields }),
+    Runs.Fields({
+      id: DEPLOY_RUN_KIND,
+      section: "Deploy",
+      component: DeployRunFields,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -84,6 +84,13 @@ names no kind. `core`: `defineRunArmFields`. `server`: `defineRunKind` in
 `register: [...]`. `web`: `Runs.Kind` (label, optional `open`), plus
 `Runs.Fields` / `Runs.Row` / `Runs.Leading` as wanted.
 
+`Runs.Fields` also declares the arm's **`section`** — the heading its columns are
+listed under in the filter picker, the Properties list and the group-by band
+("Build", "Deploy", …), beside the "Common" band of base columns every arm
+projects. Give it the same words as the kind's label. It is spelled once on the
+registration and stamped onto every field the arm returns, so eight columns
+cannot end up under two spellings; see data-view's CLAUDE.md ("Field sections").
+
 `Runs.Kind.open` is a plain callback and cannot call hooks. A kind whose detail
 pane is keyed by something the ledger does not store (release's pane wants the
 composition **uuid**; `release_runs` carries its **name**) therefore contributes

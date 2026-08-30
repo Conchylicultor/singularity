@@ -12,6 +12,7 @@ import { ControlPanelGroup } from "./group";
 import { ControlPanelStack } from "./panel-stack";
 import { ControlPanelRuleRow } from "./rule-row";
 import { ControlPanelSetting } from "./setting";
+import { ControlPanelSubhead } from "./subhead";
 
 /**
  * The vocabulary, as ONE compound namespace.
@@ -19,7 +20,9 @@ import { ControlPanelSetting } from "./setting";
  * Read as a set, the four ways to be ONE FIELD sit next to each other: `Row`
  * (the row IS the control), `Setting` (the row HOLDS the control), `Block` (the
  * control is wider than a row) and `Group` (the field is other fields) — plus
- * the builder pair, plus the boxes and bands.
+ * the builder pair, plus the boxes and bands, plus `Subhead`, which names a RUN
+ * of rows rather than any one field and so sits beside `Section` rather than
+ * among the four.
  *
  * That shape is the API's main affordance: typing `ControlPanel.` shows the
  * author the whole closed set at the point of writing, and says there is no
@@ -31,6 +34,7 @@ import { ControlPanelSetting } from "./setting";
  */
 export const ControlPanel = Object.assign(ControlPanelRoot, {
   Section: ControlPanelSection,
+  Subhead: ControlPanelSubhead,
   Row: ControlPanelRow,
   Setting: ControlPanelSetting,
   Block: ControlPanelBlock,

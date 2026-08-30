@@ -19,6 +19,12 @@ export default {
         openPane(buildDetailPane, { runId: run.id }, { mode: "push" }),
     }),
     Runs.Leading({ match: BUILD_RUN_KIND, component: BuildRunLeading }),
-    Runs.Fields({ id: BUILD_RUN_KIND, component: BuildRunFields }),
+    Runs.Fields({
+      id: BUILD_RUN_KIND,
+      // Its own band in every field list — the merged schema carries four arms'
+      // columns and they read as four short lists, not one flat forty.
+      section: "Build",
+      component: BuildRunFields,
+    }),
   ],
 } satisfies PluginDefinition;

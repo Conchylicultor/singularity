@@ -22,6 +22,11 @@ export default {
   contributions: [
     DataViewSlots.FieldExtension({
       id: "custom-columns",
+      // The user's own columns are their own band, wherever they are added: on a
+      // schema with sections they read as one more source, and on a plain one
+      // the two headings ("Common" / "Custom") are the first thing that tells
+      // the app's fields apart from the ones you made.
+      section: "Custom",
       component: CustomColumnFieldExtension,
     }),
     DataViewSlots.Setting({

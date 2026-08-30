@@ -14,6 +14,10 @@ export default {
     // that cannot read the manifest to resolve one. A row that does not activate
     // is honest; a click that silently does nothing is not.
     Runs.Kind({ kind: RELEASE_RUN_KIND, label: "Release" }),
-    Runs.Fields({ id: RELEASE_RUN_KIND, component: ReleaseRunFields }),
+    Runs.Fields({
+      id: RELEASE_RUN_KIND,
+      section: "Release",
+      component: ReleaseRunFields,
+    }),
   ],
 } satisfies PluginDefinition;

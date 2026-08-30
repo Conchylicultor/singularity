@@ -223,6 +223,10 @@ export interface FieldExtensionsDescriptor<TRow> extends SlotHandle {
   /** All contributed field-extension components (sealed, like any slot). */
   useContributions: () => SealContributions<{
     id: string;
+    /** The heading this contributor's fields are listed under (`null` = they are
+     *  ordinary fields of the host's own schema). The host STAMPS it onto every
+     *  field the contributor returns — see `FieldDef.section`. */
+    section: string | null;
     component: ComponentType<FieldExtensionProps<TRow>>;
     order?: number;
   }>[];
@@ -317,6 +321,20 @@ export interface FieldDef<TRow> {
   cover?: boolean;
   /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
   primary?: boolean;
+  /**
+   * Which titled section of the schema this field belongs to — the heading it
+   * is listed under in every "choose a field" surface (filter, sort, group-by,
+   * Properties). Absent = the host's own fields, listed first under
+   * `SHARED_FIELD_SECTION` ("Common") once anything else IS sectioned.
+   *
+   * Nothing to do with `groupable`, which is about partitioning ROWS.
+   *
+   * A field contributed through a field extension never authors this: the host's
+   * fold stamps the contribution's own `section` over whatever it returned, so
+   * a contributor cannot file its columns under someone else's name. Author it
+   * only on a host's base schema, to split a long one into bands of its own.
+   */
+  section?: string;
   /**
    * Whether the field is in the DEFAULT body set (list subtitle, table column,
    * gallery property row, tree secondary chip). Default `true`. `false` = the

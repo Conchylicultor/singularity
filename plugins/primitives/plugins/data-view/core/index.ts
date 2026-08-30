@@ -13,6 +13,13 @@ export { IDENTITY_CODEC } from "./internal/types";
 
 export { compareValues } from "./internal/grouping";
 
+export {
+  splitFieldSections,
+  orderFieldsBySection,
+  SHARED_FIELD_SECTION,
+} from "./internal/field-sections";
+export type { FieldSchemaSection } from "./internal/field-sections";
+
 export type {
   FieldGrouping,
   FieldGroupingSet,

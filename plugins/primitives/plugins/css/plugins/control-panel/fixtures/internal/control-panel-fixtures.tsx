@@ -353,6 +353,63 @@ export const controlPanelFixtures: HarnessFixture[] = [
     ],
   },
 
+  // ── §1.4: a Subhead names a RUN, so it keeps the eyebrow's rail ───
+  //
+  // The other side of the split `block-label-rail` gates. A `Subhead` labels a
+  // run of rows rather than one control, so it belongs on the eyebrow's rung —
+  // the panel's own content edge — and carries no rail class to get there. The
+  // failure it exists to catch is the member acquiring an inline padding of its
+  // own (it shipped as hand-rolled `px-2xs` typography in data-view, 4px past
+  // the rail), which no rail guard sees because the heading is a grandchild of
+  // the panel root rather than a direct child.
+  //
+  // Again a panel WITH an icon column: without one the eyebrow's rail and a row
+  // label's are the same x, and a sub-head that drifted onto the field-label
+  // rung would pass.
+  {
+    id: "control-panel/subhead-rail",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <ControlPanel aria-label="Subhead rail">
+        <ControlPanel.Section
+          label={<span data-geo="eyebrow">Properties</span>}
+        >
+          <RailMarker id="rail-icon" />
+          <ControlPanel.Subhead>
+            <Fills id="subhead">Build</Fills>
+          </ControlPanel.Subhead>
+          <ControlPanel.Row
+            icon={
+              <Fills id="row-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+          >
+            <RowRail id="rail-text" />
+            <Fills id="row-label">Duration</Fills>
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>
+    ),
+    invariants: [
+      // The eyebrow rung: the sub-head beside the section label above it, and
+      // the row's leading cell — the grid tracks, which is the independent
+      // mechanism the panel's padding is being compared against.
+      { kind: "leftPack", after: "rail-icon", slot: "subhead", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "eyebrow", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "row-icon-cell", gap: 0 },
+      // The rung it is NOT, stated so a panel whose two rails collapsed onto one
+      // x fails here rather than passing silently.
+      { kind: "leftPack", after: "rail-text", slot: "row-label", gap: 0 },
+      // NO `noOverlap` — see `setting-rail`. These slots live on three separate
+      // rows, and `rail-icon` is a zero-width probe sitting inside the box of
+      // everything that starts at its x.
+      { kind: "noClip" },
+    ],
+  },
+
   // ── The nested region an inline Group opens ───────────────────────
   //
   // Nesting is shadowing: the group re-declares the rail for its own subtree and

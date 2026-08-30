@@ -1058,6 +1058,9 @@ interface FieldExtensionProps<TRow> {
 }
 ```
 
+The registration carries one more thing — **`section: string | null`**, the band
+its fields are listed under (see "Field sections" below).
+
 Every contributor receives the **surface coordinates** (`storageKey`, `rowKey`) so
 a cross-cutting contributor can key its per-row data over the surface; one that
 doesn't need them just ignores them:
@@ -1071,7 +1074,7 @@ function PlaybackFields({ render }: FieldExtensionProps<Song>) {
   ], [map]);
   return <>{render(fields)}</>;  // ignores storageKey/rowKey — it keys off its own resource
 }
-MyFields({ id: "playback", component: PlaybackFields });
+MyFields({ id: "playback", section: null, component: PlaybackFields });
 ```
 
 **Two registration entry points, one mechanism.** A field extension reaches the
@@ -1121,6 +1124,51 @@ symmetrize. Do **not** "restore symmetry" by re-splitting `FieldExtension` or by
 minting a per-consumer `RowOrder` factory that has no consumer. See
 ["The global `RowOrder` slot"](#the-global-roworder-slot-cross-plugin) under
 Manual order.
+
+### Field sections: a band per contributor
+
+A schema several plugins contributed to is a flat list of forty columns unless
+something says where each came from. `FieldDef.section` is that: the heading a
+field is listed under in **every** "choose a field" surface — the filter and sort
+typeahead, the Properties list, the group-by band. The host's own fields sit
+first under `SHARED_FIELD_SECTION` ("Common"); each contributor's follow under
+its own name, so the merged run surface reads `Common / Build / Backup / Release
+/ Deploy` everywhere instead of one undifferentiated list.
+
+**A contributor never authors it per field.** `FieldExtensionContribution.section`
+is declared once on the registration and the fold **stamps** it over every field
+that contributor returned (`sectioned()` in `field-extensions.tsx`), so a plugin
+cannot spell its own band two ways across forty columns, forget it on the
+fortieth, or file a column under another plugin's name. Authoring
+`FieldDef.section` by hand is for a HOST splitting its own base schema into
+bands.
+
+It is **required and nullable**, not optional: `null` says "these are ordinary
+fields of the host's own schema" (one `Starred` boolean on the pages sidebar,
+`Category` on tasks) and is a real answer, distinct from an arm that merely
+forgot — which, defaulted, would file its columns under the host's own name with
+nothing to catch it.
+
+Three rules fall out of it, all in one place each:
+
+- **Headings appear only when there is something to tell apart.** `FieldSections`
+  (`web/internal/field-sections.tsx`) is the one component every surface draws its
+  field list through; with a single section it draws no heading at all, so a
+  plain one-plugin schema keeps the flat list it always had. The heading is
+  `ControlPanel.Subhead` — the panel vocabulary's own member, so it follows the
+  panel's label rails and typography instead of being hand-rolled here; carrying
+  no rail class of its own is what also makes it right in the one surface with no
+  panel around it (`field-picker.tsx`'s bare `InlinePopover`), where it lands on
+  that region's own content edge.
+- **The typeahead matches the band's name too** (`fieldSearchText`), so typing
+  "deploy" in the filter picker offers the deploy arm's eight columns whatever
+  they are individually called.
+- **The band order IS the body order.** `orderFieldsBySection` (core) is applied
+  by both `resolveBodyFields` and the Properties controller's item list, and
+  Properties draws one `SortableList` per band — so a drag reorders within its
+  own source, and a column can never sit between two bands in the table while
+  the list that ordered it shows it inside one. The cost is deliberate: columns
+  from two sources cannot be interleaved.
 
 ## Collection-consumer separation
 
@@ -1668,6 +1716,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FieldGrouping`
     - `FieldGroupingSet`
     - `FieldOption`
+    - `FieldSchemaSection`
     - `FieldValue`
     - `FilterConjunction`
     - `FilterFieldValue`
@@ -1703,6 +1752,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `FilterNodeSchema`
     - `FilterRuleSchema`
     - `IDENTITY_CODEC`
+    - `orderFieldsBySection`
+    - `SHARED_FIELD_SECTION`
+    - `splitFieldSections`
 - Sub-plugins:
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.

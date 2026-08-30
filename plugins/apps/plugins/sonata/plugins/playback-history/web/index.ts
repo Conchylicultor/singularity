@@ -11,6 +11,10 @@ export default {
     "Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns.",
   contributions: [
     Sonata.Effect({ id: "record-play", component: RecordPlayObserver }),
-    Library.Fields({ id: "playback", component: PlaybackFields }),
+    Library.Fields({
+      id: "playback",
+      section: null,
+      component: PlaybackFields,
+    }),
   ],
 } satisfies PluginDefinition;

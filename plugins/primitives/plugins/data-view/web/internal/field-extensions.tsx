@@ -15,6 +15,19 @@ import type {
 
 export interface FieldExtensionContribution<TRow> {
   id: string;
+  /**
+   * The heading this contributor's fields are listed under in every "choose a
+   * field" surface — the arm's own name on the merged run surface ("Build",
+   * "Deploy"), so a schema of forty columns from five plugins reads as five
+   * short lists instead of one flat one.
+   *
+   * `null` means the opposite, deliberately: these fields are ORDINARY fields of
+   * the host's own schema (one `Starred` boolean on the pages sidebar), and get
+   * no band of their own. Required and nullable rather than optional, because
+   * the two answers are a real choice and the wrong one is invisible — an arm
+   * that merely forgot would file its columns under the host's own name.
+   */
+  section: string | null;
   component: ComponentType<FieldExtensionProps<TRow>>;
   order?: number;
 }
@@ -33,7 +46,7 @@ export interface FieldExtensions<TRow> extends RenderSlot<
 
 /**
  * Mint a per-consumer field-extension slot. The returned value is **callable for
- * contributions** (`MyFields({ id, component })`, like any `defineRenderSlot`
+ * contributions** (`MyFields({ id, section, component })`, like any `defineRenderSlot`
  * result) and — being a slot — already exposes the `FieldExtensionsDescriptor`
  * surface (`id` + `useContributions`) the host reads. Mirrors `defineItemActions`:
  * disjoint row types per consumer → a factory, not a global slot.
@@ -93,6 +106,17 @@ export function CollectFieldExtensions(props: {
       emit={children}
     />
   );
+}
+
+/** Stamp one contributor's `section` over every field it returned. `null` (the
+ *  fields are ordinary host fields) passes the array through untouched, so the
+ *  common case allocates nothing. */
+function sectioned(
+  fields: FieldDef<unknown>[],
+  section: string | null,
+): FieldDef<unknown>[] {
+  if (section === null) return fields;
+  return fields.map((field) => ({ ...field, section }));
 }
 
 /** One source-level fold level: fold every contribution of `sources[index]` into
@@ -182,7 +206,12 @@ function FieldExtensionStep(props: {
         slot={slot}
         contributions={contributions}
         index={index + 1}
-        acc={[...acc, ...fields]}
+        // The section is STAMPED here, never read off the returned field: it is
+        // a fact about who contributed, so the contributor declares it once on
+        // its registration and cannot spell it differently (or forget it) on the
+        // fortieth column. `null` → the fields stay un-sectioned, i.e. part of
+        // the host's own set.
+        acc={[...acc, ...sectioned(fields, contribution.section)]}
         storageKey={storageKey}
         rowKey={rowKey}
         emit={emit}

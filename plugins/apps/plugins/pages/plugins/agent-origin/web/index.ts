@@ -8,5 +8,7 @@ export type { AgentPageRow } from "../shared/resources";
 export default {
   description:
     "Agent-origin provenance for pages: contributes an `origin` enum field (Mine / Agent) into the Pages sidebar DataView, so pages written by an automated session segregate into their own `[Agent]` section of the tree.",
-  contributions: [PageTree.Fields({ id: "origin", component: OriginField })],
+  contributions: [
+    PageTree.Fields({ id: "origin", section: null, component: OriginField }),
+  ],
 } satisfies PluginDefinition;

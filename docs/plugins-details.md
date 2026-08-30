@@ -22111,7 +22111,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/outline/rail`
               - `primitives/pane`
               - `primitives/tabbed-view`
-        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
+        - **`control-panel`** — The control-panel vocabulary: ControlPanel plus its closed set of members (Section, Subhead, Row, Setting, Block, Group, RuleList, RuleRow, Field, Footer, Empty, Stack) and its two surfaces, ControlPanelPopover and ControlPanelPane. The container draws the hairlines, the row is a grid so every label starts at one x, selection has one language per meaning, and width is a role rather than a measurement.
           - Web:
             - Uses:
               - `primitives/css/rail.useRailGuard`
@@ -22150,6 +22150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ControlPanelSettingProps`
               - `ControlPanelSize`
               - `ControlPanelStackProps`
+              - `ControlPanelSubheadProps`
               - `PanelStackApi`
               - `PanelStackEntry`
             - Exports (values):
@@ -24971,6 +24972,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FieldGrouping`
           - `FieldGroupingSet`
           - `FieldOption`
+          - `FieldSchemaSection`
           - `FieldValue`
           - `FilterConjunction`
           - `FilterFieldValue`
@@ -25006,6 +25008,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FilterNodeSchema`
           - `FilterRuleSchema`
           - `IDENTITY_CODEC`
+          - `orderFieldsBySection`
+          - `SHARED_FIELD_SECTION`
+          - `splitFieldSections`
       - Plugins:
         - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
           - Web:

@@ -10,6 +10,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
 import { DynamicIcon } from "../../internal/dynamic-icon";
+import { FieldSections, fieldSearchText } from "../../internal/field-sections";
 
 /**
  * Notion-style search-first field picker: a "Filter by…" typeahead over the
@@ -18,6 +19,11 @@ import { DynamicIcon } from "../../internal/dynamic-icon";
  * behind every "choose a field" surface in the filter builder — the empty state,
  * the `Add filter` affordance, and changing an existing rule's field — so they
  * all gain typeahead from one place.
+ *
+ * A schema several plugins contributed to is listed band by band under its
+ * sections (`Common`, then each contributor's), and the typeahead matches the
+ * band's name as well as the field's — so on the merged run surface "deploy"
+ * finds the deploy arm's eight columns whatever they are called.
  */
 export function FieldSearchList<TRow>(props: {
   fields: FieldDef<TRow>[];
@@ -30,7 +36,7 @@ export function FieldSearchList<TRow>(props: {
   const resolveIcon = useResolveFieldIcon();
   const { query, setQuery, filtered } = useTextFilter({
     items: props.fields,
-    accessor: (f) => f.label,
+    accessor: fieldSearchText,
   });
 
   return (
@@ -45,24 +51,35 @@ export function FieldSearchList<TRow>(props: {
       <Scroll className="max-h-64">
         <Stack gap="2xs">
           {filtered.length === 0 ? (
-            <Text as="div" variant="caption" tone="muted" className="px-2xs py-xs">
+            <Text
+              as="div"
+              variant="caption"
+              tone="muted"
+              className="px-2xs py-xs"
+            >
               No fields
             </Text>
           ) : (
-            filtered.map((field) => {
-              const icon = resolveIcon(field.type ?? "text");
-              return (
-                <Row
-                  key={field.id}
-                  size="sm"
-                  hover="muted"
-                  icon={icon ? <DynamicIcon icon={icon} /> : undefined}
-                  onClick={() => props.onPick(field.id)}
-                >
-                  <span className="truncate">{field.label}</span>
-                </Row>
-              );
-            })
+            // Sectioned over the FILTERED set, so a search that matches nothing
+            // in a band drops that band's heading with it.
+            <FieldSections fields={filtered}>
+              {(fields) =>
+                fields.map((field) => {
+                  const icon = resolveIcon(field.type ?? "text");
+                  return (
+                    <Row
+                      key={field.id}
+                      size="sm"
+                      hover="muted"
+                      icon={icon ? <DynamicIcon icon={icon} /> : undefined}
+                      onClick={() => props.onPick(field.id)}
+                    >
+                      <span className="truncate">{field.label}</span>
+                    </Row>
+                  );
+                })
+              }
+            </FieldSections>
           )}
         </Stack>
       </Scroll>

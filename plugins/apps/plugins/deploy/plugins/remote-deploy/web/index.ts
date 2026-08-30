@@ -21,6 +21,10 @@ export default {
       label: "Output",
       component: OutputSection,
     }),
-    Deployments.Fields({ id: "release", component: ReleaseField }),
+    Deployments.Fields({
+      id: "release",
+      section: null,
+      component: ReleaseField,
+    }),
   ],
 } satisfies PluginDefinition;

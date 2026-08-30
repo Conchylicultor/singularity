@@ -15,6 +15,10 @@ export default {
     // buttons rather than buttons nested inside one.
     Runs.Kind({ kind: BACKUP_RUN_KIND, label: "Backup" }),
     Runs.Row({ match: BACKUP_RUN_KIND, component: BackupRunRow }),
-    Runs.Fields({ id: BACKUP_RUN_KIND, component: BackupRunFields }),
+    Runs.Fields({
+      id: BACKUP_RUN_KIND,
+      section: "Backup",
+      component: BackupRunFields,
+    }),
   ],
 } satisfies PluginDefinition;

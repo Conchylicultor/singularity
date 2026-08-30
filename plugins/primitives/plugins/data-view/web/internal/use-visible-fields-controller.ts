@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { FieldDef } from "../../core";
+import { orderFieldsBySection, type FieldDef } from "../../core";
 
 export interface VisibleFieldItem<TRow> {
   field: FieldDef<TRow>;
@@ -20,6 +20,21 @@ export interface VisibleFieldsController<TRow> {
   showAll: () => void;
   /** True once an explicit array is stored (i.e. customized away from show-all). */
   isCustomized: boolean;
+}
+
+/** Reorder the display items so each section's fields are contiguous, reusing the
+ *  ONE section-ordering rule rather than re-deriving it over the item wrapper. */
+function orderItemsBySection<TRow>(
+  items: VisibleFieldItem<TRow>[],
+  schema: FieldDef<TRow>[],
+): VisibleFieldItem<TRow>[] {
+  const byFieldId = new Map(items.map((i) => [i.field.id, i]));
+  return orderFieldsBySection(
+    items.map((i) => i.field),
+    // Band order from the SCHEMA: these items are visible-first-then-hidden, so
+    // their own order would decide the bands by accident.
+    schema,
+  ).map((field) => byFieldId.get(field.id)!);
 }
 
 /** arrayMove(items, from, to) — pure, immutable reorder. */
@@ -74,7 +89,12 @@ export function useVisibleFieldsController<TRow>(
     for (const field of fields) {
       if (!visibleSet.has(field.id)) ordered.push({ field, visible: false });
     }
-    return ordered;
+    // Band by band, matching `resolveBodyFields`. Two things follow, and both
+    // are the point: a section is one contiguous run (so the list draws one
+    // heading per source, never the same heading twice around a field the user
+    // hid), and the displayed order still IS the body order — the commit below
+    // writes exactly this order back.
+    return orderItemsBySection(ordered, fields);
   }, [fields, visibleFields]);
 
   const isCustomized = visibleFields != null;

@@ -9,6 +9,10 @@ export default {
     "Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and contributes the Source field (Library.Fields) that flags — and lets you filter for — folder-imported songs whose file has been deleted from disk.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: midiFoldersConfig }),
-    Library.Fields({ id: "source-missing", component: SourceMissingField }),
+    Library.Fields({
+      id: "source-missing",
+      section: null,
+      component: SourceMissingField,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useGroupByController } from "../../internal/use-group-by-controller";
+import { FieldSections } from "../../internal/field-sections";
 import { useDataViewControls } from "../controls/controls-context";
 
 /**
@@ -44,29 +45,38 @@ export function GroupByControl(): ReactNode {
     return null;
   }
 
-  // "None" is one of the options, not a reset button beside them: ungrouped is a
-  // grouping choice, so it sits in the same radio set as the fields.
-  const options: { id: string | null; label: string }[] = [
-    { id: null, label: "None" },
-    ...controller.groupableFields.map((f) => ({ id: f.id, label: f.label })),
-  ];
   // The field row names only the field — `setField` resolves the granularity
   // (keeping the current one when the new type still offers it).
   const groupings = controller.groupings?.groupings ?? [];
+  const activeFieldId = controller.groupBy?.fieldId ?? null;
 
   return (
     <Fragment>
       <ControlPanel.Section label="Group by">
-        {options.map((option) => (
-          <ControlPanel.Row
-            key={option.id ?? "__none__"}
-            select="radio"
-            checked={(controller.groupBy?.fieldId ?? null) === option.id}
-            onSelect={() => controller.setField(option.id)}
-          >
-            {option.label}
-          </ControlPanel.Row>
-        ))}
+        {/* "None" is one of the options, not a reset button beside them:
+            ungrouped is a grouping choice, so it sits in the same radio set as
+            the fields — above every band, because it belongs to none of them. */}
+        <ControlPanel.Row
+          select="radio"
+          checked={activeFieldId === null}
+          onSelect={() => controller.setField(null)}
+        >
+          None
+        </ControlPanel.Row>
+        <FieldSections fields={controller.groupableFields}>
+          {(sectionFields) =>
+            sectionFields.map((field) => (
+              <ControlPanel.Row
+                key={field.id}
+                select="radio"
+                checked={activeFieldId === field.id}
+                onSelect={() => controller.setField(field.id)}
+              >
+                {field.label}
+              </ControlPanel.Row>
+            ))
+          }
+        </FieldSections>
       </ControlPanel.Section>
       {/* One choice is not a choice — a type declaring a single grouping (or
           none, falling back to the identity one) shows no band at all. */}

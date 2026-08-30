@@ -30,6 +30,6 @@ export default {
       hydrate,
       createOption: midiCreateOption,
     }),
-    Library.Fields({ id: "midi", component: MidiFields }),
+    Library.Fields({ id: "midi", section: null, component: MidiFields }),
   ],
 } satisfies PluginDefinition;
