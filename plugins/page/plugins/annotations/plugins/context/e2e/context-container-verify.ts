@@ -647,11 +647,12 @@ await withBrowser(async (h) => {
   }
 
   // --- seed ------------------------------------------------------------------
-  const seeded = await seedCards(page, pageId).catch((err: unknown): Promise<never> =>
-    bail(
-      "seed: the fixture posts through the write boundary",
-      `${err instanceof Error ? err.message : String(err)} — nothing below is checkable`,
-    ),
+  const seeded = await seedCards(page, pageId).catch(
+    (err: unknown): Promise<never> =>
+      bail(
+        "seed: the fixture posts through the write boundary",
+        `${err instanceof Error ? err.message : String(err)} — nothing below is checkable`,
+      ),
   );
   console.log("seeded:", JSON.stringify(seeded));
 

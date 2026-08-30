@@ -324,7 +324,8 @@ await withBrowser(async (h) => {
   );
 
   const bar = barOwnedBy(g, quoteId);
-  if (!bar) return await bail("the quote paints a left bar", JSON.stringify(g.bars));
+  if (!bar)
+    return await bail("the quote paints a left bar", JSON.stringify(g.bars));
   r.ok(
     "the anchor row itself renders NO line (zero height, no contenteditable)",
     (g.rows[quoteId]?.height ?? 99) <= 1 && g.rows[quoteId]?.editable === false,
