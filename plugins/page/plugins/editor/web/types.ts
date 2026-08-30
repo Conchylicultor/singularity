@@ -220,9 +220,14 @@ export interface BlockChrome {
  *   own, so it fills that box with `absolute` insets. Do NOT use `h-full`: an
  *   explicit height defeats the editor's grid stretch, and any vertical bleed
  *   then shifts the box instead of growing it.
- * - It must add no horizontal offset of its own beyond `inset`: rows seat their
- *   hover controls against a content edge the SURFACE computed (this frame's,
- *   for the rows inside it), so shifting the flow would strand them.
+ * - It must add no horizontal offset of its own: the box it paints is the one
+ *   the SURFACE measured, handed over whole. Rows seat their hover controls
+ *   against a content edge the surface computed (this frame's, for the rows
+ *   inside it), so shifting the flow would strand them — and the rows inside
+ *   reserve their `padding-right` from the same count this box's right edge
+ *   comes from, so a second opinion here would put a card's text past its own
+ *   tint. Consumers hand these props straight to `ContainerBackdrop` and supply
+ *   appearance classes only.
  */
 export interface BlockFrameProps {
   /** The container block's type — the dispatch key. */
@@ -244,11 +249,23 @@ export interface BlockFrameProps {
   blockId?: string;
   /**
    * Distance (px) from the frame box's left edge to the container block's
-   * content edge `C`. The decoration starts here so it aligns with the block
-   * content instead of bleeding over the editable surface's hover rail. Zero on
-   * surfaces with no rail (the read-only renderer).
+   * content edge `C` — the ORIGIN the box is measured from, not the box's own
+   * edge. Zero on surfaces with no rail (the read-only renderer).
+   *
+   * The painted left edge is `frameBoxLeft(inset)`, one `BLOCK_INSET` further
+   * in, which is where every other decorated block already paints; the frame
+   * does not apply that itself (`ContainerBackdrop` does, once, for all of
+   * them). See `internal/page-column.ts`.
    */
   inset: number;
+  /**
+   * How far the box's RIGHT edge pulls in from the surface's own right edge, as
+   * a CSS length — one `BLOCK_INSET` per enclosing frame, this one included, so
+   * a nested card closes inside its parent the way its left edge opens inside
+   * it. The rows inside reserve the same amount as `padding-right`, from the
+   * same count, so their text always stops before this edge.
+   */
+  rightInset: string;
 }
 
 /**

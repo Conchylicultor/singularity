@@ -9,7 +9,7 @@ export { privateNotesBlock } from "../core";
 
 export default {
   description:
-    "Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents.",
+    "Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents.",
   contributions: [
     // The card renders NO row of its own — `BlockRow`'s anchored branch never
     // dispatches `Editor.Block` for an `anchor` type, so the container
@@ -31,7 +31,7 @@ export default {
     Editor.BlockFrame({
       match: privateNotesBlock.type,
       component: PrivateNotesFrame,
-      anchor: PrivateNotesAnchor,
+      cornerAnchor: PrivateNotesAnchor,
     }),
   ],
 } satisfies PluginDefinition;

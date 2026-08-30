@@ -12,10 +12,10 @@ Container          ← the anchor: appearance only, no line of its own
 └── Bulleted list
 ```
 
-Three kinds exist today — `page/callout` (a solid tint, prose the reader should
-notice), the four dashed [`page/annotations`](../annotations/CLAUDE.md) cards
-(meta, addressed to or withheld from an agent), and `page/quote` (a bare left
-rule, a quoted passage) — and this plugin is everything they have in common. It contributes **nothing** itself: it is a library the
+Three kinds exist today — `page/callout` (a solid tint led by an icon its author
+chose), the four soft-washed [`page/annotations`](../annotations/CLAUDE.md) cards
+(meta, addressed to or withheld from an agent, each NAMED in its own corner), and
+`page/quote` (a bare left rule, a quoted passage) — and this plugin is everything they have in common. It contributes **nothing** itself: it is a library the
 container plugins build their own block type out of.
 
 ## Why a primitive, and not "copy the callout"
@@ -135,26 +135,60 @@ are the two users today.
 
 - **`ContainerBackdrop`** — the frame's positioned box. The primitive owns the
   GEOMETRY and the consumer passes appearance classes only, which is what makes
-  the three documented frame rules (`BlockFrameProps`) true by construction:
-  `absolute` insets filling the surface-provided box from `inset` (the editor's
-  already-resolved content edge `C`, 0 on surfaces with no rail), never `h-full`
-  (an explicit height defeats the editor's grid stretch), and no horizontal
-  offset beyond `inset` (the rows inside seat their hover controls against that
-  same edge, so shifting the flow would strand them). The single
+  the documented frame rules (`BlockFrameProps`) true by construction: `absolute`
+  insets filling the box the SURFACE measured — handed over whole as the frame's
+  own props, never as a coordinate the consumer might add to — never `h-full` (an
+  explicit height defeats the editor's grid stretch), and no horizontal offset of
+  its own (the rows inside seat their hover controls against an edge the surface
+  computed, so shifting the flow would strand them). The single
   `layout/no-adhoc-layout` escape for the whole family lives here.
+
+  **That box is the container's own CONTENT box**, `[C + BLOCK_INSET, R −
+  BLOCK_INSET × enclosing frames]` — the same box a code block's background and a
+  place block's card already paint. It used to bleed to `C`, one `BLOCK_INSET`
+  further left, which is what "the card looks shifted" was: its edge stood 12px
+  left of every paragraph on the page and of every other decorated box. The right
+  inset and the enclosed rows' `padding-right` come from ONE count (how many
+  frames cover the row), so a card's text can never end past its own tint, and a
+  nested card closes inside its parent the way its left edge opens inside it.
 
   The appearance channel is deliberately named `className`: the
   `no-adhoc-layout` / `no-adhoc-spacing` / `no-adhoc-radius` /
   `no-adhoc-surface` rules all scan a `className` attribute, so "appearance
   only" is enforced at the consumer's own call site rather than trusted.
 
-- **`ContainerAnchor`** — the decoration shell, and **appearance only**. It owns
-  the static-vs-interactive branch on `editor` presence, the trigger
+- **`ContainerAnchor` / `ContainerCornerLabel`** — the decoration shells, one per
+  SEAT, and **appearance only**. Both own the static-vs-interactive branch on
+  `editor` presence, and both open the same popover — the trigger
   (`preventDefault`ed mousedown, because the click lands beside a live caret) and
-  the popover. The consumer supplies the `glyph` and optionally `sections` — its
-  own appearance controls, handed `{ editor, close }` — with `triggerLabel` and
-  the width typed as travelling WITH `sections`, so "a glyph with no appearance but
-  a trigger label" is unrepresentable.
+  its open state live once in `internal/appearance-popover.tsx`, so the two seats
+  cannot drift into different contracts. The consumer supplies the mark (a
+  `glyph`, or a `name`) and optionally `sections` — its own appearance controls,
+  handed `{ editor, close }` — with `triggerLabel` and the width typed as
+  travelling WITH `sections`, so "a decoration with no appearance but a trigger
+  label" is unrepresentable.
+
+  **A container has exactly one decoration, and the field it is spelled in says
+  what that decoration IS.** `anchor` is the GUTTER glyph: a mark in the box's own
+  indent column, seated on the first visible child's borrowed line, always there,
+  leading the text — what a callout's icon is, since its author chose it and it is
+  part of what the card says. `cornerAnchor` is the card's NAME, pinned to the
+  box's top-right corner and hidden until the pointer is inside the box — what an
+  annotation's type is, since it answers a question the reader asks only
+  occasionally and a permanent glyph charged every card for. `BlockFrameDecoration`
+  is a union of the two, so "both" and "a seat with no component" are unspellable,
+  and `page-editor:anchor-has-decoration` accepts either arm: what it pins is that
+  a container asked for ONE, a container with none being invisible whichever seat
+  it declined.
+
+  The corner seat's reveal cannot be CSS. A frame is a grid SIBLING of the rows it
+  spans, so a card has no ancestor for `group-hover` to travel up, and the frame's
+  own wrapper is `pointer-events-none` under every row it covers — it can never be
+  `:hover`ed itself. So the editor TRACKS it (`page/editor`'s
+  `internal/frame-hover.ts`: a scoped store the rows write on pointer-enter, whose
+  only subscribers are the decorations, so a pointer crossing a page re-renders no
+  row), while `read-only-view` — whose nesting IS real wrapper elements — reveals
+  with a plain `group/frame`. One component reads both.
 
   The width is one of TWO mutually exclusive props, and which one a consumer
   passes says what its sections ARE. `panel: ControlPanelSize` means they are
@@ -239,9 +273,13 @@ they describe.
 
 ## Plugin reference
 
-- Description: Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the optional appearance popover — the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
+- Description: Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the two decoration seats a container may ask for — a gutter glyph that leads its first line, or the card's own name in the box's top-right corner, revealed only while the pointer is inside it (both share the static/interactive branch and the appearance popover; the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
 - Web:
   - Uses:
+    - `page/editor.BlockEditorAPI`
+    - `page/editor.BlockFrameProps`
+    - `page/editor.frameBoxLeft`
+    - `page/editor.useFrameHovered`
     - `primitives/css/center.Center`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/control-panel.ControlPanelSize`
@@ -250,10 +288,13 @@ they describe.
     - `primitives/css/ui-kit.PopoverContent`
     - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/css/ui-kit.PopoverWidth`
-  - Exports (types): `ContainerAnchorProps`
+  - Exports (types):
+    - `ContainerAnchorProps`
+    - `ContainerCornerLabelProps`
   - Exports (values):
     - `ContainerAnchor`
     - `ContainerBackdrop`
+    - `ContainerCornerLabel`
     - `ContainerNoRow`
 - Core:
   - Uses:

@@ -10,7 +10,7 @@ export { todoBlock } from "../core";
 
 export default {
   description:
-    "TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status.",
+    "TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status.",
   contributions: [
     // The card renders NO row of its own — `BlockRow`'s anchored branch never
     // dispatches `Editor.Block` for an `anchor` type, so the container
@@ -39,7 +39,7 @@ export default {
     Editor.BlockFrame({
       match: todoBlock.type,
       component: TodoFrame,
-      anchor: TodoAnchor,
+      cornerAnchor: TodoAnchor,
       menu: TodoMenu,
     }),
   ],

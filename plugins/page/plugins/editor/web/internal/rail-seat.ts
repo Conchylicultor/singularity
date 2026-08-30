@@ -40,6 +40,17 @@ export interface RailSeat {
    */
   left: number;
   /**
+   * How many container frames enclose this row, this row's own frame included
+   * when it is an anchor. The row reserves one `BLOCK_INSET` of `padding-right`
+   * per frame, and each frame pulls its box's right edge in by the same count —
+   * so a card's text stops inside its own tint, and a nested card closes inside
+   * its parent the way its left edge opens inside it.
+   *
+   * It rides here, on the seat, because it is the same fact `left` is: a row's
+   * relationship to the frames spanning it, which only the resolver can see.
+   */
+  frameCount: number;
+  /**
    * The block every rail control acts on: the outermost container whose
    * BORROWED LINE this row is, else the row's own block. Carries `childCount`
    * so a consumer can offer a fold without a second lookup.
@@ -93,7 +104,9 @@ const DOC_LINE_HEIGHT: Record<BlockTextVariant, string> = {
  * child's — `resolveRailSeats` reads the child's handle through this same
  * function, so the row's own seat and the borrowed one cannot drift.
  */
-export function gutterFirstLineCenter(handle: BlockHandle<unknown> | undefined): string {
+export function gutterFirstLineCenter(
+  handle: BlockHandle<unknown> | undefined,
+): string {
   return (
     handle?.gutterFirstLineCenter ??
     `calc(var(--space-xs) + ${DOC_LINE_HEIGHT[handle?.textVariant ?? "body"]} / 2)`
@@ -113,18 +126,23 @@ export function resolveRailSeats(
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
 ): RailSeat[] {
   const lefts = computeRailLefts(flat, spans);
-  const isAnchor = (i: number) => handleOf(flat[i]!.block.type)?.anchor === true;
+  const frameCounts = computeFrameCounts(flat, spans);
+  const isAnchor = (i: number) =>
+    handleOf(flat[i]!.block.type)?.anchor === true;
 
   return flat.map((f, i) => {
     const self = { block: f.block, childCount: f.childCount };
     const chain = borrowChain(flat, i, isAnchor);
     return {
       left: lefts[i]!,
+      frameCount: frameCounts[i]!,
       // The OUTERMOST container whose borrowed line this row is (the chain is
       // ordered outermost-first), else the row itself. An anchor row has an
       // empty chain by construction — it renders no line, so no line of its own
       // can be borrowed from it, and it renders no rail either.
-      owner: chain[0] ? { block: chain[0].block, childCount: chain[0].childCount } : self,
+      owner: chain[0]
+        ? { block: chain[0].block, childCount: chain[0].childCount }
+        : self,
       borrowedFirstLineCenter: borrowedFirstLineCenter(flat, i, handleOf),
       chevron: resolveChevron(f, chain, isAnchor(i), handleOf),
     };
@@ -246,6 +264,27 @@ function computeRailLefts(
       seated[i] = true;
       out[i] = left;
     }
+  }
+  return out;
+}
+
+/**
+ * How many frames cover each flat index — the one count the box's right edge and
+ * the enclosed rows' `padding-right` both read, which is what keeps a card's
+ * text inside its own tint however deeply the cards nest.
+ *
+ * Unlike `computeRailLefts` this ACCUMULATES rather than taking the outermost:
+ * the left edge is a single seat (controls sit outside the outermost box), while
+ * the right inset is a stack (each box closes one step further in, mirroring the
+ * `BLOCK_INDENT` its children opened it by).
+ */
+function computeFrameCounts(
+  flat: readonly FlatBlock[],
+  spans: readonly FrameSpan[],
+): number[] {
+  const out = flat.map(() => 0);
+  for (const span of spans) {
+    for (let i = span.start; i <= span.end; i += 1) out[i] = out[i]! + 1;
   }
   return out;
 }

@@ -85,13 +85,14 @@ declares the token. This plugin renders chips; it owns none.
   - Uses:
     - `page/editor.BLOCK_INDENT`
     - `page/editor.BLOCK_INSET`
-    - `page/editor.BlockAnchorProps`
+    - `page/editor.BlockDecoration`
     - `page/editor.blockTextRenderableExtensions`
     - `page/editor.colorCssValue`
     - `page/editor.Editor`
+    - `page/editor.FrameHoverProvider`
     - `page/editor.PageIcon`
     - `page/editor.TextBlockLayout`
-    - `page/editor.useBlockAnchors`
+    - `page/editor.useBlockDecorations`
     - `page/editor.useFramedBlockTypes`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`

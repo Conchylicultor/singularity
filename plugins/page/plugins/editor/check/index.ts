@@ -256,7 +256,11 @@ const anchorHasDecoration: Check = {
 
     // type -> the plugin ids declaring `anchor: true` on its handle.
     const anchorTypes = new Map<string, string[]>();
-    // types whose `Editor.BlockFrame` contribution supplies an `anchor` component.
+    // types whose `Editor.BlockFrame` contribution supplies a decoration — in
+    // EITHER seat. Which seat a container asks for says what its decoration is
+    // (a glyph leading its first line, or its name in the box's corner), and
+    // that is a design choice; what this check pins is that it asked for one at
+    // all, since a container with none is invisible whichever seat it declined.
     const decorated = new Set<string>();
 
     for (const dir of candidateDirs) {
@@ -269,6 +273,7 @@ const anchorHasDecoration: Check = {
           _slot?: SlotHandle;
           match?: unknown;
           anchor?: unknown;
+          cornerAnchor?: unknown;
           block?: { type?: unknown; anchor?: unknown };
         };
         if (c._slot === slots.block) {
@@ -279,7 +284,8 @@ const anchorHasDecoration: Check = {
             anchorTypes.set(type, list);
           }
         } else if (c._slot === slots.frame) {
-          if (typeof c.match === "string" && c.anchor) decorated.add(c.match);
+          if (typeof c.match === "string" && (c.anchor || c.cornerAnchor))
+            decorated.add(c.match);
         }
       }
     }
@@ -293,7 +299,8 @@ const anchorHasDecoration: Check = {
     const lines = missing.map(
       ([type, plugins]) =>
         `  block type "${type}" (declared by: ${[...new Set(plugins)].sort().join(", ")}) ` +
-        "declares `anchor: true` but contributes no `anchor` component on `Editor.BlockFrame`",
+        "declares `anchor: true` but contributes no `anchor` / `cornerAnchor` component on " +
+        "`Editor.BlockFrame`",
     );
     return {
       ok: false,
@@ -302,9 +309,12 @@ const anchorHasDecoration: Check = {
         `invisible (the row collapses to zero height and nothing paints the gutter column):\n${lines.join("\n")}`,
       hint:
         "Add the decoration to the SAME `Editor.BlockFrame` contribution that makes the type a " +
-        "container:\n" +
-        "  Editor.BlockFrame({ match: <handle>.type, component: <Frame>, anchor: <Anchor> })\n" +
-        "The anchor component takes `BlockAnchorProps` ({ type, data, editor? }) and renders " +
+        "container, in whichever of the two seats fits what the decoration IS:\n" +
+        "  Editor.BlockFrame({ match: <handle>.type, component: <Frame>, anchor: <Glyph> })\n" +
+        "    — a mark leading the card's first line (the callout's icon), or\n" +
+        "  Editor.BlockFrame({ match: <handle>.type, component: <Frame>, cornerAnchor: <Name> })\n" +
+        "    — the card's own name in the box's top-right corner, revealed on hover.\n" +
+        "Either component takes `BlockAnchorProps` ({ type, data, editor? }) and renders " +
         "APPEARANCE only — the surface owns its position, and the structural actions live on " +
         "the rail of the line the container borrows. Alternatively drop " +
         "`anchor: true` from the handle if the type really does render its own line.",

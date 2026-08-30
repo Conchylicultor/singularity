@@ -71,35 +71,49 @@ async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
 }
 
 /**
- * The resolved border colour of the document's one dashed box — the TODO card's
- * frame. Dashed is the annotation family's signature and this scratch page holds
- * exactly one annotation, so the box needs no other identification.
+ * The resolved background colour of the document's one container box — the TODO
+ * card's frame. A card is a TINT and nothing else now (the family's dashed
+ * border went with the redesign), and this scratch page holds exactly one
+ * annotation and no other framed block, so the box needs no other
+ * identification: it is the only absolutely-positioned element painting a fill.
  *
- * `undefined` when no dashed box is painted, which is itself a failure the
- * caller reports rather than an absorbed empty answer.
+ * The positioning is what keeps it apart from ordinary chrome. A frame is a
+ * `ContainerBackdrop` — `position: absolute`, filling the box the surface
+ * measured — where a button, a chip or a popover fill is in flow or fixed.
+ *
+ * `undefined` when no box is painted, which is itself a failure the caller
+ * reports rather than an absorbed empty answer.
  */
-async function dashedBorder(page: Page): Promise<string | undefined> {
+async function cardTint(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     for (const el of document.querySelectorAll("div")) {
       const style = getComputedStyle(el);
-      if (style.borderStyle === "dashed") return style.borderColor;
+      if (style.position !== "absolute") continue;
+      const bg = style.backgroundColor;
+      if (
+        bg === "" ||
+        bg === "transparent" ||
+        bg.startsWith("rgba(0, 0, 0, 0)")
+      )
+        continue;
+      return bg;
     }
     return undefined;
   });
 }
 
 /**
- * The dashed border once it differs from `from`, or its unchanged value at the
+ * The card's tint once it differs from `from`, or its unchanged value at the
  * deadline — which the caller then reports as the failure it is.
  */
-async function waitForBorderChange(
+async function waitForTintChange(
   page: Page,
   from: string | undefined,
   deadlineMs = 10_000,
 ): Promise<string | undefined> {
   const until = Date.now() + deadlineMs;
   for (;;) {
-    const now = await dashedBorder(page);
+    const now = await cardTint(page);
     if (now !== from || Date.now() >= until) return now;
     await page.waitForTimeout(250);
   }
@@ -252,7 +266,7 @@ await withBrowser(async (h) => {
   // the family's `warning` hue. Read as a computed colour rather than a class
   // name — the tint is a token, and what is under test is that the frame
   // re-rendered at all.
-  const beforeDrop = await dashedBorder(page);
+  const beforeDrop = await cardTint(page);
   await page.evaluate(async (taskId: string) => {
     const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
@@ -266,10 +280,10 @@ await withBrowser(async (h) => {
   // sub-second in the ordinary case — but a fixed wait turns "usually fast
   // enough" into a test that fails on the run where a burst of writes queued
   // ahead of it. The deadline is what the assertion is actually about.
-  const afterDrop = await waitForBorderChange(page, beforeDrop);
+  const afterDrop = await waitForTintChange(page, beforeDrop);
   await snap(page, out, "3-card-dropped");
   r.ok(
-    "dropping the task repaints the card's dashed box",
+    "dropping the task repaints the card's tint",
     beforeDrop !== undefined &&
       afterDrop !== undefined &&
       beforeDrop !== afterDrop,

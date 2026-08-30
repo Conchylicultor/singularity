@@ -9,15 +9,21 @@ import { COLOR_BG } from "./callout-colors";
  * nested inside it — the callout is a CONTAINER: it supplies the box, the blocks
  * within supply the content, and they may be of any type.
  *
- * `ContainerBackdrop` owns the geometry (an `absolute` box filling the
- * surface-provided positioned box from `inset`, never `h-full`, no horizontal
- * offset of its own) so this file declares nothing but the tint.
+ * `ContainerBackdrop` owns the geometry (the box the surface measured, handed
+ * over whole: the callout's own content box, so its tint starts on the same x as
+ * the first letter of the paragraph above it) so this file declares nothing but
+ * the tint.
  *
  * `data` may be transient mid-edit, so the color is read defensively; an
  * unparseable payload still gets a box, just the default tint.
  */
-export function CalloutFrame({ data, inset }: BlockFrameProps) {
-  const parsed = calloutBlock.safeParse(data);
+export function CalloutFrame(props: BlockFrameProps) {
+  const parsed = calloutBlock.safeParse(props.data);
   const color = parsed.success ? parsed.data.color : "default";
-  return <ContainerBackdrop inset={inset} className={cn("rounded-md", COLOR_BG[color])} />;
+  return (
+    <ContainerBackdrop
+      frame={props}
+      className={cn("rounded-md", COLOR_BG[color])}
+    />
+  );
 }

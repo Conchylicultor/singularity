@@ -16,11 +16,15 @@
 //  3. ZERO HEIGHT: an anchor row with visible children measures 0px — that is
 //     what puts its icon and its first child on ONE visual line.
 //  4. THE COLLISION REGRESSION: the icon's box lies inside the one-indent column
-//     `[C, C+BLOCK_INDENT]` and is genuinely CLICKABLE while the first child is
-//     an EXPANDED PARENT block — i.e. exactly when that child's own chevron
-//     would sit in the icon's column under the naive "each row seats its rail
-//     against its own content edge" rule. This is the case the whole
-//     outermost-frame rail rule exists to fix; hit-test it, don't eyeball it.
+//     `[C+BLOCK_INSET, C+BLOCK_INSET+BLOCK_INDENT]` — the glyph seats inside the
+//     box it decorates, and that box is the callout's own CONTENT box, one
+//     `BLOCK_INSET` right of the decoration origin `C` (it used to paint from `C`
+//     itself, which left the tint standing to the left of every paragraph on the
+//     page) — and is genuinely CLICKABLE while the first child is an EXPANDED
+//     PARENT block — i.e. exactly when that child's own chevron would sit in the
+//     icon's column under the naive "each row seats its rail against its own
+//     content edge" rule. This is the case the whole outermost-frame rail rule
+//     exists to fix; hit-test it, don't eyeball it.
 //  5. VERTICAL SEATING: the icon's centre sits within ~2px of the first child's
 //     first-line centre — measured against the gutter handle rendered on that
 //     child's ROW, which is seated by the same rule, so the two cannot silently
@@ -48,7 +52,11 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
-import { blockText, caretState, openBlankPage } from "@plugins/page/plugins/editor/e2e";
+import {
+  blockText,
+  caretState,
+  openBlankPage,
+} from "@plugins/page/plugins/editor/e2e";
 
 const base = baseUrl();
 const out = arg("out", "/tmp/callout");
@@ -92,7 +100,8 @@ async function probeFrame(
       const anchor = row(anchorId);
       const tail = row(tailId);
       const outsider = row(outsiderId);
-      if (!anchor || !tail || !outsider) return { framed: false, leaksOutsider: false };
+      if (!anchor || !tail || !outsider)
+        return { framed: false, leaksOutsider: false };
 
       // Rows sit one wrapper deep in the block grid; the backdrops are siblings
       // of those wrappers, holding no rows of their own.
@@ -104,7 +113,11 @@ async function probeFrame(
         return (
           all.find((n) => {
             const bg = getComputedStyle(n).backgroundColor;
-            return bg !== "" && bg !== "transparent" && !bg.startsWith("rgba(0, 0, 0, 0)");
+            return (
+              bg !== "" &&
+              bg !== "transparent" &&
+              !bg.startsWith("rgba(0, 0, 0, 0)")
+            );
           }) ?? null
         );
       };
@@ -119,7 +132,9 @@ async function probeFrame(
         // anchor's (zero-height) row line.
         .find((n) => {
           const b = n.getBoundingClientRect();
-          return b.top <= anchorRect.top + 1 && b.bottom >= anchorRect.bottom - 1;
+          return (
+            b.top <= anchorRect.top + 1 && b.bottom >= anchorRect.bottom - 1
+          );
         });
 
       if (!backdrop) return { framed: false, leaksOutsider: false };
@@ -137,7 +152,8 @@ async function probeFrame(
           bottom: anchorRect.bottom,
           left: anchorRect.left,
           contentLeft:
-            anchorRect.left + parseFloat(getComputedStyle(anchor).paddingLeft || "0"),
+            anchorRect.left +
+            parseFloat(getComputedStyle(anchor).paddingLeft || "0"),
         },
         tail: { top: tailRect.top, bottom: tailRect.bottom },
         outsiderTop: outsiderRect.top,
@@ -150,7 +166,9 @@ async function probeFrame(
 /** A block row's content-edge inset, in px — one BLOCK_INDENT deeper per level. */
 async function contentEdge(page: Page, id: string): Promise<number> {
   return page.evaluate((blockId) => {
-    const el = document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`);
+    const el = document.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"]`,
+    );
     return el ? parseFloat(getComputedStyle(el).paddingLeft) : -1;
   }, id);
 }
@@ -159,8 +177,9 @@ async function contentEdge(page: Page, id: string): Promise<number> {
 async function rowHeight(page: Page, id: string): Promise<number> {
   return page.evaluate(
     (blockId) =>
-      document.querySelector<HTMLElement>(`[data-block-id="${blockId}"]`)?.getBoundingClientRect()
-        .height ?? -1,
+      document
+        .querySelector<HTMLElement>(`[data-block-id="${blockId}"]`)
+        ?.getBoundingClientRect().height ?? -1,
     id,
   );
 }
@@ -171,6 +190,14 @@ interface AnchorProbe {
   contentEdge?: number;
   /** One indent, derived from the first child's own edge (never hardcoded). */
   indent?: number;
+  /**
+   * One `BLOCK_INSET`, derived from an ordinary unframed text row: the gap
+   * between where that row's box is MEASURED from (its content edge) and where
+   * its first glyph actually lands. Never hardcoded — `BLOCK_INSET` is the
+   * `--space-md` token and follows the density preset, so 12px is only today's
+   * answer at today's default.
+   */
+  inset?: number;
   icon?: { left: number; right: number; top: number; bottom: number };
   /** What is actually hit-tested at the icon's centre. */
   hitIsIcon?: boolean;
@@ -191,9 +218,10 @@ async function probeAnchor(
   page: Page,
   calloutId: string,
   firstChildId: string,
+  insetRowId: string,
 ): Promise<AnchorProbe> {
   return page.evaluate(
-    ({ calloutId, firstChildId }) => {
+    ({ calloutId, firstChildId, insetRowId }) => {
       const anchorRow = document.querySelector<HTMLElement>(
         `[data-block-id="${calloutId}"]`,
       );
@@ -209,9 +237,29 @@ async function probeAnchor(
       const anchorRect = anchorRow.getBoundingClientRect();
       const childRect = childRow.getBoundingClientRect();
       const contentEdge =
-        anchorRect.left + parseFloat(getComputedStyle(anchorRow).paddingLeft || "0");
+        anchorRect.left +
+        parseFloat(getComputedStyle(anchorRow).paddingLeft || "0");
       const childEdge =
-        childRect.left + parseFloat(getComputedStyle(childRow).paddingLeft || "0");
+        childRect.left +
+        parseFloat(getComputedStyle(childRow).paddingLeft || "0");
+
+      // One `BLOCK_INSET`, read off a plain unframed paragraph: how far its
+      // first glyph sits from the edge its box is measured from. That is the
+      // same step the callout's box (and so its glyph column) now takes.
+      const insetRow = document.querySelector<HTMLElement>(
+        `[data-block-id="${insetRowId}"]`,
+      );
+      const insetText = insetRow?.querySelector<HTMLElement>(
+        '[contenteditable="true"]',
+      );
+      const insetRect = insetRow?.getBoundingClientRect();
+      const inset =
+        insetRow && insetText && insetRect
+          ? insetText.getBoundingClientRect().left -
+            (insetRect.left +
+              parseFloat(getComputedStyle(insetRow).paddingLeft || "0"))
+          : undefined;
+
       const box = icon.getBoundingClientRect();
 
       const hit = document.elementFromPoint(
@@ -227,13 +275,21 @@ async function probeAnchor(
         found: true,
         contentEdge,
         indent: childEdge - contentEdge,
-        icon: { left: box.left, right: box.right, top: box.top, bottom: box.bottom },
+        inset,
+        icon: {
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+        },
         hitIsIcon: hit != null && (hit === icon || icon.contains(hit)),
         hitTag: hit ? `${hit.tagName}.${hit.className}` : "none",
-        childHandleCenterY: handleRect ? handleRect.top + handleRect.height / 2 : undefined,
+        childHandleCenterY: handleRect
+          ? handleRect.top + handleRect.height / 2
+          : undefined,
       };
     },
-    { calloutId, firstChildId },
+    { calloutId, firstChildId, insetRowId },
   );
 }
 
@@ -247,7 +303,11 @@ async function probeAnchor(
  */
 async function anchorIds(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    [...document.querySelectorAll('button[aria-label="Callout icon and color"]')]
+    [
+      ...document.querySelectorAll(
+        'button[aria-label="Callout icon and color"]',
+      ),
+    ]
       .map((el) => el.closest("[data-block-id]")?.getAttribute("data-block-id"))
       .filter((id): id is string => id !== null && id !== undefined),
   );
@@ -281,7 +341,9 @@ async function caretToStart(page: Page, blockId: string): Promise<boolean> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const { pageUrl, pageId } = await openBlankPage(page, base, { settleMs: 3000 });
+  const { pageUrl, pageId } = await openBlankPage(page, base, {
+    settleMs: 3000,
+  });
   console.log("page url:", pageUrl);
 
   // --- 1. seed --------------------------------------------------------------
@@ -296,50 +358,60 @@ await withBrowser(async (h) => {
   // write boundary's strict parse rejects a stray one (400). A seed that still
   // posted `{text, icon, …}` — as this script's predecessor did — is itself the
   // regression.
-  const seeded = await page.evaluate(async ({ pageId }) => {
-    const post = async (body: unknown) => {
-      const res = await fetch("/api/blocks", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
-      return (await res.json()) as { id: string };
-    };
-    const callout = (color: string) =>
-      post({ parentId: pageId, type: "callout", data: { icon: null, iconSvgNodes: null, color } });
-    const text = (parentId: string, type: string, body: string) =>
-      post({ parentId, type, data: { text: [{ text: body }] } });
+  const seeded = await page.evaluate(
+    async ({ pageId }) => {
+      const post = async (body: unknown) => {
+        const res = await fetch("/api/blocks", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok)
+          throw new Error(
+            `POST /api/blocks ${res.status}: ${await res.text()}`,
+          );
+        return (await res.json()) as { id: string };
+      };
+      const callout = (color: string) =>
+        post({
+          parentId: pageId,
+          type: "callout",
+          data: { icon: null, iconSvgNodes: null, color },
+        });
+      const text = (parentId: string, type: string, body: string) =>
+        post({ parentId, type, data: { text: [{ text: body }] } });
 
-    const c1 = await callout("info");
-    const c1First = await text(c1.id, "text", "parent line");
-    const c1Grand = await text(c1First.id, "bulleted-list", "inside");
-    const outsider = await text(pageId, "text", "outside");
-    const afterC1 = await text(pageId, "text", "after all");
+      const c1 = await callout("info");
+      const c1First = await text(c1.id, "text", "parent line");
+      const c1Grand = await text(c1First.id, "bulleted-list", "inside");
+      const outsider = await text(pageId, "text", "outside");
+      const afterC1 = await text(pageId, "text", "after all");
 
-    const c2 = await callout("warning");
-    const c2First = await text(c2.id, "text", "solo line");
+      const c2 = await callout("warning");
+      const c2First = await text(c2.id, "text", "solo line");
 
-    const c3 = await callout("success");
+      const c3 = await callout("success");
 
-    const c4 = await callout("danger");
-    const c4Only = await text(c4.id, "text", "only child");
-    const end = await text(pageId, "text", "the end");
+      const c4 = await callout("danger");
+      const c4Only = await text(c4.id, "text", "only child");
+      const end = await text(pageId, "text", "the end");
 
-    return {
-      c1: c1.id,
-      c1First: c1First.id,
-      c1Grand: c1Grand.id,
-      outsiderId: outsider.id,
-      afterC1: afterC1.id,
-      c2: c2.id,
-      c2First: c2First.id,
-      c3: c3.id,
-      c4: c4.id,
-      c4Only: c4Only.id,
-      end: end.id,
-    };
-  }, { pageId });
+      return {
+        c1: c1.id,
+        c1First: c1First.id,
+        c1Grand: c1Grand.id,
+        outsiderId: outsider.id,
+        afterC1: afterC1.id,
+        c2: c2.id,
+        c2First: c2First.id,
+        c3: c3.id,
+        c4: c4.id,
+        c4Only: c4Only.id,
+        end: end.id,
+      };
+    },
+    { pageId },
+  );
   console.log("seeded:", JSON.stringify(seeded));
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -355,9 +427,15 @@ await withBrowser(async (h) => {
     seeded.c1.length > 0,
   );
   const firstText = await blockText(
-    page.locator(`[data-block-id="${seeded.c1First}"] [contenteditable="true"]`).first(),
+    page
+      .locator(`[data-block-id="${seeded.c1First}"] [contenteditable="true"]`)
+      .first(),
   );
-  r.ok("seed: the callout's first child holds its own text", firstText === "parent line", firstText);
+  r.ok(
+    "seed: the callout's first child holds its own text",
+    firstText === "parent line",
+    firstText,
+  );
 
   const c1Edge = await contentEdge(page, seeded.c1);
   const c1FirstEdge = await contentEdge(page, seeded.c1First);
@@ -374,7 +452,10 @@ await withBrowser(async (h) => {
   // anchor must not be a zero-height, unclickable, undeletable ghost.
   const c3Height = await rowHeight(page, seeded.c3);
   const c3Frame = await probeFrame(page, seeded.c3, seeded.c3, seeded.c4);
-  console.log("childless callout:", JSON.stringify({ c3Height, tint: c3Frame.tint }));
+  console.log(
+    "childless callout:",
+    JSON.stringify({ c3Height, tint: c3Frame.tint }),
+  );
   r.ok(
     "childless: the anchor row falls back to a real one-line box",
     c3Height > 12,
@@ -382,7 +463,9 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "childless: that box is actually painted (a visible tint, not a 0px ghost)",
-    c3Frame.framed && c3Frame.tint != null && c3Frame.tint.bottom - c3Frame.tint.top > 12,
+    c3Frame.framed &&
+      c3Frame.tint != null &&
+      c3Frame.tint.bottom - c3Frame.tint.top > 12,
     JSON.stringify(c3Frame.tint),
   );
 
@@ -399,17 +482,43 @@ await withBrowser(async (h) => {
   // until hovered, so a hit test taken cold would pass even if they overlapped.
   await page.locator(`[data-block-id="${seeded.c1First}"]`).first().hover();
   await page.waitForTimeout(300);
-  const anchorProbe = await probeAnchor(page, seeded.c1, seeded.c1First);
+  // `outsider` is the inset yardstick: a plain, unframed, page-level paragraph,
+  // measured before phase 8 Tabs it into the callout.
+  const anchorProbe = await probeAnchor(
+    page,
+    seeded.c1,
+    seeded.c1First,
+    seeded.outsiderId,
+  );
   console.log("anchor probe:", JSON.stringify(anchorProbe));
   if (!anchorProbe.found || !anchorProbe.icon) {
-    r.fail("anchor: the callout paints a decoration", JSON.stringify(anchorProbe));
-  } else {
-    const { icon, contentEdge: C = 0, indent = 0 } = anchorProbe;
-    r.ok(
-      "anchor: the icon sits inside the one-indent column [C, C+BLOCK_INDENT]",
-      icon.left >= C - 1 && icon.right <= C + indent + 1,
-      `icon=[${icon.left},${icon.right}] C=${C} indent=${indent}`,
+    r.fail(
+      "anchor: the callout paints a decoration",
+      JSON.stringify(anchorProbe),
     );
+  } else {
+    const { icon, contentEdge: C = 0, indent = 0, inset } = anchorProbe;
+    // The glyph column sits inside the box it decorates, and that box is the
+    // callout's own CONTENT box — so the column starts one `BLOCK_INSET` right
+    // of the decoration origin `C`, on the same x as the first letter of an
+    // ordinary paragraph. It used to start at `C` itself, which put the tint and
+    // the icon to the LEFT of every paragraph on the page.
+    //
+    // The inset is MEASURED off that paragraph rather than written down: it is
+    // the `--space-md` token, so a density preset moves it and a hardcoded 12
+    // would make this assertion a statement about today's theme.
+    if (inset === undefined) {
+      r.fail(
+        "anchor: an ordinary paragraph was measurable, to read one BLOCK_INSET off it",
+        JSON.stringify(anchorProbe),
+      );
+    } else {
+      r.ok(
+        "anchor: the icon sits inside the one-indent column [C+BLOCK_INSET, C+BLOCK_INSET+BLOCK_INDENT]",
+        icon.left >= C + inset - 1 && icon.right <= C + inset + indent + 1,
+        `icon=[${icon.left},${icon.right}] C=${C} inset=${inset} indent=${indent}`,
+      );
+    }
     r.ok(
       "anchor: the icon is CLICKABLE with an expanded parent as first child",
       anchorProbe.hitIsIcon === true,
@@ -423,7 +532,9 @@ await withBrowser(async (h) => {
         `icon=${iconCenter} childHandle=${anchorProbe.childHandleCenterY}`,
       );
     } else {
-      r.fail("anchor: the first child exposes its own gutter handle to compare against");
+      r.fail(
+        "anchor: the first child exposes its own gutter handle to compare against",
+      );
     }
 
     // And the click really opens the callout's APPEARANCE controls. The icon no
@@ -433,7 +544,9 @@ await withBrowser(async (h) => {
     // is their spec. What is left here is the callout's own payload, and a dead
     // icon is still a callout that cannot be re-coloured.
     await page
-      .locator(`[data-block-id="${seeded.c1}"] button[aria-label="Callout icon and color"]`)
+      .locator(
+        `[data-block-id="${seeded.c1}"] button[aria-label="Callout icon and color"]`,
+      )
       .first()
       .click();
     await page.waitForTimeout(600);
@@ -449,7 +562,10 @@ await withBrowser(async (h) => {
       .first()
       .isVisible();
     await snap(page, out, "2-icon-menu");
-    r.ok("anchor: clicking the icon opens the callout's appearance controls", swatchVisible);
+    r.ok(
+      "anchor: clicking the icon opens the callout's appearance controls",
+      swatchVisible,
+    );
     r.ok(
       "anchor: and nothing structural — that menu moved to the borrowed line's rail",
       !structuralLeaked,
@@ -479,13 +595,23 @@ await withBrowser(async (h) => {
     );
     const splitId = newIds.at(-1);
     console.log("new ids after Enter:", JSON.stringify(newIds));
-    r.ok("enter: a new line was created", splitId != null, `new=${newIds.length}`);
+    r.ok(
+      "enter: a new line was created",
+      splitId != null,
+      `new=${newIds.length}`,
+    );
 
     if (splitId) {
       const splitText = await blockText(
-        page.locator(`[data-block-id="${splitId}"] [contenteditable="true"]`).first(),
+        page
+          .locator(`[data-block-id="${splitId}"] [contenteditable="true"]`)
+          .first(),
       );
-      r.ok("enter: typing landed in the new line", splitText === "second line", splitText);
+      r.ok(
+        "enter: typing landed in the new line",
+        splitText === "second line",
+        splitText,
+      );
 
       const splitEdge = await contentEdge(page, splitId);
       const c2FirstEdge = await contentEdge(page, seeded.c2First);
@@ -532,23 +658,35 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(1500);
     await snap(page, out, "4-turned-into-heading");
 
-    const stillThere = await page.locator(`[data-block-id="${seeded.c2First}"]`).count();
+    const stillThere = await page
+      .locator(`[data-block-id="${seeded.c2First}"]`)
+      .count();
     r.ok(
       "turn-into: the converted child keeps its block id",
       stillThere === 1,
       `count=${stillThere}`,
     );
     const headingText = await blockText(
-      page.locator(`[data-block-id="${seeded.c2First}"] [contenteditable="true"]`).first(),
+      page
+        .locator(`[data-block-id="${seeded.c2First}"] [contenteditable="true"]`)
+        .first(),
     );
-    r.ok("turn-into: its text survived the conversion", headingText === "solo line", headingText);
+    r.ok(
+      "turn-into: its text survived the conversion",
+      headingText === "solo line",
+      headingText,
+    );
     const fontSize = await page.evaluate((id) => {
       const el = document.querySelector<HTMLElement>(
         `[data-block-id="${id}"] [contenteditable="true"]`,
       );
       return el ? parseFloat(getComputedStyle(el).fontSize) : -1;
     }, seeded.c2First);
-    r.ok("turn-into: it really is a heading now (larger type)", fontSize > 20, `fontSize=${fontSize}`);
+    r.ok(
+      "turn-into: it really is a heading now (larger type)",
+      fontSize > 20,
+      `fontSize=${fontSize}`,
+    );
 
     const anchorsNow = await anchorIds(page);
     r.ok(
@@ -556,7 +694,12 @@ await withBrowser(async (h) => {
       anchorsNow.includes(seeded.c2),
       `anchors=${JSON.stringify(anchorsNow)}`,
     );
-    const probeH1 = await probeFrame(page, seeded.c2, seeded.c2First, seeded.c4);
+    const probeH1 = await probeFrame(
+      page,
+      seeded.c2,
+      seeded.c2First,
+      seeded.c4,
+    );
     r.ok(
       "turn-into: the tint still wraps the converted child",
       probeH1.framed &&
@@ -566,7 +709,9 @@ await withBrowser(async (h) => {
       JSON.stringify(probeH1.tint),
     );
   } else {
-    r.fail("turn-into: could not place the caret at the start of the first child");
+    r.fail(
+      "turn-into: could not place the caret at the start of the first child",
+    );
   }
 
   // --- 8. Tab an EXISTING block into the frame, caret mid-word ----------------
@@ -597,7 +742,12 @@ await withBrowser(async (h) => {
       `callout=${c1Edge} indented=${indentedEdge}`,
     );
 
-    const probeTabbed = await probeFrame(page, seeded.c1, seeded.outsiderId, seeded.afterC1);
+    const probeTabbed = await probeFrame(
+      page,
+      seeded.c1,
+      seeded.outsiderId,
+      seeded.afterC1,
+    );
     r.ok(
       "tab-in: the box grew to cover the block indented into it",
       probeTabbed.framed &&
@@ -625,7 +775,9 @@ await withBrowser(async (h) => {
     const typedText = await blockText(outsiderEditable);
     const expected =
       before.anchorOffset != null
-        ? `outside`.slice(0, before.anchorOffset) + "X" + `outside`.slice(before.anchorOffset)
+        ? `outside`.slice(0, before.anchorOffset) +
+          "X" +
+          `outside`.slice(before.anchorOffset)
         : null;
     r.ok(
       "tab-in: typing lands at the preserved caret, not at the block start",
@@ -644,7 +796,12 @@ await withBrowser(async (h) => {
       outEdge <= c1Edge,
       `callout=${c1Edge} outdented=${outEdge}`,
     );
-    const probeOut = await probeFrame(page, seeded.c1, seeded.c1First, seeded.outsiderId);
+    const probeOut = await probeFrame(
+      page,
+      seeded.c1,
+      seeded.c1First,
+      seeded.outsiderId,
+    );
     r.ok(
       "tab-out: the box shrank back, leaving the outdented block outside it",
       probeOut.framed && !probeOut.leaksOutsider,
@@ -670,22 +827,39 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(1500);
     await snap(page, out, "7-unwrapped");
 
-    const survives = await page.locator(`[data-block-id="${seeded.c4Only}"]`).count();
-    r.ok("unwrap: the child survives — it popped OUT, it was not deleted", survives === 1);
-    const unwrappedText = await blockText(
-      page.locator(`[data-block-id="${seeded.c4Only}"] [contenteditable="true"]`).first(),
+    const survives = await page
+      .locator(`[data-block-id="${seeded.c4Only}"]`)
+      .count();
+    r.ok(
+      "unwrap: the child survives — it popped OUT, it was not deleted",
+      survives === 1,
     );
-    r.ok("unwrap: its text is intact", unwrappedText === "only child", unwrappedText);
-    const calloutGone = await page.locator(`[data-block-id="${seeded.c4}"]`).count();
-    r.ok("unwrap: the callout row is gone", calloutGone === 0, `count=${calloutGone}`);
+    const unwrappedText = await blockText(
+      page
+        .locator(`[data-block-id="${seeded.c4Only}"] [contenteditable="true"]`)
+        .first(),
+    );
+    r.ok(
+      "unwrap: its text is intact",
+      unwrappedText === "only child",
+      unwrappedText,
+    );
+    const calloutGone = await page
+      .locator(`[data-block-id="${seeded.c4}"]`)
+      .count();
+    r.ok(
+      "unwrap: the callout row is gone",
+      calloutGone === 0,
+      `count=${calloutGone}`,
+    );
     const anchorsAfterUnwrap = await anchorIds(page);
     r.ok(
       "unwrap: its decoration went with it, and no other callout was disturbed",
       anchorsBeforeUnwrap.includes(seeded.c4) &&
         !anchorsAfterUnwrap.includes(seeded.c4) &&
-        anchorsBeforeUnwrap.filter((id) => id !== seeded.c4).every((id) =>
-          anchorsAfterUnwrap.includes(id),
-        ),
+        anchorsBeforeUnwrap
+          .filter((id) => id !== seeded.c4)
+          .every((id) => anchorsAfterUnwrap.includes(id)),
       `before=${JSON.stringify(anchorsBeforeUnwrap)} after=${JSON.stringify(anchorsAfterUnwrap)}`,
     );
     const endEdge = await contentEdge(page, seeded.end);
@@ -708,7 +882,12 @@ await withBrowser(async (h) => {
     .first()
     .waitFor({ state: "visible", timeout: 30_000 });
   await pageB.waitForTimeout(2500);
-  const probeB = await probeFrame(pageB, seeded.c1, seeded.c1First, seeded.outsiderId);
+  const probeB = await probeFrame(
+    pageB,
+    seeded.c1,
+    seeded.c1First,
+    seeded.outsiderId,
+  );
   const heightB = await rowHeight(pageB, seeded.c1);
   await snap(pageB, out, "8-context-b");
   console.log("context B:", JSON.stringify({ probeB, heightB }));

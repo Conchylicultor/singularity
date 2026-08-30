@@ -50,7 +50,7 @@ reachable.
 
 ## Plugin reference
 
-- Description: TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+- Description: TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
     - `Editor.Block` "todo" → `ContainerNoRow`
@@ -58,11 +58,11 @@ reachable.
   - Uses:
     - `page/annotations/todo/task-link.TodoDispatch`
     - `page/annotations/todo/task-link.useTodoTaskState`
-    - `page/container.ContainerAnchor`
     - `page/container.ContainerBackdrop`
+    - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
-    - `primitives/css/ui-kit.cn`
+    - `primitives/css/row.Row`
     - `tasks/task-status.STATUS_META`
   - Exports (values): `todoBlock`
 - Server:

@@ -18397,7 +18397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mcpTool('read_page')`
               - `mcpTool('write_agent_note')`
               - `mcpTool('edit_page')`
-        - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "agent-note" → `ContainerNoRow`
@@ -18405,8 +18405,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
               - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
-              - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
+              - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
             - Exports (values): `agentNotesBlock`
@@ -18457,14 +18457,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `AgentNotesAuthorSchema`
                   - `agentNotesAuthorsResource`
-        - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`context`** — Context block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "context" → `ContainerNoRow`
               - `Editor.BlockFrame` "context" → `ContextFrame`
             - Uses:
-              - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
+              - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
             - Exports (values): `contextBlock`
@@ -18476,14 +18476,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `contextBlock`
               - `contextDataSchema`
-        - **`private-notes`** — Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "private-note" → `ContainerNoRow`
               - `Editor.BlockFrame` "private-note" → `PrivateNotesFrame`
             - Uses:
-              - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
+              - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
             - Exports (values): `privateNotesBlock`
@@ -18495,7 +18495,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `privateNotesBlock`
               - `privateNotesDataSchema`
-        - **`todo`** — TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`todo`** — TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "todo" → `ContainerNoRow`
@@ -18503,11 +18503,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/annotations/todo/task-link.TodoDispatch`
               - `page/annotations/todo/task-link.useTodoTaskState`
-              - `page/container.ContainerAnchor`
               - `page/container.ContainerBackdrop`
+              - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
-              - `primitives/css/ui-kit.cn`
+              - `primitives/css/row.Row`
               - `tasks/task-status.STATUS_META`
             - Exports (values): `todoBlock`
           - Server:
@@ -18768,9 +18768,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `codeBlock`
-    - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the anchor-decoration shell (static/interactive branch + the optional appearance popover — the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
+    - **`container`** — Void-container primitive for the page editor: the shared null row renderer, the frame backdrop that owns a container decoration's geometry, and the two decoration seats a container may ask for — a gutter glyph that leads its first line, or the card's own name in the box's top-right corner, revealed only while the pointer is inside it (both share the static/interactive branch and the appearance popover; the structural actions live on the rail of the line the container borrows). Contributes nothing itself — each container plugin registers its own block type through it.
       - Web:
         - Uses:
+          - `page/editor.BlockEditorAPI`
+          - `page/editor.BlockFrameProps`
+          - `page/editor.frameBoxLeft`
+          - `page/editor.useFrameHovered`
           - `primitives/css/center.Center`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/control-panel.ControlPanelSize`
@@ -18779,10 +18783,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.PopoverContent`
           - `primitives/css/ui-kit.PopoverTrigger`
           - `primitives/css/ui-kit.PopoverWidth`
-        - Exports (types): `ContainerAnchorProps`
+        - Exports (types):
+          - `ContainerAnchorProps`
+          - `ContainerCornerLabelProps`
         - Exports (values):
           - `ContainerAnchor`
           - `ContainerBackdrop`
+          - `ContainerCornerLabel`
           - `ContainerNoRow`
       - Core:
         - Uses:
@@ -18880,6 +18887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
+          - `primitives/scoped-store.defineScopedStore`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineDispatchSlot`
@@ -18907,6 +18915,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockAnchorProps`
           - `BlockChrome`
           - `BlockContribution`
+          - `BlockDecoration`
+          - `BlockDecorationSeat`
           - `BlockEditorAPI`
           - `BlockEditorHandle`
           - `BlockFrameMeta`
@@ -18949,6 +18959,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Editor`
           - `filterBlockTypes`
           - `flattenSections`
+          - `frameBoxLeft`
+          - `FrameHoverProvider`
           - `getBlockTextExtensions`
           - `isValidLinkUrl`
           - `MarkButton`
@@ -18964,14 +18976,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerBlockTextExtensionSource`
           - `TextBlockLayout`
           - `useBlockActivate`
-          - `useBlockAnchors`
+          - `useBlockDecorations`
           - `useBlockEditor`
           - `useCaretEscape`
           - `useFormatToolbar`
           - `useFramedBlockTypes`
+          - `useFrameHovered`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
           - `usePageOptions`
+          - `useSetFrameHover`
           - `useVoidCaret`
       - Server:
         - Contributes:
@@ -20069,13 +20083,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.BLOCK_INDENT`
           - `page/editor.BLOCK_INSET`
-          - `page/editor.BlockAnchorProps`
+          - `page/editor.BlockDecoration`
           - `page/editor.blockTextRenderableExtensions`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
+          - `page/editor.FrameHoverProvider`
           - `page/editor.PageIcon`
           - `page/editor.TextBlockLayout`
-          - `page/editor.useBlockAnchors`
+          - `page/editor.useBlockDecorations`
           - `page/editor.useFramedBlockTypes`
           - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
@@ -22977,6 +22992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/zero-test`
               - `history/dialog`
               - `page/annotations/agent-notes/authorship`
+              - `page/annotations/todo`
               - `page/annotations/todo/task-link`
               - `page/editor`
               - `page/inline-date`
@@ -24350,7 +24366,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `layouts/full-pane`
               - `layouts/miller`
               - `layouts/route-fallback`
-              - `page/annotations/todo`
               - `page/attachment-block`
               - `page/audio`
               - `page/bookmark`
@@ -27529,6 +27544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/live-play`
           - `apps/sonata/shell`
+          - `page/editor`
           - `primitives/sync-status`
           - `primitives/undo-redo`
     - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.

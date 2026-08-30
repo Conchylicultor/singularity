@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
   type Ref,
 } from "react";
 import {
@@ -84,7 +85,12 @@ import {
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
 import { SelectionBands } from "./selection-bands";
-import { BLOCK_GUTTER, blockContentLeft } from "../internal/page-column";
+import {
+  BLOCK_GUTTER,
+  blockContentLeft,
+  frameBoxRightInset,
+} from "../internal/page-column";
+import { FrameHoverProvider, useSetFrameHover } from "../internal/frame-hover";
 import { ExternalDropOverlay } from "./external-drop-overlay";
 import {
   resolveBlockPasteHandler,
@@ -192,6 +198,45 @@ function isInsideEditingHost(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     target.closest('[contenteditable="true"]') !== null
+  );
+}
+
+/**
+ * One row's grid cell — and the surface's one report of where the pointer is.
+ *
+ * A container's frame is a grid SIBLING of the rows it spans, so a card has no
+ * DOM ancestor holding both its box and its lines, and a CSS `group-hover` has
+ * nothing to travel up (see `internal/frame-hover.ts`). The rows are what the
+ * pointer actually enters, so they are what says so — writing the frames
+ * covering this row into the hover store, which renders nothing and re-renders
+ * no row.
+ *
+ * A leave clears nothing, deliberately: moving between two rows fires the leave
+ * BEFORE the enter, so clearing here would flick a card's name off and back on
+ * every time the pointer crossed a line inside it. A pointer leaving the list
+ * downward crosses rows that report no frames; one leaving sideways leaves the
+ * last row's answer standing, which costs a stale name on a card the pointer has
+ * left and nothing else.
+ */
+function RowCell({
+  row,
+  frames,
+  children,
+}: {
+  row: number;
+  frames: readonly string[];
+  children: ReactNode;
+}) {
+  const setFrameHover = useSetFrameHover();
+  return (
+    <div
+      // eslint-disable-next-line layout/no-adhoc-layout -- explicit grid line placement keeps rows ordered independently of the frames; not a ramp-expressible anchor
+      className="col-start-1"
+      style={{ gridRow: row + 1 }}
+      onPointerEnter={() => setFrameHover(frames)}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -1479,6 +1524,19 @@ function SelectionLayer({
     [flat, frameSpans, handleOf],
   );
 
+  // Which container frames cover each row, outermost first. It is what a row
+  // hands the hover store on the way in, so a card's corner name can reveal
+  // itself: the frame is a grid SIBLING of the rows it spans, so no ancestor
+  // exists for a CSS `:hover` to travel up — see `internal/frame-hover.ts`.
+  const frameIdsByRow = useMemo(() => {
+    const out: string[][] = flat.map(() => []);
+    for (const span of frameSpans) {
+      for (let i = span.start; i <= span.end; i += 1)
+        out[i]!.push(span.block.id);
+    }
+    return out;
+  }, [flat, frameSpans]);
+
   // The selection highlight, as runs of consecutive selected LINES rather than
   // one box per row — see `internal/selection-bands.ts` for why that is the
   // shape, and `components/selection-bands.tsx` for the look.
@@ -1621,30 +1679,42 @@ function SelectionLayer({
                 parent (and its live Lexical instance + caret). Rows are placed
                 explicitly rather than auto-flowed so the frames, which ARE
                 explicitly placed, cannot perturb their order. */}
-            <div
-              ref={contentRef}
-              // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
-              className={cn("relative grid grid-cols-1", contentClassName)}
-              style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
-            >
-              {/* Frames first in DOM order so they paint BEHIND the rows they
+            {/* The pointer-inside-this-card signal, scoped to this block list.
+                It wraps the grid rather than the whole surface so the store dies
+                with the list it describes, and it adds no DOM. */}
+            <FrameHoverProvider>
+              <div
+                ref={contentRef}
+                // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
+                className={cn("relative grid grid-cols-1", contentClassName)}
+                style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
+              >
+                {/* Frames first in DOM order so they paint BEHIND the rows they
                   span (equal stacking level → document order decides). */}
-              {frameSpans.map((span) => (
-                <div
-                  key={`frame:${span.block.id}`}
-                  // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
-                  className="pointer-events-none relative col-start-1"
-                  style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
-                >
-                  <Editor.BlockFrame.Dispatch
-                    type={span.block.type}
-                    data={span.block.data}
-                    blockId={span.block.id}
-                    inset={blockContentLeft(span.depth)}
-                  />
-                </div>
-              ))}
-              {/* The block-selection highlight, over the frames and under the
+                {frameSpans.map((span) => (
+                  <div
+                    key={`frame:${span.block.id}`}
+                    // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
+                    className="pointer-events-none relative col-start-1"
+                    style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
+                  >
+                    <Editor.BlockFrame.Dispatch
+                      type={span.block.type}
+                      data={span.block.data}
+                      blockId={span.block.id}
+                      inset={blockContentLeft(span.depth)}
+                      // This box closes one `BLOCK_INSET` further in per frame
+                      // enclosing it, its own included — read off the seat of the
+                      // row it starts on, which is the SAME count the rows inside
+                      // reserve as `padding-right`. One count, so a card's text
+                      // can never end past its own tint.
+                      rightInset={frameBoxRightInset(
+                        railSeats[span.start]?.frameCount ?? 1,
+                      )}
+                    />
+                  </div>
+                ))}
+                {/* The block-selection highlight, over the frames and under the
                   rows. It is resolved here — with the whole flatten in view —
                   rather than per row, because "is the line above me selected
                   too" is not knowable from a row alone, and it is the answer to
@@ -1652,44 +1722,40 @@ function SelectionLayer({
                   passage. A selected CONTAINER needs no special case either: it
                   paints over its frame span, which is what covers a zero-height
                   anchor row's box. */}
-              <SelectionBands bands={selectionBands} />
-              {flat.map((f, i) => (
-                <div
-                  key={f.block.id}
-                  // eslint-disable-next-line layout/no-adhoc-layout -- explicit grid line placement keeps rows ordered independently of the frames; not a ramp-expressible anchor
-                  className="col-start-1"
-                  style={{ gridRow: i + 1 }}
-                >
-                  <BlockRow
-                    block={f.block}
-                    depth={f.depth}
-                    hasVisibleChildren={f.firstVisibleChildType !== null}
-                    ordinal={f.ordinal}
-                    seat={railSeats[i]!}
-                    isSelected={selection.has(f.block.id)}
-                    isDragging={
-                      activeId === f.block.id ||
-                      (bulkDrag?.subtree.has(f.block.id) ?? false)
-                    }
-                    dropZone={
-                      activeDropTarget?.id === f.block.id
-                        ? activeDropTarget.zone
-                        : null
-                    }
+                <SelectionBands bands={selectionBands} />
+                {flat.map((f, i) => (
+                  <RowCell key={f.block.id} row={i} frames={frameIdsByRow[i]!}>
+                    <BlockRow
+                      block={f.block}
+                      depth={f.depth}
+                      hasVisibleChildren={f.firstVisibleChildType !== null}
+                      ordinal={f.ordinal}
+                      seat={railSeats[i]!}
+                      isSelected={selection.has(f.block.id)}
+                      isDragging={
+                        activeId === f.block.id ||
+                        (bulkDrag?.subtree.has(f.block.id) ?? false)
+                      }
+                      dropZone={
+                        activeDropTarget?.id === f.block.id
+                          ? activeDropTarget.zone
+                          : null
+                      }
+                    />
+                  </RowCell>
+                ))}
+                {marquee && (
+                  <div
+                    // The lasso is drawn OVER the blocks it is sweeping, so its
+                    // fill stays fainter than the selection band underneath it —
+                    // it reads as the gesture, not as a second highlight.
+                    // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
+                    className="bg-primary/5 border-primary/25 pointer-events-none absolute inset-x-2 z-base rounded-sm border"
+                    style={{ top: marquee.top, height: marquee.height }}
                   />
-                </div>
-              ))}
-              {marquee && (
-                <div
-                  // The lasso is drawn OVER the blocks it is sweeping, so its
-                  // fill stays fainter than the selection band underneath it —
-                  // it reads as the gesture, not as a second highlight.
-                  // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
-                  className="bg-primary/5 border-primary/25 pointer-events-none absolute inset-x-2 z-base rounded-sm border"
-                  style={{ top: marquee.top, height: marquee.height }}
-                />
-              )}
-            </div>
+                )}
+              </div>
+            </FrameHoverProvider>
           </Overlay>
         </ContentScope>
         <DragOverlay dropAnimation={null}>

@@ -1,14 +1,20 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, type CSSProperties } from "react";
+import { useMemo, type ComponentType, type CSSProperties } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import type { Block } from "../../core";
+import type { BlockAnchorProps, BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
-import { Editor, useBlockAnchors } from "../slots";
+import { Editor, useBlockDecorations } from "../slots";
 import { BlockRail } from "./block-rail";
 import { BlockCaretHost } from "./void-caret";
-import { BLOCK_INDENT, blockContentLeft } from "../internal/page-column";
+import {
+  BLOCK_INDENT,
+  blockContentLeft,
+  frameBoxLeft,
+  frameBoxRightInset,
+} from "../internal/page-column";
 import { gutterFirstLineCenter, type RailSeat } from "../internal/rail-seat";
 import "./block-document-scale.css";
 
@@ -27,6 +33,16 @@ const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
 // const, so hoisting hides nothing. The exemption is written at the use site.
 const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
+// The CORNER seat: the card's name, pinned to the top-right of the box the frame
+// paints, above it and in the row layer so it can be clicked. It floats OVER the
+// content — it reserves no space and shifts nothing, which is the point: at rest
+// there is nothing there at all, and pointing at the card is what asks.
+//
+// No `.block-anchor` (that class carries the borrowed-first-line vertical seat,
+// which is exactly what this seat does NOT want) and no width: a name is as wide
+// as it reads.
+const CORNER_COLUMN = "absolute top-0 z-raised";
+
 // The selection marker: a selected block SAYS "Selected." to a screen reader,
 // because it has no attribute with which to be selected.
 //
@@ -43,6 +59,35 @@ const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 // *The block list is a document, not a listbox*.
 function SelectionMarker({ isSelected }: { isSelected: boolean }) {
   return <span className="sr-only">{isSelected ? "Selected. " : ""}</span>;
+}
+
+/**
+ * Renders whichever decoration the container's frame registration supplied, in
+ * whichever seat the surface put it. It exists so the two seats dispatch through
+ * ONE call site: a seat is a position, never a different contract, and a second
+ * spelling here is how one of them would quietly grow a prop the other lacks.
+ */
+function AnchorDecoration({
+  component: Decoration,
+  block,
+  editor,
+}: {
+  component: ComponentType<BlockAnchorProps>;
+  block: Block;
+  editor: BlockEditorAPI;
+}) {
+  // Not a component CREATED during render: `Decoration` arrives as a prop, from
+  // a registry LOOKUP into the memoized `useBlockDecorations()` map whose values
+  // are module-level slot contributions. Its identity is stable across renders,
+  // so no state below it can reset.
+  return (
+    <Decoration
+      type={block.type}
+      data={block.data}
+      blockId={block.id}
+      editor={editor}
+    />
+  );
 }
 
 // The column geometry (rail width, per-depth indent, content inset) lives in
@@ -110,8 +155,8 @@ export function BlockRow({
   // `acceptsText` test, since their Lexical instance is the host.)
   const editorHoldsCaret =
     handle?.acceptsText !== true && registration?.caret !== "renderer";
-  const anchors = useBlockAnchors();
-  const Anchor = anchors.get(block.type);
+  const decorations = useBlockDecorations();
+  const decoration = decorations.get(block.type);
 
   // One droppable per row; the editor's drag handler resolves before/after/child
   // from the pointer's position within this rect (single target → single line).
@@ -175,25 +220,42 @@ export function BlockRow({
         }
       >
         <SelectionMarker isSelected={isSelected} />
-        {/* The decoration column: exactly one BLOCK_INDENT wide, flush at the
-            container's content edge `C`, so it sits in the gap the enclosed
-            rows' rail no longer occupies (they seat theirs at the frame's edge).
-            `z-raised` puts it above the frame it decorates. */}
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- the anchor column is positioned from JS coords (style left/width below), so no layout primitive can express it; see ANCHOR_COLUMN
-          className={cn(ANCHOR_COLUMN, isDragging && "opacity-40")}
-          style={{ left: contentLeft, width: BLOCK_INDENT }}
-        >
-          {Anchor ? (
-            // eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset.
-            <Anchor
-              type={block.type}
-              data={block.data}
-              blockId={block.id}
+        {/* The decoration, in the seat its own registration asked for — a glyph
+            in the box's indent column, or the card's name in the box's top-right
+            corner. Both sit in the ROW layer (`z-raised`), above the frame, which
+            is what makes them clickable: the frame is `pointer-events-none` and
+            painted under every row it spans. */}
+        {decoration?.seat === "corner" ? (
+          <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- the corner seat is pinned to the frame box's own right inset, a surface-computed CSS length (style below); not a ramp-expressible anchor
+            className={cn(CORNER_COLUMN, isDragging && "opacity-40")}
+            style={{ right: frameBoxRightInset(seat.frameCount) }}
+          >
+            <AnchorDecoration
+              component={decoration.component}
+              block={block}
               editor={api}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : (
+          /* The glyph column: exactly one BLOCK_INDENT wide, seated at the box's
+             own left edge — inside the tint it decorates, and in the gap the
+             enclosed rows' rail no longer occupies (they seat theirs at the
+             frame's edge). */
+          <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- the anchor column is positioned from JS coords (style left/width below), so no layout primitive can express it; see ANCHOR_COLUMN
+            className={cn(ANCHOR_COLUMN, isDragging && "opacity-40")}
+            style={{ left: frameBoxLeft(contentLeft), width: BLOCK_INDENT }}
+          >
+            {decoration ? (
+              <AnchorDecoration
+                component={decoration.component}
+                block={block}
+                editor={api}
+              />
+            ) : null}
+          </div>
+        )}
         {/* Childless fallback: one empty body line so the frame has a real box
             to paint, and the container stays selectable and deletable. */}
         {!hasVisibleChildren && <div style={{ minHeight: ONE_EMPTY_LINE }} />}
@@ -214,6 +276,11 @@ export function BlockRow({
       style={
         {
           paddingLeft: contentLeft,
+          // The other side of the same count the frames above this row close
+          // their boxes with: one `BLOCK_INSET` per enclosing frame, so this
+          // line's text stops inside the innermost tint instead of running to
+          // its edge. `0px` for an unframed row, which reserves nothing.
+          paddingRight: frameBoxRightInset(seat.frameCount),
           "--gutter-first-line-center": firstLineCenter,
         } as CSSProperties
       }

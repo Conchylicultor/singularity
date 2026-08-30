@@ -181,6 +181,7 @@ genuine transient-chrome list escapes with
     - `debug/zero-test`
     - `history/dialog`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/todo`
     - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/inline-date`

@@ -88,6 +88,7 @@ sink*, and it belongs in [`primitives/install-sink`](../install-sink/CLAUDE.md).
     - `apps/sonata/audio/engine`
     - `apps/sonata/audio/live-play`
     - `apps/sonata/shell`
+    - `page/editor`
     - `primitives/sync-status`
     - `primitives/undo-redo`
 

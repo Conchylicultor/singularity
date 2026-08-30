@@ -1,4 +1,4 @@
-import type { ComponentType, CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   MdImage,
   MdLink as MdLinkIcon,
@@ -28,11 +28,12 @@ import {
   Editor,
   PageIcon,
   TextBlockLayout,
-  useBlockAnchors,
+  useBlockDecorations,
+  FrameHoverProvider,
   useFramedBlockTypes,
   BLOCK_INDENT,
   BLOCK_INSET,
-  type BlockAnchorProps,
+  type BlockDecoration,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type {
@@ -330,7 +331,7 @@ function NodeView({
   ordinal,
   contributions,
   framedTypes,
-  anchors,
+  decorations,
   diff,
 }: {
   node: ReadOnlyNode;
@@ -344,7 +345,7 @@ function NodeView({
   /** Container block types, derived from the live `Editor.BlockFrame` registry. */
   framedTypes: ReadonlySet<string>;
   /** Container-anchor decorations, from the same `Editor.BlockFrame` registry. */
-  anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
+  decorations: ReadonlyMap<string, BlockDecoration>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const contribution = contributions.find((c) => c.block.type === node.type);
@@ -363,7 +364,7 @@ function NodeView({
           forest={node.children}
           contributions={contributions}
           framedTypes={framedTypes}
-          anchors={anchors}
+          decorations={decorations}
           diff={diff}
         />
       </div>
@@ -403,26 +404,35 @@ function NodeView({
     // `relative` wrapper with the decoration pinned at its left edge puts the
     // glyph in exactly the column the editor puts it in — with none of the
     // control-collision the editable surface has to resolve.
-    const Anchor = anchors.get(node.type);
+    const decoration = decorations.get(node.type);
     body = (
       <>
         {/* Zero height: an absolutely-pinned child contributes none, so the
-            decoration and the first child share one visual line. */}
+            decoration and the first child share one visual line. The CORNER seat
+            pins to the other end of that same line, over the content, where the
+            editor pins it to the frame box's top-right.
+
+            Appearance and nothing else, in both seats. A decoration's structural
+            actions live on the rail of the line the container borrows, which this
+            surface has none of — and it carries no id here either, since a
+            read-only node may legitimately have none. Omitting `editor` is the
+            read-only signal: the contribution degrades to a static mark rather
+            than rendering a dead control. */}
         <div className="relative">
-          {Anchor ? (
+          {decoration ? (
             <Pin
-              to="top-left"
+              to={decoration.seat === "corner" ? "top-right" : "top-left"}
               className="py-xs"
-              style={{ width: BLOCK_INDENT }}
+              style={
+                decoration.seat === "corner"
+                  ? undefined
+                  : { width: BLOCK_INDENT }
+              }
             >
-              {/* Appearance and nothing else. An anchor's structural actions live
-                  on the rail of the line the container borrows, which this
-                  surface has none of — and it carries no id here either, since a
-                  read-only node may legitimately have none. Omitting `editor` is
-                  the read-only signal: the contribution degrades to a static
-                  glyph rather than rendering a dead control. */}
-              {/* eslint-disable-next-line react-hooks/static-components -- not a component CREATED during render: `Anchor` is a registry LOOKUP into the memoized `useBlockAnchors()` map, whose values are module-level slot contributions. Its identity is stable across renders, so no state can reset. */}
-              <Anchor type={node.type} data={node.data} />
+              {/* Not a component CREATED during render: this is a registry
+                  LOOKUP into the memoized `useBlockDecorations()` map, whose
+                  values are module-level slot contributions. */}
+              <decoration.component type={node.type} data={node.data} />
             </Pin>
           ) : null}
         </div>
@@ -479,13 +489,22 @@ function NodeView({
   // documented degradation, not a gap: a frame reading a side table keyed by
   // block id falls back to its static appearance there.
   const framed = framedTypes.has(node.type) ? (
+    // `group/frame` is this surface's half of the corner decoration's reveal:
+    // here the frame and the lines it covers DO share an ancestor (nesting is a
+    // real wrapper div, not a grid span), so a card's name can appear on plain
+    // CSS hover with no pointer tracking at all. The editor, whose frame is a
+    // grid sibling, has to answer the same question with a store.
     <Overlay
+      className="group/frame"
       behind={
         <Editor.BlockFrame.Dispatch
           type={node.type}
           data={node.data}
           blockId={node.id}
           inset={0}
+          // No rail and no nesting inset to mirror: this surface's boxes run the
+          // full width of the column they are drawn in.
+          rightInset="0px"
         />
       }
     >
@@ -502,13 +521,13 @@ function ForestView({
   forest,
   contributions,
   framedTypes,
-  anchors,
+  decorations,
   diff,
 }: {
   forest: ReadOnlyNode[];
   contributions: BlockEntry[];
   framedTypes: ReadonlySet<string>;
-  anchors: ReadonlyMap<string, ComponentType<BlockAnchorProps>>;
+  decorations: ReadonlyMap<string, BlockDecoration>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const ordinals: number[] = [];
@@ -528,7 +547,7 @@ function ForestView({
           ordinal={ordinals[i] ?? 1}
           contributions={contributions}
           framedTypes={framedTypes}
-          anchors={anchors}
+          decorations={decorations}
           diff={diff}
         />
       ))}
@@ -561,14 +580,21 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
   // renders it through the same `TextBlockLayout` the editor uses.
   const contributions = Editor.Block.useContributions();
   const framedTypes = useFramedBlockTypes();
-  const anchors = useBlockAnchors();
+  const decorations = useBlockDecorations();
   return (
-    <ForestView
-      forest={forest}
-      contributions={contributions}
-      framedTypes={framedTypes}
-      anchors={anchors}
-      diff={diff}
-    />
+    // A corner decoration asks the editor's hover store whether the pointer is
+    // inside its card. This surface never writes to it — it reveals by the CSS
+    // group above, which it can, having real wrapper elements — but the question
+    // must have somewhere to land, so the provider is mounted and always answers
+    // "no". One decoration component, two surfaces, no second code path.
+    <FrameHoverProvider>
+      <ForestView
+        forest={forest}
+        contributions={contributions}
+        framedTypes={framedTypes}
+        decorations={decorations}
+        diff={diff}
+      />
+    </FrameHoverProvider>
   );
 }

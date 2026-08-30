@@ -29,7 +29,7 @@
 //
 // Measurement convention: a quote's box is identified by its LEFT border and
 // nothing else — no tint, no top border (that is what separates it from a
-// callout's fill and an annotation card's dashed box), and deliberately not by
+// callout's fill and an annotation card's wash), and deliberately not by
 // any anchor-decoration selector, which would fail on a cosmetic rename rather
 // than on a regression.
 //
@@ -90,7 +90,9 @@ async function geometry(page: Page): Promise<Geometry> {
   return page.evaluate(() => {
     const rows: Record<string, RowRect> = {};
     const order: string[] = [];
-    for (const el of document.querySelectorAll<HTMLElement>("[data-block-id]")) {
+    for (const el of document.querySelectorAll<HTMLElement>(
+      "[data-block-id]",
+    )) {
       const id = el.getAttribute("data-block-id");
       if (id === null) continue;
       order.push(id);
@@ -99,7 +101,8 @@ async function geometry(page: Page): Promise<Geometry> {
         top: rect.top,
         bottom: rect.bottom,
         height: rect.height,
-        contentLeft: rect.left + parseFloat(getComputedStyle(el).paddingLeft || "0"),
+        contentLeft:
+          rect.left + parseFloat(getComputedStyle(el).paddingLeft || "0"),
         editable: el.querySelector('[contenteditable="true"]') !== null,
       };
     }
@@ -113,17 +116,27 @@ async function geometry(page: Page): Promise<Geometry> {
     for (const child of grid ? [...grid.children] : []) {
       if (!(child instanceof HTMLElement)) continue;
       if (child.querySelector("[data-block-id]") !== null) continue;
-      for (const node of [child, ...child.querySelectorAll<HTMLElement>("div")]) {
+      for (const node of [
+        child,
+        ...child.querySelectorAll<HTMLElement>("div"),
+      ]) {
         const style = getComputedStyle(node);
-        // A quote's box is a LEFT rule and nothing else: no top border (the
-        // annotation cards' dashed box has one) and no fill (the callout's tint).
+        // A quote's box is a LEFT rule and nothing else: no top border, and no
+        // fill (the callout's tint, and every annotation card's wash — since the
+        // redesign those cards carry no border at all, so the rule below still
+        // tells a quote apart from every one of them).
         const leftOnly =
           parseFloat(style.borderLeftWidth || "0") > 0 &&
           style.borderLeftStyle !== "none" &&
           parseFloat(style.borderTopWidth || "0") === 0;
         if (!leftOnly) continue;
         const box = node.getBoundingClientRect();
-        bars.push({ top: box.top, bottom: box.bottom, left: box.left, height: box.height });
+        bars.push({
+          top: box.top,
+          bottom: box.bottom,
+          left: box.left,
+          height: box.height,
+        });
         break;
       }
     }
@@ -160,7 +173,9 @@ function ownerOf(g: Geometry, bar: FrameBox): string | undefined {
  * "Enter did not mint a second quote" is therefore "no NEW id appeared".
  */
 function barOwners(g: Geometry): string[] {
-  return g.bars.map((b) => ownerOf(g, b)).filter((id): id is string => id !== undefined);
+  return g.bars
+    .map((b) => ownerOf(g, b))
+    .filter((id): id is string => id !== undefined);
 }
 
 /** The topmost VISIBLE line (non-zero-height row) painted inside a bar. */
@@ -168,7 +183,10 @@ function firstLineInside(g: Geometry, bar: FrameBox): string | undefined {
   return g.order.find((id) => {
     const row = g.rows[id];
     return (
-      row != null && row.height > 1 && row.top >= bar.top - 1 && row.bottom <= bar.bottom + 1
+      row != null &&
+      row.height > 1 &&
+      row.top >= bar.top - 1 &&
+      row.bottom <= bar.bottom + 1
     );
   });
 }
@@ -189,7 +207,8 @@ interface StoredRow {
 async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
   return page.evaluate(async (id: string) => {
     const res = await fetch(`/api/pages/${id}/blocks`);
-    if (!res.ok) throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
+    if (!res.ok)
+      throw new Error(`GET blocks ${res.status}: ${await res.text()}`);
     return (await res.json()) as StoredRow[];
   }, pageId);
 }
@@ -209,7 +228,11 @@ async function postBlock(
       const res = await fetch("/api/blocks", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ parentId: parent, type: "quote", data: payload }),
+        body: JSON.stringify({
+          parentId: parent,
+          type: "quote",
+          data: payload,
+        }),
       });
       return { status: res.status, body: (await res.text()).slice(0, 400) };
     },
@@ -218,8 +241,15 @@ async function postBlock(
 }
 
 /** Commit a slash-menu conversion from the end of a block's text. */
-async function convertVia(page: Page, blockId: string, query: string): Promise<void> {
-  await page.locator(`[data-block-id="${blockId}"] [contenteditable="true"]`).first().click();
+async function convertVia(
+  page: Page,
+  blockId: string,
+  query: string,
+): Promise<void> {
+  await page
+    .locator(`[data-block-id="${blockId}"] [contenteditable="true"]`)
+    .first()
+    .click();
   await page.keyboard.press("End");
   await page.keyboard.type(` ${query}`, { delay: 25 });
   await page.waitForTimeout(600);
@@ -234,7 +264,9 @@ await withBrowser(async (h) => {
   console.log("page url:", doc.pageUrl);
 
   // --- 1. the void schema is enforced at the write boundary -------------------
-  const rejected = await postBlock(page, doc.pageId, { text: [{ text: "wisdom" }] });
+  const rejected = await postBlock(page, doc.pageId, {
+    text: [{ text: "wisdom" }],
+  });
   r.eq("a text-bearing quote payload is rejected", rejected.status, 400);
   r.ok(
     "…and rejected for the RIGHT reason (unrecognized key `text`, not unknown type)",
@@ -242,10 +274,17 @@ await withBrowser(async (h) => {
     rejected.body,
   );
   const accepted = await postBlock(page, doc.pageId, {});
-  r.ok("a void `{}` quote payload is accepted", accepted.status < 400, String(accepted.status));
+  r.ok(
+    "a void `{}` quote payload is accepted",
+    accepted.status < 400,
+    String(accepted.status),
+  );
 
   // --- 2. `/quote` WRAPS ------------------------------------------------------
-  await page.locator(`[data-block-id="${originId}"] [contenteditable="true"]`).first().click();
+  await page
+    .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+    .first()
+    .click();
   await page.keyboard.type("The best way to predict the future", { delay: 15 });
   await page.waitForTimeout(600);
   await convertVia(page, originId, "/quote");
@@ -253,19 +292,30 @@ await withBrowser(async (h) => {
 
   let g = await geometry(page);
   const originRow = g.rows[originId];
-  if (!originRow) bail("the origin survived the wrap", `no row for ${originId}`);
-  r.ok("the origin block kept its id", originRow.editable, JSON.stringify(originRow));
+  if (!originRow)
+    bail("the origin survived the wrap", `no row for ${originId}`);
+  r.ok(
+    "the origin block kept its id",
+    originRow.editable,
+    JSON.stringify(originRow),
+  );
   r.eq(
     "the origin's text is intact",
     await blockText(
-      page.locator(`[data-block-id="${originId}"] [contenteditable="true"]`).first(),
+      page
+        .locator(`[data-block-id="${originId}"] [contenteditable="true"]`)
+        .first(),
     ),
     "The best way to predict the future",
   );
 
   let rows = await storedRows(page, doc.pageId);
   const origin = rows.find((b) => b.id === originId);
-  r.eq("the origin is still a `text` block — a wrap, not a retype", origin?.type, "text");
+  r.eq(
+    "the origin is still a `text` block — a wrap, not a retype",
+    origin?.type,
+    "text",
+  );
   const quoteId = origin?.parentId ?? "";
   r.eq(
     "…whose parent is a freshly minted `quote` anchor",

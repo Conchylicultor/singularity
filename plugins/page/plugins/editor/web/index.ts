@@ -1,8 +1,20 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor as EditorSlots } from "./slots";
 
-export { Editor, useFramedBlockTypes, useBlockAnchors } from "./slots";
-export type { BlockContribution, BlockFrameMeta } from "./slots";
+export { Editor, useFramedBlockTypes, useBlockDecorations } from "./slots";
+export type {
+  BlockContribution,
+  BlockFrameMeta,
+  BlockDecoration,
+  BlockDecorationSeat,
+} from "./slots";
+// The pointer-inside-this-card signal a corner decoration reveals itself on.
+// Both surfaces mount the provider; only the decorations subscribe.
+export {
+  FrameHoverProvider,
+  useFrameHovered,
+  useSetFrameHover,
+} from "./internal/frame-hover";
 export { MarkButton } from "./components/mark-button";
 export type { MarkButtonProps } from "./components/mark-button";
 export { useFormatToolbar } from "./internal/format-toolbar-context";
@@ -35,6 +47,11 @@ export {
   BLOCK_INSET,
   BLOCK_INDENT,
   MARKER_GUTTER,
+  // The frame box's own edges, derived from the surface-provided `inset` /
+  // `rightInset` — exported for `ContainerBackdrop`, the ONE consumer that
+  // paints that box. `BLOCK_GUTTER` stays unexported: a block contribution
+  // still cannot compute a content edge, only apply one it was handed.
+  frameBoxLeft,
 } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";
 // `BlockTextEditor` is deliberately NOT exported: a text-bearing block type

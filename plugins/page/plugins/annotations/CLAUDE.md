@@ -2,7 +2,7 @@
 
 The page's **side-channel between a human and the agents working on it**, as
 block types. An annotation is a [void container](../container/CLAUDE.md) — it owns
-no text; its content IS its children — whose dashed box says *this run of blocks
+no text; its content IS its children — whose soft tint says *this run of blocks
 is not the page's prose, it is addressed to (or withheld from) an agent*.
 
 Four of them, and the family is exactly the four directions that channel has:
@@ -59,7 +59,7 @@ would silently eat text on Cmd+C.
 
 Shared, and NOT re-derived per plugin: the whole void-container shape —
 `anchor` / `wrapOnConvert` forced, plus `ContainerNoRow`, `ContainerBackdrop` and
-`ContainerAnchor`. The mechanism lives in
+`ContainerCornerLabel`. The mechanism lives in
 [`page/container`](../container/CLAUDE.md); an annotation plugin adds none of its
 own. It reaches it through this umbrella's `defineAnnotationBlock`, never
 `defineContainerBlock` directly — that is the audience declaration above, and the
@@ -70,7 +70,7 @@ and must stay so. The structural actions (Collapse / Remove `<label>` / Delete)
 are never contributed either: they come from the rail on the line the card
 BORROWS, whose menu arm keys on the core `BlockHandle.anchor` fact.
 
-Two of the four still put something behind their glyph, and neither breaks that
+Two of the four still put something behind their NAME, and neither breaks that
 rule, because what they show is per-instance STATE held in a side-table keyed on
 the block id — not per-instance *data*:
 
@@ -80,23 +80,45 @@ the block id — not per-instance *data*:
   With no authors it falls back to the plain inert mark.
 - **`todo`** passes `sections` AND a `BlockFrameMeta.menu` — the same dispatch
   panel in both places, per the container convention. It is the one annotation
-  with an ACTION rather than a read, so its glyph is a trigger even before there
-  is state behind it. See [`todo/plugins/task-link`](plugins/todo/plugins/task-link/CLAUDE.md).
+  with an ACTION rather than a read, so its name is a trigger even before there
+  is state behind it, and the one that declares an `action`: point at the word
+  `TODO` and it becomes `▷ LAUNCH`, in place. See
+  [`todo/plugins/task-link`](plugins/todo/plugins/task-link/CLAUDE.md).
 
-`context` and `private-note` pass a bare `glyph` — a plain, non-interactive mark
-on both surfaces.
+`context` and `private-note` pass a bare name — plain and non-interactive on both
+surfaces.
 
-Per-block, and deliberately: its identity (`type`, label, aliases, glyph), its
+Per-block, and deliberately: its identity (`type`, label, aliases), its
 tint, and its markdown marker. Those are four separate `Editor.Block` /
 `Editor.BlockFrame` registrations rather than one parameterized helper, for the
 reason `page/container` already records — containerhood is derived from *who
 actually paints a box*, so a registration made on a plugin's behalf would move
 that fact one indirection away from the plugin it describes.
 
-### The tints are one visual language
+### The family is NAMED, where a callout is DRAWN
 
-All four are **dashed** — the family signature, and what separates them at a
-glance from `page/callout`'s solid tint, which is prose the reader should notice.
+That sentence replaced the old family signature, which was a **dashed border**.
+Dashes, a permanent icon in the margin and a hue were three marks doing one job,
+and a page carrying three cards read as a stack of widgets rather than as a
+document with asides. What is left is:
+
+- a **soft tint and nothing else** at rest — no border, no icon;
+- the card's **own name**, in the box's top-right corner, appearing only while
+  the pointer is inside it (`cornerAnchor`, the corner decoration seat — see
+  [`page/container`](../container/CLAUDE.md));
+- and, for `/todo`, that name doubling as the launch control.
+
+A **callout** is the inverse and that is now the whole distinction: it keeps a
+gutter glyph (`anchor`), because its icon is one its author CHOSE and is part of
+what the card says, and it carries no name because the icon already answers.
+An annotation has no mark of its own to show, so it says what it is in words,
+and only when asked.
+
+The icons did not disappear — `MdRule`, `MdPendingActions`, `MdAutoAwesome` and
+`MdVisibilityOff` still name their cards in the slash menu and the turn-into
+list, off the handle. They just left the card, where they were charging every
+instance a fixed price for a fact the tint already carries.
+
 Within the family the hue carries the direction, over the shared semantic tokens
 (never raw colors, so a preset switch restyles them for free):
 
@@ -106,7 +128,19 @@ Within the family the hue carries the direction, over the shared semantic tokens
   whose dispatched task is `done` repaints `success` and a `dropped` one fades to
   `muted`, so a finished TODO stops shouting without leaving the page.
 - `private-note` — `destructive` at low alpha: restricted, not an error. The
-  glyph (a struck-through eye) carries the meaning; the tint only flags it.
+  NAME carries the meaning; the tint only flags it. It is the one card whose name
+  genuinely tells the reader something the hue cannot, which is the argument for
+  a word over an icon rather than against showing anything at all.
+
+The alphas lifted a step when the borders went: with no edge to hold it together
+a `/5` wash read as a smudge rather than as a box.
+
+`/todo` is the one card that keeps its name at REST, and only once an agent is
+running on it: the name then carries the task's live status (`RUNNING`, `DONE`),
+which the tint cannot spell — an open card and a card with an agent working on it
+are both `warning`. The rule is about what the name is SAYING, not about which
+card it belongs to: hidden while it merely repeats the tint, shown while it
+carries state the reader would otherwise have to open a popover to learn.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -130,9 +164,9 @@ Within the family the hue carries the direction, over the shared semantic tokens
     - `page/annotations/todo`
 - Sub-plugins:
   - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must land inside an <agent-note> card). The policy over page/markdown-apply's audience-agnostic engine.
-  - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
-  - **`context`** — Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
-  - **`private-notes`** — Private-note block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
-  - **`todo`** — TODO block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its glyph and its rail menu open the dispatch panel, and its box and glyph follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+  - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+  - **`context`** — Context block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+  - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+  - **`todo`** — TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 
 <!-- AUTOGENERATED:END -->

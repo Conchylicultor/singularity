@@ -44,10 +44,17 @@ composes:
   container" flag to drift from who actually paints a box.
 
   The frame declares the **tint and nothing else** — `ContainerBackdrop` owns the
-  box's geometry (`absolute` insets from `inset`, never `h-full`, no horizontal
-  offset of its own), which is why the tint bleeds to the content edge `C` rather
-  than `C + BLOCK_INSET`, and why a stray padding or left border can no longer
-  strand the enclosed rows' hover controls.
+  box's geometry (the box the surface measured, handed over whole; never
+  `h-full`, no horizontal offset of its own), which is why a stray padding or
+  left border can no longer strand the enclosed rows' hover controls.
+
+  That box is the callout's own CONTENT box, so the tint starts on the same x as
+  the first letter of the paragraph above it. It used to bleed one `BLOCK_INSET`
+  further left, to the decoration origin `C` — recorded here for a while as the
+  right answer, and it was not: every OTHER decorated block (a code background, a
+  place card) paints the content box, so the callout was the one thing on the
+  page whose edge did not line up. Measured, then fixed; see
+  `page/container`'s `ContainerBackdrop`.
 
 - **The anchor** (`web/components/callout-anchor.tsx`) is the icon, and it rides
   on the *same* `Editor.BlockFrame` registration (`BlockFrameMeta.anchor`) so a
@@ -56,8 +63,12 @@ composes:
   together — a handle declaring `anchor: true` whose plugin supplies no component
   is an invisible container, not a cosmetic gap.
 
-  It supplies a `glyph` and `sections` to `ContainerAnchor`; the shell owns the
-  static-vs-interactive branch, the trigger and the popover, and the surface owns
+  It supplies a `glyph` and `sections` to `ContainerAnchor` — the GUTTER seat,
+  deliberately, where the annotation cards take the corner one: a callout's icon
+  is a mark its author CHOSE and part of what the card says, so it leads the
+  text and is always there, while a card whose decoration is merely its type name
+  charges nothing at rest and says it in the corner when asked. The shell owns
+  the static-vs-interactive branch, the trigger and the popover, and the surface owns
   the geometry (a `BLOCK_INDENT`-wide column at `C`, seated on the first visible
   child's borrowed first-line centre, plus the drag listeners).
 

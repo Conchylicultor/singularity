@@ -197,9 +197,9 @@ const blockSlot = defineOrderedDispatchSlot<
  * The two are **different surfaces of one container**, and the split is the
  * user's stated model:
  *
- * - `anchor` is the leading decoration (the callout's icon), rendered by the
+ * - `anchor` / `cornerAnchor` is the container's decoration, rendered by the
  *   surface in the ROW layer — see `BlockAnchorProps`. It is the container's
- *   APPEARANCE affordance.
+ *   APPEARANCE affordance, and the two spellings are its two SEATS (below).
  * - `menu` is contributed sections inside the rail popover the container owns on
  *   its BORROWED line (`BlockActionsMenu`'s container arm) — where the
  *   STRUCTURAL actions (Collapse, Remove, Delete) live. A container with nothing
@@ -217,8 +217,7 @@ const blockSlot = defineOrderedDispatchSlot<
  * the slot. Precedent: `BlockHandle.icon` is rendered raw today. Documented, not
  * discovered.
  */
-export interface BlockFrameMeta {
-  anchor?: ComponentType<BlockAnchorProps>;
+export type BlockFrameMeta = BlockFrameDecoration & {
   /**
    * Sections this container contributes to the rail popover, above the generic
    * structural actions. The prop shape is `Editor.TurnInto`'s verbatim, so
@@ -230,6 +229,42 @@ export interface BlockFrameMeta {
     api: BlockEditorAPI;
     close: () => void;
   }>;
+};
+
+/**
+ * A container's decoration and, by which field it is spelled, its SEAT. Exactly
+ * one of the two, because a container has exactly one decoration — and the
+ * union is what makes "both" and "an appearance with no seat" unspellable,
+ * rather than a `seat: "gutter" | "corner"` flag that could name a seat for a
+ * component nobody supplied.
+ *
+ * - **`anchor` — the gutter glyph.** A `BLOCK_INDENT`-wide column at the box's
+ *   own left inset, seated on the FIRST VISIBLE CHILD's borrowed first line, so
+ *   the mark and that line read as one. What a callout's icon is: a mark the
+ *   author chose, which is the content of the card's identity, so it is always
+ *   there and it leads the text.
+ * - **`cornerAnchor` — the card's name, in the box's top-right corner.** Hidden
+ *   until the pointer is inside the card, floating OVER the content (it
+ *   reserves no space and shifts nothing). What the annotation family's type
+ *   name is: not content, just an answer to "what is this box?" — worth nothing
+ *   at rest and worth exactly one glance on demand.
+ *
+ * Which one a container reaches for is a statement about what its decoration IS,
+ * which is why it is spelled here and not configured: an annotation is NAMED, a
+ * callout is DRAWN, and that replaced the dashed-vs-solid border as the thing
+ * that tells the two families apart.
+ */
+export type BlockFrameDecoration =
+  | { anchor?: ComponentType<BlockAnchorProps>; cornerAnchor?: never }
+  | { cornerAnchor: ComponentType<BlockAnchorProps>; anchor?: never };
+
+/** Where the surface seats a container's decoration. */
+export type BlockDecorationSeat = "gutter" | "corner";
+
+/** A container's decoration, resolved with the seat it asked for. */
+export interface BlockDecoration {
+  component: ComponentType<BlockAnchorProps>;
+  seat: BlockDecorationSeat;
 }
 
 export const Editor = {
@@ -314,25 +349,29 @@ export function useFramedBlockTypes(): ReadonlySet<string> {
 }
 
 /**
- * Block type → its container ANCHOR component, derived from the same
- * `Editor.BlockFrame` registrations `useFramedBlockTypes()` reads. Twin of that
- * hook, on the same single source of truth: a type has a decoration exactly when
- * the registration that makes it a container also supplies one.
+ * Block type → its container DECORATION and the seat it asked for, derived from
+ * the same `Editor.BlockFrame` registrations `useFramedBlockTypes()` reads. Twin
+ * of that hook, on the same single source of truth: a type has a decoration
+ * exactly when the registration that makes it a container also supplies one.
  *
  * A `BlockHandle` declaring `anchor: true` whose plugin supplies no component
  * here is a real disagreement (the reducer would treat the type as a void
  * container while the surface paints nothing) — `./singularity check
  * page-editor:anchor-has-decoration` fails on it.
  */
-export function useBlockAnchors(): ReadonlyMap<
-  string,
-  ComponentType<BlockAnchorProps>
-> {
+export function useBlockDecorations(): ReadonlyMap<string, BlockDecoration> {
   const contributions = Editor.BlockFrame.useContributions();
   return useMemo(() => {
-    const out = new Map<string, ComponentType<BlockAnchorProps>>();
+    const out = new Map<string, BlockDecoration>();
     for (const c of contributions) {
-      if (typeof c.match === "string" && c.anchor) out.set(c.match, c.anchor);
+      if (typeof c.match !== "string") continue;
+      // One map, not one hook per seat: a surface that had to ask twice could
+      // render one seat and silently drop the other, which is a container whose
+      // decoration exists and is nowhere on screen. Asking once makes the seat
+      // something the surface must SWITCH on rather than something it can miss.
+      if (c.anchor) out.set(c.match, { component: c.anchor, seat: "gutter" });
+      else if (c.cornerAnchor)
+        out.set(c.match, { component: c.cornerAnchor, seat: "corner" });
     }
     return out;
   }, [contributions]);

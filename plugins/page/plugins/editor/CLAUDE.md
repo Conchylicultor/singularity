@@ -41,11 +41,28 @@ horizontal geometry. The invariant:
 
 > A page's block content box has a left edge `C`.
 >
-> - Block **decorations** start at `C` (quote border, callout tint, code
->   background, image, divider rule, selection highlight, diff rail).
+> - `C` is the ORIGIN the surface computes and the rail seats against — where a
+>   block's box is measured from, not where paint lands.
 > - Block **content** (text, media) insets from `C` by `BLOCK_INSET`.
+> - Block **decorations paint that same content box**, so a box's own edge and
+>   the first letter of the prose above it share one x: a code background, a
+>   place card, a callout tint, a quote rule, an annotation card's wash. The
+>   right edge pulls in by one `BLOCK_INSET` per enclosing container frame, the
+>   same count the rows inside reserve as `padding-right`, so a card's text
+>   always stops inside its own tint (`frameBoxLeft` / `frameBoxRightInset`).
+> - The two exceptions are the marks that are not boxes: the block-selection
+>   highlight and the diff rail still start at `C`, so a selected card's band
+>   surrounds its tint rather than tracing it — a highlight wants padding around
+>   the thing it highlights, and a box wants to line up with the prose.
 > - Anything a host renders *alongside* blocks that is not itself a block — page
 >   title, page icon, section list — sits at `C + BLOCK_INSET`.
+
+This invariant used to read "block decorations start at `C`", and the container
+frame was the only thing that believed it — an ordinary decorated block paints
+inside its own `<Inset x={BLOCK_INSET}>` content box and always did. So a
+callout's tint stood one `BLOCK_INSET` to the LEFT of every paragraph on the page
+and of every other decorated box, which is what "the card looks shifted" was.
+Measured on the deployed app, then fixed.
 
 The editable surface reserves the hover rail (`BLOCK_GUTTER`, 64px) to the **left**
 of `C`, inside each row's own padding so the `+` / drag / chevron controls are
@@ -81,11 +98,11 @@ Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``): Tailwind
 an `@utility` only for literal tokens it can scan. Use `<Inset>`, or `insetClass()`
 from the spacing primitive when you only have a `className`.
 
-One known deviation from the invariant: the code background sits at
-`C + BLOCK_INSET` rather than bleeding to `C` (its `px` wrapper is outside the
-decoration). The callout tint and the quote's left rule were two more until each
-became a container frame — a frame gets `C` handed to it as `inset`, so both now
-bleed correctly.
+The code background sits at `C + BLOCK_INSET` (its `px` wrapper is outside the
+decoration) and was once recorded here as the invariant's one deviation. It is
+the RULE now, and the container frames were the deviation: a frame is handed `C`
+as `inset` and adds the same `BLOCK_INSET` itself (once, in `ContainerBackdrop`),
+so every decorated box on the page lines up.
 
 `blockContentLeft(depth)` is the one derivation of `C` in the editable surface's
 row coordinates. A container frame insets its decoration to it, and the editor
@@ -159,11 +176,22 @@ Four rules, each closing a failure the naive version has:
   the flag is safe to mean what it says.
 - **The decoration lives in the row layer, never the frame.** Frames are emitted
   before the rows and are `pointer-events-none`, so an interactive control there
-  is hit-tested under the following row. The anchor component rides on the
-  `Editor.BlockFrame` contribution (`BlockFrameMeta.anchor`) precisely so it
-  cannot drift from who actually paints a box, but the *surface* mounts it — in
-  the `BLOCK_INDENT` column at `C`, seated on the first visible child's borrowed
-  first-line centre, since an anchor has no line of its own to measure.
+  is hit-tested under the following row. The decoration rides on the
+  `Editor.BlockFrame` contribution precisely so it cannot drift from who actually
+  paints a box, but the *surface* mounts it — in one of TWO seats, and which
+  field the registration spells says which:
+  - **`anchor`** — a glyph in the `BLOCK_INDENT` column at the box's own left
+    edge, seated on the first visible child's borrowed first-line centre, since
+    an anchor has no line of its own to measure. The callout's icon.
+  - **`cornerAnchor`** — the card's NAME, at the box's top-right corner, hidden
+    until the pointer is inside the card. The annotation family's.
+
+  The corner seat needs a hover signal a frame cannot give: the frame is a grid
+  SIBLING of its rows, so no ancestor holds both and `group-hover` has nothing to
+  travel up. `internal/frame-hover.ts` is that signal — a scoped store the rows
+  write on pointer-enter and only the decorations read, so a pointer crossing a
+  long page re-renders no row. `read-only-view` nests through real wrappers and
+  reveals with a plain `group/frame` instead; one component reads both.
 - **An anchor row renders no rail *of its own* — because the rail on its borrowed
   line is already the container's.** The slots coincide with the first child's, on
   the same visual line, so there is exactly one rail there and `RailSeat.owner`
@@ -186,11 +214,12 @@ contributed sections:
 
 Both structural halves are **generic**: `Remove callout` derives its wording from
 `handle.label`, so a new container type wires nothing here. `menu` is a second
-field on the same `Editor.BlockFrame` registration as `anchor` (`useBlockFrameMenus`
-is `useBlockAnchors`' twin), reusing `Editor.TurnInto`'s contribution prop shape so
-"menu sections contributed by a plugin" is one convention. A container's appearance
-renders in **both** the glyph's popover and this menu, deliberately — the rail is
-where a user looks for block actions, the glyph is where they look for the glyph.
+field on the same `Editor.BlockFrame` registration as the decoration
+(`useBlockFrameMenus` is `useBlockDecorations`' twin), reusing `Editor.TurnInto`'s
+contribution prop shape so "menu sections contributed by a plugin" is one
+convention. A container's appearance renders in **both** the decoration's popover
+and this menu, deliberately — the rail is where a user looks for block actions,
+the decoration is where they look for the decoration.
 
 `BlockHandle.anchor` is a **core** fact because the reducer needs it (`BlockOpContext.anchorTypes`
 drives the split/merge refusals and the childless-anchor prune) and the server has
@@ -1192,9 +1221,10 @@ selected too" is unknowable from a row alone). Rounding is a property of the run
 not the row. A run splits into TOUCHING bands wherever the decoration edge steps
 (a selected block deeper than the line above it) — a notch in one region, not two
 boxes. A selected container paints over its frame span, so `handle.anchor`'s
-zero-height row needs no branch. The band spans `C` → the content box's right
-edge, the box `ContainerBackdrop` fills, so a selected callout's tint and its
-band are concentric.
+zero-height row needs no branch. The band spans `C` → the row's right edge, one
+`BLOCK_INSET` OUTSIDE the box `ContainerBackdrop` fills: a highlight wants
+padding around the thing it highlights, so a selected callout's band surrounds
+its tint rather than tracing it.
 
 ## The block list is a document, not a listbox
 
@@ -3083,6 +3113,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
+    - `primitives/scoped-store.defineScopedStore`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineDispatchSlot`
@@ -3110,6 +3141,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockAnchorProps`
     - `BlockChrome`
     - `BlockContribution`
+    - `BlockDecoration`
+    - `BlockDecorationSeat`
     - `BlockEditorAPI`
     - `BlockEditorHandle`
     - `BlockFrameMeta`
@@ -3152,6 +3185,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor`
     - `filterBlockTypes`
     - `flattenSections`
+    - `frameBoxLeft`
+    - `FrameHoverProvider`
     - `getBlockTextExtensions`
     - `isValidLinkUrl`
     - `MarkButton`
@@ -3167,14 +3202,16 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `registerBlockTextExtensionSource`
     - `TextBlockLayout`
     - `useBlockActivate`
-    - `useBlockAnchors`
+    - `useBlockDecorations`
     - `useBlockEditor`
     - `useCaretEscape`
     - `useFormatToolbar`
     - `useFramedBlockTypes`
+    - `useFrameHovered`
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`
     - `usePageOptions`
+    - `useSetFrameHover`
     - `useVoidCaret`
 - Server:
   - Contributes:

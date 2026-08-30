@@ -7,7 +7,7 @@ run X first", a domain glossary. It owns no text and no appearance: its payload 
 do not know they are inside it:
 
 ```
-Context            ← the anchor: a fixed glyph, no line of its own
+Context            ← the anchor: its name in the corner, no line of its own
 ├── Heading  "Repo conventions"
 ├── Bulleted list  "run ./singularity build after every change"
 └── Code block
@@ -39,7 +39,7 @@ also what lets the first visible line be a heading.
 **It folds, and needed no header row to do it.** A context card holds standing
 instructions a reader usually wants out of the way, so this is the point of the
 block. It collapses to its BORROWED line — its first child's, the same line the
-anchor already borrows to seat its glyph — so nothing moves, and the chevron
+anchor already borrows for its own seat — so nothing moves, and the chevron
 lives on that line's row rather than on a title row the void model exists to
 avoid. See *A container folds to its borrowed line* in
 [`page/editor`](../../../editor/CLAUDE.md).
@@ -52,16 +52,19 @@ payload. The write boundary parses through `handle.schema.strict()`, so a stray
 previous model's rows unwritable rather than merely unused. `core/context-block.test.ts`
 pins both the rejection and the forced container facts.
 
-There is no per-instance appearance either, and the anchor reflects that: a
-**fixed** `MdRule` glyph with **no popover at all** — a plain mark on both
-surfaces. It contributes neither `sections` nor `BlockFrameMeta.menu` rather than
+There is no per-instance appearance either, and the decoration reflects that: the
+card's **name** in the box's top-right corner, revealed only while the pointer is
+inside it, with **no popover at all** — a plain answer on both surfaces. It used
+to be a fixed `MdRule` glyph in the margin; the icon still names the card in the
+slash menu, off the handle, it just stopped charging every card on the page for
+a fact the tint already carries. It contributes neither `sections` nor `BlockFrameMeta.menu` rather than
 inheriting a picker it has no field to write to, and loses nothing by it: the
 structural actions (Collapse / Remove context / Delete) come from the rail on the
 line it borrows, generically over `BlockHandle.anchor`.
 
 ## The frame is appearance only
 
-`web/components/context-frame.tsx` paints the dashed box over the card's own
+`web/components/context-frame.tsx` paints the soft wash over the card's own
 (zero-height) anchor row plus its whole visible subtree. A block renderer cannot
 do this itself: both surfaces render the forest as a flat list of sibling rows, so
 a block's children are not its DOM children — `Editor.BlockFrame` is the seam for
@@ -74,9 +77,11 @@ box. The anchor rides on the same registration, so `anchor: true` can never clai
 a decoration nothing supplies (`./singularity check page-editor:anchor-has-decoration`).
 
 The box's geometry belongs to `ContainerBackdrop`; this file declares only the
-look. The **dashed border** is the whole visual argument: a callout is a solid
-tint and reads as prose the reader should notice, while a dashed box reads as
-*meta*.
+look. A soft tint and NOTHING else — no border, no icon. What separates it from a
+callout is no longer a dashed edge but that a callout is DRAWN (an icon its
+author chose) while an annotation is NAMED, and only when pointed at. See *The
+family is NAMED, where a callout is DRAWN* in
+[`page/annotations`](../../CLAUDE.md).
 
 ## Markdown emits the marker alone
 
@@ -135,14 +140,14 @@ than an invisible ghost.
 
 ## Plugin reference
 
-- Description: Context block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+- Description: Context block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
     - `Editor.Block` "context" → `ContainerNoRow`
     - `Editor.BlockFrame` "context" → `ContextFrame`
   - Uses:
-    - `page/container.ContainerAnchor`
     - `page/container.ContainerBackdrop`
+    - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
   - Exports (values): `contextBlock`

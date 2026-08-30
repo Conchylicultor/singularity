@@ -77,7 +77,7 @@ afterwards, on the plan:
   existing card is a MOVE, and because the aligner preserves the id of
   byte-identical text it arrives as an `update` naming `parentId` — not a create.
   An after-only test would accept it, and the whole page could be annexed into
-  the agent's dashed box, attributed to the agent, without a character being
+  the agent's own card, attributed to the agent, without a character being
   deleted. Updated/text-edited blocks are therefore judged on their OLD chain as
   well (`escaped-origin`), resolved against pre-plan maps so moving an ancestor
   in the same plan cannot launder a block through it.

@@ -63,7 +63,7 @@ exactly why a two-paragraph quotation used to draw two bars; a frame spans the
 passage, so one unbroken rule runs its full height however many blocks it holds.
 
 It is also the lightest look in the container family on purpose: the callout is a
-solid tint, the annotation cards are dashed boxes, and a quote is a bare rule.
+solid tint, the annotation cards a soft wash, and a quote is a bare rule.
 Contributing that frame is what *makes* this a container — the framed-type set is
 derived from the slot's own registered matches (`useFramedBlockTypes()`) — and
 the anchor rides on the same registration, so `anchor: true` can never claim a

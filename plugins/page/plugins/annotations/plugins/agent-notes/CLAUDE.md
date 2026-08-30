@@ -7,7 +7,7 @@ reader can tell it from their own prose.
 A void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its
 [siblings](../../CLAUDE.md) — read those two for the shape and the family's
-visual language. This plugin declares only identity: a fixed `MdAutoAwesome` glyph,
+visual language. This plugin declares only identity: a fixed `Agent notes` corner name,
 the `info` dashed tint, and the `<agent-note>` markdown tag.
 
 ## The type is `agent-note`; the directory is `agent-notes`
@@ -29,13 +29,13 @@ not: nothing addresses them by id, and neither carries state keyed on the row.
 ## Who wrote it is a sub-plugin, not a field
 
 Provenance lives in [`authorship`](./plugins/authorship/CLAUDE.md) — a
-`(block, conversation)` link table plus the card's glyph popover — never in this
+`(block, conversation)` link table plus the card's name popover — never in this
 block's `data`. It has to survive edits, be queryable, and accumulate several
 authors; a name in `data` would be an unjoinable, single-valued copy of that.
 This is why `agent-notes` is an umbrella while its three siblings are leaves.
 
-That sub-plugin is also why THIS card's glyph opens a popover where the other
-annotations' glyphs are inert marks: the family rule ("payload is `{}`, so
+That sub-plugin is also why THIS card's name opens a popover where the other
+annotations' names are inert marks: the family rule ("payload is `{}`, so
 nothing per-instance to show") reads `data`, and provenance is per-instance
 without being in it.
 
@@ -43,7 +43,7 @@ without being in it.
 
 ## Plugin reference
 
-- Description: Agent-notes block type: a void CONTAINER whose dashed box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+- Description: Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
     - `Editor.Block` "agent-note" → `ContainerNoRow`
@@ -51,8 +51,8 @@ without being in it.
   - Uses:
     - `page/annotations/agent-notes/authorship.AgentNotesAuthors`
     - `page/annotations/agent-notes/authorship.useAgentNotesAuthors`
-    - `page/container.ContainerAnchor`
     - `page/container.ContainerBackdrop`
+    - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
   - Exports (values): `agentNotesBlock`

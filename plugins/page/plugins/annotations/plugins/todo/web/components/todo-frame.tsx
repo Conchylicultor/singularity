@@ -8,26 +8,25 @@ import { useTodoTaskState } from "@plugins/page/plugins/annotations/plugins/todo
  * a utility only for literal tokens it can read.
  */
 const TINTS = {
-  open: "rounded-md border border-dashed border-warning/40 bg-warning/10",
-  done: "rounded-md border border-dashed border-success/40 bg-success/10",
-  dropped:
-    "rounded-md border border-dashed border-muted-foreground/30 bg-muted/40",
+  open: "rounded-md bg-warning/10",
+  done: "rounded-md bg-success/10",
+  dropped: "rounded-md bg-muted/50",
 } as const;
 
 /**
- * The TODO card's dashed box, covering the card's own (zero-height) anchor row
+ * The TODO card's wash, covering the card's own (zero-height) anchor row
  * AND every block nested inside it.
  *
  * `ContainerBackdrop` owns the geometry, so this file declares nothing but the
- * look, and the three frame rules (`BlockFrameProps`) hold by construction: the
- * backdrop fills the surface-provided box from `inset` with absolute insets,
+ * look, and the frame rules (`BlockFrameProps`) hold by construction: the
+ * backdrop fills the box the surface measured — the card's own content box —
  * never `h-full`, and adds no horizontal offset of its own. Semantic theme
  * tokens only, so a preset switch restyles it for free.
  *
  * ## The hue follows the linked task, and stops shouting when it settles
  *
- * **Dashed** is fixed — the annotation family's signature, meta rather than
- * prose. The hue is the family's "outstanding work" `warning` until the card's
+ * A soft wash with no border and no icon, like every card in the family. The hue
+ * is the family's "outstanding work" `warning` until the card's
  * task says otherwise: `done` repaints it `success`, `dropped` fades it to
  * `muted`. Every other status (including no task at all) is still outstanding
  * work and still warning. So a finished TODO stops competing for attention
@@ -44,10 +43,10 @@ const TINTS = {
  * the box says what remains to be done about this card, which is a fact about
  * the card today whichever revision of its text you are reading.
  */
-export function TodoFrame({ blockId, inset }: BlockFrameProps) {
-  if (blockId === undefined)
-    return <ContainerBackdrop inset={inset} className={TINTS.open} />;
-  return <LinkedTodoFrame blockId={blockId} inset={inset} />;
+export function TodoFrame(props: BlockFrameProps) {
+  if (props.blockId === undefined)
+    return <ContainerBackdrop frame={props} className={TINTS.open} />;
+  return <LinkedTodoFrame blockId={props.blockId} frame={props} />;
 }
 
 /**
@@ -56,10 +55,10 @@ export function TodoFrame({ blockId, inset }: BlockFrameProps) {
  */
 function LinkedTodoFrame({
   blockId,
-  inset,
+  frame,
 }: {
   blockId: string;
-  inset: number;
+  frame: BlockFrameProps;
 }) {
   const dispatched = useTodoTaskState(blockId);
   const tint =
@@ -69,5 +68,5 @@ function LinkedTodoFrame({
         ? TINTS.dropped
         : TINTS.open;
 
-  return <ContainerBackdrop inset={inset} className={tint} />;
+  return <ContainerBackdrop frame={frame} className={tint} />;
 }
