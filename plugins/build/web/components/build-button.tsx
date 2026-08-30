@@ -15,7 +15,7 @@ import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { buildRoute, buildDetailRoute } from "@plugins/build/core";
+import { buildRoute } from "@plugins/build/core";
 import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
 import {
   buildHistoryResource,
@@ -158,17 +158,13 @@ function BuildButtonInner({
           />
         </ControlSizeProvider>
       </Stack>
+      {/* WHERE a row goes is the arm's — a build row opens the build detail, a
+          backup row opens the backup detail, and neither is something global
+          chrome can name. All this button still owns is its own chrome: closing
+          the popover so it does not hang over the pane the click just opened. */}
       <BuildPopoverContent
         variant="popover"
-        onRunClick={(runId) => {
-          setOpen(false);
-          // ONE navigation to the full chain — `buildDetailRoute` already
-          // carries `buildRoute` as its parent, so this lands on
-          // `/debug/build/r/<runId>` with both panes in the route. The old
-          // root-then-push pair went through `useOpenPane`, which this button
-          // (global chrome, outside every pane surface) has no store for.
-          navigate(buildDetailRoute.link(debugApp, { runId }));
-        }}
+        onRowActivate={() => setOpen(false)}
       />
     </InlinePopover>
   );

@@ -210,7 +210,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `auth/notion`
-    - `backup`
+    - `backup/runs-arm`
     - `backup/targets/google-drive`
     - `integrations/gmail`
     - `integrations/google-maps`

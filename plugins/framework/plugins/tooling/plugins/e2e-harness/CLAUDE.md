@@ -52,6 +52,7 @@ rule keeps the broken shape from coming back.
     - `apps/prototypes/thumbnails`
     - `apps/sonata/look`
     - `apps/sonata/view-options`
+    - `build`
     - `code-explorer`
     - `config_v2/settings`
     - `config_v2/settings/conflict-agent`

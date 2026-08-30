@@ -528,7 +528,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       rootId={options.rootId}
       onSelect={(id) => {
         const original = originalById.get(id);
-        if (original !== undefined) props.onRowActivate?.(original);
+        if (original !== undefined) props.rowActivation?.(original)?.();
       }}
       setExpanded={setExpanded}
       onMove={onMove}

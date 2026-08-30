@@ -21,7 +21,7 @@ import {
   queryDeployRuns,
 } from "../core/endpoints";
 
-export { _deployDeployments } from "./internal/tables";
+export { _deployDeployments, _deployRuns } from "./internal/tables";
 export { deploymentsServerResource } from "./internal/resources";
 
 export default {

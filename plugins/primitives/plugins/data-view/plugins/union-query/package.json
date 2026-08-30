@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-union-query",
+  "description": "Keyset-paginated UNION ALL compiler: merges N heterogeneous tables into one ordered row space, with arm pruning, aligned NULL projections and per-arm push-down of WHERE / seek / LIMIT.",
+  "private": true,
+  "version": "0.0.1"
+}

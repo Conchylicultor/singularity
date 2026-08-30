@@ -12,6 +12,7 @@
     - `apps/browser/start-page`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
+    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`
     - `apps/events/event-list`
@@ -30,7 +31,7 @@
     - `apps/workflows/definitions`
     - `apps/workflows/engine`
     - `apps/workflows/executions`
-    - `build`
+    - `backup/runs-arm`
     - `build/build-info`
     - `build/serve-composition`
     - `conversations/all-conversations`
@@ -50,6 +51,7 @@
     - `page/annotations/agent-notes/authorship`
     - `plugin-meta/plugin-health`
     - `primitives/sync-status`
+    - `runs`
     - `shell/notifications`
     - `tasks/task-header`
     - `tasks/task-list`

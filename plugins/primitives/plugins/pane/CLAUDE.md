@@ -928,6 +928,7 @@ See "Open questions" in the design doc.
     - `primitives/launch`
     - `reports`
     - `review`
+    - `runs`
     - `screenshot`
     - `stats`
     - `stats/cost`

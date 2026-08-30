@@ -271,6 +271,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `primitives/usage-rank`
     - `release`
     - `reports`
+    - `runs`
     - `search/engine`
     - `shell/notifications`
     - `stats/cost`

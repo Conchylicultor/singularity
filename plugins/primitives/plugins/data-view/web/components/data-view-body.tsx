@@ -88,6 +88,7 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     searchAccessor,
     rowTone,
     onRowActivate,
+    rowActivation,
     selectedRowId,
     emptyState,
     loading,
@@ -142,6 +143,26 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
     }),
     [viewOptions, activeInstance],
   );
+  // ONE per-row activation resolver, so no view ever sees the two host props and
+  // no view can re-invent the "is this row clickable" question. `onRowActivate`
+  // is the every-row case folded into the same shape; `rowActivation` is the
+  // per-row one. Passing both is a bug, not a precedence question — two props
+  // asserting whether a row activates can disagree — so it throws rather than
+  // picking a winner.
+  const resolveRowActivation = useMemo<
+    ((row: TRow) => (() => void) | undefined) | undefined
+  >(() => {
+    if (rowActivation && onRowActivate) {
+      throw new Error(
+        "DataView: pass `onRowActivate` (every row activates) or `rowActivation` " +
+          "(per row), never both — they are two answers to one question.",
+      );
+    }
+    if (rowActivation) return rowActivation;
+    if (onRowActivate) return (row) => () => onRowActivate(row);
+    return undefined;
+  }, [rowActivation, onRowActivate]);
+
   // Computed here (not in the shell): `stateFor` mints a fresh object per call,
   // so the body reads it off the model itself and stays live on state writes.
   const activeState = viewModel.stateFor(activeViewId);
@@ -323,8 +344,8 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
           state: effectiveState,
           setSort: (fieldId) => viewModel.setSort(activeViewId, fieldId),
           setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
-          onRowActivate:
-            onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
+          rowActivation:
+            resolveRowActivation as DataViewRenderProps<unknown>["rowActivation"],
           selectedRowId,
           options: mergedOptions,
           searchAccessor:

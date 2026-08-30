@@ -1,4 +1,8 @@
-import { BUILD_EXIT_SUPERSEDED } from "./exit-codes";
+import {
+  BUILD_EXIT_HARD_KILLED,
+  BUILD_EXIT_SIGNAL_BASE,
+  BUILD_EXIT_SUPERSEDED,
+} from "./exit-codes";
 
 /**
  * How a build run ended, as one closed set. Four of the six arms are *not*
@@ -15,33 +19,13 @@ import { BUILD_EXIT_SUPERSEDED } from "./exit-codes";
  * `buildStatusOf`, so no call site branches on exit codes again.
  */
 export type BuildStatus =
-  | "running"
-  | "success"
-  | "superseded"
-  | "interrupted"
-  | "killed"
-  | "failed";
+  "running" | "success" | "superseded" | "interrupted" | "killed" | "failed";
 
 /** The two fields that decide a status — any `BuildRun` satisfies it. */
 export interface BuildRunOutcome {
   finishedAt: Date | null;
   exitCode: number | null;
 }
-
-/**
- * The exit code the ledger writes for a run whose owning process was hard-killed
- * by a newer build's restart. Deliberately outside the 0-255 wait status range,
- * so it can never collide with a code the build itself chose.
- */
-const EXIT_HARD_KILLED = -1;
-
-/**
- * POSIX shell convention: a process terminated by signal N reports 128 + N. The
- * CLI's own fatal-signal handlers already produce exactly this (SIGHUP → 129,
- * SIGINT → 130, SIGQUIT → 131, SIGTERM → 143), so no new constant is needed to
- * recognise an externally-killed build.
- */
-const EXIT_SIGNAL_BASE = 128;
 
 const SIGNAL_NAMES: Record<number, string> = {
   1: "SIGHUP",
@@ -67,8 +51,8 @@ export function buildStatusOf(run: BuildRunOutcome): BuildStatus {
   const { exitCode } = run;
   if (exitCode === 0) return "success";
   if (exitCode === BUILD_EXIT_SUPERSEDED) return "superseded";
-  if (exitCode === EXIT_HARD_KILLED) return "interrupted";
-  if (exitCode !== null && exitCode > EXIT_SIGNAL_BASE) return "killed";
+  if (exitCode === BUILD_EXIT_HARD_KILLED) return "interrupted";
+  if (exitCode !== null && exitCode > BUILD_EXIT_SIGNAL_BASE) return "killed";
   return "failed";
 }
 
@@ -78,6 +62,6 @@ export function buildStatusOf(run: BuildRunOutcome): BuildStatus {
  * rather than vanishing, so the detail line always says something true.
  */
 export function killedSignalName(exitCode: number): string {
-  const signo = exitCode - EXIT_SIGNAL_BASE;
+  const signo = exitCode - BUILD_EXIT_SIGNAL_BASE;
   return SIGNAL_NAMES[signo] ?? `SIG${signo}`;
 }

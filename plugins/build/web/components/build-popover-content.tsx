@@ -4,19 +4,13 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   fetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
-import { buildStatusOf } from "@plugins/build/plugins/build-status/core";
-import {
-  BUILD_STATUS_OPTIONS,
-  BuildStatusChip,
-  BuildStatusDot,
-} from "@plugins/build/plugins/build-status/web";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -28,25 +22,22 @@ import {
   useStickyScroll,
   JumpToBottomButton,
 } from "@plugins/primitives/plugins/auto-scroll/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import {
-  DataView,
-  defineDataView,
-} from "@plugins/primitives/plugins/data-view/web";
-import type {
-  FieldDef,
-  DataViewDensity,
-} from "@plugins/primitives/plugins/data-view/web";
+import { RunsDataView } from "@plugins/runs/web";
+// The one declaration of the kind a build run carries — not a literal repeated
+// here, which would have gone on silently highlighting nothing after a rename.
+// It lives in `run-ledger` (a leaf) rather than in the arm because importing it
+// from the arm closed a real plugin-level cycle: `build.web → build/runs-arm`
+// against the arm's own `→ build/web`. The boundary checker collapses runtimes
+// for cycle detection, which is what made the "different zone.runtime nodes"
+// reasoning wrong.
+import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
 import { DeploymentChain } from "@plugins/build/plugins/deployment/web";
 import { buildHistoryResource } from "../../shared";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import type { BuildRun } from "../../shared";
 import type {
   ClientMessage,
@@ -57,17 +48,18 @@ import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/w
 
 const LOGS_WS_PATH = "/ws/logs";
 
+// Both build surfaces open on the `active` tab, which is empty whenever nothing
+// is in flight — the normal case. The shared surface's own default reads
+// "Nothing has run here yet.", which on that tab is a false claim about a
+// machine with thousands of recorded runs. Say what is actually true of an empty
+// FILTERED list instead. (The real fix belongs in `runs`, whose empty state
+// should know whether a filter is narrowing it; until then this is the honest
+// wording here.)
+const NO_MATCHING_RUNS = <>Nothing matches this view.</>;
+
 // Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
 // Overflow is owned by the `<Scroll axis="y">` wrapper, not baked in here.
 const logViewerClass = cn("bg-muted/30 px-md py-sm", textVariantClass("code"));
-
-function formatDuration(start: Date, end: Date | null): string {
-  const ms = (end ?? new Date()).getTime() - start.getTime();
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
 
 function BuildControls({
   building,
@@ -225,186 +217,27 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   );
 }
 
-// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
-const BUILD_HISTORY_VIEW = defineDataView("build.history");
-
 /**
- * Build history as a DataView — search / filter / sort / group-by come free over
- * the build-run schema. The `buildHistoryResource` is already a server-windowed
- * `orderBy startedAt desc LIMIT 50` read, so the view renders the full resource
- * slice (no extra client cap).
+ * Inner: receives settled history so hooks always run with real data.
  *
- * **Both** build surfaces render this one component. The standing `/debug/build`
- * pane takes it comfortable — the full inline toolbar. The toolbar popover takes
- * it `density="compact"`, which folds search and every control behind a single
- * hover-revealed options trigger. The popover used to hand-roll its own ten-row
- * list instead, on the stated grounds that it had no room for that toolbar;
- * compact chrome removes the grounds, and with them the duplicate. Both surfaces
- * share the `build.history` storage key, so a filter or sort authored in one is
- * already there when you open the other.
- *
- * Natural-height, like every DataView — the caller owns the single scroll. In the
- * pane that is `PaneChrome`'s body; in the popover it is an explicit capped
- * `<Scroll>` (see `BuildPopoverContentInner`).
+ * `buildRuns` is here for ONE thing — whether a build of this checkout is in
+ * flight, which is what the Build control's spinner says. It is deliberately not
+ * the list: the list below is the merged runs surface, which pages every
+ * ledger's rows off its own keyset query. The two must not be confused, hence
+ * the name.
  */
-function BuildHistoryDataView({
-  runs,
-  selectedRunId,
-  onRunClick,
-  density,
-}: {
-  runs: BuildRun[];
-  selectedRunId?: string;
-  onRunClick?: (runId: string) => void;
-  /** How much room this surface gives the view. Omitted = comfortable. */
-  density?: DataViewDensity;
-}) {
-  // The filter's chips come from the rows, because the option set is genuinely
-  // open: a composition id is whatever someone put in the manifest, and the
-  // window is the last 50 runs. Derived rather than enumerated, so a newly-served
-  // composition is filterable the moment its first build lands.
-  const targetOptions = useMemo(
-    () =>
-      [...new Set(runs.flatMap((r) => r.targets))]
-        .sort()
-        .map((t) => ({ value: t, label: t })),
-    [runs],
-  );
-
-  const fields = useMemo<FieldDef<BuildRun>[]>(
-    () => [
-      {
-        id: "startedAt",
-        label: "Started",
-        type: "date",
-        value: (r) => r.startedAt,
-        cell: (r) => (
-          <span className="text-muted-foreground">
-            <RelativeTime date={r.startedAt} />
-          </span>
-        ),
-        primary: true,
-        sortable: true,
-        width: "10rem",
-      },
-      {
-        id: "status",
-        label: "Status",
-        type: "enum",
-        value: (r) => buildStatusOf(r),
-        options: BUILD_STATUS_OPTIONS,
-        cell: (r) => <BuildStatusChip run={r} />,
-        sortable: true,
-        filterable: true,
-      },
-      {
-        id: "trigger",
-        label: "Trigger",
-        type: "enum",
-        value: (r) => r.trigger,
-        options: [
-          { value: "manual", label: "Manual" },
-          { value: "auto", label: "Auto" },
-        ],
-        cell: (r) => (
-          <Badge variant={r.trigger === "auto" ? "info" : "muted"}>
-            {r.trigger}
-          </Badge>
-        ),
-        sortable: true,
-        filterable: true,
-      },
-      {
-        id: "targets",
-        label: "Targets",
-        // `tags`, not `text`: one invocation builds N compositions, so the cell
-        // is a SET of ids. The tags field type carries its values through
-        // `values` and filters array-aware (match-any), which is exactly the
-        // question a reader has — "which runs touched sonata?" — and it comes
-        // free rather than being hand-rolled here. No `options`: composition ids
-        // are an open-ended set, so the filter derives its chips from the rows.
-        type: "tags",
-        values: (r) => r.targets,
-        options: targetOptions,
-        cell: (r) => (
-          <Inline gap="2xs">
-            {r.targets.map((t) => (
-              <Badge
-                key={t}
-                variant={t === MAIN_COMPOSITION_ID ? "muted" : "info"}
-              >
-                {t}
-              </Badge>
-            ))}
-          </Inline>
-        ),
-        sortable: false,
-        filterable: true,
-        width: "12rem",
-      },
-      {
-        id: "duration",
-        label: "Duration",
-        type: "int",
-        // null for still-running builds — honest, and it sorts them apart from
-        // finished runs rather than pinning them to a fake 0.
-        value: (r) =>
-          r.finishedAt === null
-            ? null
-            : Math.floor(
-                (r.finishedAt.getTime() - r.startedAt.getTime()) / 1000,
-              ),
-        cell: (r) => (
-          <span className="tabular-nums text-muted-foreground">
-            {r.finishedAt === null
-              ? "running…"
-              : formatDuration(r.startedAt, r.finishedAt)}
-          </span>
-        ),
-        sortable: true,
-        align: "end",
-        width: "7rem",
-      },
-    ],
-    [targetOptions],
-  );
-
-  return (
-    <DataView<BuildRun>
-      rows={runs}
-      fields={fields}
-      rowKey={(r) => r.id}
-      views={["list", "table"]}
-      defaultView="list"
-      density={density}
-      storageKey={BUILD_HISTORY_VIEW}
-      selectedRowId={selectedRunId}
-      onRowActivate={onRunClick ? (r) => onRunClick(r.id) : undefined}
-      // The status leads the row as a dot rather than sitting inline as a chip:
-      // it is what you scan a build list for, and a colored dot carries it in the
-      // width of one glyph. The `status` field stays in the schema — filterable,
-      // sortable, and still a chip in the table view.
-      viewOptions={{
-        list: { leading: (r: BuildRun) => <BuildStatusDot run={r} /> },
-      }}
-      emptyState={<>No builds yet</>}
-    />
-  );
-}
-
-/** Inner: receives settled history so hooks always run with real data. */
 function BuildPopoverContentInner({
   variant,
+  buildRuns,
   selectedRunId,
-  onRunClick,
-  runs,
+  onRowActivate,
 }: {
   variant: "popover" | "pane";
+  buildRuns: BuildRun[];
   selectedRunId?: string;
-  onRunClick?: (runId: string) => void;
-  runs: BuildRun[];
+  onRowActivate?: () => void;
 }) {
-  const latestRun = runs[0];
+  const latestRun = buildRuns[0];
   const building = latestRun?.finishedAt === null;
 
   const handleBuild = useCallback(async () => {
@@ -449,24 +282,29 @@ function BuildPopoverContentInner({
           <BuildLogView variant={variant} />
           {/* The popover has to supply the history scroll itself. A DataView is
               always natural-height and never opens a scroller, and here there is
-              no `PaneChrome` above it to do so — the whole fifty-run slice would
+              no `PaneChrome` above it to do so — the whole loaded window would
               otherwise push the panel to full viewport height. Capped just above
               the log view's `h-48` so the two read as a pair rather than as a log
               with a wall of history under it. */}
           <Scroll axis="y" className="max-h-64">
-            <BuildHistoryDataView
+            <RunsDataView
               density="compact"
-              runs={runs}
-              selectedRunId={selectedRunId}
-              onRunClick={onRunClick}
+              defaultView="active"
+              emptyState={NO_MATCHING_RUNS}
+              onRowActivate={onRowActivate}
             />
           </Scroll>
         </>
       ) : (
-        <BuildHistoryDataView
-          runs={runs}
-          selectedRunId={selectedRunId}
-          onRunClick={onRunClick}
+        <RunsDataView
+          emptyState={NO_MATCHING_RUNS}
+          // The pair, not the bare id: a run id is only unique inside its own
+          // ledger, and the row this pane has open is by construction a build.
+          selectedRun={
+            selectedRunId === undefined
+              ? undefined
+              : { kind: BUILD_RUN_KIND, id: selectedRunId }
+          }
         />
       )}
     </Stack>
@@ -476,11 +314,16 @@ function BuildPopoverContentInner({
 export function BuildPopoverContent({
   variant,
   selectedRunId,
-  onRunClick,
+  onRowActivate,
 }: {
   variant: "popover" | "pane";
+  /** The build run whose detail pane is open, highlighted in the list. */
   selectedRunId?: string;
-  onRunClick?: (runId: string) => void;
+  /**
+   * The host's own business after a row click — the toolbar popover closing
+   * itself. NOT where the row goes: that is the arm's, and runs first.
+   */
+  onRowActivate?: () => void;
 }) {
   const historyResult = useResource(buildHistoryResource);
   if (historyResult.pending) {
@@ -493,9 +336,9 @@ export function BuildPopoverContent({
   return (
     <BuildPopoverContentInner
       variant={variant}
+      buildRuns={historyResult.data}
       selectedRunId={selectedRunId}
-      onRunClick={onRunClick}
-      runs={historyResult.data}
+      onRowActivate={onRowActivate}
     />
   );
 }

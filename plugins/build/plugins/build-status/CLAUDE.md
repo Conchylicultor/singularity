@@ -45,14 +45,16 @@ disappearing.
     - `BuildStatusDot`
 - Cross-plugin:
   - Imported by:
-    - `build`
     - `build/build-info`
     - `build/build-termination`
+    - `build/runs-arm`
 - Core:
   - Exports (types):
     - `BuildRunOutcome`
     - `BuildStatus`
   - Exports (values):
+    - `BUILD_EXIT_HARD_KILLED`
+    - `BUILD_EXIT_SIGNAL_BASE`
     - `BUILD_EXIT_SUPERSEDED`
     - `buildStatusOf`
     - `killedSignalName`

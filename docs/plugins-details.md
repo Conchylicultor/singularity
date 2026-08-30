@@ -749,6 +749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
             - Exports (values):
               - `_deployDeployments`
+              - `_deployRuns`
               - `deploymentsServerResource`
             - Register: `defineJob('retention.deploy_runs')`
             - Resources:
@@ -819,8 +820,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
+          - Plugins:
+            - **`runs-arm`** — The deploy arm's presence on the merged run surface: the kind's label, its eight own columns (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) as real filterable and sortable SQL dimensions, and the list row that renders the CLI's refusal text verbatim beside the leg of an update that died. Contributes no row activation — see the plugin's CLAUDE.md. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+              - Web:
+                - Contributes:
+                  - `Runs.Kind`
+                  - `Runs.Row` → `DeployRunRow`
+                  - `Runs.Fields` "deploy" → `DeployRunFields`
+                - Uses:
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/relative-time.RelativeTime`
+                  - `runs.armNumber`
+                  - `runs.armText`
+                  - `runs.formatDuration`
+                  - `runs.runArmFields`
+                  - `runs.RunRowProps`
+                  - `runs.Runs`
+              - Server:
+                - Uses:
+                  - `apps/deploy/deployments._deployRuns`
+                  - `apps/deploy/servers._deployServers`
+                  - `runs.defineRunKind`
+                - Register: `defineRunKind('deploy')`
+              - Core:
+                - Uses: `runs.defineRunArmFields`
+                - Exports (types): `DeployRunStatus`
+                - Exports (values):
+                  - `DEPLOY_RUN_KIND`
+                  - `DEPLOY_STATUS_OUTCOME`
+                  - `deployRunFields`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and contributes the derived `status` field into the servers DataView plus the verify step of the SSH setup flow. Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its keyed live resource, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -1039,6 +1074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/health`
               - `apps/deploy/ssh-setup`
             - Extended by: `apps/deploy/health` (table `deploy_servers_ext_health`)
@@ -6474,7 +6510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `auth/google-maps/setup-wizard`
       - `auth/google/setup-wizard`
       - `auth/notion`
-      - `backup`
+      - `backup/runs-arm`
       - `backup/targets/google-drive`
       - `integrations/gmail`
       - `integrations/google-maps`
@@ -6649,23 +6685,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `DebugApp.Sidebar` "Backup" → `component`
     - Uses:
       - `apps/debug/shell.DebugApp`
-      - `auth.GrantAccessButton`
       - `config_v2.ConfigV2`
       - `config_v2/config-link.ConfigGearButton`
-      - `infra/endpoints.useEndpoint`
       - `infra/endpoints.useEndpointMutation`
       - `primitives/app-shell.sidebarNavItem`
-      - `primitives/css/clip.Clip`
-      - `primitives/css/fill.fillClasses`
+      - `primitives/css/rail.useRailGuard`
       - `primitives/css/rigid.rigidClass`
+      - `primitives/css/spacing.selfClass`
       - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
-      - `primitives/css/ui-kit.cn`
-      - `primitives/loading.Loading`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
+      - `runs.RunsDataView`
     - Exports (values): `backupPane`
   - Server:
     - Contributes: `ConfigV2.Register` "config"
@@ -6684,11 +6717,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `BackupSource`
       - `BackupTarget`
     - Register: `defineJob('backup.run')`
-    - Routes:
-      - `POST /api/backup/run`
-      - `GET /api/backup/runs`
+    - Routes: `POST /api/backup/run`
   - Cross-plugin:
     - Imported by:
+      - `backup/runs-arm`
       - `backup/sources/attachments`
       - `backup/sources/claude-settings`
       - `backup/sources/config`
@@ -6709,12 +6741,50 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `BackupSourceReport`
       - `BackupTargetResult`
   - Shared:
-    - Exports (types): `BackupRun`
-    - Exports (values):
-      - `BackupRunSchema`
-      - `listBackupRuns`
-      - `runBackup`
+    - Exports (values): `runBackup`
   - Plugins:
+    - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the list row — the backup panel's expand/collapse card, moved — carrying the manifest's source reports and the per-target outcome with its Grant access remediation. Contributes no row activation, which is what lets the row hold those controls. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup is host-global) and for message (a backup's failure words are per-target).
+      - Web:
+        - Contributes:
+          - `Runs.Kind`
+          - `Runs.Row` → `BackupRunRow`
+          - `Runs.Fields` "backup" → `BackupRunFields`
+        - Uses:
+          - `auth.GrantAccessButton`
+          - `primitives/collapsible.Collapsible`
+          - `primitives/collapsible.CollapsibleChevron`
+          - `primitives/collapsible.CollapsibleContent`
+          - `primitives/collapsible.CollapsibleTrigger`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/relative-time.RelativeTime`
+          - `runs.armNumber`
+          - `runs.armText`
+          - `runs.formatDuration`
+          - `runs.runArmFields`
+          - `runs.RunRowProps`
+          - `runs.Runs`
+      - Server:
+        - Uses:
+          - `backup._backupRuns`
+          - `runs.defineRunKind`
+        - Register: `defineRunKind('backup')`
+      - Core:
+        - Uses: `runs.defineRunArmFields`
+        - Exports (types): `BackupRunStatus`
+        - Exports (values):
+          - `BACKUP_RUN_KIND`
+          - `BACKUP_RUN_STATUSES`
+          - `BACKUP_STATUS_OUTCOME`
+          - `backupRunFields`
+          - `backupSources`
+          - `backupTargetResults`
     - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
       - Plugins:
         - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
@@ -6893,9 +6963,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `apps-core/tabs.navigate`
       - `apps/debug/shell.DebugApp`
-      - `build/build-status.BUILD_STATUS_OPTIONS`
-      - `build/build-status.BuildStatusChip`
-      - `build/build-status.BuildStatusDot`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
@@ -6903,8 +6970,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/app-shell.sidebarNavItem`
       - `primitives/auto-scroll.JumpToBottomButton`
       - `primitives/auto-scroll.useStickyScroll`
-      - `primitives/css/badge.Badge`
-      - `primitives/css/inline.Inline`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
@@ -6915,8 +6980,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.cn`
       - `primitives/css/ui-kit.ControlSizeProvider`
-      - `primitives/data-view.DataView`
-      - `primitives/data-view.defineDataView`
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/icon-button.IconButton`
       - `primitives/live-state.useNotificationsChannelStatuses`
@@ -6928,10 +6991,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
-      - `primitives/pane.useOpenPane`
       - `primitives/popover.InlinePopover`
-      - `primitives/relative-time.RelativeTime`
       - `primitives/tooltip.WithTooltip`
+      - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
     - Exports (values):
@@ -7000,6 +7062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/build-info`
       - `build/build-logs`
       - `build/build-profiling`
+      - `build/runs-arm`
       - `debug/reports`
       - `shell/global-action-bar`
   - Shared:
@@ -7146,14 +7209,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BuildStatusDot`
       - Cross-plugin:
         - Imported by:
-          - `build`
           - `build/build-info`
           - `build/build-termination`
+          - `build/runs-arm`
       - Core:
         - Exports (types):
           - `BuildRunOutcome`
           - `BuildStatus`
         - Exports (values):
+          - `BUILD_EXIT_HARD_KILLED`
+          - `BUILD_EXIT_SIGNAL_BASE`
           - `BUILD_EXIT_SUPERSEDED`
           - `buildStatusOf`
           - `killedSignalName`
@@ -7263,6 +7328,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `build`
           - `build/build-commits`
+          - `build/runs-arm`
+      - Core:
+        - Exports (values): `BUILD_RUN_KIND`
+    - **`runs-arm`** — The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
+      - Web:
+        - Contributes:
+          - `Runs.Kind`
+          - `Runs.Leading` → `BuildRunLeading`
+          - `Runs.Fields` "build" → `BuildRunFields`
+        - Uses:
+          - `build.buildDetailPane`
+          - `build/build-status.BUILD_STATUS_OPTIONS`
+          - `build/build-status.BuildStatusChip`
+          - `build/build-status.BuildStatusDot`
+          - `primitives/css/badge.Badge`
+          - `runs.armNumber`
+          - `runs.armTags`
+          - `runs.armText`
+          - `runs.runArmFields`
+          - `runs.Runs`
+      - Server:
+        - Uses:
+          - `build/run-ledger._buildRuns`
+          - `infra/paths.currentWorktreeName`
+          - `runs.defineRunKind`
+        - Register: `defineRunKind('build')`
+      - Core:
+        - Uses:
+          - `build/run-ledger.BUILD_RUN_KIND`
+          - `runs.defineRunArmFields`
+        - Exports (values): `buildRunArmFields`
     - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
       - Web:
         - Uses:
@@ -11114,6 +11210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/usage-rank`
       - `release`
       - `reports`
+      - `runs`
       - `search/engine`
       - `shell/notifications`
       - `stats/cost`
@@ -14478,6 +14575,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities`
           - `primitives/data-view/custom-columns`
           - `release`
+          - `runs`
       - Server:
         - Exports (types):
           - `FieldFilterSqlContribution`
@@ -15173,7 +15271,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `triggerResourcePush`
           - `unboundedWindowKeys`
           - `withNotifyBatch`
-    - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots: [...]` declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
+    - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/codegen`
@@ -15555,6 +15653,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/thumbnails`
               - `apps/sonata/look`
               - `apps/sonata/view-options`
+              - `build`
               - `code-explorer`
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
@@ -16475,6 +16574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/mutation-errors`
           - `review/code-review`
           - `review/plugin-changes`
+          - `runs`
           - `screenshot`
           - `search/engine`
           - `search/quick-find`
@@ -17351,6 +17451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-logs`
           - `build/build-profiling`
           - `build/deployment`
+          - `build/runs-arm`
           - `build/serve-composition`
           - `build/server-build-id`
           - `code-explorer`
@@ -17394,6 +17495,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `release`
           - `release/bundles`
+          - `release/runs-arm`
           - `review/plugin-changes`
           - `stats/commits`
           - `stats/cost`
@@ -21335,6 +21437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/ssh-setup`
           - `apps/mail/reading-pane`
           - `apps/workflows/engine`
+          - `backup/runs-arm`
           - `build/build-logs`
           - `code-explorer/commit-detail`
           - `conversations/agents`
@@ -21487,6 +21590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -21518,10 +21622,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/steps/llm-prompt`
               - `auth`
               - `auth/apple-signing/setup-wizard`
-              - `build`
+              - `backup/runs-arm`
               - `build/build-info`
               - `build/build-status`
               - `build/deployment`
+              - `build/runs-arm`
               - `build/serve-composition`
               - `config_v2/settings`
               - `conversations/conversation-category`
@@ -21596,6 +21701,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/file-links`
+              - `release/runs-arm`
               - `reorder`
               - `reports/adaptive-bar`
               - `reports/caret-flight`
@@ -21608,6 +21714,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
               - `review/plugin-changes/file-changes`
+              - `runs`
+              - `runs/run-outcome`
               - `shell/notifications`
               - `tasks/attempt-status`
               - `tasks/attempt-view`
@@ -21795,7 +21903,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/scrubber`
               - `apps/studio/graph`
               - `apps/website/demos/release-switcher`
-              - `backup`
               - `build/build-logs`
               - `code-explorer`
               - `config_v2/settings`
@@ -21839,6 +21946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating`
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/remote-deploy`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
@@ -21852,6 +21960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/demos/plugin-pyramid`
               - `apps/website/demos/sample-app`
+              - `backup/runs-arm`
               - `config_v2/fields`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -21878,6 +21987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/avatar`
               - `primitives/date-picker`
+              - `runs`
               - `stats/commits`
               - `tasks/task-dependencies`
               - `ui/theme-engine/theme-customizer`
@@ -22070,6 +22180,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/servers`
               - `apps/deploy/ssh-setup`
               - `apps/events/event-list`
@@ -22094,7 +22205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/workflows/editor`
               - `auth`
               - `auth/apple-signing/setup-wizard`
-              - `backup`
+              - `backup/runs-arm`
               - `build/deployment`
               - `code-explorer/commit-detail`
               - `config_v2/config-link`
@@ -22161,6 +22272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
+              - `runs`
               - `shell/notifications`
               - `tasks/attempt-view`
               - `tasks/task-draft-form`
@@ -22249,7 +22361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
-              - `build`
+              - `backup/runs-arm`
               - `build/build-info`
               - `build/build-status`
               - `build/deployment`
@@ -22298,6 +22410,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/render-loop`
               - `reports/turn-unconfirmed`
               - `reports/viewport-escape`
+              - `runs/run-outcome`
               - `tasks/attempt-view`
               - `tasks/task-deps-tree`
               - `tasks/task-draft-form`
@@ -22696,6 +22809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `railClass`
           - Cross-plugin:
             - Imported by:
+              - `backup`
               - `primitives/css/control-panel`
               - `primitives/css/ui-kit`
           - Web:
@@ -22718,6 +22832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/shell`
               - `auth`
               - `backup`
+              - `backup/runs-arm`
               - `build`
               - `build/build-info`
               - `build/build-logs`
@@ -23001,6 +23116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/health`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -23096,6 +23212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
+              - `backup/runs-arm`
               - `build`
               - `build/build-info`
               - `build/build-logs`
@@ -23274,6 +23391,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
+              - `runs`
               - `screenshot`
               - `screenshot/draw-on-app`
               - `search/quick-find`
@@ -23369,6 +23487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/timeline`
               - `debug/trace/pane`
               - `infra/health`
+              - `runs/run-outcome`
               - `shell/global-action-bar`
               - `tasks/attempt-view`
               - `tasks/task-status`
@@ -23504,6 +23623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/composition`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
+              - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/health`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -23597,6 +23717,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
+              - `backup/runs-arm`
               - `build`
               - `build/build-info`
               - `build/build-logs`
@@ -23771,6 +23892,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
               - `review/plugin-changes/file-changes`
+              - `runs`
               - `screenshot`
               - `screenshot/draw-on-app`
               - `search/quick-find`
@@ -24094,6 +24216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth/google-maps/setup-wizard`
               - `auth/google/setup-wizard`
               - `backup`
+              - `backup/runs-arm`
               - `build`
               - `build/build-fix`
               - `build/build-info`
@@ -24512,7 +24635,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+          - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -24690,7 +24813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+        - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
         - Uses:
           - `config_v2.getConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -24717,7 +24840,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer`
           - `apps/workflows/definitions`
           - `apps/workflows/executions`
-          - `build`
           - `code-explorer`
           - `config_v2/settings`
           - `conversations/agents`
@@ -24769,6 +24891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/tree`
           - `primitives/data-view/view-order`
           - `release`
+          - `runs`
           - `tasks/task-deps-tree`
           - `tasks/task-list`
           - `ui/tweakcn/community-browser`
@@ -24999,6 +25122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `conversations/all-conversations`
               - `primitives/data-view/custom-columns`
+              - `primitives/data-view/union-query`
               - `release`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
@@ -25077,6 +25201,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree.useTreeListContext`
               - `primitives/tree.useTreeRow`
             - Exports (types): `TreeViewOptions`
+        - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
+          - Server:
+            - Uses:
+              - `primitives/data-view/server-query.compileWhere`
+              - `primitives/data-view/server-query.FieldColumnMap`
+              - `primitives/data-view/server-query.OperatorSqlResolver`
+              - `primitives/keyset.buildSortKeys`
+              - `primitives/keyset.ColumnExpr`
+              - `primitives/keyset.orderByClauses`
+              - `primitives/keyset.seekPredicate`
+              - `primitives/keyset.SortKey`
+            - Exports (types):
+              - `CompiledUnionPage`
+              - `CompileUnionPageArgs`
+              - `UnionArm`
+            - Exports (values): `compileUnionPage`
+          - Cross-plugin:
+            - Imported by: `runs`
+          - Core:
+            - Exports (types):
+              - `UnionColumnSpec`
+              - `UnionColumnSpecs`
+            - Exports (values): `UnionCursorMismatchError`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Uses:
@@ -25839,7 +25986,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/threads`
           - `conversations/all-conversations`
           - `infra/query-resource`
+          - `primitives/data-view/union-query`
           - `release`
+          - `runs`
       - Server:
         - Exports (types):
           - `ColumnExpr`
@@ -26209,6 +26358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review`
           - `review/code-review`
           - `review/plugin-changes`
+          - `runs`
           - `shell/global-action-bar`
           - `shell/notifications`
           - `tasks`
@@ -26314,7 +26464,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/steps/user-input`
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
-          - `backup`
           - `build`
           - `build/build-commits`
           - `build/build-info`
@@ -27016,6 +27165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch`
           - `reports`
           - `review`
+          - `runs`
           - `screenshot`
           - `stats`
           - `stats/cost`
@@ -27248,6 +27398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/start-page`
           - `apps/deploy/deploy-history`
           - `apps/deploy/deployments`
+          - `apps/deploy/deployments/runs-arm`
           - `apps/deploy/health`
           - `apps/deploy/remote-deploy`
           - `apps/events/event-list`
@@ -27266,7 +27417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/definitions`
           - `apps/workflows/engine`
           - `apps/workflows/executions`
-          - `build`
+          - `backup/runs-arm`
           - `build/build-info`
           - `build/serve-composition`
           - `conversations/all-conversations`
@@ -27286,6 +27437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/agent-notes/authorship`
           - `plugin-meta/plugin-health`
           - `primitives/sync-status`
+          - `runs`
           - `shell/notifications`
           - `tasks/task-header`
           - `tasks/task-list`
@@ -27582,6 +27734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reorder`
           - `reports`
           - `review/plugin-changes`
+          - `runs`
           - `shell`
           - `shell/action-bar`
           - `stats`
@@ -28318,6 +28471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `apps/deploy/deployments`
       - `auth/apple-signing`
+      - `release/runs-arm`
   - Plugins:
     - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
       - Server:
@@ -28355,10 +28509,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DIRTY_WORKTREE_REASON`
           - `namespaceHint`
           - `ReleaseManifestSchema`
+    - **`runs-arm`** — The release arm's presence on the merged run surface: the Release kind, plus the composition / target / platform / provenance columns only a release row has. Contributes no row activation — the release run-detail pane hangs off a composition pane keyed by a config-item id the ledger row does not carry. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
+      - Web:
+        - Contributes:
+          - `Runs.Kind`
+          - `Runs.Fields` "release" → `ReleaseRunFields`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `runs.armBool`
+          - `runs.armText`
+          - `runs.runArmFields`
+          - `runs.Runs`
+      - Server:
+        - Uses:
+          - `infra/paths.currentWorktreeName`
+          - `release._releaseRuns`
+          - `runs.defineRunKind`
+        - Register: `defineRunKind('release')`
+      - Core:
+        - Uses: `runs.defineRunArmFields`
+        - Exports (values):
+          - `RELEASE_RUN_KIND`
+          - `releaseRunArmFields`
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×206: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.WebRegister` ×207: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -28387,7 +28563,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×205: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.Register` ×206: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -28985,6 +29161,123 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view.DiffOrImageView`
               - `primitives/loading.Loading`
               - `review/plugin-changes.PluginChangesSlots`
+
+- **`runs`** — The merged run surface: <RunsDataView> over the base field schema plus every arm's contributed fields, and the four seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Row / Runs.Leading for the list row, Runs.Fields for its own columns). Presentation is dispatched per kind; the schema never is, so filter / sort / group-by mean one thing across every ledger. The run-kind registry and the one query behind the merged run space: defineRunKind binds a domain's own ledger into the union (base columns typed against the base declaration, extra columns typed against the arm's own field declaration), POST /api/runs/query compiles every registered arm into one keyset page, and runs.revision is the scalar tick that refreshes the loaded window. Names no run kind.
+  - Web:
+    - Slots:
+      - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
+      - `Runs.Row` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`
+      - `Runs.Leading` ← `build.runs-arm`
+      - `Runs.Fields` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
+    - Uses:
+      - `infra/endpoints.fetchEndpoint`
+      - `primitives/css/badge.Badge`
+      - `primitives/css/cluster.Cluster`
+      - `primitives/css/fill.Fill`
+      - `primitives/css/spacing.Stack`
+      - `primitives/css/text.Text`
+      - `primitives/data-view.DataView`
+      - `primitives/data-view.DataViewDensity`
+      - `primitives/data-view.defineDataView`
+      - `primitives/data-view.defineFieldExtensions`
+      - `primitives/live-state.matchResource`
+      - `primitives/live-state.useResource`
+      - `primitives/pane.useOpenPane`
+      - `primitives/relative-time.RelativeTime`
+      - `primitives/slot-render.defineDispatchSlot`
+      - `runs/run-outcome.RUN_OUTCOME_OPTIONS`
+      - `runs/run-outcome.RunOutcomeChip`
+      - `runs/run-outcome.RunOutcomeDot`
+    - Exports (types):
+      - `RunKindContribution`
+      - `RunRowProps`
+      - `RunsDataViewProps`
+    - Exports (values):
+      - `armBool`
+      - `armDate`
+      - `armNumber`
+      - `armTags`
+      - `armText`
+      - `formatDuration`
+      - `runArmFields`
+      - `Runs`
+      - `RUNS_VIEW`
+      - `RunsDataView`
+  - Server:
+    - Contributes: `resource.declare` "runs.revision"
+    - Uses:
+      - `database.db`
+      - `fields/server-capabilities.resolveFieldFilterSql`
+      - `infra/endpoints.HttpError`
+      - `infra/endpoints.implement`
+      - `primitives/data-view/union-query.compileUnionPage`
+      - `primitives/keyset.keyValuesOf`
+    - Exports (types):
+      - `RunArmBaseColumns`
+      - `RunKind`
+      - `RunKindSpec`
+    - Exports (values):
+      - `defineRunKind`
+      - `durationMsExpr`
+      - `getRunKinds`
+    - Resources: `runs.revision` (push)
+    - Routes: `POST /api/runs/query`
+  - Core:
+    - Uses:
+      - `infra/endpoints.defineEndpoint`
+      - `primitives/data-view.FilterGroupSchema`
+      - `primitives/live-state.resourceDescriptor`
+      - `runs/run-outcome.RunOutcomeSchema`
+    - Exports (types):
+      - `QueryRunsBody`
+      - `QueryRunsResponse`
+      - `RunArmBaseColumnId`
+      - `RunArmFieldSpecs`
+      - `RunBaseColumnId`
+      - `RunBaseColumnNullable`
+      - `RunColumnSpec`
+      - `RunDerivedColumnId`
+      - `UnionRun`
+    - Exports (values):
+      - `defineRunArmFields`
+      - `queryRuns`
+      - `QueryRunsBodySchema`
+      - `QueryRunsResponseSchema`
+      - `RUN_BASE_COLUMNS`
+      - `RUN_SEARCH_COLUMNS`
+      - `runRowKey`
+      - `runsRevisionResource`
+      - `UnionRunSchema`
+  - Cross-plugin:
+    - Imported by:
+      - `apps/deploy/deployments/runs-arm`
+      - `backup`
+      - `backup/runs-arm`
+      - `build`
+      - `build/runs-arm`
+      - `release/runs-arm`
+  - Plugins:
+    - **`run-outcome`** — The shared run-outcome display: the colour/label metadata, the derived filter options, and the dot / chip / badge every run kind renders its outcome through — so a build row and a backup row cannot disagree about what `failed` looks like.
+      - Web:
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/badge.BadgeVariant`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/status-dot.StatusDot`
+        - Exports (values):
+          - `RUN_OUTCOME_META`
+          - `RUN_OUTCOME_OPTIONS`
+          - `RunOutcomeBadge`
+          - `RunOutcomeChip`
+          - `RunOutcomeDot`
+      - Cross-plugin:
+        - Imported by: `runs`
+      - Core:
+        - Exports (types): `RunOutcome`
+        - Exports (values):
+          - `isRunInFlight`
+          - `RUN_OUTCOMES`
+          - `RunOutcomeSchema`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Web:

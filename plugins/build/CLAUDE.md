@@ -94,9 +94,6 @@ see its docblock.
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
-    - `build/build-status.BUILD_STATUS_OPTIONS`
-    - `build/build-status.BuildStatusChip`
-    - `build/build-status.BuildStatusDot`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`
@@ -104,8 +101,6 @@ see its docblock.
     - `primitives/app-shell.sidebarNavItem`
     - `primitives/auto-scroll.JumpToBottomButton`
     - `primitives/auto-scroll.useStickyScroll`
-    - `primitives/css/badge.Badge`
-    - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
@@ -116,8 +111,6 @@ see its docblock.
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
@@ -129,10 +122,9 @@ see its docblock.
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/pane.useOpenPane`
     - `primitives/popover.InlinePopover`
-    - `primitives/relative-time.RelativeTime`
     - `primitives/tooltip.WithTooltip`
+    - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
   - Exports (values):
@@ -201,6 +193,7 @@ see its docblock.
     - `build/build-info`
     - `build/build-logs`
     - `build/build-profiling`
+    - `build/runs-arm`
     - `debug/reports`
     - `shell/global-action-bar`
 - Shared:
@@ -220,6 +213,7 @@ see its docblock.
   - **`build-termination`** — Per-run termination endpoint: what the host-global signal-origin sink recorded about the death of one build run (which signal, and who sent it).
   - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint. The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.
   - **`run-ledger`** — Lean build-runs ledger leaf: the build_runs table def + the CLI build-run recorder, importable by the `./singularity build` CLI without the heavy build barrel (which pulls config_v2/notifications).
+  - **`runs-arm`** — The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
   - **`serve-composition`** — Serve capability for a composition: the live-serve toggle panel, the enable→build hook (a `build --composition <id>` of THIS checkout), the served-liveness read (the server-resolved namespace plus the composition.json marker, not the autoBuild intent), and the delete flow — which asks what the composition owns across every checkout, names it in a confirm dialog, and reclaims it before the manifest row goes. Consumed by Studio's Build & serve section and compositions list, and by the deploy pane's Test locally section. Serve-liveness read for a composition: WHERE this backend's checkout serves it (the server-resolved namespace + url) and whether anything is actually there (the composition.json marker), plus the reset-to-first-launch endpoint — wipes ONLY that namespace's DB + config back to what a serve build provisions on a fresh serve, then restarts its backend. Never touches the checkout's own app. Also answers what a composition owns across EVERY checkout that has served it (the marker scan behind the delete confirmation) and reclaims that whole set, per-namespace outcomes reported individually.
   - **`server-build-id`** — Served-bundle pin leaf: reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call. A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
 

@@ -44,6 +44,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
+    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/remote-deploy`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -75,10 +76,11 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/workflows/steps/llm-prompt`
     - `auth`
     - `auth/apple-signing/setup-wizard`
-    - `build`
+    - `backup/runs-arm`
     - `build/build-info`
     - `build/build-status`
     - `build/deployment`
+    - `build/runs-arm`
     - `build/serve-composition`
     - `config_v2/settings`
     - `conversations/conversation-category`
@@ -153,6 +155,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/file-links`
+    - `release/runs-arm`
     - `reorder`
     - `reports/adaptive-bar`
     - `reports/caret-flight`
@@ -165,6 +168,8 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
+    - `runs`
+    - `runs/run-outcome`
     - `shell/notifications`
     - `tasks/attempt-status`
     - `tasks/attempt-view`

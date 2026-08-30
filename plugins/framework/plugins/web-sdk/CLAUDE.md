@@ -30,20 +30,32 @@ Slots are grouped in a namespace object per plugin (`export const MyPlugin = { P
 
 ### Declaring the slots you own
 
-A plugin lists the slots it owns in `slots: [...]`, the exact sibling of
-`contributions`:
+A plugin declares the slots it owns in `slots`, the sibling of `contributions`.
+It is a **record, never an array** — the KEY is what names the slot, because a
+slot's id is `` `${pluginId}.${key}` ``:
 
 ```typescript
 export default {
   description: "…",
-  slots: [MyPlugin, myDetailPane],   // a slot group, and a pane
+  slots: MyPlugin,                    // a slot group: its own keys are the names
+  contributions: [ … ],
+} satisfies PluginDefinition;
+
+export default {
+  description: "…",
+  slots: { canvas: canvasPane },      // a lone slot/pane needs a key to name it
   contributions: [ … ],
 } satisfies PluginDefinition;
 ```
 
-An entry is **a slot, or an object whose own values are slots** — a slot group,
-a pane (its `Actions` slot). Entries are read
-**one level deep**; a slot nested deeper is listed on its own.
+A value is **a slot, or an object whose own values are slots** — a slot group, a
+pane (its `Actions` slot). Values are read **one level deep**; a slot nested
+deeper is declared on its own key.
+
+`slots: [MyPlugin]` is the old form and does not work: an array is an object, so
+its key path would be `"0.sidebar"` — an id nobody wrote. `collectSlots` throws
+naming the fix, but `SlotRecord` is `object`, so `tsc` does not catch it first
+(see task-1787890773432-i2biih).
 
 This is not bookkeeping. It is what makes a slot **discoverable** (the docs and
 the reorder manifest read the declaration, not an export-graph crawl that

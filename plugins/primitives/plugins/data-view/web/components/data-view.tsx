@@ -59,6 +59,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     props.storageKey,
     entries,
     props.defaultView,
+    props.pinnedView,
   );
   return (
     <DataViewShellFrame
@@ -69,6 +70,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       actions={props.actions}
       creators={props.creators}
       density={props.density}
+      pinnedView={props.pinnedView}
     >
       {(activeInstance, chrome, readyModel) => (
         <DataViewBody<TRow>
@@ -101,6 +103,8 @@ export function DataViewShellFrame(props: {
   actions?: ReactNode;
   creators?: CreateOption[];
   density?: DataViewDensity;
+  /** Present → this host shows one named instance and paints no switcher. */
+  pinnedView?: string;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
    *  shell is the one place that narrowed the union, so a host never re-derives
    *  (or forgets) that narrowing at its own call site. */
@@ -118,6 +122,7 @@ export function DataViewShellFrame(props: {
     actions,
     creators,
     density,
+    pinnedView,
     children,
   } = props;
 
@@ -157,8 +162,16 @@ export function DataViewShellFrame(props: {
   }
 
   const { instances, activeId } = viewModel;
-  const activeInstance =
-    instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
+  const pinned = pinnedView !== undefined;
+  const matched = instances.find((r) => r.instance.id === activeId) ?? null;
+  // The first-instance fallback is for an UNPINNED surface, whose active id can
+  // legitimately be stale (a renamed instance, a device that never chose one).
+  // A pinned surface must not have it: `resolveActiveId` returns "" precisely to
+  // say "the pinned instance is not authored", and falling through to
+  // `instances[0]` would answer that by rendering someone else's tab — the exact
+  // silent-wrong-list failure pinning exists to prevent, and invisible on any
+  // surface that has instances at all.
+  const activeInstance = pinned ? matched : (matched ?? instances[0] ?? null);
 
   const activeViewId = activeInstance?.instance.id ?? "";
 
@@ -176,8 +189,17 @@ export function DataViewShellFrame(props: {
         <ShellToolbar title={title} actions={actions} creators={creators} />
         <div className="rail-follow py-md">
           <Placeholder>
-            No views configured — author{" "}
-            <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+            {pinned ? (
+              <>
+                No view instance <code>{pinnedView}</code> in{" "}
+                <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+              </>
+            ) : (
+              <>
+                No views configured — author{" "}
+                <code>config/&lt;plugin&gt;/{storageKey}.jsonc</code>
+              </>
+            )}
           </Placeholder>
         </div>
       </Stack>
@@ -187,7 +209,13 @@ export function DataViewShellFrame(props: {
   // The switcher needs only model inputs, so the shell builds the node once per
   // surface and the body renders it inside the toolbar as an opaque node.
   const chrome: DataViewShellChrome = {
-    switcher: (
+    // A pinned host paints NO switcher — the node itself, not just its count.
+    // `switcherCount` gates only the COMPACT toolbar (`switcherCount > 1`); the
+    // wide toolbar renders `{switcher}` unconditionally, so a count of 1 alone
+    // would leave a wide pinned surface showing the full tab strip, whose clicks
+    // write a shared selection this host then ignores — a dead switcher, which
+    // is worse than the shared-selection problem pinning solves.
+    switcher: pinned ? null : (
       <EditableViewSwitcher
         instances={instances}
         activeId={activeViewId}
@@ -196,7 +224,7 @@ export function DataViewShellFrame(props: {
         viewVariants={viewVariants}
       />
     ),
-    switcherCount: instances.length,
+    switcherCount: pinned ? 1 : instances.length,
     title,
     actions,
     density,

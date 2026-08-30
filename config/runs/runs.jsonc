@@ -1,0 +1,159 @@
+// @hash 6ec84829688d
+{
+  // ONE DataView over every ledger on this machine — builds, backups, releases,
+  // deploys — merged at read time. The tabs below are that surface's view
+  // instances, and a tab is nothing but a filter: each scope is an ORDINARY
+  // editable `filter`, the same tree the Filter pill edits and writes straight
+  // back into this file. "Builds" is definitionally the view whose filter is
+  // `kind is build`; edit it and that is the answer. Nothing re-derives or
+  // enforces these anywhere else, so adding "failed builds this week" costs a
+  // row here rather than code.
+  //
+  // The rules are written against the BASE fields every arm projects
+  // (`RUN_BASE_COLUMNS`, plugins/runs/core/internal/base-columns.ts) plus the
+  // `kind` discriminator, and the REGISTERED operator ids of the `enum` field
+  // type — `is` and `is-any-of`
+  // (plugins/fields/plugins/enum/plugins/filter/web/operator-set.ts). A wrong
+  // fieldId or operatorId fails SOFT: the rule is dropped and the tab silently
+  // shows everything, so check a tab actually narrows after editing it.
+  //
+  // Base fields only, deliberately. A rule naming an ARM field (`build.targets`,
+  // `backup.archiveSize`, …) prunes every other arm out of the union entirely —
+  // a useful thing to ask, but a different question from the one a kind tab
+  // asks, and it would make "Builds" mean "builds that declare this column".
+  //
+  // Every row carries an explicit bare-slug `id` (config-stable-list-ids: it
+  // keys the saved per-view manual row order) and the started-newest-first sort
+  // that is the order anyone asks "what is happening" in.
+  "views": [
+    {
+      // The default for the build popover: what is in flight right now, which is
+      // the question the toolbar button is already being pressed to answer.
+      "id": "active",
+      "name": "Active",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "active",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "active-running",
+              "fieldId": "outcome",
+              "operatorId": "is",
+              "value": "running"
+            }
+          ]
+        }
+      }
+    },
+    {
+      // No filter at all — every kind, interleaved, newest first. The unscoped
+      // answer the four separate ledgers could never give.
+      "id": "recent",
+      "name": "Recent",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }]
+      }
+    },
+    {
+      "id": "builds",
+      "name": "Builds",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "builds",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "builds-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "build"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "backups",
+      "name": "Backups",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "backups",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "backups-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "backup"
+            }
+          ]
+        }
+      }
+    },
+    {
+      // Releases and deploys are one question — "what went out" — asked in two
+      // steps, so they share a tab rather than each getting a thin one.
+      "id": "shipping",
+      "name": "Shipping",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "shipping",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "shipping-kinds",
+              "fieldId": "kind",
+              "operatorId": "is-any-of",
+              "value": ["release", "deploy"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      // `partial` sits beside `failed` because a half-finished backup is
+      // something that needs looking at, which is what this tab is for.
+      "id": "failed",
+      "name": "Failed",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "startedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "failed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "failed-outcomes",
+              "fieldId": "outcome",
+              "operatorId": "is-any-of",
+              "value": ["failed", "partial"]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

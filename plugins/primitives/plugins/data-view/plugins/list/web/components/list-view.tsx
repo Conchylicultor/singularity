@@ -281,7 +281,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         key={key}
         selected={key === props.selectedRowId}
         size={rowSize}
-        onClick={() => props.onRowActivate?.(row)}
+        // Straight through, `undefined` and all — NEVER `() => activate?.()`.
+        // `Row` infers its element from `onClick`, so a closure is never null and
+        // every row becomes a `<button>` that then nests whatever `renderRow`
+        // put inside it. A non-activating row is a plain container, which is
+        // what lets its body hold a real control.
+        onClick={props.rowActivation?.(row)}
         icon={options.leading?.(row)}
         actions={revealed?.({
           row,

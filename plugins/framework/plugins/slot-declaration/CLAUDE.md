@@ -7,7 +7,7 @@ The slot contract, split out of `web-sdk` so it can be read without React.
   which render method got attached, and not grepped from a constructor's name.
 - The created-set — `defineSlot` (the single funnel every constructor calls)
   appends every slot at construction, so nothing has to be kept in sync.
-- `collectSlots` — the ONE normalisation of a plugin's `slots: [...]`
+- `collectSlots` — the ONE normalisation of a plugin's `slots` RECORD
   declaration (one level deep), shared by `PluginProvider`, the slots facet and
   the build-time orphan guard, so the three cannot disagree.
 
@@ -22,7 +22,7 @@ import — keep it that way.
 
 ## Plugin reference
 
-- Description: The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots: [...]` declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
+- Description: The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/codegen`

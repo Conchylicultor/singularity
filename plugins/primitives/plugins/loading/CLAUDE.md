@@ -111,7 +111,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/workflows/steps/user-input`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
-    - `backup`
     - `build`
     - `build/build-commits`
     - `build/build-info`

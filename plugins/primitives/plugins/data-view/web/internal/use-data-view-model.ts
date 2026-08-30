@@ -156,12 +156,14 @@ export function useDataViewModel(
   storageKey: string,
   entries: ViewSourceEntry<DataViewContribution>[],
   defaultView: string | undefined,
+  pinnedView?: string,
 ): ViewModel {
   const core = useViewModel<DataViewContribution>(
     storageKey,
     dataViewDescriptors,
     entries,
     defaultView,
+    pinnedView,
   );
   const ephemeral = useViewEphemeral(storageKey);
 

@@ -75,6 +75,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `apps/story/shell`
     - `auth`
     - `backup`
+    - `backup/runs-arm`
     - `build`
     - `build/build-info`
     - `build/build-logs`

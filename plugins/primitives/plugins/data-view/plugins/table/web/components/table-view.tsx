@@ -242,7 +242,15 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     rowKey: props.rowKey,
     sortState: mapPrimary(props.state.sort),
     onToggleSort: (columnId: string) => props.setSort(columnId),
-    onRowClick: props.onRowActivate,
+    // `DataTable.onRowClick` is a TABLE-level prop (and has consumers outside
+    // data-view), so the table's granularity stays table-level: rows are
+    // clickable iff the surface resolves activation at all. A row this resolver
+    // answers `undefined` for simply does nothing when clicked — it does not get
+    // its own plain-container element the way a list row does. Per-row here
+    // means a `DataTable` change, which is its own.
+    onRowClick: props.rowActivation
+      ? (row: unknown) => props.rowActivation?.(row)?.()
+      : undefined,
     selectedRowId: props.selectedRowId,
     filter: undefined,
     emptyLabel: "No results found",

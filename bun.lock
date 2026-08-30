@@ -258,6 +258,10 @@
       "name": "@singularity/plugin-apps-deploy-deployments",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm": {
+      "name": "@singularity/plugin-apps-deploy-deployments-runs-arm",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/health": {
       "name": "@singularity/plugin-apps-deploy-health",
       "version": "0.0.1",
@@ -1146,6 +1150,10 @@
       "name": "@singularity/plugin-backup",
       "version": "0.0.1",
     },
+    "plugins/backup/plugins/runs-arm": {
+      "name": "@singularity/plugin-backup-runs-arm",
+      "version": "0.0.1",
+    },
     "plugins/backup/plugins/sources": {
       "name": "@singularity/plugin-backup-sources",
       "version": "0.0.1",
@@ -1240,6 +1248,10 @@
     },
     "plugins/build/plugins/run-ledger": {
       "name": "@singularity/plugin-build-run-ledger",
+      "version": "0.0.1",
+    },
+    "plugins/build/plugins/runs-arm": {
+      "name": "@singularity/plugin-build-runs-arm",
       "version": "0.0.1",
     },
     "plugins/build/plugins/serve-composition": {
@@ -4085,6 +4097,10 @@
       "name": "@singularity/plugin-primitives-data-view-tree",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/data-view/plugins/union-query": {
+      "name": "@singularity/plugin-primitives-data-view-union-query",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/data-view/plugins/view-core": {
       "name": "@singularity/plugin-primitives-data-view-view-core",
       "version": "0.0.1",
@@ -4487,6 +4503,10 @@
       "name": "@singularity/plugin-release-bundles",
       "version": "0.0.1",
     },
+    "plugins/release/plugins/runs-arm": {
+      "name": "@singularity/plugin-release-runs-arm",
+      "version": "0.0.1",
+    },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
       "version": "0.0.1",
@@ -4593,6 +4613,14 @@
     },
     "plugins/review/plugins/plugin-changes/plugins/file-changes": {
       "name": "@singularity/plugin-review-plugin-changes-file-changes",
+      "version": "0.0.1",
+    },
+    "plugins/runs": {
+      "name": "@singularity/plugin-runs",
+      "version": "0.0.1",
+    },
+    "plugins/runs/plugins/run-outcome": {
+      "name": "@singularity/plugin-runs-run-outcome",
       "version": "0.0.1",
     },
     "plugins/screenshot": {
@@ -5872,6 +5900,8 @@
 
     "@singularity/plugin-apps-deploy-deployments": ["@singularity/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 
+    "@singularity/plugin-apps-deploy-deployments-runs-arm": ["@singularity/plugin-apps-deploy-deployments-runs-arm@workspace:plugins/apps/plugins/deploy/plugins/deployments/plugins/runs-arm"],
+
     "@singularity/plugin-apps-deploy-health": ["@singularity/plugin-apps-deploy-health@workspace:plugins/apps/plugins/deploy/plugins/health"],
 
     "@singularity/plugin-apps-deploy-local-serve": ["@singularity/plugin-apps-deploy-local-serve@workspace:plugins/apps/plugins/deploy/plugins/local-serve"],
@@ -6298,6 +6328,8 @@
 
     "@singularity/plugin-backup": ["@singularity/plugin-backup@workspace:plugins/backup"],
 
+    "@singularity/plugin-backup-runs-arm": ["@singularity/plugin-backup-runs-arm@workspace:plugins/backup/plugins/runs-arm"],
+
     "@singularity/plugin-backup-sources": ["@singularity/plugin-backup-sources@workspace:plugins/backup/plugins/sources"],
 
     "@singularity/plugin-backup-sources-attachments": ["@singularity/plugin-backup-sources-attachments@workspace:plugins/backup/plugins/sources/plugins/attachments"],
@@ -6345,6 +6377,8 @@
     "@singularity/plugin-build-deployment": ["@singularity/plugin-build-deployment@workspace:plugins/build/plugins/deployment"],
 
     "@singularity/plugin-build-run-ledger": ["@singularity/plugin-build-run-ledger@workspace:plugins/build/plugins/run-ledger"],
+
+    "@singularity/plugin-build-runs-arm": ["@singularity/plugin-build-runs-arm@workspace:plugins/build/plugins/runs-arm"],
 
     "@singularity/plugin-build-serve-composition": ["@singularity/plugin-build-serve-composition@workspace:plugins/build/plugins/serve-composition"],
 
@@ -7686,6 +7720,8 @@
 
     "@singularity/plugin-primitives-data-view-tree": ["@singularity/plugin-primitives-data-view-tree@workspace:plugins/primitives/plugins/data-view/plugins/tree"],
 
+    "@singularity/plugin-primitives-data-view-union-query": ["@singularity/plugin-primitives-data-view-union-query@workspace:plugins/primitives/plugins/data-view/plugins/union-query"],
+
     "@singularity/plugin-primitives-data-view-view-core": ["@singularity/plugin-primitives-data-view-view-core@workspace:plugins/primitives/plugins/data-view/plugins/view-core"],
 
     "@singularity/plugin-primitives-data-view-view-order": ["@singularity/plugin-primitives-data-view-view-order@workspace:plugins/primitives/plugins/data-view/plugins/view-order"],
@@ -7866,6 +7902,8 @@
 
     "@singularity/plugin-release-bundles": ["@singularity/plugin-release-bundles@workspace:plugins/release/plugins/bundles"],
 
+    "@singularity/plugin-release-runs-arm": ["@singularity/plugin-release-runs-arm@workspace:plugins/release/plugins/runs-arm"],
+
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 
     "@singularity/plugin-reorder-edit-mode": ["@singularity/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
@@ -7919,6 +7957,10 @@
     "@singularity/plugin-review-plugin-changes-api-changes": ["@singularity/plugin-review-plugin-changes-api-changes@workspace:plugins/review/plugins/plugin-changes/plugins/api-changes"],
 
     "@singularity/plugin-review-plugin-changes-file-changes": ["@singularity/plugin-review-plugin-changes-file-changes@workspace:plugins/review/plugins/plugin-changes/plugins/file-changes"],
+
+    "@singularity/plugin-runs": ["@singularity/plugin-runs@workspace:plugins/runs"],
+
+    "@singularity/plugin-runs-run-outcome": ["@singularity/plugin-runs-run-outcome@workspace:plugins/runs/plugins/run-outcome"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

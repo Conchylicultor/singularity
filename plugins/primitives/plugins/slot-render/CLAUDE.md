@@ -312,6 +312,7 @@ the outcome too, with no separate code path.
     - `reorder`
     - `reports`
     - `review/plugin-changes`
+    - `runs`
     - `shell`
     - `shell/action-bar`
     - `stats`

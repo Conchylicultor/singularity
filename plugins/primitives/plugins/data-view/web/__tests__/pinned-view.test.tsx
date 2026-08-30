@@ -1,0 +1,154 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import {
+  PluginProvider,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
+import type { DataViewId } from "../../core";
+import { DataViewShellFrame } from "../components/data-view";
+import type {
+  ReadyViewModel,
+  ViewModel,
+} from "../internal/use-data-view-model";
+
+/**
+ * The pinned-instance contract, at the seam where it was nearly lost.
+ *
+ * `resolveActiveId` answers a pinned id that is not authored with `""` (proved
+ * in its own suite, beside it). This asserts the other half: that the SHELL
+ * renders that as "not authored" rather than falling through to `instances[0]`.
+ * The fallback is correct for an unpinned surface and catastrophic for a pinned
+ * one — a mis-pinned backup panel silently rendering the Active tab is a
+ * different list that looks like a working one — and it is invisible on any
+ * surface that has instances at all, which is every real surface.
+ */
+
+const plugin = {
+  id: "data-view-pinned-view-test",
+  description: "pinned-view shell fixture",
+  contributions: [],
+} as unknown as LoadedPlugin;
+
+const STORAGE_KEY = "runs" as DataViewId;
+
+function inst(id: string) {
+  return {
+    instance: { id, name: id, type: "list" },
+    viewType: {},
+  };
+}
+
+/** Three authored instances — the shape `config/runs/runs.jsonc` has. */
+const INSTANCES = [inst("active"), inst("recent"), inst("backups")];
+
+/**
+ * A settled model. `activeId` is what `resolveActiveId` would have produced:
+ * the pinned id when it is authored, `""` when it is not, and the persisted /
+ * first instance when the surface is not pinned.
+ */
+function model(activeId: string): ViewModel {
+  return {
+    ready: true,
+    instances: INSTANCES,
+    activeId,
+    setActiveView: () => {},
+    stateFor: () => ({
+      sort: [],
+      filter: null,
+      visibleFields: null,
+      groupBy: undefined,
+      query: "",
+      expanded: {},
+    }),
+    setSort: () => {},
+    setSortRules: () => {},
+    setVisibleFields: () => {},
+    setFilter: () => {},
+    setGroupBy: () => {},
+    setQuery: () => {},
+    setExpanded: () => {},
+    collapsedSectionsFor: () => new Set<string>(),
+    setSectionCollapsed: () => {},
+    actions: {
+      availableSources: [],
+      addView: () => {},
+      renameView: () => {},
+      duplicateView: () => {},
+      deleteView: () => {},
+      reorderView: () => {},
+      updateView: () => {},
+    },
+  } as unknown as ReadyViewModel & { ready: true };
+}
+
+let lastSwitcher: unknown;
+
+function renderShell(opts: { activeId: string; pinnedView?: string }) {
+  lastSwitcher = undefined;
+  return render(
+    <PluginProvider plugins={[plugin]}>
+      <DataViewShellFrame
+        storageKey={STORAGE_KEY}
+        viewModel={model(opts.activeId)}
+        contributions={[]}
+        pinnedView={opts.pinnedView}
+      >
+        {(activeInstance, chrome) => {
+          lastSwitcher = chrome.switcher;
+          return (
+            <div data-testid="body">rows of {activeInstance.instance.id}</div>
+          );
+        }}
+      </DataViewShellFrame>
+    </PluginProvider>,
+  );
+}
+
+afterEach(cleanup);
+
+describe("pinnedView", () => {
+  it("renders the placeholder — not the first instance — when the pinned id is not authored", () => {
+    renderShell({ activeId: "", pinnedView: "backup" });
+
+    // It says which id it could not find, so a typo is readable rather than
+    // "why is the backup panel showing builds".
+    expect(screen.getByText(/backup/)).toBeTruthy();
+    expect(screen.getByText(/No view instance/)).toBeTruthy();
+    // The body never mounted: no rows, and certainly not `active`'s.
+    expect(screen.queryByTestId("body")).toBeNull();
+  });
+
+  it("renders the pinned instance, and no switcher, when it IS authored", () => {
+    renderShell({ activeId: "backups", pinnedView: "backups" });
+
+    expect(screen.getByTestId("body").textContent).toBe("rows of backups");
+    // The node itself, not merely a count of 1: the WIDE toolbar renders the
+    // switcher unconditionally, so a non-null node would paint a live tab strip
+    // whose clicks this host ignores.
+    expect(lastSwitcher).toBeNull();
+  });
+
+  it("keeps the first-instance fallback for an UNPINNED surface", () => {
+    renderShell({ activeId: "gone" });
+
+    expect(screen.getByTestId("body").textContent).toBe("rows of active");
+    expect(lastSwitcher).not.toBeNull();
+  });
+
+  it("still says 'no views configured' for an unpinned surface with none", () => {
+    render(
+      <PluginProvider plugins={[plugin]}>
+        <DataViewShellFrame
+          storageKey={STORAGE_KEY}
+          viewModel={{ ...model(""), instances: [] } as unknown as ViewModel}
+          contributions={[]}
+        >
+          {() => <div data-testid="body">rows</div>}
+        </DataViewShellFrame>
+      </PluginProvider>,
+    );
+
+    expect(screen.getByText(/No views configured/)).toBeTruthy();
+    expect(screen.queryByTestId("body")).toBeNull();
+  });
+});

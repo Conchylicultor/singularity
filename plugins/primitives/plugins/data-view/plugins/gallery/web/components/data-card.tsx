@@ -55,18 +55,28 @@ export function DataCard(props: DataCardProps) {
   // eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally
   const body = <div className="min-w-0 flex-1">{children}</div>;
 
+  // A card with no `onActivate` is not a button: no role, no tab stop, no key
+  // handler, no `interactive` affordance. Announcing one as a button and giving
+  // it a focus stop is a promise the card cannot keep — and it puts a
+  // `role="button"` box around whatever control the footer holds.
+  const activates = onActivate !== undefined;
+
   return (
     <Card
-      interactive
-      role="button"
-      tabIndex={0}
+      interactive={activates}
+      role={activates ? "button" : undefined}
+      tabIndex={activates ? 0 : undefined}
       onClick={onActivate}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onActivate?.();
-        }
-      }}
+      onKeyDown={
+        activates
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onActivate();
+              }
+            }
+          : undefined
+      }
       // `rowActionsAnchor` carries `relative` too, which is what the pinned
       // cluster anchors to — the card needs no `relative` of its own.
       className={cn(

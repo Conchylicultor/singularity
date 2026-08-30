@@ -173,6 +173,7 @@ run everywhere.
     - `build/build-logs`
     - `build/build-profiling`
     - `build/deployment`
+    - `build/runs-arm`
     - `build/serve-composition`
     - `build/server-build-id`
     - `code-explorer`
@@ -216,6 +217,7 @@ run everywhere.
     - `primitives/terminal`
     - `release`
     - `release/bundles`
+    - `release/runs-arm`
     - `review/plugin-changes`
     - `stats/commits`
     - `stats/cost`

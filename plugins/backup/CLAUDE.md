@@ -13,23 +13,20 @@
     - `DebugApp.Sidebar` "Backup" → `component`
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `auth.GrantAccessButton`
     - `config_v2.ConfigV2`
     - `config_v2/config-link.ConfigGearButton`
-    - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/app-shell.sidebarNavItem`
-    - `primitives/css/clip.Clip`
-    - `primitives/css/fill.fillClasses`
+    - `primitives/css/rail.useRailGuard`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
-    - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `runs.RunsDataView`
   - Exports (values): `backupPane`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
@@ -48,11 +45,10 @@
     - `BackupSource`
     - `BackupTarget`
   - Register: `defineJob('backup.run')`
-  - Routes:
-    - `POST /api/backup/run`
-    - `GET /api/backup/runs`
+  - Routes: `POST /api/backup/run`
 - Cross-plugin:
   - Imported by:
+    - `backup/runs-arm`
     - `backup/sources/attachments`
     - `backup/sources/claude-settings`
     - `backup/sources/config`
@@ -73,12 +69,9 @@
     - `BackupSourceReport`
     - `BackupTargetResult`
 - Shared:
-  - Exports (types): `BackupRun`
-  - Exports (values):
-    - `BackupRunSchema`
-    - `listBackupRuns`
-    - `runBackup`
+  - Exports (values): `runBackup`
 - Sub-plugins:
+  - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the list row — the backup panel's expand/collapse card, moved — carrying the manifest's source reports and the per-target outcome with its Grant access remediation. Contributes no row activation, which is what lets the row hold those controls. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup is host-global) and for message (a backup's failure words are per-target).
   - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
     - Plugins:
       - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.

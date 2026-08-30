@@ -82,5 +82,26 @@ export const _releaseRuns = pgTable(
       t.composition,
       t.startedAt.desc(),
     ),
+    // Supports the unified runs view's release arm, on every page of every
+    // scroll. The arm carries an always-on `where namespace = ?`
+    // (runs-arm/server), so its subselect is unconditionally
+    // `WHERE namespace = ? ORDER BY started_at DESC, id ASC LIMIT n`.
+    //
+    // The `(namespace, composition, started_at desc)` index above CANNOT serve
+    // it, and that is not obvious: `composition` sits between the constrained
+    // leading column and the ordering column, so the walk breaks in the middle.
+    // The two indexes answer different questions — that one covers
+    // queryReleaseHistory's composition-scoped page, this one the unscoped-by-
+    // composition merged list. Neither subsumes the other; do not consolidate.
+    //
+    // `id` is the keyset tiebreak and part of the ordering, not padding — see
+    // the twin index on build_runs for the full argument, including why there is
+    // no unscoped `(started_at desc, id)` here either and what would bring it
+    // back (making the arm's hard namespace scope widenable).
+    index("release_runs_ns_started_id_idx").on(
+      t.namespace,
+      t.startedAt.desc(),
+      t.id,
+    ),
   ],
 );

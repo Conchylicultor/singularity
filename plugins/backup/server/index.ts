@@ -2,10 +2,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { backupConfig } from "../shared/config";
-import { runBackup, listBackupRuns } from "../shared/endpoints";
+import { runBackup } from "../shared/endpoints";
 import { backupRunJob } from "./internal/backup-job";
 import { handleRun } from "./internal/handle-run";
-import { handleList } from "./internal/handle-list";
 import { reconcileBackups } from "./internal/reconcile-backups";
 
 export { BackupSource, BackupTarget } from "./internal/contribution";
@@ -16,7 +15,6 @@ export default {
     "Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.",
   httpRoutes: {
     [runBackup.route]: handleRun,
-    [listBackupRuns.route]: handleList,
   },
   contributions: [ConfigV2.Register({ descriptor: backupConfig })],
   onReady: async () => {

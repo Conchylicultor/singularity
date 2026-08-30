@@ -12,7 +12,9 @@
     - `apps/mail/threads`
     - `conversations/all-conversations`
     - `infra/query-resource`
+    - `primitives/data-view/union-query`
     - `release`
+    - `runs`
 - Server:
   - Exports (types):
     - `ColumnExpr`

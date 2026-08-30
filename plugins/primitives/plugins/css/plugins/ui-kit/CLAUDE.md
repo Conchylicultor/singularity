@@ -486,6 +486,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
+    - `backup/runs-arm`
     - `build`
     - `build/build-fix`
     - `build/build-info`

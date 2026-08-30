@@ -19,7 +19,7 @@ export interface FieldRendererComponent<T = unknown> {
 
 /**
  * The renderer dispatch slot itself. Exported (not just wrapped by `Fields.Renderer`)
- * because the plugin declares the slots it owns in its `slots: [...]`, and
+ * because the plugin declares the slots it owns in its `slots` record, and
  * `Renderer` is a typed contribution helper — not a slot object.
  */
 export const fieldRendererSlot = defineDispatchSlot<FieldRendererProps>({

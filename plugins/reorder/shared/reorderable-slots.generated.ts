@@ -203,6 +203,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "primitives.text-editor.plugin", pluginId: "primitives.text-editor", configName: "plugin" },
   { slotId: "review.conv-review.actions", pluginId: "review", configName: "conv-review.actions" },
   { slotId: "review.section", pluginId: "review", configName: "section" },
+  { slotId: "runs.fields", pluginId: "runs", configName: "fields" },
   { slotId: "screenshot.screenshot.actions", pluginId: "screenshot", configName: "screenshot.actions" },
   { slotId: "shell.action-bar.item", pluginId: "shell.action-bar", configName: "item" },
   { slotId: "shell.sidebar", pluginId: "shell", configName: "sidebar" },

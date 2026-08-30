@@ -1,4 +1,11 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.
@@ -26,9 +33,15 @@ export const _deployDeployments = pgTable(
     // being non-empty, never declared — a deployment behind an open 443 with a
     // public hostname simply IS public, so there is no flag to typo.
     hostnames: text("hostnames").array().notNull(),
-    loopbackPort: integer("loopback_port").notNull().default(DEFAULT_LOOPBACK_PORT),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    loopbackPort: integer("loopback_port")
+      .notNull()
+      .default(DEFAULT_LOOPBACK_PORT),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
   },
   (t) => [
     // The two invariants are carried by the DB, so neither needs a check and
@@ -46,7 +59,10 @@ export const _deployDeployments = pgTable(
       t.serverId,
     ),
     // The port is the only resource two installs on one box contend for.
-    uniqueIndex("deploy_deployments_server_port_uq").on(t.serverId, t.loopbackPort),
+    uniqueIndex("deploy_deployments_server_port_uq").on(
+      t.serverId,
+      t.loopbackPort,
+    ),
   ],
 );
 
@@ -85,7 +101,9 @@ export const _deployRuns = pgTable(
     // The leg an `update` died on. Null unless the run failed on one — a
     // succeeded run has no failing phase, and a single-verb run has no phases.
     phaseFailed: text("phase_failed"),
-    startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
     // Null while running — including forever, on a run whose backend died before
     // it could stamp an outcome. That is the honest record of what was observed.
     finishedAt: timestamp("finished_at", { withTimezone: true }),
@@ -94,8 +112,20 @@ export const _deployRuns = pgTable(
     message: text("message"),
   },
   (t) => [
-    // Covers the history query's `WHERE deployment_id = ? ORDER BY started_at DESC`
-    // keyset seek + tiebreak — the only way this table is ever read.
-    index("deploy_runs_deployment_started_idx").on(t.deploymentId, t.startedAt.desc()),
+    // Covers the per-deployment history query's `WHERE deployment_id = ?
+    // ORDER BY started_at DESC` keyset seek + tiebreak.
+    index("deploy_runs_deployment_started_idx").on(
+      t.deploymentId,
+      t.startedAt.desc(),
+    ),
+    // Covers the UNSCOPED read — the unified runs query's per-arm subselect,
+    // `ORDER BY started_at DESC, id ASC LIMIT n`, and the nightly retention
+    // sweep's range scan on the same column. The index above cannot serve
+    // either: both bind no deployment, so its leading column is dead and the
+    // ordering degrades to a top-N heapsort over the whole ledger. Both indexes
+    // are needed; neither subsumes the other. (No namespace to lead with —
+    // a deploy targets a remote server, so this arm carries no worktree
+    // predicate, unlike the build and release arms. See the arm's CLAUDE.md.)
+    index("deploy_runs_started_id_idx").on(t.startedAt.desc(), t.id),
   ],
 );

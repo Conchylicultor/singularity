@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  defineEndpoint,
-  dateString,
-} from "@plugins/infra/plugins/endpoints/core";
+import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 export const RunBackupResultSchema = z.object({
   ok: z.literal(true),
@@ -58,21 +55,4 @@ export const BackupTargetResultSchema = z.object({
   consent: z
     .object({ providerId: z.string(), scopes: z.array(z.string()) })
     .optional(),
-});
-
-export const BackupRunSchema = z.object({
-  id: z.string(),
-  trigger: z.string(),
-  startedAt: dateString(),
-  finishedAt: dateString().nullable(),
-  status: z.string(),
-  archiveSizeBytes: z.number().nullable(),
-  manifest: BackupManifestSchema.nullable(),
-  targetResults: z.array(BackupTargetResultSchema).nullable(),
-});
-export type BackupRun = z.infer<typeof BackupRunSchema>;
-
-export const listBackupRuns = defineEndpoint({
-  route: "GET /api/backup/runs",
-  response: z.array(BackupRunSchema),
 });

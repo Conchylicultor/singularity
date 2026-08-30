@@ -787,6 +787,30 @@ longer installed" fallback). An override that renders plain text for a chip-type
 field loses its middots; cosmetic, and the price of not making every consumer
 re-declare what its type already said.
 
+## Row activation is PER ROW
+
+`onRowActivate?: (row) => void` says every row activates. `rowActivation?: (row)
+=> (() => void) | null` says which ones do — the handler's **presence** is the
+fact, so there is no predicate beside it to disagree with. Passing both throws.
+
+The host folds either into ONE `DataViewRenderProps.rowActivation: (row) =>
+(() => void) | undefined`, so a view never sees the two.
+
+**A view must pass that result straight to its row element's `onClick` —
+`undefined` and all, never wrapped in a closure.** `Row` infers its element from
+`onClick` (`row.tsx`), and a closure is never null, so wrapping makes every row a
+`<button>` with the `renderRow` children nested inside it: invalid DOM for any
+control a row body holds, the outer row eating the press, and a list where
+nothing activates announcing every row as a button. Locked by
+`list/web/__tests__/row-activation.test.tsx`, which asserts the DOM shape — the
+handler fired correctly the whole time this was broken.
+
+`DataCard` follows the same rule (no `role`/`tabIndex`/key handler without
+`onActivate`). **The table is table-level**, not per-row: `DataTable.onRowClick`
+is a table-wide prop with consumers outside data-view, so a non-activating row
+there is a live-looking row that does nothing rather than a plain container.
+Lifting that means changing `DataTable`.
+
 ## Row tone: a row can read as inactive
 
 `DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
@@ -1365,7 +1389,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes:
-    - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+    - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
     - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -1543,7 +1567,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useServerDataSource`
     - `useSortController`
 - Server:
-  - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "build.history", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+  - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
   - Uses:
     - `config_v2.getConfig`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -1570,7 +1594,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `apps/studio/explorer`
     - `apps/workflows/definitions`
     - `apps/workflows/executions`
-    - `build`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`
@@ -1622,6 +1645,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/tree`
     - `primitives/data-view/view-order`
     - `release`
+    - `runs`
     - `tasks/task-deps-tree`
     - `tasks/task-list`
     - `ui/tweakcn/community-browser`
@@ -1686,6 +1710,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
   - **`server-query`** — Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the filter compilation, not any field type. The field-agnostic keyset seek + cursor codec now live in primitives/keyset.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
+  - **`union-query`** — Keyset-paginated UNION ALL compiler for server-delegated DataViews: merges N heterogeneous tables into one ordered row space. Owns the three things that are hard to get right and entirely field-agnostic — arm pruning, aligned typed-NULL projections, and pushing the compiled WHERE / keyset seek / LIMIT into each arm before the union. Composes server-query's compileWhere and primitives/keyset's seek; imports no field type.
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
   - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
 

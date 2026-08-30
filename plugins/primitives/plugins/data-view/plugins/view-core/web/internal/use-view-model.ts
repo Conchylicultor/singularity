@@ -10,6 +10,7 @@ import type {
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
+import { resolveActiveId } from "./resolve-active-id";
 
 /**
  * Instance actions for the editable view-switcher (every view surface has
@@ -59,19 +60,6 @@ export interface ViewModelCore<T extends ViewTypeMeta = ViewTypeMeta> {
   availableSources: AddableSource[];
 }
 
-/** Resolve the active instance id given the persisted selection + fallbacks. */
-function resolveActiveId<T extends ViewTypeMeta>(
-  instances: ResolvedViewInstance<T>[],
-  persisted: string | null,
-  defaultView: string | undefined,
-): string {
-  const byPersisted = instances.find((r) => r.instance.id === persisted);
-  if (byPersisted) return byPersisted.instance.id;
-  const byDefault = instances.find((r) => r.instance.id === defaultView);
-  if (byDefault) return byDefault.instance.id;
-  return instances[0]?.instance.id ?? "";
-}
-
 /**
  * The single generic view model: config-authored instances, raw view read/write,
  * full instance actions. active-id stays device-local via `useActiveViewId`.
@@ -87,6 +75,7 @@ export function useViewModel<T extends ViewTypeMeta>(
   descriptorMap: Map<string, ConfigDescriptor>,
   entries: ViewSourceEntry<T>[],
   defaultView: string | undefined,
+  pinnedView?: string,
 ): ViewModelCore<T> {
   // Config is the single source of truth — no synthesized defaults. The instance
   // list comes only from the authored config rows (terse `{ name, view }`,
@@ -100,6 +89,7 @@ export function useViewModel<T extends ViewTypeMeta>(
     cfg.instances as ResolvedViewInstance<T>[],
     active.activeViewId,
     defaultView,
+    pinnedView,
   );
 
   // Capability-gated add menu, grouped per source entry: each group is that

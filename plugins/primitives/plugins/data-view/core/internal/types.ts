@@ -533,8 +533,19 @@ export interface DataViewRenderProps<TRow> {
   setSort: (fieldId: string) => void;
   /** Writes THIS view's whole filter tree (null clears it). */
   setFilter: (filter: FilterGroup | null) => void;
-  /** Row/card click (default cards & table rows). */
-  onRowActivate?: (row: TRow) => void;
+  /**
+   * **Per-row** activation: the handler for THIS row, or `undefined` when this
+   * row does not activate. Resolved once by the host from `rowActivation` /
+   * `onRowActivate`, so a view never sees the two.
+   *
+   * A view MUST pass the result straight through to its row element's `onClick`
+   * — `undefined` and all — never wrap it in a closure. `Row` infers its element
+   * from `onClick` (`row.tsx`), so a closure is never null and every row becomes
+   * a `<button>` whose `renderRow` children are then nested inside it. That is
+   * invalid DOM for any interactive content a row body holds, and it makes a
+   * list where nothing activates announce every row as a button.
+   */
+  rowActivation?: (row: TRow) => (() => void) | undefined;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
@@ -808,6 +819,23 @@ export interface DataViewProps<TRow> {
   /** Restrict + order by view id; omitted → all contributions by order/title. */
   views?: string[];
   defaultView?: string;
+  /**
+   * Show exactly this view instance, and hide the switcher.
+   *
+   * The active instance is otherwise device-local **per `storageKey`**, so every
+   * host of one surface shares a selection — which is right for hosts that are
+   * tab strips over the same thing, and wrong for a host that is one scoped list
+   * ("the backups", inside the backup app). A pinned host reads the named
+   * instance and never writes the shared selection, so it cannot drag the other
+   * hosts onto its own tab.
+   *
+   * Hiding the switcher is part of the same decision rather than a second prop:
+   * a visible switcher whose selection does not persist is worse than none.
+   *
+   * Names an instance that the surface's config does not author → the surface
+   * says so instead of quietly falling back to whatever tab was last used.
+   */
+  pinnedView?: string;
   storageKey: DataViewId;
   title?: ReactNode;
   actions?: ReactNode;
@@ -823,7 +851,35 @@ export interface DataViewProps<TRow> {
    * decorations is its own change.
    */
   rowTone?: (row: TRow) => RowTone;
+  /**
+   * Every row activates, this way. The simple case, and what most surfaces want.
+   *
+   * Mutually exclusive with {@link DataViewProps.rowActivation} — passing both
+   * throws, because two props asserting whether a row activates can disagree.
+   */
   onRowActivate?: (row: TRow) => void;
+  /**
+   * **Per-row** activation: the handler for this row, or `undefined` when this
+   * row does not activate.
+   *
+   * A resolver rather than a predicate beside `onRowActivate`, so there is no
+   * second fact to keep in step: the handler's PRESENCE is what says the row
+   * activates. A row that resolves to nothing renders as a plain container
+   * rather than a button, which is what lets its body hold an interactive
+   * control — a `<button>` inside a `<button>` is invalid DOM, and the outer row
+   * swallows the click.
+   *
+   * `undefined` and not `null`, matching the render-props shape it is folded
+   * into: the value's destination is an `onClick`, and a second spelling of
+   * "no handler" bought only an impedance mismatch at that boundary. (`null`
+   * would additionally reject an implicit return — but a resolver that falls off
+   * the end means precisely "this row does not activate", so that is a spelling
+   * difference, not a mistake worth a type error.)
+   *
+   * Reach for it when one list holds rows of different kinds: a merged run list
+   * where builds open a detail pane and backups offer a Grant-access button.
+   */
+  rowActivation?: (row: TRow) => (() => void) | undefined;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   emptyState?: ReactNode;

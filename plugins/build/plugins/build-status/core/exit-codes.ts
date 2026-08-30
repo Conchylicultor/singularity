@@ -18,3 +18,23 @@
  * ledger already spends on a hard-killed owner of unknown outcome.
  */
 export const BUILD_EXIT_SUPERSEDED = 75;
+
+/**
+ * The exit code the ledger writes for a run whose owning process was hard-killed
+ * by a newer build's restart. Deliberately outside the 0-255 wait status range,
+ * so it can never collide with a code the build itself chose.
+ */
+export const BUILD_EXIT_HARD_KILLED = -1;
+
+/**
+ * POSIX shell convention: a process terminated by signal N reports 128 + N. The
+ * CLI's own fatal-signal handlers already produce exactly this (SIGHUP → 129,
+ * SIGINT → 130, SIGQUIT → 131, SIGTERM → 143), so no new constant is needed to
+ * recognise an externally-killed build.
+ *
+ * Exported alongside the other two because `buildStatusOf` is not the only place
+ * the rule is written any more: the `runs` build arm compiles the SAME rule into
+ * SQL, and the one thing that must never differ between the two encodings is the
+ * numbers they compare against.
+ */
+export const BUILD_EXIT_SIGNAL_BASE = 128;

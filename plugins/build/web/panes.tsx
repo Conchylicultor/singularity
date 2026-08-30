@@ -1,9 +1,5 @@
 import type { ReactElement } from "react";
-import {
-  Pane,
-  PaneChrome,
-  useOpenPane,
-} from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildRoute, buildDetailRoute } from "@plugins/build/core";
 import { BuildPopoverContent } from "./components/build-popover-content";
@@ -24,18 +20,16 @@ export const buildDetailPane = Pane.define({
 });
 
 function BuildPaneBody(): ReactElement {
-  const openPane = useOpenPane();
+  // No `onRunClick`: a row's destination belongs to the arm that owns the row —
+  // the build arm's `Runs.Kind.open` pushes `buildDetailPane` from whichever
+  // surface the row was clicked in, and a backup row goes somewhere else
+  // entirely. `selectedRunId` stays, because which row is OPEN is this pane's
+  // own knowledge and nothing else can supply it.
   const selectedRunId = buildDetailPane.useRouteEntry()?.params.runId;
 
   return (
     <PaneChrome pane={buildPane} title="Builds">
-      <BuildPopoverContent
-        variant="pane"
-        selectedRunId={selectedRunId}
-        onRunClick={(runId) =>
-          openPane(buildDetailPane, { runId }, { mode: "push" })
-        }
-      />
+      <BuildPopoverContent variant="pane" selectedRunId={selectedRunId} />
     </PaneChrome>
   );
 }

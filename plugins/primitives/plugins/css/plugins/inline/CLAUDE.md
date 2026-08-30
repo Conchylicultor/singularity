@@ -65,7 +65,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
-    - `build`
+    - `backup/runs-arm`
     - `build/build-info`
     - `build/build-status`
     - `build/deployment`
@@ -114,6 +114,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `reports/render-loop`
     - `reports/turn-unconfirmed`
     - `reports/viewport-escape`
+    - `runs/run-outcome`
     - `tasks/attempt-view`
     - `tasks/task-deps-tree`
     - `tasks/task-draft-form`
