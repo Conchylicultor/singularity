@@ -104,7 +104,6 @@ export function RunsDataView({
 
   const openPane = useOpenPane();
   const kinds = Runs.Kind.useContributions();
-  const rowRenderers = Runs.Row.useContributions();
   const fields = useRunFields(kinds);
 
   const openers = useMemo(
@@ -115,20 +114,17 @@ export function RunsDataView({
     [kinds],
   );
 
+  // No `renderRow`: the row body is the list's own, built from the field schema,
+  // so it obeys the view's visible fields. An arm decorates the line with a
+  // leading glyph and contributes columns — it does not replace the line. See
+  // `Runs` in `internal/slots.ts` for why that seam no longer exists.
   const viewOptions = useMemo(
     () => ({
       list: {
         leading: (run: UnionRun) => <Runs.Leading.Dispatch run={run} />,
-        // Only take over the row body when an arm actually has one. With no
-        // contributor the list keeps its own field-driven row, which respects
-        // the user's chosen visible fields; `renderRow` would override that for
-        // every kind to buy nothing.
-        ...(rowRenderers.length > 0
-          ? { renderRow: (run: UnionRun) => <Runs.Row.Dispatch run={run} /> }
-          : {}),
       },
     }),
-    [rowRenderers.length],
+    [],
   );
 
   // Per row, not per surface: this list holds rows of several kinds and only

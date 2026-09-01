@@ -1,16 +1,15 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
-import { compositionDetailPane } from "@plugins/apps/plugins/studio/plugins/compositions/web";
+import { releaseDetailRoute } from "@plugins/apps/plugins/studio/plugins/compositions/plugins/release/core";
 import { ReleaseDetail } from "./slots";
 
 export const releaseDetailPane = Pane.define({
-  id: "release-detail",
+  // Identity (id / `rel/:runId` segment / the compositions ancestor) comes from
+  // the route in `core/`, so a link built there and the pane it lands on cannot
+  // drift.
+  route: releaseDetailRoute,
   app: studioApp,
-  defaultAncestors: [compositionDetailPane],
-  // Segments are GLOBALLY unique across all panes (not path-scoped): build's
-  // run-detail already owns "r/:runId", so the release run-detail uses "rel/…".
-  segment: "rel/:runId",
   component: ReleaseDetailBody,
   width: 480,
   resolve: false,

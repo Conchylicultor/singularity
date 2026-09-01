@@ -103,7 +103,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
@@ -368,7 +367,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
-    - `runs`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `search/quick-find`

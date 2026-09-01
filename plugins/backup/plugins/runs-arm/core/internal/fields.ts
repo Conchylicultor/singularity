@@ -1,5 +1,5 @@
 import { defineRunArmFields } from "@plugins/runs/core";
-import { BACKUP_RUN_KIND } from "./kind";
+import { BACKUP_RUN_KIND } from "@plugins/backup/core";
 
 /**
  * The columns only a backup run has.

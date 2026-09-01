@@ -1,11 +1,8 @@
 import { sql, type SQL } from "drizzle-orm";
 import { _backupRuns } from "@plugins/backup/server";
 import { defineRunKind } from "@plugins/runs/server";
-import {
-  BACKUP_RUN_KIND,
-  BACKUP_STATUS_OUTCOME,
-  backupRunFields,
-} from "../../core";
+import { BACKUP_RUN_KIND } from "@plugins/backup/core";
+import { BACKUP_STATUS_OUTCOME, backupRunFields } from "../../core";
 
 /**
  * `backup_runs.status` → the shared outcome vocabulary, folded out of the map

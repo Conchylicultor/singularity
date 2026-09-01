@@ -16,7 +16,13 @@ export {
   queryRuns,
   QueryRunsBodySchema,
   QueryRunsResponseSchema,
+  getRun,
+  RunByIdResponseSchema,
 } from "./internal/endpoints";
-export type { QueryRunsBody, QueryRunsResponse } from "./internal/endpoints";
+export type {
+  QueryRunsBody,
+  QueryRunsResponse,
+  RunByIdResponse,
+} from "./internal/endpoints";
 
 export { runsRevisionResource } from "./internal/resources";

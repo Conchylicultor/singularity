@@ -7,6 +7,7 @@ import { ReleaseHistorySection } from "./components/release-history-section";
 import { ReleaseDetail } from "./slots";
 
 export { ReleaseDetail } from "./slots";
+export { releaseDetailPane } from "./panes";
 
 export default {
   description:

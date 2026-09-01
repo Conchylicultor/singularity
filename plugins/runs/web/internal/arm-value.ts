@@ -1,3 +1,4 @@
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { RunArmFieldSpecs, UnionRun } from "../../core";
 
 /**
@@ -160,6 +161,35 @@ export function armDate<S extends RunArmFieldSpecs>(
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) throw wrongShape(id, v, "a parseable date");
     return d;
+  };
+}
+
+/**
+ * A structured (jsonb) arm column, decoded by the arm's own schema.
+ *
+ * The member of this family an arm cannot write for itself: a `json` column
+ * arrives as `unknown` with no shape the accessor could check, so the arm has to
+ * supply the check. It supplies a schema, and the schema IS the check — a wrong
+ * shape throws out of `.parse`, which is this file's "a wrong shape throws" rule
+ * expressed by the only code that knows the shape.
+ *
+ * Null is still an answer (the column is null on every other kind's rows), and
+ * the parse is per row rather than at build time, since there is no row to check
+ * when the accessor is built.
+ *
+ * `ZodParser` is imported **type-only**: the schema is the arm's, so `runs/web`
+ * names zod without depending on it at runtime.
+ */
+export function armJson<S extends RunArmFieldSpecs, T>(
+  specs: S,
+  id: IdsWithType<S, "json">,
+  schema: ZodParser<T>,
+): (run: UnionRun) => T | null {
+  bind(specs, id, ["json"]);
+  return (run) => {
+    const v = read(run, id);
+    if (v === null || v === undefined) return null;
+    return schema.parse(v);
   };
 }
 

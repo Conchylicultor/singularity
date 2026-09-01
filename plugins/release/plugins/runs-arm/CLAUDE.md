@@ -33,39 +33,22 @@ it would make the shared Trigger column mean one thing for a build and another
 for a release. That is the one thing a shared column may not do. A NULL base
 column is a real answer here: releases have no trigger notion.
 
-## No row activation, and why
+## Rows activate into the Studio run-detail pane
 
-`releaseDetailPane` (Studio) hangs off `compositionDetailPane`, whose `:id` is
-the **compositions config-item id** — a uuid — while `release_runs.composition`
-is the composition **name**. Resolving one to the other needs the compositions
-manifest, and `Runs.Kind`'s `open` is a plain callback that runs outside render
-and cannot read it.
+`releaseDetailPane` (Studio) is keyed by run id and nothing else — every section
+it hosts (info / logs / artifact) reads `releaseRunResource` by that id — so this
+arm's `open` is the same two lines build's is, over the id the ledger row already
+carries.
 
-So this arm contributes no `open`, and its rows do not activate. That is the
-honest behaviour: a click that silently does nothing is worse than a row that
-does not offer one.
-
-**To fix it, one of two things has to change. The first is much the smaller
-lift; neither is started.**
-
-1. **Teach `releaseDetailPane` to accept the composition NAME** — the smaller
-   fix, and the one to reach for. Its ancestor's `:id` is the only thing
-   standing in the way, and the pane already resolves its run through
-   `releaseRunResource`, which carries the composition. Either let the
-   composition pane resolve a name as well as a uuid, or drop the ancestor
-   requirement so the run pane is addressable by run id alone (the shape
-   `buildDetailPane` already has, which is why the build arm's `open` is one
-   line). Both keep the scoped release-history section working unchanged, and
-   both make the pane linkable from anywhere rather than only from here.
-2. **Give `runs` a component seam for row activation** — the larger fix, and
-   worth doing only if other arms turn out to need it too. `Runs.Kind.open` is a
-   plain callback, so it cannot read a hook; a contributed *component* could,
-   and would let any arm resolve whatever its detail surface needs. That is a
-   change to the `runs` API rather than to this arm, so it should be driven by
-   more than one arm wanting it.
-
-Until then, a release run is still reached the way it always was: Studio →
-the composition → Release history.
+It was not always so. The pane used to hang off `compositionDetailPane`, whose
+`:id` is the compositions **config-item id** (a uuid), while
+`release_runs.composition` is the composition **name**; resolving one to the other
+needs the compositions manifest, and `open` is a plain callback that runs outside
+render and cannot read it. So the rows did not activate at all. The fix was to
+reparent the pane onto the paramless compositions route rather than to resolve the
+name — the ancestor supplied breadcrumb position and no data, and a route parent
+is only a hint for opening from scratch, so the release-history section still
+pushes the run under the composition exactly as before.
 
 ## Worktree-scoped by construction
 
@@ -90,12 +73,13 @@ quiet absence of a predicate.
 
 ## Plugin reference
 
-- Description: The release arm's presence on the merged run surface: the Release kind, plus the composition / target / platform / provenance columns only a release row has. Contributes no row activation — the release run-detail pane hangs off a composition pane keyed by a config-item id the ledger row does not carry. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
+- Description: The release arm's presence on the merged run surface: the Release kind (whose rows open the Studio release run-detail pane), plus the composition / target / platform / provenance columns only a release row has. The release arm of the merged run space: binds `release_runs` into the runs union, mapping its own three-way status onto the shared outcome axis through a typed-total record, and contributing the composition / target / platform / provenance columns only a release row has — `release.kind` namespaced so the ledger's own kind column cannot shadow the run-kind discriminator.
 - Web:
   - Contributes:
     - `Runs.Kind`
     - `Runs.Fields` "release" → `ReleaseRunFields`
   - Uses:
+    - `apps/studio/compositions/release.releaseDetailPane`
     - `primitives/css/badge.Badge`
     - `runs.armBool`
     - `runs.armText`

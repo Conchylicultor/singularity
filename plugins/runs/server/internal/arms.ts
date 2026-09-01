@@ -1,4 +1,4 @@
-import { sql, type SQL } from "drizzle-orm";
+import { and, sql, type SQL } from "drizzle-orm";
 import type { ColumnExpr } from "@plugins/primitives/plugins/keyset/server";
 import type { UnionArm } from "@plugins/primitives/plugins/data-view/plugins/union-query/server";
 import type { RunArmFieldSpecs } from "../../core";
@@ -33,6 +33,41 @@ export function runArms(kinds: RunKind[]): UnionArm[] {
     },
     extra: k.extra,
     where: k.where,
+  }));
+}
+
+/**
+ * The one arm that owns `kind`, narrowed to the single row `id` names.
+ *
+ * Built by narrowing what {@link runArms} already produced rather than by
+ * assembling an arm here, so the derived `duration` cannot end up meaning one
+ * thing on the list and another on a deep link.
+ *
+ * Three things about it are deliberate:
+ *
+ * - **An unknown kind is `[]`**, which `compileUnionPage` compiles into its
+ *   empty-result scaffold. "There is no such kind" and "there is no such run"
+ *   are the same answer to the caller's question, and neither is a failure —
+ *   an arm can legitimately be out of the running composition.
+ * - **The id predicate casts to text**, because `RUN_BASE_COLUMNS.id` DECLARES
+ *   text and that declaration is what every other arm's NULL is cast to. An
+ *   arm whose primary key happens to be a uuid or a bigint is still addressed
+ *   by the text the union projects, so the comparison honours the base
+ *   declaration rather than one arm's storage.
+ * - **The arm's own `where` survives.** It is the arm's always-on scope (a
+ *   soft-delete flag, a retention window, a namespace); dropping it here would
+ *   let a deep link resolve a run the list refuses to show.
+ */
+export function runArmForRow(
+  kinds: RunKind[],
+  kind: string,
+  id: string,
+): UnionArm[] {
+  const found = kinds.find((k) => k.kind === kind);
+  if (!found) return [];
+  return runArms([found]).map((arm) => ({
+    ...arm,
+    where: and(arm.where, sql`${found.base.id}::text = ${id}`),
   }));
 }
 

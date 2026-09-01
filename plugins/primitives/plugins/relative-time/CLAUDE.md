@@ -12,7 +12,6 @@
     - `apps/browser/start-page`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`
     - `apps/events/event-list`
@@ -31,7 +30,6 @@
     - `apps/workflows/definitions`
     - `apps/workflows/engine`
     - `apps/workflows/executions`
-    - `backup/runs-arm`
     - `build/build-info`
     - `build/serve-composition`
     - `conversations/all-conversations`

@@ -106,6 +106,7 @@ DataView dropped in is inset once, by the card. See `data-view/CLAUDE.md`
     - `apps/studio/compositions/release`
     - `apps/studio/contributions/tables`
     - `apps/workflows/definitions`
+    - `backup`
     - `build`
     - `plugin-meta/plugin-view`
     - `review`

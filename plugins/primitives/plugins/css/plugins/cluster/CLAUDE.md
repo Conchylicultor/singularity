@@ -42,7 +42,6 @@ defined in exactly one place. The distinct export buys two things:
     - `apps-core/surface/floating`
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
-    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/remote-deploy`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
@@ -54,7 +53,6 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
-    - `backup/runs-arm`
     - `config_v2/fields`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -81,7 +79,6 @@ defined in exactly one place. The distinct export buys two things:
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/avatar`
     - `primitives/date-picker`
-    - `runs`
     - `stats/commits`
     - `tasks/task-dependencies`
     - `ui/theme-engine/theme-customizer`

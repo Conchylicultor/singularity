@@ -4,17 +4,23 @@ import type {
   BackupSourceReport,
   BackupTargetResult,
 } from "@plugins/backup/core";
+import { armJson } from "@plugins/runs/web";
 import type { UnionRun } from "@plugins/runs/core";
+import { backupRunFields } from "../../core";
 
 /**
  * The two jsonb columns this arm projects, decoded.
  *
- * `runs/web`'s `armText` / `armNumber` / … cover every scalar arm column; a
- * jsonb one has no accessor there and needs a real decoder anyway, so these are
- * it. Same two rules as those accessors: a shape the SQL did not produce throws,
- * and an absent column is not an error — an empty list reads identically to
- * "this run has none", which is what a `running` row and another kind's row
- * both are.
+ * `armJson` is the `json` member of the same `armText` / `armNumber` family the
+ * arm reads every other column through: the id is checked against this arm's own
+ * `defineRunArmFields` declaration, so a column that is not declared `json` — or
+ * not declared at all — does not compile. What it cannot check is the shape
+ * inside the blob, which is why it takes a schema; the parse IS the check, and a
+ * shape the SQL did not produce throws rather than being coerced past.
+ *
+ * A null column is an answer, not an error: it is null on every row of every
+ * other kind, and on a backup that has not got that far yet. Both decoders read
+ * it as an empty list, which is what "this run has none" looks like too.
  *
  * Both schemas are a second spelling of ones `backup` already owns —
  * deliberately, and the only option: the originals decode these columns inside
@@ -22,7 +28,7 @@ import type { UnionRun } from "@plugins/runs/core";
  * boundary. What keeps them from drifting is the annotation: each output is
  * pinned to the interface `backup/core` exports, which IS importable, so a field
  * renamed in the shared shape stops compiling here rather than quietly
- * disappearing from the row.
+ * disappearing from the section.
  */
 const BackupTargetResultSchema: ZodParser<BackupTargetResult> = z.object({
   targetId: z.string(),
@@ -48,15 +54,21 @@ const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z.object({
   sizeBytes: z.number(),
 });
 
-function armJson(run: UnionRun, id: string): unknown {
-  return (run as unknown as Record<string, unknown>)[id];
-}
+const targetResultsOf = armJson(
+  backupRunFields,
+  "backup.targetResults",
+  z.array(BackupTargetResultSchema),
+);
+
+const sourcesOf = armJson(
+  backupRunFields,
+  "backup.sources",
+  z.array(BackupSourceReportSchema),
+);
 
 /** The run's per-target outcomes, read off the merged row. */
 export function backupTargetResults(run: UnionRun): BackupTargetResult[] {
-  const raw = armJson(run, "backup.targetResults");
-  if (raw === null || raw === undefined) return [];
-  return z.array(BackupTargetResultSchema).parse(raw);
+  return targetResultsOf(run) ?? [];
 }
 
 /**
@@ -64,13 +76,9 @@ export function backupTargetResults(run: UnionRun): BackupTargetResult[] {
  *
  * Skipped ones are dropped here rather than at the call site, because a skipped
  * source did not go into the archive and this list is what the archive holds —
- * the same reading the count column takes, so the two cannot disagree.
+ * the same reading the `sourceCount` column's `WHERE` takes on the server, so
+ * the list and the number cannot disagree.
  */
 export function backupSources(run: UnionRun): BackupSourceReport[] {
-  const raw = armJson(run, "backup.sources");
-  if (raw === null || raw === undefined) return [];
-  return z
-    .array(BackupSourceReportSchema)
-    .parse(raw)
-    .filter((s) => !s.skipped);
+  return (sourcesOf(run) ?? []).filter((s) => !s.skipped);
 }

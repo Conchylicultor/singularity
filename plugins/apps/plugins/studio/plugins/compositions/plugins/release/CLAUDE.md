@@ -17,9 +17,25 @@ the detail pane deleted that dropdown: the composition is the pane's `:id` param
 so only the target remains a choice.
 
 `releaseDetailPane` survived the move unchanged (a run is a genuinely separate
-entity); only its `defaultAncestors` was re-pointed at `compositionDetailPane`.
-Its segment stays `rel/:runId` — segments are globally unique, and build's
-run-detail already owns `r/:runId`.
+entity). Its segment stays `rel/:runId` — segments are globally unique, and
+build's run-detail already owns `r/:runId`.
+
+## The run pane hangs off `compositions`, not off `comp/:id`
+
+`releaseDetailRoute` (`core/routes.ts`) parents on the **paramless**
+`compositionsRoute`. A run is addressable by its own id alone: all three sections
+read `releaseRunResource` by `runId`, and the composition pane above supplied
+breadcrumb position and no data at all.
+
+Parented on `comp/:id` the pane could only be opened by a caller already holding
+the compositions **config-item uuid** — which `release_runs` does not store (it
+stores the composition *name*), so the merged runs list could not activate a
+release row at all. Reparenting makes that mismatch moot instead of resolving it,
+and nothing is lost: a route parent is only a hint for opening from scratch, and
+the history section pushes with `mode: "push"` from inside the composition pane,
+so the run still nests under it exactly as before. What changes is that a bare
+deep link, or a click in the merged runs list, now lands somewhere — previously
+neither did.
 
 ## Two things worth knowing
 
@@ -47,14 +63,13 @@ top-level and untouched by this; only the Studio UI lives here.
 - Web:
   - Slots:
     - `ReleaseDetail.Section` ← `apps.studio.compositions.release.release-artifact`, `apps.studio.compositions.release.release-info`, `apps.studio.compositions.release.release-logs`
-    - `release-detail.actions` ← `primitives.pane`
+    - `releaseDetailPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "release-detail"
     - `CompositionDetail.Section` "Build & serve" → `ReleaseSection`
     - `CompositionDetail.Section` "Release history" → `ReleaseHistorySection`
   - Uses:
     - `apps/studio/compositions.CompositionDetail`
-    - `apps/studio/compositions.compositionDetailPane`
     - `build/serve-composition.ServeTargetPanel`
     - `build/serve-composition.useServeStatus`
     - `infra/endpoints.fetchEndpoint`
@@ -77,12 +92,20 @@ top-level and untouched by this; only the Studio UI lives here.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-  - Exports (values): `ReleaseDetail`
+  - Exports (values):
+    - `ReleaseDetail`
+    - `releaseDetailPane`
+- Core:
+  - Uses:
+    - `apps/studio/compositions.compositionsRoute`
+    - `primitives/pane.defineRoute`
+  - Exports (values): `releaseDetailRoute`
 - Cross-plugin:
   - Imported by:
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/compositions/release/release-info`
     - `apps/studio/compositions/release/release-logs`
+    - `release/runs-arm`
 - Sub-plugins:
   - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
   - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.

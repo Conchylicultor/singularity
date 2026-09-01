@@ -30,7 +30,12 @@ export {
   deployRunsResource,
   deployRunsRevisionResource,
 } from "./runs";
-export type { DeployRun, DeployRunRecord, DeployVerb, DeployPhase } from "./runs";
+export type {
+  DeployRun,
+  DeployRunRecord,
+  DeployVerb,
+  DeployPhase,
+} from "./runs";
 export {
   deriveInstall,
   releaseDir,
@@ -48,3 +53,4 @@ export {
   REMOTE_SCRIPT_SHEBANG,
 } from "./derive";
 export type { InstallLayout } from "./derive";
+export { deploymentDetailRoute } from "./routes";

@@ -27,17 +27,21 @@ field** is one only that kind has, always namespaced `<kind>.<id>`. The prefix i
 load-bearing: `release_runs` has a `kind` column of its own, which becomes
 `release.kind` and must not shadow the discriminator.
 
-## Presentation is dispatched; schema is not
+## A row is fields, and only fields
 
-An arm supplies its list row (`Runs.Row`) and leading indicator
-(`Runs.Leading`) — that is where a domain's shorthand belongs. It may **not**
-replace the row wholesale in the table view, because fields are what make
-filter / sort / group-by mean one thing across kinds; an arm field is simply
-blank on other kinds' rows.
+Every row is one field-driven line, in every view, for every kind — so the
+Properties panel means something. An arm contributes **columns** (`Runs.Fields`)
+and a **leading glyph** (`Runs.Leading`); it does not contribute a row body.
 
-`renderRow` is only handed to the list when at least one arm contributes one —
-otherwise the list keeps its own field-driven row, which respects the user's
-chosen visible fields.
+There used to be a `Runs.Row`. Do not reintroduce one: the list installs a
+`renderRow` override the moment *any* arm contributes, and that override replaces
+the field-driven body for **every** kind — so one arm's bespoke row switched off
+the visible-fields panel for all four. What the two arms using it actually wanted
+was not a row: backup wanted a detail surface it did not have yet, and deploy was
+hand-rendering chips its own fields already described.
+
+A domain's detail belongs in the pane `Kind.open` pushes. A domain's data belongs
+in `Fields`, where it is filterable and sortable rather than merely visible.
 
 ## Where an arm cannot go wrong
 
@@ -82,7 +86,7 @@ in-window change, and old runs are finished, so that tail is stable by nature.
 Its own `{core,server,web}` under the owning domain plugin — never here; `runs`
 names no kind. `core`: `defineRunArmFields`. `server`: `defineRunKind` in
 `register: [...]`. `web`: `Runs.Kind` (label, optional `open`), plus
-`Runs.Fields` / `Runs.Row` / `Runs.Leading` as wanted.
+`Runs.Fields` / `Runs.Leading` as wanted.
 
 `Runs.Fields` also declares the arm's **`section`** — the heading its columns are
 listed under in the filter picker, the Properties list and the group-by band
@@ -91,41 +95,52 @@ projects. Give it the same words as the kind's label. It is spelled once on the
 registration and stamped onto every field the arm returns, so eight columns
 cannot end up under two spellings; see data-view's CLAUDE.md ("Field sections").
 
-`Runs.Kind.open` is a plain callback and cannot call hooks. A kind whose detail
-pane is keyed by something the ledger does not store (release's pane wants the
-composition **uuid**; `release_runs` carries its **name**) therefore contributes
-no `open`, and its rows do not activate. **The smaller fix is to teach that pane
-to accept the identifier the ledger already carries** — not to grow this API a
-component seam so one arm can resolve a lookup at render time.
+`Runs.Kind.open` is a plain callback and cannot call hooks, so it can only use
+identifiers the ledger row already carries. When a pane wants one the row does
+not have, **fix the pane** — do not grow this API a component seam so an arm can
+resolve a lookup at render time. Both cases that hit this were pane bugs: the
+release pane hung off a composition **uuid** while the ledger stores the **name**
+(reparented onto the paramless route it never needed an ancestor for), and the
+deployment pane's ancestor param was unspellable in the legacy `Pane.define`
+segment form (converted to `route:`, which chains params).
 
 The kind's human label is declared **only** on `Runs.Kind` — the filter chip must
 offer every registered kind, not the ones on the loaded page, so the label is a
 web fact. `defineRunKind` has no `label`; there is nothing to keep in sync.
 
 Read an arm's own column with `armText` / `armNumber` / `armBool` / `armDate` /
-`armTags` (`runs/web`), never by hand off the `catchall`. They take the arm's
-specs, so a wrong id or a type that disagrees with the column will not compile;
-a null is an answer (the column is null on every other kind's rows) and a wrong
-shape throws.
+`armTags` / `armJson` (`runs/web`), never by hand off the `catchall`. They take
+the arm's specs, so a wrong id or a type that disagrees with the column will not
+compile; a null is an answer (the column is null on every other kind's rows) and
+a wrong shape throws. `armJson` additionally takes the schema, since `runs` knows
+a column is jsonb but not what is inside it.
+
+## Reading one run: `useRun({ kind, id })`
+
+The by-id read behind every run-detail pane. It compiles through the SAME
+`compileUnionPage` the list does — one arm, every arm's column specs — so the row
+comes back **byte-identical in shape to a listed one** and the same accessors
+decode it. There is no second row type.
+
+Two consequences worth knowing. The list and the detail share one projection, so
+a column cannot be trimmed from the list without also removing it from the
+detail — per-read column selection does not exist in `union-query` today. And the
+pair is the address: a run id is unique only within its own ledger.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The merged run surface: <RunsDataView> over the base field schema plus every arm's contributed fields, and the four seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Row / Runs.Leading for the list row, Runs.Fields for its own columns). Presentation is dispatched per kind; the schema never is, so filter / sort / group-by mean one thing across every ledger. The run-kind registry and the one query behind the merged run space: defineRunKind binds a domain's own ledger into the union (base columns typed against the base declaration, extra columns typed against the arm's own field declaration), POST /api/runs/query compiles every registered arm into one keyset page, and runs.revision is the scalar tick that refreshes the loaded window. Names no run kind.
+- Description: The merged run surface: <RunsDataView> over the base field schema plus every arm's contributed fields, and the three seams an arm reaches it through (Runs.Kind for the label + row activation, Runs.Leading for the list row's status glyph, Runs.Fields for its own columns). Every row is a single field-driven line that obeys the view's visible fields, and a domain's detail lives in the pane its rows open — an arm contributes columns and a glyph, never a row body. Also exports useRun, the by-(kind, id) read every run-detail surface hydrates from. The run-kind registry and the one query behind the merged run space: defineRunKind binds a domain's own ledger into the union (base columns typed against the base declaration, extra columns typed against the arm's own field declaration), POST /api/runs/query compiles every registered arm into one keyset page, GET /api/runs/:kind/:id compiles the one arm that owns the kind against every arm's column specs so a single row comes back shaped exactly like a listed one, and runs.revision is the scalar tick that refreshes the loaded window. Names no run kind.
 - Web:
   - Slots:
     - `Runs.Kind` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
-    - `Runs.Row` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`
     - `Runs.Leading` ← `build.runs-arm`
     - `Runs.Fields` ← `apps.deploy.deployments.runs-arm`, `backup.runs-arm`, `build.runs-arm`, `release.runs-arm`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
-    - `primitives/css/cluster.Cluster`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.DataViewDensity`
     - `primitives/data-view.defineDataView`
@@ -140,11 +155,13 @@ shape throws.
     - `runs/run-outcome.RunOutcomeDot`
   - Exports (types):
     - `RunKindContribution`
+    - `RunRead`
     - `RunRowProps`
     - `RunsDataViewProps`
   - Exports (values):
     - `armBool`
     - `armDate`
+    - `armJson`
     - `armNumber`
     - `armTags`
     - `armText`
@@ -153,6 +170,7 @@ shape throws.
     - `Runs`
     - `RUNS_VIEW`
     - `RunsDataView`
+    - `useRun`
 - Server:
   - Contributes: `resource.declare` "runs.revision"
   - Uses:
@@ -171,7 +189,9 @@ shape throws.
     - `durationMsExpr`
     - `getRunKinds`
   - Resources: `runs.revision` (push)
-  - Routes: `POST /api/runs/query`
+  - Routes:
+    - `POST /api/runs/query`
+    - `GET /api/runs/:kind/:id`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -185,16 +205,19 @@ shape throws.
     - `RunArmFieldSpecs`
     - `RunBaseColumnId`
     - `RunBaseColumnNullable`
+    - `RunByIdResponse`
     - `RunColumnSpec`
     - `RunDerivedColumnId`
     - `UnionRun`
   - Exports (values):
     - `defineRunArmFields`
+    - `getRun`
     - `queryRuns`
     - `QueryRunsBodySchema`
     - `QueryRunsResponseSchema`
     - `RUN_BASE_COLUMNS`
     - `RUN_SEARCH_COLUMNS`
+    - `RunByIdResponseSchema`
     - `runRowKey`
     - `runsRevisionResource`
     - `UnionRunSchema`

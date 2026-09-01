@@ -77,7 +77,6 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
     - `apps/workflows/engine`
-    - `backup/runs-arm`
     - `build/build-logs`
     - `code-explorer/commit-detail`
     - `conversations/agents`

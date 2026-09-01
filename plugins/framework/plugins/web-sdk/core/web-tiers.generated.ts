@@ -22,6 +22,12 @@
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/explorer: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/explorer/plugins/membership: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/graph: dependency closure (imported by an eager plugin)
+//   - apps/plugins/studio/plugins/membership-tint: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/pages-nav",
@@ -137,13 +143,11 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/story/plugins/pages-integration",
   "apps/plugins/story/plugins/renderers/plugins/blog",
   "apps/plugins/story/plugins/renderers/plugins/slides",
-  "apps/plugins/studio/plugins/compositions",
   "apps/plugins/studio/plugins/compositions/plugins/closure-tree",
   "apps/plugins/studio/plugins/compositions/plugins/contributors",
   "apps/plugins/studio/plugins/compositions/plugins/draft-actions",
   "apps/plugins/studio/plugins/compositions/plugins/entry-points",
   "apps/plugins/studio/plugins/compositions/plugins/membership-summary",
-  "apps/plugins/studio/plugins/compositions/plugins/release",
   "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-artifact",
   "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-info",
   "apps/plugins/studio/plugins/compositions/plugins/release/plugins/release-logs",
@@ -154,15 +158,11 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes",
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count",
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows",
-  "apps/plugins/studio/plugins/explorer",
   "apps/plugins/studio/plugins/explorer/plugins/child-count",
   "apps/plugins/studio/plugins/explorer/plugins/collapsed",
   "apps/plugins/studio/plugins/explorer/plugins/excluded",
   "apps/plugins/studio/plugins/explorer/plugins/expand-collapse",
   "apps/plugins/studio/plugins/explorer/plugins/load-bearing",
-  "apps/plugins/studio/plugins/explorer/plugins/membership",
-  "apps/plugins/studio/plugins/graph",
-  "apps/plugins/studio/plugins/membership-tint",
   "apps/plugins/website/plugins/landing/plugins/fork",
   "apps/plugins/website/plugins/landing/plugins/intro",
   "apps/plugins/website/plugins/questions/plugins/apps",

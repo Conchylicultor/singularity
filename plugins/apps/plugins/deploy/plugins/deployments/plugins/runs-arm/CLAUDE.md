@@ -1,9 +1,9 @@
 # runs-arm (deploy)
 
 The deploy arm of the unified run space: `deploy_runs` bound into the
-[`runs`](../../../../../../runs/CLAUDE.md) union, its own columns, and the list
-row. It lives under `deployments` because `deploy_runs` is that plugin's table;
-`runs` names no kind.
+[`runs`](../../../../../../runs/CLAUDE.md) union, its own columns, and what a
+deploy row opens. It lives under `deployments` because `deploy_runs` is that
+plugin's table; `runs` names no kind.
 
 The per-deployment history DataView is untouched — that one is *scoped*, this
 one is global. They read the same table through different queries.
@@ -29,21 +29,22 @@ A deploy records no separate initiator, and `converge` / `ship` / `update` is th
 closest thing to "how did this start". It is *also* `deploy.verb`, so the same
 fact is filterable precisely (closed enum, chips) as well as generically.
 
-## `message` is rendered verbatim
+## `message` is the CLI's own words
 
 The CLI owns every refusal; this app only spawns `./singularity deploy` and
-streams its output. The row prints the message untruncated and unclamped, as the
-existing deploy pane does — a paraphrase of "the command refused, and this is
-what it said" is the one thing that must not happen to it.
+streams its output. The deploy pane prints the message untruncated and
+unclamped — a paraphrase of "the command refused, and this is what it said" is
+the one thing that must not happen to it.
 
-## No row activation, and what it would take
+## A deploy row opens the deployment pane
 
-The row carries both ids `deploymentDetailPane` needs, but that pane is a legacy
-segment-form pane: its typed params are its own only, so `openPane` cannot be
-handed the `serverId` its `serverDetailPane` ancestor needs, and an open from
-anywhere but the server page lands on a "server not found" column. Converting it
-to `Pane.define({ route })` types the parent params and mints the `.link` a real
-cross-app hand-off needs; `open` is then two lines in `web/index.ts`.
+`open` needs BOTH `deploy.serverId` and `deploy.deploymentId`, because
+`deploymentDetailPane` nests under the server page. That is why the whole deploy
+pane chain is `Pane.define({ route })`: the legacy segment form typed a pane's
+params as its own segment's only, so the ancestor's `serverId` was unspellable
+and a deploy row could not activate from anywhere but the server page. Both
+columns are `NOT NULL`, so `open` throws on a null rather than returning — an
+impossible row, not a case to handle.
 
 ## `deploy.releaseRunId` is a plain chip
 
@@ -64,22 +65,16 @@ is non-nullable.
 
 ## Plugin reference
 
-- Description: The deploy arm's presence on the merged run surface: the kind's label, its eight own columns (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) as real filterable and sortable SQL dimensions, and the list row that renders the CLI's refusal text verbatim beside the leg of an update that died. Contributes no row activation — see the plugin's CLAUDE.md. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
+- Description: The deploy arm's presence on the merged run surface: the Deploy kind (whose rows open the deployment detail pane on the server the run went to), and its eight own columns (verb, failed phase, server / deployment / composition / release-run / commit ids, exit code) as real filterable and sortable SQL dimensions. The deploy arm of the unified run space: binds deploy_runs into the runs union — status folded into the shared outcome vocabulary through a typed map, a label naming the composition and the server it went to, the verb as both the shared trigger and its own enum dimension, and the CLI's refusal text as the shared message. Reads null for namespace: a deploy targets a remote server, not a worktree.
 - Web:
   - Contributes:
     - `Runs.Kind`
-    - `Runs.Row` → `DeployRunRow`
     - `Runs.Fields` "deploy" → `DeployRunFields`
   - Uses:
+    - `apps/deploy/deployments.deploymentDetailPane`
     - `primitives/css/badge.Badge`
-    - `primitives/css/cluster.Cluster`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/spacing.Stack`
-    - `primitives/css/text.Text`
-    - `primitives/relative-time.RelativeTime`
     - `runs.armNumber`
     - `runs.armText`
-    - `runs.formatDuration`
     - `runs.runArmFields`
     - `runs.RunRowProps`
     - `runs.Runs`

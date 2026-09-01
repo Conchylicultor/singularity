@@ -143,13 +143,25 @@ export function useRunFields(
         label: "Message",
         type: "text",
         value: (r) => r.message,
-        cell: (r) =>
-          r.message === null ? null : (
-            <span className="whitespace-pre-wrap" title={r.message}>
-              {r.message}
-            </span>
-          ),
+        // No `cell` of its own, deliberately. The one it used to carry rendered
+        // `whitespace-pre-wrap`, which is the single thing in this schema that
+        // can break a row's line: the list's one-line shape is a `region-line`
+        // context where every leaf ellipsizes without asking, and a cell that
+        // overrides `white-space` opts back out of it. The shared `TextCell`
+        // truncates, which is what a row wants.
+        //
+        // Off by default, like `finishedAt`. This is the only prose in a schema
+        // of badges and scalars, it is non-null on just two of the four arms
+        // (build and backup both project null — a build's words live in its
+        // transcript, a backup's are per-target), and the failure is already
+        // stated by `outcome` and, more precisely, by `deploy.phaseFailed` /
+        // `build.status` / the exit codes. Where the verbatim text matters it is
+        // one click away in the run's own detail surface.
+        //
+        // `filterable` stays, and `RUN_SEARCH_COLUMNS` already lists `message`,
+        // so searching for a failure's own words is unaffected by the default.
         filterable: true,
+        visible: false,
         width: "24rem",
       },
     ] satisfies FieldDef<UnionRun>[];

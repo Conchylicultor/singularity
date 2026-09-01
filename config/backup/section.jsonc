@@ -1,0 +1,17 @@
+// @hash 1f08ff27ac74
+// The backup run-detail pane, top to bottom.
+//
+// Sources before Targets because that is the order the run happened in: a
+// backup gathers what goes into the archive, then dispatches the archive to
+// each storage target. It is also the order the hand-rolled card this pane
+// replaced used.
+//
+// Targets is second but not lesser — it is the one that opens itself when a
+// target failed (`useDefaultOpen`), because it holds the Grant access button,
+// the only in-app repair path for a storage target whose OAuth token expired.
+{
+  "items": [
+    "backup.runs-arm:sources",
+    "backup.runs-arm:targets"
+  ]
+}

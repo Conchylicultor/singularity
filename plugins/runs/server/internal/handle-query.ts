@@ -1,9 +1,6 @@
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
-import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
-import type { OperatorSqlResolver } from "@plugins/primitives/plugins/data-view/plugins/server-query/server";
 import { compileUnionPage } from "@plugins/primitives/plugins/data-view/plugins/union-query/server";
 import { UnionCursorMismatchError } from "@plugins/primitives/plugins/data-view/plugins/union-query/core";
 import { encodeCursor } from "@plugins/primitives/plugins/keyset/core";
@@ -16,16 +13,8 @@ import {
   type UnionRun,
 } from "../../core";
 import { armFieldSpecs, runArms } from "./arms";
+import { DEFAULT_SORT, resolver } from "./query-defaults";
 import { getRunKinds } from "./registry";
-
-// Newest first when the client sends no sort — the only order a "what is
-// happening" surface can open on.
-const DEFAULT_SORT: SortRule[] = [{ fieldId: "startedAt", direction: "desc" }];
-
-// Field-type agnostic: the SQL for each (type, operator) pair comes from the
-// fields registry; an unknown pair resolves to `null` → that rule is dropped.
-const resolver: OperatorSqlResolver = (typeId, operatorId) =>
-  resolveFieldFilterSql(typeId, operatorId) ?? null;
 
 /**
  * One window of the merged run space.

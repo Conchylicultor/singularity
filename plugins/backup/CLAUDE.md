@@ -4,12 +4,16 @@
 
 ## Plugin reference
 
-- Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
+- Description: Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 - Web:
-  - Slots: `backupPane.Actions` ← `primitives.pane`
+  - Slots:
+    - `BackupRunDetail.Section` ← `backup.runs-arm`
+    - `backupPane.Actions` ← `primitives.pane`
+    - `backupRunPane.Actions` ← `primitives.pane`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `Pane.Register` "backup"
+    - `Pane.Register` "backup-run"
     - `DebugApp.Sidebar` "Backup" → `component`
   - Uses:
     - `apps/debug/shell.DebugApp`
@@ -23,11 +27,17 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
+    - `primitives/detail-sections.defineDetailSections`
+    - `primitives/loading.Loading`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `runs.RunsDataView`
-  - Exports (values): `backupPane`
+    - `runs.useRun`
+  - Exports (values):
+    - `backupPane`
+    - `BackupRunDetail`
+    - `backupRunPane`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses:
@@ -46,6 +56,18 @@
     - `BackupTarget`
   - Register: `defineJob('backup.run')`
   - Routes: `POST /api/backup/run`
+- Core:
+  - Uses: `primitives/pane.defineRoute`
+  - Exports (types):
+    - `BackupArchive`
+    - `BackupManifest`
+    - `BackupSourceItem`
+    - `BackupSourceReport`
+    - `BackupTargetResult`
+  - Exports (values):
+    - `BACKUP_RUN_KIND`
+    - `backupRoute`
+    - `backupRunRoute`
 - Cross-plugin:
   - Imported by:
     - `backup/runs-arm`
@@ -61,17 +83,10 @@
     - `backup/sources/transcripts`
     - `backup/targets/google-drive`
     - `backup/targets/local`
-- Core:
-  - Exports (types):
-    - `BackupArchive`
-    - `BackupManifest`
-    - `BackupSourceItem`
-    - `BackupSourceReport`
-    - `BackupTargetResult`
 - Shared:
   - Exports (values): `runBackup`
 - Sub-plugins:
-  - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the list row — the backup panel's expand/collapse card, moved — carrying the manifest's source reports and the per-target outcome with its Grant access remediation. Contributes no row activation, which is what lets the row hold those controls. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup is host-global) and for message (a backup's failure words are per-target).
+  - **`runs-arm`** — The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the two detail sections carrying what no scalar column can — the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup is host-global) and for message (a backup's failure words are per-target).
   - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
     - Plugins:
       - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.

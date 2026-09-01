@@ -48,3 +48,35 @@ export const queryRuns = defineEndpoint({
   body: QueryRunsBodySchema,
   response: QueryRunsResponseSchema,
 });
+
+/**
+ * One merged row, or `null` when the pair names no run.
+ *
+ * `null` is an ANSWER, not an absence of one: it says the ledger was read and
+ * holds no such row. A transport failure is a rejection, so a caller can still
+ * tell "this run is gone" apart from "nobody could tell me" — which is the whole
+ * reason this is a nullable field over a 200 rather than a 404.
+ */
+export const RunByIdResponseSchema = z.object({
+  run: UnionRunSchema.nullable(),
+});
+export type RunByIdResponse = z.infer<typeof RunByIdResponseSchema>;
+
+/**
+ * One run, addressed by the PAIR that names it.
+ *
+ * Never a bare id, for the same reason `runRowKey` is not one: a run id is
+ * unique only within its **own** ledger, so two ledgers can mint the same one.
+ * A by-id lookup would then have to search every arm and pick a winner, and the
+ * one it picked would depend on registration order. The kind makes the address
+ * total — and, on the server, it is also what lets exactly one arm be compiled
+ * instead of a union of all of them.
+ *
+ * `dedupe: true` because a detail pane is several sections asking about the same
+ * row at the same instant; they should cost one query, not one each.
+ */
+export const getRun = defineEndpoint({
+  route: "GET /api/runs/:kind/:id",
+  response: RunByIdResponseSchema,
+  dedupe: true,
+});

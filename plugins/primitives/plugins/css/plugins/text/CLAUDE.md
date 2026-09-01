@@ -172,7 +172,6 @@ fixed raw size escapes per-site via
     - `apps/deploy/composition`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/health`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
@@ -431,7 +430,6 @@ fixed raw size escapes per-site via
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
-    - `runs`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `search/quick-find`

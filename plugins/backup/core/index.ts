@@ -1,3 +1,6 @@
+export { BACKUP_RUN_KIND } from "./kind";
+export { backupRoute, backupRunRoute } from "./routes";
+
 export interface BackupSourceItem {
   label: string;
   detail?: string;

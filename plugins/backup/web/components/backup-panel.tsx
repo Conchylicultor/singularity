@@ -9,11 +9,24 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { RunsDataView } from "@plugins/runs/web";
+import { BACKUP_RUN_KIND } from "../../core";
 import { runBackup } from "../../shared/endpoints";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import { backupConfig } from "../../shared/config";
 
-export function BackupPanel() {
+export interface BackupPanelProps {
+  /**
+   * The run whose detail pane is open, so the list highlights its row.
+   *
+   * A bare id, not the `{ kind, id }` pair `RunsDataView` wants: this panel is
+   * pinned to the backups view and its host reads the id off the backup
+   * run-detail pane's own route entry, so the kind is already known here and
+   * asking the caller for it again would only be a way to get it wrong.
+   */
+  selectedRunId?: string;
+}
+
+export function BackupPanel({ selectedRunId }: BackupPanelProps) {
   const { mutate: triggerBackup, isPending } = useEndpointMutation(runBackup);
   // This box opens a region, so it takes the region owner's dev-only guard:
   // it measures every child's content edge against the rail published below and
@@ -33,13 +46,12 @@ export function BackupPanel() {
     // body (`rail-x-lg pb-lg`). This mattered not at all for the hand-rolled
     // cards that used to be here; it matters the moment a rail follower is.
     //
-    // `max-w-5xl`, not the old `max-w-2xl`: 42rem was sized for hand-rolled
-    // cards, and what lives here now is a DataView whose rows carry chips, a
-    // size, a source count, a duration, a timestamp and a disclosure — plus a
-    // Grant access button on a row whose target failed. At 2xl the chevron
-    // wrapped onto its own line on EVERY row; the same rows render on one line
-    // in the wider /debug/build pane, which is what identifies the box as the
-    // thing that was wrong rather than the row as greedy.
+    // `max-w-5xl`, not the old `max-w-2xl`: 42rem was sized for the hand-rolled
+    // cards that used to be here, and what lives here now is a DataView with a
+    // table view — a row's own line truncates gracefully at any width, but a
+    // table of six columns does not, and 42rem is where its cells stop being
+    // readable. The cap is still a cap: this is prose-and-list chrome, so it is
+    // held to a reading width rather than stretched across a 27" display.
     <Stack ref={railRef} gap="xl" className="py-xl rail-x-xl max-w-5xl">
       <Stack gap="xs">
         <Stack direction="row" gap="md" align="center" justify="between">
@@ -86,11 +98,21 @@ export function BackupPanel() {
           there. Pinning also drops the switcher, which is right — inside the
           Backup app this is one scoped list, not a tab strip over every ledger.
 
-          The hand-rolled expand/collapse cards that used to live here are gone:
-          the backup arm carries their detail into the merged row, and a new
-          backup arrives through `runs.revision` rather than through this panel
+          The hand-rolled expand/collapse cards that used to live here are gone,
+          and so is the disclosure row that replaced them: a run's detail is now
+          a pane of its own, which is what lets the row be an ordinary
+          field-driven line that obeys the Properties panel. A new backup
+          arrives through `runs.revision` rather than through this panel
           re-fetching a list of its own. */}
-      <RunsDataView pinnedView="backups" emptyState={<>No backups yet.</>} />
+      <RunsDataView
+        pinnedView="backups"
+        emptyState={<>No backups yet.</>}
+        selectedRun={
+          selectedRunId === undefined
+            ? undefined
+            : { kind: BACKUP_RUN_KIND, id: selectedRunId }
+        }
+      />
     </Stack>
   );
 }

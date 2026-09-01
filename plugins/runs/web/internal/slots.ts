@@ -3,11 +3,12 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 import { defineFieldExtensions } from "@plugins/primitives/plugins/data-view/web";
 import type { OpenPaneFn } from "@plugins/primitives/plugins/pane/web";
 import type { UnionRun } from "../../core";
-import {
-  GenericRunLeading,
-  GenericRunRow,
-  type RunRowProps,
-} from "../components/generic-run-row";
+import { GenericRunLeading } from "../components/generic-run-leading";
+
+/** The props every per-kind row affordance receives: the merged row itself. */
+export interface RunRowProps {
+  run: UnionRun;
+}
 
 /**
  * What an arm registers on the web: its label, and — optionally — where a row of
@@ -32,22 +33,28 @@ export interface RunKindContribution {
 /**
  * The seams an arm reaches the merged surface through.
  *
- * Presentation is dispatched, schema is not — that split is load-bearing.
- * Fields are what make filter / sort / group-by / search mean one thing across
- * kinds, so the table view stays strictly field-driven and an arm's field is
- * simply blank on other kinds' rows. Only the *list row* and its leading
- * indicator are the arm's to replace, because those are where a domain's own
- * shorthand belongs.
+ * **The row body is not one of them, deliberately.** There used to be a
+ * `Runs.Row` an arm could replace the whole line with, and it cost the surface
+ * its schema: the list installs a `renderRow` override the moment ANY arm
+ * contributes one, and that override replaces the field-driven body for EVERY
+ * kind — so one arm's bespoke row silently switched off the Properties panel for
+ * all four. What an arm wanted it for was never really a row, either: it was a
+ * detail surface it did not have yet (backup's expand/collapse card) or a set of
+ * chips its own fields already described (deploy's).
+ *
+ * So a row is fields, and only fields. A domain's detail belongs in the pane its
+ * `Kind.open` pushes; a domain's columns belong in `Fields`, where they are also
+ * filterable, sortable and groupable rather than merely visible.
  */
 export const Runs = {
   /** One per arm: the kind's label, and optionally how to open one of its rows. */
   Kind: defineSlot<RunKindContribution>(),
-  /** The list-row body for one kind. Falls back to the base-column row. */
-  Row: defineDispatchSlot<RunRowProps, string>({
-    key: (p) => p.run.kind,
-    fallback: GenericRunRow,
-  }),
-  /** The list-row leading indicator for one kind. Falls back to the outcome dot. */
+  /**
+   * The list-row leading indicator for one kind. Falls back to the outcome dot.
+   *
+   * The one presentational seam that survives, because it is a fixed-size glyph
+   * in a slot the list already owns — it cannot grow to swallow the row.
+   */
   Leading: defineDispatchSlot<RunRowProps, string>({
     key: (p) => p.run.kind,
     fallback: GenericRunLeading,

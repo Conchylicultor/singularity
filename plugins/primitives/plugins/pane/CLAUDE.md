@@ -629,7 +629,7 @@ See "Open questions" in the design doc.
     - `compositionsPane.Actions` "title" → `PaneTitleItem`
     - `compositionDetailPane.Actions` "title" → `PaneTitleItem`
     - `comparePane.Actions` "title" → `PaneTitleItem`
-    - `release-detail.actions` "title" → `PaneTitleItem`
+    - `releaseDetailPane.Actions` "title" → `PaneTitleItem`
     - `contributions.actions` "title" → `PaneTitleItem`
     - `tableDetailPane.Actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`
@@ -644,6 +644,7 @@ See "Open questions" in the design doc.
     - `googleMapsSetupPane.Actions` "title" → `PaneTitleItem`
     - `googleSetupPane.Actions` "title" → `PaneTitleItem`
     - `backupPane.Actions` "title" → `PaneTitleItem`
+    - `backupRunPane.Actions` "title" → `PaneTitleItem`
     - `buildPane.Actions` "title" → `PaneTitleItem`
     - `buildDetailPane.Actions` "title" → `PaneTitleItem`
     - `global-file-tree.actions` "title" → `PaneTitleItem`

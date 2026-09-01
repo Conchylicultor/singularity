@@ -187,7 +187,7 @@ function DeploymentsBody({
         onRowActivate={(d) =>
           openPane(
             deploymentDetailPane,
-            { deploymentId: d.id },
+            { serverId, deploymentId: d.id },
             { mode: "push", side: "right" },
           )
         }

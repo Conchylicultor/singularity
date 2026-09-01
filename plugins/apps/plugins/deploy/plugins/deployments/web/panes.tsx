@@ -1,9 +1,8 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { serverDetailPane } from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
-import { deploymentsResource } from "../core";
+import { deploymentDetailRoute, deploymentsResource } from "../core";
 import { DeploymentDetail } from "./slots";
 
 function useResolveDeployment({ deploymentId }: { deploymentId: string }) {
@@ -38,12 +37,8 @@ function useDeploymentTitle({
  * deployment is a drill-in under it, not a new main surface.
  */
 export const deploymentDetailPane = Pane.define({
-  id: "deploy-deployment-detail",
+  route: deploymentDetailRoute,
   app: deployApp,
-  defaultAncestors: [serverDetailPane],
-  // Segments are GLOBALLY unique across all panes after param-name erasure —
-  // `d/:sha` is the diff pane's, so a deployment uses `dep/…`.
-  segment: "dep/:deploymentId",
   component: DeploymentDetailBody,
   width: 460,
   resolve: useResolveDeployment,

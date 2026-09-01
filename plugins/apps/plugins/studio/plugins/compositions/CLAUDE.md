@@ -6,9 +6,17 @@ pane** whose content is a render slot, and a **compare** pane.
 ```
 compositions (list, 380)                    [Studio.Sidebar entry]
 ├── comp/:id   (detail — CompositionDetail.Host, collapsible sections)
-│     └── rel/:runId  (a release run, pushed from the history section)
+├── rel/:runId (a release run — pushed UNDER comp/:id from the history
+│               section, but parented here; see below)
 └── compare    (A/B pickers + delta)
 ```
+
+`rel/:runId` parents on the **paramless** compositions route, not `comp/:id` —
+deliberately, though it still *appears* under a composition when pushed from the
+history section (a route parent is only a hint for opening from scratch). Do not
+reparent it: `comp/:id` is the config-item **uuid** while `release_runs` stores
+the composition **name**, so anyone holding just a ledger row (the merged runs
+list) could not name the ancestor, and release rows could not activate at all.
 
 The detail pane owns no content of its own. It hosts
 `CompositionDetail = defineDetailSections<{ id }>("composition-detail")`,

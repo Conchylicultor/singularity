@@ -7,6 +7,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
+import { serversRoute, serverDetailRoute } from "../core";
 import { serversResource } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
@@ -19,10 +20,10 @@ import { ServerDetail } from "./slots";
 export const NEW_SERVER_ID = "new";
 
 export const serversRootPane = Pane.define({
-  id: "deploy-servers",
+  route: serversRoute,
   app: deployApp,
   // The Deploy app's index/landing pane — what its bare root (/deploy)
-  // resolves to.
+  // resolves to. Its route owns no segment, for exactly that reason.
   appIndex: true,
   component: ServersRoot,
   width: 320,
@@ -39,10 +40,8 @@ function useResolveServer({ serverId }: { serverId: string }) {
 // same page in edit mode. One route serves both, so adding and editing a server
 // are the same surface.
 export const serverDetailPane = Pane.define({
-  id: "deploy-server-detail",
+  route: serverDetailRoute,
   app: deployApp,
-  defaultAncestors: [serversRootPane],
-  segment: "server/:serverId",
   component: ServerDetailBody,
   resolve: useResolveServer,
   width: 420,

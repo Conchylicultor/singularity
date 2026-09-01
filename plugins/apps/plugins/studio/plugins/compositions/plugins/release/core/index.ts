@@ -1,0 +1,1 @@
+export { releaseDetailRoute } from "./routes";

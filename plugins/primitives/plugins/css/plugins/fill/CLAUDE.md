@@ -87,7 +87,6 @@ primitive exists to name.
     - `apps/browser/shell`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
-    - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
     - `apps/events/event-list`
@@ -111,7 +110,6 @@ primitive exists to name.
     - `apps/workflows/editor`
     - `auth`
     - `auth/apple-signing/setup-wizard`
-    - `backup/runs-arm`
     - `build/deployment`
     - `code-explorer/commit-detail`
     - `config_v2/config-link`
@@ -178,7 +176,6 @@ primitive exists to name.
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
-    - `runs`
     - `shell/notifications`
     - `tasks/attempt-view`
     - `tasks/task-draft-form`

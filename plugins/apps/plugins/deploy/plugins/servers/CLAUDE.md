@@ -99,6 +99,11 @@ contributing a section, never by wrapping the pane.
     - `DELETE /api/deploy/servers/:id`
     - `POST /api/deploy/servers/:id/ssh-keypair`
     - `POST /api/deploy/servers/:id/ssh-keypair/import`
+- Core:
+  - Uses: `primitives/pane.defineRoute`
+  - Exports (values):
+    - `serverDetailRoute`
+    - `serversRoute`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
