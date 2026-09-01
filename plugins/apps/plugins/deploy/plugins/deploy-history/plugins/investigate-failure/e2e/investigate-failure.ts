@@ -113,11 +113,14 @@ await withBrowser(async (h) => {
     await failedRow.hover();
     await snap(page, out, "hover");
     await failedRow.locator(INVESTIGATE).click();
+    // `isVisible()` rather than `waitFor()`: the popover opens on a React state
+    // flip in the click's own turn, so there is nothing to wait for — and a
+    // `waitFor` here could only report the miss by throwing, which would trade
+    // this named assertion for a stack trace.
     const heading = page.getByText("Investigate this failure", { exact: true });
-    await heading.waitFor({ state: "visible" }).catch(() => undefined);
     r.ok(
       "pressing it opens the launch form",
-      (await heading.count()) > 0,
+      await heading.isVisible(),
       "no launch form appeared after the click",
     );
     await snap(page, out, "popover");
