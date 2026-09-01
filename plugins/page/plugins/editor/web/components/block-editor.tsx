@@ -158,8 +158,14 @@ function isCaretHost(el: HTMLElement): boolean {
 // range keeps extending onto whatever scrolls into view under it. A version that
 // returned null off-content would freeze the selection the moment the drag left
 // the content box — i.e. exactly when auto-scroll takes over.
-function rowAtPointer(y: number): DropTarget | null {
-  const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
+//
+// Takes the ROWS rather than finding them, because there is no such thing as
+// "the" rows of the document: two page panes side by side are two editors, each
+// with its own. See `blockRows` below.
+function rowAtPointer(
+  els: readonly HTMLElement[],
+  y: number,
+): DropTarget | null {
   let nearest: DropTarget | null = null;
   let nearestDist = Infinity;
   for (const el of els) {
@@ -570,6 +576,34 @@ function SelectionLayer({
   // owned by `useBlockSelection` below, as `containerRef`.
   const contentRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * THIS editor's rendered block rows, in document order — the one place the
+   * `[data-block-id]` scan is spelled, and the reason it is scoped to
+   * `contentRef` rather than to `document`.
+   *
+   * Two page panes can be open side by side (`/pages/page/:a/page/:b`), and each
+   * mounts its own `BlockEditor` with its own rows. A document-wide scan makes
+   * every pointer question answer with the FIRST pane whose row happens to share
+   * the pointer's y — DOM order wins the contains-test — so a drag in the right
+   * pane resolved to left-pane block ids, and the range it built named blocks
+   * this editor does not have: the marquee painted and nothing selected. Rows
+   * belong to an editor, so the pointer question is asked of an editor's box.
+   *
+   * The rect reads that follow already dominate a per-frame gesture, so
+   * materialising the list costs nothing measurable next to them.
+   */
+  const blockRows = useCallback((): readonly HTMLElement[] => {
+    const content = contentRef.current;
+    if (!content) return [];
+    return [...content.querySelectorAll<HTMLElement>("[data-block-id]")];
+  }, []);
+
+  /** {@link rowAtPointer} over this editor's own rows. */
+  const rowAt = useCallback(
+    (y: number) => rowAtPointer(blockRows(), y),
+    [blockRows],
+  );
+
   // The block list as the range machinery reads it: order (what a range spans)
   // plus depth (what tells a range which rows below it are children of what it
   // already covers, so a selected parent takes its subtree with it).
@@ -937,7 +971,7 @@ function SelectionLayer({
       const fallback = defaultTextHandle(handles);
       const firstId = flat[0]?.block.id;
       const lastBlock = flat[flat.length - 1]?.block;
-      const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
+      const els = blockRows();
       const firstEl = els[0];
       const lastEl = els[els.length - 1];
 
@@ -974,7 +1008,7 @@ function SelectionLayer({
         }
         return;
       }
-      const row = rowAtPointer(y);
+      const row = rowAt(y);
       if (row) {
         const rect = contentRef.current?.getBoundingClientRect();
         const edge: "start" | "end" =
@@ -984,7 +1018,16 @@ function SelectionLayer({
       }
       clearSelection();
     },
-    [flat, handles, insert, clearSelection, applyRange, focusBlockBoundary],
+    [
+      flat,
+      handles,
+      insert,
+      clearSelection,
+      applyRange,
+      focusBlockBoundary,
+      blockRows,
+      rowAt,
+    ],
   );
 
   /**
@@ -1008,7 +1051,7 @@ function SelectionLayer({
     // content, which is exactly what this wants: a pointer parked below the last
     // block resolves to the last row, so the range keeps extending as fresh
     // content scrolls in under it.
-    const cur = rowAtPointer(clientY);
+    const cur = rowAt(clientY);
 
     if (start.mode === "text") {
       if (!textDragPromotedRef.current) {
@@ -1127,7 +1170,7 @@ function SelectionLayer({
       const mode: DragMode = onBackground ? "background" : "text";
       const originId = inText
         ? (row?.getAttribute("data-block-id") ?? null)
-        : (rowAtPointer(e.clientY)?.id ?? null);
+        : (rowAt(e.clientY)?.id ?? null);
 
       dragStartRef.current = {
         id: originId,
@@ -1195,7 +1238,14 @@ function SelectionLayer({
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onCancel);
     },
-    [applySelectionAt, autoScroll, focusContainer, onEmptyClick, containerRef],
+    [
+      applySelectionAt,
+      autoScroll,
+      focusContainer,
+      onEmptyClick,
+      containerRef,
+      rowAt,
+    ],
   );
 
   // ---- Drag-and-drop (single block, or the whole selection) ----------------
@@ -1237,7 +1287,7 @@ function SelectionLayer({
   const currentTarget = (): DropTarget | null => {
     const pointer = pointerRef.current;
     if (!pointer || !activeId) return null;
-    const target = rowAtPointer(pointer.y);
+    const target = rowAt(pointer.y);
     if (!target) return null;
     const bulk = bulkDragRef.current;
     if (bulk) {
@@ -1368,12 +1418,12 @@ function SelectionLayer({
       e.preventDefault(); // required so the drop event fires
       e.dataTransfer.dropEffect = "copy";
       setExternalDragging(kind);
-      const next = rowAtPointer(e.clientY);
+      const next = rowAt(e.clientY);
       setExternalDropTarget((prev) =>
         prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
       );
     },
-    [allowAttachments],
+    [allowAttachments, rowAt],
   );
 
   const onExternalDragLeave = useCallback(
@@ -1440,7 +1490,7 @@ function SelectionLayer({
         text: readTransferText(dt),
         inline: isInsideEditingHost(e.target),
       });
-      const pos = externalDropPosition(rowAtPointer(e.clientY));
+      const pos = externalDropPosition(rowAt(e.clientY));
       setExternalDragging(null);
       setExternalDropTarget(null);
 
@@ -1489,7 +1539,7 @@ function SelectionLayer({
       e.preventDefault();
       paste({ blocks: forest, ...pos });
     },
-    [externalDropPosition, paste, handles, allowAttachments],
+    [externalDropPosition, paste, handles, allowAttachments, rowAt],
   );
 
   // The reorder drag and the file drag are mutually exclusive, so one indicator
