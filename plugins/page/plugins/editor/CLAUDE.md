@@ -1253,7 +1253,13 @@ still caught by the strict `parseBlockData` at the write boundary.
 
 `opBlockIds`' split case stays `[blockId, newId]`, deliberately omitting
 adopted children — the same documented under-approximation as merge's
-rewritten target: less cascade-confirmation coverage, but never a wrong drop.
+rewritten target. It feeds `sameOverlayTarget`, the overlay's ordering rule, so
+an omission means less **blocking**: two ops can interact in the fold without
+registering as same-target, and the newer one may leave while the older still
+replays. Never a wrong drop, because the relation is a symmetric intersection —
+under-naming can only fail to match. That guarantee would **invert** under a
+subset test (an omission on the *older* side makes it pass), which is one reason
+the primitive blocks rather than absorbs.
 
 ## The selection highlight belongs to the RUN, not to the row
 
@@ -2202,7 +2208,7 @@ were therefore broken for anyone who did not call through it:
   conversion itself is a different, successful write, so nothing looked broken;
   what it left was a durable HTTP failure that is **never retried and never
   resolves** (`use-optimistic-resource.ts` — failed ops are immune to
-  confirm/cascade/denial, and only NETWORK failures auto-retry), parking the
+  confirmation and denial alike, and only NETWORK failures auto-retry), parking the
   page's save indicator on an error with a Retry that re-fails. **No user action
   clears it short of a reload.**
 - **void → text.** `emptyRowData()` is the target's defaults minus `text`, and a
@@ -2636,18 +2642,28 @@ push, so the detector below stays the net for a push that never arrives.
   (collapsed ancestor — the manager died with the doc); a typing run within 500 ms
   after a non-doc structural op on the same block merging into the pre-op manager
   item (coarse grouping). All leave docs ≡ rows.
-- **Inverse pairs need same-target cascade confirmation.** An undo patch followed by
-  a redo patch before the undo's confirming push arrives leaves the undo op unable
-  to ever confirm. Fixed in the `optimistic-mutation` primitive (SAME-TARGET cascade
-  confirmation in `confirmPass` — see that plugin's CLAUDE.md); the editor declares
-  op identity via `sameOverlayTarget` (block-id-set intersection), so the inverse
-  pair cascades while an unrelated block's confirmation can never drop another
-  block's still-pending op. Under the never-revert policy
-  (`research/2026-07-11-global-never-revert-optimistic-edits.md`) there is no
-  miss-limit eviction: the `op`/`patch` endpoints return their commit watermark
-  (`currentTxId` read inside the write transaction), so an op leaves the overlay only
-  for a causal reason. One that fails to converge stays rendered and files a
-  `stalled` divergence report instead of un-splitting the user's block.
+- **Inverse pairs are handled by the overlay's ordering rule, not by absorption.**
+  An undo patch followed by a redo patch before the undo's confirming push arrives
+  leaves the undo op unable to ever confirm — every later snapshot shows X present,
+  which confirms the redo and never the undo. The `optimistic-mutation` primitive
+  resolves it by making the redo **wait**: an op may not leave the overlay while an
+  older, still-pending, same-target op survives the pass (see that plugin's
+  CLAUDE.md). The editor declares op identity via `sameOverlayTarget` (block-id-set
+  intersection), so the inverse pair blocks as a pair while an unrelated block's
+  confirmation never touches another block's op. Both replay meanwhile, so the
+  render is correct throughout the wait, and the pair drains as soon as a
+  watermark-carrying frame denies the undo.
+- **An op leaves the overlay only for a causal reason — and that is now literally
+  true.** It used not to be: same-target *cascade* dropped an older op on a newer
+  op's evidence, which is a non-causal exit, and it cost a user a visibly
+  disappearing block. What makes the claim true is that the only remaining exits
+  are an op's own confirmation and Rule-B denial of that same op, both gated by the
+  ordering rule so nothing leaves out of turn. The `op`/`patch` endpoints return
+  their commit watermark (`currentTxId` read inside the write transaction), which is
+  what gives denial its causal proof; there is no miss-limit eviction
+  (`research/2026-07-11-global-never-revert-optimistic-edits.md`), so an op that
+  fails to converge stays rendered and files a `stalled` divergence report instead
+  of un-splitting the user's block.
 
 ### Inline markdown autoformat is ONE captured doc edit
 

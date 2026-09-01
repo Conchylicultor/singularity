@@ -435,6 +435,46 @@ describe("isPatchReflected", () => {
     ).toBe(true);
   });
 
+  // The two exclusions above compose into a TAUTOLOGY, and this is the case
+  // that matters: `data` is never compared (`fieldsReflected`'s `compareData:
+  // false`) and an update naming an absent row is skipped (`patchLanded`), so a
+  // patch whose only update names `data` has nothing left to test. It returns
+  // `true` against every conceivable snapshot — the row present with the wrong
+  // text, the row present with the right text, the row missing, the page empty.
+  // Such a snapshot did not REFLECT the patch; it merely failed to CONTRADICT
+  // it.
+  //
+  // That is exactly why a confirmation may never speak for a DIFFERENT op. The
+  // debounced text projection is this patch shape, it fires constantly while a
+  // user types, and the old same-target cascade let its vacuous `true` evict an
+  // older structural op sharing a row — which is how a live block vanished from
+  // a user's screen for ~90s mid-typing. The overlay is an ordered fold, so
+  // dropping a middle op renders a state the user never created. Confirmation
+  // is now local to the op that earned it, and an older same-target op merely
+  // makes a newer one WAIT. See
+  // `research/2026-09-01-global-overlay-ordered-fold-no-transitive-eviction.md`.
+  //
+  // The `data` exclusion itself is correct and stays: server truth legitimately
+  // differs (`parseBlockData` normalization, the ~1s `data.text` projection
+  // lag), and comparing it would strand every projection in the overlay. This
+  // pins the property so the next reader knows what the predicate can and
+  // cannot prove — it does not condemn it.
+  test("a data-only patch is confirmed by ANY snapshot — its predicate cannot fail", () => {
+    const dataOnly = {
+      creates: [],
+      updates: [{ id: "A", changes: { data: { text: "projected" } } }],
+      deleteIds: [],
+    };
+    // Row present, text stale — the write demonstrably has NOT landed.
+    expect(
+      isPatchReflected([mk("A", null, a, { text: "stale" })], dataOnly),
+    ).toBe(true);
+    // Row absent entirely: the update is skipped, so nothing is left to fail.
+    expect(isPatchReflected([mk("B", null, after(a))], dataOnly)).toBe(true);
+    // The strongest form: an EMPTY snapshot confirms it too.
+    expect(isPatchReflected([], dataOnly)).toBe(true);
+  });
+
   test("only the NAMED fields are compared", () => {
     const patch = {
       creates: [],
@@ -671,7 +711,13 @@ describe("updates never create", () => {
 });
 
 // ---------------------------------------------------------------------------
-// sameOverlayTarget (op identity for cascade confirmation)
+// sameOverlayTarget (op identity for the overlay's ordering rule)
+//
+// The relation is unchanged; what it MEANS changed. It used to be a licence to
+// evict — a confirmed newer op dropped every older op sharing a row. It is now
+// a reason to WAIT: an op may not leave the overlay while an older, still-
+// pending op sharing a row survives the same pass. So an inaccurate answer now
+// costs a deferred departure instead of a reverted edit.
 // ---------------------------------------------------------------------------
 
 describe("sameOverlayTarget", () => {
@@ -692,13 +738,48 @@ describe("sameOverlayTarget", () => {
     expect(sameOverlayTarget(upd, patchOn(["B"]))).toBe(false);
   });
 
-  test("an undo patch and its redo inverse share their id set (the stuck-inverse pair cascades)", () => {
+  test("an undo patch and its redo inverse share their id set (the stuck-inverse pair blocks)", () => {
     const undoP = patchOn([], ["X"]); // undo: delete X
     const redoP = patchOn(["X"]); // redo: restore X
     expect(sameOverlayTarget(undoP, redoP)).toBe(true);
   });
 
-  test("patches on disjoint blocks are unrelated (a projectText on another block never cascades)", () => {
+  // The relation is an INTERSECTION — "do these two write any row in common" —
+  // not a subset, and the difference is load-bearing. Here the split writes two
+  // rows (the origin block it truncates and the block it mints) while the patch
+  // names only the minted one. They match, yet the patch's evidence says nothing
+  // about the ORIGIN row the split also rewrote.
+  //
+  // That is why an overlap may not absorb: dropping the split on the patch's
+  // word would discard the split's effect on a row nothing vouched for — and
+  // this is the incident's own shape, since the patch is the debounced text
+  // projection on the new block, whose predicate confirms unconditionally (see
+  // the `isPatchReflected` tautology case above). Under the ordering rule the
+  // overlap instead makes the newer op WAIT for the older one, which needs no
+  // claim about coverage at all: over-matching only defers a departure. An
+  // absorbing rule would need a true subset relation, which is why it was
+  // deferred rather than shipped —
+  // `research/2026-09-01-global-overlay-ordered-fold-no-transitive-eviction.md`.
+  test("target sets INTERSECT rather than nest (a split writes a row its patch never names)", () => {
+    const rows = [mk("A", null, a), mk("B", null, after(a))];
+    const split = buildOverlayOp(
+      { kind: "split", blockId: "A", position: 1, newId: "NEW" },
+      rows,
+    );
+    // The projection patch: a `data`-only update on the minted block alone.
+    const projection = buildPatchOverlayOp({
+      creates: [],
+      updates: [{ id: "NEW", changes: { data: { text: "typed" } } }],
+      deleteIds: [],
+    });
+    expect(sameOverlayTarget(split, projection)).toBe(true);
+    // …but the split also rewrote "A", which the patch never mentions, so the
+    // match is an overlap and not containment in either direction.
+    expect(sameOverlayTarget(split, patchOn([], ["A"]))).toBe(true);
+    expect(sameOverlayTarget(projection, patchOn([], ["A"]))).toBe(false);
+  });
+
+  test("patches on disjoint blocks are unrelated (a projectText on another block never blocks)", () => {
     expect(sameOverlayTarget(patchOn(["A"]), patchOn(["B"]))).toBe(false);
     expect(sameOverlayTarget(patchOn([], ["A"]), patchOn(["B"], ["C"]))).toBe(
       false,

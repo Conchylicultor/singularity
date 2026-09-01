@@ -23,9 +23,11 @@ like waiting for the refetch does.
 The governing policy
 (`research/2026-07-11-global-never-revert-optimistic-edits.md`, matching
 Docs/Figma/Linear/Notion local-first semantics): **pending local edits are never
-visually reverted.** An op leaves the overlay only for a *causal* reason —
-provably absorbed (confirmation / the same-target cascade) or provably
-superseded (a snapshot causally past its commit lacks its effect). A failed
+visually reverted.** An op leaves the overlay only for a *causal* reason **local
+to itself** — provably absorbed (its own `isConfirmedBy` accepts the snapshot, or
+an exact ack names its own commit) or provably superseded (a snapshot causally
+past its commit lacks its effect). One op's evidence never speaks for another,
+and no op leaves out of turn: see *The ordering rule* below. A failed
 `mutate` is a sync-status state (the cloud icon), never an undo; a
 non-confirming push is at worst a *report*, never an eviction. The CRDT text
 lane (`page/editor`'s `live-state-yjs-provider.ts` — offline is `syncing`, bytes
@@ -109,7 +111,7 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   mutate,              // (vars: Vars) => Promise<void | { watermark?: string }> — the network call
   // Content-based confirmation is an all-or-nothing PAIR (omit both for coarse):
   isConfirmedBy,       // (serverData, vars) => boolean — content-based confirmation
-  sameTarget,          // (a, b) => boolean — op identity; REQUIRED with isConfirmedBy (same-target cascade)
+  sameTarget,          // (a, b) => boolean — op identity; REQUIRED with isConfirmedBy (the ordering rule)
   onError,             // optional (err, vars) => void
   label,               // optional string — names the thing being saved (sync-status error state)
   describeOp,          // optional (vars) => string — bounded op summary for the divergence report
@@ -139,7 +141,11 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   deliberately NOT in it (they auto-retry — see the failure model).
   `retry(opId)` re-fires the op **in place**: same opId, same overlay position,
   so the rendered prediction never moves or flickers (it clears the failure and
-  re-runs `mutate`; there is no remove + re-dispatch).
+  re-runs `mutate`; there is no remove + re-dispatch). Consequence: a retried op
+  sits **earlier** in the pending order than ops that committed before it, so
+  overlay position is NOT commit order. Nothing may infer "older in the list ⇒
+  committed first" — the ordering rule doesn't; it only makes the retried op
+  block its same-target juniors until it settles, which is correct either way.
 - `serverData` is the raw authoritative overlay base — server truth with NO
   pending ops applied (`resource.initialData` until the first push). For
   consumers that must distinguish "the server has really absorbed this row" from
@@ -164,9 +170,9 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   registry (`hasResourceTxAck` / `subscribeResourceTxAcks` from `live-state/web`,
   namespaced per `(key, paramsKey)`, 256-entry ring). Consumption here: a registry
   hit on an op's `ackWatermark` proves *that commit's rows were re-read
-  post-commit for this tuple* — so it CONFIRMS the op exactly (feeding the
-  same-target cascade in content mode, on all three edges: push, resolve, and the
-  ack edge's `ackPass`) and can NEVER deny; denial stays snapshot-watermark-only
+  post-commit for this tuple* — so it CONFIRMS the op exactly, on all three edges
+  (push, resolve, and the ack edge's `ackPass`), and can NEVER deny; denial stays
+  snapshot-watermark-only
   (Rule B). This keeps confirmation exact once scoped/point deltas stop shipping
   snapshot watermarks; a lost ack degrades safely to the Rule B backstop on the
   next full frame / resub. See
@@ -231,13 +237,22 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
     server would just repeat the verdict). `onError` fires on every rejection.
 
   A failed op is **unresolved**, and unresolved ops are untouchable by
-  confirmation, cascade, denial, and miss counting alike — it just keeps
-  replaying, which is exactly the never-revert guarantee.
+  confirmation, denial, and miss counting alike — it just keeps replaying, which
+  is exactly the never-revert guarantee.
+
+  **It also parks its juniors.** Unresolved means it survives every pass, so the
+  ordering rule holds every newer same-target op in the overlay behind it: a
+  `network` failure until a reconnect edge auto-retries it, an `http` failure
+  until the user clicks Retry. That is intended — the fold stays intact, so the
+  juniors keep rendering correctly and accrue no misses, and the surface is
+  already in `error` for the failed op anyway. It is still a behaviour change
+  worth knowing: before the ordering rule those juniors could confirm and leave
+  ahead of a write that had not landed.
 - **Divergence: denial vs report-only.** There is deliberately no miss-limit
   eviction: under push lag its "misses" are stale snapshots computed before the
   commit, so dropping the op reverts the user's edit. What exists instead:
-  - **Causal denial** (content mode only — the ONE remaining eviction): a
-    resolved, unconfirmed, non-cascaded op carrying an `ackWatermark` is
+  - **Causal denial** (content mode only — the ONE eviction there is): a
+    resolved, unconfirmed, unblocked op carrying an `ackWatermark` is
     dropped when the snapshot watermark is *strictly* past it yet
     `isConfirmedBy` still rejects the snapshot — the snapshot provably saw the
     commit, so the effect was overwritten by newer server truth. Rendering that
@@ -250,10 +265,18 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
     (`kind: "stalled"`, latched via `divergenceReported`) and **stays in the
     overlay**, still confirmable by any later matching snapshot. It is the
     investigation signal for a wrong `apply`/`isConfirmedBy` pair — or plain
-    push lag, which self-heals. Cascade-dropped ops are **never** reported:
-    being superseded by a newer same-target write is the healthy outcome. The
-    resolve edge counts no miss and never denies — no new snapshot arrived, so
-    a non-confirmation carries no evidence.
+    push lag, which self-heals. A **blocked** op counts no miss: a miss means
+    "a fresh snapshot arrived and still didn't reflect the op", and a pass we
+    declined to evaluate is information-free — counting it would file a
+    `stalled` report about a verdict never formed. The front of each same-target
+    chain is never blocked, so the signal survives. The resolve edge counts no
+    miss and never denies — no new snapshot arrived, so a non-confirmation
+    carries no evidence.
+  - **Self-supersession files no report.** A denial whose op has a newer
+    same-target op confirmed in the *same* pass is the client overwriting its
+    own write (undo→redo), not a lost race: the drop still happens, the
+    `superseded` report is suppressed. Misclassification costs a mis-filed
+    report and never a lost edit, which is where a heuristic belongs.
 - **`optimisticDivergenceReportSink`** (`web/reporter.ts`) is the sanctioned sink
   inversion, mirroring `error-boundary`'s `boundaryReportSink`: this primitive
   must not import `reports`, so `reports/plugins/optimistic-divergence` registers
@@ -262,30 +285,59 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   `vars` — unbounded and possibly unserializable; `opSummaries` comes from the
   optional `describeOp(vars)` arg (empty if omitted), which must be pure and
   total — it runs on the reconcile path. `emit` never throws.
-- **Cascade confirmation** (content-based mode — this plugin owns it; `page/editor`
+- **The ordering rule** (content-based mode — this plugin owns it; `page/editor`
   defers here): `sameTarget` is **required** alongside `isConfirmedBy` — the two
   are a paired, all-or-nothing arm of a discriminated union, and each half alone
   is unrepresentable (pinned at type level by `web/internal/args-types.test.ts`).
-  Precise per-op matching implies concurrent per-entity ops in flight — a
-  structurally multi-target consumer — which needs the cascade to avoid the
-  stuck-inverse-pair replay. So whenever an op is confirmed, every RESOLVED op
-  older than it in the pending order **that writes the same entity/key** is
-  dropped too, even when the snapshot doesn't match those ops. A snapshot
-  reflecting a newer write to a target already contains an older resolved write's
-  effect on that target (possibly overwritten), so an older same-target op that
-  still doesn't match can never match any future snapshot — keeping it would
-  replay stale state forever. Concretely this closes the stuck-inverse-pair
-  hazard (undo dispatches "delete X", redo dispatches "restore X" before the push
-  carrying the deletion arrives: every later snapshot shows X present, confirming
-  the redo but never the undo — without the cascade the stuck undo would delete X
-  from every rendered state from then on). The containment argument is only valid
-  WITHIN one entity, so the consumer declares op identity via
-  `sameTarget: (a, b) => boolean` ("do these two ops write the same entity?"); an
-  older resolved op on an UNRELATED target always survives until its own
-  confirming push arrives (cascade-dropping it would transiently revert that
-  entity to stale server data). Unresolved ops are never cascade-dropped. Current
-  consumers: the page editor (`sameOverlayTarget` — block-id-set intersection
-  over ops/patches) and config_v2 staging (`(pluginId, configName)` equality).
+  The rule:
+
+  > An op may not **leave** the overlay while an older, still-pending,
+  > same-target op survives this pass.
+
+  It applies **only in content mode**: `decideVerdicts` blocks nothing without a
+  `sameTarget`, so coarse consumers get no ordering rule. Correct, not an
+  oversight — with no identity relation you cannot know which ops interact, and
+  coarse mode's exits are confirmation-only (it never denies).
+
+  Why it must exist: the rendered value is `pendingOps.reduce(apply, serverTruth)`,
+  an ordered fold. Removing a *middle* element changes the composition — drop B
+  while A remains and the user sees `A(base)` instead of `B(A(base))`, a state
+  they never created. This holds even with perfect evidence about B, so no
+  amount of proof licenses an out-of-turn departure. (The predecessor rule,
+  same-target *cascade*, did the opposite — a confirmed newer op evicted older
+  same-target ops — and shipped an incident where a live block vanished for ~90s:
+  `research/2026-09-01-global-overlay-ordered-fold-no-transitive-eviction.md`.)
+
+  - **Gates every exit route** — content confirmation, exact `hasAck`, coarse,
+    and denial. Gating only content leaves the hole open through the ack door: A
+    deletes X, B recreates it, the net recompute changes no value, so a
+    standalone `{kind:"ack"}` frame confirms B *exactly* while the cached pre-A
+    snapshot still shows X; drop B, replay A, X vanishes.
+  - **A denied older op does not block** — the snapshot provably lacks its
+    effect, so the base is past it, not stale with respect to it. A just-confirmed
+    older op doesn't block either: it is leaving in this same pass.
+  - **Evicts nothing.** A wrong answer costs a deferred confirmation, never a
+    reverted edit — which is also why `sameTarget` may stay an intersection test:
+    over-matching only defers.
+  - **Liveness.** Blocking runs strictly older→newer over array order, so the
+    waits-for graph is a total order restricted to same-target pairs — a DAG, no
+    cycle spellable. The oldest op on a target is never blocked, so it is decided
+    exactly as before; when it leaves, its successor becomes the front. Every
+    chain drains from the front.
+  - **Coverage is exactly as good as `sameTarget` is accurate.** An
+    under-approximating relation means less *blocking*, so two ops that really do
+    interact in the fold may not register as same-target and one can leave early.
+    Accepted residue; the fix is at a better rung — make `sameTarget` name the
+    rows an op really writes.
+
+  It closes the stuck-inverse-pair hazard the cascade existed for (undo "delete
+  X", redo "restore X" dispatched before the deletion's push: every later
+  snapshot shows X present, confirming the redo and never the undo) by making the
+  redo *wait* instead of evicting the undo. Both replay, X renders present, and
+  the pair drains as soon as any watermark-carrying frame denies the undo.
+  Content-mode consumer: the page editor (`sameOverlayTarget` — block-id-set
+  intersection over ops/patches, `web/block-store.ts`). The conversation queue is
+  the coarse-mode consumer and supplies neither half.
 - `apply` must be pure. For the "this op no longer applies to the current base"
   case (e.g. the server already absorbed it and the row it referenced is gone),
   throw `OpNoLongerApplies` (exported from the barrel) — the replay drops just
@@ -294,15 +346,50 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   self-healing push.
 - Op insertion order is preserved, so fast chained ops compose deterministically.
 
+## Two rejected fixes, so they aren't re-proposed
+
+- **A causal floor on content confirmation** (reject a confirmation when
+  `W < op.ackWatermark`). Not unsound — but it **wedges under the exact load it
+  exists to survive**. `xmin` is the lowest still-running xid, so one long
+  transaction pins it low cluster-wide, and `SOURCE_TX_CAP = 64` makes the
+  runtime suppress the *entire* `sourceTx` set on overflow — killing `hasAck`
+  too. Both confirmation routes die at once, the overlay grows at the user's
+  edit rate for the whole episode, and replay goes quadratic. It also
+  contradicts `live-state/CLAUDE.md` ("an absent watermark means *no causal
+  floor*: confirming by content is fine, denial is forbidden").
+- **Absorbing through the ack door** instead of blocking (when B is
+  ack-confirmed and orders after A, drop A with it). Deferred, not unsound in
+  principle — but it needs a **subset** relation, not `sameTarget`'s
+  intersection, or it discards A's effect on rows B never wrote. The
+  fail-closed `coversOverlayTarget` sketch (only a patch may be absorbed, since
+  only a patch's target set is exact) is in the research doc. It only shortens a
+  wait the rule already renders correctly through, so revisit it only if
+  deferral measurably fails.
+
 ## Where the logic lives
 
-The **whole op lifecycle** is a pure state machine in `web/internal/overlay.ts`:
-`replay`, the two edge functions `confirmPass` / `resolvePass` (both returning
-`{ pending, dropped, stalled }`, sharing one `reconcile` core), plus
-`markResolved` / `markFailed` / `clearFailure`. Both edges return the input
-`pending` array **by identity** when nothing changed, so the React shell skips the
-state write. Unit-tested in `overlay.test.ts` (`bun test`) — where new lifecycle
-coverage belongs.
+The **whole op lifecycle** is a pure state machine in `web/internal/overlay.ts`.
+Deciding and partitioning are split, because the blocking test needs each op's
+**final** fate — denial included — before any newer op consults it:
+
+- `decideVerdicts` — one forward loop, oldest first, assigning each op
+  `confirmed | denied | denied-silent | unconfirmed | pending | blocked`. The
+  first three drop; the last three keep, and only `unconfirmed` costs a miss.
+  `pending` is an unresolved op (in flight, or `mutate` rejected) — nothing is
+  known to be wrong with it, so it keeps AND **blocks**: it is a survivor of the
+  pass. Because the loop runs oldest-first, an op's fate is fixed before its
+  juniors read it.
+- `reconcile` — a pure partition of that verdict array plus the miss/latch
+  bookkeeping. It holds no `sameTarget` and no watermark; all the deciding is in
+  the loop above.
+
+`ReconcileResult` gains no arm for the two silent verdicts: `dropped` *is* the
+report channel, so `confirmed` and `denied-silent` are simply absent from it.
+Around them sit `replay`, the three edges `confirmPass` / `resolvePass` /
+`ackPass`, and `markResolved` / `markFailed` / `clearFailure`. Every edge returns
+the input `pending` array **by identity** when nothing changed, so the React shell
+skips the state write. Unit-tested in `overlay.test.ts` (`bun test`) — where new
+lifecycle coverage belongs.
 
 The hook (`web/internal/use-optimistic-resource.ts`) is a thin shell: the
 `pending` state (mirrored in a commit-time ref, because a functional `setState`

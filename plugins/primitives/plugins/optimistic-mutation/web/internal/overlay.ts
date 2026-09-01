@@ -6,10 +6,21 @@
 //
 // The governing policy (research/2026-07-11-global-never-revert-optimistic-edits.md):
 // **pending local edits are never visually reverted.** An op leaves the overlay
-// only for a CAUSAL reason — provably absorbed (confirmation, cascade) or
-// provably superseded (a causally-later snapshot lacks its effect, Rule B).
-// Failure is a sync-status state, not an undo; divergence without causal proof
-// is a report, not an eviction.
+// only for a CAUSAL reason that is LOCAL TO ITSELF — provably absorbed
+// (confirmation) or provably superseded (a causally-later snapshot lacks its
+// effect, Rule B). Failure is a sync-status state, not an undo; divergence
+// without causal proof is a report, not an eviction.
+//
+// **The overlay is an ordered fold, so no op may be evicted on another op's
+// evidence** (research/2026-09-01-global-overlay-ordered-fold-no-transitive-eviction.md).
+// The rendered value is `pending.reduce(apply, serverTruth)`: removing a MIDDLE
+// element changes the composition, so dropping B while an older A survives
+// renders `A(base)` instead of `B(A(base))` — a state the user never created.
+// That holds even with perfect evidence about B, which is why the old
+// "cascade confirmation" (absorb every older same-target op when a newer one
+// confirms) was deleted rather than better-evidenced. Its replacement is the
+// ordering rule, enforced in `decideVerdicts`: **an op may not LEAVE the overlay
+// while an older, still-surviving, same-target op is still in it.**
 
 import { compareTxWatermark } from "@plugins/primitives/plugins/live-state/core";
 
@@ -75,7 +86,14 @@ export interface PendingOp<Vars> {
    * snapshot whose watermark is strictly greater provably saw this commit.
    */
   ackWatermark?: string;
-  /** Present while the op's latest `mutate` attempt rejected (see `OpFailure`). */
+  /**
+   * Present while the op's latest `mutate` attempt rejected (see `OpFailure`).
+   * A failed op is UNRESOLVED, so it is untouchable by confirmation, denial and
+   * miss counting — and, since it is still in the fold, it also blocks its
+   * newer same-target ops from leaving (see `decideVerdicts`, which spells out
+   * how long: until a reconnect edge for `network`, until the user's `retry()`
+   * for `http`).
+   */
   failure?: OpFailure;
   /**
    * One-shot latch: the `stalled` report for this op has been filed. Misses may
@@ -145,8 +163,13 @@ function safeApply<Data, Vars>(
  * after my commit landed" — exactly via the ack token when the consumer's
  * `mutate` returned one, or legacy "an authoritative push landed after
  * dispatch" when tokenless. Content-based asks the snapshot directly via
- * `isConfirmedBy`, and declares op identity via `sameTarget` for the
- * same-target cascade (see `reconcile`).
+ * `isConfirmedBy`, and declares op identity via `sameTarget` — which is the
+ * ordering rule's "are these two ops in the same fold position?" relation (see
+ * `decideVerdicts`), NOT a licence to evict one on the other's evidence.
+ *
+ * `sameTarget` may over-approximate freely (intersection, not subset, is the
+ * right relation here): a wrong `true` only makes an op WAIT one more pass,
+ * never leave early.
  */
 export interface Confirmation<Data, Vars> {
   isConfirmedBy: (serverData: Data, vars: Vars) => boolean;
@@ -154,75 +177,201 @@ export interface Confirmation<Data, Vars> {
 }
 
 /**
- * Is op `i` superseded by a NEWER confirmed op writing the same target?
+ * What one pass decided about one op. Every exit from the overlay is one of the
+ * three dropping arms; every other arm KEEPS the op, and only `unconfirmed`
+ * counts a miss.
  *
- * **Cascade confirmation** (content-based mode): when an op is confirmed, every
- * RESOLVED op *older* than it (earlier in the pending order) **on the same
- * target** is absorbed too, even if the snapshot doesn't match it. Same-target
- * ops resolve in dispatch order in practice, so a snapshot reflecting a newer
- * write to a target already CONTAINS the older resolved write's effect on that
- * target — possibly overwritten by the newer one. If such an op still doesn't
- * match the snapshot, it can never match any future snapshot either; keeping it
- * would replay stale state forever. The concrete failure this closes: undo
- * dispatches patch P (e.g. "delete row X"), redo dispatches its inverse P⁻¹
- * ("restore X") before a push carrying P's state arrives — the eventual push
- * shows X present, confirming P⁻¹ but never P, and the stuck P would keep
- * deleting X from every rendered state from then on.
- *
- * The containment argument above is only valid WITHIN one entity/key: an older
- * resolved op on an UNRELATED target (whose own confirming push simply hasn't
- * arrived yet) must never be cascade-dropped — that would transiently revert
- * its surface to stale server data. `sameTarget(a, b)` is the consumer's
- * declaration of op identity ("do these two ops write the same entity?"). It is
- * required alongside `isConfirmedBy`, so content-based mode always cascades.
+ * - `confirmed` — drop, silently (the server absorbed it).
+ * - `denied` — drop into `dropped`; the caller reports it as `superseded`.
+ * - `denied-silent` — drop, NOT reported: the client superseded its OWN write
+ *   (a newer same-target op confirmed on this very pass), so nobody lost a race
+ *   and a `superseded` report would be noise. See `classifySelfSupersession`.
+ * - `unconfirmed` — keep; on a push edge this is real evidence of
+ *   non-confirmation, so it costs a miss (and eventually one `stalled` report).
+ * - `pending` — keep, no miss: the op is unresolved (in flight, or its `mutate`
+ *   rejected). Nothing is known to be wrong with it.
+ * - `blocked` — keep, no miss: the ordering rule declined to EVALUATE it this
+ *   pass, because an older same-target op is still in the fold ahead of it.
  */
-function supersededBy<Vars>(
+type Verdict =
+  | "confirmed"
+  | "denied"
+  | "denied-silent"
+  | "unconfirmed"
+  | "pending"
+  | "blocked";
+
+/**
+ * What one edge's own evidence says about a single RESOLVED op, in isolation.
+ * Each edge supplies this as a closure (its snapshot, its watermark, its ack
+ * probe, its coarse fallback); the ordering rule and the miss/report
+ * bookkeeping are shared and live outside it.
+ */
+type Evaluation = "confirmed" | "denied" | "unconfirmed";
+
+/**
+ * The ordering rule: **an op may not LEAVE the overlay while an older,
+ * still-surviving, same-target op remains in it.**
+ *
+ * Why it has to exist: the overlay is an ordered fold
+ * (`pending.reduce(apply, base)`), so an op's rendered effect is defined
+ * RELATIVE to the ops before it. Dropping a middle element re-composes the
+ * fold and renders a state the user never created — which is why evidence
+ * about op B can never license removing B while an older A it was composed on
+ * top of is still replaying, however good that evidence is.
+ *
+ * `verdict[j]` is already final for every `j < i` because the loop runs
+ * oldest-first, so this reads FINAL fates, not guesses:
+ *
+ * - `pending` / `unconfirmed` / `blocked` ⇒ that op SURVIVES this pass and is
+ *   still ahead of us in the fold ⇒ block.
+ * - `confirmed` / `denied` / `denied-silent` ⇒ that op is LEAVING on this same
+ *   pass, so the base we are about to be evaluated against is past it. A denied
+ *   older op in particular does not block: denial means the snapshot provably
+ *   saw its commit and lacks its effect, so the base is past it, not stale with
+ *   respect to it.
+ *
+ * **Liveness.** Blocking only ever points strictly older→newer over array
+ * order, so the waits-for graph is a total order restricted to same-target
+ * pairs — a DAG; no cycle is spellable. The oldest op on each target has
+ * nothing older, so it is decided exactly as it would be without this rule;
+ * when it leaves, its successor becomes the oldest. Every chain drains from the
+ * front.
+ */
+function blockedByOlder<Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
-  confirmed: ReadonlyArray<boolean>,
+  verdicts: ReadonlyArray<Verdict>,
   sameTarget: (a: Vars, b: Vars) => boolean,
   i: number,
 ): boolean {
-  for (let j = i + 1; j < pending.length; j++) {
-    if (confirmed[j] && sameTarget(pending[i]!.vars, pending[j]!.vars)) return true;
+  for (let j = 0; j < i; j++) {
+    const older = verdicts[j]!;
+    if (older !== "pending" && older !== "unconfirmed" && older !== "blocked")
+      continue;
+    if (sameTarget(pending[j]!.vars, pending[i]!.vars)) return true;
   }
   return false;
 }
 
 /**
- * The one place an op leaves the overlay. Given a per-index `confirmed`
- * verdict, drop every RESOLVED op that is confirmed or cascade-superseded, keep
- * every UNRESOLVED op untouched (failed ops are unresolved by construction —
- * their `mutate` rejected — so confirmation, cascade, denial, and miss counting
- * are all structurally unable to touch them: they keep replaying, which IS the
- * never-revert policy), and decide the fate of the resolved-but-unconfirmed
- * survivors:
+ * Decide every op's fate in ONE forward pass, oldest first — so that by the
+ * time op `i` is considered, the FINAL verdict of every older op (denial
+ * included) is already known and the ordering rule can read it.
  *
- * - **Causal denial** (`denyWatermark` set — the push edge in content mode
- *   only): an op carrying an `ackWatermark` with
- *   `compareTxWatermark(denyWatermark, ackWatermark) > 0` is provably
- *   superseded — the snapshot saw its commit (Rule B, strict `>`) yet
- *   `isConfirmedBy` still rejects it, so a newer server write overwrote its
- *   effect. It is removed into `dropped` (rendering newer truth, not a revert).
- *   Tokenless ops are NEVER denied — without a token there is no causal proof.
- * - `countMisses` (the push edge): a fresh authoritative snapshot arrived and
- *   still doesn't reflect the op ⇒ `misses + 1`. Crossing
- *   `DIVERGENCE_REPORT_MISSES` for the first time returns the op in `stalled`
- *   (a one-shot report latch, `divergenceReported`) — the op itself is KEPT.
- * - `!countMisses` (the resolve edge): no new snapshot arrived, so a
- *   non-confirmation carries no information — the op survives unchanged.
+ * Order of the checks per op:
  *
- * A cascade-dropped op is NEVER denied or reported: being superseded by a newer
- * write to the same target is the expected, healthy outcome.
+ * 1. **Blocked first.** An op an older same-target survivor sits ahead of is
+ *    not evaluated at all this pass. This gates EVERY exit route — content,
+ *    exact ack, coarse, and denial alike. Gating only content would leave the
+ *    fold hole open through the ack door: A deletes X, B recreates it, the net
+ *    recompute produces no value change, so a standalone ack frame confirms B
+ *    exactly while the cached pre-A snapshot still shows X — drop B, replay A,
+ *    and X vanishes from the user's screen.
+ * 2. **Unresolved ⇒ `pending`.** Failed ops are unresolved by construction
+ *    (their `mutate` rejected), so confirmation, denial and miss counting are
+ *    all structurally unable to touch them: they keep replaying, which IS the
+ *    never-revert policy. Note they also BLOCK newer same-target ops (via the
+ *    check above) — dropping a newer op while an unresolved older one is still
+ *    in the fold breaks the composition exactly the same way a resolved one
+ *    does; whether the older op's request is in flight has no bearing on where
+ *    it sits in the fold.
+ *
+ *    **Consequence, stated so it is never rediscovered as a surprise:** a
+ *    FAILED op parks its same-target juniors in the overlay for as long as it
+ *    stays failed. A `network` failure self-heals — the next reconnect edge
+ *    auto-retries it — but an `http` failure is a durable verdict that waits
+ *    for the user's explicit `retry()`, so its juniors can sit there
+ *    indefinitely. That is the safe direction and the whole point: those
+ *    juniors keep RENDERING (the fold stays intact), they accrue no misses
+ *    while blocked, and the surface is already reporting `error` because of the
+ *    failed op — the cost is deferred overlay occupancy, never a reverted edit.
+ * 3. Otherwise the edge's own `evaluate` closure decides.
+ *
+ * `sameTarget` is absent in coarse mode (the consumer declared no op identity),
+ * so there is nothing to block on and every op is evaluated — coarse has always
+ * been per-op and never had a cross-op rule.
+ */
+function decideVerdicts<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  sameTarget: ((a: Vars, b: Vars) => boolean) | undefined,
+  evaluate: (op: PendingOp<Vars>) => Evaluation,
+): Verdict[] {
+  const verdicts: Verdict[] = [];
+  for (let i = 0; i < pending.length; i++) {
+    const op = pending[i]!;
+    if (
+      sameTarget !== undefined &&
+      blockedByOlder(pending, verdicts, sameTarget, i)
+    ) {
+      verdicts.push("blocked");
+      continue;
+    }
+    if (!op.resolved) {
+      verdicts.push("pending");
+      continue;
+    }
+    verdicts.push(evaluate(op));
+  }
+  if (sameTarget !== undefined)
+    classifySelfSupersession(pending, verdicts, sameTarget);
+  return verdicts;
+}
+
+/**
+ * Report classification, as a second pass because it needs LOOK-AHEAD (the
+ * forward loop cannot know a newer op will confirm).
+ *
+ * A denial whose target is written again, later in the same overlay, by an op
+ * that confirmed on this very pass is the client superseding its OWN write —
+ * the ordinary undo→redo shape: A (`delete X`) is oldest and unconfirmable once
+ * B (`create X`) has put X back, so A is denied the moment any watermark past
+ * its commit arrives. Nobody lost a race, and filing `superseded` for it would
+ * bury the real races in noise. The DROP still happens (it is causally proven);
+ * only the report is suppressed. Getting this classification wrong costs a
+ * mis-filed report, never a lost edit — the right place for a heuristic.
+ */
+function classifySelfSupersession<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  verdicts: Verdict[],
+  sameTarget: (a: Vars, b: Vars) => boolean,
+): void {
+  for (let i = 0; i < verdicts.length; i++) {
+    if (verdicts[i] !== "denied") continue;
+    for (let j = i + 1; j < verdicts.length; j++) {
+      if (verdicts[j] !== "confirmed") continue;
+      if (!sameTarget(pending[i]!.vars, pending[j]!.vars)) continue;
+      verdicts[i] = "denied-silent";
+      break;
+    }
+  }
+}
+
+/**
+ * The one place an op leaves the overlay: a pure partition of `pending` by its
+ * already-decided `verdicts`, plus the miss/report bookkeeping. It decides
+ * nothing itself — every judgement was made in `decideVerdicts`.
+ *
+ * - `confirmed` / `denied-silent` ⇒ dropped, in NEITHER output list.
+ * - `denied` ⇒ dropped into `dropped`; the caller reports it as `superseded`.
+ * - `pending` / `blocked` ⇒ kept unchanged, and **no miss**. A miss means "a
+ *   fresh snapshot arrived and still doesn't reflect the op" — evidence of
+ *   non-confirmation. A pass we declined to evaluate (blocked) or could not
+ *   evaluate (unresolved) produced no such evidence, and counting it would file
+ *   a `stalled` report about a verdict we never formed. The front of each
+ *   same-target chain is never blocked, so the investigation signal survives.
+ * - `unconfirmed` ⇒ kept; with `countMisses` (the push edge) `misses + 1`, and
+ *   crossing `DIVERGENCE_REPORT_MISSES` for the first time also returns the op
+ *   in `stalled` (one-shot latch, `divergenceReported`) — the op itself is KEPT.
+ *   Without `countMisses` (resolve / ack edges) no new snapshot arrived, so a
+ *   non-confirmation carries no information and the op survives unchanged.
  *
  * Returns `pending` BY IDENTITY when nothing changed, so the React shell can
  * skip the state write (and the overlay recompute it would trigger).
  */
 function reconcile<Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
-  confirmed: ReadonlyArray<boolean>,
-  sameTarget: ((a: Vars, b: Vars) => boolean) | undefined,
+  verdicts: ReadonlyArray<Verdict>,
   countMisses: boolean,
-  denyWatermark: string | undefined,
 ): ReconcileResult<Vars> {
   const kept: PendingOp<Vars>[] = [];
   const dropped: PendingOp<Vars>[] = [];
@@ -231,45 +380,41 @@ function reconcile<Vars>(
 
   for (let i = 0; i < pending.length; i++) {
     const op = pending[i]!;
-    if (!op.resolved) {
-      kept.push(op);
-      continue;
-    }
-    if (confirmed[i]) {
-      changed = true; // the server absorbed it
-      continue;
-    }
-    if (sameTarget && supersededBy(pending, confirmed, sameTarget, i)) {
-      changed = true; // superseded by a newer confirmed write to the same target
-      continue;
-    }
-    if (
-      denyWatermark !== undefined &&
-      op.ackWatermark !== undefined &&
-      compareTxWatermark(denyWatermark, op.ackWatermark) > 0
-    ) {
-      // Rule B, strict `>`: the snapshot provably saw this op's commit and
-      // still doesn't reflect it — genuinely superseded by newer server truth.
-      changed = true;
-      dropped.push(op);
-      continue;
-    }
-    if (!countMisses) {
-      kept.push(op);
-      continue;
-    }
-    changed = true;
-    const misses = op.misses + 1;
-    if (misses >= DIVERGENCE_REPORT_MISSES && !op.divergenceReported) {
-      const reported = { ...op, misses, divergenceReported: true };
-      stalled.push(reported);
-      kept.push(reported);
-    } else {
-      kept.push({ ...op, misses });
+    switch (verdicts[i]!) {
+      case "confirmed":
+      case "denied-silent":
+        changed = true;
+        continue;
+      case "denied":
+        changed = true;
+        dropped.push(op);
+        continue;
+      case "pending":
+      case "blocked":
+        kept.push(op);
+        continue;
+      case "unconfirmed": {
+        if (!countMisses) {
+          kept.push(op);
+          continue;
+        }
+        changed = true;
+        const misses = op.misses + 1;
+        if (misses >= DIVERGENCE_REPORT_MISSES && !op.divergenceReported) {
+          const reported = { ...op, misses, divergenceReported: true };
+          stalled.push(reported);
+          kept.push(reported);
+        } else {
+          kept.push({ ...op, misses });
+        }
+        continue;
+      }
     }
   }
 
-  return changed ? { pending: kept, dropped, stalled } : { pending, dropped, stalled };
+  return changed
+    ? { pending: kept, dropped, stalled }
+    : { pending, dropped, stalled };
 }
 
 /**
@@ -286,14 +431,14 @@ function reconcile<Vars>(
  *   - coarse tokenless (legacy): any resolved op is dropped — "a push after my
  *     mutation resolved confirms me".
  *   - content-based: a resolved op is dropped when `isConfirmedBy(serverData,
- *     vars)` accepts the snapshot, when a newer confirmed op on the same target
- *     supersedes it (the cascade), or — denial — when it carries a token the
- *     snapshot is causally past yet still unreflected (see `reconcile`).
+ *     vars)` accepts the snapshot, or — denial — when it carries a token the
+ *     snapshot is causally past yet still unreflected (Rule B).
  *
- * Un-resolved ops (mutate still in flight, or failed) are always kept.
- * Insertion order is preserved for the survivors. Resolved survivors accrue a
- * miss; crossing `DIVERGENCE_REPORT_MISSES` files a one-shot `stalled` report —
- * the op itself is never evicted.
+ * Un-resolved ops (mutate still in flight, or failed) are always kept, and so
+ * is any op the ordering rule blocked behind an older same-target survivor.
+ * Insertion order is preserved for the survivors. Resolved, evaluated,
+ * unconfirmed survivors accrue a miss; crossing `DIVERGENCE_REPORT_MISSES`
+ * files a one-shot `stalled` report — the op itself is never evicted.
  */
 export function confirmPass<Data, Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
@@ -305,31 +450,56 @@ export function confirmPass<Data, Vars>(
   // Exact-ack confirmation (both modes): the server broadcast the op's own
   // commit txid in a frame's `ackTx` — the strongest possible proof its rows
   // were re-read post-commit. Confirms exactly; never denies (denial stays
-  // snapshot-watermark-only). Feeds the same-target cascade in content mode
-  // like any other confirmation.
+  // snapshot-watermark-only). Like every other exit it is gated by the ordering
+  // rule: an exact proof about THIS op still says nothing about the older
+  // same-target op it is folded on top of.
+  //
+  // No `op.resolved` guard here (there used to be one): `decideVerdicts` returns
+  // `"pending"` for an unresolved op before `evaluate` is ever called, so an
+  // in-flight or failed op cannot reach this predicate. The check is gone
+  // because it is unreachable, not because it stopped mattering.
   const acked = (op: PendingOp<Vars>): boolean =>
-    op.resolved && op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true;
+    op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true;
   if (!confirmation) {
-    const confirmed = pending.map((op) => {
-      if (!op.resolved) return false;
-      if (acked(op)) return true;
+    // COARSE MODE HAS NO ORDERING RULE — deliberately, and not a regression
+    // (coarse never had a cross-op rule of any kind). `sameTarget` is the
+    // consumer's declaration of "these two ops write the same thing", and a
+    // coarse consumer declared none, so there is no relation to say which ops
+    // interact and no sound way to guess one. Coarse consumers are single-target
+    // or serialized in practice (the conversation queue), which is why they
+    // could omit it. Do not read the ordering rule as universal: it is exactly
+    // as wide as the `sameTarget` a consumer supplies.
+    const verdicts = decideVerdicts<Vars>(pending, undefined, (op) => {
+      if (acked(op)) return "confirmed";
       if (op.ackWatermark !== undefined) {
-        return (
-          snapshotWatermark !== undefined &&
+        return snapshotWatermark !== undefined &&
           compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
-        );
+          ? "confirmed"
+          : "unconfirmed";
       }
-      return true; // legacy tokenless coarse: any post-resolve push confirms
+      return "confirmed"; // legacy tokenless coarse: any post-resolve push confirms
     });
-    return reconcile(pending, confirmed, undefined, true, undefined);
+    return reconcile(pending, verdicts, true);
   }
   const { isConfirmedBy, sameTarget } = confirmation;
-  const confirmed = pending.map(
-    (op) => (op.resolved && isConfirmedBy(serverData, op.vars)) || acked(op),
-  );
-  // Denial is content-mode-only: coarse has no isConfirmedBy to say "the
-  // snapshot lacks my effect", so a causally-later snapshot simply confirms.
-  return reconcile(pending, confirmed, sameTarget, true, snapshotWatermark);
+  const verdicts = decideVerdicts<Vars>(pending, sameTarget, (op) => {
+    if (acked(op)) return "confirmed";
+    if (isConfirmedBy(serverData, op.vars)) return "confirmed";
+    // Denial is content-mode-only: coarse has no isConfirmedBy to say "the
+    // snapshot lacks my effect", so a causally-later snapshot simply confirms.
+    // Rule B, strict `>`: the snapshot provably saw this op's commit and still
+    // doesn't reflect it — genuinely superseded by newer server truth.
+    // Tokenless ops are NEVER denied: without a token there is no causal proof.
+    if (
+      snapshotWatermark !== undefined &&
+      op.ackWatermark !== undefined &&
+      compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
+    ) {
+      return "denied";
+    }
+    return "unconfirmed";
+  });
+  return reconcile(pending, verdicts, true);
 }
 
 /**
@@ -343,12 +513,16 @@ export function confirmPass<Data, Vars>(
  * indefinitely, because the only confirming push it will ever get has already
  * been consumed.
  *
- * - content-based: confirm iff a snapshot exists and `isConfirmedBy` accepts
- *   it, then run the same same-target cascade.
+ * - content-based: confirm iff a snapshot exists and `isConfirmedBy` accepts it.
  * - coarse + token: confirm iff `cmp(snapshotWatermark, ackWatermark) > 0` —
  *   the cached snapshot provably saw this commit.
  * - coarse tokenless: confirm iff `gen > op.dispatchGen` — an authoritative
  *   push landed since dispatch.
+ *
+ * ONLY the resolving op is evaluated: every other op keeps its
+ * non-evaluation semantics (survives unchanged, no miss). The ordering rule
+ * still applies to the resolving op — a resolve is an exit like any other, and
+ * letting one out of turn re-composes the fold exactly as a push edge would.
  *
  * **Tokenless-coarse soundness, stated explicitly.** `gen > dispatchGen` proves
  * *a* push arrived after dispatch, not that it carries our commit. In the rare
@@ -378,46 +552,65 @@ export function resolvePass<Data, Vars>(
   hasAck?: (txid: string) => boolean,
 ): ReconcileResult<Vars> {
   const resolved = markResolved(pending, opId, ackWatermark);
-  const confirmed = resolved.map((op) => {
-    if (op.opId !== opId) return false;
-    // Exact ack (both modes): the delta-before-HTTP-response race — the frame
-    // carrying this commit's ackTx landed before its own response, so the
-    // registry already remembers it. Checked first: it is strictly more precise
-    // than the content/watermark/gen checks below.
-    if (op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true) return true;
-    if (confirmation) {
-      return serverData !== undefined && confirmation.isConfirmedBy(serverData, op.vars);
-    }
-    if (op.ackWatermark !== undefined) {
-      return (
-        snapshotWatermark !== undefined &&
-        compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
-      );
-    }
-    return gen > op.dispatchGen;
-  });
-  return reconcile(resolved, confirmed, confirmation?.sameTarget, false, undefined);
+  const verdicts = decideVerdicts<Vars>(
+    resolved,
+    confirmation?.sameTarget,
+    (op) => {
+      // Not the resolving op: this edge holds no new evidence about it, so it
+      // keeps its "kept, no miss" non-evaluation semantics.
+      if (op.opId !== opId) return "unconfirmed";
+      // Exact ack (both modes): the delta-before-HTTP-response race — the frame
+      // carrying this commit's ackTx landed before its own response, so the
+      // registry already remembers it. Checked first: it is strictly more precise
+      // than the content/watermark/gen checks below.
+      if (op.ackWatermark !== undefined && hasAck?.(op.ackWatermark) === true)
+        return "confirmed";
+      if (confirmation) {
+        return serverData !== undefined &&
+          confirmation.isConfirmedBy(serverData, op.vars)
+          ? "confirmed"
+          : "unconfirmed";
+      }
+      if (op.ackWatermark !== undefined) {
+        return snapshotWatermark !== undefined &&
+          compareTxWatermark(snapshotWatermark, op.ackWatermark) > 0
+          ? "confirmed"
+          : "unconfirmed";
+      }
+      return gen > op.dispatchGen ? "confirmed" : "unconfirmed";
+    },
+  );
+  // `countMisses: false` — no new snapshot arrived, so nothing here is evidence
+  // of non-confirmation, for the resolving op or for anyone else.
+  return reconcile(resolved, verdicts, false);
 }
 
 /**
  * The ACK edge: a standalone `{ kind: "ack" }` frame (or any ack note) landed
  * in the tx-ack registry for this tuple — a recompute that produced NO value
  * change acknowledged one or more commits. Drops every RESOLVED op whose ack
- * token the registry now remembers (running the same-target cascade in content
- * mode, like any confirmation), and NOTHING else: no miss is counted (no new
- * snapshot arrived — a non-ack carries no evidence) and no denial ever runs
+ * token the registry now remembers, and NOTHING else: no miss is counted (no
+ * new snapshot arrived — a non-ack carries no evidence) and no denial ever runs
  * (`ackTx` can only confirm). Returns the input `pending` BY IDENTITY when
  * nothing changed, so the React shell skips the state write.
+ *
+ * The ordering rule gates this edge too, and this is the edge that most needs
+ * it: a standalone ack frame is emitted precisely when the recompute produced
+ * NO value change — e.g. A deletes X and B recreates it — so the cached
+ * snapshot beside it still shows the pre-A world. Confirming B out of turn
+ * there would drop B, replay A alone, and make X vanish.
  */
 export function ackPass<Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
   hasAck: (txid: string) => boolean,
   sameTarget?: (a: Vars, b: Vars) => boolean,
 ): ReconcileResult<Vars> {
-  const confirmed = pending.map(
-    (op) => op.resolved && op.ackWatermark !== undefined && hasAck(op.ackWatermark),
+  const verdicts = decideVerdicts<Vars>(pending, sameTarget, (op) =>
+    op.ackWatermark !== undefined && hasAck(op.ackWatermark)
+      ? "confirmed"
+      : "unconfirmed",
   );
-  return reconcile(pending, confirmed, sameTarget, false, undefined);
+  return reconcile(pending, verdicts, false);
 }
 
 /**
@@ -433,7 +626,11 @@ export function markResolved<Vars>(
   return pending.map((op) => {
     if (op.opId !== opId) return op;
     const { failure: _failure, ...rest } = op;
-    return { ...rest, resolved: true, ...(ackWatermark !== undefined ? { ackWatermark } : {}) };
+    return {
+      ...rest,
+      resolved: true,
+      ...(ackWatermark !== undefined ? { ackWatermark } : {}),
+    };
   });
 }
 

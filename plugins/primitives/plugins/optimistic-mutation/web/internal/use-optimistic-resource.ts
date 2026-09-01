@@ -77,13 +77,14 @@ interface OptimisticBaseArgs<
  * `b` write the SAME entity/key?").
  *
  * Precise per-op matching implies concurrent per-entity ops in flight — i.e. a
- * structurally multi-target consumer — which needs the same-target cascade to
- * avoid the stuck-inverse-pair replay: confirming an op also drops older
- * RESOLVED ops on the same target, because a newer confirmed write to a target
- * proves the snapshot already contains the older write's (possibly overwritten)
- * effect, so an older op that still doesn't match can never match any future
- * snapshot (see `confirmPass`). An older resolved op on an UNRELATED target,
- * whose own confirming push simply hasn't arrived yet, is never cascade-dropped.
+ * structurally multi-target consumer — where the overlay's being an ORDERED
+ * FOLD starts to bite: an op's rendered effect is defined relative to the ops
+ * before it, so letting one leave while an older op it was folded on top of is
+ * still replaying renders a state the user never created. `sameTarget` is what
+ * the ordering rule reads to prevent that (`overlay.ts` — an op may not leave
+ * while an older, still-surviving, same-target op remains). It only ever makes
+ * an op WAIT, so over-approximating is safe and under-approximating merely
+ * narrows the protection.
  *
  * `isConfirmedBy` without `sameTarget` (or vice versa) is therefore
  * unrepresentable.
@@ -176,7 +177,9 @@ export function useOptimisticResource<
   // authoritative value) before `resource.initialData`. Without this, the
   // widened `pending` would collapse the base to `initialData` on any transient
   // error and blank the page block editor / conversation queue sidebar.
-  const base = result.pending ? (result.stale ?? resource.initialData) : result.data;
+  const base = result.pending
+    ? (result.stale ?? resource.initialData)
+    : result.data;
   // Preserve the documented `pending` contract — "true until the FIRST
   // authoritative value" — rather than forwarding the widened one: once a value
   // has landed (`stale` defined), an error must NOT re-report the surface as
@@ -216,7 +219,10 @@ export function useOptimisticResource<
   const mutateRef = useLatestRef(mutate);
   const onErrorRef = useLatestRef(onError);
 
-  const queryKey = useMemo(() => queryKeyFor(resource.key, params), [resource.key, params]);
+  const queryKey = useMemo(
+    () => queryKeyFor(resource.key, params),
+    [resource.key, params],
+  );
   const queryKeyRef = useLatestRef(queryKey);
   const targetKey = useMemo(() => JSON.stringify(queryKey), [queryKey]);
   // This tuple's send lane (module-level, shared with every other mount on the
@@ -224,7 +230,10 @@ export function useOptimisticResource<
   // drain keep stable identities while still enqueuing onto the LIVE tuple's
   // lane — ops never outlive their tuple, so a params re-baseline swaps lanes
   // with it.
-  const laneKey = useMemo(() => sendLaneKey(resource.key, params), [resource.key, params]);
+  const laneKey = useMemo(
+    () => sendLaneKey(resource.key, params),
+    [resource.key, params],
+  );
   const laneKeyRef = useLatestRef(laneKey);
 
   // The server-acked ops and the server's snapshots durably disagree — either
@@ -280,7 +289,9 @@ export function useOptimisticResource<
   useEffect(() => {
     const cache = queryClient.getQueryCache();
     // Re-baseline when the key changes: ops never outlive their (key, params).
-    lastGenRef.current = queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ?? 0;
+    lastGenRef.current =
+      queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ??
+      0;
     return cache.subscribe((event) => {
       if (event.type !== "updated") return;
       if (JSON.stringify(event.query.queryKey) !== targetKey) return;
@@ -319,21 +330,33 @@ export function useOptimisticResource<
     });
     // The subscription stays mounted for the resource's lifetime and reads the
     // freshest confirmation off the stable `confirmationRef.current` at call time.
-  }, [queryClient, targetKey, resource.key, commitPending, reportOutcomes, hasAck]);
+  }, [
+    queryClient,
+    targetKey,
+    resource.key,
+    commitPending,
+    reportOutcomes,
+    hasAck,
+  ]);
 
   // The ACK edge: a standalone `{ kind: "ack" }` frame produces NO cache event
   // (nothing changed byte-wise), so the QueryCache subscription above never
   // fires for it — this registry subscription is its delivery channel. Runs
   // `ackPass` only on a tuple match with ops pending; drops acked resolved ops
-  // (cascading in content mode), counts no miss, denies nothing — so nothing to
-  // report. Value-frame ack notes fire this too; that second pass is an
-  // identity no-op after the cache edge handled them.
+  // (unless the ordering rule blocks one behind an older same-target op),
+  // counts no miss, denies nothing — so nothing to report. Value-frame ack
+  // notes fire this too; that second pass is an identity no-op after the cache
+  // edge handled them.
   useEffect(() => {
     return subscribeResourceTxAcks((key, params) => {
       if (key !== resource.key) return;
       if (ackParamsKey(params) !== ackParamsKey(paramsRef.current)) return;
       if (pendingRef.current.length === 0) return;
-      const next = ackPass(pendingRef.current, hasAck, confirmationRef.current?.sameTarget);
+      const next = ackPass(
+        pendingRef.current,
+        hasAck,
+        confirmationRef.current?.sameTarget,
+      );
       // Identity when nothing changed — skip the state write.
       if (next.pending !== pendingRef.current) commitPending(next.pending);
     });
@@ -427,10 +450,18 @@ export function useOptimisticResource<
       // asks "did a push land after this?" — for consumers with no
       // `isConfirmedBy` and no ack token.
       const dispatchGen =
-        queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ?? 0;
+        queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ??
+        0;
       commitPending([
         ...pendingRef.current,
-        { opId, vars, resolved: false, dispatchGen, misses: 0, divergenceReported: false },
+        {
+          opId,
+          vars,
+          resolved: false,
+          dispatchGen,
+          misses: 0,
+          divergenceReported: false,
+        },
       ]);
       // Onto the tuple's send lane, never straight at the network: this op's
       // predecessors must reach the server first. Head-of-line blocking is real
@@ -448,7 +479,9 @@ export function useOptimisticResource<
   // outcome (undefined when the op is gone or not failed) for the drain below.
   const retryOp = useCallback(
     (opId: string): Promise<"resolved" | OpFailure["kind"]> | undefined => {
-      const op = pendingRef.current.find((o) => o.opId === opId && o.failure !== undefined);
+      const op = pendingRef.current.find(
+        (o) => o.opId === opId && o.failure !== undefined,
+      );
       if (!op) return undefined;
       commitPending(clearFailure(pendingRef.current, opId));
       return runMutate(opId, op.vars);
@@ -481,7 +514,9 @@ export function useOptimisticResource<
     (kinds: ReadonlyArray<OpFailure["kind"]>) => {
       if (drainingRef.current) return;
       const opIds = pendingRef.current
-        .filter((op) => op.failure !== undefined && kinds.includes(op.failure.kind))
+        .filter(
+          (op) => op.failure !== undefined && kinds.includes(op.failure.kind),
+        )
         .map((op) => op.opId);
       if (opIds.length === 0) return;
       drainingRef.current = true;
@@ -518,7 +553,8 @@ export function useOptimisticResource<
   useEffect(() => {
     const socketKind = resource.origin === "central" ? "central" : "worktree";
     const unsubscribe = subscribeWsStatus((ev) => {
-      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== socketKind) return;
+      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== socketKind)
+        return;
       retryNetworkFailed();
     });
     const onOnline = () => retryNetworkFailed();
@@ -576,7 +612,8 @@ export function useOptimisticResource<
   // once-loaded one silently serves stale rows). The exemption is only sound if
   // the failure it swallows comes out here, with a Retry that re-fetches.
   const loadFailed = resultError !== null;
-  const phase = failed.length || loadFailed ? "error" : saving ? "syncing" : "idle";
+  const phase =
+    failed.length || loadFailed ? "error" : saving ? "syncing" : "idle";
   useReportSync({
     phase,
     label,
@@ -597,6 +634,16 @@ export function useOptimisticResource<
       failed,
       retry,
     }),
-    [data, base, resultPending, resultError, dispatch, pendingOps, saving, failed, retry],
+    [
+      data,
+      base,
+      resultPending,
+      resultError,
+      dispatch,
+      pendingOps,
+      saving,
+      failed,
+      retry,
+    ],
   );
 }
