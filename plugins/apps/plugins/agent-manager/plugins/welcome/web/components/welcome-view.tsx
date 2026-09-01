@@ -38,9 +38,9 @@ export function WelcomeView() {
       <Stack align="center" gap="2xl" className="w-full max-w-sm">
         {/* Branding */}
         <Stack align="center" gap="sm">
-          <img src="/icon.svg" alt="Singularity" className="size-24" />
+          <img src="/icon.svg" alt="Equin" className="size-24" />
           <Text as="span" variant="heading" className="tracking-tight">
-            Singularity
+            Equin
           </Text>
         </Stack>
 

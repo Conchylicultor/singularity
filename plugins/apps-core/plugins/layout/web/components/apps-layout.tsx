@@ -79,9 +79,9 @@ function RaillessFraming({ body }: RailFramingProps) {
 
 /**
  * Mirrors the focused tab's content title into the browser document title
- * (`<Entity> — <App> — Singularity`), reusing the same per-tab titles the tab
+ * (`<Entity> — <App> — Equin`), reusing the same per-tab titles the tab
  * bar shows. One global sync, so the browser tab name is never the stale static
- * "Singularity".
+ * "Equin".
  */
 function DocumentTitleSync() {
   const { tabs, focusedTabId, titles } = useTabs();
@@ -90,9 +90,7 @@ function DocumentTitleSync() {
   const appName = apps.find((a) => a.id === focused?.appId)?.app.name;
   const entity = focused ? titles[focused.tabId] : undefined;
   useEffect(() => {
-    document.title = [entity, appName, "Singularity"]
-      .filter(Boolean)
-      .join(" — ");
+    document.title = [entity, appName, "Equin"].filter(Boolean).join(" — ");
   }, [entity, appName]);
   return null;
 }

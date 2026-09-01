@@ -31,12 +31,12 @@ export function AgentManagerLayout() {
         >
           <img
             src="/icon.svg"
-            alt="Singularity"
+            alt="Equin"
             className={cn("size-6", rigidClass())}
           />
           <Fill>
             <Text as="span" variant="subheading" className="tracking-tight">
-              Singularity
+              Equin
             </Text>
           </Fill>
         </Line>
