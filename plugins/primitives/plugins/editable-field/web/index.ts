@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useEditableField } from "./use-editable-field";
-export type { EditableField, UseEditableFieldOptions } from "./use-editable-field";
+export type {
+  EditableField,
+  EditableFieldConflict,
+  UseEditableFieldOptions,
+} from "./use-editable-field";
 
 export default {
   description:

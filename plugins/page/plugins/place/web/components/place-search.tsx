@@ -18,6 +18,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { useBlockActivate } from "@plugins/page/plugins/editor/web";
 import { placeSearchEndpoint, type PlaceSuggestion } from "../../core";
 import { useDebouncedValue } from "../internal/use-debounced-value";
@@ -99,6 +100,11 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
         <Icon className={cn(rigidClass(), "size-4 text-muted-foreground")} />
         <Fill>
           <Input
+            // Chrome, not document content: the query is discarded on
+            // selection, so its ⌘Z belongs to the browser's own input
+            // history. Without the marker the block list's `surfaceUndoProps`
+            // ancestor claims the key and rewinds an unrelated block edit.
+            {...localUndoProps}
             ref={inputRef}
             value={query}
             placeholder={`Search ${provider.label}…`}

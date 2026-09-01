@@ -29,6 +29,7 @@
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/loading.Loading`
     - `primitives/text-editor/paste-images.attachmentUrl`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (values):
     - `BOOKMARK_TYPE`
     - `bookmarkBlock`

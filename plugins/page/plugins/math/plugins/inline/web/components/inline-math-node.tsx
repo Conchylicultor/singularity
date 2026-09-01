@@ -3,6 +3,7 @@ import { $getNodeByKey, type LexicalNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -87,6 +88,15 @@ function InlineMathView({
           )}
         </Center>
         <textarea
+          // NOT redundant, however portaled this looks. This field reads as
+          // `local` today only because the popover portals to `document.body`,
+          // which severs it from the page body's `surfaceUndoProps` subtree so
+          // `resolveUndoOwner`'s `closest()` walk finds nothing. That is an
+          // accident: `PortalForwardProvider` re-stamps ancestry-derived `data-*`
+          // across portals and already carries four, so the day
+          // `data-undo-owner` joins them this flips to `surface` with no test to
+          // catch it. Declared, the answer stays true either way.
+          {...localUndoProps}
           value={draft}
           autoFocus
           onChange={(e) => commit(e.target.value)}

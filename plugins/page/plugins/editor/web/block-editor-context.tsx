@@ -414,6 +414,25 @@ interface BlockEditorContextValue {
    */
   projectText: ProjectTextFn;
   /**
+   * Row writer for an editing surface that has ALREADY put this edit on the
+   * undo stack itself — today exactly `useBlockPlainText`, the one sanctioned
+   * plain-text control a block may own (`<BlockTextArea>`).
+   *
+   * Same optimistic pipeline as `BlockEditorAPI.update`, with `record: false`
+   * — the same exemption `projectText` takes, for the same reason: something
+   * else owns this edit's history. Such a surface edits at INPUT frequency, so
+   * it cannot pay for a row write per keystroke; it records synchronously (so
+   * Cmd+Z reaches the keystroke you just typed) and persists on a timer. If
+   * the timer's write recorded too, one typing burst would cost TWO Cmd+Z —
+   * and the first of them would revert only the row while the control kept
+   * rendering its own draft, i.e. an undo that visibly does nothing.
+   *
+   * Deliberately NOT on `BlockEditorAPI`: a block renderer must not be able to
+   * write a row off the history by accident. Reaching this takes
+   * `useBlockEditor()` and a deliberate claim that the edit is recorded.
+   */
+  commitRecordedRowData: (blockId: string, data: RowData) => void;
+  /**
    * Text-history recorder: mirror ONE captured `Y.UndoManager` item (a
    * coalesced typing run in `blockId`'s content doc) onto the unified undo
    * stack. Called by `CollabTextPlugin` from the content-doc seam's
@@ -1131,6 +1150,19 @@ export function BlockEditorProviderInner({
       );
     },
     [commitRow, liveRowsRef],
+  );
+
+  // See the interface doc: the ROW half of an edit whose history entry its own
+  // surface already recorded. `preserveText` carries the row's `text`
+  // projection across untouched, exactly as `update` does.
+  const commitRecordedRowData = useCallback(
+    (blockId: string, data: RowData) => {
+      commitRow(blockId, (b) => ({ ...b, data: preserveText(b.data, data) }), {
+        label: "Edit block",
+        record: false,
+      });
+    },
+    [commitRow],
   );
 
   // Apply a single tree op optimistically AND record it for structural undo. The
@@ -1919,6 +1951,7 @@ export function BlockEditorProviderInner({
       insert,
       insertFirst,
       projectText,
+      commitRecordedRowData,
       recordTextEdit,
       recordDocEdit,
       undo,
@@ -1957,6 +1990,7 @@ export function BlockEditorProviderInner({
       insert,
       insertFirst,
       projectText,
+      commitRecordedRowData,
       recordTextEdit,
       recordDocEdit,
       undo,

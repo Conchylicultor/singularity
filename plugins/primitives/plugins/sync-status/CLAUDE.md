@@ -49,6 +49,20 @@ while offline**, since the bytes are buffered and will flush on the next
 reconnect edge. Offline is not `error`; only a real, non-retryable server
 rejection is.
 
+## `conflict` is a different axis, not a softer `error`
+
+`conflict` ⇔ this reporter's copy and the server's have moved apart, and the
+reporter is holding the user's unsaved version. Nothing failed and nothing is in
+flight, so neither `error` nor `syncing` can say it: `error` promises a write
+was rejected and a Retry exists, and retrying is meaningless here. The cloud
+shows a warning sync icon and names the diverged fields; there is no button,
+because the reporter — not the surface chrome — owns how to resolve it
+(`useEditableField` keeps the draft and exposes `acceptExternal()`).
+
+It outranks `syncing` in the aggregate: an in-flight save is routine, a
+divergence is the thing the user has to know about. It does not outrank `error`,
+which still has an action attached.
+
 ## Architecture
 
 ```
@@ -67,7 +81,8 @@ Reporters write through plain React context — **no module-global registry, no
 ## API
 
 - **`useReportSync({ phase, label?, retry?, savedAt? })`** — declarative. Called
-  every render with the current `phase` (`"idle" | "syncing" | "error"`), an
+  every render with the current `phase`
+  (`"idle" | "syncing" | "conflict" | "error"`), an
   optional `label` (the thing being saved), a `retry` thunk (only meaningful
   while `error`), and an optional `savedAt` timestamp. A stable id is minted with
   `useId()`; the entry is removed on unmount. **The reporter owns "saved"
@@ -89,11 +104,12 @@ Reporters write through plain React context — **no module-global registry, no
 ## Aggregate & precedence
 
 The indicator collapses all active sources into one aggregate with precedence
-**error > syncing > saved > idle**:
+**error > conflict > syncing > saved > idle**:
 
 | aggregate | UI |
 |---|---|
 | `error`   | `MdCloudOff` (destructive) + "Couldn't save {labels}" + **Retry** (runs every error source's `retry()`) |
+| `conflict`| `MdSyncProblem` (warning) + "{labels} changed elsewhere while you were editing" — no button |
 | `syncing` | `Spinner` + "Saving…" (after a ~120ms show-delay, so fast saves never flash) |
 | `saved`   | `MdCloudDone` (muted) + "Saved" (`RelativeTime` of `lastSavedAt` in the tooltip) |
 | `idle`    | renders nothing |
@@ -111,7 +127,8 @@ non-surface mounts instead of crashing.
 
 ## Invariants
 
-- Only `syncing` / `error` sources are stored; `idle` removes the entry.
+- Only `syncing` / `conflict` / `error` sources are stored; `idle` removes the
+  entry.
   `lastSavedAt` is bumped **only** by a reporter's explicit `savedAt` — a failed
   save never sets `savedAt`, so it never shows "Saved".
 - `applyReport` returns the SAME `state` reference when neither the phase/label

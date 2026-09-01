@@ -84,6 +84,20 @@ export {
   useBlockActivate,
 } from "./components/void-caret";
 export type { VoidCaret, VoidCaretOptions } from "./components/void-caret";
+// The ONE plain-text editing surface a page block may own. A block that holds
+// source rather than prose (code, an equation) declares its draft here instead
+// of hand-rolling a textarea: recording is synchronous on the keystroke, the row
+// write is debounced and records nothing, and the void-caret registration is
+// made from inside so a caller cannot forget it.
+export { useBlockPlainText, BlockTextArea } from "./components/block-text-area";
+export type {
+  BlockPlainText,
+  BlockPlainTextControl,
+  BlockPlainTextOptions,
+  BlockPlainTextProps,
+  BlockTextAreaProps,
+  BlockTextSelection,
+} from "./components/block-text-area";
 export {
   useInsertableBlocks,
   useGroupedInsertableBlocks,

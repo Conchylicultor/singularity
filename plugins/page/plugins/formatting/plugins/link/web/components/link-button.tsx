@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { MdLink } from "react-icons/md";
 import {
   $getSelection,
@@ -9,10 +15,15 @@ import {
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  Input,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useFormatToolbar,
   OPEN_LINK_POPOVER_COMMAND,
@@ -116,13 +127,24 @@ export function LinkButton() {
           }
           aria-pressed={activeLink !== null}
           onMouseDown={(e) => e.preventDefault()}
-          className={cn(activeLink !== null && "bg-accent text-accent-foreground")}
+          className={cn(
+            activeLink !== null && "bg-accent text-accent-foreground",
+          )}
         />
       }
     >
       <form onSubmit={apply}>
         <Stack gap="xs">
           <Input
+            // NOT redundant, however portaled this looks. This field reads as
+            // `local` today only because the popover portals to `document.body`,
+            // which severs it from the page body's `surfaceUndoProps` subtree so
+            // `resolveUndoOwner`'s `closest()` walk finds nothing. That is an
+            // accident: `PortalForwardProvider` re-stamps ancestry-derived `data-*`
+            // across portals and already carries four, so the day
+            // `data-undo-owner` joins them this flips to `surface` with no test to
+            // catch it. Declared, the answer stays true either way.
+            {...localUndoProps}
             autoFocus
             value={url}
             onChange={(e) => setUrl(e.target.value)}

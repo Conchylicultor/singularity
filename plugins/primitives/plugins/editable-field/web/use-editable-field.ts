@@ -1,23 +1,40 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  useReportSync,
+  type SyncPhase,
+} from "@plugins/primitives/plugins/sync-status/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { mapCaret } from "./internal/map-caret";
+import { reconcile } from "./internal/reconcile";
 
 export interface UseEditableFieldOptions<T extends string> {
   value: T;
   onSave: (next: T) => void | Promise<void>;
   debounceMs?: number;
   /**
-   * When true, the server owns this field right now: mirror the incoming
-   * `value` into the draft and never autosave. Lets a consumer suspend a
-   * field's autosave while a structural op rewrites that field server-side,
-   * so the autosave can't clobber the server's edit.
-   */
-  frozen?: boolean;
-  /**
    * Human-readable name of the field being saved. Surfaced by the universal
-   * sync-status indicator in the error state (e.g. "Couldn't save Task title").
+   * sync-status indicator in the error state (e.g. "Couldn't save Task title")
+   * and in the conflict state (e.g. "Task title changed elsewhere").
    */
   label?: string;
+}
+
+/**
+ * A newer external value the local draft is holding out against: the server (or
+ * another tab, or an agent, or an undo patch) moved this field on while the
+ * draft carried unsaved edits. The draft stays on screen — a typing user never
+ * has text yanked away — and this is how the write that was NOT applied stays
+ * visible instead of vanishing.
+ */
+export interface EditableFieldConflict<T extends string> {
+  /** The value the field's source has now, which the draft has not adopted. */
+  external: T;
 }
 
 export interface EditableField<T extends string> {
@@ -31,12 +48,62 @@ export interface EditableField<T extends string> {
   isError: boolean;
   /** Re-run the save of the current draft (drives the indicator's Retry). */
   retry: () => void;
+  /**
+   * Non-null while the external value has moved on and the draft has unsaved
+   * edits. Reported to sync-status as the `conflict` phase; a consumer can also
+   * render its own affordance from it.
+   */
+  conflict: EditableFieldConflict<T> | null;
+  /** Resolve a conflict the other way: take the external value, drop the draft. */
+  acceptExternal: () => void;
+}
+
+/** A caret to restore once the adopted value has been written to the DOM. */
+interface CaretAdoption {
+  prev: string;
+  next: string;
+  start: number;
+  end: number;
+  direction: "forward" | "backward" | "none" | null;
+}
+
+function isTextEntry(
+  el: Element | null,
+): el is HTMLInputElement | HTMLTextAreaElement {
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement;
+}
+
+/**
+ * Read the caret out of the element that is rendering this draft, so adopting
+ * an external value into a focused field can put it back where it belongs.
+ *
+ * The element is found through `document.activeElement` rather than a ref the
+ * consumer wires: the hook only ever adopts into a *focused* field, and the
+ * focused element is by construction the one whose `onFocus` set the flag. Two
+ * guards keep that inference honest — it must be a text entry with a selection
+ * (an `<input type="number">` has none), and it must currently show exactly the
+ * draft we are about to replace. When either fails there is no caret mapping
+ * (React DOM's own raw-offset restore still applies); nothing else changes.
+ */
+function captureCaret(
+  prev: string,
+  next: string,
+  focused: boolean,
+): CaretAdoption | null {
+  if (!focused) return null;
+  const el = document.activeElement;
+  if (!isTextEntry(el)) return null;
+  if (el.value !== prev) return null;
+  const start = el.selectionStart;
+  const end = el.selectionEnd;
+  if (start === null || end === null) return null;
+  return { prev, next, start, end, direction: el.selectionDirection };
 }
 
 export function useEditableField<T extends string>(
   opts: UseEditableFieldOptions<T>,
 ): EditableField<T> {
-  const { value, debounceMs = 500, frozen = false, label } = opts;
+  const { value, debounceMs = 500, label } = opts;
 
   const [draft, setDraft] = useState<T>(value);
   const [isSaving, setIsSaving] = useState(false);
@@ -45,41 +112,88 @@ export function useEditableField<T extends string>(
   // A persistent state value (unlike the transient isSaving boolean, which a
   // warm local socket can flip true→false inside one coalesced render).
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [conflict, setConflict] = useState<EditableFieldConflict<T> | null>(
+    null,
+  );
 
   const focusedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savePromiseRef = useRef<Promise<void> | null>(null);
   const lastSavedRef = useRef<T>(value);
   const onSaveRef = useRef(opts.onSave);
-  const frozenRef = useRef(frozen);
+  const pendingCaretRef = useRef<CaretAdoption | null>(null);
+
+  // Keep the latest draft/conflict in refs so the stable callbacks below
+  // (`retry` is pulled imperatively by the sync-status indicator) don't churn.
+  const draftRef = useLatestRef(draft);
+  const conflictRef = useLatestRef(conflict);
 
   useEffect(() => {
     onSaveRef.current = opts.onSave;
-    frozenRef.current = frozen;
   });
 
-  // Entering frozen: drop any pending debounce so it can't fire after the
-  // server takes over the field.
+  // Reconcile the external value with the draft on every change to either.
+  //
+  // This used to be an unconditional `if (focusedRef.current) return`, which
+  // silently DROPPED every external write to a focused field — an agent's
+  // rename, another tab, a collaborator, an undo patch — and then flushed the
+  // stale draft back over it on blur. The rule now is: adopt when the draft has
+  // nothing unsaved to lose, and when it does, keep the user's text but report
+  // the divergence instead of discarding it.
   useEffect(() => {
-    if (frozen && timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    switch (reconcile(value, draft, lastSavedRef.current)) {
+      case "echo":
+        // Our own write coming back (or the seed) — the two sides agree.
+        setConflict(null);
+        return;
+      case "converged":
+        // The draft already spells the external value; record the agreement so
+        // a later blur doesn't re-save identical text.
+        lastSavedRef.current = value;
+        setConflict(null);
+        return;
+      case "conflict":
+        // Keep the draft. Re-report the same external value as the SAME object
+        // so React bails instead of re-rendering on every keystroke.
+        setConflict((prev) =>
+          prev && Object.is(prev.external, value) ? prev : { external: value },
+        );
+        return;
+      case "adopt":
+        // A pending debounce would re-save the value we are replacing.
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+          timerRef.current = null;
+        }
+        pendingCaretRef.current = captureCaret(
+          draft,
+          value,
+          focusedRef.current,
+        );
+        lastSavedRef.current = value;
+        setDraft(value);
+        setConflict(null);
+        return;
     }
-  }, [frozen]);
+  }, [value, draft]);
 
-  useEffect(() => {
-    // While frozen, the server owns the field: mirror its `value` into the
-    // draft unconditionally (bypass the focus/timer/save guards) and keep
-    // lastSavedRef in sync so unfreezing fires no spurious save.
-    if (!frozen) {
-      if (focusedRef.current) return;
-      if (timerRef.current) return;
-      if (savePromiseRef.current) return;
-    }
-    if (Object.is(value, lastSavedRef.current)) return;
-    lastSavedRef.current = value;
-    setDraft(value);
-  }, [value, frozen]);
+  // Put the caret back after the adopted value has been committed to the DOM.
+  // A layout effect runs after React DOM's own selection restore, so this wins;
+  // no dep array, because it must fire on exactly the commit that applied it.
+  useLayoutEffect(() => {
+    const pending = pendingCaretRef.current;
+    if (!pending) return;
+    pendingCaretRef.current = null;
+    const el = document.activeElement;
+    if (!isTextEntry(el)) return;
+    if (el.value !== pending.next) return;
+    const start = mapCaret(pending.prev, pending.next, pending.start);
+    const end =
+      pending.start === pending.end
+        ? start
+        : mapCaret(pending.prev, pending.next, pending.end);
+    el.setSelectionRange(start, end, pending.direction ?? undefined);
+  });
 
   useEffect(() => {
     return () => {
@@ -96,7 +210,7 @@ export function useEditableField<T extends string>(
       if (prior) {
         try {
           await prior;
-        // eslint-disable-next-line promise-safety/no-bare-catch
+          // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {
           // Prior save's error is its own problem; don't block this save.
         }
@@ -128,9 +242,6 @@ export function useEditableField<T extends string>(
   const onChange = useCallback(
     (next: T) => {
       setDraft(next);
-      // While frozen, keep the display live but never schedule a save —
-      // the server owns the field.
-      if (frozenRef.current) return;
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
@@ -156,7 +267,7 @@ export function useEditableField<T extends string>(
     if (savePromiseRef.current) {
       try {
         await savePromiseRef.current;
-      // eslint-disable-next-line promise-safety/no-bare-catch
+        // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // Surface the error to the original caller of runSave, not here.
       }
@@ -165,14 +276,8 @@ export function useEditableField<T extends string>(
 
   const onBlur = useCallback(() => {
     focusedRef.current = false;
-    // While frozen there is nothing to flush — the server owns the field.
-    if (frozenRef.current) return;
     void flush();
   }, [flush]);
-
-  // Keep the latest draft in a ref so `retry` can stay referentially stable
-  // (the sync-status indicator pulls it imperatively, so churn would thrash).
-  const draftRef = useLatestRef(draft);
 
   // `retry` stays referentially stable (the sync-status indicator pulls it
   // imperatively) and reads the latest draft off the stable `draftRef.current`.
@@ -180,10 +285,49 @@ export function useEditableField<T extends string>(
     void runSave(draftRef.current);
   }, [runSave]);
 
+  // The other way out of a conflict: take the external value and drop the
+  // draft. It mirrors the effect's `adopt` arm, but reached from an explicit
+  // gesture rather than from a value change — the draft it discards is the
+  // user's unsaved text, so nothing may do this on its own.
+  const acceptExternal = useCallback(() => {
+    const pending = conflictRef.current;
+    if (!pending) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    pendingCaretRef.current = captureCaret(
+      draftRef.current,
+      pending.external,
+      focusedRef.current,
+    );
+    lastSavedRef.current = pending.external;
+    setDraft(pending.external);
+    setConflict(null);
+  }, []);
+
   // Auto-report to the universal sync-status indicator. Harmless no-op when no
-  // <SyncStatusProvider> is above (unit tests, non-surface mounts).
-  const phase = isError ? "error" : isSaving ? "syncing" : "idle";
+  // <SyncStatusProvider> is above (unit tests, non-surface mounts). A failed
+  // save outranks a conflict: it is the state with an action attached.
+  const phase: SyncPhase = isError
+    ? "error"
+    : conflict
+      ? "conflict"
+      : isSaving
+        ? "syncing"
+        : "idle";
   useReportSync({ phase, label, retry: isError ? retry : undefined, savedAt });
 
-  return { value: draft, onChange, onFocus, onBlur, flush, isSaving, isError, retry };
+  return {
+    value: draft,
+    onChange,
+    onFocus,
+    onBlur,
+    flush,
+    isSaving,
+    isError,
+    retry,
+    conflict,
+    acceptExternal,
+  };
 }

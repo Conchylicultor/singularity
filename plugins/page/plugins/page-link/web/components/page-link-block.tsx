@@ -8,6 +8,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
@@ -84,6 +85,15 @@ function PagePicker({
     >
       <Stack gap="sm">
         <SearchInput
+          // NOT redundant, however portaled this looks. This field reads as
+          // `local` today only because the popover portals to `document.body`,
+          // which severs it from the page body's `surfaceUndoProps` subtree so
+          // `resolveUndoOwner`'s `closest()` walk finds nothing. That is an
+          // accident: `PortalForwardProvider` re-stamps ancestry-derived `data-*`
+          // across portals and already carries four, so the day
+          // `data-undo-owner` joins them this flips to `surface` with no test to
+          // catch it. Declared, the answer stays true either way.
+          {...localUndoProps}
           autoFocus
           placeholder="Search pages…"
           value={query}

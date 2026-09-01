@@ -13,6 +13,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useBlockActivate,
   type BlockRendererProps,
@@ -63,6 +64,11 @@ function EmptyEmbedBlock({ onSubmit }: { onSubmit: (url: string) => void }) {
         </Stack>
         <Stack direction="row" gap="sm" align="center">
           <Input
+            // Chrome, not document content: this field holds nothing the page
+            // persists, so its ⌘Z belongs to the browser's own input history.
+            // Without the marker the block list's `surfaceUndoProps` ancestor
+            // claims the key and rewinds an unrelated block edit mid-typing.
+            {...localUndoProps}
             ref={inputRef}
             value={value}
             placeholder="https://…"

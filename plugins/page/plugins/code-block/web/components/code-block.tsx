@@ -11,7 +11,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import {
   resolveLang,
@@ -20,7 +20,6 @@ import {
   useHighlightedHtml,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {
   Inset,
   Stack,
@@ -35,7 +34,8 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   BLOCK_INSET,
-  useVoidCaret,
+  BlockTextArea,
+  useBlockPlainText,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
@@ -77,12 +77,30 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   const [language, setLanguage] = useState<string | undefined>(parsed.language);
   const languageRef = useLatestRef(language);
 
-  const field = useEditableField({
+  // The block's own plain-text surface. `useBlockPlainText` owns the draft, the
+  // SYNCHRONOUS undo entry per keystroke, the debounced row write, the void-caret
+  // registration and the ↑/↓/Backspace boundary keys — this block adds only what
+  // is its own: Tab indents by two spaces instead of leaving the block.
+  const text = useBlockPlainText({
+    blockId: block.id,
+    isFocused,
+    editor,
     value: parsed.code,
-    onSave: (next) =>
-      editor.update({ code: next, language: languageRef.current }),
+    rowData: (code) => ({ code, language: languageRef.current }),
+    label: "code",
+    onKeyDown: (e, ctl) => {
+      if (e.key !== "Tab") return;
+      e.preventDefault();
+      const { selectionStart, selectionEnd } = e.currentTarget;
+      const next =
+        ctl.value.slice(0, selectionStart) +
+        "  " +
+        ctl.value.slice(selectionEnd);
+      const caret = selectionStart + 2;
+      ctl.setValue(next, { start: caret, end: caret });
+    },
   });
-  const code = field.value;
+  const code = text.value;
 
   // In AUTO mode (language undefined) guess the language from the content; an
   // explicit choice (including the "text" plain sentinel) wins over detection.
@@ -95,65 +113,6 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // cancel guard drops stale results from earlier keystrokes). No cacheKey: the
   // editor recomputes per keystroke, matching the pre-hook behavior.
   const { html } = useHighlightedHtml(code, resolved, { dark });
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // A code block is a *void* block as far as the editor is concerned: its text
-  // lives in a plain <textarea>, not in Lexical, so the block has to hand the
-  // editor a focus capability of its own. It used to pull DOM focus on
-  // `isFocused` but register NO handle, and the two are not the same
-  // obligation — `navigate()` walks the registered handles, so arrowing past a
-  // code block SKIPPED it entirely while a click could still focus it, leaving
-  // the editor's focus model and the browser's disagreeing. `useVoidCaret` does
-  // both halves, which is the fix.
-  const voidCaret = useVoidCaret({
-    blockId: block.id,
-    isFocused,
-    editor,
-    focus: () => textareaRef.current?.focus(),
-  });
-
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    const ta = e.currentTarget;
-    if (e.key === "Tab") {
-      // Indent with spaces instead of moving focus out of the block.
-      e.preventDefault();
-      const { selectionStart, selectionEnd } = ta;
-      const next =
-        code.slice(0, selectionStart) + "  " + code.slice(selectionEnd);
-      field.onChange(next);
-      requestAnimationFrame(() => {
-        if (textareaRef.current) {
-          textareaRef.current.selectionStart =
-            textareaRef.current.selectionEnd = selectionStart + 2;
-        }
-      });
-      return;
-    }
-    if (e.key === "Backspace" && code === "") {
-      // Empty code block → remove it, matching Notion.
-      e.preventDefault();
-      editor.remove();
-      return;
-    }
-    if (
-      e.key === "ArrowUp" &&
-      ta.selectionStart === 0 &&
-      ta.selectionEnd === 0
-    ) {
-      e.preventDefault();
-      editor.navigate("up");
-      return;
-    }
-    if (
-      e.key === "ArrowDown" &&
-      ta.selectionStart === code.length &&
-      ta.selectionEnd === code.length
-    ) {
-      e.preventDefault();
-      editor.navigate("down");
-    }
-  }
 
   function onLanguageChange(value: string | null) {
     // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
@@ -261,28 +220,19 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
         )}
 
         {/* Editor: transparent text + visible caret, laid exactly over the underlay. */}
-        <textarea
-          ref={textareaRef}
-          value={code}
-          onChange={(e) => field.onChange(e.target.value)}
-          onFocus={() => {
-            field.onFocus();
-            voidCaret.onFocus();
-          }}
-          onBlur={field.onBlur}
-          onKeyDown={onKeyDown}
-          spellCheck={false}
-          autoCorrect="off"
-          autoCapitalize="off"
+        <BlockTextArea
+          text={text}
           placeholder="Code…"
           // The interactive full-bleed editor layer laid exactly over the sizing
           // underlay. `layerClasses()` (not `<Overlay above>`, which is
-          // pointer-events-none) because the layer IS this element.
+          // pointer-events-none) because the layer IS this element. METRICS is
+          // the caret-alignment contract: drop a token and the invisible caret
+          // drifts off the coloured glyphs underneath.
           className={cn(
             layerClasses(),
             clipClasses({ axis: "both", fill: false }),
             "h-full w-full resize-none border-0 bg-transparent",
-            "text-transparent caret-foreground outline-none placeholder:text-muted-foreground",
+            "text-transparent",
             METRICS,
           )}
         />

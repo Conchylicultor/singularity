@@ -25,6 +25,7 @@
     - `primitives/loading.Loading`
     - `primitives/popover.InlinePopover`
     - `primitives/search.SearchInput`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (values): `pageLinkBlock`
 - Server:
   - Contributes:

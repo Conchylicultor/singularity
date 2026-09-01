@@ -2,13 +2,20 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web"
 
 /**
  * The lifecycle phase a single sync source reports. `idle` is the absence of a
- * source (the entry is removed), so only `syncing`/`error` are ever stored.
+ * source (the entry is removed), so only `syncing`/`conflict`/`error` are ever
+ * stored.
+ *
+ * `conflict` is a DIFFERENT axis from `error`, not a softer one: nothing failed
+ * and nothing is in flight — the source's own copy and the server's have moved
+ * apart, and the source is holding the user's unsaved version. `error` means a
+ * write was rejected and can be retried; retrying is meaningless here, so the
+ * two can never share a phase.
  */
-export type SyncPhase = "idle" | "syncing" | "error";
+export type SyncPhase = "idle" | "syncing" | "conflict" | "error";
 
-/** A single in-flight or failed sync source, keyed by the reporter's stable id. */
+/** A single in-flight, diverged or failed sync source, keyed by the reporter's stable id. */
 export interface SyncSource {
-  phase: "syncing" | "error";
+  phase: "syncing" | "conflict" | "error";
   /** Human label for the thing being saved (e.g. "title", "description"). */
   label?: string;
 }
@@ -87,13 +94,16 @@ export function removeReport(
 }
 
 /**
- * The aggregate the indicator renders. Precedence is **error > syncing > saved
- * > idle**: any failed source surfaces as an error (with the failing labels);
- * else any in-flight source is "syncing"; else a past save is "saved"; else
- * there is nothing to show.
+ * The aggregate the indicator renders. Precedence is **error > conflict >
+ * syncing > saved > idle**: any failed source surfaces as an error (with the
+ * failing labels); else any diverged source surfaces as a conflict; else any
+ * in-flight source is "syncing"; else a past save is "saved"; else there is
+ * nothing to show. A conflict outranks "syncing" because an in-flight save is
+ * routine and a divergence is the thing the user has to know about.
  */
 export type SyncAggregate =
   | { kind: "error"; labels: string[] }
+  | { kind: "conflict"; labels: string[] }
   | { kind: "syncing" }
   | { kind: "saved"; at: number }
   | { kind: "idle" };
@@ -101,13 +111,18 @@ export type SyncAggregate =
 export function aggregate(state: SyncStatusState): SyncAggregate {
   const entries = Object.values(state.sources);
   const errors = entries.filter((s) => s.phase === "error");
-  if (errors.length > 0) {
-    const labels = errors
-      .map((s) => s.label)
-      .filter((l): l is string => Boolean(l));
-    return { kind: "error", labels };
+  if (errors.length > 0) return { kind: "error", labels: labelsOf(errors) };
+  const diverged = entries.filter((s) => s.phase === "conflict");
+  if (diverged.length > 0) {
+    return { kind: "conflict", labels: labelsOf(diverged) };
   }
   if (entries.some((s) => s.phase === "syncing")) return { kind: "syncing" };
-  if (state.lastSavedAt != null) return { kind: "saved", at: state.lastSavedAt };
+  if (state.lastSavedAt != null)
+    return { kind: "saved", at: state.lastSavedAt };
   return { kind: "idle" };
+}
+
+/** The named subset of a phase's sources — unlabelled reporters contribute none. */
+function labelsOf(sources: SyncSource[]): string[] {
+  return sources.map((s) => s.label).filter((l): l is string => Boolean(l));
 }

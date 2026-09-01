@@ -1,6 +1,7 @@
 import noAdhocBlockId from "./no-adhoc-block-id";
 import noAdhocForestWrite from "./no-adhoc-forest-write";
 import noAdhocStructuralWrite from "./no-adhoc-structural-write";
+import noUnhistoriedBlockField from "./no-unhistoried-block-field";
 import noModelFocusRing from "./no-model-focus-ring";
 
 /**
@@ -26,6 +27,16 @@ import noModelFocusRing from "./no-model-focus-ring";
  * would be the signal that it had gone back to painting focus from the model —
  * not something to exempt.
  *
+ * ## `no-unhistoried-block-field`
+ *
+ * The other rule about what the user experiences rather than about who may
+ * write. The block list declares `data-undo-owner="surface"`, so a raw
+ * `<textarea>`/`<input>`/`contenteditable` anywhere beneath it that declares
+ * nothing hands ⌘Z to the document stack — killing the browser's own history
+ * for that field and reversing an unrelated block edit mid-typing. The rule
+ * forces one of the two honest answers: `<BlockTextArea>` for text the page
+ * persists, `localUndoProps` for transient chrome.
+ *
  * The remaining three are write-authority rules, each with exactly the modules
  * that hold the authority listed below.
  */
@@ -35,6 +46,7 @@ export default {
     "no-adhoc-block-id": noAdhocBlockId,
     "no-adhoc-forest-write": noAdhocForestWrite,
     "no-adhoc-structural-write": noAdhocStructuralWrite,
+    "no-unhistoried-block-field": noUnhistoriedBlockField,
   },
   // Class rules are FACTORIES: they read class tokens, so they take the one
   // shared walk from `buildLintConfig` instead of hand-copying it. See
@@ -57,6 +69,13 @@ export default {
     "no-adhoc-structural-write": [
       "plugins/page/plugins/editor/web/block-store.ts",
       "plugins/page/plugins/editor/web/composite-block-store.tsx",
+    ],
+    // The one module allowed to render a raw block textarea: it IS the
+    // sanctioned surface, and it records every typing run onto the document
+    // stack itself. Everything else in `plugins/page/**/web` takes one of the
+    // two answers the rule's message names.
+    "no-unhistoried-block-field": [
+      "plugins/page/plugins/editor/web/components/block-text-area.tsx",
     ],
   },
 };

@@ -10,8 +10,9 @@
   - Uses:
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
+    - `page/editor.BlockTextArea`
     - `page/editor.Editor`
-    - `page/editor.useVoidCaret`
+    - `page/editor.useBlockPlainText`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/clip.Clip`
     - `primitives/css/clip.clipClasses`
@@ -28,7 +29,6 @@
     - `primitives/css/ui-kit.SelectItem`
     - `primitives/css/ui-kit.SelectSeparator`
     - `primitives/css/ui-kit.SelectTrigger`
-    - `primitives/editable-field.useEditableField`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/latest-ref.useLatestRef`

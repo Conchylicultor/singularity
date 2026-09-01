@@ -24,6 +24,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useBlockActivate,
   type BlockRendererProps,
@@ -91,6 +92,11 @@ function EmptyBookmarkBlock({
       <Stack direction="row" gap="sm" align="center">
         <MdBookmark className="size-4 text-muted-foreground" />
         <Input
+          // Chrome, not document content: this field holds nothing the page
+          // persists, so its ⌘Z belongs to the browser's own input history.
+          // Without the marker the block list's `surfaceUndoProps` ancestor
+          // claims the key and rewinds an unrelated block edit mid-typing.
+          {...localUndoProps}
           ref={inputRef}
           value={value}
           placeholder="Paste a link…"

@@ -23,6 +23,7 @@
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`
     - `primitives/text-editor/caret-trigger.useCaretQuery`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (values):
     - `INLINE_MATH_TOKEN_PATTERN`
     - `inlineMathToken`

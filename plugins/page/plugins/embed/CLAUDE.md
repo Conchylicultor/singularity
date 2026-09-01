@@ -20,6 +20,7 @@
     - `primitives/css/ui-kit.Input`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (values):
     - `EMBED_TYPE`
     - `embedBlock`

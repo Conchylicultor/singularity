@@ -3244,13 +3244,19 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockFrameMeta`
     - `BlockFrameProps`
     - `BlockPasteHandler`
+    - `BlockPlainText`
+    - `BlockPlainTextControl`
+    - `BlockPlainTextOptions`
+    - `BlockPlainTextProps`
     - `BlockRegion`
     - `BlockRegionProps`
     - `BlockRegions`
     - `BlockRendererProps`
     - `BlockSection`
+    - `BlockTextAreaProps`
     - `BlockTextExtension`
     - `BlockTextPluginProps`
+    - `BlockTextSelection`
     - `BlockTextTokenExtension`
     - `CaretFlightAbortReason`
     - `CaretFlightAbortReport`
@@ -3272,6 +3278,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
     - `BlockEditor`
+    - `BlockTextArea`
     - `blockTextRenderableExtensions`
     - `BlockTextRenderer`
     - `blockTextTokenExtension`
@@ -3304,6 +3311,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useBlockActivate`
     - `useBlockDecorations`
     - `useBlockEditor`
+    - `useBlockPlainText`
     - `useCaretEscape`
     - `useFormatToolbar`
     - `useFramedBlockTypes`

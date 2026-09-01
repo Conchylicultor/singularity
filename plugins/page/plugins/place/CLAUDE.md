@@ -37,6 +37,7 @@
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/loading.Loading`
+    - `primitives/undo-redo.localUndoProps`
   - Exports (types): `PlaceProviderContribution`
   - Exports (values):
     - `Place`

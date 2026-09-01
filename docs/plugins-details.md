@@ -15493,6 +15493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/annotations/context`
               - `page/annotations/todo/task-link`
               - `page/callout`
+              - `page/code-block`
               - `page/container`
               - `page/divider`
               - `page/editor`
@@ -18460,6 +18461,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/loading.Loading`
           - `primitives/text-editor/paste-images.attachmentUrl`
+          - `primitives/undo-redo.localUndoProps`
         - Exports (values):
           - `BOOKMARK_TYPE`
           - `bookmarkBlock`
@@ -18532,8 +18534,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockRendererProps`
+          - `page/editor.BlockTextArea`
           - `page/editor.Editor`
-          - `page/editor.useVoidCaret`
+          - `page/editor.useBlockPlainText`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/clip.Clip`
           - `primitives/css/clip.clipClasses`
@@ -18550,7 +18553,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.SelectItem`
           - `primitives/css/ui-kit.SelectSeparator`
           - `primitives/css/ui-kit.SelectTrigger`
-          - `primitives/editable-field.useEditableField`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/latest-ref.useLatestRef`
@@ -18719,13 +18721,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockFrameMeta`
           - `BlockFrameProps`
           - `BlockPasteHandler`
+          - `BlockPlainText`
+          - `BlockPlainTextControl`
+          - `BlockPlainTextOptions`
+          - `BlockPlainTextProps`
           - `BlockRegion`
           - `BlockRegionProps`
           - `BlockRegions`
           - `BlockRendererProps`
           - `BlockSection`
+          - `BlockTextAreaProps`
           - `BlockTextExtension`
           - `BlockTextPluginProps`
+          - `BlockTextSelection`
           - `BlockTextTokenExtension`
           - `CaretFlightAbortReason`
           - `CaretFlightAbortReport`
@@ -18747,6 +18755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
           - `BlockEditor`
+          - `BlockTextArea`
           - `blockTextRenderableExtensions`
           - `BlockTextRenderer`
           - `blockTextTokenExtension`
@@ -18779,6 +18788,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useBlockActivate`
           - `useBlockDecorations`
           - `useBlockEditor`
+          - `useBlockPlainText`
           - `useCaretEscape`
           - `useFormatToolbar`
           - `useFramedBlockTypes`
@@ -19143,6 +19153,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Input`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/undo-redo.localUndoProps`
         - Exports (values):
           - `EMBED_TYPE`
           - `embedBlock`
@@ -19239,6 +19250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/icon-button.IconButton`
               - `primitives/popover.InlinePopover`
               - `primitives/tooltip.Kbd`
+              - `primitives/undo-redo.localUndoProps`
         - **`strikethrough`** — Strikethrough mark button for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `StrikethroughButton`
@@ -19546,15 +19558,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Editor.Block` "equation" → `EquationBlock`
             - Uses:
               - `page/editor.BlockRendererProps`
+              - `page/editor.BlockTextArea`
               - `page/editor.Editor`
-              - `page/editor.useVoidCaret`
+              - `page/editor.useBlockPlainText`
               - `page/math/render.KatexMath`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
               - `primitives/css/text.Text`
               - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
-              - `primitives/editable-field.useEditableField`
             - Exports (values):
               - `EQUATION_TYPE`
               - `equationBlock`
@@ -19585,6 +19597,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
               - `primitives/text-editor/caret-trigger.useCaretMenu`
               - `primitives/text-editor/caret-trigger.useCaretQuery`
+              - `primitives/undo-redo.localUndoProps`
             - Exports (values):
               - `INLINE_MATH_TOKEN_PATTERN`
               - `inlineMathToken`
@@ -19637,6 +19650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/popover.InlinePopover`
           - `primitives/search.SearchInput`
+          - `primitives/undo-redo.localUndoProps`
         - Exports (values): `pageLinkBlock`
       - Server:
         - Contributes:
@@ -19711,6 +19725,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/loading.Loading`
+          - `primitives/undo-redo.localUndoProps`
         - Exports (types): `PlaceProviderContribution`
         - Exports (values):
           - `Place`
@@ -25293,9 +25308,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/sync-status.SyncPhase`
           - `primitives/sync-status.useReportSync`
         - Exports (types):
           - `EditableField`
+          - `EditableFieldConflict`
           - `UseEditableFieldOptions`
         - Exports (values): `useEditableField`
       - Cross-plugin:
@@ -25309,8 +25326,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/workflows/editor`
           - `conversations/agents`
           - `conversations/conversation-view/notes`
-          - `page/code-block`
-          - `page/math/equation`
           - `tasks/task-description`
           - `tasks/task-header`
     - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
@@ -28084,7 +28099,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tab-surface`
           - `apps/pages/page-tree`
           - `infra/trash`
+          - `page/bookmark`
           - `page/editor`
+          - `page/embed`
+          - `page/formatting/link`
+          - `page/math/inline`
+          - `page/page-link`
+          - `page/place`
           - `primitives/text-editor`
     - **`usage-rank`** — Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, and useUsageOrder() returns the most-used-first order — one coalesced point subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a bounded point resource and swept by a nightly 1-year retention job.
       - Server:

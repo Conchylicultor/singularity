@@ -9,15 +9,15 @@
   - Contributes: `Editor.Block` "equation" → `EquationBlock`
   - Uses:
     - `page/editor.BlockRendererProps`
+    - `page/editor.BlockTextArea`
     - `page/editor.Editor`
-    - `page/editor.useVoidCaret`
+    - `page/editor.useBlockPlainText`
     - `page/math/render.KatexMath`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/text.Text`
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
-    - `primitives/editable-field.useEditableField`
   - Exports (values):
     - `EQUATION_TYPE`
     - `equationBlock`

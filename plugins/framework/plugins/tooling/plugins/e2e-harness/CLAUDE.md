@@ -114,6 +114,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `page/annotations/context`
     - `page/annotations/todo/task-link`
     - `page/callout`
+    - `page/code-block`
     - `page/container`
     - `page/divider`
     - `page/editor`

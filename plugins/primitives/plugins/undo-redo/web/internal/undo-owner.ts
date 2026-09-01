@@ -29,10 +29,31 @@ export const UNDO_OWNER_ATTR = "data-undo-owner";
 export const surfaceUndoProps = { [UNDO_OWNER_ATTR]: "surface" } as const;
 
 /**
- * Spread onto an editor that keeps its OWN undo history, to claim `mod+z` back
- * from an enclosing {@link surfaceUndoProps} region. Only needed for a nested
- * editor: an undeclared editable already resolves to `local` (see
- * {@link resolveUndoOwner}), so plain inputs and textareas need no marker.
+ * Spread onto a field or editor whose `mod+z` must stay INSIDE it — a nested
+ * editor with its own history, or a transient input the browser's own undo
+ * stack should own — claiming the key back from an enclosing
+ * {@link surfaceUndoProps} region.
+ *
+ * Whether a field needs this is decided by the NEAREST declaring ancestor, not
+ * by the field itself, so the two cases read opposite ways:
+ *
+ * - **No declaring ancestor.** An undeclared text field already resolves to
+ *   `local` (see {@link resolveUndoOwner}), so the marker changes nothing.
+ * - **Inside a {@link surfaceUndoProps} region.** The region wins. An
+ *   undeclared field there sends `mod+z` to the SURFACE stack: the binding
+ *   calls `preventDefault()`, the browser's own field history never runs, and
+ *   the last unrelated document edit is reversed while the user is typing.
+ *
+ * The page block editor is that second case for every field rendered in it —
+ * the block list declares `surface` (`page/editor`'s `block-editor.tsx`) — so
+ * any field there that is CHROME rather than document content (a bookmark's URL
+ * prompt, a place search box, a link popover's URL input) must spread this.
+ *
+ * A portal is not a substitute for declaring it. A field the popover lifts to
+ * `document.body` reads as `local` only because `closest()` no longer sees the
+ * region; `PortalForwardProvider` exists precisely to re-stamp ancestry-derived
+ * `data-*` attributes across portals, so that reading is one commit from
+ * flipping. Declare it.
  */
 export const localUndoProps = { [UNDO_OWNER_ATTR]: "local" } as const;
 

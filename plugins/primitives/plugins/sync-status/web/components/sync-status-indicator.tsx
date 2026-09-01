@@ -1,12 +1,16 @@
 import { useContext, useEffect, useState } from "react";
-import { MdCloudDone, MdCloudOff } from "react-icons/md";
+import { MdCloudDone, MdCloudOff, MdSyncProblem } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { SyncStatusSinkContext } from "../internal/sink-context";
-import { aggregate, SyncStatusStore, type SyncAggregate } from "../internal/store";
+import {
+  aggregate,
+  SyncStatusStore,
+  type SyncAggregate,
+} from "../internal/store";
 
 /** Time the `syncing` state must persist before the spinner shows, so fast saves
  *  never flash (mirrors the `loading` primitive's ~120ms delay-before-show). */
@@ -63,6 +67,21 @@ function Body({ agg }: { agg: Exclude<SyncAggregate, { kind: "idle" }> }) {
     );
   }
 
+  if (agg.kind === "conflict") {
+    // Nothing failed and nothing is in flight: this surface is holding an
+    // unsaved edit while the server's copy of the same field moved on. There is
+    // no retry to offer — saving is what the surface will do anyway — so this
+    // states the divergence and stays out of the way.
+    const who = agg.labels.length > 0 ? agg.labels.join(", ") : "This field";
+    return (
+      <WithTooltip
+        content={`${who} changed elsewhere while you were editing — your unsaved version is the one on screen`}
+      >
+        <MdSyncProblem className="icon-auto text-warning" />
+      </WithTooltip>
+    );
+  }
+
   // error — the cloud-off icon doubles as the retry button.
   const labels = agg.labels;
   const what = labels.length > 0 ? ` ${labels.join(", ")}` : "";
@@ -102,11 +121,15 @@ function useDelayed(value: boolean, delayMs: number): boolean {
 function aggregateEqual(a: SyncAggregate, b: SyncAggregate): boolean {
   if (a.kind !== b.kind) return false;
   if (a.kind === "saved" && b.kind === "saved") return a.at === b.at;
-  if (a.kind === "error" && b.kind === "error") {
-    return (
-      a.labels.length === b.labels.length &&
-      a.labels.every((l, i) => l === b.labels[i])
-    );
+  const la = labelsOf(a);
+  const lb = labelsOf(b);
+  if (la && lb) {
+    return la.length === lb.length && la.every((l, i) => l === lb[i]);
   }
   return true;
+}
+
+/** The labels an aggregate names, or null for the kinds that name none. */
+function labelsOf(agg: SyncAggregate): string[] | null {
+  return agg.kind === "error" || agg.kind === "conflict" ? agg.labels : null;
 }
