@@ -7,12 +7,31 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row } from "./row";
 
-export type SectionHeaderVariant = "eyebrow" | "title";
+/**
+ * What the header's text IS, which is what picks its treatment.
+ *
+ * - **`eyebrow`** (default) — a label the APP wrote: "Tokens", "Parameters",
+ *   "Preview". Small caps, because caps mark it as chrome naming the run of
+ *   rows below it rather than as content.
+ * - **`title`** — the section's own name, at body weight. What `SectionCard`
+ *   uses.
+ * - **`value`** — a value out of the DATA, not a label at all: a DataView's
+ *   group-by header, which is whatever the grouped column happens to hold
+ *   ("Mine", "In progress", `agent-manager`). It gets the eyebrow's size and
+ *   tone and NOT its caps, because uppercasing a value misspells it — a
+ *   composition name is a namespace component stored lowercase, and a header
+ *   reading `AGENT-MANAGER` shows an identifier in a form nothing stores.
+ *
+ * The split exists because a group header used to take the `eyebrow` default by
+ * omission, which is how the app came to shout its own data back at the reader.
+ */
+export type SectionHeaderVariant = "eyebrow" | "title" | "value";
 
 const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
   eyebrow:
     "text-caption font-medium uppercase tracking-wider text-muted-foreground",
   title: "text-body font-semibold",
+  value: "text-caption font-medium text-muted-foreground",
 };
 
 /**
@@ -30,7 +49,10 @@ export interface SectionHeaderRowProps extends Passthrough {
   open?: boolean;
   /** Click handler. Optional: falls back to the collapsible context's toggle. */
   onClick?: () => void;
-  /** Typographic variant. "eyebrow" (default) | "title". */
+  /**
+   * Typographic variant — see {@link SectionHeaderVariant}. Defaults to
+   * `"eyebrow"`; a header showing DATA rather than a label wants `"value"`.
+   */
   variant?: SectionHeaderVariant;
   /** Trailing slot (swatches / stats / headerExtra). */
   actions?: React.ReactNode;

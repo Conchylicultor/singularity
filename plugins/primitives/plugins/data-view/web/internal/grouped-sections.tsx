@@ -85,6 +85,9 @@ export function GroupedSections({
             >
               <StickyStackItem itemKey={key} mask layer="raised">
                 <SectionHeaderRow
+                  // The label is the grouped column's VALUE, not a name this
+                  // chrome chose — so it is spelled the way the data spells it.
+                  variant="value"
                   className="rail-follow"
                   actions={
                     <Text variant="caption" tone="muted">

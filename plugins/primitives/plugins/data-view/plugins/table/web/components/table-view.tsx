@@ -293,6 +293,9 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
             rows: section.entries.map((e) => e.row),
             header: (
               <SectionHeaderRow
+                // The grouped column's VALUE — spelled as the data spells it,
+                // never as chrome. Same call the flat views make.
+                variant="value"
                 open={!collapsed}
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
                 actions={
