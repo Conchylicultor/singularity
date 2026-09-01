@@ -90,7 +90,9 @@ await withBrowser(async (h) => {
   // most deployments that have one. It is here so the gate is asserted the day
   // a succeeded or stuck-running run does land in the window.
   if (other.length === 0) {
-    r.note("no succeeded or running run in this window — negative case not exercised");
+    r.note(
+      "no succeeded or running run in this window — negative case not exercised",
+    );
   }
   r.ok(
     "no succeeded or running run shows it",
