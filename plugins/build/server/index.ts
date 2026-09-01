@@ -7,8 +7,7 @@ import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/cor
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { handleBuild } from "./internal/handle-build";
 import { handleServeComposition } from "./internal/handle-serve-composition";
-import { reconcileOrphanBuilds } from "./internal/run-build";
-import { watchInflightBuild } from "./internal/watch-inflight-build";
+import { buildRunKind } from "./internal/run-state";
 import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
 import { compositionTickJob } from "./internal/composition-tick-job";
@@ -35,19 +34,23 @@ export default {
     [triggerBuildEndpoint.route]: handleBuild,
     [serveCompositionEndpoint.route]: handleServeComposition,
   },
-  register: [buildRunJob, buildRunDebouncedJob, compositionTickJob],
+  // The supervised-run kind must be REGISTERED, not merely defined: the
+  // primitive's own `onReady` reconciler loops the registered set, so a kind
+  // that never lands here would start runs nothing ever closes.
+  register: [
+    buildRunJob,
+    buildRunDebouncedJob,
+    compositionTickJob,
+    buildRunKind,
+  ],
   onReady: async () => {
-    // Close any build left unfinished by a crashed owner (scoped to this
-    // namespace so inherited main rows aren't reaped into a phantom "Build
-    // failed"). Also clears the build_runs_inflight_uniq lock for the next build.
-    await reconcileOrphanBuilds();
-
-    // If a live in-flight build just restarted this backend, adopt it: arm a
-    // short-lived watch that closes its row the instant the CLI writes its
-    // terminal artifact, instead of leaving it open until the next reconcile.
-    // Per-namespace, like the reconcile above — not isMain-gated.
-    await watchInflightBuild();
-
+    // Unfinished `build_runs` rows are no longer reconciled here, and neither is
+    // the boot re-adoption of a build that outlived the backend it restarted:
+    // both are the supervised-run primitive's ONE reconciler, which closes a
+    // build whose process is gone and re-attaches — transcript still streaming —
+    // to one that is not. `reconcileOrphanBuilds` and `watchInflightBuild` were
+    // two near-copies of that, and are deleted.
+    //
     // The "observer starts" edge. It exists because the other two edges both run
     // in a process a build can kill: if a push lands while a build is finishing,
     // the reconcile that would have caught it can die with the backend. This one

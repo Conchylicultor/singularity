@@ -745,7 +745,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
+              - `infra/jobs/supervised-run.defineSupervisedRunKind`
+              - `infra/jobs/supervised-run.startSupervisedRun`
+              - `infra/jobs/supervised-run.UnfinishedRun`
+              - `infra/paths.currentWorktreeName`
               - `infra/paths.REPO_ROOT`
+              - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
               - `primitives/data-view/server-query.augmentServerQuery`
               - `primitives/data-view/server-query.compileWhere`
@@ -764,7 +769,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `_deployDeployments`
               - `_deployRuns`
               - `deploymentsServerResource`
-            - Register: `defineJob('retention.deploy_runs')`
+            - Register:
+              - `defineJob('retention.deploy_runs')`
+              - `defineSupervisedRunKind('deploy')`
             - Resources:
               - `deploy.deployments` (push)
               - `deploy.runs` (push)
@@ -6841,17 +6848,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/events.Trigger`
-      - `infra/file-watcher.createFileWatcher`
-      - `infra/file-watcher.FileWatcher`
       - `infra/git-watcher.refAdvanced`
       - `infra/jobs.defineJob`
+      - `infra/jobs/supervised-run.defineSupervisedRunKind`
+      - `infra/jobs/supervised-run.startSupervisedRun`
+      - `infra/jobs/supervised-run.UnfinishedRun`
       - `infra/paths.checkoutRef`
       - `infra/paths.currentWorktreeName`
       - `infra/paths.isMain`
-      - `infra/paths.pruneWorktreeBuildArtifacts`
       - `infra/paths.REPO_ROOT`
-      - `infra/paths.worktreeArtifacts`
-      - `infra/paths.worktreeDataDir`
       - `infra/query-resource.queryResource`
       - `infra/worktree.readCompositionMarker`
       - `primitives/log-channels.Log`
@@ -6860,6 +6865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `defineJob('build.run')`
       - `defineJob('build.run.debounced')`
       - `defineJob('build.composition-tick')`
+      - `defineSupervisedRunKind('build')`
     - Resources: `build.history` (keyed)
     - Routes:
       - `POST /api/build`
@@ -7154,7 +7160,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-commits`
           - `build/runs-arm`
       - Core:
-        - Exports (values): `BUILD_RUN_KIND`
+        - Exports (values):
+          - `BUILD_RUN_KIND`
+          - `BUILD_RUN_KIND_ID`
     - **`runs-arm`** — The build arm's presence on the merged run surface: the Build kind (whose rows open the existing build run-detail pane), the six-way build status dot as the list row's leading indicator, and the status / targets / commit / exit-code columns only a build row has. The build arm of the merged run space: binds `build_runs` into the runs union, mapping the six-way BuildStatus taxonomy onto the shared outcome axis while keeping it whole as the `build.status` arm field, plus the targets, commit and exit code only a build row has.
       - Web:
         - Contributes:
@@ -16740,13 +16748,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/prototypes/files`
           - `apps/sonata/sources/midi/folders`
-          - `build`
           - `config_v2`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/op-status`
           - `conversations/transcript-watcher`
           - `infra/corpus-index`
           - `infra/git-watcher`
+          - `infra/jobs/supervised-run`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-tree`
       - Server:
@@ -17123,6 +17131,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `JobDeadlinePayloadSchema`
               - `JobSlotFloorPayloadSchema`
+        - **`supervised-run`** — Long-running out-of-process work that survives a backend restart: a detached child whose merged output goes to a transcript FILE (published live by tailing it, so there is no pipe-shaped path to lose), a POSIX shim that records any command's exit status into an atomic marker, and ONE boot reconciler over every registered kind that closes the dead and re-attaches the living.
+          - Server:
+            - Uses:
+              - `infra/file-watcher.createFileWatcher`
+              - `infra/file-watcher.FileWatcher`
+              - `infra/paths.currentWorktreeName`
+              - `infra/paths.pruneWorktreeRunArtifacts`
+              - `infra/paths.RUN_TERMINAL_SUFFIX`
+              - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
+              - `infra/paths.worktreeArtifacts`
+            - Exports (types):
+              - `KillOutcome`
+              - `StartedRun`
+              - `SupervisedRunKind`
+              - `SupervisedRunKindSpec`
+              - `UnfinishedRun`
+            - Exports (values):
+              - `defineSupervisedRunKind`
+              - `killSupervisedRun`
+              - `reconcileSupervisedRuns`
+              - `startSupervisedRun`
+              - `TRANSCRIPT_CEILING_BYTES`
+          - Core:
+            - Uses:
+              - `infra/paths.currentWorktreeName`
+              - `infra/paths.worktreeArtifacts`
+            - Exports (types): `RunTerminal`
+            - Exports (values):
+              - `assertRunId`
+              - `assertRunKindId`
+              - `HARD_KILL_EXIT_CODE`
+              - `isPidAlive`
+              - `readRunTerminal`
+              - `RUN_TERMINAL_ENV`
+              - `RunMarkerError`
+              - `supervisedArgv`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `build`
+              - `release`
     - **`launcher`**
       - Server:
         - Uses:
@@ -17271,6 +17320,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `releaseIdentity`
           - `REPO_ROOT`
           - `repoConfigDir`
+          - `RUN_TERMINAL_SUFFIX`
+          - `RUN_TRANSCRIPT_SUFFIX`
           - `setReleaseIdentity`
           - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
@@ -17321,6 +17372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/claude-cli`
           - `infra/corpus-index`
           - `infra/git-watcher`
+          - `infra/jobs/supervised-run`
           - `infra/launcher`
           - `infra/warmup`
           - `infra/worktree`
@@ -17372,6 +17424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pruneWorktreeBuildArtifacts`
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeReleaseArtifacts`
+          - `pruneWorktreeRunArtifacts`
           - `PS`
           - `publishDataDirsManifest`
           - `relativeToDataRoot`
@@ -17379,6 +17432,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `releaseIdentity`
           - `REPO_ROOT`
           - `repoConfigDir`
+          - `RUN_ARTIFACTS_RETENTION`
+          - `RUN_TERMINAL_SUFFIX`
+          - `RUN_TRANSCRIPT_SUFFIX`
           - `setReleaseIdentity`
           - `TMUX`
           - `WEB_CORE_RELATIVE`
@@ -28226,14 +28282,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `fields/server-capabilities.resolveFieldFilterSql`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `infra/jobs/supervised-run.defineSupervisedRunKind`
+      - `infra/jobs/supervised-run.startSupervisedRun`
+      - `infra/jobs/supervised-run.UnfinishedRun`
       - `infra/launcher.gatewayPidFile`
       - `infra/launcher.isRunning`
       - `infra/launcher.teardownSelfContainedApp`
       - `infra/paths.currentWorktreeName`
-      - `infra/paths.pruneWorktreeReleaseArtifacts`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.worktreeArtifacts`
-      - `infra/paths.worktreeDataDir`
       - `primitives/data-view/server-query.augmentServerQuery`
       - `primitives/data-view/server-query.compileWhere`
       - `primitives/data-view/server-query.FieldColumnMap`
@@ -28257,6 +28314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `Release`
       - `runRelease`
       - `triggerRelease`
+    - Register: `defineSupervisedRunKind('release')`
     - Resources:
       - `release.history-revision` (push)
       - `release.previews` (push)

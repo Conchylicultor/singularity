@@ -50,16 +50,24 @@ export const DEPLOY_LOG_CHANNEL = "deploy";
  * deployment: the **live view**.
  *
  * In-memory state projected into a live resource (the `release.previews` shape),
- * because that is what a live view is: a run's progress belongs to the process
- * driving the child, and a restart takes both. What it is NOT is the record —
- * `deploy_runs` is (see {@link DeployRunRecordSchema}), written by the same two
- * functions that write this map. The pair is deliberate and neither replaces the
- * other:
+ * because that is what a live view is: progress at phase granularity, for
+ * whatever is happening now. What it is NOT is the record — `deploy_runs` is
+ * (see {@link DeployRunRecordSchema}), written by the same functions that write
+ * this map. The pair is deliberate and neither replaces the other:
  *
- * - this answers *what is happening right now*, at phase granularity, with no
- *   query — and is empty after a restart, honestly, because nothing is
- *   happening any more (the spawned CLI is not detached, so the restart took it);
+ * - this answers *what is happening right now*, with no query;
  * - the table answers *what happened*, across restarts, for every run.
+ *
+ * A restart no longer empties it. The CLI is spawned as a **supervised run** —
+ * detached, with its output going to a transcript file rather than a pipe — so
+ * the child outlives the backend, and the boot reconciler rebuilds this map's
+ * entry from the ledger row while re-publishing the transcript into the log
+ * channel. The run reappears as running, with output still scrolling, which is
+ * the whole point: a `./singularity build` restarting the backend used to kill
+ * the deploy outright (`drun-1787890652933-wr3v6d`).
+ *
+ * Rebuilt at boot and never persisted, so it cannot go stale — the `op-status` /
+ * `prototypes/thumbnails` idiom.
  */
 export const DeployRunSchema = z.object({
   /**
@@ -170,11 +178,16 @@ export const DeployRunRecordSchema = z.object({
   /** The commit that bundle was built from, or null — as on the live run. */
   commitSha: z.string().nullable(),
   /**
-   * `running` is a legitimate row to read back, and a *stale* one: a backend
-   * that died mid-run leaves it, because the process that would have stamped the
-   * outcome is the process that went away. Reading a `running` row whose backend
-   * is long gone is the honest record of exactly that, and better than a sweep
-   * inventing a terminal status nobody observed.
+   * `running` now means running. A backend that died mid-run used to leave the
+   * row here forever, because the process that would have stamped the outcome
+   * was the process that went away; the supervised-run reconciler closes those
+   * on the next boot from the child's **own** exit marker — a status the child
+   * recorded, not one a sweep invented — and re-attaches the ones still going.
+   *
+   * Two rows can still read `running` without being: one written before
+   * supervision existed (no leg to speak for it), and one launched by a
+   * different namespace and inherited through the DB fork. Neither is this
+   * process's to close, and both stay as the honest record of what was observed.
    */
   status: z.enum(["running", "succeeded", "failed"]),
   /** Which leg an `update` died on. Null unless the run failed on one. */

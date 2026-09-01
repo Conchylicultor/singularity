@@ -13,6 +13,19 @@ const UNIQUE_VIOLATION = "23505";
 const FK_VIOLATION = "23503";
 
 /**
+ * Did this write fail against that exact unique index?
+ *
+ * Shared rather than re-spelled, because the run ledger contends on one too —
+ * `deploy_runs_server_inflight_uq`, the claiming INSERT that IS the per-server
+ * exclusivity lock (see `run-state.ts`). Same SQLSTATE, same reasoning: the
+ * write is the arbiter, so the only question left is which invariant it hit.
+ */
+export function isUniqueViolation(err: unknown, constraint: string): boolean {
+  const pg = err as { code?: string; constraint?: string } | null;
+  return pg?.code === UNIQUE_VIOLATION && pg.constraint === constraint;
+}
+
+/**
  * Rethrow a write failure as the HTTP verdict it actually is. Anything this does
  * not recognise is rethrown untouched — an unmapped DB error must stay a loud
  * 500, not become a plausible-looking 409.
@@ -23,7 +36,7 @@ export function rethrowConstraintViolation(
 ): never {
   const pg = err as { code?: string; constraint?: string } | null;
   if (pg?.code === UNIQUE_VIOLATION) {
-    if (pg.constraint === COMPOSITION_SERVER_UQ) {
+    if (isUniqueViolation(err, COMPOSITION_SERVER_UQ)) {
       throw new HttpError(
         409,
         "This server already has a deployment of that composition. There is one " +
@@ -31,7 +44,7 @@ export function rethrowConstraintViolation(
           "edit the existing deployment.",
       );
     }
-    if (pg.constraint === SERVER_PORT_UQ) {
+    if (isUniqueViolation(err, SERVER_PORT_UQ)) {
       throw new HttpError(
         409,
         ctx.loopbackPort === undefined
@@ -43,7 +56,10 @@ export function rethrowConstraintViolation(
   if (pg?.code === FK_VIOLATION) {
     // The only FK on the table. A deployment against an unregistered server is
     // the caller's mistake, not a server fault.
-    throw new HttpError(400, "No such server — register it in the Deploy app first.");
+    throw new HttpError(
+      400,
+      "No such server — register it in the Deploy app first.",
+    );
   }
   throw err;
 }

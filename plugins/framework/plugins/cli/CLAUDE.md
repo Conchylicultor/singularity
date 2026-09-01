@@ -298,9 +298,10 @@ Three orderings that look incidental and are not:
   database the backend's boot migrator fills. The fork wait is hoisted into the
   invocation prefix because the ledger row lives in that database.
 
-`hasLiveInflightBuild` (the backend's durable lock) is deliberately target-blind,
-so a live composition build makes the UI drop a main auto-build request in the
-same checkout. Correct: the per-checkout `.build.lock` serializes them anyway.
+The backend's durable build lock — the `build_runs_inflight_uniq` partial unique
+index the claiming INSERT contends on — is deliberately target-blind, so a live
+composition build makes the UI drop a main auto-build request in the same
+checkout. Correct: the per-checkout `.build.lock` serializes them anyway.
 
 The ordered pipeline both postures drive is
 [`plugins/build/cli/internal/app-artifacts.ts`](plugins/build/cli/internal/app-artifacts.ts)

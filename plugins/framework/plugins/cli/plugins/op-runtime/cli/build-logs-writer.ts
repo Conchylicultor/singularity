@@ -18,11 +18,13 @@ export interface BuildStepLog {
 export interface BuildLogs {
   steps: BuildStepLog[];
   /**
-   * Wall-clock instant (epoch ms) the build reached its terminal state. An
-   * auto-build restarts the very backend that spawned it, so the tracking
-   * process is SIGTERM-killed before it can stamp build_runs.finished_at at the
-   * true exit — the row is instead closed later by reconcileOrphanBuilds, which
-   * reads this field so Duration reflects the real finish, not the reconcile.
+   * Wall-clock instant (epoch ms) the build reached its terminal state.
+   *
+   * No longer how a recovered row gets its finish instant — that is the
+   * supervised-run exit marker's mtime now (the shim writes it for any command,
+   * rather than depending on this CLI remembering to). Kept because it is the
+   * transcript's own record of when it was closed, and a human reading the JSON
+   * should not have to correlate two files to find out.
    */
   finishedAt: number;
   /**
@@ -33,6 +35,10 @@ export interface BuildLogs {
    * at a COMPLETE terminal. An aborted build writes whatever steps it had
    * finished — all of them green, since the one it died inside never closed — so
    * `steps.every(s => s.success)` would read a kill as a successful deploy.
+   *
+   * The row's own exit code no longer comes from here either (see
+   * {@link BuildLogs.finishedAt}); this is the transcript saying what it ended
+   * on, beside the steps it ended after.
    */
   exitCode: number;
 }
@@ -116,8 +122,8 @@ function makeStepLogCollector(): StepLogCollectorInternal {
     const dir = worktreeDataDir(name);
     mkdirSync(dir, { recursive: true });
     const jsonPath = worktreeArtifacts.buildLogs(name, buildId);
-    // The JSON payload is deliberately push-order and verdict-free: run-build.ts's
-    // resolveOrphanExitCode and build-fix-section.tsx both read `steps[].success`.
+    // The JSON payload is deliberately push-order and verdict-free:
+    // build-fix-section.tsx reads `steps[].success` to name the failing steps.
     writeAtomic(jsonPath, JSON.stringify(logs, null, 2) + "\n");
     const textPath = worktreeArtifacts.buildLogText(name, buildId);
     const text = trailer

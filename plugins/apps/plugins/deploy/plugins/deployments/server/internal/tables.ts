@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -6,6 +7,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.
@@ -72,9 +74,16 @@ export const _deployDeployments = pgTable(
 // unanswerable after a reboot; the two are not redundant (see `../../core/runs.ts`:
 // the Map is the live view, this is the record).
 //
-// Written only by `run-state.ts` — `startRun` opens a row, `finishRun` stamps its
-// outcome — so there is exactly one writer and the live view and the record can
-// never disagree about a run they both name by the same `id`.
+// It is also the **durable lock and the re-attach index**. The claiming INSERT is
+// what wins or loses the race for a server (see the partial unique index below),
+// and `launched_from` / `leg_run_id` / `pid` are what let a backend that restarted
+// mid-run find the CLI child it left behind and adopt it — the supervised-run
+// contract, whose kind for this table is defined in `run-state.ts`.
+//
+// Written only by `run-state.ts` — `claimRun` opens a row, `finishRun` and the
+// supervised-run kind's `finish` stamp its outcome — so there is exactly one
+// writer and the live view and the record can never disagree about a run they
+// both name by the same `id`.
 export const _deployRuns = pgTable(
   "deploy_runs",
   {
@@ -98,20 +107,84 @@ export const _deployRuns = pgTable(
     // this checkout rather than about the bytes that went out.
     commitSha: text("commit_sha"),
     status: text("status").notNull().default("running"), // running|succeeded|failed
+    // The worktree whose backend LAUNCHED this run — not where the software
+    // went. A worktree DB is a fork of main's and inherits main's rows, so
+    // without this a worktree backend would reconcile (and close, and re-attach
+    // to) another namespace's runs, surfacing phantom failures everywhere.
+    //
+    // Deliberately not called `namespace`, which is what `build_runs` and
+    // `release_runs` call the same column: those runs HAPPEN in a worktree, and
+    // the runs-arm reads `namespace: null` for a deploy precisely because a
+    // deploy targets a remote host. Both facts are true at once only if the
+    // column says which one it is.
+    //
+    // The `main` default is for rows written before this column existed. They
+    // are all finished (or legacy-stuck, see `leg_run_id`), so attributing them
+    // to main costs nothing and keeps the column NOT NULL — the same call
+    // `release_runs.namespace` makes.
+    launchedFrom: text("launched_from").notNull().default(MAIN_WORKTREE_NAME),
+    // The supervised-run id of the CLI leg this row is currently waiting on —
+    // `<id>.converge` or `<id>.ship` (`server/internal/legs.ts` owns the
+    // grammar). It is the name of the run's transcript and exit-marker files, so
+    // storing it makes the row→artifact mapping a recorded fact rather than a
+    // re-derivation two files could disagree about.
+    //
+    // An `update` rewrites it when it moves from its converge leg to its ship
+    // leg, and always BEFORE that leg is spawned — a restart in the gap must
+    // find the child that is actually running, not the one that just ended.
+    //
+    // Null only on rows written before supervision existed. Those are skipped by
+    // `listUnfinished`: there are no artifacts to read and no pid to trust, so
+    // nothing this process can honestly say about them.
+    legRunId: text("leg_run_id"),
+    // The OS pid of the process this run belongs to: seeded with the claiming
+    // backend's own `process.pid`, then replaced with the detached CLI leg's pid
+    // once it is spawned. The seed is what keeps a freshly-claimed row from
+    // looking like an orphan in the window before the child exists.
+    //
+    // Internal only — stripped from every wire projection (see
+    // `handle-runs-query.ts`), exactly as `release_runs.pid` is.
+    pid: integer("pid"),
     // The leg an `update` died on. Null unless the run failed on one — a
     // succeeded run has no failing phase, and a single-verb run has no phases.
     phaseFailed: text("phase_failed"),
     startedAt: timestamp("started_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
-    // Null while running — including forever, on a run whose backend died before
-    // it could stamp an outcome. That is the honest record of what was observed.
+    // Null while running — and *only* while running. A backend that dies mid-run
+    // used to leave this null forever, because the process that would have
+    // stamped it was the process that went away; the supervised-run reconciler
+    // now closes those on the next boot from the child's own exit marker, so a
+    // null here means the leg is genuinely still in flight. The exception is a
+    // row with no `leg_run_id` (written before supervision), which nothing can
+    // speak for and nothing will close.
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     exitCode: integer("exit_code"),
     // The CLI's own words on a failure, stored verbatim.
     message: text("message"),
   },
   (t) => [
+    // **At most one in-flight run per (launcher, server) — and this index IS the
+    // exclusivity lock.** Converge writes `/etc/caddy/Caddyfile` and runs
+    // `apt-get`, so two of them on one box race even for different
+    // compositions; an `update` holds the server for its whole sequence for the
+    // same reason. The claiming INSERT wins or loses here, which closes the
+    // check-then-act window the previous in-memory `Map` check had and, unlike
+    // that Map, survives a restart.
+    //
+    // `launched_from` leads, and it is load-bearing rather than decorative. The
+    // scope this can honestly enforce is per-DB, and each namespace has its own
+    // DB fork — so cross-namespace exclusivity was never enforced and cannot be
+    // (that is the same strength the in-memory check had). What leading with it
+    // BUYS is that a still-`running` row inherited from main at fork time
+    // cannot wedge a worktree's deploys to that server forever. Legacy rows
+    // carry the `main` default, so they only ever contend with main's own.
+    uniqueIndex("deploy_runs_server_inflight_uq")
+      .on(t.launchedFrom, t.serverId)
+      .where(sql`${t.finishedAt} IS NULL`),
+    // That index also serves the reconciler's read — every unfinished row this
+    // namespace launched, on boot and on every artifact event — because its
+    // leading column and its predicate are exactly that query. No second index.
     // Covers the per-deployment history query's `WHERE deployment_id = ?
     // ORDER BY started_at DESC` keyset seek + tiebreak.
     index("deploy_runs_deployment_started_idx").on(

@@ -56,14 +56,18 @@ export const _buildRuns = pgTable(
   },
   (t) => [
     // At most one in-flight build per namespace, enforced atomically by the DB.
-    // The durable lock (hasLiveInflightBuild) is a check-then-act fast path with a
-    // TOCTOU window: two triggers racing across backend processes (where the
-    // in-process `inflight` flag gives no protection) can both pass the liveness
-    // check before either inserts, then both spawn `./singularity build` and the
-    // two competing builds stomp each other's backend restart, leaving both rows
-    // unfinished → the reconciler stamps both exit_code=-1. This partial unique
-    // index makes the claiming INSERT itself the lock: the loser fails with a
-    // 23505 and bails instead of starting a second build.
+    // THE lock: the claiming INSERT is what wins or loses, and the loser fails
+    // with a 23505 and bails instead of starting a second build.
+    //
+    // There used to be a pid-liveness pre-check in front of it, and it is gone
+    // rather than kept as a fast path — it was a check-then-act with a TOCTOU
+    // window. Two triggers racing across backend processes (where the in-process
+    // `inflight` flag gives no protection) could both pass the liveness check
+    // before either inserted, then both spawn `./singularity build`, and the two
+    // competing builds stomp each other's backend restart, leaving both rows
+    // unfinished → the reconciler stamps both exit_code=-1. Liveness is now the
+    // supervised-run reconciler's single answer, and this index is the only
+    // arbiter of the race.
     //
     // Scoped by `namespace` alone. It used to be `(namespace, target)` so main's
     // row and its compose-serve children could be open at once; with no children

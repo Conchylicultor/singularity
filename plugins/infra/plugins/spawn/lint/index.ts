@@ -45,18 +45,19 @@ export default {
       // `pg_dump -Fc` writes straight into a caller-chosen output file sink;
       // spawnCaptured only ever captures into its own temp files.
       "plugins/database/plugins/admin/server/internal/backup.ts",
+      // The supervised-run primitive, and the one place `detached: true` is
+      // meant to be written. Every property that makes it exempt is the point
+      // of it: the child outlives the call BY DESIGN (that is what surviving a
+      // backend restart means), its stdout and stderr are a caller-owned file
+      // descriptor rather than temp files read after exit, and its output is
+      // published while it runs by tailing that file. As build, release and
+      // deploy migrate onto it, their three entries below are deleted — the
+      // exemption converges on this one line instead of spreading.
+      "plugins/infra/plugins/jobs/plugins/supervised-run/server/internal/supervisor.ts",
       // Long-lived supervised child: the gateway process outlives the call.
       "plugins/infra/plugins/launcher/server/internal/boot.ts",
       // Long-lived preview server, started and left running.
       "plugins/release/server/internal/preview-manager.ts",
-      // Release build: output is streamed to the live release log as it happens.
-      "plugins/release/server/internal/run-release.ts",
-      // Detached long-running `./singularity build`; the pid is recorded and the
-      // child deliberately outlives the request that started it.
-      "plugins/build/server/internal/run-build.ts",
-      // Deploy runner: stdout/stderr are consumed line-by-line into the live
-      // deploy log while the command runs.
-      "plugins/apps/plugins/deploy/plugins/deployments/server/internal/run-deploy.ts",
       // Long-lived probe children, supervised for the lifetime of the experiment.
       "plugins/debug/plugins/paging-probe/server/internal/probe-host.ts",
       // `tmux load-buffer -b … -` reads the buffer from stdin as a stream.

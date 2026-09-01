@@ -1,40 +1,20 @@
-import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
-import { releaseLogsEndpoint, type ReleaseLogLine } from "../../core/endpoints";
+import { releaseLogsEndpoint } from "../../core/endpoints";
+import { readReleaseTranscript } from "./transcript";
 
-interface ReleaseLogsFile {
-  exitCode: number;
-  lines: ReleaseLogLine[];
-}
-
-// Read the persisted per-run fallback artifact. Returns null when no artifact
-// exists (a still-running or successful run — the live `/ws/logs` stream covers
-// those).
-function readReleaseRunLogs(releaseId: string): ReleaseLogsFile | null {
-  const name = currentWorktreeName();
-  const path = worktreeArtifacts.releaseLogs(name, releaseId);
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as ReleaseLogsFile;
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      !(err instanceof SyntaxError)
-    )
-      throw err;
-    return null;
-  }
-}
-
+/**
+ * The persisted log view of one run, served from its supervised-run transcript.
+ *
+ * It used to read `release-logs-<id>.json`, a parent-written, failure-only
+ * artifact — so a successful finished run showed an empty pane, and a run whose
+ * backend went away mid-flight (the case the file existed for) had nothing to
+ * read at all. See `transcript.ts` for what replaced it and what the swap costs.
+ */
 export const handleReleaseLogs = implement(
   releaseLogsEndpoint,
   ({ params }) => {
     const releaseId = params.id;
     if (!releaseId) throw new HttpError(400, "Missing id");
-    const logs = readReleaseRunLogs(releaseId);
-    return { lines: logs?.lines ?? [] };
+    return { lines: readReleaseTranscript(releaseId) };
   },
 );

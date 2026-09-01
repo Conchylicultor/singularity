@@ -8,7 +8,7 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleRun } from "./internal/handle-run";
 import { handleRunsQuery } from "./internal/handle-runs-query";
 import { deploymentsServerResource } from "./internal/resources";
-import { deployRunsServerResource } from "./internal/run-state";
+import { deployRunsServerResource, deployVerbKind } from "./internal/run-state";
 import { deployRunsRevisionServerResource } from "./internal/runs-revision-resource";
 import { deployRunRetention } from "./internal/retention";
 import {
@@ -41,5 +41,9 @@ export default {
     Resource.Declare(deployRunsServerResource),
     Resource.Declare(deployRunsRevisionServerResource),
   ],
-  register: [deployRunRetention],
+  // `deployVerbKind` is mounted, not merely defined: the supervised-run
+  // primitive's single boot reconciler loops the kinds registered by the time
+  // its own `onReady` runs, so an unmounted kind would start CLI legs that
+  // nothing ever adopts or closes.
+  register: [deployRunRetention, deployVerbKind],
 } satisfies ServerPluginDefinition;

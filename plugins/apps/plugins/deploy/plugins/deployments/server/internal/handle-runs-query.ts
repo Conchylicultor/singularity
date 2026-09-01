@@ -25,10 +25,16 @@ import { queryDeployRuns } from "../../core/endpoints";
 import type { DeployRunRecord } from "../../core/runs";
 import { _deployRuns } from "./tables";
 
-// The public wire projection — every `deploy_runs` column, in one place, so a new
-// column reaches the endpoint by being added here rather than at each read site.
-// The table has no internal-only column to withhold (release's `pid` is the
-// counter-example); should one ever appear, this is where it stops.
+// The public wire projection — the `deploy_runs` columns a client may see, in one
+// place, so a new column reaches the endpoint by being added here rather than at
+// each read site.
+//
+// Three are deliberately withheld, and this is where they stop: `pid`,
+// `leg_run_id` and `launched_from` are the supervised-run bookkeeping that lets a
+// restarted backend find the CLI child it left behind (see `tables.ts`). They say
+// nothing about what went onto the box, and `pid` in particular is a
+// process-local number that means nothing to a reader — the same call
+// `release_runs.pid` makes.
 const DEPLOY_RUN_WIRE_COLUMNS = {
   id: _deployRuns.id,
   deploymentId: _deployRuns.deploymentId,
@@ -94,81 +100,87 @@ const resolver: OperatorSqlResolver = (typeId, operatorId) =>
  * `ON DELETE CASCADE`, so "no such deployment" and "no runs" are the same empty
  * window, and a 404 here would only be a second, slower way to say it.
  */
-export const handleRunsQuery = implement(queryDeployRuns, async ({ params, body }) => {
-  const { filter, query, cursor, limit } = body;
-  // Substitute the default order when the client sends no sort, and use the same
-  // effective sort everywhere (keys, signature, augmentors) so cursors stay
-  // consistent across pages.
-  const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
+export const handleRunsQuery = implement(
+  queryDeployRuns,
+  async ({ params, body }) => {
+    const { filter, query, cursor, limit } = body;
+    // Substitute the default order when the client sends no sort, and use the same
+    // effective sort everywhere (keys, signature, augmentors) so cursors stay
+    // consistent across pages.
+    const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
 
-  // Fold in the generic server-side augmentors (custom columns, …). Each binds its
-  // aliased columns into `columnMap` (so sort/filter/seek reach them), a `LEFT JOIN`
-  // thunk, and a projection (so `keyValuesOf` can mint the cursor). `rowKeyCol` must
-  // be the column whose value == the web `rowKey(row)` (here `_deployRuns.id`).
-  const aug = await augmentServerQuery({
-    dataViewId: body.dataViewId,
-    rowKeyCol: _deployRuns.id,
-    sort,
-    filter,
-  });
-  const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+    // Fold in the generic server-side augmentors (custom columns, …). Each binds its
+    // aliased columns into `columnMap` (so sort/filter/seek reach them), a `LEFT JOIN`
+    // thunk, and a projection (so `keyValuesOf` can mint the cursor). `rowKeyCol` must
+    // be the column whose value == the web `rowKey(row)` (here `_deployRuns.id`).
+    const aug = await augmentServerQuery({
+      dataViewId: body.dataViewId,
+      rowKeyCol: _deployRuns.id,
+      sort,
+      filter,
+    });
+    const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
 
-  // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
-  // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
-  const keys = buildSortKeys(sort, columnMap, { col: _deployRuns.id, fieldId: "id" });
+    // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
+    // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
+    const keys = buildSortKeys(sort, columnMap, {
+      col: _deployRuns.id,
+      fieldId: "id",
+    });
 
-  let seek: SQL | undefined;
-  if (cursor) {
-    const payload = decodeCursor(cursor);
-    // Backstop: a cursor minted under a different sort must not be replayed
-    // against this request's ordering (would dup/skip rows).
-    if (payload.s !== sortSignature(sort)) {
-      throw new HttpError(400, "Cursor sort signature mismatch");
+    let seek: SQL | undefined;
+    if (cursor) {
+      const payload = decodeCursor(cursor);
+      // Backstop: a cursor minted under a different sort must not be replayed
+      // against this request's ordering (would dup/skip rows).
+      if (payload.s !== sortSignature(sort)) {
+        throw new HttpError(400, "Cursor sort signature mismatch");
+      }
+      seek = seekPredicate(keys, payload.v);
     }
-    seek = seekPredicate(keys, payload.v);
-  }
 
-  const where = and(
-    eq(_deployRuns.deploymentId, params.id),
-    searchWhere(query),
-    compileWhere(filter, columnMap, resolver),
-    seek,
-  );
+    const where = and(
+      eq(_deployRuns.deploymentId, params.id),
+      searchWhere(query),
+      compileWhere(filter, columnMap, resolver),
+      seek,
+    );
 
-  // Explicit flat projection (wire columns + the augmentors' sort-key columns) over
-  // a `$dynamic()` query so the augmentors' joins can be applied.
-  let q: PgSelect = db
-    .select({ ...DEPLOY_RUN_WIRE_COLUMNS, ...aug.projection })
-    .from(_deployRuns)
-    .$dynamic();
-  for (const j of aug.joins) q = j.apply(q);
-  const rows = await q
-    .where(where)
-    .orderBy(...orderByClauses(keys))
-    .limit(limit + 1);
+    // Explicit flat projection (wire columns + the augmentors' sort-key columns) over
+    // a `$dynamic()` query so the augmentors' joins can be applied.
+    let q: PgSelect = db
+      .select({ ...DEPLOY_RUN_WIRE_COLUMNS, ...aug.projection })
+      .from(_deployRuns)
+      .$dynamic();
+    for (const j of aug.joins) q = j.apply(q);
+    const rows = await q
+      .where(where)
+      .orderBy(...orderByClauses(keys))
+      .limit(limit + 1);
 
-  const hasMore = rows.length > limit;
-  const rawItems = rows.slice(0, limit);
+    const hasMore = rows.length > limit;
+    const rawItems = rows.slice(0, limit);
 
-  // Compute the cursor from the RAW last row — it still carries the custom
-  // projection keys `keyValuesOf` reads to mint the keyset cursor.
-  const lastRaw = rawItems.at(-1);
-  const nextCursor =
-    hasMore && lastRaw
-      ? encodeCursor(
-          keyValuesOf(lastRaw as unknown as Record<string, unknown>, keys),
-          sortSignature(sort),
-        )
-      : null;
+    // Compute the cursor from the RAW last row — it still carries the custom
+    // projection keys `keyValuesOf` reads to mint the keyset cursor.
+    const lastRaw = rawItems.at(-1);
+    const nextCursor =
+      hasMore && lastRaw
+        ? encodeCursor(
+            keyValuesOf(lastRaw as unknown as Record<string, unknown>, keys),
+            sortSignature(sort),
+          )
+        : null;
 
-  // Strip the custom projection keys before returning: the response schema strips
-  // unknown keys anyway, but doing it here keeps the wire lean and the shape explicit.
-  const ccKeys = Object.keys(aug.projection);
-  const items = rawItems.map((r) => {
-    const c = { ...r } as Record<string, unknown>;
-    for (const k of ccKeys) delete c[k];
-    return c;
-  }) as unknown as DeployRunRecord[];
+    // Strip the custom projection keys before returning: the response schema strips
+    // unknown keys anyway, but doing it here keeps the wire lean and the shape explicit.
+    const ccKeys = Object.keys(aug.projection);
+    const items = rawItems.map((r) => {
+      const c = { ...r } as Record<string, unknown>;
+      for (const k of ccKeys) delete c[k];
+      return c;
+    }) as unknown as DeployRunRecord[];
 
-  return { items, nextCursor, hasMore };
-});
+    return { items, nextCursor, hasMore };
+  },
+);

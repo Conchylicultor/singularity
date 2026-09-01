@@ -1,7 +1,12 @@
 import { readdirSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { worktreeDataDir } from "./paths";
+import {
+  RUN_TERMINAL_SUFFIX,
+  RUN_TRANSCRIPT_SUFFIX,
+  worktreeArtifacts,
+  worktreeDataDir,
+} from "./paths";
 
 /*
  * Lives in `core/` beside `paths.ts` — the layout it mirrors — rather than in
@@ -108,8 +113,43 @@ const CHECK_FAMILY: ArtifactFamily = {
   tmpPrefixes: ["check-"],
 };
 
+/**
+ * How many recent supervised-run artifact sets to retain per worktree, PER KIND.
+ * A "set" is the two files sharing one run: `<kindId>-<runId>.log` and
+ * `<kindId>-<runId>.exit-code`.
+ *
+ * Same disk-bound rationale and the same number as the three families above,
+ * with one difference that matters: the window is per kind, not per directory.
+ * Builds, releases and deploys share `runs/`, and a single window over all of
+ * them would let a busy afternoon of builds reap the transcript of the one
+ * deploy someone is trying to read. Each kind therefore gets its own 50.
+ */
+export const RUN_ARTIFACTS_RETENTION = 50;
+
 /** The one legacy fixed-path check transcript, reaped alongside the family below. */
 const LEGACY_CHECK_LOG = "check.log";
+
+/**
+ * The artifact family of ONE supervised-run kind. Built per call rather than
+ * declared as a constant beside its siblings because the set of kinds is open —
+ * a plugin registers one — so the family cannot be enumerated here.
+ *
+ * `kindId` is validated at registration to be lowercase alphanumeric with no
+ * separator (`supervised-run`'s `assertRunKindId`), which is what makes these
+ * prefixes disjoint: were `deploy` and `deploy2` both kinds, a filename
+ * `deploy2-x.log` would parse under BOTH prefixes and the narrower kind's prune
+ * would reap the wider one's files. With no separator inside a kind id, the
+ * first `-` in a filename is always the kind/run boundary.
+ */
+function runFamily(kindId: string): ArtifactFamily {
+  return {
+    patterns: [
+      { prefix: `${kindId}-`, suffix: RUN_TRANSCRIPT_SUFFIX },
+      { prefix: `${kindId}-`, suffix: RUN_TERMINAL_SUFFIX },
+    ],
+    tmpPrefixes: [`${kindId}-`],
+  };
+}
 
 /** The run id an id-keyed artifact filename belongs to, or null if it is not one. */
 function runIdOf(
@@ -234,6 +274,35 @@ export function pruneReleaseArtifactsInDir(dir: string, keep: number): void {
 export function pruneCheckArtifactsInDir(dir: string, keep: number): void {
   pruneArtifactsInDir(dir, CHECK_FAMILY, keep);
   unlinkQuiet(dir, LEGACY_CHECK_LOG);
+}
+
+/** Directory-scoped supervised-run prune, split out so it is testable against a throwaway dir. */
+export function pruneRunArtifactsInDir(
+  dir: string,
+  kindId: string,
+  keep: number,
+): void {
+  pruneArtifactsInDir(dir, runFamily(kindId), keep);
+}
+
+/**
+ * Cap one kind's supervised-run artifacts in a worktree's `runs/` dir to the
+ * newest `keep` run ids.
+ *
+ * Called by `startSupervisedRun` immediately after it creates the new
+ * transcript, which is the same "writing a new set is what trims the old ones"
+ * rule the build and release prunes follow — no scheduler, and no window that
+ * keeps shrinking on a worktree nobody builds in any more. The new run's own
+ * files carry the newest mtime and are always inside the window; a run still
+ * LIVE is likewise safe, because its transcript's mtime advances every time the
+ * child writes a line.
+ */
+export function pruneWorktreeRunArtifacts(
+  name: Namespace,
+  kindId: string,
+  keep: number = RUN_ARTIFACTS_RETENTION,
+): void {
+  pruneRunArtifactsInDir(worktreeArtifacts.runsDir(name), kindId, keep);
 }
 
 /** Cap the per-build artifacts in one worktree's data dir to the newest `keep` build ids. */

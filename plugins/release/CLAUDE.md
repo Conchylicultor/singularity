@@ -2,9 +2,10 @@
 
 Reusable engine for the **local composition release lifecycle** (F4): run a
 release, observe live progress/logs, see the artifact, and launch/preview it
-locally. A sibling of the `build` plugin and modeled on it shape-for-shape
-(durable pid-claim, detached `Bun.spawn`, line streaming into a `Log.channel`,
-orphan reconcile on boot, a partial unique inflight index). The Studio app is the
+locally. Every part of "run a detached child and survive a restart" now belongs
+to the **supervised-run** primitive
+(`@plugins/infra/plugins/jobs/plugins/supervised-run`) — this plugin keeps only
+its own ledger, its argv, and what a finished run MEANS. The Studio app is the
 first UI consumer; the engine ships no UI of its own. Its web barrel
 (`web/index.ts`) is **registration-only** — a side-effect import
 (`web/internal/register.ts`) that eagerly pulls `@plugins/release/core` into the
@@ -24,11 +25,16 @@ registration.)
   build from it). Not a slot: adding `tauri` (F5) is one line here. The icon stays
   web-only (the server never imports a UI component).
 - **Run model** (`server/internal/run-release.ts`) wraps `./singularity release
-  --composition <c> --target <t> --dev --out <short-dir>`. It spawns the CLI
-  detached and tracks it by OS pid in `release_runs.pid` — the restart-durable
-  lock. The inflight unique index is scoped by **(namespace, composition)**:
-  concurrent releases of *different* compositions are legitimate; a duplicate
-  in-flight release of the *same* composition is rejected (23505 → no-op).
+  --composition <c> --target <t> --dev --out <short-dir>` as a **supervised
+  run**. The primitive owns detach, the pid, the transcript, the boot reconcile
+  and the re-attach; `server/internal/run-state.ts` is the adapter over
+  `release_runs` (`listUnfinished` / `setPid` / `finish`), mounted in
+  `register: [releaseRunKind]`. The claiming INSERT IS the lock: the partial
+  unique index is scoped by **(namespace, composition)**, so concurrent releases
+  of *different* compositions are legitimate and a duplicate in-flight release of
+  the *same* composition loses with 23505 → `already-running`. There is no
+  pre-flight liveness probe and no per-plugin orphan sweep left — both were
+  second copies of a question the primitive's one reconciler answers.
 - **The spawning backend is never restarted.** Phase 1 of the release CLI shells
   into `./singularity build --hermetic --composition <c>`, the *hermetic*
   posture of `build`: it
@@ -72,9 +78,24 @@ from "the build ran and failed" and from an actual bug. The `failed` arm's
 `message` is literally the string written to `release_runs.error`, so a caller
 reporting it and a user opening the run detail read one sentence.
 
-`inflight` guards only `triggerRelease`. The authoritative lock is the DB one
-(`isAnyReleaseAlive` + the partial unique index), and a caller that legitimately
-awaits a release must not be dropped by a module-level boolean.
+`inflight` guards only `triggerRelease`. The authoritative lock is the claiming
+INSERT against the partial unique index, and a caller that legitimately awaits a
+release must not be dropped by a module-level boolean.
+
+**How an awaited call survives an event-driven outcome.** A supervised run's
+terminal does not come back from the call that started it — it arrives at the
+kind's `finish` callback, driven by a file watcher. `internal/driving.ts` absorbs
+that in one map: `runRelease` claims the run before spawning, `finish` hands the
+terminal straight back to it, and only a run whose sequencer is *gone* (this
+backend restarted) takes the adopting path and is closed from the ledger. The
+entry is released after the row is stamped, not at delivery — between those two
+instants the row is still open, and dropping the claim earlier would let a
+reconcile pass close a run that is being finished right now.
+
+`stampRelease` is the ONE terminal write, shared by both arrivals, so an orphaned
+release and a watched one cannot be recorded differently. `finished_at` is the
+exit marker's **mtime**, so a run recovered after a restart reports the duration
+it actually took rather than the gap until something noticed.
 
 ## Intent: what a run is FOR
 
@@ -94,6 +115,22 @@ so a zod default would make `intent` **required** for every existing caller.
 
 `kind` is stamped at claim time from the request — what a run was FOR is decided
 by the caller, never inferred later from what happens to be on disk.
+
+## Logs: the transcript IS the record
+
+`release-logs-<id>.json` is gone. It was written by the PARENT, from lines it had
+accumulated off the CLI's pipe, and only when the run failed — so it existed
+exactly when the parent survived the run (the case that never needed it) and was
+absent for every genuinely orphaned release (the case it was written for). That
+is why `resolveOrphanExitCode` always fell through to the `-1` sentinel.
+
+`GET /api/release/runs/:id/logs` now reads the supervised run's transcript file,
+which the CHILD writes for every run whatever becomes of it. Two consequences:
+a **successful** finished run now has a readable log pane (it used to be empty),
+and every line reads as `stdout`, because a supervised child's stdout and stderr
+share one descriptor — the interleaving survives, the classification does not.
+The live view of the same bytes already says `stdout` (the log channel defaults
+an unclassified line to it), so the two views now agree.
 
 ## `GET /api/release/candidate?composition&platform`
 
@@ -283,14 +320,15 @@ here.
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/jobs/supervised-run.defineSupervisedRunKind`
+    - `infra/jobs/supervised-run.startSupervisedRun`
+    - `infra/jobs/supervised-run.UnfinishedRun`
     - `infra/launcher.gatewayPidFile`
     - `infra/launcher.isRunning`
     - `infra/launcher.teardownSelfContainedApp`
     - `infra/paths.currentWorktreeName`
-    - `infra/paths.pruneWorktreeReleaseArtifacts`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
-    - `infra/paths.worktreeDataDir`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.compileWhere`
     - `primitives/data-view/server-query.FieldColumnMap`
@@ -314,6 +352,7 @@ here.
     - `Release`
     - `runRelease`
     - `triggerRelease`
+  - Register: `defineSupervisedRunKind('release')`
   - Resources:
     - `release.history-revision` (push)
     - `release.previews` (push)

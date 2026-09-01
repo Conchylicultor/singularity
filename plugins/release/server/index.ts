@@ -20,21 +20,27 @@ import { handleLatestRun } from "./internal/handle-latest-run";
 import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
 import { handleHistoryQuery } from "./internal/handle-history-query";
-import { reconcileOrphanReleases } from "./internal/run-release";
 import { reconcileOrphanPreviews } from "./internal/preview-manager";
+import { releaseRunKind } from "./internal/run-state";
 import { releaseRunResource } from "./internal/release-run-resource";
 import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
 import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { triggerRelease, runRelease } from "./internal/run-release";
-export type { ReleaseOutcome, TriggerReleaseOptions } from "./internal/run-release";
+export type { TriggerReleaseOptions } from "./internal/run-release";
+export type { ReleaseOutcome } from "./internal/run-state";
 // `releaseOutDir` / `newReleaseRunId` are NOT re-exported here: they now live in
 // `@plugins/release/plugins/bundles/server`, which is DB-free and therefore
 // importable by a CLI process — import them from there.
 export { Release, collectReleaseEnv } from "./internal/env-provider";
 
 export default {
-  description: "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
+  description:
+    "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
+  // The supervised-run kind must be REGISTERED, not merely defined: the
+  // primitive's own `onReady` reconciler loops the registered set, so a kind
+  // that never lands here would start runs nothing ever closes.
+  register: [releaseRunKind],
   contributions: [
     Resource.Declare(releaseRunResource),
     Resource.Declare(releaseRunsRevisionResource),
@@ -50,10 +56,11 @@ export default {
     [queryReleaseHistory.route]: handleHistoryQuery,
   },
   onReady: async () => {
-    // Close any release left unfinished by a crashed owner (scoped to this
-    // namespace so inherited main rows aren't reaped into phantom state) and
-    // clear the release_runs_inflight_uniq lock for the next release.
-    await reconcileOrphanReleases();
+    // Unfinished release_runs rows are no longer reconciled here: that is the
+    // supervised-run primitive's ONE reconciler, which adopts a release whose
+    // CLI is still running and closes one whose is not — including clearing the
+    // release_runs_inflight_uniq lock for the next release.
+    //
     // Drop any preview whose gateway died across the restart, and reap orphan
     // /tmp/sgp-* stacks left running by a prior backend lifetime.
     await reconcileOrphanPreviews();

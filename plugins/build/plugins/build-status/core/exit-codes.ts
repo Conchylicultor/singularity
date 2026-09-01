@@ -32,6 +32,31 @@ export const BUILD_EXIT_HARD_KILLED = -1;
  * SIGINT → 130, SIGQUIT → 131, SIGTERM → 143), so no new constant is needed to
  * recognise an externally-killed build.
  *
+ * ## The precondition that makes reading `exitCode > 128` as "killed" legal here
+ *
+ * Elsewhere in this repo that read is banned outright, and for a good reason: a
+ * shell reports a signalled child as `128 + signo`, so for an ARBITRARY command
+ * `143` cannot be told apart from a program that chose `exit(143)` — which is
+ * what recorded a killed deploy as `Exited with code 143`, a sentence about a
+ * command that never exited and never refused. The supervised-run primitive
+ * exists partly to replace that guess with an observation (`RunTerminal.
+ * signalCode`, set by its shim's trap having fired) and states flatly that
+ * nothing may re-derive killed-ness from the status.
+ *
+ * **`buildStatusOf` is not an exception to that rule; it is outside its
+ * premise.** The premise is a command whose codes we do not author. These codes
+ * are FIRST-PARTY: `./singularity build` installs `installFatalSignalExit` and
+ * *chooses* `128 + signo` for itself, from `FATAL_SIGNAL_EXITS`, having caught
+ * the signal. So the number here is a record the build wrote about a signal it
+ * saw, not a wait status somebody decoded afterwards.
+ *
+ * That precondition is the whole licence, so it is written down rather than
+ * assumed: **the moment `build_runs.exit_code` can carry a status this repo did
+ * not author, this reading becomes the banned inference and must be replaced by
+ * an observed signal.** (One is available — the supervised-run marker records
+ * it — and the only reason it is not consulted is that the table has nowhere to
+ * put it and the CLI's own code already answers.)
+ *
  * Exported alongside the other two because `buildStatusOf` is not the only place
  * the rule is written any more: the `runs` build arm compiles the SAME rule into
  * SQL, and the one thing that must never differ between the two encodings is the

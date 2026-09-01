@@ -27,9 +27,16 @@ const DEBOUNCE_MS = 5_000;
  * lost.
  *
  * Called at five edges — the target moving (`buildRunJob`, on the durable
- * `refAdvanced` trigger), a build reaching terminal (`triggerBuild`'s `finally`
- * and `watchInflightBuild`'s `settle`), this backend starting (`onReady`), the
+ * `refAdvanced` trigger), a build reaching terminal (the supervised-run kind's
+ * `finish`, in `run-state.ts`), this backend starting (`onReady`), the
  * `compositions` config changing, and the `build.composition-tick` cron.
+ *
+ * The terminal edge used to be TWO — `triggerBuild`'s `finally` for a build
+ * whose starting backend survived, and `watchInflightBuild`'s `settle` for one
+ * it did not. A build restarts the backend that spawned it, so the first almost
+ * never fired; they are now one callback the supervised-run supervisor invokes
+ * from whichever backend is alive when the exit marker lands.
+ *
  * Because the decision is stateless and idempotent (the
  * `build_runs_inflight_uniq` partial index already makes a redundant trigger a
  * no-op), an extra edge is free and a missed edge degrades to "converges at the

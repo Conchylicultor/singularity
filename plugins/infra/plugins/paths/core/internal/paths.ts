@@ -245,6 +245,43 @@ export function worktreeDataDir(name: Namespace): string {
 }
 
 /**
+ * The per-worktree supervised-run artifact dir: `<worktreeDataDir()>/runs/`.
+ *
+ * A SUBDIRECTORY, where every other artifact family here is a flat file beside
+ * its siblings, and the reason is that this family has a *watcher* on it. The
+ * supervised-run supervisor publishes a live run's output by tailing its
+ * transcript, and it learns the file grew from one `@parcel/watcher`
+ * subscription over the directory the transcripts live in. Pointed at the data
+ * dir itself that subscription would also wake on every build profile, build
+ * log, check transcript and spec write in the worktree — so the directory is
+ * what keeps the watch narrow, not a filter the watcher would have to remember.
+ *
+ * A second, smaller reason: the prune is directory-scoped
+ * (`pruneRunArtifactsInDir`), so keeping the newest N runs cannot even in
+ * principle see a `build-<id>.log` — the two families never share a directory.
+ *
+ * Spelled as a function above `worktreeArtifacts` because the object literal
+ * cannot reference its own entries while it is being constructed; the public
+ * spelling is `worktreeArtifacts.runsDir`.
+ */
+function runsDirFor(name: Namespace): string {
+  return join(worktreeDataDir(name), "runs");
+}
+
+/**
+ * The two filename suffixes of the supervised-run family.
+ *
+ * Exported, unlike every other suffix in this file, because this family has a
+ * READER that goes the other way: the supervisor watches the directory and has
+ * to turn each event's filename back into a (kind, run) pair. Without these it
+ * would spell `".exit-code"` itself — a second copy of the layout, in the one
+ * place a drift would silently stop every run from ever being closed. The prune
+ * (`prune-artifacts.ts`) reads them for the same reason.
+ */
+export const RUN_TRANSCRIPT_SUFFIX = ".log";
+export const RUN_TERMINAL_SUFFIX = ".exit-code";
+
+/**
  * The gateway's registration record for a namespace: `spec.json`, inside that
  * namespace's own data dir.
  *
@@ -281,8 +318,13 @@ export const WORKTREE_SPEC_FILE = "spec.json";
  * recent / manual CLI" artifact while passing a build/release run id yields the
  * per-run artifact for that run.
  *
- * `webDist` and `releaseWebDist` are the exceptions: they are DIRECTORIES, not
- * files, and have no run-id variant. Each is a symlink published atomically by
+ * Three entries are DIRECTORIES rather than files. `runsDir` is the plain one:
+ * it is where the supervised-run family lives, and it has a directory of its
+ * own so a watcher can be pointed at it (see {@link runsDirFor}); its contents
+ * are ordinary id-keyed files with an ordinary prune.
+ *
+ * `webDist` and `releaseWebDist` are the odd ones: DIRECTORIES with no run-id
+ * variant. Each is a symlink published atomically by
  * `dist-publish.ts` at `<base>` → `<base>.live.<pid>` (with `<base>.staging.*` /
  * `<base>.swap.*` siblings in flight), so the path named here is the stable
  * pointer, never the tree itself. Their cleanup is NOT the file-retention
@@ -350,6 +392,36 @@ export const worktreeArtifacts = {
   /** Per-release fallback log. Always keyed to a release run id. */
   releaseLogs: (name: Namespace, releaseId: string): string =>
     join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
+  /**
+   * DIRECTORY. Every supervised run's transcript and exit marker, for every
+   * kind. See {@link runsDirFor} for why this family gets a directory of its own.
+   */
+  runsDir: (name: Namespace): string => runsDirFor(name),
+  /**
+   * One supervised run's merged stdout+stderr transcript.
+   *
+   * This file IS the stream: the child writes into it through a plain kernel fd
+   * and the supervisor publishes to the run's log channel by tailing it, so
+   * there is no second, pipe-shaped path that only works while the process that
+   * spawned the child is alive. `<kindId>-<runId>.log` — `kindId` first so a
+   * kind's runs sort together and its prune can name its own family by prefix.
+   */
+  runTranscript: (name: Namespace, kindId: string, runId: string): string =>
+    join(runsDirFor(name), `${kindId}-${runId}${RUN_TRANSCRIPT_SUFFIX}`),
+  /**
+   * One supervised run's exit marker: the child's status, and nothing else.
+   *
+   * Written by the POSIX shim the supervisor wraps every argv in, atomically
+   * (tmp + rename) at the one instant the status is known — so recording it is
+   * not something a command can forget to do, and its ABSENCE is the honest
+   * signal that the child was hard-killed and ran no shell at all.
+   *
+   * The finish INSTANT is this file's mtime, which is why it holds only the
+   * code: a timestamp the shell had to format would be a second thing to get
+   * right, in `sh`, for no gain.
+   */
+  runTerminal: (name: Namespace, kindId: string, runId: string): string =>
+    join(runsDirFor(name), `${kindId}-${runId}${RUN_TERMINAL_SUFFIX}`),
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
    * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree

@@ -173,6 +173,8 @@ run everywhere.
     - `releaseIdentity`
     - `REPO_ROOT`
     - `repoConfigDir`
+    - `RUN_TERMINAL_SUFFIX`
+    - `RUN_TRANSCRIPT_SUFFIX`
     - `setReleaseIdentity`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
@@ -223,6 +225,7 @@ run everywhere.
     - `infra/claude-cli`
     - `infra/corpus-index`
     - `infra/git-watcher`
+    - `infra/jobs/supervised-run`
     - `infra/launcher`
     - `infra/warmup`
     - `infra/worktree`
@@ -274,6 +277,7 @@ run everywhere.
     - `pruneWorktreeBuildArtifacts`
     - `pruneWorktreeCheckArtifacts`
     - `pruneWorktreeReleaseArtifacts`
+    - `pruneWorktreeRunArtifacts`
     - `PS`
     - `publishDataDirsManifest`
     - `relativeToDataRoot`
@@ -281,6 +285,9 @@ run everywhere.
     - `releaseIdentity`
     - `REPO_ROOT`
     - `repoConfigDir`
+    - `RUN_ARTIFACTS_RETENTION`
+    - `RUN_TERMINAL_SUFFIX`
+    - `RUN_TRANSCRIPT_SUFFIX`
     - `setReleaseIdentity`
     - `TMUX`
     - `WEB_CORE_RELATIVE`

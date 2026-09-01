@@ -20,5 +20,9 @@
  * Do NOT re-export it from `runs-arm/core` to save an import: cross-plugin
  * re-exports are banned (they hide the real dependency), and the ban is
  * enforced transitively.
+ *
+ * Not to be confused with `BUILD_RUN_KIND_ID` beside it, which happens to be the
+ * same word and names a different thing — see its docblock for why they are two
+ * constants.
  */
 export const BUILD_RUN_KIND = "build";

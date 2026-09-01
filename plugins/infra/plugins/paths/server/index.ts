@@ -10,6 +10,8 @@ export {
   worktreeDataDir,
   worktreeArtifacts,
   WORKTREE_SPEC_FILE,
+  RUN_TRANSCRIPT_SUFFIX,
+  RUN_TERMINAL_SUFFIX,
   CLAUDE_DIR,
   CLAUDE_PROJECTS_DIR,
   CLAUDE_SESSIONS_DIR,
@@ -59,9 +61,11 @@ export {
   pruneWorktreeBuildArtifacts,
   pruneWorktreeReleaseArtifacts,
   pruneWorktreeCheckArtifacts,
+  pruneWorktreeRunArtifacts,
   BUILD_ARTIFACTS_RETENTION,
   RELEASE_ARTIFACTS_RETENTION,
   CHECK_ARTIFACTS_RETENTION,
+  RUN_ARTIFACTS_RETENTION,
 } from "../core/internal/prune-artifacts";
 
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";

@@ -1,35 +1,35 @@
 # deployments
 
 The **deployment record**: `(composition × server) → { hostnames, loopbackPort }`.
-*Where* a composition is served and under what URL. Design:
+_Where_ a composition is served and under what URL. Design:
 [`research/2026-07-29-global-composition-production-deployment.md`](../../../../../../research/2026-07-29-global-composition-production-deployment.md)
 (D2b).
 
 ## Why this is not repo state
 
-Every field of a deployment is an *operational placement* fact, not a property of
+Every field of a deployment is an _operational placement_ fact, not a property of
 the software: the same composition can be served at many URLs on many surfaces,
 and the loopback port is a property of the box it lands on. The composition
 itself **is** the software and stays in the `compositions` config. So this plugin
 adds nothing to git, and the tradeoff is stated plainly: which composition is
 served at which URL is DB state, not reviewable in a diff, and covered by the
 `backup` plugin rather than by version control. What stays reproducible is what
-the original complaint was about — the *host* is derived from code and the
-*artifact* is built from a commit.
+the original complaint was about — the _host_ is derived from code and the
+_artifact_ is built from a commit.
 
 ## Nothing about the install is stored
 
 `runUser`, `installDir`, the systemd unit, the Caddy site path and the whole dir
 layout are **derived from the composition name** in [`core/derive.ts`](./core/derive.ts),
 which is the only place they may be spelled. `runUser` is the reason: its one
-real requirement is *not root* (embedded Postgres refuses `initdb` as uid 0), and
+real requirement is _not root_ (embedded Postgres refuses `initdb` as uid 0), and
 a configurable field with a default is a field someone can set back to `root`.
 Deriving `svc-<composition>` makes "never root" **inexpressible** rather than
 merely discouraged — the same move as the uid-0 guard, not a second place to get
 it right.
 
 The **platform** is likewise not here. It is read off the server's health probe
-(`deploy_servers_ext_health.platform`, D2a) — *discovered* on every reachability
+(`deploy_servers_ext_health.platform`, D2a) — _discovered_ on every reachability
 check, never typed by a human, so moving from an x86 box to an ARM box is a fact
 about hardware rather than a commit.
 
@@ -83,24 +83,27 @@ converged and running an install no row describes any more.
 
 `POST /api/deploy/deployments/:id/run` spawns exactly
 `./singularity deploy converge|ship <composition> --server <serverId>` and streams
-its stdout/stderr into the durable **`deploy`** log channel — the split `release`
-(CLI) / Studio (UI) already uses. (`update` is a *sequence* of those two spawns —
+its output into the durable **`deploy`** log channel — the split `release`
+(CLI) / Studio (UI) already uses. (`update` is a _sequence_ of those two spawns —
 see below — not a third command.) The endpoint owns two verdicts and no others:
 
 - **404** — no such deployment.
 - **409** — a run is already in flight **on this server**. Scoped to the server,
   not the deployment: converge writes `/etc/caddy/Caddyfile` and runs `apt-get`,
-  so two of them on one box race even for different compositions. The check and
-  the state write happen in one synchronous turn (`startDeployRun`), so there is
-  no TOCTOU window between them.
+  so two of them on one box race even for different compositions. **The claiming
+  INSERT is the lock** — a partial unique index on
+  `(launched_from, server_id) WHERE finished_at IS NULL` — so there is no
+  check-then-act pair to keep in one turn, and the lock survives a restart. It
+  used to be an in-memory `Map` read, which meant the promise evaporated at every
+  restart and held only as long as nobody put an `await` in the wrong place.
 
-Every other refusal is the CLI's, and reaches the user *after* a 200: the command
+Every other refusal is the CLI's, and reaches the user _after_ a 200: the command
 exits non-zero, its message lands on the log channel and on the run's `message`,
 and the UI repeats it verbatim (`RunFailureNotice`). That is deliberate — the
 refusals (never-verified server, non-Linux host, owner-data closure behind a
 public hostname, platform mismatch, missing bundle, un-converged host) are the
 CLI's to own, and restating any of them here would be a second place to keep
-right. The one exception is a *pre*-check the UI can make about its own state: the
+right. The one exception is a _pre_-check the UI can make about its own state: the
 row actions disable, with the reason in the tooltip, when the server has no
 successful probe — the platform a deploy needs is discovered by that probe, so the
 button would certainly be refused.
@@ -118,14 +121,14 @@ It re-implements no refusal, no host mutation and no health gate: both legs are
 the same `./singularity deploy` commands the row actions launch, and the
 build/no-build decision is `resolveBundle` + `compareToHead` — the same authority
 `ship` itself consults, asked one step earlier so nobody has to ask the user. So
-"the CLI is the engine" still holds; what lives here is the *ordering*.
+"the CLI is the engine" still holds; what lives here is the _ordering_.
 
 Three things are load-bearing about how it is built:
 
 - **The body carries no fields.** The platform is read server-side off
   `deploy_servers_ext_health` and the release run id comes from `resolveBundle`
   after the build, so there is no way to ask for a deploy of the wrong bundle to
-  the wrong host. That platform read happens *before* the converge: an update
+  the wrong host. That platform read happens _before_ the converge: an update
   that cannot resolve a bundle is going to fail anyway, and failing first means
   the user reads the real reason instead of a converge log to scroll past.
 - **The bundle is re-resolved after the build**, never reused from before it — a
@@ -165,28 +168,28 @@ both keyed on `currentWorktreeName()`.
 - **`deploy.runs`** — the **live view**: an in-memory `Map` projected into a push
   resource (the `release.previews` shape), bounded at one entry per deployment
   row, carrying `phase` so a running `update` reports which leg it is on. It is
-  empty after a restart, and that is honest rather than lossy: the spawned CLI is
-  **not detached**, so the restart took the run with it and nothing is running.
-  (A child that outlived the map would be an invisible orphan nothing could
-  report on, which is worse. Long unattended deploys belong on the CLI.)
-- **`deploy_runs`** — the **record**: one row per launched run, so *what is live
-  on this box, and what happened before* survives that restart. Queried back by
+  rebuilt at boot from the ledger (see _A run survives the backend_ below) and
+  never persisted, so it cannot go stale.
+- **`deploy_runs`** — the **record**: one row per launched run, so _what is live
+  on this box, and what happened before_ survives a restart. Queried back by
   `POST /api/deploy/deployments/:id/runs/query` (keyset, `deploy-history`'s
-  section renders it), swept at 90 days.
+  section renders it), swept at 90 days. It is also the **lock** (above) and the
+  **re-attach index** (below).
 
 Both are written by `internal/run-state.ts` and only there, and they share the
 run's `id` so the two name one run. Two rules in that file look like fussiness
 and are correctness:
 
-- **`startRun` is synchronous and writes no row.** Its claim must sit in the same
-  turn as `startDeployRun`'s exclusivity check — an `await` between them is a
-  TOCTOU window two clicks walk through — and an INSERT cannot join that turn. So
-  `recordRunStarted` opens the row as the first thing the async run body does. A
-  ledger write that fails ends the run instead of deploying unrecorded.
+- **`claimRun` INSERTs before anything is spawned.** The row is the exclusivity
+  lock and the only handle a restarted backend has on the child, so it must exist
+  first. A failed claim is a refusal the caller sees immediately — a 409 for the
+  in-flight index, a loud 500 for anything else — rather than a run that appears
+  to start and then reports that it did not.
 - **`finishRun` pushes the live view before writing the row.** Progress must not
   wait on durability, and the history DataView refreshes off the
   `deploy.runs-revision` tick, which fires from the change feed after the row
-  commits.
+  commits. The row write is first-writer-wins (`WHERE finished_at IS NULL`),
+  because the reconciler can reach the same row from the other side.
 
 `commit_sha` comes from the pinned bundle's own manifest at the instant it
 resolves, and is null wherever it genuinely is not (a converge; a bare `ship`,
@@ -194,6 +197,60 @@ whose bundle the CLI picks inside its own process). HEAD is never substituted.
 
 The `deploy` log channel's `logs/deploy.jsonl` is still the deeper archive — the
 full transcript, where the ledger holds the one-line outcome.
+
+### A run survives the backend that started it
+
+The CLI is spawned as a **supervised run**
+([`infra/jobs/supervised-run`](../../../../../infra/plugins/jobs/plugins/supervised-run/CLAUDE.md)),
+which is the fix for the incident this plugin used to lose runs to: a plain child
+shares the backend's process group, the gateway signals that whole group when it
+hot-restarts a backend, and every `./singularity build` of this worktree does
+exactly that. `drun-1787890652933-wr3v6d` lost its `ship` 0.9 s after spawning it
+and was recorded as `Exited with code 143` — a sentence about a command that
+never exited and never refused.
+
+Four things follow, and none of them are optional:
+
+- **The child is detached and its output goes to a transcript FILE**, tailed into
+  the `deploy` channel by the primitive. A restart mid-run republishes it, and
+  `verbFailureMessage` picks its sentence from that same file — the one copy, for
+  a leg this process started and for one it merely adopted. stdout and stderr are
+  merged (one fd), so the per-line stream classification is gone; the `deploy: `
+  refusal scan is keyed on line _content_ and is unaffected, while the fallback
+  that was "the last non-blank **stderr** line" is now "the last non-blank line".
+- **`signalCode` is observed, never derived.** It comes from the shim's signal
+  trap having fired. `128 + signo` cannot tell a kill from a program that chose
+  `exit(143)`; that ambiguity is what produced the sentence above, so nothing here
+  may re-derive killed-ness from `exitCode > 128`. `verb-outcome.ts` and its tests
+  are where that is pinned down.
+- **The unit the primitive supervises is a _leg_, not a run.** A `converge` or a
+  `ship` is one leg; an `update` is two, with an in-process release build between
+  them that spawns nothing of its own. Each leg needs its own transcript and exit
+  marker, so its supervised id is `<runId>.converge` / `<runId>.ship`
+  (`internal/legs.ts` owns the grammar), and the ledger row records which leg it
+  is waiting on — durably, _before_ that leg is spawned, since it is the only
+  thing a restarted backend has to find the child with.
+- **`listUnfinished` is scoped to `launched_from`.** A worktree DB is a fork of
+  main's and inherits its rows; unscoped, a worktree would adopt and close another
+  machine's runs. The column is deliberately not called `namespace` — a deploy
+  targets a remote host, so the worktree is the _launcher_, which is also why the
+  runs-arm reads `namespace: null`.
+
+**The outcome now arrives at a callback, and the sequence is still a sequence.**
+A supervised leg's outcome comes back from the kind's `finish`, driven by a file
+watcher, not from the call that started it. Read literally that turns `runUpdate`
+into a state machine; it does not have to be one. While _this_ process is driving
+the run it is also the one `finish` can hand the outcome to, so `legs.ts` keeps
+one map of waiting sequencers and `runUpdate` stays ordinary straight-line code.
+The absence of a waiter is then the honest signal that this process did not start
+the leg, and `closeAdoptedLeg` handles that case alone.
+
+What genuinely cannot survive a restart is the _sequence_: an update's middle leg
+is an in-process `runRelease`, with nothing durable to resume from. So an adopted
+converge that succeeded is recorded as a **failure** saying the update was
+interrupted — stamping it `succeeded` would claim a deploy went out when nothing
+was shipped. Its final `ship` leg, and every single-verb run, get their real
+verdict, which is the whole win.
 
 ### The row is a list row; the record lives in the pane
 
@@ -295,7 +352,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/jobs/supervised-run.defineSupervisedRunKind`
+    - `infra/jobs/supervised-run.startSupervisedRun`
+    - `infra/jobs/supervised-run.UnfinishedRun`
+    - `infra/paths.currentWorktreeName`
     - `infra/paths.REPO_ROOT`
+    - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
     - `primitives/data-view/server-query.augmentServerQuery`
     - `primitives/data-view/server-query.compileWhere`
@@ -314,7 +376,9 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `_deployDeployments`
     - `_deployRuns`
     - `deploymentsServerResource`
-  - Register: `defineJob('retention.deploy_runs')`
+  - Register:
+    - `defineJob('retention.deploy_runs')`
+    - `defineSupervisedRunKind('deploy')`
   - Resources:
     - `deploy.deployments` (push)
     - `deploy.runs` (push)

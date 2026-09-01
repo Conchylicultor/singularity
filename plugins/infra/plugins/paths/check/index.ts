@@ -176,6 +176,21 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   // and writer in different worktrees — the one place a rename could not be
   // caught by following imports.
   { pattern: /["'`]data-dirs\.json/, grepArg: "data-dirs.json" },
+  // The supervised-run artifact dir. Every other entry above names a FILE,
+  // because every other family is a flat file in the data dir and re-inlining
+  // one means typing its name. This family is a subdirectory, so the way back
+  // in is joining the dir rather than spelling a filename — and once you hold
+  // the dir, `runTranscript` / `runTerminal` are trivially reconstructable.
+  // Hence the pattern is on the join, with `worktreeDataDir` as the fixed
+  // prefilter (a bare "runs" would scan half the repo).
+  {
+    pattern: /worktreeDataDir\s*\([^)]*\)\s*,\s*["'`]runs["'`]/,
+    grepArg: "worktreeDataDir",
+  },
+  // The supervised-run exit marker. A distinctive extension precisely so this
+  // pattern can exist: a plain `.exit` would collide with every `process.exit`
+  // written inside a template literal or a docblock's backticks.
+  { pattern: /["'`][^"'`\s]*\.exit-code/, grepArg: ".exit-code" },
 ];
 
 // The paths plugin OWNS the artifact layout: paths.ts defines it, the prune

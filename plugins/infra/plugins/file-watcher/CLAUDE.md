@@ -32,13 +32,13 @@ moved (see `apps/prototypes/files`).
   - Imported by:
     - `apps/prototypes/files`
     - `apps/sonata/sources/midi/folders`
-    - `build`
     - `config_v2`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/op-status`
     - `conversations/transcript-watcher`
     - `infra/corpus-index`
     - `infra/git-watcher`
+    - `infra/jobs/supervised-run`
     - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-tree`
 - Server:
