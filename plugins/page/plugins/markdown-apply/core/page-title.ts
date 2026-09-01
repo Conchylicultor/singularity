@@ -50,7 +50,9 @@ const BANNER_PREFIX = "# ";
  */
 function bannerLine(title: string, ctx: MarkdownContext): string {
   const oneLine = title.replace(/\r\n?|\n/g, " ");
-  return BANNER_PREFIX + serializeInlineMarkdown(runsOf(oneLine), ctx.protectedSpans);
+  return (
+    BANNER_PREFIX + serializeInlineMarkdown(runsOf(oneLine), ctx.protectedSpans)
+  );
 }
 
 /**
@@ -93,9 +95,12 @@ export function pageTitleBanner(title: string, ctx: MarkdownContext): string {
  *    the same reason: this module refuses to guess which half of a mangled line
  *    was the title.
  *
- * Leading blank lines are tolerated (the rule is on the first NON-EMPTY line,
- * and a blank line is inert to `parseMarkdownToForest` anyway); the ONE blank
- * line the banner itself emitted is consumed with it, which is what makes
+ * Leading blank lines are tolerated (the rule is on the first NON-EMPTY line).
+ * A blank line is no longer inert to `parseMarkdownToForest` — it is an empty
+ * paragraph — but this runs BEFORE the parse, and a blank left at the front of
+ * the document is a leading blank run with nothing to attach to, which the
+ * parser drops. The ONE blank line the banner itself emitted is consumed with
+ * it, which is what makes
  * `stripPageTitleBanner(pageTitleBanner(t, ctx) + doc, banner) === doc` exact.
  *
  * KNOWN BOUND: "byte-identical" is measured on lines split by `\n`, so a

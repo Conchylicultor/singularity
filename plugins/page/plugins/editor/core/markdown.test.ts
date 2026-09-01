@@ -30,11 +30,12 @@ const text = defineBlock({
   schema: textDataSchema,
   defaultText: true,
   empty: () => ({ text: [] }),
-  // An EMPTY paragraph gets `<text/>`; anything else is ordinary prose. The tag
-  // is parse-only here (`serialize` wins on the way out).
+  // An EMPTY paragraph is a blank line; anything else is ordinary prose. The tag
+  // is parse-only here (`serialize` wins on the way out), and stays so that
+  // `<text/>` — every document written before the blank-line dialect — keeps
+  // parsing. Mirrors `page/text`'s real declaration.
   markdown: {
-    serialize: (d, ctx) =>
-      runsLength(d.text) === 0 ? "<text/>" : ctx.md(d.text),
+    serialize: (d, ctx) => (runsLength(d.text) === 0 ? "" : ctx.md(d.text)),
     tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
   },
 });
@@ -349,9 +350,21 @@ const handles: BlockHandle<unknown>[] = [
 
 // No token extensions in the pure suite: `protectedSpans` is exercised directly
 // in `inline-markdown.test.ts`, where the masking rule lives.
-const mdCtx: MarkdownContext = { handles, protectedSpans: [] };
+//
+// The default dialect here is OUR OWN (`"empty-block"`), because that is the
+// document the round-trip property is about — what this codebase emits is what
+// it must read back. `pasteCtx` is the other half of the asymmetry, for the
+// tests that assert a pasted foreign document is unchanged by it.
+const mdCtx: MarkdownContext = {
+  handles,
+  protectedSpans: [],
+  blankLines: "empty-block",
+};
+const pasteCtx: MarkdownContext = { ...mdCtx, blankLines: "separator" };
 const parse = (md: string): SerializedBlock[] =>
   parseMarkdownToForest(md, mdCtx);
+const parsePasted = (md: string): SerializedBlock[] =>
+  parseMarkdownToForest(md, pasteCtx);
 const serialize = (forest: SerializedBlock[]): string =>
   serializeForestToMarkdown(forest, mdCtx);
 
@@ -385,8 +398,17 @@ describe("plain paragraphs", () => {
     expect(serialize([node("text", { text: runs("hello") })])).toBe("hello");
   });
 
-  test("blank lines are skipped on parse", () => {
+  test("a blank line is an empty paragraph — one block per line, no counting", () => {
     const forest = parse("a\n\n\nb");
+    expect(forest.map((b) => b.type)).toEqual(["text", "text", "text", "text"]);
+    expect(forest.map(dataText)).toEqual(["a", "", "", "b"]);
+  });
+
+  test("under the paste dialect blank lines are still skipped", () => {
+    // The lenient half of the contract, unchanged: in foreign markdown a blank
+    // line separates paragraphs, so reading it as an empty paragraph would put
+    // one between every two paragraphs of a pasted README.
+    const forest = parsePasted("a\n\n\nb");
     expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
     expect(forest.map(dataText)).toEqual(["a", "b"]);
   });
@@ -1003,6 +1025,7 @@ describe("annotated tags (facts the block does not own)", () => {
     const ctx: MarkdownContext = {
       handles: [...handles, dispatchCard],
       protectedSpans: [],
+      blankLines: "empty-block",
     };
     const md = serializeForestToMarkdown(
       [
@@ -1098,6 +1121,7 @@ describe("annotated tags (facts the block does not own)", () => {
     const ctx: MarkdownContext = {
       handles: [...handles, doubled],
       protectedSpans: [],
+      blankLines: "empty-block",
     };
     expect(() => serializeForestToMarkdown([node("doubled", {})], ctx)).toThrow(
       /own `attrs` emitted one too/,
@@ -1256,16 +1280,104 @@ describe("page tags", () => {
 });
 
 describe("empty paragraphs", () => {
-  test("an empty text block emits `<text/>` and comes back", () => {
-    const forest = [node("text", { text: [] })];
-    expect(serialize(forest)).toBe("<text/>");
-    expect(parse("<text/>")).toEqual(forest);
+  const empty = (): SerializedBlock => node("text", { text: [] });
+
+  test("an empty text block emits a blank line and comes back", () => {
+    const forest = [
+      node("text", { text: runs("a") }),
+      empty(),
+      node("text", { text: runs("b") }),
+    ];
+    expect(serialize(forest)).toBe("a\n\nb");
+    expect(parse("a\n\nb")).toEqual(forest);
   });
 
-  test("a blank LINE is still skipped on parse — the asymmetry is deliberate", () => {
-    // What this codebase emits round-trips; what a user pastes stays lenient
-    // (blank-line-skipping is correct CommonMark for foreign markdown).
-    expect(parse("a\n\nb").map((b) => b.type)).toEqual(["text", "text"]);
+  test("`<text/>` still parses, so documents written before this keep working", () => {
+    // The tag is parse-only now — nothing emits it — but it is the one spelling
+    // of an empty paragraph that survives a position a blank line cannot state.
+    expect(parse("a\n<text/>\nb")).toEqual([
+      node("text", { text: runs("a") }),
+      empty(),
+      node("text", { text: runs("b") }),
+    ]);
+  });
+
+  test("a blank line lands at the depth of the block that FOLLOWS it — shallower", () => {
+    // The empty paragraph is written as the last child of the bullet, and comes
+    // back at root, beside it: a blank line carries no indent of its own, so the
+    // block after it decides. This is the accepted loss, pinned so it stays a
+    // known outcome (`research/2026-09-01-page-blank-line-empty-paragraph.md`).
+    const forest = parse("- Bullet\n  - Nested\n\nNext");
+    expect(forest.map((b) => b.type)).toEqual([
+      "bulleted-list",
+      "text",
+      "text",
+    ]);
+    expect(forest.map(dataText)).toEqual(["Bullet", "", "Next"]);
+    expect(forest[0]!.children.map(dataText)).toEqual(["Nested"]);
+  });
+
+  test("a blank line lands at the depth of the block that FOLLOWS it — deeper", () => {
+    const forest = parse("- Bullet\n\n  - Nested");
+    expect(forest).toHaveLength(1);
+    expect(forest[0]!.children.map((b) => b.type)).toEqual([
+      "text",
+      "bulleted-list",
+    ]);
+    expect(forest[0]!.children.map(dataText)).toEqual(["", "Nested"]);
+  });
+
+  test("a leading and a trailing blank run are dropped", () => {
+    // Nothing before them to be a sibling of, nothing after them to take a depth
+    // from. On an apply that is an ordinary delete of a block owning nothing.
+    expect(parse("\n\na\n\n\n")).toEqual([node("text", { text: runs("a") })]);
+  });
+
+  test("a blank run at the edge of a CONTAINER body is dropped too", () => {
+    // A tag body recurses through the same parse, so "leading" and "trailing"
+    // are per scope — the blank beside `a` inside the quote is an edge of that
+    // body, not of the document.
+    expect(parse("<quote>\n\n  a\n\n</quote>\nafter")).toEqual([
+      {
+        type: "quote",
+        data: {},
+        expanded: true,
+        children: [node("text", { text: runs("a") })],
+      },
+      node("text", { text: runs("after") }),
+    ]);
+  });
+
+  test("an empty paragraph between two container children survives", () => {
+    const forest = [
+      {
+        type: "quote",
+        data: {},
+        expanded: true,
+        children: [
+          node("text", { text: runs("a") }),
+          empty(),
+          node("text", { text: runs("b") }),
+        ],
+      },
+    ];
+    expect(serialize(forest)).toBe("<quote>\n  a\n\n  b\n</quote>");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a nested empty paragraph emits an EMPTY line, never padded whitespace", () => {
+    // Trailing whitespace is stripped in transit and reads as noise in a diff.
+    const md = serialize([
+      {
+        ...node("text", { text: runs("parent") }),
+        children: [
+          node("text", { text: runs("a") }),
+          empty(),
+          node("text", { text: runs("b") }),
+        ],
+      },
+    ]);
+    expect(md).toBe("parent\n  a\n\n  b");
   });
 });
 
@@ -1338,7 +1450,13 @@ describe("round-trip property (fuzzed forest)", () => {
     children: boolean;
   }[] = [
     { type: "text", data: (r) => ({ text: pick(r) }), children: true },
-    { type: "text", data: () => ({ text: [] }), children: true },
+    // An empty paragraph is a BLANK LINE, which carries no indent of its own —
+    // so it cannot own children (they would re-parent onto the block above) and
+    // its depth is read off the block that follows it. `representable` below
+    // keeps the generated forest to the positions the dialect can state; the
+    // ones it cannot are the accepted loss, each pinned by its own test in
+    // `describe("empty paragraphs")`.
+    { type: "text", data: () => ({ text: [] }), children: false },
     { type: "bulleted-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "heading-1", data: (r) => ({ text: pick(r) }), children: true },
     { type: "numbered-list", data: (r) => ({ text: pick(r) }), children: true },
@@ -1442,6 +1560,36 @@ describe("round-trip property (fuzzed forest)", () => {
     return [{ text: parts.join(" "), ...(marks ? { marks } : {}) }];
   }
 
+  /** An empty text block — the one node whose markdown form is a blank line. */
+  const isEmptyText = (b: SerializedBlock): boolean =>
+    b.type === "text" && runsLength((b.data as { text: RichText }).text) === 0;
+
+  /**
+   * Drop the empty paragraphs a blank line cannot put back, so the property
+   * below stays EXACT over everything else. Exactly two positions go, and they
+   * are the two losses the design accepts:
+   *
+   *  - no sibling AFTER it: nothing follows to take a depth from, and at the end
+   *    of a document or a container body the run is never flushed at all;
+   *  - no sibling BEFORE it: a run at the start of a parse scope (the document,
+   *    or one container's body) has nothing to be the previous sibling of.
+   *
+   * Everything between two siblings round-trips exactly, at any depth and inside
+   * any container, which is what this narrowing leaves the property asserting.
+   */
+  const representable = (nodes: SerializedBlock[]): SerializedBlock[] => {
+    // To a FIXED POINT: dropping a leading empty makes the next node leading.
+    let kept = nodes;
+    for (;;) {
+      const next = kept.filter(
+        (b, i) => !isEmptyText(b) || (i > 0 && i < kept.length - 1),
+      );
+      if (next.length === kept.length) break;
+      kept = next;
+    }
+    return kept.map((b) => ({ ...b, children: representable(b.children) }));
+  };
+
   const build = (r: () => number, depth: number): SerializedBlock => {
     const gen = gens[Math.floor(r() * gens.length)]!;
     const kids: SerializedBlock[] = [];
@@ -1460,9 +1608,10 @@ describe("round-trip property (fuzzed forest)", () => {
   test("parse(serialize(forest)) === forest, over 400 seeds", () => {
     for (let seed = 1; seed <= 400; seed++) {
       const r = rng(seed);
-      const forest: SerializedBlock[] = [];
+      const generated: SerializedBlock[] = [];
       const roots = 1 + Math.floor(r() * 4);
-      for (let i = 0; i < roots; i++) forest.push(build(r, 0));
+      for (let i = 0; i < roots; i++) generated.push(build(r, 0));
+      const forest = representable(generated);
       const md = serialize(forest);
       expect({ seed, forest: parse(md) }).toEqual({ seed, forest });
       // Idempotence: the emitted document is CANONICAL, so a second cycle is a
@@ -1513,10 +1662,12 @@ describe("round-trip property (fuzzed forest)", () => {
 
     for (let seed = 1; seed <= 200; seed++) {
       const r = rng(seed);
-      const forest: SerializedBlock[] = [];
+      const generated: SerializedBlock[] = [];
       const roots = 1 + Math.floor(r() * 4);
-      for (let i = 0; i < roots; i++) forest.push(build(r, 0));
-      const stamped = stamp(forest, "");
+      for (let i = 0; i < roots; i++) generated.push(build(r, 0));
+      // Same narrowing as the property above, for the same reason: an empty
+      // paragraph a blank line cannot place would not come back to be stamped.
+      const stamped = stamp(representable(generated), "");
       const parsed = parseMarkdownToForest(
         serializeForestToMarkdown(stamped, mdCtx),
         mdCtx,

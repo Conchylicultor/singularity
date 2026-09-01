@@ -68,6 +68,11 @@ const CONVERSATION = "e2e-agent-access";
 const TITLE = "Parser notes";
 const LINES = ["alpha one", "bravo two", "charlie three"];
 const SECRET = "do not tell the agent";
+// What an agent actually writes: a paragraph, a blank line, then a list. Under
+// the blank-line dialect that is FOUR blocks — the blank line is an empty
+// paragraph, not spacing — and all four land inside the card, so this stays a
+// legal write. Keeping the realistic shape is the point: it is what the round
+// trip below (E4) has to be a fixed point over.
 const NOTE_MD =
   "found two call sites\n\n- one in the parser\n- one in the writer";
 const NOTE_FIRST = "found two call sites";
@@ -337,7 +342,10 @@ await withBrowser(async (h) => {
   const created = await mustWrite("edit_page", {
     block_id: pageId,
     old_string: LINES[1]!,
-    new_string: `${LINES[1]!}\n\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
+    // One `\n`, not two: a blank line here is an empty paragraph at ROOT, outside
+    // every card, which the notes-only rule refuses — and the refusal would look
+    // nothing like this case's subject.
+    new_string: `${LINES[1]!}\n<${CARD_TAG}>\n${NOTE_MD}\n</${CARD_TAG}>`,
   });
   const noteId = created.note_ids?.[0];
   if (noteId === undefined) {
@@ -354,15 +362,16 @@ await withBrowser(async (h) => {
     card?.type === CARD_TAG && card.parentId === pageId,
     JSON.stringify(card ?? null),
   );
+  // Four children, not three: the blank line inside `NOTE_MD` is an empty
+  // paragraph. Exactly one of them is empty — asserted rather than counted, so a
+  // fourth block appearing for some OTHER reason still fails this.
+  const cardChildren = rowsAfterCreate.filter((b) => b.parentId === noteId);
   r.ok(
-    "the markdown became the card's CHILDREN (not a nested card)",
-    rowsAfterCreate.filter((b) => b.parentId === noteId).length === 3 &&
+    "the markdown became the card's CHILDREN (not a nested card), blank line included",
+    cardChildren.length === 4 &&
+      cardChildren.filter((b) => rowText(b) === "").length === 1 &&
       rowsAfterCreate.every((b) => b.id === noteId || b.type !== CARD_TAG),
-    JSON.stringify(
-      rowsAfterCreate
-        .filter((b) => b.parentId === noteId)
-        .map((b) => [b.type, rowText(b)]),
-    ),
+    JSON.stringify(cardChildren.map((b) => [b.type, rowText(b)])),
   );
   r.ok(
     "the create touched no prose block — every one is still there",
@@ -524,7 +533,7 @@ await withBrowser(async (h) => {
       {
         block_id: pageId,
         old_string: NOTE_FIRST,
-        new_string: `${NOTE_FIRST}\n\n<${CARD_TAG}>\nnested\n</${CARD_TAG}>`,
+        new_string: `${NOTE_FIRST}\n<${CARD_TAG}>\nnested\n</${CARD_TAG}>`,
       },
       /do not nest/,
     ],
@@ -534,7 +543,7 @@ await withBrowser(async (h) => {
       {
         block_id: pageId,
         old_string: NOTE_FIRST,
-        new_string: `${NOTE_FIRST}\n\n<private-note>\nsneaky\n</private-note>`,
+        new_string: `${NOTE_FIRST}\n<private-note>\nsneaky\n</private-note>`,
       },
       /addressed to the page's author only/,
     ],

@@ -222,5 +222,39 @@ await withBrowser(async (h) => {
   );
   r.eq("F: the block's root still holds ONE paragraph", rootParagraphs, 1);
 
+  // ---- G: a pasted README's blank lines are SPACING, not blocks ---------------
+  // The regression `MarkdownContext.blankLines` exists to prevent, and the reason
+  // the dialect is a required field rather than one rule for everybody. A blank
+  // line between paragraphs is how markdown is written everywhere — a README, a
+  // chat answer, anything an agent wrote — so a paste that read them as empty
+  // paragraphs would double-space every one of them, and the user would delete
+  // the spacers by hand. The paste sites declare `"separator"` and skip blank
+  // lines; `read_page` and the clipboard COPY declare `"empty-block"` and write a
+  // blank line for a real empty paragraph. Same bytes, opposite readings, decided
+  // by the caller that knows which document it is holding.
+  //
+  // Asserted as a DELTA rather than against absolute indices, so the phases above
+  // stay free to change what they leave behind.
+  const beforeG = await blockTexts();
+  await page.evaluate(() =>
+    navigator.clipboard.writeText(
+      "## Install\n\nRun the installer.\n\nThen restart the server.",
+    ),
+  );
+  await editableBlocks(page).last().click();
+  await page.keyboard.press("Meta+v");
+  await page.waitForTimeout(2000);
+  const afterG = await blockTexts();
+  r.eq(
+    "G: a README's three lines became three blocks, not five",
+    afterG.length - beforeG.length,
+    3,
+  );
+  r.eq("G: and its blank lines minted no empty paragraph", afterG.slice(-3), [
+    "Install",
+    "Run the installer.",
+    "Then restart the server.",
+  ]);
+
   await r.finish();
 });

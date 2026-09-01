@@ -31,8 +31,10 @@ const text = defineBlock({
   schema: textDataSchema,
   defaultText: true,
   empty: () => ({ text: [] }),
+  // Mirrors `page/text`: an empty paragraph is a blank line, and the tag stays
+  // parse-only so `<text/>` written before that dialect still comes back.
   markdown: {
-    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "<text/>" : ctx.md(d.text)),
+    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "" : ctx.md(d.text)),
     tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
   },
 });
@@ -134,13 +136,19 @@ const divider = defineBlock({
 
 const codeBlock = defineBlock({
   type: "code-block",
-  schema: z.object({ code: z.string().default(""), language: z.string().optional() }),
+  schema: z.object({
+    code: z.string().default(""),
+    language: z.string().optional(),
+  }),
   empty: () => ({ code: "" }),
   markdown: {
     fence: {
       open: "```",
       close: "```",
-      parseFenced: (info, body) => ({ code: body, ...(info ? { language: info } : {}) }),
+      parseFenced: (info, body) => ({
+        code: body,
+        ...(info ? { language: info } : {}),
+      }),
     },
     serialize: (d) => "```" + (d.language ?? "") + "\n" + d.code + "\n```",
   },
@@ -157,7 +165,8 @@ const page = defineBlock({
       name: "page",
       body: "children-when-expanded",
       attrs: (_data, ctx) => {
-        if (ctx.id === undefined) throw new Error("a `page` block needs its row id");
+        if (ctx.id === undefined)
+          throw new Error("a `page` block needs its row id");
         return { id: ctx.id };
       },
       serializeOnly: true,
@@ -176,7 +185,8 @@ const pageLink = defineBlock({
       attrs: (data) => ({ id: data.pageId }),
       parseAttrs: (attrs) => {
         const id = attrs.id;
-        if (id === undefined || id === "") throw new Error("<page/> needs an `id`");
+        if (id === undefined || id === "")
+          throw new Error("<page/> needs an `id`");
         return { pageId: id };
       },
     },
@@ -202,7 +212,12 @@ const handles: BlockHandle<unknown>[] = [
 ] as BlockHandle<unknown>[];
 
 const byType = new Map(handles.map((h) => [h.type, h] as const));
-const ctx: MarkdownContext = { handles, protectedSpans: [] };
+const ctx: MarkdownContext = {
+  handles,
+  protectedSpans: [],
+  // The server dialect: this module's documents are ones this codebase emitted.
+  blankLines: "empty-block",
+};
 
 const PAGE_ID = "PAGE";
 
@@ -216,7 +231,11 @@ interface RawNode {
   children: RawNode[];
 }
 
-const raw = (type: string, data: unknown, children: RawNode[] = []): RawNode => ({
+const raw = (
+  type: string,
+  data: unknown,
+  children: RawNode[] = [],
+): RawNode => ({
   type,
   data,
   children,
@@ -258,7 +277,12 @@ const markdownOf = (rows: StoredRow[], rootId = PAGE_ID): string =>
 type Redact = (rows: StoredRow[]) => StoredRow[];
 
 /** `pageId` stays `PAGE_ID` throughout: these fixtures are all one page. */
-const planResult = (rows: StoredRow[], md: string, rootId = PAGE_ID, redact?: Redact) =>
+const planResult = (
+  rows: StoredRow[],
+  md: string,
+  rootId = PAGE_ID,
+  redact?: Redact,
+) =>
   planMarkdownApply({
     rootId,
     pageId: PAGE_ID,
@@ -275,16 +299,19 @@ function planOf(
   redact?: Redact,
 ): MarkdownApplyPlan {
   const result = planResult(rows, md, rootId, redact);
-  if (!result.ok) throw new Error(`refused: ${result.reason} — ${result.detail}`);
+  if (!result.ok)
+    throw new Error(`refused: ${result.reason} — ${result.detail}`);
   return result.plan;
 }
 
 /** Round-trip a page through markdown and plan the result back onto it. */
-const replan = (rows: StoredRow[]): MarkdownApplyPlan => planOf(rows, markdownOf(rows));
+const replan = (rows: StoredRow[]): MarkdownApplyPlan =>
+  planOf(rows, markdownOf(rows));
 
 const namedFields = (patch: BlockPatch): Set<string> => {
   const named = new Set<string>();
-  for (const u of patch.updates) for (const k of Object.keys(u.changes)) named.add(k);
+  for (const u of patch.updates)
+    for (const k of Object.keys(u.changes)) named.add(k);
   return named;
 };
 
@@ -300,15 +327,20 @@ const plainTextOfRow = (row: StoredRow): string =>
  */
 function applyPlan(rows: StoredRow[], plan: MarkdownApplyPlan): StoredRow[] {
   const gone = new Set(plan.patch.deleteIds);
-  const out = rows.filter((row) => !gone.has(row.id)).map((row) => ({ ...row }));
+  const out = rows
+    .filter((row) => !gone.has(row.id))
+    .map((row) => ({ ...row }));
   const byId = new Map(out.map((row) => [row.id, row] as const));
   for (const update of plan.patch.updates) {
     const row = byId.get(update.id);
     if (!row) continue; // an update never creates
-    if (namesField(update.changes, "parentId")) row.parentId = update.changes.parentId!;
+    if (namesField(update.changes, "parentId"))
+      row.parentId = update.changes.parentId!;
     if (namesField(update.changes, "type")) row.type = update.changes.type!;
-    if (namesField(update.changes, "rank")) row.rank = String(update.changes.rank);
-    if (namesField(update.changes, "expanded")) row.expanded = update.changes.expanded!;
+    if (namesField(update.changes, "rank"))
+      row.rank = String(update.changes.rank);
+    if (namesField(update.changes, "expanded"))
+      row.expanded = update.changes.expanded!;
     if (namesField(update.changes, "data")) row.data = update.changes.data;
   }
   for (const created of plan.patch.creates) {
@@ -343,7 +375,10 @@ function expectConverges(
 ): void {
   const md = markdownOf(target, rootId);
   const plan = planOf(rows, md, rootId);
-  expect({ label, md: markdownOf(applyPlan(rows, plan), rootId) }).toEqual({ label, md });
+  expect({ label, md: markdownOf(applyPlan(rows, plan), rootId) }).toEqual({
+    label,
+    md,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -366,14 +401,21 @@ describe("identity ⇒ no writes", () => {
     const plan = replan(rows);
     expect(isEmptyPatch(plan.patch)).toBe(true);
     expect(plan.textEdits).toEqual([]);
-    expect(plan.stats).toEqual({ survived: rows.length, created: 0, deleted: 0, moved: 0 });
+    expect(plan.stats).toEqual({
+      survived: rows.length,
+      created: 0,
+      deleted: 0,
+      moved: 0,
+    });
   });
 
   test("a COLLAPSED block stays collapsed — `expanded` is never written", () => {
     // A parsed forest is uniformly `expanded: true`, so the only thing standing
     // between an apply and every collapse state on the page is this invariant.
     const rows = rowsOf([
-      raw("toggle", { text: runs("folded") }, [raw("text", { text: runs("hidden") })]),
+      raw("toggle", { text: runs("folded") }, [
+        raw("text", { text: runs("hidden") }),
+      ]),
     ]);
     rows[0]!.expanded = false;
     const plan = replan(rows);
@@ -385,7 +427,9 @@ describe("identity ⇒ no writes", () => {
     const md = "**hello**";
     const plan = planOf(rows, md);
     expect(isEmptyPatch(plan.patch)).toBe(true);
-    expect(plan.textEdits).toEqual([{ blockId: "b1", runs: [{ text: "hello", marks: ["bold"] }] }]);
+    expect(plan.textEdits).toEqual([
+      { blockId: "b1", runs: [{ text: "hello", marks: ["bold"] }] },
+    ]);
   });
 });
 
@@ -410,7 +454,9 @@ describe("repeated identical lines", () => {
     // genuinely unanswerable — the rows are indistinguishable — so the assertion
     // is on the id SET, plus the single text edit and the absence of churn.
     const rows = fiveItems();
-    const md = ["* item", "* item", "* item edited", "* item", "* item"].join("\n");
+    const md = ["* item", "* item", "* item edited", "* item", "* item"].join(
+      "\n",
+    );
     const plan = planOf(rows, md);
     expect(plan.patch.creates).toEqual([]);
     expect(plan.patch.deleteIds).toEqual([]);
@@ -455,7 +501,9 @@ describe("sub-pages", () => {
     expect(shellUpdate).toBeDefined();
     expect(namesField(shellUpdate!.changes, "rank")).toBe(true);
     const shellRank = String(shellUpdate!.changes.rank);
-    const others = ["b1", "b3"].map((id) => rows.find((r) => r.id === id)!.rank);
+    const others = ["b1", "b3"].map(
+      (id) => rows.find((r) => r.id === id)!.rank,
+    );
     for (const rank of others) {
       expect(Rank.compare(Rank.from(shellRank), Rank.from(rank))).toBe(1);
     }
@@ -484,7 +532,12 @@ describe("sub-pages", () => {
 
   test("an INVENTED page reference is refused, loudly", () => {
     const rows = withShell();
-    const md = ["before", `<page id="ghost"/>`, "after", `<page id="b2"/>`].join("\n");
+    const md = [
+      "before",
+      `<page id="ghost"/>`,
+      "after",
+      `<page id="b2"/>`,
+    ].join("\n");
     const result = planResult(rows, md);
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("unknown-ref");
@@ -504,7 +557,9 @@ describe("sub-pages", () => {
 
   test("referencing one shell TWICE is refused rather than duplicated", () => {
     const rows = withShell();
-    const md = ["before", `<page id="b2"/>`, "after", `<page id="b2"/>`].join("\n");
+    const md = ["before", `<page id="b2"/>`, "after", `<page id="b2"/>`].join(
+      "\n",
+    );
     const result = planResult(rows, md);
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("ref-duplicated");
@@ -512,7 +567,9 @@ describe("sub-pages", () => {
 
   test("a shell whose PARENT is deleted survives at the top level", () => {
     const rows = rowsOf([
-      raw("text", { text: runs("parent") }, [raw("page", { title: "Sub", icon: null })]),
+      raw("text", { text: runs("parent") }, [
+        raw("page", { title: "Sub", icon: null }),
+      ]),
     ]);
     // The whole document is emptied — so the shell's parent really is deleted,
     // and the shell has to be lifted out BEFORE the delete cascade reaches it
@@ -555,9 +612,13 @@ describe("identified cards", () => {
     // order crossed, so without it a card that merely moved would arrive as
     // "delete this card and mint another" — detaching its authorship.
     const rows = withCard();
-    const md = ["before", "after", `<agent-notes id="b2">`, "  noted", "</agent-notes>"].join(
-      "\n",
-    );
+    const md = [
+      "before",
+      "after",
+      `<agent-notes id="b2">`,
+      "  noted",
+      "</agent-notes>",
+    ].join("\n");
     const plan = planOf(rows, md);
     expect(plan.patch.creates).toEqual([]);
     expect(plan.patch.deleteIds).toEqual([]);
@@ -582,7 +643,10 @@ describe("identified cards", () => {
     ].join("\n");
     const plan = planOf(rows, md);
     expect(plan.patch.deleteIds).toEqual([]);
-    expect(plan.patch.creates.map((b) => b.type)).toEqual(["agent-notes", "text"]);
+    expect(plan.patch.creates.map((b) => b.type)).toEqual([
+      "agent-notes",
+      "text",
+    ]);
     // The stored card keeps its row, and the new one is a genuinely new id.
     for (const created of plan.patch.creates) expect(created.id).not.toBe("b2");
     // The document comes back with the minted id filled in — which is the whole
@@ -607,7 +671,10 @@ describe("identified cards", () => {
     // `<page id="…"/>` has one, because that tag doubles as an ordinary
     // link-to-page block. An id on an identified tag is only ever an identity
     // claim, so a typo must never quietly become a create.
-    const result = planResult(withCard(), `<agent-notes id="typo">\n  noted\n</agent-notes>`);
+    const result = planResult(
+      withCard(),
+      `<agent-notes id="typo">\n  noted\n</agent-notes>`,
+    );
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("unknown-ref");
   });
@@ -615,7 +682,10 @@ describe("identified cards", () => {
   test("an id naming a row that carries no id of its own is refused", () => {
     // `b1` is a paragraph: real, in scope, and not addressable — no read ever
     // handed that id out, so claiming it is the same invention as a typo.
-    const result = planResult(withCard(), `<agent-notes id="b1">\n  noted\n</agent-notes>`);
+    const result = planResult(
+      withCard(),
+      `<agent-notes id="b1">\n  noted\n</agent-notes>`,
+    );
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("unknown-ref");
   });
@@ -637,10 +707,14 @@ describe("identified cards", () => {
   test("a card on ANOTHER branch cannot be dragged into a scoped apply", () => {
     // b1 "host" > b2 "inside" | b3 <agent-notes> > b4 "noted"
     const rows = rowsOf([
-      raw("text", { text: runs("host") }, [raw("text", { text: runs("inside") })]),
+      raw("text", { text: runs("host") }, [
+        raw("text", { text: runs("inside") }),
+      ]),
       raw("agent-notes", {}, [raw("text", { text: runs("noted") })]),
     ]);
-    const md = [`<agent-notes id="b3">`, "  noted", "</agent-notes>"].join("\n");
+    const md = [`<agent-notes id="b3">`, "  noted", "</agent-notes>"].join(
+      "\n",
+    );
     const result = planResult(rows, md, "b1");
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("ref-out-of-scope");
@@ -655,7 +729,13 @@ describe("identified cards", () => {
       pageId: PAGE_ID,
       existing: rows,
       incoming: [
-        { type: "text", data: { text: runs("alpha") }, expanded: true, children: [], ref: "b1" },
+        {
+          type: "text",
+          data: { text: runs("alpha") },
+          expanded: true,
+          children: [],
+          ref: "b1",
+        },
       ],
       handles,
     });
@@ -669,7 +749,8 @@ describe("identified cards", () => {
 // ---------------------------------------------------------------------------
 
 /** The human-audience analogue: a card the read pruned and the agent never saw. */
-const redactPrivate: Redact = (rows) => rows.filter((row) => row.type !== "private-notes");
+const redactPrivate: Redact = (rows) =>
+  rows.filter((row) => row.type !== "private-notes");
 
 describe("redaction", () => {
   // A / P(hidden) / B, where P's rank is EXACTLY the midpoint of A's and B's —
@@ -684,7 +765,10 @@ describe("redaction", () => {
       parentId: PAGE_ID,
       type: "private-notes",
       data: {},
-      rank: Rank.between(Rank.from(rows[0]!.rank), Rank.from(rows[1]!.rank)).toJSON(),
+      rank: Rank.between(
+        Rank.from(rows[0]!.rank),
+        Rank.from(rows[1]!.rank),
+      ).toJSON(),
       expanded: true,
     });
     return rows;
@@ -718,7 +802,8 @@ describe("redaction", () => {
     const bravo = rows.find((row) => row.id === "b2")!;
     expect(Rank.compare(Rank.from(minted), Rank.from(bravo.rank))).toBe(-1);
     // Nothing the document could not see is written, in either channel.
-    for (const update of plan.patch.updates) expect(update.id).not.toBe("hidden");
+    for (const update of plan.patch.updates)
+      expect(update.id).not.toBe("hidden");
     expect(plan.patch.deleteIds).toEqual([]);
   });
 
@@ -746,7 +831,10 @@ describe("redaction", () => {
     expect(shellUpdate).toBeDefined();
     expect(String(shellUpdate.changes.rank)).not.toBe(hiddenRank);
     expect(
-      Rank.compare(Rank.from(String(shellUpdate.changes.rank)), Rank.from(hiddenRank)),
+      Rank.compare(
+        Rank.from(String(shellUpdate.changes.rank)),
+        Rank.from(hiddenRank),
+      ),
     ).toBe(1);
   });
 
@@ -758,7 +846,12 @@ describe("redaction", () => {
       raw("text", { text: runs("alpha") }),
       raw("private-notes", {}, [raw("text", { text: runs("secret") })]),
     ]);
-    const md = ["alpha", `<private-notes id="b2">`, "  secret", "</private-notes>"].join("\n");
+    const md = [
+      "alpha",
+      `<private-notes id="b2">`,
+      "  secret",
+      "</private-notes>",
+    ].join("\n");
     const result = planResult(rows, md, PAGE_ID, redactPrivate);
     expect(result.ok).toBe(false);
     expect(result.ok === false && result.reason).toBe("ref-out-of-scope");
@@ -782,7 +875,10 @@ describe("fuzz: a redacted read round-trips to no writes at all", () => {
         seed,
         patch: { creates: [], updates: [], deleteIds: [] },
       });
-      expect({ seed, textEdits: plan.textEdits }).toEqual({ seed, textEdits: [] });
+      expect({ seed, textEdits: plan.textEdits }).toEqual({
+        seed,
+        textEdits: [],
+      });
     }
     expect(exercised).toBeGreaterThan(100);
   });
@@ -800,18 +896,24 @@ describe("a change names exactly the fields it changes", () => {
     ]);
     const plan = planOf(rows, ["alpha", "bravo tweaked"].join("\n"));
     expect(isEmptyPatch(plan.patch)).toBe(true);
-    expect(plan.textEdits).toEqual([{ blockId: "b2", runs: [{ text: "bravo tweaked" }] }]);
+    expect(plan.textEdits).toEqual([
+      { blockId: "b2", runs: [{ text: "bravo tweaked" }] },
+    ]);
   });
 
   test("a conversion names `type` and nothing else", () => {
     const rows = rowsOf([raw("text", { text: runs("alpha") })]);
     const plan = planOf(rows, "# alpha");
-    expect(plan.patch.updates).toEqual([{ id: "b1", changes: { type: "heading-1" } }]);
+    expect(plan.patch.updates).toEqual([
+      { id: "b1", changes: { type: "heading-1" } },
+    ]);
     expect(plan.textEdits).toEqual([]);
   });
 
   test("a data-only edit names `data`, and its `text` restates the row's own", () => {
-    const rows = rowsOf([raw("to-do", { text: runs("ship it"), checked: false })]);
+    const rows = rowsOf([
+      raw("to-do", { text: runs("ship it"), checked: false }),
+    ]);
     const plan = planOf(rows, "- [x] ship it");
     expect(plan.patch.updates).toHaveLength(1);
     expect(plan.patch.updates[0]!.changes).toEqual({
@@ -858,7 +960,10 @@ describe("a change names exactly the fields it changes", () => {
       raw("text", { text: runs("charlie") }),
       raw("text", { text: runs("delta") }),
     ]);
-    const plan = planOf(rows, ["bravo", "charlie", "delta", "alpha"].join("\n"));
+    const plan = planOf(
+      rows,
+      ["bravo", "charlie", "delta", "alpha"].join("\n"),
+    );
     expect(plan.patch.creates).toEqual([]);
     expect(plan.patch.deleteIds).toEqual([]);
     expect(plan.patch.updates.map((u) => u.id)).toEqual(["b1"]);
@@ -887,14 +992,23 @@ const words = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf"];
 function pickRuns(r: () => number): RichText {
   const n = 1 + Math.floor(r() * 3);
   const parts: string[] = [];
-  for (let i = 0; i < n; i++) parts.push(words[Math.floor(r() * words.length)]!);
+  for (let i = 0; i < n; i++)
+    parts.push(words[Math.floor(r() * words.length)]!);
   const marks = r() < 0.2 ? (["bold"] as const) : undefined;
   return [{ text: parts.join(" "), ...(marks ? { marks: [...marks] } : {}) }];
 }
 
-const gens: { type: string; data(r: () => number): unknown; children: boolean }[] = [
+const gens: {
+  type: string;
+  data(r: () => number): unknown;
+  children: boolean;
+}[] = [
   { type: "text", data: (r) => ({ text: pickRuns(r) }), children: true },
-  { type: "bulleted-list", data: (r) => ({ text: pickRuns(r) }), children: true },
+  {
+    type: "bulleted-list",
+    data: (r) => ({ text: pickRuns(r) }),
+    children: true,
+  },
   { type: "heading-1", data: (r) => ({ text: pickRuns(r) }), children: true },
   { type: "toggle", data: (r) => ({ text: pickRuns(r) }), children: true },
   { type: "quote", data: (r) => ({ text: pickRuns(r) }), children: true },
@@ -973,7 +1087,10 @@ describe("fuzz: identity ⇒ no writes", () => {
         seed,
         patch: { creates: [], updates: [], deleteIds: [] },
       });
-      expect({ seed, textEdits: plan.textEdits }).toEqual({ seed, textEdits: [] });
+      expect({ seed, textEdits: plan.textEdits }).toEqual({
+        seed,
+        textEdits: [],
+      });
       expect({ seed, survived: plan.stats.survived }).toEqual({
         seed,
         survived: rows.length,
@@ -984,9 +1101,11 @@ describe("fuzz: identity ⇒ no writes", () => {
 
 // --- Edit scripts ----------------------------------------------------------
 
-const clone = (rows: StoredRow[]): StoredRow[] => rows.map((row) => ({ ...row }));
+const clone = (rows: StoredRow[]): StoredRow[] =>
+  rows.map((row) => ({ ...row }));
 const isShellRow = (row: StoredRow): boolean => row.type === "page";
-const isTextRow = (row: StoredRow): boolean => byType.get(row.type)?.text !== undefined;
+const isTextRow = (row: StoredRow): boolean =>
+  byType.get(row.type)?.text !== undefined;
 
 function subtreeIds(rows: StoredRow[], rootId: string): Set<string> {
   const ids = new Set([rootId]);
@@ -1010,14 +1129,19 @@ function siblingsOf(rows: StoredRow[], parentId: string): StoredRow[] {
 }
 
 /** A rank placing a row at slot `at` of `parentId`'s sibling list. */
-function rankAt(rows: StoredRow[], parentId: string, at: number, excludeId?: string): string {
+function rankAt(
+  rows: StoredRow[],
+  parentId: string,
+  at: number,
+  excludeId?: string,
+): string {
   const list = siblingsOf(rows, parentId).filter((row) => row.id !== excludeId);
   const prev = at > 0 ? Rank.from(list[at - 1]!.rank) : null;
   const next = at < list.length ? Rank.from(list[at]!.rank) : null;
   return Rank.between(prev, next).toJSON();
 }
 
-const pickFrom = <T,>(r: () => number, items: T[]): T | undefined =>
+const pickFrom = <T>(r: () => number, items: T[]): T | undefined =>
   items.length === 0 ? undefined : items[Math.floor(r() * items.length)];
 
 describe("fuzz: one edit at a time", () => {
@@ -1033,15 +1157,19 @@ describe("fuzz: one edit at a time", () => {
         rows.filter(
           (row) =>
             isTextRow(row) &&
-            rows.filter((x) => isTextRow(x) && plainTextOfRow(x) === plainTextOfRow(row))
-              .length === 1,
+            rows.filter(
+              (x) => isTextRow(x) && plainTextOfRow(x) === plainTextOfRow(row),
+            ).length === 1,
         ),
       );
       if (!target) continue;
       exercised += 1;
       const edited = clone(rows);
       const row = edited.find((x) => x.id === target.id)!;
-      row.data = { ...(row.data as object), text: runs(`${plainTextOfRow(target)} tweak${seed}`) };
+      row.data = {
+        ...(row.data as object),
+        text: runs(`${plainTextOfRow(target)} tweak${seed}`),
+      };
       const plan = planOf(rows, markdownOf(edited));
       expect({ seed, patch: plan.patch }).toEqual({
         seed,
@@ -1070,11 +1198,14 @@ describe("fuzz: one edit at a time", () => {
           (row) =>
             plain.includes(row.type) &&
             plainTextOfRow(row).length > 0 &&
-            rows.filter((x) => plainTextOfRow(x) === plainTextOfRow(row)).length === 1,
+            rows.filter((x) => plainTextOfRow(x) === plainTextOfRow(row))
+              .length === 1,
         ),
       );
       if (!target) continue;
-      const nextType = plain.filter((t) => t !== target.type)[Math.floor(r() * 2)]!;
+      const nextType = plain.filter((t) => t !== target.type)[
+        Math.floor(r() * 2)
+      ]!;
       exercised += 1;
       const edited = clone(rows);
       edited.find((x) => x.id === target.id)!.type = nextType;
@@ -1083,9 +1214,11 @@ describe("fuzz: one edit at a time", () => {
         seed,
         updates: [{ id: target.id, changes: { type: nextType } }],
       });
-      expect({ seed, creates: plan.patch.creates.length, deletes: plan.patch.deleteIds }).toEqual(
-        { seed, creates: 0, deletes: [] },
-      );
+      expect({
+        seed,
+        creates: plan.patch.creates.length,
+        deletes: plan.patch.deleteIds,
+      }).toEqual({ seed, creates: 0, deletes: [] });
       expectConverges(rows, edited, seed);
     }
     expect(exercised).toBeGreaterThan(60);
@@ -1098,9 +1231,11 @@ describe("fuzz: one edit at a time", () => {
       const rows = fuzzRows(seed);
       // A shell is never deleted by an apply — that case is its own test above.
       const candidates = rows.filter(
-        (row) => !isShellRow(row) && ![...subtreeIds(rows, row.id)].some((id) =>
-          isShellRow(rows.find((x) => x.id === id)!),
-        ),
+        (row) =>
+          !isShellRow(row) &&
+          ![...subtreeIds(rows, row.id)].some((id) =>
+            isShellRow(rows.find((x) => x.id === id)!),
+          ),
       );
       const target = pickFrom(r, candidates);
       if (!target) continue;
@@ -1117,7 +1252,11 @@ describe("fuzz: one edit at a time", () => {
         seed,
         deleted: gone.size,
       });
-      expect({ seed, creates: plan.patch.creates, texts: plan.textEdits }).toEqual({
+      expect({
+        seed,
+        creates: plan.patch.creates,
+        texts: plan.textEdits,
+      }).toEqual({
         seed,
         creates: [],
         texts: [],
@@ -1139,7 +1278,9 @@ describe("fuzz: one edit at a time", () => {
       const rows = fuzzRows(seed);
       const parents: string[] = [
         PAGE_ID,
-        ...rows.filter((row) => !isShellRow(row) && isTextRow(row)).map((row) => row.id),
+        ...rows
+          .filter((row) => !isShellRow(row) && isTextRow(row))
+          .map((row) => row.id),
       ];
       const parentId = pickFrom(r, parents)!;
       const at = Math.floor(r() * (siblingsOf(rows, parentId).length + 1));
@@ -1154,12 +1295,19 @@ describe("fuzz: one edit at a time", () => {
         expanded: true,
       });
       const plan = planOf(rows, markdownOf(edited));
-      expect({ seed, updates: plan.patch.updates, deletes: plan.patch.deleteIds }).toEqual({
+      expect({
+        seed,
+        updates: plan.patch.updates,
+        deletes: plan.patch.deleteIds,
+      }).toEqual({
         seed,
         updates: [],
         deletes: [],
       });
-      expect({ seed, creates: plan.patch.creates.length }).toEqual({ seed, creates: 1 });
+      expect({ seed, creates: plan.patch.creates.length }).toEqual({
+        seed,
+        creates: 1,
+      });
       expect({ seed, parent: plan.patch.creates[0]!.parentId }).toEqual({
         seed,
         parent: parentId,
@@ -1181,7 +1329,8 @@ describe("fuzz: one edit at a time", () => {
           !isShellRow(row) &&
           isTextRow(row) &&
           plainTextOfRow(row).length > 0 &&
-          rows.filter((x) => plainTextOfRow(x) === plainTextOfRow(row)).length === 1 &&
+          rows.filter((x) => plainTextOfRow(x) === plainTextOfRow(row))
+            .length === 1 &&
           !rows.some((x) => x.parentId === row.id),
       );
       const target = pickFrom(r, leaves);
@@ -1189,13 +1338,17 @@ describe("fuzz: one edit at a time", () => {
       const destinations = [
         PAGE_ID,
         ...rows
-          .filter((row) => row.id !== target.id && !isShellRow(row) && isTextRow(row))
+          .filter(
+            (row) => row.id !== target.id && !isShellRow(row) && isTextRow(row),
+          )
           .map((row) => row.id),
       ];
       const parentId = pickFrom(r, destinations)!;
       const edited = clone(rows);
       const moved = edited.find((x) => x.id === target.id)!;
-      const slots = siblingsOf(edited, parentId).filter((x) => x.id !== target.id).length;
+      const slots = siblingsOf(edited, parentId).filter(
+        (x) => x.id !== target.id,
+      ).length;
       const at = Math.floor(r() * (slots + 1));
       const rank = rankAt(edited, parentId, at, target.id);
       if (parentId === moved.parentId && rank === moved.rank) continue;
@@ -1204,7 +1357,11 @@ describe("fuzz: one edit at a time", () => {
       if (markdownOf(edited) === markdownOf(rows)) continue;
       exercised += 1;
       const plan = planOf(rows, markdownOf(edited));
-      expect({ seed, creates: plan.patch.creates, deletes: plan.patch.deleteIds }).toEqual({
+      expect({
+        seed,
+        creates: plan.patch.creates,
+        deletes: plan.patch.deleteIds,
+      }).toEqual({
         seed,
         creates: [],
         deletes: [],
@@ -1234,17 +1391,25 @@ describe("survivor invariants", () => {
       // than a single edit, so the invariant is tested against real churn.
       const textRow = pickFrom(r, edited.filter(isTextRow));
       if (textRow) {
-        textRow.data = { ...(textRow.data as object), text: runs(`rewritten ${seed}`) };
+        textRow.data = {
+          ...(textRow.data as object),
+          text: runs(`rewritten ${seed}`),
+        };
       }
-      const doomed = pickFrom(r, edited.filter((row) => !isShellRow(row)));
+      const doomed = pickFrom(
+        r,
+        edited.filter((row) => !isShellRow(row)),
+      );
       const survivors = doomed
         ? edited.filter((row) => !subtreeIds(edited, doomed.id).has(row.id))
         : edited;
       const plan = planOf(rows, markdownOf(survivors));
       for (const update of plan.patch.updates) {
-        expect({ seed, id: update.id, expanded: namesField(update.changes, "expanded") }).toEqual(
-          { seed, id: update.id, expanded: false },
-        );
+        expect({
+          seed,
+          id: update.id,
+          expanded: namesField(update.changes, "expanded"),
+        }).toEqual({ seed, id: update.id, expanded: false });
       }
     }
   });
@@ -1254,7 +1419,10 @@ describe("survivor invariants", () => {
       const r = rng(seed * 122949829);
       const rows = fuzzRows(seed);
       const edited = clone(rows);
-      const toggled = pickFrom(r, edited.filter((row) => row.type === "to-do"));
+      const toggled = pickFrom(
+        r,
+        edited.filter((row) => row.type === "to-do"),
+      );
       if (toggled) {
         toggled.data = {
           ...(toggled.data as { checked: boolean }),
@@ -1263,7 +1431,10 @@ describe("survivor invariants", () => {
       }
       const textRow = pickFrom(r, edited.filter(isTextRow));
       if (textRow) {
-        textRow.data = { ...(textRow.data as object), text: runs(`rewritten ${seed}`) };
+        textRow.data = {
+          ...(textRow.data as object),
+          text: runs(`rewritten ${seed}`),
+        };
       }
       const plan = planOf(rows, markdownOf(edited));
       for (const update of plan.patch.updates) {
@@ -1272,8 +1443,14 @@ describe("survivor invariants", () => {
         expect({
           seed,
           id: update.id,
-          text: plainOf(runsOf((update.changes.data as { text?: unknown }).text)),
-        }).toEqual({ seed, id: update.id, text: plainOf(runsOf((before.data as { text?: unknown }).text)) });
+          text: plainOf(
+            runsOf((update.changes.data as { text?: unknown }).text),
+          ),
+        }).toEqual({
+          seed,
+          id: update.id,
+          text: plainOf(runsOf((before.data as { text?: unknown }).text)),
+        });
       }
     }
   });
@@ -1398,9 +1575,14 @@ describe("a non-page root bounds every authority", () => {
     // The two roots differ here and nowhere else; pinning both sides is what
     // keeps the refusal from quietly becoming the general answer.
     const rows = withNestedShell();
-    const plan = planOf(rows, markdownOf(rows.filter((row) => row.id !== "b4")));
+    const plan = planOf(
+      rows,
+      markdownOf(rows.filter((row) => row.id !== "b4")),
+    );
     expect(plan.patch.deleteIds).toEqual([]);
-    expect(plan.patch.updates.find((u) => u.id === "b4")?.changes.parentId).toBe(PAGE_ID);
+    expect(
+      plan.patch.updates.find((u) => u.id === "b4")?.changes.parentId,
+    ).toBe(PAGE_ID);
   });
 });
 
@@ -1414,7 +1596,9 @@ describe("fuzz: a non-page root, over the same edits", () => {
         const ids = subtreeIds(rows, row.id);
         // A dropped shell under a non-page root is a REFUSAL, tested above; the
         // fuzz is about plans, so it works over shell-free subtrees.
-        return ids.size > 1 && ![...ids].some((id) => isShellRow(byId.get(id)!));
+        return (
+          ids.size > 1 && ![...ids].some((id) => isShellRow(byId.get(id)!))
+        );
       }),
     );
   }
@@ -1427,17 +1611,27 @@ describe("fuzz: a non-page root, over the same edits", () => {
       const root = pickRoot(r, rows);
       if (!root) continue;
       const inside = subtreeIds(rows, root.id);
-      const reachable = (id: string): boolean => inside.has(id) && id !== root.id;
+      const reachable = (id: string): boolean =>
+        inside.has(id) && id !== root.id;
 
       // A worst case rather than a single edit — rewrite one text row inside the
       // subtree AND drop a whole subtree inside it — so the plan has real churn
       // to be minimal about.
       const edited = clone(rows);
-      const textRow = pickFrom(r, edited.filter((row) => isTextRow(row) && reachable(row.id)));
+      const textRow = pickFrom(
+        r,
+        edited.filter((row) => isTextRow(row) && reachable(row.id)),
+      );
       if (textRow) {
-        textRow.data = { ...(textRow.data as object), text: runs(`rewritten ${seed}`) };
+        textRow.data = {
+          ...(textRow.data as object),
+          text: runs(`rewritten ${seed}`),
+        };
       }
-      const doomed = pickFrom(r, edited.filter((row) => reachable(row.id)));
+      const doomed = pickFrom(
+        r,
+        edited.filter((row) => reachable(row.id)),
+      );
       const survivors = doomed
         ? edited.filter((row) => !subtreeIds(edited, doomed.id).has(row.id))
         : edited;
@@ -1457,15 +1651,19 @@ describe("fuzz: a non-page root, over the same edits", () => {
         });
       }
       for (const update of plan.patch.updates) {
-        expect({ seed, id: update.id, expanded: namesField(update.changes, "expanded") }).toEqual(
-          { seed, id: update.id, expanded: false },
-        );
+        expect({
+          seed,
+          id: update.id,
+          expanded: namesField(update.changes, "expanded"),
+        }).toEqual({ seed, id: update.id, expanded: false });
         if (!namesField(update.changes, "data")) continue;
         const before = rows.find((row) => row.id === update.id)!;
         expect({
           seed,
           id: update.id,
-          text: plainOf(runsOf((update.changes.data as { text?: unknown }).text)),
+          text: plainOf(
+            runsOf((update.changes.data as { text?: unknown }).text),
+          ),
         }).toEqual({
           seed,
           id: update.id,
@@ -1473,7 +1671,10 @@ describe("fuzz: a non-page root, over the same edits", () => {
         });
       }
       for (const created of plan.patch.creates) {
-        expect({ seed, pageId: created.pageId }).toEqual({ seed, pageId: PAGE_ID });
+        expect({ seed, pageId: created.pageId }).toEqual({
+          seed,
+          pageId: PAGE_ID,
+        });
       }
 
       // The complement, stated positively: every row the walk could not reach is

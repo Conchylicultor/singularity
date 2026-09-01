@@ -21,5 +21,10 @@ export function serverMarkdownContext(): MarkdownContext {
   return {
     handles: [...Editor.BlockData.getContributions()],
     protectedSpans: blockTextProtectedSpans(),
+    // Both server halves read markdown this codebase EMITTED (`read_page`'s
+    // output, an agent editing it back), so a blank line in one is an empty
+    // paragraph — never the paragraph separator it is in a document pasted from
+    // somewhere else.
+    blankLines: "empty-block",
   };
 }

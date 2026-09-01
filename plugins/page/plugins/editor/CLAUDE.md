@@ -3031,14 +3031,15 @@ middle materializes it, and read-only surfaces chip it from `data.text` today.
 ## Markdown is a LOSSLESS PROJECTION of the forest
 
 > Lenient on parse (foreign markdown pastes as it always did), CANONICAL on
-> serialize: anything this codebase emits re-parses to the same forest.
+> serialize: anything this codebase emits re-parses to the same forest — with two
+> named exceptions, both about empty paragraphs, in the blank-line bullets below.
 
 `core/markdown.ts` stays the pure orchestrator that never names a block type. Its
 void fallback is now the generic **`tag`** (`<name attrs>…</name>`, body parsed
 recursively) instead of `() => ""` — which is why a type with no markdown
 declaration at all (callout, image, video, audio, file, embed, bookmark) is
 covered. Design:
-[`research/2026-08-03-page-markdown-block-roundtrip.md`](../../../research/2026-08-03-page-markdown-block-roundtrip.md);
+[`research/2026-08-03-page-markdown-block-roundtrip.md`](../../../../research/2026-08-03-page-markdown-block-roundtrip.md);
 `markdown.test.ts`'s fuzzed round-trip property test is the executable statement
 — extend it for a new block type rather than adding a one-off case.
 
@@ -3066,9 +3067,35 @@ covered. Design:
   with no MARKDOWN prefix; without it it serialized as a bare paragraph and came
   back as `text`. (`quote` had the same problem — `> ` belongs to `toggle` — but
   it is a void container now, so its tag carries `children`.)
-- **`page/text` emits `<text/>` for an EMPTY paragraph** only. Blank lines stay
-  skipped on parse — correct CommonMark for foreign markdown. The asymmetry is
-  the contract: what we emit round-trips, what a user pastes stays lenient.
+- **A blank line IS an empty paragraph — in our own dialect only.** Every call
+  site says which dialect its text is in through `MarkdownContext.blankLines`,
+  required — so a call site that does not state its dialect is a tsc error, not
+  one that inherits a default.
+  What we emit and read back (`read_page`, `edit_page`, copy to the clipboard)
+  declares `"empty-block"`; the three paste sites declare `"separator"` and still
+  skip blank lines, which is correct CommonMark and the regression the whole
+  field exists to prevent — a pasted README must not gain a spacer between every
+  two paragraphs. On parse a blank line becomes the PREVIOUS SIBLING of the block
+  that follows it, at that block's indent; two in a row give two empty blocks, no
+  counting rule. A blank run with nothing after it — the start or end of a
+  document, or of a tag body — is dropped. `markdown.ts` still names no block
+  type: the empty block is minted through `defaultTextHandle`, so a composition
+  shipping no default text type skips blank lines as before.
+- **Two empty blocks do NOT round-trip, knowingly.** A blank line carries no
+  indentation of its own, so this dialect cannot spell an empty block at the
+  start or end of a document or container body (it is dropped — on an apply, an
+  ordinary delete of a row that owned no text, no attachments and no links), nor
+  one whose depth differs from the block after it (it comes back at that block's
+  depth). The second is a `parentId` update on apply — a move the agent never
+  made — and `touched.ts` judges `parentId`, so under `agent-access`'s
+  every-write-inside-an-`<agent-note>`-card rule it can refuse an apply that had
+  nothing to do with that block. Traded deliberately for a projection that reads
+  as prose. `page/text` KEEPS its `tag`, so `<text/>` still parses: documents
+  written before this change keep working, an agent that needs an empty block the
+  rules cannot place can still write one explicitly, and restoring exactness is
+  one ternary in `text-block.ts`.
+  Design:
+  [`research/2026-09-01-page-blank-line-empty-paragraph.md`](../../../../research/2026-09-01-page-blank-line-empty-paragraph.md).
 
 ### The page tags
 

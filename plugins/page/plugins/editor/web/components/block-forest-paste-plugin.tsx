@@ -75,6 +75,9 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
           forest = parseMarkdownToForest(decision.text, {
             handles,
             protectedSpans: blockTextProtectedSpans(),
+            // Foreign markdown: a blank line separates paragraphs, exactly as
+            // for the container paste (`block-editor.tsx`).
+            blankLines: "separator",
           });
         }
         // Empty/unparseable forest (e.g. whitespace-only multi-line) → let the

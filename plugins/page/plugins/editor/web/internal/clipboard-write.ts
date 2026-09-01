@@ -38,6 +38,10 @@ export function writeForestToClipboard(
     serializeForestToMarkdown(forest, {
       handles,
       protectedSpans: blockTextProtectedSpans(),
+      // Serialize ignores the dialect — there is one emitted form — but this is
+      // the text that names it: what we put on the clipboard writes an empty
+      // paragraph as a blank line.
+      blankLines: "empty-block",
     }),
   );
 }

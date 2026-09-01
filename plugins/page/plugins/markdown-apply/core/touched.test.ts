@@ -14,7 +14,11 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { markdownNodesOfRows } from "./flatten";
-import { planMarkdownApply, type MarkdownApplyPlan, type MarkdownTextEdit } from "./plan";
+import {
+  planMarkdownApply,
+  type MarkdownApplyPlan,
+  type MarkdownTextEdit,
+} from "./plan";
 import type { StoredRow } from "./stored-row";
 import { boundaryViolations, touchedBlocks } from "./touched";
 
@@ -36,8 +40,10 @@ const text = defineBlock({
   schema: textDataSchema,
   defaultText: true,
   empty: () => ({ text: [] }),
+  // Mirrors `page/text`: an empty paragraph is a blank line, and the tag stays
+  // parse-only so `<text/>` written before that dialect still comes back.
   markdown: {
-    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "<text/>" : ctx.md(d.text)),
+    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "" : ctx.md(d.text)),
     tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
   },
 });
@@ -57,7 +63,12 @@ const fence = defineBlock({
 }) as BlockHandle<unknown>;
 
 const handles: BlockHandle<unknown>[] = [text, fence] as BlockHandle<unknown>[];
-const ctx: MarkdownContext = { handles, protectedSpans: [] };
+const ctx: MarkdownContext = {
+  handles,
+  protectedSpans: [],
+  // The server dialect: this module's documents are ones this codebase emitted.
+  blankLines: "empty-block",
+};
 
 const PAGE_ID = "PAGE";
 
@@ -71,7 +82,11 @@ interface RawNode {
   children: RawNode[];
 }
 
-const raw = (type: string, data: unknown, children: RawNode[] = []): RawNode => ({
+const raw = (
+  type: string,
+  data: unknown,
+  children: RawNode[] = [],
+): RawNode => ({
   type,
   data,
   children,
@@ -176,7 +191,10 @@ const violationsOf = (
 
 describe("T3: annexing the document's prose into a boundary", () => {
   const rows = (): StoredRow[] =>
-    rowsOf([line("The parser handles UTF-8."), raw(BOUNDARY_TYPE, {}, [line("Checked the writer.")])]);
+    rowsOf([
+      line("The parser handles UTF-8."),
+      raw(BOUNDARY_TYPE, {}, [line("Checked the writer.")]),
+    ]);
 
   // b1 = the prose, b2 = the card, b3 = the card's own line.
   const attack = [
@@ -194,7 +212,8 @@ describe("T3: annexing the document's prose into a boundary", () => {
       incoming: parseMarkdownToForest(attack, ctx),
       handles,
     });
-    if (!result.ok) throw new Error(`refused: ${result.reason} — ${result.detail}`);
+    if (!result.ok)
+      throw new Error(`refused: ${result.reason} — ${result.detail}`);
     return result.plan;
   };
 
@@ -205,7 +224,9 @@ describe("T3: annexing the document's prose into a boundary", () => {
     // its content doc, its links, its authorship) and simply changes parent.
     expect(plan.patch.creates).toEqual([]);
     expect(plan.patch.deleteIds).toEqual([]);
-    expect(plan.patch.updates.find((u) => u.id === "b1")?.changes.parentId).toBe("b2");
+    expect(
+      plan.patch.updates.find((u) => u.id === "b1")?.changes.parentId,
+    ).toBe("b2");
     expect(touchedBlocks(plan).updated).toContain("b1");
   });
 
@@ -222,14 +243,19 @@ describe("T3: annexing the document's prose into a boundary", () => {
     // what proves `escaped-origin` names the MOVE and not the destination.
     const existing = rows();
     const moved = existing.map((row) =>
-      row.id === "b1" ? { ...row, parentId: "b2", rank: Rank.between(null, null).toJSON() } : row,
+      row.id === "b1"
+        ? { ...row, parentId: "b2", rank: Rank.between(null, null).toJSON() }
+        : row,
     );
     expect(violationsOf(planAttack(moved), moved)).toEqual([]);
   });
 
   test("the document a faithful read produces plans no violation at all", () => {
     const existing = rows();
-    const faithful = serializeForestToMarkdown(markdownNodesOfRows(existing, PAGE_ID), ctx);
+    const faithful = serializeForestToMarkdown(
+      markdownNodesOfRows(existing, PAGE_ID),
+      ctx,
+    );
     const result = planMarkdownApply({
       rootId: PAGE_ID,
       pageId: PAGE_ID,
@@ -243,12 +269,86 @@ describe("T3: annexing the document's prose into a boundary", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The accepted loss: an empty paragraph a blank line cannot place
+// ---------------------------------------------------------------------------
+//
+// An empty paragraph is a BLANK LINE, and a blank line carries no indentation of
+// its own — so it comes back at the depth of the block that FOLLOWS it. When
+// that block is shallower, the round trip is a real move the writer never made,
+// and `parentId` is a judged field, so a faithful read applied straight back is
+// REFUSED on a block the edit never mentioned. Designed behaviour rather than a
+// defect (`research/2026-09-01-page-blank-line-empty-paragraph.md`), pinned here
+// so it stays a known outcome instead of a rediscovered surprise.
+
+describe("an empty paragraph the blank-line dialect cannot place", () => {
+  // PAGE ├ b1 text "prose" ─ b2 text ""   ← empty, b1's last child
+  //      └ b3 fence        ─ b4 text "noted"
+  const rows = (): StoredRow[] =>
+    rowsOf([
+      raw("text", { text: runs("prose") }, [line("")]),
+      raw(BOUNDARY_TYPE, {}, [line("noted")]),
+    ]);
+
+  /** Read the forest out and apply it straight back — an edit that changes nothing. */
+  const noOpApply = (existing: StoredRow[]): MarkdownApplyPlan => {
+    const md = serializeForestToMarkdown(
+      markdownNodesOfRows(existing, PAGE_ID),
+      ctx,
+    );
+    const result = planMarkdownApply({
+      rootId: PAGE_ID,
+      pageId: PAGE_ID,
+      existing,
+      incoming: parseMarkdownToForest(md, ctx),
+      handles,
+    });
+    if (!result.ok)
+      throw new Error(`refused: ${result.reason} — ${result.detail}`);
+    return result.plan;
+  };
+
+  test("the read emits the empty paragraph as a bare blank line", () => {
+    expect(
+      serializeForestToMarkdown(markdownNodesOfRows(rows(), PAGE_ID), ctx),
+    ).toBe(
+      [
+        "prose",
+        "",
+        `<${BOUNDARY_TYPE} id="b3">`,
+        "  noted",
+        `</${BOUNDARY_TYPE}>`,
+      ].join("\n"),
+    );
+  });
+
+  test("applying it straight back is a `parentId` update on the empty block", () => {
+    const plan = noOpApply(rows());
+    // The ROW survives — an empty paragraph owns no text, no attachments, no
+    // links — so the loss is its parent, never its id.
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(
+      plan.patch.updates.find((u) => u.id === "b2")?.changes.parentId,
+    ).toBe(PAGE_ID);
+  });
+
+  test("and under boundary enforcement that move refuses the whole apply", () => {
+    const existing = rows();
+    expect(violationsOf(noOpApply(existing), existing)).toEqual([
+      { blockId: "b2", how: "updated", reason: "escaped" },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // The chain rule, per `how`
 // ---------------------------------------------------------------------------
 
 describe("moves", () => {
   test("out of a boundary onto the page body is `escaped`", () => {
-    const plan = planOf({ updates: [{ id: "b3", changes: { parentId: PAGE_ID } }] });
+    const plan = planOf({
+      updates: [{ id: "b3", changes: { parentId: PAGE_ID } }],
+    });
     expect(violationsOf(plan)).toEqual([
       { blockId: "b3", how: "updated", reason: "escaped" },
     ]);
@@ -257,7 +357,9 @@ describe("moves", () => {
   test("between two boundaries is legal", () => {
     // Both chains reach A boundary — not the same one, deliberately. The rule is
     // about being inside the caller's set, not about staying in one card.
-    const plan = planOf({ updates: [{ id: "b3", changes: { parentId: "b4" } }] });
+    const plan = planOf({
+      updates: [{ id: "b3", changes: { parentId: "b4" } }],
+    });
     expect(violationsOf(plan)).toEqual([]);
   });
 
@@ -303,43 +405,56 @@ describe("T4: field granularity", () => {
     // chain trivially passes (a boundary is inside itself) while the row it came
     // from was open body. Both are only caught by the old chain.
     for (const changes of [{ type: BOUNDARY_TYPE }, { parentId: "b2" }]) {
-      expect(violationsOf(planOf({ updates: [{ id: "b1", changes }] }))).toEqual([
-        { blockId: "b1", how: "updated", reason: "escaped-origin" },
-      ]);
+      expect(
+        violationsOf(planOf({ updates: [{ id: "b1", changes }] })),
+      ).toEqual([{ blockId: "b1", how: "updated", reason: "escaped-origin" }]);
     }
   });
 
   test("a rank change RIDING a judged field is still judged", () => {
     const plan = planOf({
       updates: [
-        { id: "b1", changes: { rank: Rank.between(null, null), data: { text: runs("x") } } },
+        {
+          id: "b1",
+          changes: {
+            rank: Rank.between(null, null),
+            data: { text: runs("x") },
+          },
+        },
       ],
     });
     expect(violationsOf(plan)).toHaveLength(1);
   });
 
   test("`touchedBlocks` still reports a rank-only update as a write", () => {
-    const plan = planOf({ updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }] });
+    const plan = planOf({
+      updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }],
+    });
     expect(touchedBlocks(plan).updated).toEqual(["b1"]);
   });
 });
 
 describe("creates", () => {
   test("inside an EXISTING boundary is legal", () => {
-    expect(violationsOf(planOf({ creates: [create("n", "b2", "text")] }))).toEqual([]);
+    expect(
+      violationsOf(planOf({ creates: [create("n", "b2", "text")] })),
+    ).toEqual([]);
   });
 
   test("a created boundary satisfies its own check, and hosts its own children", () => {
     const plan = planOf({
-      creates: [create("card", PAGE_ID, BOUNDARY_TYPE), create("n", "card", "text")],
+      creates: [
+        create("card", PAGE_ID, BOUNDARY_TYPE),
+        create("n", "card", "text"),
+      ],
     });
     expect(violationsOf(plan)).toEqual([]);
   });
 
   test("outside every boundary is a violation", () => {
-    expect(violationsOf(planOf({ creates: [create("n", PAGE_ID, "text")] }))).toEqual([
-      { blockId: "n", how: "created", reason: "escaped" },
-    ]);
+    expect(
+      violationsOf(planOf({ creates: [create("n", PAGE_ID, "text")] })),
+    ).toEqual([{ blockId: "n", how: "created", reason: "escaped" }]);
   });
 
   test("a create is judged on its NEW chain only — it has no old one", () => {
@@ -369,13 +484,19 @@ describe("deletes", () => {
 
 describe("text edits", () => {
   test("inside a boundary is legal", () => {
-    expect(violationsOf(planOf({ textEdits: [{ blockId: "b3", runs: runs("re") }] }))).toEqual([]);
+    expect(
+      violationsOf(
+        planOf({ textEdits: [{ blockId: "b3", runs: runs("re") }] }),
+      ),
+    ).toEqual([]);
   });
 
   test("on the page's own prose is a violation", () => {
-    expect(violationsOf(planOf({ textEdits: [{ blockId: "b1", runs: runs("re") }] }))).toEqual([
-      { blockId: "b1", how: "text-edited", reason: "escaped" },
-    ]);
+    expect(
+      violationsOf(
+        planOf({ textEdits: [{ blockId: "b1", runs: runs("re") }] }),
+      ),
+    ).toEqual([{ blockId: "b1", how: "text-edited", reason: "escaped" }]);
   });
 });
 
@@ -396,7 +517,9 @@ describe("the scope root", () => {
   });
 
   test("a non-boundary root does not become one", () => {
-    expect(violationsOf(planOf({ deleteIds: ["b1"] }), fixture(), PAGE_ID)).toHaveLength(1);
+    expect(
+      violationsOf(planOf({ deleteIds: ["b1"] }), fixture(), PAGE_ID),
+    ).toHaveLength(1);
   });
 });
 
@@ -429,8 +552,22 @@ describe("touchedBlocks", () => {
 describe("corruption", () => {
   test("a cycle in the parent map THROWS rather than looping", () => {
     const cyclic: StoredRow[] = [
-      { id: "x", parentId: "y", type: "text", data: {}, rank: "a0", expanded: true },
-      { id: "y", parentId: "x", type: "text", data: {}, rank: "a1", expanded: true },
+      {
+        id: "x",
+        parentId: "y",
+        type: "text",
+        data: {},
+        rank: "a0",
+        expanded: true,
+      },
+      {
+        id: "y",
+        parentId: "x",
+        type: "text",
+        data: {},
+        rank: "a1",
+        expanded: true,
+      },
     ];
     expect(() => violationsOf(planOf({ deleteIds: ["x"] }), cyclic)).toThrow(
       /does not terminate/,
@@ -442,7 +579,14 @@ describe("corruption", () => {
     // boundary — where a chain that never ends is corruption. The two must not
     // collapse into one arm.
     const orphan: StoredRow[] = [
-      { id: "x", parentId: "gone", type: "text", data: {}, rank: "a0", expanded: true },
+      {
+        id: "x",
+        parentId: "gone",
+        type: "text",
+        data: {},
+        rank: "a0",
+        expanded: true,
+      },
     ];
     expect(violationsOf(planOf({ deleteIds: ["x"] }), orphan)).toEqual([
       { blockId: "x", how: "deleted", reason: "escaped" },

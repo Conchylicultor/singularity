@@ -35,11 +35,30 @@ import type { SerializedBlock } from "./serialized-block";
  * know about them corrupts inline LaTeX — which is full of `_` and `*`. An
  * optional parameter is one a caller can silently forget; a required one makes
  * "I have no tokens" an explicit `[]`.
+ *
+ * `blankLines` is required for the same shape of reason, over a different
+ * asymmetry: a blank line means an empty paragraph in the markdown this codebase
+ * EMITS and a paragraph separator in the markdown a user PASTES, and nothing
+ * about the text tells the two apart — only the caller knows which document it
+ * is holding. A default would silently pick one, and both wrong answers are
+ * documents nobody wrote: an empty paragraph sprayed between every two
+ * paragraphs of a pasted README, or every spacer dropped out of our own round
+ * trip.
  */
 export interface MarkdownContext {
   handles: BlockHandle<unknown>[];
   /** Spans that must survive verbatim: no delimiter may open or close inside one. */
   protectedSpans: RegExp[];
+  /**
+   * `"empty-block"` — a blank line is an empty block of the default-text type,
+   * landing as the previous sibling of the block that follows it.
+   * `"separator"` — blank lines are skipped, which is correct CommonMark and
+   * the lenient half of the paste contract.
+   *
+   * Read on PARSE only: there is one emitted form for everybody, so the
+   * serializer never asks.
+   */
+  blankLines: "empty-block" | "separator";
 }
 
 /**
@@ -263,8 +282,10 @@ export interface BlockMarkdown<T> {
    * Tag-delimited region — the ONLY mapping that can carry children, and the
    * default for a type with neither a text lens nor a `serialize`. Declaring it
    * beside a `serialize` makes it PARSE-only for that type: `serialize` wins on
-   * the way out, which is how `page/text` emits `<text/>` for an empty paragraph
-   * and ordinary prose otherwise.
+   * the way out, which is how `page/text` emits a BLANK LINE for an empty
+   * paragraph while `<text/>` keeps parsing back into one — the spelling every
+   * document written before the blank-line dialect uses, and the way to write an
+   * empty block whose position that dialect cannot express.
    */
   tag?: BlockTag<T>;
 }
@@ -742,10 +763,39 @@ export function parseMarkdownToForest(
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   const tokens: FlatToken[] = [];
 
+  // A blank line carries no indentation of its own, so the block it stands for
+  // is placed by the block that FOLLOWS it: the run is held here and flushed at
+  // the next token's own indent, which `tokensToTree` then reads as "previous
+  // sibling of that token". Two drops fall out of that one counter rather than
+  // being rules of their own, and both are the dialect's accepted loss (see
+  // `research/2026-09-01-page-blank-line-empty-paragraph.md`): a run with no
+  // token BEFORE it in this scope flushes nothing, and a run with no token after
+  // it is never flushed at all. A tag body recurses through this same function,
+  // so "this scope" means the document or one container's body.
+  let pendingBlanks = 0;
+  const flushBlanks = (indent: number): void => {
+    // `tokens.length === 0` is the leading-run drop. A composition shipping no
+    // default-text type has nothing to mint, and skips blank lines as it always
+    // did — the same answer `defaultTextHandle` gives every other caller.
+    if (tokens.length > 0 && fallback) {
+      for (let n = 0; n < pendingBlanks; n++) {
+        tokens.push({
+          indent,
+          type: fallback.type,
+          data: { ...(fallback.empty?.() ?? {}), text: [] },
+        });
+      }
+    }
+    pendingBlanks = 0;
+  };
+
   let i = 0;
   while (i < lines.length) {
     const raw = lines[i]!;
     if (raw.trim() === "") {
+      // Under `"separator"` nothing is ever counted, so nothing can ever be
+      // flushed: this dialect is byte-identical to the skip it replaced.
+      if (ctx.blankLines === "empty-block") pendingBlanks++;
       i++;
       continue;
     }
@@ -775,6 +825,7 @@ export function parseMarkdownToForest(
         ctx,
       );
       if (claimed) {
+        flushBlanks(indent);
         tokens.push(claimed.token);
         i = claimed.next;
         continue;
@@ -800,6 +851,7 @@ export function parseMarkdownToForest(
         i++;
       }
       if (i < lines.length) i++; // consume closing fence
+      flushBlanks(indent);
       tokens.push({
         indent,
         type: fenceH.type,
@@ -813,6 +865,7 @@ export function parseMarkdownToForest(
     for (const c of claimers) {
       const data = c.parse(content, parseCtx);
       if (data !== null) {
+        flushBlanks(indent);
         tokens.push({ indent, type: c.handle.type, data });
         claimed = true;
         break;
@@ -825,6 +878,7 @@ export function parseMarkdownToForest(
 
     // Plain paragraph → default text type.
     if (fallback) {
+      flushBlanks(indent);
       tokens.push({
         indent,
         type: fallback.type,
@@ -1050,9 +1104,17 @@ function tokensToTree(tokens: FlatToken[]): SerializedBlock[] {
 // Serialize: forest → markdown text
 // ---------------------------------------------------------------------------
 
-/** Nest one rendered sibling list under its parent (two columns per level). */
+/**
+ * Nest one rendered sibling list under its parent (two columns per level).
+ *
+ * An EMPTY line stays empty. It is an empty paragraph, and padding it would emit
+ * trailing whitespace — stripped in transit, and noise in a diff. Nothing
+ * downstream wants the padding either: a blank line's own indent is never read
+ * (its block takes the indent of the block that follows it), and `dedentBlock`
+ * already skips blank lines when measuring a tag body's common indent.
+ */
 function indentLines(lines: string[]): string[] {
-  return lines.map((line) => "  " + line);
+  return lines.map((line) => (line === "" ? line : "  " + line));
 }
 
 /**

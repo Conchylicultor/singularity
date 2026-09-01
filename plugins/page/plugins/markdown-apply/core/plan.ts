@@ -120,7 +120,11 @@ export type MarkdownApplyResult =
        * only a shell owns a whole other partition that an omission must not
        * destroy.
        */
-      reason: "unknown-ref" | "ref-duplicated" | "ref-out-of-scope" | "subpage-removed";
+      reason:
+        | "unknown-ref"
+        | "ref-duplicated"
+        | "ref-out-of-scope"
+        | "subpage-removed";
       detail: string;
     };
 
@@ -180,7 +184,10 @@ interface IncomingNode {
 
 function flattenIncoming(forest: readonly IdentifiedBlock[]): IncomingNode[] {
   const out: IncomingNode[] = [];
-  const walk = (nodes: readonly IdentifiedBlock[], parentIndex: number | null): void => {
+  const walk = (
+    nodes: readonly IdentifiedBlock[],
+    parentIndex: number | null,
+  ): void => {
     for (const node of nodes) {
       const index = out.length;
       out.push({ node, parentIndex, type: node.type, data: node.data ?? {} });
@@ -215,7 +222,9 @@ function survivorData(
 ): unknown {
   if (!handle?.text) return incoming;
   const base =
-    incoming !== null && typeof incoming === "object" && !Array.isArray(incoming)
+    incoming !== null &&
+    typeof incoming === "object" &&
+    !Array.isArray(incoming)
       ? (incoming as Record<string, unknown>)
       : {};
   return { ...base, text: currentRuns };
@@ -231,11 +240,20 @@ export function planMarkdownApply<R extends StoredRow>(
   // whose attribute values are quoted rather than inline-markdown-escaped — so
   // the inline token spans that `protectedSpans` exists to mask cannot reach it,
   // and an empty list is the honest answer rather than a forgotten parameter.
-  const ctx: MarkdownContext = { handles: [...handles], protectedSpans: [] };
+  // Serialize-only, so `blankLines` is never read; it names the dialect this
+  // module's output is in, which is the server's own.
+  const ctx: MarkdownContext = {
+    handles: [...handles],
+    protectedSpans: [],
+    blankLines: "empty-block",
+  };
 
   // Everything a plan may WRITE reads `oldRows`, never `existing`: the walk is
   // the scope, and a redaction is a filter on that walk (see `args.redact`).
-  const oldRows = documentOrderRows(redact ? redact([...existing]) : existing, rootId);
+  const oldRows = documentOrderRows(
+    redact ? redact([...existing]) : existing,
+    rootId,
+  );
   // The two questions only `existing` can answer, both about rows the walk
   // cannot reach: does this id name a row of this page at all (`ref` resolution
   // below), and which `(parent_id, rank)` keys are held by a live row this plan
@@ -271,7 +289,10 @@ export function planMarkdownApply<R extends StoredRow>(
     handles.find((h) => markdownParseTagName(h) === pageTagName)?.type ?? null;
   const hasPageHandle = byType.has(PAGE_BLOCK_TYPE);
   const pointerLine = (type: string, data: unknown, id?: string): string =>
-    serializeForestToMarkdown([{ id, type, data, expanded: false, children: [] }], ctx);
+    serializeForestToMarkdown(
+      [{ id, type, data, expanded: false, children: [] }],
+      ctx,
+    );
   const shellByLine = new Map<string, StoredRow>();
   if (hasPageHandle) {
     for (const row of oldRows) {
@@ -291,10 +312,13 @@ export function planMarkdownApply<R extends StoredRow>(
   const pinnedOldRows = new Map<string, StoredRow>();
   const oldItems: AlignItem[] = oldRows.map((row) => {
     const handle = byType.get(row.type);
-    const pinned = row.type === PAGE_BLOCK_TYPE || identifiedTypes.has(row.type);
+    const pinned =
+      row.type === PAGE_BLOCK_TYPE || identifiedTypes.has(row.type);
     if (pinned) pinnedOldRows.set(row.id, row);
     return {
-      key: pinned ? pinnedRowKey(row.id) : identityKeyOf(row.type, row.data, handle),
+      key: pinned
+        ? pinnedRowKey(row.id)
+        : identityKeyOf(row.type, row.data, handle),
       plain: plainTextOf(row.data, handle),
       type: row.type,
       pin: pinned ? row.id : null,
@@ -537,7 +561,8 @@ export function planMarkdownApply<R extends StoredRow>(
 
     if (Object.keys(changes).length > 0) {
       updates.push({ id: row.id, changes });
-      if (changes.parentId !== undefined || changes.rank !== undefined) moved += 1;
+      if (changes.parentId !== undefined || changes.rank !== undefined)
+        moved += 1;
     }
   }
 
@@ -597,7 +622,7 @@ export function planMarkdownApply<R extends StoredRow>(
         `from inside block ${rootId}. A sub-page owns its own page and can never be ` +
         "deleted by a markdown apply; nor can it be lifted out of the block this " +
         "apply is scoped to, which is where preserving it would have to put it. " +
-        "Re-read the block and keep every `<page id=\"…\"/>` pointer the document holds.",
+        'Re-read the block and keep every `<page id="…"/>` pointer the document holds.',
     };
   }
 
@@ -619,7 +644,10 @@ export function planMarkdownApply<R extends StoredRow>(
     // where it is, and let it bound whatever is appended behind it. A shell
     // ANYWHERE else moves — its own sibling list was re-ranked without it, so
     // the only interval provably free of a collision is above the floor.
-    if (shell.parentId === rootId && (floor === null || Rank.compare(rank, floor) > 0)) {
+    if (
+      shell.parentId === rootId &&
+      (floor === null || Rank.compare(rank, floor) > 0)
+    ) {
       floor = rank;
       continue;
     }

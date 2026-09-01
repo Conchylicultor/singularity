@@ -894,6 +894,10 @@ function SelectionLayer({
         forest = parseMarkdownToForest(decision.text, {
           handles,
           protectedSpans: blockTextProtectedSpans(),
+          // Foreign markdown: a blank line separates paragraphs. Reading it as
+          // an empty paragraph would spray one between every two paragraphs of
+          // a pasted README.
+          blankLines: "separator",
         });
       }
       // Empty/unparseable forest (an empty or whitespace-only payload) → let the
@@ -1531,6 +1535,10 @@ function SelectionLayer({
         forest = parseMarkdownToForest(decision.text, {
           handles,
           protectedSpans: blockTextProtectedSpans(),
+          // Foreign markdown: a blank line separates paragraphs. Reading it as
+          // an empty paragraph would spray one between every two paragraphs of
+          // a pasted README.
+          blankLines: "separator",
         });
       }
       // Empty/unparseable forest (a whitespace-only payload) → never swallow the

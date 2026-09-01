@@ -24,8 +24,10 @@ const text = defineBlock({
   schema: textDataSchema,
   defaultText: true,
   empty: () => ({ text: [] }),
+  // Mirrors `page/text`: an empty paragraph is a blank line, and the tag stays
+  // parse-only so `<text/>` written before that dialect still comes back.
   markdown: {
-    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "<text/>" : ctx.md(d.text)),
+    serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "" : ctx.md(d.text)),
     tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
   },
 });
@@ -38,7 +40,12 @@ const heading1 = defineBlock({
 });
 
 const handles = [text, heading1] as BlockHandle<unknown>[];
-const ctx: MarkdownContext = { handles, protectedSpans: [] };
+const ctx: MarkdownContext = {
+  handles,
+  protectedSpans: [],
+  // The server dialect: this module's documents are ones this codebase emitted.
+  blankLines: "empty-block",
+};
 
 describe("pageTitleBanner", () => {
   test("is a `# Title` line plus the blank line after it", () => {
@@ -75,11 +82,19 @@ describe("stripPageTitleBanner", () => {
   const banner = pageTitleBanner("Design notes", ctx);
 
   test("strips a first non-empty line byte-identical to the banner", () => {
-    expect(stripPageTitleBanner(`${banner}Body line`, banner)).toBe("Body line");
+    expect(stripPageTitleBanner(`${banner}Body line`, banner)).toBe(
+      "Body line",
+    );
   });
 
   test("is the exact inverse of prepending, for any document", () => {
-    for (const doc of ["", "one", "one\n\ntwo", "# Design notes", "  indented"]) {
+    for (const doc of [
+      "",
+      "one",
+      "one\n\ntwo",
+      "# Design notes",
+      "  indented",
+    ]) {
       expect(stripPageTitleBanner(banner + doc, banner)).toBe(doc);
     }
   });
@@ -204,7 +219,10 @@ describe("the banner across a read → apply round trip", () => {
   // same words: the strip takes exactly ONE line, so the block survives.
   test("a first-block H1 identical to the title survives the round trip", () => {
     const title = "Design notes";
-    const rows = rowsOf([node("heading-1", "Design notes"), node("text", "Body.")]);
+    const rows = rowsOf([
+      node("heading-1", "Design notes"),
+      node("text", "Body."),
+    ]);
 
     const markdown = readPage(rows, title);
     expect(markdown).toBe("# Design notes\n\n# Design notes\nBody.");
@@ -228,8 +246,11 @@ describe("the banner across a read → apply round trip", () => {
   });
 
   // The failure this whole module exists to prevent, stated as a test: without
-  // the strip, the page's own title arrives as a created heading block.
-  test("the banner WOULD become a created block if it were not stripped", () => {
+  // the strip, the page's own title arrives as a created heading block — and so
+  // does the blank line after it, which is an empty paragraph now. Both belong
+  // to the banner, which is exactly why `stripPageTitleBanner` consumes the
+  // blank line rather than only the `# ` line.
+  test("the banner WOULD become created blocks if it were not stripped", () => {
     const title = "Design notes";
     const rows = rowsOf([node("text", "Body.")]);
 
@@ -242,7 +263,12 @@ describe("the banner across a read → apply round trip", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.plan.patch.creates).toHaveLength(1);
-    expect(result.plan.patch.creates[0]!.type).toBe("heading-1");
+    expect(result.plan.patch.creates.map((b) => b.type)).toEqual([
+      "heading-1",
+      "text",
+    ]);
+    expect(
+      plainOf((result.plan.patch.creates[1]!.data as { text: unknown }).text),
+    ).toBe("");
   });
 });

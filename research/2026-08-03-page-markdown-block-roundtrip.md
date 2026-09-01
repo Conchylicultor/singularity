@@ -261,6 +261,12 @@ nodes carry their own.
   an empty text block and ordinary prose otherwise, so a blank line this codebase
   emits round-trips while a blank line in pasted markdown still collapses.
 
+> **Superseded (2026-09-01), for the empty-paragraph bullet only.** An empty
+> paragraph now emits as a blank line, and in our own dialect a blank line parses
+> back into one; `<text/>` is kept as a parse-side alias so documents written
+> under the rule above still work. Foreign pastes stay lenient. See
+> [`research/2026-09-01-page-blank-line-empty-paragraph.md`](./2026-09-01-page-blank-line-empty-paragraph.md).
+
 ## Files
 
 Core (the substance):
