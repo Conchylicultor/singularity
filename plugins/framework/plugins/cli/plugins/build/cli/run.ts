@@ -1238,11 +1238,20 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     // cache entry no standalone check could reproduce, and a later push
     // would read it back as its own verdict.
     //
-    // NO scope filter: build is the one caller that CAN assert
-    // `scope: "deploy"`, because it is the process producing the dist those
-    // checks inspect.
+    // Build asserts exactly two scopes: the TREE it built from, and the DEPLOY
+    // it just produced — it is the one caller that can claim the latter, being
+    // the process that produces the dist those checks inspect.
+    //
+    // It does NOT assert `host`. That scope is about the machine: the shared
+    // `~/.singularity` data root, which every checkout on the box writes to and
+    // which runs ahead of any one branch. A build observing it sees state some
+    // other live worktree created — state it did not cause and cannot repair.
+    // This used to be spelled as NO filter at all, which is a different claim
+    // ("every scope, including any added later") and is how a build came to fail
+    // on a data dir a concurrently-running agent's unmerged branch had declared.
     const result = await runCheckSubprocess({
       root,
+      select: { scope: ["tree", "deploy"] },
       // The build's host CPU grant — the child's type-check spends it per
       // worker, without re-acquiring host-wide.
       grant,

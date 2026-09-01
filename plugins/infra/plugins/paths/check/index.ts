@@ -12,13 +12,22 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/paths/core` alias would
 // name this plugin from inside itself. Same shape as `test-layout/check`
 // importing `../core/test-layout`.
+import { checkoutWorktreeName } from "../core/internal/paths";
 import { dataDirsEntries } from "../core/data-dirs.generated";
 import {
   DATA_DIR_KINDS,
   dataRoot,
   getDataDirs,
+  isDataDir,
 } from "../core/internal/data-dir";
 import type { DataDir } from "../core/internal/data-dir";
+import {
+  declaredSets,
+  describeAttribution,
+  manifestStamps,
+  partitionByOwner,
+  readForeignManifests,
+} from "../core/internal/data-dirs-manifest";
 import { legacyRootEntries } from "../core/internal/legacy-layout";
 import type { LegacyRootEntry } from "../core/internal/legacy-layout";
 
@@ -162,6 +171,11 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   // separate `join(worktreeDataDir(name), "check.log")` call sites be written by
   // hand — and stay in sync with each other but not with the artifact layout.
   { pattern: /["'`]check(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
+  // The namespace's declared-data-dir manifest. Read by an audit running in a
+  // DIFFERENT checkout, so a second spelling of the filename would put reader
+  // and writer in different worktrees — the one place a rename could not be
+  // caught by following imports.
+  { pattern: /["'`]data-dirs\.json/, grepArg: "data-dirs.json" },
 ];
 
 // The paths plugin OWNS the artifact layout: paths.ts defines it, the prune
@@ -253,6 +267,18 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 //      moment the top level is seven kind dirs: `state` is a kind, so a
 //      hand-made `state/foo` would pass rule 1 forever.
 //
+// "DECLARED" MEANS DECLARED ON THIS MACHINE, not declared in this checkout.
+// Rules 1 and 3 both read the union of this checkout's registry and every other
+// live namespace's published manifest (`core/internal/data-dirs-manifest.ts`).
+// The root is host-global — it holds the union of every branch that has ever run
+// here — while a checkout's registry is one branch's view, and comparing those
+// two directly is a category error: it reported `state/agent-write-ledger`, a
+// directory a concurrently-running agent's correct-but-unmerged branch had just
+// created, as an orphan, and failed the deploy of a worktree that could neither
+// delete it nor declare it. An entry another live namespace owns is now logged
+// as owned. What reaches the offender list is an entry NOBODY on this machine
+// declares, which is the orphan this check has always been about.
+//
 // Rules 2 and 3's second half are self-liquidating: when every legacy name has
 // drained, `LEGACY_LAYOUT`, the migrate script and rule 2 are deleted together.
 
@@ -277,21 +303,6 @@ const KIND_NAMES: ReadonlySet<string> = new Set<string>(DATA_DIR_KINDS);
  *   `paths:no-inlined-worktree-artifacts` above, not by a registry of names.
  */
 const OPEN_KINDS: ReadonlySet<string> = new Set(["deprecated", "worktrees"]);
-
-function isDataDir(value: unknown): value is DataDir {
-  if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<DataDir>;
-  const spec = candidate.spec as Partial<DataDir["spec"]> | undefined;
-  return (
-    typeof spec === "object" &&
-    spec !== null &&
-    typeof spec.kind === "string" &&
-    typeof spec.name === "string" &&
-    typeof spec.owner === "string" &&
-    typeof candidate.file === "function" &&
-    typeof candidate.ensure === "function"
-  );
-}
 
 /** What actually sits at a path — never a boolean, so "absent" and "wrong shape" stay distinct. */
 type RootNode =
@@ -482,17 +493,28 @@ const noUndeclaredDataDirsCheck: Check = {
   id: "paths:no-undeclared-data-dirs",
   description:
     "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>.",
-  // The subject is the live filesystem, not the tree — see the block comment
-  // above. A deploy-scoped check MUST supply a cacheSignature().
-  scope: "deploy",
+  // The subject is the MACHINE — one data root shared by every checkout on this
+  // box, holding the union of every branch that has ever run here. Not the tree,
+  // and not the dist this build produced, so no per-worktree caller can assert
+  // it: a build observing this root sees state another live branch created,
+  // which it did not cause and cannot repair. It was `scope: "deploy"` until
+  // that difference cost a worktree its deploy — see the block comment above
+  // rule 3 and research/2026-09-01-global-host-scoped-data-root-audit.md. A
+  // non-tree-scoped check MUST supply a cacheSignature().
+  scope: "host",
   cacheSignature(): string {
     // Everything the verdict reads: the root's listing, each kind directory's
-    // listing (the second-level rule), and what each legacy name actually is
-    // (the symlink verification). Folding in less than this is how a cached PASS
-    // outlives the move it was recorded before.
+    // listing (the second-level rule), what each legacy name actually is (the
+    // symlink verification), and every other namespace's declaration manifest
+    // (the attribution below). Folding in less than this is how a cached PASS
+    // outlives the move it was recorded before — and, for the manifests
+    // specifically, how a pass recorded while another checkout excused an entry
+    // would replay green after that checkout was deleted and the entry became a
+    // real orphan. The root listing does not change when a namespace goes away.
     const obs = observeRoot();
     if (obs.entries === null) return "no-root";
     const lines = [
+      `manifests:${manifestStamps().join(",")}`,
       `root:${[...obs.entries].sort().join(",")}`,
       ...[...obs.kinds.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -520,17 +542,40 @@ const noUndeclaredDataDirsCheck: Check = {
       label: "data-dir",
     });
     const declared = getDataDirs();
-    const declaredKeys = new Set(declared.keys());
-
+    // Both local sets from the ONE derivation each namespace publishes with, so
+    // what this checkout checks itself against and what it publishes for others
+    // cannot become two different answers.
+    const local = declaredSets(declared);
+    const declaredKeys = new Set(local.keys);
     // The grandfathered live services (postgres, sockets, zero, node): declared
-    // where they already sit rather than moved under their kind. The FIRST
-    // segment only — a legacy path may reach deeper than the root's own listing,
-    // and what is being cleared here is exactly one top-level entry.
-    const permanent = new Set<string>();
-    for (const dir of declared.values()) {
-      const legacy = dir.spec.legacyLocation;
-      if (legacy) permanent.add(legacy.path.split("/")[0]!);
-    }
+    // where they already sit rather than moved under their kind.
+    const permanent = new Set(local.rootEntries);
+
+    // What the OTHER live namespaces on this machine declare. The data root is
+    // host-global while `declared` above is one branch's view, so an entry a
+    // concurrently-running agent's unmerged branch owns is invisible here — and
+    // used to be reported as an orphan nobody could act on. See the manifest
+    // module for the whole story.
+    // `checkoutWorktreeName`, not `currentWorktreeName`: this runs in a CLI
+    // process, where `SINGULARITY_WORKTREE` (a gateway-set, backend-only var) is
+    // unset and `currentWorktreeName()` would answer `main` from every worktree.
+    // Excluding the wrong namespace would leave OUR OWN possibly-stale manifest
+    // in the foreign set, where it could excuse an entry this checkout has
+    // stopped declaring — turning a real local orphan into someone else's.
+    const foreign = readForeignManifests(
+      checkoutWorktreeName(await getWorktreeRoot()),
+    );
+    /** Attributed entries, collected across both rules for one log line. */
+    const attributed = new Map<string, string[]>();
+    const owned = (
+      candidates: readonly string[],
+      which: "keys" | "rootEntries",
+    ): string[] => {
+      const split = partitionByOwner(candidates, foreign.manifests, which);
+      for (const [name, owners] of split.attributed)
+        attributed.set(name, owners);
+      return split.orphans;
+    };
 
     const table = legacyRootEntries();
     const tableNames = new Set(table.map((e) => e.name));
@@ -545,7 +590,7 @@ const noUndeclaredDataDirsCheck: Check = {
         !permanent.has(name) &&
         !tableNames.has(name),
     );
-    for (const name of undeclared.sort())
+    for (const name of owned(undeclared.sort(), "rootEntries"))
       offenders.push(`${name} — undeclared entry at the data root`);
 
     // Rule 2 — the legacy names are VERIFIED, not merely tolerated.
@@ -583,13 +628,17 @@ const noUndeclaredDataDirsCheck: Check = {
         );
         continue;
       }
-      for (const child of children.sort()) {
-        if (OS_NOISE.has(child)) continue;
-        if (declaredKeys.has(`${kind}/${child}`)) continue;
+      const candidates = children
+        .sort()
+        .filter(
+          (child) =>
+            !OS_NOISE.has(child) && !declaredKeys.has(`${kind}/${child}`),
+        )
+        .map((child) => `${kind}/${child}`);
+      for (const key of owned(candidates, "keys"))
         offenders.push(
-          `${kind}/${child} — inside a kind directory but not a declared \`${kind}/${child}\``,
+          `${key} — inside a kind directory but not a declared \`${key}\``,
         );
-      }
     }
 
     // The table is only a to-do list if somebody is told when an item is done.
@@ -603,6 +652,31 @@ const noUndeclaredDataDirsCheck: Check = {
       "stdout",
     );
 
+    // Attributed entries are NOT offenders and are not silent either. This is a
+    // normal state on a machine running several agents at once: the owning
+    // branch simply has not merged yet, at which point the entry becomes
+    // ordinarily declared here and this line stops mentioning it.
+    if (attributed.size > 0) {
+      ctx.log?.(
+        `paths:no-undeclared-data-dirs: ${attributed.size} entr(ies) under ${obs.root} are ` +
+          `declared by another live worktree rather than by this checkout — ` +
+          `${describeAttribution(attributed)}. Nothing to do: they stop appearing here once ` +
+          `those branches merge.`,
+        "stdout",
+      );
+    }
+    // A namespace publishing an unusable manifest attributes nothing, so its
+    // live directories would surface above as orphans. Say so, or that reads as
+    // an unexplained failure in a checkout that owns neither end of it.
+    for (const bad of foreign.unreadable) {
+      ctx.log?.(
+        `paths:no-undeclared-data-dirs: ignoring ${bad.namespace}'s declaration manifest — ` +
+          `${bad.reason}. Directories that namespace owns will be reported as undeclared ` +
+          `until it publishes a readable one (its backend rewrites it on boot).`,
+        "stderr",
+      );
+    }
+
     if (offenders.length === 0) return { ok: true };
 
     return {
@@ -611,6 +685,12 @@ const noUndeclaredDataDirsCheck: Check = {
         `${offenders.length} problem(s) under the data root (${obs.root}):\n    ` +
         offenders.join("\n    "),
       hint:
+        "An entry here is NOT necessarily yours. This root is shared by every checkout on the " +
+        "machine, so a directory can belong to another live worktree whose branch has not merged " +
+        "yet — those are recognised automatically from each namespace's published declaration " +
+        "manifest and reported as owned, not as failures, so an entry reaching THIS list means no " +
+        "live namespace on this machine declares it (one that has never booted publishes no " +
+        "manifest; boot it and re-run). " +
         "Every directory under the data root has exactly one owning plugin. Declare it: create " +
         "`plugins/<owner>/data-dirs/index.ts` default-exporting a `DataDir[]` built with " +
         "`defineDataDir({ kind, name, owner, description, reclaim })` from " +

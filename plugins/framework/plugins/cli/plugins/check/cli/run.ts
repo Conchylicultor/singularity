@@ -158,16 +158,23 @@ const run: CliAction<
 > = async (checks, opts) => {
   // Validate before anything else: an unrecognized scope must NOT fall
   // through to `scope: undefined`, which means "every scope" — a typo would
-  // then silently run MORE than asked and report a pass.
-  let scope: CheckScope | undefined;
+  // then silently run MORE than asked and report a pass. EVERY part of a
+  // comma-separated list is validated for the same reason: one good part must
+  // not carry a typo'd sibling through.
+  let scope: CheckScope[] | undefined;
   if (opts.scope !== undefined) {
-    if (!(CHECK_SCOPES as readonly string[]).includes(opts.scope)) {
+    const parts = opts.scope.split(",").map((s) => s.trim());
+    const unknown = parts.filter(
+      (s) => !(CHECK_SCOPES as readonly string[]).includes(s),
+    );
+    if (unknown.length > 0) {
       console.error(
-        `Unknown --scope "${opts.scope}". Expected one of: ${CHECK_SCOPES.join(", ")}.`,
+        `Unknown --scope ${unknown.map((s) => `"${s}"`).join(", ")}. ` +
+          `Expected one of: ${CHECK_SCOPES.join(", ")} (comma-separated for several).`,
       );
       process.exit(1);
     }
-    scope = opts.scope as CheckScope;
+    scope = parts as CheckScope[];
   }
 
   // NESTING, resolved before anything acts on it. The parent op (`push`, or

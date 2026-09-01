@@ -622,12 +622,18 @@ export async function fastValidationJobs(opts: {
   // freshly-loaded registry; no id list crosses the boundary. An empty selection
   // (the last `alwaysRun: true` deleted) fails loudly there, which is the only
   // place it can be noticed now that nothing here enumerates the set.
+  //
+  // The scopes are named alongside it (they compose as an AND) for the same
+  // reason the full pass names them: this is still a BUILD asserting the
+  // verdict, and a build cannot assert `host`. Belt to the braces of the
+  // load-time refusal of an `alwaysRun` host check — this states what the pass
+  // claims, that states that the contradiction cannot be written.
   jobs.push(async (grant) => {
     const start = performance.now();
     const result = await runCheckSubprocess({
       root,
       grant,
-      select: { alwaysRun: true },
+      select: { scope: ["tree", "deploy"], alwaysRun: true },
       runId: checkRunId,
       output: "capture",
     });

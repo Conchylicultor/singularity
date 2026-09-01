@@ -35,9 +35,17 @@
 //     local gitignored dist that `build` produces: it never lands on main, and
 //     push's own rebase moves the tree past it by construction, so a push can
 //     only ever report the artifact as stale for having done its job.
-//   • `build` (full pass) — NO scope at all. Build is the caller that *can*
-//     assert `deploy`, because it is the one producing the dist.
+//   • `build` (full pass) — `scope: ["tree", "deploy"]`. Build is the caller
+//     that *can* assert `deploy`, because it is the one producing the dist. It
+//     names both scopes rather than dropping the filter: "every scope" is not
+//     the claim it is making, and while it WAS spelled that way build silently
+//     took on `host` too — asserting the shared `~/.singularity` data root, and
+//     so failing a deploy over a directory another agent's unmerged branch had
+//     just declared.
 //   • `build --skip-checks` — `alwaysRun: true`, the cheap structural subset.
+//
+// Nobody asserts `host` from an op. Its subject is the machine, shared with
+// every checkout on the box; its home is a standalone `./singularity check`.
 //
 // **`SINGULARITY_BUILD_IN_PROGRESS` must pass through untouched.** That marker
 // is how a dist-comparing check (`web-artifacts:map-in-sync`) learns to skip a
@@ -74,7 +82,7 @@ export interface CheckSubprocessOptions {
    * child. Deliberately no `ids` field: a list computed in this process would be
    * read out of the very module cache the child exists to escape.
    */
-  select?: { scope?: CheckScope; alwaysRun?: boolean };
+  select?: { scope?: CheckScope | readonly CheckScope[]; alwaysRun?: boolean };
   /**
    * The caller's run id (`--run-id`), adopted by the child so `check-<id>.log`,
    * its progress records and its console all name the parent op. Omit it and
@@ -126,7 +134,11 @@ export async function runCheckSubprocess(
   // Push's exact argv shape, and never a positional: a positional would be a
   // check ID, i.e. selection by id, which this helper does not do.
   const argv = ["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"];
-  if (select?.scope !== undefined) argv.push("--scope", select.scope);
+  if (select?.scope !== undefined)
+    argv.push(
+      "--scope",
+      typeof select.scope === "string" ? select.scope : select.scope.join(","),
+    );
   if (select?.alwaysRun === true) argv.push("--always-run");
   if (runId !== undefined) argv.push("--run-id", runId);
 

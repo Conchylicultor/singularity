@@ -162,7 +162,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
-    - **`paths`**
+    - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Plugins:
         - **`display`** — The human-facing spelling of the singularity data dirs (the `~/…` form a message, an empty state, or an agent prompt writes). Web-safe by construction: string literals only, no node:* and no homedir() — so the browser can name a directory the server resolves.
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.

@@ -65,5 +65,14 @@ export {
 } from "../core/internal/prune-artifacts";
 
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { publishDataDirsManifest } from "./internal/publish-data-dirs";
 
-export default {} satisfies ServerPluginDefinition;
+export { publishDataDirsManifest } from "./internal/publish-data-dirs";
+
+export default {
+  description:
+    "Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.",
+  onReady: async () => {
+    await publishDataDirsManifest();
+  },
+} satisfies ServerPluginDefinition;

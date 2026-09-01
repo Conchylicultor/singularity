@@ -44,25 +44,58 @@ export function scopeOf(check: Check): CheckScope {
 }
 
 /**
- * Enforce the `Check.scope` invariant at LOAD, not at run: a `deploy` check's
+ * Enforce the `Check.scope` invariant at LOAD, not at run: a non-tree check's
  * subject is outside the tree hash, so without a `cacheSignature()` the runner
  * would record its verdict under a tree-only key and replay that pass for every
- * later deploy state — a green that can never go red again. Throwing here fires
- * for `runChecks` and `--list` alike, so the violation surfaces the moment the
- * check is written rather than as an inexplicably-passing check months later.
+ * later state of that subject — a green that can never go red again. Throwing
+ * here fires for `runChecks` and `--list` alike, so the violation surfaces the
+ * moment the check is written rather than as an inexplicably-passing check
+ * months later.
+ *
+ * Written as "anything but `tree`" rather than as a list of the scopes that owe
+ * a signature. The condition used to be `=== "deploy"`, which was the same set
+ * while `deploy` was the only non-tree scope — and would have silently exempted
+ * `host` the moment it was added, which is exactly the class of hole this
+ * assertion exists to close.
  */
 function assertScopeInvariant(checks: Check[]): void {
   for (const check of checks) {
-    if (scopeOf(check) === "deploy" && check.cacheSignature === undefined) {
+    const scope = scopeOf(check);
+    // `alwaysRun` means "run even under `build --skip-checks`" — it is defined
+    // entirely in terms of the ops (build, push) that a `host` verdict is not
+    // theirs to assert. The pair is a contradiction, so it has no spelling
+    // rather than being quietly filtered out at each call site.
+    if (scope === "host" && check.alwaysRun === true) {
       throw new Error(
-        `Check "${check.id}" is scope: "deploy" but supplies no cacheSignature(). ` +
-          `A deploy-scoped verdict is not covered by the working-tree hash, so caching it ` +
+        `Check "${check.id}" is scope: "host" and alwaysRun: true, which cannot both hold. ` +
+          `alwaysRun means "run during a build even with --skip-checks", and a build cannot ` +
+          `assert a host-scoped verdict: its subject is the machine, shared with every other ` +
+          `checkout on this box and ahead of any one branch. Drop alwaysRun, or reclassify ` +
+          `the check if its subject really is this tree or this build's deploy.`,
+      );
+    }
+    if (scope !== "tree" && check.cacheSignature === undefined) {
+      throw new Error(
+        `Check "${check.id}" is scope: "${scope}" but supplies no cacheSignature(). ` +
+          `A ${scope}-scoped verdict is not covered by the working-tree hash, so caching it ` +
           `under the tree hash alone would record a permanently stale pass. Add a ` +
-          `cacheSignature() that covers the deploy state it inspects (or returns null to ` +
+          `cacheSignature() that covers the ${scope} state it inspects (or returns null to ` +
           `opt out of caching entirely).`,
       );
     }
   }
+}
+
+/**
+ * The requested scopes as a set, or `null` for "every scope". ONE normalisation,
+ * shared by the filter and by the string the progress run / transcript record —
+ * so what a run reports it selected cannot drift from what it actually ran.
+ */
+function normalizeScopes(
+  scope: CheckScope | readonly CheckScope[] | undefined,
+): readonly CheckScope[] | null {
+  if (scope === undefined) return null;
+  return typeof scope === "string" ? [scope] : scope;
 }
 
 async function loadAllChecks(): Promise<Check[]> {
@@ -95,12 +128,20 @@ export interface RunChecksOptions {
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
   /**
-   * Restrict the run to checks of this scope; omitted = every scope. See
+   * Restrict the run to checks of these scopes; omitted = every scope. See
    * `Check.scope`: `push` passes "tree" because a deploy-scoped verdict is about
-   * an artifact outside the push payload. Selection is by PROPERTY — a caller
+   * an artifact outside the push payload, and `build` passes ["tree","deploy"]
+   * because it produces the dist the second kind inspects but does not own the
+   * host state the third kind is about. Selection is by PROPERTY — a caller
    * never enumerates ids to include or exclude.
+   *
+   * A SET, not one value, because "the scopes I can assert" is genuinely plural
+   * for a caller sitting between the extremes: `build` asserts two of the three.
+   * Spelled as a lone `CheckScope` it could only say so by dropping the filter
+   * entirely, which is not the same claim — it silently picks up every scope
+   * added later, which is exactly how a build came to assert the host's state.
    */
-  scope?: CheckScope;
+  scope?: CheckScope | readonly CheckScope[];
   /**
    * Restrict the run to checks flagged `Check.alwaysRun`; omitted = no such
    * restriction. This is the `--skip-checks` validation set, selected BY
@@ -179,8 +220,9 @@ export async function runChecks(
   // knowable here; `treeHash` and the resolved selection arrive via
   // `progress.resolved()` once bootstrap has earned them.
   const requested = ids && ids.length > 0 ? ids : null;
+  const requestedScopes = normalizeScopes(options.scope)?.join(",") ?? null;
   const progress = openProgressRun({
-    scope: options.scope ?? null,
+    scope: requestedScopes,
     requested,
     runId: options.logRun?.runId,
   });
@@ -193,7 +235,7 @@ export async function runChecks(
   const transcript = options.logRun
     ? openCheckTranscript({
         ...options.logRun,
-        scope: options.scope ?? null,
+        scope: requestedScopes,
         requested,
       })
     : null;
@@ -222,13 +264,13 @@ export async function runChecks(
   // dropping it would run a smaller set than asked and report a pass — and with
   // a single named id, an empty selection reaches `Promise.all([])` and passes
   // vacuously. Fail loudly instead.
-  const scope = options.scope;
+  const scopes = normalizeScopes(options.scope);
   const scoped =
-    scope === undefined ? named : named.filter((c) => scopeOf(c) === scope);
-  if (scope !== undefined && ids && ids.length > 0) {
-    const excluded = named.filter((c) => scopeOf(c) !== scope);
+    scopes === null ? named : named.filter((c) => scopes.includes(scopeOf(c)));
+  if (scopes !== null && ids && ids.length > 0) {
+    const excluded = named.filter((c) => !scopes.includes(scopeOf(c)));
     if (excluded.length > 0) {
-      const message = `Excluded by --scope ${scope}: ${excluded
+      const message = `Excluded by --scope ${scopes.join(",")}: ${excluded
         .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
         .join(", ")}. Drop the --scope flag, or run only checks of that scope.`;
       console.error(message);

@@ -367,6 +367,34 @@ export const worktreeArtifacts = {
    */
   releaseWebDist: (worktree: string, composition: string): string =>
     join(worktreeDataDir(asNamespace(worktree)), "release-web", composition),
+  /**
+   * What this namespace's checkout DECLARES under the data root — the
+   * `${kind}/${name}` keys of its `defineDataDir` registry, plus the top-level
+   * entries its `legacyLocation` declarations claim.
+   *
+   * Not a build artifact (neither is `spec`), and deliberately WITHOUT a run-id
+   * variant: a namespace has exactly one declared set, and this file's whole job
+   * is to be found at a fixed path by an audit running in a DIFFERENT checkout.
+   *
+   * That cross-checkout read is the point. `~/.singularity/` is host-global —
+   * every namespace on this box writes into it — while a checkout's declarations
+   * are one branch's view, so `paths:no-undeclared-data-dirs` used to report a
+   * directory another live worktree had just declared as an orphan. Each
+   * namespace publishing its own set is what makes the rule as host-global as
+   * the root it polices.
+   *
+   * The set must come from the EVALUATED registry, never from parsing the
+   * `data-dirs/index.ts` sources: `infra/host-admission` derives one
+   * `locks/<id>` declaration per entry of `RESERVED_POOLS`, so a declared name
+   * is not always a literal anyone can grep for.
+   *
+   * Its lifetime is exactly right by construction — `removeWorktreeSpec` already
+   * removes `worktreeDataDir(name)` recursively, so the manifest dies with the
+   * namespace, i.e. at the moment that namespace stops being able to write to
+   * the root.
+   */
+  dataDirs: (name: Namespace): string =>
+    join(worktreeDataDir(name), "data-dirs.json"),
 } as const;
 
 /**

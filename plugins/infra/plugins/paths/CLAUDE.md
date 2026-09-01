@@ -81,6 +81,22 @@ is what once made a release report a null build id.
 A directory is declared **exactly once** — a duplicate `${kind}/${name}` throws,
 mirroring `defineFileSink`. Two owners claiming one directory is always a bug.
 
+### "Declared" means declared on this MACHINE, not in this checkout
+
+The root is shared by every checkout on the box; a checkout's registry is one
+branch's view. So each namespace's backend publishes its own declared set to
+`worktreeArtifacts.dataDirs(namespace)` on boot, and the audit reads the union —
+an entry another live namespace owns is logged as owned, not failed. Only an
+entry nobody on this machine declares is an offender. Two things not to undo:
+
+- The manifest comes from the **evaluated registry**, never from parsing
+  `data-dirs/index.ts` — `infra/host-admission` mints one `locks/<id>`
+  declaration per pool, so a declared name is not always a literal.
+- The check is `scope: "host"` and so **does not run during a build**: no
+  per-worktree op can assert a root that runs ahead of its own branch. Run it
+  with a standalone `./singularity check`. A namespace that has never booted
+  publishes nothing, so its dirs read as undeclared until it does.
+
 `paths:no-undeclared-data-dirs` reads the REAL root and fails on any top-level
 entry that is neither declared nor grandfathered. Grandfathering is driven by
 one `LEGACY_LAYOUT` table (`core/internal/legacy-layout.ts`), shared by the
@@ -115,10 +131,12 @@ run everywhere.
 
 ## Plugin reference
 
+- Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
   - Uses:
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/namespace.asNamespace`
+    - `infra/namespace.isNamespace`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.Namespace`
     - `infra/namespace.namespaceFor`
@@ -257,6 +275,7 @@ run everywhere.
     - `pruneWorktreeCheckArtifacts`
     - `pruneWorktreeReleaseArtifacts`
     - `PS`
+    - `publishDataDirsManifest`
     - `relativeToDataRoot`
     - `RELEASE_ARTIFACTS_RETENTION`
     - `releaseIdentity`

@@ -17212,11 +17212,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/worktree-cleanup`
       - Server:
         - Exports (values): `ndjsonResponse`
-    - **`paths`**
+    - **`paths`** — Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
       - Core:
         - Uses:
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/namespace.asNamespace`
+          - `infra/namespace.isNamespace`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.Namespace`
           - `infra/namespace.namespaceFor`
@@ -17355,6 +17356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pruneWorktreeCheckArtifacts`
           - `pruneWorktreeReleaseArtifacts`
           - `PS`
+          - `publishDataDirsManifest`
           - `relativeToDataRoot`
           - `RELEASE_ARTIFACTS_RETENTION`
           - `releaseIdentity`

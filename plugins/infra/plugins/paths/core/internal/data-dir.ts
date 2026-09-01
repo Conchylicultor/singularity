@@ -263,3 +263,27 @@ export function defineDataDir(spec: DataDirSpec): DataDir {
 export function getDataDirs(): ReadonlyMap<string, DataDir> {
   return new Map(dataDirs);
 }
+
+/**
+ * Is this default export from a `data-dirs/index.ts` really a {@link DataDir}?
+ *
+ * Lives beside the type it validates, not in one caller: both consumers of the
+ * `data-dirs` collected dir — the audit check and the backend publishing its
+ * namespace's manifest — must agree on what counts, and a second hand-written
+ * copy is how one of them silently starts accepting or rejecting a shape the
+ * other does not.
+ */
+export function isDataDir(value: unknown): value is DataDir {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<DataDir>;
+  const spec = candidate.spec as Partial<DataDirSpec> | undefined;
+  return (
+    typeof spec === "object" &&
+    spec !== null &&
+    typeof spec.kind === "string" &&
+    typeof spec.name === "string" &&
+    typeof spec.owner === "string" &&
+    typeof candidate.file === "function" &&
+    typeof candidate.ensure === "function"
+  );
+}

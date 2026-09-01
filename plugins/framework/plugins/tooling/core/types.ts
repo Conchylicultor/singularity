@@ -40,7 +40,7 @@ export interface CheckContext {
  * CLI's `--scope` flag) reads the same closed set the type is derived from, and
  * a new scope can never be accepted by the type but rejected by the flag.
  */
-export const CHECK_SCOPES = ["tree", "deploy"] as const;
+export const CHECK_SCOPES = ["tree", "deploy", "host"] as const;
 
 /**
  * What a check's verdict is a function of — the axis that decides which callers
@@ -66,6 +66,17 @@ export interface Check {
    *     assert it — no matter how it is scheduled. Its real homes are `build`
    *     (which deploys, then verifies), a standalone `./singularity check`, and
    *     main's post-push auto-build.
+   *   - "host" → the verdict is about this MACHINE: the shared data root
+   *     (`~/.singularity/`), host-global services, state no checkout owns. It is
+   *     a function of neither the tree nor the artifact a build produces, and —
+   *     unlike the two above — NO per-worktree caller can assert it. The subject
+   *     is shared with every other checkout on the box and is AHEAD of any one
+   *     branch: a worktree observing it sees state some other live branch
+   *     created, which it did not cause and cannot repair. Asserting it from a
+   *     build is what made `paths:no-undeclared-data-dirs` fail a deploy on a
+   *     directory another agent's unmerged branch had just declared (see
+   *     research/2026-09-01-global-host-scoped-data-root-audit.md). Its home is a
+   *     standalone `./singularity check` and any host-singleton runner.
    *
    * TREE PURITY — the second half of what `"tree"` promises. The verdict must be
    * a function of the tree hash AND of NOTHING ELSE, including what else already
@@ -99,15 +110,18 @@ export interface Check {
    *     indistinguishable from a correct one, which is exactly how it shipped.
    *
    * Consumers select BY THIS PROPERTY, NEVER by check id: `push` asks for
-   * `--scope tree`, not for "everything except web-artifacts:map-in-sync".
-   * Classifying a new check is then the only edit a new check needs.
+   * `--scope tree`, and `build` for `--scope tree,deploy` — never for
+   * "everything except web-artifacts:map-in-sync". Classifying a new check is
+   * then the only edit a new check needs.
    *
-   * THE INVARIANT that makes this load-bearing: `scope: "deploy"` means the tree
-   * hash does NOT cover the check's subject, so the check MUST supply a
-   * `cacheSignature()` (covering the deploy state, or returning null). Without
-   * one, a verdict about the deploy would be recorded under a tree-only cache
-   * key — a pass that survives every later deploy change, i.e. a permanently
-   * stale green. Enforced at load; a violation throws.
+   * THE INVARIANT that makes this load-bearing: any scope OTHER than `"tree"`
+   * means the tree hash does NOT cover the check's subject, so the check MUST
+   * supply a `cacheSignature()` (covering that subject, or returning null).
+   * Without one, a verdict about the deploy or the host would be recorded under
+   * a tree-only cache key — a pass that survives every later change to it, i.e.
+   * a permanently stale green. Enforced at load; a violation throws. Stated
+   * against the `"tree"` case on purpose: written as a list of the scopes that
+   * need it, a scope added later would silently owe nothing.
    */
   scope?: CheckScope;
   /**

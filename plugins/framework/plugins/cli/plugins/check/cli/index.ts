@@ -49,12 +49,16 @@ export default defineCliCommand<
       description: "Bypass the tree-hash check-result cache",
     },
     {
-      flags: "--scope <scope>",
+      flags: "--scope <scopes>",
       description:
-        `Run only checks of this scope (${CHECK_SCOPES.join(" | ")}); default: every scope. ` +
+        `Run only checks of these scopes — one, or a comma-separated list, of ` +
+        `${CHECK_SCOPES.join(" | ")}; default: every scope. ` +
         "`tree` = the verdict is a function of the tree content, i.e. of what a push carries; " +
-        "`deploy` = it verifies the local gitignored dist/artifact store `build` produces. " +
-        "`--scope tree` reproduces the pass `./singularity push` runs.",
+        "`deploy` = it verifies the local gitignored dist/artifact store `build` produces; " +
+        "`host` = it is about this MACHINE — the shared data root and other host-global state " +
+        "no single worktree owns, which another live checkout may have created. " +
+        "`--scope tree` reproduces the pass `./singularity push` runs, and " +
+        "`--scope tree,deploy` the pass `./singularity build` runs.",
     },
     {
       flags: "--always-run",
