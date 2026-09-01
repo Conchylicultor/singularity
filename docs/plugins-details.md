@@ -5724,6 +5724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/center.Center`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/tooltip.WithTooltip`
         - Exports (values): `AppRail`
@@ -5804,9 +5805,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.useSurfaceMode`
           - `apps-core/tabs.useTabs`
           - `primitives/css/clip.Clip`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.PortalThemeScopeProvider`
           - `primitives/css/viewport-overlay.useViewportEscape`
           - `shell/action-bar.ActionBar`
         - Exports (types):
@@ -5826,9 +5827,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
           - Web:
             - Contributes: `Surface.Placement`
-            - Uses:
-              - `apps-core/surface.Surface`
-              - `primitives/css/ui-kit.cn`
+            - Uses: `apps-core/surface.Surface`
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
           - Web:
             - Contributes:
@@ -6025,7 +6024,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs.exitToPreviousMode`
               - `apps-core/tabs.getSurfaceMode`
               - `primitives/css/pin.Pin`
-              - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
               - `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
@@ -6043,9 +6041,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/css/ui-kit.PortalThemeScopeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/sortable-list.SortableItem`
@@ -6061,8 +6059,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.loadScopePrefixFor`
           - `apps-core/tabs.Tab`
           - `apps-core/tabs.useTabs`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.appThemeScope`
-          - `primitives/css/ui-kit.PortalThemeScopeProvider`
           - `primitives/pane.PaneBasePathContext`
           - `primitives/pane.PaneSurfaceProvider`
           - `primitives/pane.useIndexMatch`
@@ -17972,12 +17970,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `layouts/route-fallback.DeferredRouteFallback`
-          - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/pane.PaneBox`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
           - `primitives/pane.paneOwnerFor`
-          - `primitives/pane.PaneResolveGuard`
           - `primitives/pane.usePaneMatch`
           - `primitives/ui-context.UiRegion`
         - Exports (values): `FullPane`
@@ -18001,19 +17998,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/route-fallback.DeferredRouteFallback`
           - `primitives/auto-scroll.scrollChildIntoView`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/pane.MatchEntry`
           - `primitives/pane.PaneBasePathContext`
+          - `primitives/pane.PaneBox`
           - `primitives/pane.PaneInstanceContext`
           - `primitives/pane.PaneLayoutContext`
           - `primitives/pane.paneOwnerFor`
-          - `primitives/pane.PaneResolveGuard`
           - `primitives/pane.PaneStore`
+          - `primitives/pane.paneThemeScope`
           - `primitives/pane.usePaneMatch`
           - `primitives/pane.usePaneStore`
           - `primitives/pane.useRoute`
@@ -23767,6 +23765,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/type-scale`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
+        - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.PortalThemeScopeProvider`
+              - `primitives/css/ui-kit.SURFACE_LEVELS`
+            - Exports (types):
+              - `ThemeProps`
+              - `ThemeSurface`
+            - Exports (values): `Theme`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/app-rail`
+              - `apps-core/surface`
+              - `apps-core/tab-bar`
+              - `apps-core/tab-surface`
+              - `layouts/miller`
+              - `primitives/pane`
+              - `shell/toast`
         - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
           - Web:
             - Uses:
@@ -23965,12 +23982,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-rail`
               - `apps-core/layout`
               - `apps-core/surface`
-              - `apps-core/surface/docked`
               - `apps-core/surface/floating`
               - `apps-core/surface/floating/wallpaper`
               - `apps-core/surface/floating/wallpaper/from-url`
               - `apps-core/surface/floating/wallpaper/upload`
-              - `apps-core/surface/solo`
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
               - `apps-core/theme-scope`
@@ -24126,7 +24141,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `integrations/gmail`
               - `integrations/google-maps`
-              - `layouts/full-pane`
               - `layouts/miller`
               - `layouts/route-fallback`
               - `page/attachment-block`
@@ -24196,6 +24210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/surface`
               - `primitives/css/switch`
               - `primitives/css/text`
+              - `primitives/css/theme-boundary`
               - `primitives/css/toggle-chip`
               - `primitives/css/viewport-overlay`
               - `primitives/cursor-menu`
@@ -26753,8 +26768,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.ScrollProps`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.Theme`
+          - `primitives/css/ui-kit.appThemeScope`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/install-sink.defineInstallSink`
@@ -26811,6 +26829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `openPane`
           - `Pane`
           - `PaneBasePathContext`
+          - `PaneBox`
           - `PaneChrome`
           - `PaneHeaderCell`
           - `PaneIconAction`
@@ -26819,11 +26838,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PaneLoadScopeContext`
           - `PaneMatchContext`
           - `paneOwnerFor`
-          - `PaneResolveGuard`
           - `PaneScroll`
           - `PaneStoreContext`
           - `PaneSurfaceAppContext`
           - `PaneSurfaceProvider`
+          - `paneThemeScope`
           - `parseUrl`
           - `peekBasePath`
           - `peekRoute`
@@ -29415,6 +29434,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `ToasterHost`
         - Uses:
           - `apps-core/theme-scope.useChromeThemeScope`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/element-size.useElementSize`

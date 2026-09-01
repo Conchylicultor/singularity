@@ -1,14 +1,17 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
+  PaneBox,
   PaneLayoutContext,
-  PaneResolveGuard,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
-import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
-import { useClearMaximize, useColumnMaximize, useMaximizedId } from "../hooks/use-column-maximize";
+import {
+  useClearMaximize,
+  useColumnMaximize,
+  useMaximizedId,
+} from "../hooks/use-column-maximize";
 import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
 import { CollapsedBar } from "./collapsed-bar";
 import { ResizeHandle } from "./resize-handle";
@@ -22,7 +25,12 @@ interface ColumnProps {
   dragHandleProps?: Record<string, unknown>;
 }
 
-export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps) {
+export function Column({
+  entry,
+  isFirst,
+  isLast,
+  dragHandleProps,
+}: ColumnProps) {
   const [collapsed, toggleCollapse] = useColumnCollapse(entry.uuid);
   const [isMaximized, toggleMaximize] = useColumnMaximize(entry.uuid);
   const maximizedId = useMaximizedId();
@@ -33,7 +41,10 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
     entry.pane.width ?? DEFAULT_WIDTH,
   );
 
-  const divRef = useRef<HTMLDivElement>(null);
+  // `HTMLElement`, not `HTMLDivElement`: `PaneBox` publishes its box as the
+  // generic element (the tag is the theme boundary's to pick), and `offsetWidth`
+  // is all this measurement needs.
+  const divRef = useRef<HTMLElement>(null);
   // Tracks the actual rendered width while this column has flex-1 (isLast=true).
   const capturedWidthRef = useRef(0);
 
@@ -49,7 +60,11 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
   const paneId = entry.pane.id;
 
   useLayoutEffect(() => {
-    if (!isLast && capturedWidthRef.current > 0 && !hasStoredWidth(tabId, paneId)) {
+    if (
+      !isLast &&
+      capturedWidthRef.current > 0 &&
+      !hasStoredWidth(tabId, paneId)
+    ) {
       // First time a column opens to our right and the user hasn't set a custom
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
@@ -88,36 +103,44 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
   // subtree is never torn down. The CollapsedBar takes position 1.
   return (
     <>
-      <div
-        ref={divRef}
-        data-pane-id={paneId}
-        style={isCollapsed ? { display: "none" } : (expandFull ? undefined : { width })}
-        // The column body is a flex-col clip pane whose row-child role is
-        // JS-measured: the leaf column flex-grows (`flex-1`) while fixed-width
-        // columns stay rigid (`shrink-0`), and `capturedWidthRef` reads
-        // `offsetWidth` to split space 50/50 when a new column opens. The
-        // flex-grow/shrink choice is computed per render, so it stays raw.
-        // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured flex-grow/shrink column body in miller's row
-        className={
-          isCollapsed
-            ? undefined
-            : expandFull
-              ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
-              : "flex h-full shrink-0 flex-col overflow-hidden"
-        }
-      >
-        <PaneLayoutContext.Provider value={paneLayout}>
-          {/* Forward the pane id across portals so popovers/menus opened from
-              this column still report their containing pane to the picker. */}
-          <PortalForwardProvider name="data-pane-id" value={paneId}>
-            <PaneResolveGuard pane={entry.pane} params={entry.params} />
-          </PortalForwardProvider>
-        </PaneLayoutContext.Provider>
-      </div>
+      {/* `PaneBox` is the pane's own box: it stamps the pane id and the home
+          app's theme scope on this element AND forwards both across portals, so
+          popovers opened from this column still report their containing pane and
+          keep its theme. This renderer owns only where the box sits and how wide
+          it is. `PaneLayoutContext` wraps from outside — it is React context, so
+          it reaches the pane regardless of which element it hangs off. */}
+      <PaneLayoutContext.Provider value={paneLayout}>
+        <PaneBox
+          ref={divRef}
+          pane={entry.pane}
+          params={entry.params}
+          style={
+            isCollapsed
+              ? { display: "none" }
+              : expandFull
+                ? undefined
+                : { width }
+          }
+          // The column body is a flex-col clip pane whose row-child role is
+          // JS-measured: the leaf column flex-grows (`flex-1`) while fixed-width
+          // columns stay rigid (`shrink-0`), and `capturedWidthRef` reads
+          // `offsetWidth` to split space 50/50 when a new column opens. The
+          // flex-grow/shrink choice is computed per render, so it stays raw.
+          // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured flex-grow/shrink column body in miller's row
+          className={
+            isCollapsed
+              ? undefined
+              : expandFull
+                ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
+                : "flex h-full shrink-0 flex-col overflow-hidden"
+          }
+        />
+      </PaneLayoutContext.Provider>
       {isCollapsed ? (
         <CollapsedBar entry={entry} onExpand={toggleCollapse} />
       ) : (
-        !isLast && !isMaximized && (
+        !isLast &&
+        !isMaximized && (
           <ResizeHandle
             onResize={(dx) => setWidth((w) => w + dx)}
             onCollapse={toggleCollapse}

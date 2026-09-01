@@ -5,6 +5,14 @@ route is composed on screen. The pane primitive resolves a URL to an
 ordered route of panes; a layout plugin maps that route to a visible
 arrangement (columns, tabs, grid, overlays, …).
 
+A layout renderer paints a pane by rendering **`PaneBox`** (from the pane
+primitive) — never the pane's component directly. The box is what carries the
+pane's identity: it stamps `data-pane-id` and the home app's `data-theme-scope`
+on the element and forwards both across portals. The renderer owns only where
+that box sits and how big it is (`className` / `style` / `ref`). The pane
+primitive exports no other way to paint a pane, so a new layout cannot ship panes
+that report no pane id or silently inherit their host app's theme.
+
 Only one layout is mounted at a time. The shell wires it in by importing
 the layout plugin's renderer component (e.g. `<MillerColumns/>`) and
 mounting it in place of `<PaneRouter/>`.

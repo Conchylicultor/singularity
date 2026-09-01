@@ -4,8 +4,8 @@ import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web
 import {
   cn,
   ControlSizeProvider,
-  PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -96,114 +96,123 @@ export function AppTabBar() {
   });
 
   return (
-    <PortalThemeScopeProvider scope={themeScope}>
-      {/* `GrowRelay.Stop`: this Stack IS the strip, so the bar's grow ask has
-        arrived. It is not a <Line> (the bar inside owns the single-line
-        contract), so it says so itself rather than inheriting it. */}
-      <GrowRelay.Stop>
-        <Stack
-          direction="row"
-          align="center"
-          gap="none"
-          data-theme-scope={themeScope}
-          // The tab strip is chrome frame (like the sidebar/rail), so it wears the
-          // recessed `--sidebar` surface — distinct from `--background`. That
-          // figure/ground gap is what lets the active "connected" tab (which is
-          // `bg-background`, matching the content surface directly below it) read as
-          // raised out of the strip and fused with the content. A same-as-content
-          // strip (e.g. bg-background) would erase the contrast; bg-muted is unsafe
-          // because some presets make `--muted` lighter than `--background`.
-          // When fillHeight, the strip drops its bottom padding AND its border-b so
-          // the full-height active tab's bottom edge IS the content seam (no moat,
-          // no line) — the recessed color step alone separates strip from content.
-          // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body
-          className={cn(
-            "shrink-0 bg-sidebar px-xs",
-            fillHeight ? "pt-2xs" : "border-b py-2xs",
-          )}
+    // `GrowRelay.Stop`: this Stack IS the strip, so the bar's grow ask has
+    // arrived. It is not a <Line> (the bar inside owns the single-line
+    // contract), so it says so itself rather than inheriting it.
+    <GrowRelay.Stop>
+      <Theme
+        as={Stack}
+        direction="row"
+        align="center"
+        gap="none"
+        // One element is now the whole boundary — the scope tag, the portal
+        // forward that used to be a separate wrapper outside `GrowRelay.Stop`,
+        // and the paint. (Context crosses the DOM freely, so collapsing the
+        // wrapper onto the strip itself changes nothing about what portaled
+        // popovers read.)
+        name={themeScope}
+        // The tab strip is chrome frame (like the sidebar/rail), so it wears the
+        // recessed `--sidebar` surface — distinct from `--background`. That
+        // figure/ground gap is what lets the active "connected" tab (which is
+        // `bg-background`, matching the content surface directly below it) read as
+        // raised out of the strip and fused with the content. A same-as-content
+        // strip (e.g. `surface="canvas"`) would erase the contrast; a `sunken`
+        // one is unsafe because some presets make `--muted` lighter than
+        // `--background`. `chrome` is the role that says exactly this, and it
+        // brings the two helper vars `--sidebar` implies (a ghost control in the
+        // trailing action zone hovers to `--sidebar-accent`, not to the page
+        // canvas's `--muted`, which would read as no hover at all).
+        surface="chrome"
+        // When fillHeight, the strip drops its bottom padding AND its border-b so
+        // the full-height active tab's bottom edge IS the content seam (no moat,
+        // no line) — the recessed color step alone separates strip from content.
+        // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body
+        className={cn(
+          "shrink-0 px-xs",
+          fillHeight ? "pt-2xs" : "border-b py-2xs",
+        )}
+      >
+        {/* The bar IS the strip's grow cell (`min-w-0 flex-1`), which is why the
+        old `flex-1` spacer below the `+` is gone: a second claimant on the
+        same slack would leave the bar reading half the width it actually has,
+        and it would compact tabs while the row still had room. It absorbing
+        the slack is also what pins the trailing actions to the right edge.
+        self-stretch/items-stretch (fillHeight only): the strip's full height
+        reaches each tab so a folder tab's bottom edge lands on the content
+        seam; the trailing actions stay centered (the strip is items-center). */}
+        <AdaptiveBar
+          overflow="scroll"
+          gap="2xs"
+          // eslint-disable-next-line layout/no-adhoc-layout -- the folder variant's full-height pass-through, waiting on a cross-axis alignment prop on AdaptiveBar. `self-stretch` alone IS now expressible (spacing's selfClass("stretch")), but `items-stretch` is AdaptiveBar's OWN cross-axis alignment of its occupants — its `align` prop is main-axis (where they sit in the slack) and does not cover it. Draining half of this with selfClass would leave the other half here and foreclose the right fix, so both halves stay until AdaptiveBar grows the prop.
+          className={fillHeight ? "items-stretch self-stretch" : undefined}
         >
-          {/* The bar IS the strip's grow cell (`min-w-0 flex-1`), which is why the
-          old `flex-1` spacer below the `+` is gone: a second claimant on the
-          same slack would leave the bar reading half the width it actually has,
-          and it would compact tabs while the row still had room. It absorbing
-          the slack is also what pins the trailing actions to the right edge.
-          self-stretch/items-stretch (fillHeight only): the strip's full height
-          reaches each tab so a folder tab's bottom edge lands on the content
-          seam; the trailing actions stay centered (the strip is items-center). */}
-          <AdaptiveBar
-            overflow="scroll"
-            gap="2xs"
-            // eslint-disable-next-line layout/no-adhoc-layout -- the folder variant's full-height pass-through, waiting on a cross-axis alignment prop on AdaptiveBar. `self-stretch` alone IS now expressible (spacing's selfClass("stretch")), but `items-stretch` is AdaptiveBar's OWN cross-axis alignment of its occupants — its `align` prop is main-axis (where they sit in the slack) and does not cover it. Draining half of this with selfClass would leave the other half here and foreclose the right fix, so both halves stay until AdaptiveBar grows the prop.
-            className={fillHeight ? "items-stretch self-stretch" : undefined}
+          <SortableList
+            items={resolved.map(({ tab }) => tab.tabId)}
+            onMove={(activeId, overId) => moveTab(activeId, overId)}
+            orientation="horizontal"
+            disabled={tabs.length < 2}
           >
-            <SortableList
-              items={resolved.map(({ tab }) => tab.tabId)}
-              onMove={(activeId, overId) => moveTab(activeId, overId)}
-              orientation="horizontal"
-              disabled={tabs.length < 2}
-            >
-              {resolved.map(({ tab, entry, label }) => (
-                // The item wraps the SortableItem, never the other way round: the
-                // bar docks each container immediately before its own anchor, so
-                // the anchor has to be the bar's own child — and dnd-kit's node (and
-                // its transform) has to travel INSIDE the container it moves.
-                <AdaptiveBar.Item key={tab.tabId} id={tab.tabId}>
-                  {/* Whole-chip drag: the sortable-list PointerSensor's 4px activation
-                  distance lets a click still activate / close the tab. */}
-                  {/* No `min-w-0` any more, and its absence is the point: this div
-                  used to be a flex item of the strip, where min-width:auto would
-                  have stopped a long label shrinking. Inside a bar it is a plain
-                  block child of the item's own container, so min-width never
-                  applied — and the shrinking is the bar's job now anyway (full →
-                  icon-only), with the chip's own `max-w-40` + truncating `Text`
-                  leaf handling what is left. `h-full` carries the strip's
-                  stretched height down to the folder tab. */}
-                  <SortableItem
-                    id={tab.tabId}
-                    className={(s) =>
-                      cn(fillHeight && "h-full", s.isDragging && "opacity-50")
-                    }
-                  >
-                    {() => (
-                      <TabChip
-                        appId={tab.appId}
-                        icon={appIconComponent(entry.icon)}
-                        // Ambient per-app attention indicator (e.g. Mail sync-error,
-                        // Settings config-conflict) — the same badge the app-rail
-                        // icon paints, now on the more-proximate tab chip. Rides the
-                        // icon so it survives collapsed/icon-only mode.
-                        badge={entry.badge}
-                        label={label}
-                        active={tab.tabId === focusedTabId}
-                        fillHeight={fillHeight}
-                        onActivate={() => focusTab(tab.tabId)}
-                        onClose={() => closeTab(tab.tabId)}
-                      />
-                    )}
-                  </SortableItem>
-                </AdaptiveBar.Item>
-              ))}
-            </SortableList>
-            <AdaptiveBar.Item id={NEW_TAB_ITEM_ID}>
-              {/* Same full-height box the tab chips sit in, so `+` stays vertically
-              centered when the strip stretches for the folder variant. */}
-              <Line as="div" className={fillHeight ? "h-full" : undefined}>
-                <ControlSizeProvider size="sm">
-                  <IconButton
-                    icon={MdAdd}
-                    label={newTabIsWindow ? "New window" : "New tab"}
-                    onClick={() => openTab("home")}
-                  />
-                </ControlSizeProvider>
-              </Line>
-            </AdaptiveBar.Item>
-          </AdaptiveBar>
-          {/* Trailing action zone — the `surface` plugin drops its placement control
-          here and the global action bar pins itself to the right edge. */}
-          <Apps.TabBarActions.Render />
-        </Stack>
-      </GrowRelay.Stop>
-    </PortalThemeScopeProvider>
+            {resolved.map(({ tab, entry, label }) => (
+              // The item wraps the SortableItem, never the other way round: the
+              // bar docks each container immediately before its own anchor, so
+              // the anchor has to be the bar's own child — and dnd-kit's node (and
+              // its transform) has to travel INSIDE the container it moves.
+              <AdaptiveBar.Item key={tab.tabId} id={tab.tabId}>
+                {/* Whole-chip drag: the sortable-list PointerSensor's 4px activation
+                distance lets a click still activate / close the tab. */}
+                {/* No `min-w-0` any more, and its absence is the point: this div
+                used to be a flex item of the strip, where min-width:auto would
+                have stopped a long label shrinking. Inside a bar it is a plain
+                block child of the item's own container, so min-width never
+                applied — and the shrinking is the bar's job now anyway (full →
+                icon-only), with the chip's own `max-w-40` + truncating `Text`
+                leaf handling what is left. `h-full` carries the strip's
+                stretched height down to the folder tab. */}
+                <SortableItem
+                  id={tab.tabId}
+                  className={(s) =>
+                    cn(fillHeight && "h-full", s.isDragging && "opacity-50")
+                  }
+                >
+                  {() => (
+                    <TabChip
+                      appId={tab.appId}
+                      icon={appIconComponent(entry.icon)}
+                      // Ambient per-app attention indicator (e.g. Mail sync-error,
+                      // Settings config-conflict) — the same badge the app-rail
+                      // icon paints, now on the more-proximate tab chip. Rides the
+                      // icon so it survives collapsed/icon-only mode.
+                      badge={entry.badge}
+                      label={label}
+                      active={tab.tabId === focusedTabId}
+                      fillHeight={fillHeight}
+                      onActivate={() => focusTab(tab.tabId)}
+                      onClose={() => closeTab(tab.tabId)}
+                    />
+                  )}
+                </SortableItem>
+              </AdaptiveBar.Item>
+            ))}
+          </SortableList>
+          <AdaptiveBar.Item id={NEW_TAB_ITEM_ID}>
+            {/* Same full-height box the tab chips sit in, so `+` stays vertically
+            centered when the strip stretches for the folder variant. */}
+            <Line as="div" className={fillHeight ? "h-full" : undefined}>
+              <ControlSizeProvider size="sm">
+                <IconButton
+                  icon={MdAdd}
+                  label={newTabIsWindow ? "New window" : "New tab"}
+                  onClick={() => openTab("home")}
+                />
+              </ControlSizeProvider>
+            </Line>
+          </AdaptiveBar.Item>
+        </AdaptiveBar>
+        {/* Trailing action zone — the `surface` plugin drops its placement control
+        here and the global action bar pins itself to the right edge. */}
+        <Apps.TabBarActions.Render />
+      </Theme>
+    </GrowRelay.Stop>
   );
 }
 

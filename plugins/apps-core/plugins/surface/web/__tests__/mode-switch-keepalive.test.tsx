@@ -61,9 +61,21 @@ vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
   registerPlacementCapabilities: () => {},
 }));
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SURFACE_LEVELS,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SurfaceBody } from "../components/surface-body";
 import { Surface, type PlacementDef } from "../slots";
+
+/**
+ * The app canvas every tab container paints, read from the primitive rather than
+ * re-spelled: the container is a `<Theme surface="canvas">`, so this prefix is
+ * on the class of EVERY mode's tab — including the empty-registry fallback,
+ * which is the whole point of moving the paint off the descriptors. Composed
+ * here so these assertions stay pinned to the FRAME mechanics they are about.
+ */
+const CANVAS = SURFACE_LEVELS.base;
 
 /** A placement that positions inside the surface (docked's shape). */
 const containedDef: PlacementDef = {
@@ -73,7 +85,6 @@ const containedDef: PlacementDef = {
   order: 0,
   default: true,
   frame: "pane",
-  paintClassName: cn("bg-background"),
   themeScope: "app",
 };
 
@@ -84,7 +95,6 @@ const viewportDef: PlacementDef = {
   icon: () => null,
   order: 1,
   frame: "viewport",
-  paintClassName: cn("bg-background"),
   themeScope: "app",
 };
 
@@ -95,7 +105,7 @@ const windowDef: PlacementDef = {
   icon: () => null,
   order: 2,
   frame: "window",
-  paintClassName: cn("rounded-lg border bg-background"),
+  frameClassName: cn("rounded-lg border"),
   visibleWhenUnfocused: true,
 };
 
@@ -179,7 +189,7 @@ describe("a surface-mode switch keeps every tab mounted", () => {
     // mechanics, so this is where the resolution is pinned to what the modes
     // used to spell out by hand.
     const tabNode = container.querySelector('[data-theme-scope="app:a1"]');
-    expect(tabNode!.className).toBe("absolute inset-0 bg-background");
+    expect(tabNode!.className).toBe(`${CANVAS} absolute inset-0`);
 
     tabsState.mode = viewportDef.id;
     rerender(
@@ -192,7 +202,7 @@ describe("a surface-mode switch keeps every tab mounted", () => {
     expect(container.querySelector('[data-theme-scope="app:a1"]')).toBe(
       tabNode,
     );
-    expect(tabNode!.className).toBe("fixed inset-0 z-overlay bg-background");
+    expect(tabNode!.className).toBe(`${CANVAS} fixed inset-0 z-overlay`);
     // And it is still a child of the surface, never of <body>.
     expect(container.contains(tabNode)).toBe(true);
   });
@@ -241,14 +251,12 @@ describe("the frame role resolves to the container mechanics", () => {
   }
 
   it("positions a pane frame against the surface", () => {
-    expect(classForMode(containedDef.id)).toBe(
-      "absolute inset-0 bg-background",
-    );
+    expect(classForMode(containedDef.id)).toBe(`${CANVAS} absolute inset-0`);
   });
 
   it("positions a viewport frame against the window, above the app chrome", () => {
     expect(classForMode(viewportDef.id)).toBe(
-      "fixed inset-0 z-overlay bg-background",
+      `${CANVAS} fixed inset-0 z-overlay`,
     );
   });
 
@@ -257,15 +265,15 @@ describe("the frame role resolves to the container mechanics", () => {
   // conceivable window mode.
   it("clips a window frame to its own corner", () => {
     expect(classForMode(windowDef.id)).toBe(
-      "absolute overflow-hidden rounded-lg border bg-background",
+      `${CANVAS} absolute overflow-hidden rounded-lg border`,
     );
   });
 
-  // Not a separate branch any more — an empty registry is the `pane` frame with
-  // a fallback paint, which is exactly what the old hardcoded fallback painted.
+  // Not a separate branch any more, and not even a fallback paint: an empty
+  // registry is the bare `pane` frame, and the app canvas comes from the
+  // container's own `<Theme surface="canvas">` exactly as it does for a
+  // registered mode. The hardcoded fallback that used to be needed here is gone.
   it("falls back to a pane frame when no placement is registered", () => {
-    expect(classForMode("", emptyPlugin)).toBe(
-      "absolute inset-0 bg-background",
-    );
+    expect(classForMode("", emptyPlugin)).toBe(`${CANVAS} absolute inset-0`);
   });
 });

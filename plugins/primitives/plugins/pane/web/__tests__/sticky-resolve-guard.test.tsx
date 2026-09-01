@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 
-import {
-  Pane,
-  PaneResolveGuard,
-  type PaneStore,
-} from "@plugins/primitives/plugins/pane/web";
+import { Pane, type PaneStore } from "@plugins/primitives/plugins/pane/web";
+// The guard is internal to the plugin — `PaneBox` is what the barrel exports, so
+// no layout renderer can paint a pane without its identity/theme stamping. This
+// suite is a unit test of the guard itself, so it reaches the internal file
+// directly (same plugin, no boundary crossed) rather than through a box.
+import { PaneResolveGuard } from "../components/pane-resolve-guard";
 import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 

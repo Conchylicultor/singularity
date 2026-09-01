@@ -15,6 +15,7 @@
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/tooltip.WithTooltip`
   - Exports (values): `AppRail`

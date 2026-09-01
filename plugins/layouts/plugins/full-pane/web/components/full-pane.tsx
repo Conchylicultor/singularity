@@ -1,10 +1,9 @@
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
-import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  PaneBox,
   PaneInstanceContext,
   PaneLayoutContext,
-  PaneResolveGuard,
   paneOwnerFor,
   usePaneMatch,
 } from "@plugins/primitives/plugins/pane/web";
@@ -52,16 +51,19 @@ export function FullPane() {
           pluginId={paneOwnerFor(active.pane)}
         >
           <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
-            <div className="h-full min-h-0" data-pane-id={active.pane.id}>
-              {/* Forward the pane id across portals so popovers/menus opened from
-                  this pane still report their containing pane. `data-pane-id` is
-                  a separate, load-bearing DOM convention with its own readers
-                  (render-loop attribution, overscroll-hint, e2e) — the region
-                  marker above is additive alongside it, not a replacement. */}
-              <PortalForwardProvider name="data-pane-id" value={active.pane.id}>
-                <PaneResolveGuard pane={active.pane} params={active.params} />
-              </PortalForwardProvider>
-            </div>
+            {/* `PaneBox` is the pane's own box: it stamps the pane id and the
+                home app's theme scope on the element AND forwards both across
+                portals, so popovers opened from this pane still report their
+                containing pane and keep its theme. `data-pane-id` is a separate,
+                load-bearing DOM convention with its own readers (render-loop
+                attribution, overscroll-hint, e2e) — the region marker above is
+                additive alongside it, not a replacement. This renderer owns only
+                the box's size: a full-surface pane fills its host. */}
+            <PaneBox
+              pane={active.pane}
+              params={active.params}
+              className="h-full min-h-0"
+            />
           </PluginErrorBoundary>
         </UiRegion>
       </PaneLayoutContext.Provider>

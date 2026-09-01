@@ -2,6 +2,7 @@ import { Toaster as Sonner } from "sonner";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { DismissAllButton } from "./dismiss-all-button";
 
 /**
@@ -34,7 +35,13 @@ export function ToasterHost() {
     // wrapper's theme scope. We wear the cross-app chrome scope: the focused
     // app's theme when a single app fills the surface (docked / solo), the
     // neutral global theme in desktop mode (no single app owns the chrome).
-    <div data-theme-scope={themeScope}>
+    //
+    // `surface="none"` is the honest no-paint case the role exists for, not an
+    // omission: everything under here is an overlay-level card (a toast, the
+    // dismiss-all strip) that paints itself and is fixed-positioned out of this
+    // wrapper's flow. A canvas here would be a full-width opaque band across the
+    // page painting over the app.
+    <Theme name={themeScope} surface="none">
       <Sonner
         theme={colorMode}
         className="toaster group"
@@ -57,6 +64,6 @@ export function ToasterHost() {
       >
         <DismissAllButton />
       </div>
-    </div>
+    </Theme>
   );
 }

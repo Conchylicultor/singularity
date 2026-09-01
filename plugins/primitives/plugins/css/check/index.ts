@@ -94,6 +94,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   "status-dot": "status glyph — a leaf",
   surface: "elevation chrome (bg/border/shadow), orthogonal to arrangement",
   switch: "a form control (track + knob) — a leaf",
+  "theme-boundary":
+    "theming chrome — it says which theme a subtree wears (the data-theme-scope tag, the portal forward that carries it, and the canvas that tag implies) and takes `as` precisely so it does NOT decide what kind of box it is. Sibling of `surface` above: that one is elevation chrome, this one is palette chrome, and both are orthogonal to arrangement. Naming it in a message about composing layout would send authors reaching for it to arrange boxes, which is the one thing it deliberately cannot do — it emits no display class at all.",
   "toggle-chip": "a stateful control (composes Badge)",
   "ui-kit": "the shadcn/cn/global-stylesheet substrate, not a layout primitive",
   "z-layers": "a token standard (the z scale) + its own lint rule",

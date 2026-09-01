@@ -12,10 +12,8 @@ import {
   registerPlacementCapabilities,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
-import {
-  cn,
-  PortalThemeScopeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { useViewportEscape } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import {
@@ -62,13 +60,6 @@ const FRAME_CLASS: Record<PlacementFrame, string> = {
   window: "absolute overflow-hidden",
   viewport: "fixed inset-0 z-overlay",
 };
-
-/**
- * The paint for the empty-registry fallback (no placement sub-plugins loaded):
- * a bare `pane` frame still needs the app's own background under it, since the
- * container carries `data-theme-scope="app:<id>"`.
- */
-const FALLBACK_PAINT = cn("bg-background");
 
 /**
  * The single surface body that renders EVERY open tab at once and positions each
@@ -191,10 +182,10 @@ export function SurfaceBody() {
     // is `display:none`. (An app's OWN `fixed` chrome stays bounded by the
     // per-tab content inset below, a different transform, in every mode.)
     //
-    // No `data-theme-scope` here — the backdrop inherits the desktop `:root`
-    // theme. Each forked app's scope block is mounted centrally (theme-engine's
-    // AppScopeThemes at Core.Root); each tab container is still tagged
-    // `data-theme-scope="app:<id>"` to pick it up.
+    // No theme boundary here — the backdrop inherits the desktop `:root` theme.
+    // Each forked app's scope block is mounted centrally (theme-engine's
+    // AppScopeThemes at Core.Root); each tab container is a `<Theme>` naming
+    // `app:<id>`, which is what picks it up.
     <Clip
       ref={backdropRef}
       className={cn(
@@ -249,11 +240,12 @@ interface TabContainerProps {
 }
 
 /**
- * One tab's stable keep-alive container. The container `<div>` and the content
- * inset → `PortalThemeScopeProvider` → `TabSurface` chain are byte-identical
- * across every placement, so a placement change restyles the still-mounted tab
- * rather than remounting it. Only the container's class / inline style / the
- * presence of a sibling `Chrome` overlay change.
+ * One tab's stable keep-alive container. The container `<Theme>` (a `<div>`
+ * carrying the tab's theme scope, its portal forward and the app canvas) and the
+ * content inset → `TabSurface` chain below it are byte-identical across every
+ * placement, so a placement change restyles the still-mounted tab rather than
+ * remounting it. Only the container's class / inline style / the presence of a
+ * sibling `Chrome` overlay change.
  *
  * That is the whole mechanism, and it is fragile in one specific way: React
  * reconciles by position AND element type, so returning this container wrapped
@@ -301,13 +293,17 @@ function TabContainer({
   );
 
   // The container's class is the active mode's FRAME role resolved to mechanics,
-  // plus its paint. Empty registry (no mode plugins) is not a separate branch —
-  // it is simply the `pane` frame with a fallback paint, so the app stays usable
-  // and looks docked-like. The control renders nothing.
+  // plus whatever extra frame chrome the mode asks for (floating's rounded
+  // border). The app's canvas is NOT in here any more — the `<Theme>` boundary
+  // below paints it, for every mode and for the empty registry alike, so a mode
+  // can no longer ship a themed container that paints nothing. Empty registry
+  // (no mode plugins) is therefore not a separate branch at all: it is simply
+  // the `pane` frame with no extra chrome, so the app stays usable and looks
+  // docked-like. The control renders nothing.
   // eslint-disable-next-line layout/no-adhoc-layout, viewport-overlay/no-adhoc-viewport-overlay -- FRAME_CLASS is the frame recipe ITSELF: this host is what the layout/viewport primitives redirect a placement to, so it owns the positioning mechanics (see FRAME_CLASS above)
   const containerClassName = cn(
     FRAME_CLASS[def?.frame ?? "pane"],
-    def ? def.paintClassName : FALLBACK_PAINT,
+    def?.frameClassName,
   );
   const visibleWhenUnfocused = def?.visibleWhenUnfocused ?? false;
   const Chrome = def?.Chrome;
@@ -327,35 +323,36 @@ function TabContainer({
   };
 
   return (
-    <div
+    <Theme
+      // The tab IS the app's theme boundary, all three halves at once: the scope
+      // tag the matching `ScopedAppTheme` block selects on, the portal forward
+      // that carries it to popovers opened out of the subtree, and — the half
+      // every placement used to have to remember in its own paint class — the
+      // app's own canvas under it.
+      name={`app:${tab.appId}`}
+      surface="canvas"
       onPointerDownCapture={onContainerPointerDownCapture}
-      // Which tab this box IS. The theme scope below is an app-level tag that
+      // Which tab this box IS. The theme scope is an app-level tag that
       // cross-app chrome (the tab strip, the rail) wears too, so it cannot name
       // one tab's container; anything asking "where does tab X live on screen"
       // — a debug overlay, the e2e that proves a mode switch never moved it —
       // needs this one.
       data-tab-id={tab.tabId}
-      // Tags this tab's subtree so the matching `ScopedAppTheme` block themes its
-      // inline content with this app's palette. Portaled descendants escape this
-      // attribute, so they re-adopt the theme via the PortalThemeScopeProvider
-      // wrapping TabSurface below.
-      data-theme-scope={`app:${tab.appId}`}
       className={containerClassName}
       style={{ display: visible ? "block" : "none", ...overrideStyle }}
     >
       {/* Stable content inset: ALWAYS present so `TabSurface`'s parent chain is
           identical in every placement. Only its CSS changes (pushed by the active
-          Chrome — e.g. floating's titlebar inset / minimized hide). The
-          PortalThemeScopeProvider is ALSO always present (stable scope per tab),
-          so it never remounts TabSurface (keep-alive). */}
+          Chrome — e.g. floating's titlebar inset / minimized hide). The portal
+          forward that used to sit between this box and `TabSurface` is gone from
+          here: `<Theme>` above renders it, unconditionally and with the same
+          per-tab scope, so the chain is one link shorter and just as stable. */}
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- stable keep-alive content inset: always-present full-bleed layer whose CSS the active placement's Chrome pushes via insetStyle (titlebar inset / minimized hide); its parent-chain identity must not change, so no wrapping primitive
         className="absolute inset-0 min-h-0 min-w-0 transform-gpu"
         style={insetStyle ?? undefined}
       >
-        <PortalThemeScopeProvider scope={`app:${tab.appId}`}>
-          <TabSurface tab={tab} />
-        </PortalThemeScopeProvider>
+        <TabSurface tab={tab} />
       </div>
 
       {/* Active placement's optional sibling Chrome overlay (never a parent of
@@ -374,6 +371,6 @@ function TabContainer({
           />
         </PlacementStyleProvider>
       )}
-    </div>
+    </Theme>
   );
 }

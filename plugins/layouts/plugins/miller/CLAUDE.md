@@ -126,19 +126,20 @@ not yet supported — see the open question in
     - `layouts/route-fallback.DeferredRouteFallback`
     - `primitives/auto-scroll.scrollChildIntoView`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/pane.MatchEntry`
     - `primitives/pane.PaneBasePathContext`
+    - `primitives/pane.PaneBox`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
     - `primitives/pane.paneOwnerFor`
-    - `primitives/pane.PaneResolveGuard`
     - `primitives/pane.PaneStore`
+    - `primitives/pane.paneThemeScope`
     - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneStore`
     - `primitives/pane.useRoute`

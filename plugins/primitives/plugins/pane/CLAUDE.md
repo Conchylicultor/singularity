@@ -510,6 +510,26 @@ discriminated `PromoteAction` (`{ kind: "cross-app"; app; run }` /
 `{ kind: "re-root"; run }`) the chrome labels itself from. `null` still means
 "nowhere to go" and paints no button.
 
+### A pane wears its home app's theme
+
+The same declaration decides how the pane **looks**. `PaneBox` stamps
+`data-theme-scope="app:<home app id>"` on the pane's box (and forwards it across
+portals, so the pane's popovers and menus keep it), so a page pane opened beside
+a conversation in the agent manager is painted with the Pages palette rather than
+the host's. Collapsed miller columns wear it too, so collapsing a guest pane does
+not snap its rail back to the host's colors.
+
+Only the *tag* lives here; whether it changes anything is theme-engine's. An app
+that has forked its theme emits a matching `[data-theme-scope="app:<id>"]` block
+(one per registered app, mounted centrally at `Core.Root`) and the pane picks it
+up. An app that has **not** forked emits no block, so its panes inherit `:root` —
+which currently carries the focused app's theme, i.e. the host's. Guest panes of
+unforked apps therefore still look like their host; see the `theme` skill.
+
+Light/dark is a single global `<html>.dark` class (per-scope color mode is
+deferred), so a scope switches tokens — palette, typography, radius — never the
+color mode.
+
 **`app` is mandatory, with no opt-out** — being displayable in any app is a fact
 about hosting, not an absence of ownership. The case that looks like an
 exception isn't: the theme customizer restyles whichever app you are in, and its
@@ -691,8 +711,11 @@ See "Open questions" in the design doc.
     - `primitives/css/scroll.ScrollProps`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
+    - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/install-sink.defineInstallSink`
@@ -749,6 +772,7 @@ See "Open questions" in the design doc.
     - `openPane`
     - `Pane`
     - `PaneBasePathContext`
+    - `PaneBox`
     - `PaneChrome`
     - `PaneHeaderCell`
     - `PaneIconAction`
@@ -757,11 +781,11 @@ See "Open questions" in the design doc.
     - `PaneLoadScopeContext`
     - `PaneMatchContext`
     - `paneOwnerFor`
-    - `PaneResolveGuard`
     - `PaneScroll`
     - `PaneStoreContext`
     - `PaneSurfaceAppContext`
     - `PaneSurfaceProvider`
+    - `paneThemeScope`
     - `parseUrl`
     - `peekBasePath`
     - `peekRoute`

@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -20,12 +21,25 @@ export function AppRail() {
   // See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
   return (
-    <Stack
+    <Theme
+      as={Stack}
       align="center"
       gap="xs"
-      data-theme-scope={themeScope}
+      // The rail is now a complete theme boundary. The portal forward is NEW:
+      // the rail carried the scope attribute and painted, but forwarded nothing,
+      // so a menu or tooltip opened from a rail button portaled out of the
+      // subtree and came back wearing the desktop theme instead of the app's.
+      name={themeScope}
+      // `canvas`, NOT `chrome`, and deliberately so: the rail is chrome
+      // furniture, but today it paints from the content palette (`--background`)
+      // while the tab strip beside it paints from the sidebar palette
+      // (`--sidebar`). Saying `chrome` here would restyle the rail, which is a
+      // real design question about its tone — filed as its own task — not
+      // something to smuggle into a mechanical conversion. Leave it as `canvas`
+      // until that question is answered.
+      surface="canvas"
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid rail sibling of the flexible body in the framing row; shrink-0 keeps its fixed width
-      className="relative z-nav w-(--app-rail-width) shrink-0 border-r bg-background pt-md"
+      className="relative z-nav w-(--app-rail-width) shrink-0 border-r pt-md"
     >
       <Apps.App.Render>
         {(entry) => (
@@ -54,6 +68,6 @@ export function AppRail() {
           </WithTooltip>
         )}
       </Apps.App.Render>
-    </Stack>
+    </Theme>
   );
 }

@@ -30,8 +30,8 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `apps-core/tabs.loadScopePrefixFor`
     - `apps-core/tabs.Tab`
     - `apps-core/tabs.useTabs`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.appThemeScope`
-    - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/pane.PaneBasePathContext`
     - `primitives/pane.PaneSurfaceProvider`
     - `primitives/pane.useIndexMatch`

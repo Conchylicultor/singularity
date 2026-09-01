@@ -1,7 +1,5 @@
-import {
-  appThemeScope,
-  PortalThemeScopeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { TabSurface } from "./tab-surface";
 
@@ -26,21 +24,28 @@ export function AppTabsBody() {
       {tabs.map((tab) => {
         const focused = tab.tabId === focusedTabId;
         return (
-          // Tag each tab's subtree with its app scope so a forked app's content
-          // is themed by the same central scope block the real surface uses;
-          // unforked apps simply inherit the desktop `:root`. The
-          // PortalThemeScopeProvider lets portaled descendants re-adopt the scope.
-          <div
+          // Each tab is its own theme boundary: its app scope (so a forked app's
+          // content is themed by the same central scope block the real surface
+          // uses; unforked apps simply inherit the desktop `:root`), the portal
+          // forward that carries it to popovers opened out of the subtree, and
+          // the app's own canvas under it.
+          //
+          // That canvas is NEW. This box used to be `absolute inset-0` and
+          // nothing else, so it re-themed its subtree and painted none of it —
+          // whatever sat behind showed through, in the host's theme, under text
+          // reading the app's. `surface="canvas"` is the fix, and it is a
+          // deliberate visual change: this fallback body now paints like the
+          // real surface does.
+          <Theme
             key={tab.tabId}
+            name={appThemeScope(tab.appId)}
+            surface="canvas"
             // eslint-disable-next-line layout/no-adhoc-layout -- keep-alive: every tab is a full-bleed stacked sibling, only the focused one displayed
             className="absolute inset-0"
-            data-theme-scope={appThemeScope(tab.appId)}
             style={{ display: focused ? "block" : "none" }}
           >
-            <PortalThemeScopeProvider scope={appThemeScope(tab.appId)}>
-              <TabSurface tab={tab} />
-            </PortalThemeScopeProvider>
-          </div>
+            <TabSurface tab={tab} />
+          </Theme>
         );
       })}
     </div>

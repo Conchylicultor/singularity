@@ -103,13 +103,18 @@ export interface PlacementDef {
    */
   frame: PlacementFrame;
   /**
-   * PAINT ONLY — background, border, radius. Geometry belongs to {@link
-   * PlacementDef.frame}. `ClassName` makes that a checked contract rather than a
-   * comment: the value comes out of `cn()`, so `no-adhoc-layout` reads its tokens
-   * and rejects any positioning / clipping / flow class that tries to sneak back
-   * in.
+   * EXTRA FRAME CHROME ONLY — the border and radius a window frame needs, and
+   * nothing else. Not the app's canvas: the container is a `<Theme
+   * surface="canvas">`, so every mode's tab is painted with the app's own
+   * background whether or not the mode remembered to say so. That is why this is
+   * optional and why docked / solo now set nothing at all — a background here
+   * would be a second, unthemed answer to a question the boundary already
+   * answers. Geometry belongs to {@link PlacementDef.frame}. `ClassName` makes
+   * that a checked contract rather than a comment: the value comes out of
+   * `cn()`, so `no-adhoc-layout` reads its tokens and rejects any positioning /
+   * clipping / flow class that tries to sneak back in.
    */
-  paintClassName?: ClassName;
+  frameClassName?: ClassName;
   /**
    * Paint EVERY tab in this mode, not just the focused one (windows mode). When
    * false (docked / solo) only the focused tab is painted; the rest stay mounted

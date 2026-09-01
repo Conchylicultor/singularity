@@ -84,7 +84,7 @@ export {
 } from "./header-slot";
 export { PaneScroll, type PaneScrollProps } from "./components/pane-scroll";
 export { PaneIconAction } from "./components/pane-icon-action";
-export { PaneResolveGuard } from "./components/pane-resolve-guard";
+export { PaneBox, paneThemeScope } from "./components/pane-box";
 export { useRenderSync } from "./use-render-sync";
 export { PaneLayoutContext } from "./maximize-context";
 export { SurfaceChromeContext } from "./surface-chrome-context";

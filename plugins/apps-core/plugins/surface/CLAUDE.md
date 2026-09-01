@@ -19,9 +19,9 @@
     - `apps-core/tabs.useSurfaceMode`
     - `apps-core/tabs.useTabs`
     - `primitives/css/clip.Clip`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.PortalThemeScopeProvider`
     - `primitives/css/viewport-overlay.useViewportEscape`
     - `shell/action-bar.ActionBar`
   - Exports (types):

@@ -42,12 +42,11 @@ declared on the pane.**
 - Web:
   - Uses:
     - `layouts/route-fallback.DeferredRouteFallback`
-    - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/pane.PaneBox`
     - `primitives/pane.PaneInstanceContext`
     - `primitives/pane.PaneLayoutContext`
     - `primitives/pane.paneOwnerFor`
-    - `primitives/pane.PaneResolveGuard`
     - `primitives/pane.usePaneMatch`
     - `primitives/ui-context.UiRegion`
   - Exports (values): `FullPane`

@@ -402,12 +402,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps-core/app-rail`
     - `apps-core/layout`
     - `apps-core/surface`
-    - `apps-core/surface/docked`
     - `apps-core/surface/floating`
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/floating/wallpaper/from-url`
     - `apps-core/surface/floating/wallpaper/upload`
-    - `apps-core/surface/solo`
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
     - `apps-core/theme-scope`
@@ -563,7 +561,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `infra/events-test`
     - `integrations/gmail`
     - `integrations/google-maps`
-    - `layouts/full-pane`
     - `layouts/miller`
     - `layouts/route-fallback`
     - `page/attachment-block`
@@ -633,6 +630,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/surface`
     - `primitives/css/switch`
     - `primitives/css/text`
+    - `primitives/css/theme-boundary`
     - `primitives/css/toggle-chip`
     - `primitives/css/viewport-overlay`
     - `primitives/cursor-menu`

@@ -52,11 +52,14 @@ export const floatingDef: PlacementDef = {
   exitDurationMs: CLOSE_MS,
   // A free box inside the surface — the `window` frame. Its position and size are
   // pushed per-window by `FloatingChrome`; the frame owns the positioning context
-  // and the clip to its own rounded corner, so this only names the paint.
+  // and the clip to its own rounded corner, so this only names the extra chrome
+  // that makes the box read as a WINDOW: a rounded border. Its canvas is not
+  // here — the host container is a `<Theme surface="canvas">`, so the window is
+  // filled with the app's own background whether or not this mode says so.
   // Shadow is NOT static here: the motion layer drives `boxShadow` per-window from
   // focus (focused lifts, unfocused recedes), so the active window reads as elevated.
   frame: "window",
-  paintClassName: cn("rounded-lg border bg-background"),
+  frameClassName: cn("rounded-lg border"),
   Backdrop: DesktopBackdrop,
   Foreground: FloatingForeground,
   Chrome: FloatingChrome,

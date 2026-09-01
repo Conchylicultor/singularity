@@ -1,5 +1,4 @@
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type {
@@ -33,7 +32,8 @@ export const soloDef: PlacementDef = {
   // A single app fills the viewport, so the chrome wears the app's theme (like
   // docked, unlike floating's multi-window backdrop) — see useChromeThemeScope.
   themeScope: "app",
-  paintClassName: cn("bg-background"),
+  // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from
+  // the host's `<Theme surface="canvas">` container like every other mode's.
   Chrome: SoloExitOverlay,
 };
 

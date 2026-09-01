@@ -9,6 +9,7 @@
   - Contributes: `Core.Root` → `ToasterHost`
   - Uses:
     - `apps-core/theme-scope.useChromeThemeScope`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/element-size.useElementSize`
