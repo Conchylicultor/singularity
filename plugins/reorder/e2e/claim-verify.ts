@@ -32,28 +32,30 @@
 //
 // Usage:
 //   ./singularity run plugins/reorder/e2e/claim-verify.ts \
-//     --url /some/route --nested '[data-block-id]' \
-//     [--base http://<worktree>.localhost:9000] [--headed]
+//     --path /some/route --nested '[data-block-id]' \
+//     [--url http://<worktree>.localhost:9000] [--headed]
+//
+// The surface is `--path` (or a full `--url` carrying it); `--url` alone names
+// which deploy to open it on.
 
 import {
-  pathUrl,
   report,
   requireArg,
+  requirePage,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const SORTABLE = '[aria-roledescription="sortable"]';
 
 const USAGE =
-  "usage: claim-verify.ts --url <path-or-url> --nested <css-selector> [--base …] [--headed]";
+  "usage: claim-verify.ts --path <route> --nested <css-selector> [--url <deploy>] [--headed]";
 
 /** A surface where a slot is dispatched from inside a reorderable contribution. */
-const target = requireArg("url", USAGE);
+const url = requirePage(USAGE);
 /** The nested content that must contain NO sortable of its own. */
 const nested = requireArg("nested", USAGE);
 
-const url = target.startsWith("http") ? target : pathUrl(target);
-const name = `${target} → ${nested}`;
+const name = `${new URL(url).pathname} → ${nested}`;
 
 const r = report("reorder claim");
 

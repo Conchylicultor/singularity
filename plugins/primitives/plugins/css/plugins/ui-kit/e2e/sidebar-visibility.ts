@@ -8,15 +8,15 @@
 // loudly when that happens — at a deliberately short viewport, which is the
 // first place the tail falls off.
 //
-// Usage: bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/sidebar-visibility.ts [--base <url>] [--width <px>] [--height <px>]
+// Usage: bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/sidebar-visibility.ts [--url <deploy>] [--width <px>] [--height <px>]
 import {
-  baseUrl,
   numArg,
+  pathUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const URL = `${baseUrl()}/agents`;
+const URL = pathUrl("/agents");
 // A short viewport is the stress case: the tail is the first thing to clip.
 const VW = numArg("width", 1280);
 const VH = numArg("height", 620);

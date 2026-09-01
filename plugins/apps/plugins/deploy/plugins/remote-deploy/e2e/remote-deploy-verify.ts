@@ -13,10 +13,10 @@
  * it; only a human, on a deployment they own, gets to start that.
  */
 import {
+  agentFetch,
   pathUrl,
   report,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const r = report("deploy remote-deploy section");

@@ -24,6 +24,7 @@ import {
   repairAgentConfigWrites,
   settleAgentConfigWrites,
 } from "./agent-writes";
+import { unconsumedPage } from "./target";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -155,6 +156,30 @@ function launchFailure(cause: unknown): Error {
 }
 
 /**
+ * Fail the run when the caller named a page the script never opened.
+ *
+ * The target URL's path is only meaningful to a tool whose job is "open the
+ * page I name" (`screenshot.ts`, `perf.ts`, the profilers) — those call
+ * `pageUrl()`. A script that verifies one specific screen names it itself, so
+ * `tabs-verify.ts --url http://wt:9000/pages` would drive `/agents` and pass,
+ * having tested a screen the caller did not ask for. Nothing crashes: the
+ * origin was split off correctly, so only the intent is lost. That is exactly
+ * the silent green run this harness exists to make unreachable.
+ *
+ * Runs at teardown, not at launch: a script may read its page inside the
+ * `withBrowser` callback (three `adaptive-bar` scripts do), which has not run
+ * when the browser starts, so a launch-time check would fail correct scripts.
+ */
+function assertPageWasConsumed(): void {
+  const page = unconsumedPage();
+  if (page === undefined) return;
+  throw new Error(
+    `the target URL named a page (${page}) but this script drives its own.\n` +
+      `  Drop the path to point it at another deploy: --url http://<worktree>.localhost:9000`,
+  );
+}
+
+/**
  * Launch chromium, run `fn`, and always close the browser. `--headed` on the
  * command line opens a visible window, which is the one thing every script
  * author reaches for when a flow misbehaves.
@@ -192,6 +217,7 @@ export async function withBrowser<T>(
     await browser.close();
     await settleAgentConfigWrites();
     await repairAgentConfigWrites("end");
+    assertPageWasConsumed();
   };
 
   // `finish()` ends in `process.exit()`, which skips `finally` — and 86 of the

@@ -33,10 +33,9 @@
 // to settle — rows are allowed to TRAIL the doc, just never to disagree with it
 // forever.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/convert-in-place-verify.ts [--base <url>] [--out /tmp/convert]
+// Usage: bun plugins/page/plugins/editor/e2e/convert-in-place-verify.ts [--url <deploy>] [--out /tmp/convert]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -44,7 +43,6 @@ import {
 import type { ElementHandle, Page } from "playwright";
 import { blockText, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/convert");
 const r = report("convert-in-place");
 
@@ -259,7 +257,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session({ label: "A" });
 
   for (const c of cases) {
-    const doc = await openBlankPage(page, base, { settleMs: 3000 });
+    const doc = await openBlankPage(page, { settleMs: 3000 });
     const blockId = doc.blockId;
     r.note(`${c.label}: page ${doc.pageId} block ${blockId}`);
 
@@ -349,7 +347,7 @@ await withBrowser(async (h) => {
   // has been launched, which is `prompt/plugins/block/e2e/prompt-launch.ts`'s
   // job. The launch CONTROL is the observable proxy for the whole footer region.
   {
-    const doc = await openBlankPage(page, base, { settleMs: 3000 });
+    const doc = await openBlankPage(page, { settleMs: 3000 });
     const blockId = doc.blockId;
     const sel = `[data-block-id="${blockId}"] [contenteditable="true"]`;
     r.note(`identity: page ${doc.pageId} block ${blockId}`);
@@ -485,7 +483,7 @@ await withBrowser(async (h) => {
   // a type that carries no text at all, which is where both halves of the rule
   // used to fail at the write boundary.
   {
-    const doc = await openBlankPage(page, base, { settleMs: 3000 });
+    const doc = await openBlankPage(page, { settleMs: 3000 });
     const blockId = doc.blockId;
     r.note(`void swap: page ${doc.pageId} block ${blockId}`);
     // Console errors are captured for the whole run, so read a DELTA over this
@@ -576,7 +574,7 @@ await withBrowser(async (h) => {
   // WHILE the projection is still pending and the row must end up with the text
   // the user typed, not the snapshot the checkbox carried.
   {
-    const doc = await openBlankPage(page, base, { settleMs: 3000 });
+    const doc = await openBlankPage(page, { settleMs: 3000 });
     const blockId = doc.blockId;
     r.note(`to-do checkbox: page ${doc.pageId} block ${blockId}`);
     await page.keyboard.type("[] ", { delay: 25 });

@@ -43,10 +43,9 @@
 //     would adopt the remaining siblings as that child's children).
 // 10. converge in a SECOND browser context (fresh socket, cold load).
 //
-// Usage: bun plugins/page/plugins/callout/e2e/callout-container-verify.ts [--base <url>] [--out /tmp/callout]
+// Usage: bun plugins/page/plugins/callout/e2e/callout-container-verify.ts [--url <deploy>] [--out /tmp/callout]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -58,7 +57,6 @@ import {
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/callout");
 
 const r = report();
@@ -341,7 +339,7 @@ async function caretToStart(page: Page, blockId: string): Promise<boolean> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const { pageUrl, pageId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

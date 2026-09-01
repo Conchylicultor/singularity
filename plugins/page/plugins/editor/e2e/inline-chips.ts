@@ -27,22 +27,21 @@
 //     keeps `https://x.dev/att-…` plain.
 //
 // Usage:
-//   bun plugins/page/plugins/editor/e2e/inline-chips.ts [--base <url>]
+//   bun plugins/page/plugins/editor/e2e/inline-chips.ts [--url <deploy>]
 //        [--attempt att-…] [--out /tmp/inline-chips] [--headed]
 import {
+  agentFetch,
   arg,
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator, Page } from "playwright";
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
 import { makeRunsReader, type NormRun } from "./support/runs";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/inline-chips");
 // This worktree's own attempt id — a real row, so the chip resolves to a live
 // status dot rather than the degraded raw-id arm.
@@ -168,10 +167,13 @@ async function shapeOf(block: Locator): Promise<string> {
 await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: base,
+    // A permission grant is scoped to a security ORIGIN, not a page — so this
+    // is one of the few places that legitimately wants the origin, derived
+    // from a URL rather than carried around as one.
+    origin: new URL(pathUrl("/")).origin,
   });
 
-  const { pageUrl, pageId, block, blockId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId, block, blockId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   r.note(`page ${pageUrl}`);

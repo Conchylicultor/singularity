@@ -20,10 +20,9 @@
 //  4. the committed chip opens the picker, showing the month grid, the relative
 //     presets, and the reminder toggle.
 //
-// Usage: bun plugins/page/plugins/inline-date/e2e/date-menu-verify.ts [--base <url>] [--out /tmp/date-menu] [--headed]
+// Usage: bun plugins/page/plugins/inline-date/e2e/date-menu-verify.ts [--url <deploy>] [--out /tmp/date-menu] [--headed]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -31,7 +30,6 @@ import {
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 import type { Locator, Page } from "playwright";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/date-menu");
 
 const r = report("inline-date @ menu");
@@ -85,7 +83,7 @@ async function clearBlock(page: Page, block: Locator): Promise<void> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  const { block, pageUrl } = await openBlankPage(page, base, {
+  const { block, pageUrl } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

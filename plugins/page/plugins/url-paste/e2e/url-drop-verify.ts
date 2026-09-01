@@ -35,11 +35,10 @@
 // The script creates its own scratch page and deletes it on the way out.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/url-paste/e2e/url-drop-verify.ts [--base <url>] [--headed]
+//   ./singularity run plugins/page/plugins/url-paste/e2e/url-drop-verify.ts [--url <deploy>] [--headed]
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -50,7 +49,6 @@ import {
   typeLines,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const OUT = arg("out", "/tmp/url-drop-verify");
 
 const MENU = '[data-caret-trigger="url-paste"]';
@@ -123,7 +121,7 @@ await withBrowser(async (h) => {
   page.setDefaultTimeout(90_000);
   page.setDefaultNavigationTimeout(90_000);
 
-  const doc = await openBlankPage(page, base, { settleMs: 3000 });
+  const doc = await openBlankPage(page, { settleMs: 3000 });
 
   async function destroyScratchPage(): Promise<void> {
     const status = await page.evaluate(async (id: string): Promise<number> => {

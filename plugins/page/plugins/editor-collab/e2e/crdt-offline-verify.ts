@@ -9,10 +9,9 @@
 //  4. assert the full text (pre-offline + offline-typed) reaches the server
 //     doc, the caret never jumped, and a second context converges.
 //
-// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-offline-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-offline-verify.ts [--url <deploy>] [--out <path>]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   waitFor,
@@ -25,7 +24,6 @@ import {
 } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDocText } from "./support/ydoc";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-offline");
 
 const r = report();
@@ -50,7 +48,7 @@ await withBrowser(async (h) => {
       warns.push(m.text());
   });
 
-  const { pageUrl, block, blockId } = await openBlankPage(pageA, base, {
+  const { pageUrl, block, blockId } = await openBlankPage(pageA, {
     settleMs: 3000,
   });
 

@@ -29,10 +29,9 @@
 // a dispatched card) and the round trip that proves they parse back off
 // (`edit_page` re-sending that document unchanged). Both are MCP-tool checks.
 //
-// Usage: bun plugins/page/plugins/annotations/plugins/todo/plugins/task-link/e2e/todo-dispatch-verify.ts [--base <url>] [--out /tmp/todo-dispatch]
+// Usage: bun plugins/page/plugins/annotations/plugins/todo/plugins/task-link/e2e/todo-dispatch-verify.ts [--url <deploy>] [--out /tmp/todo-dispatch]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -40,7 +39,6 @@ import {
 import type { Page } from "playwright";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/todo-dispatch");
 
 const r = report();
@@ -145,7 +143,7 @@ async function dispatch(
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  const doc = await openBlankPage(page, base, { settleMs: 3000 });
+  const doc = await openBlankPage(page, { settleMs: 3000 });
 
   // --- 1. mint the card ------------------------------------------------------
   // The typed trigger, which `annotations-verify.ts` pins in full; here it is

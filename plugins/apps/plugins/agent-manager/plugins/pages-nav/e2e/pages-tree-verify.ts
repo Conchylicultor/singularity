@@ -8,20 +8,19 @@
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
-//     --conv <conversationId> [--base http://<worktree>.localhost:9000] [--headed]
+//     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
-  baseUrl,
   numArg,
+  pathUrl,
   requireArg,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const CONV = requireArg(
   "conv",
-  "usage: pages-tree-verify.ts --conv <conversationId> [--base <url>] [--wait <ms>]",
+  "usage: pages-tree-verify.ts --conv <conversationId> [--url <deploy>] [--wait <ms>]",
 );
 const OUT = "/tmp/claude-501/pages-tree";
 const waitMs = numArg("wait", 3500);
@@ -42,7 +41,7 @@ await withBrowser(async (h) => {
   // toolbar toggle carries aria-pressed, so this selector is unambiguous.
   const toggle = page.locator('button[aria-label="Pages"][aria-pressed]');
 
-  await page.goto(`${BASE}/agents/c/${CONV}`);
+  await page.goto(pathUrl(`/agents/c/${CONV}`));
   await page.waitForTimeout(waitMs);
   await dump("1-conversation");
   console.log(

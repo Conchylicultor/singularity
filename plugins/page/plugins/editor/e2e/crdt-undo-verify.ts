@@ -17,21 +17,19 @@
 //     (row + re-seeded doc) AND un-appends the target;
 //  5. convergence in a second browser context.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/crdt-undo-verify.ts [--base <url>] [--out /tmp/undo]
+// Usage: bun plugins/page/plugins/editor/e2e/crdt-undo-verify.ts [--url <deploy>] [--out /tmp/undo]
 import {
-  ELEMENT_TIMEOUT_MS,
+  agentFetch,
   arg,
-  baseUrl,
+  ELEMENT_TIMEOUT_MS,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Locator } from "playwright";
 import { openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/undo");
 
 const r = report();
@@ -64,7 +62,7 @@ await withBrowser(async (h) => {
     pageId,
     block: blockA,
     blockId: idA,
-  } = await openBlankPage(pageA, base, { settleMs: 3000 });
+  } = await openBlankPage(pageA, { settleMs: 3000 });
   console.log("page url:", pageUrl);
   console.log("PAGE_ID:", pageId);
   console.log("BLOCK_A:", idA);

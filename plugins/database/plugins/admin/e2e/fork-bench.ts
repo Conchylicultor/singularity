@@ -33,8 +33,8 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import {
-  numArg,
   arg,
+  numArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const RUNS = numArg("runs", 3);

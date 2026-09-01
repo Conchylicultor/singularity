@@ -39,21 +39,19 @@
 //       — which is `crdt-reopen-verify`, and which passes either way, so it
 //       cannot catch this.
 //
-// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-fanout-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-fanout-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-fanout");
 
 const r = report();
@@ -123,7 +121,7 @@ await withBrowser(async (h) => {
   // --- 1. Context A authors several blocks -------------------------------------
   const { page: pageA, captured: capturedA } = await h.session({ label: "A" });
 
-  const { pageUrl, pageId } = await openBlankPage(pageA, base, {
+  const { pageUrl, pageId } = await openBlankPage(pageA, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl, "pageId:", pageId);

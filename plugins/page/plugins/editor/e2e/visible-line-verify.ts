@@ -13,10 +13,10 @@
 // Modeled closely on ./crdt-split-merge-verify.ts (page creation, block
 // locating/typing helpers, DOM-structure assertions).
 //
-// Usage: bun plugins/page/plugins/editor/e2e/visible-line-verify.ts [--base <url>] [--out /tmp/visible-line]
+// Usage: bun plugins/page/plugins/editor/e2e/visible-line-verify.ts [--url <deploy>] [--out /tmp/visible-line]
 import {
   arg,
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
@@ -25,7 +25,6 @@ import type { Locator, Page } from "playwright";
 import { openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/visible-line");
 
 const r = report();
@@ -50,8 +49,9 @@ async function waitForServer(
   return false;
 }
 
-console.log(`waiting for ${base} ...`);
-const up = await waitForServer(base, 60_000);
+const root = pathUrl("/");
+console.log(`waiting for ${root} ...`);
+const up = await waitForServer(root, 60_000);
 r.ok("server is serving", up);
 if (!up) await r.finish();
 
@@ -137,7 +137,7 @@ await withBrowser(async (h) => {
   console.log("\n=== Scenario A: split-with-children adoption ===");
   {
     const { context, page } = await h.session();
-    const { block: first, blockId: firstId } = await openBlankPage(page, base, {
+    const { block: first, blockId: firstId } = await openBlankPage(page, {
       settleMs: 3000,
     });
 
@@ -217,7 +217,7 @@ await withBrowser(async (h) => {
   );
   {
     const { context, page } = await h.session();
-    const { block: first } = await openBlankPage(page, base, {
+    const { block: first } = await openBlankPage(page, {
       settleMs: 3000,
     });
     await first.click();
@@ -313,7 +313,7 @@ await withBrowser(async (h) => {
   );
   {
     const { context, page } = await h.session();
-    const { block: first } = await openBlankPage(page, base, {
+    const { block: first } = await openBlankPage(page, {
       settleMs: 3000,
     });
     await first.click();
@@ -396,7 +396,7 @@ await withBrowser(async (h) => {
   console.log("\n=== Scenario D: checked to-do split -> unchecked tail ===");
   {
     const { context, page } = await h.session();
-    const { block: first, blockId: firstId } = await openBlankPage(page, base, {
+    const { block: first, blockId: firstId } = await openBlankPage(page, {
       settleMs: 3000,
     });
     await first.click();

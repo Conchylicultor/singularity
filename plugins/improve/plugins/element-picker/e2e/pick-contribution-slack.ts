@@ -14,16 +14,14 @@
 // whether the element under that slack carries it.
 //
 // Usage: bun plugins/improve/plugins/element-picker/e2e/pick-contribution-slack.ts \
-//          [--base <url>] [--url <page with a small widget in a row slot>] [--headed]
+//          [--url <page with a small widget in a row slot>] [--headed]
 import {
-  arg,
-  baseUrl,
+  pageUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
-const TARGET = arg("url") ?? BASE;
+const TARGET = pageUrl();
 
 await withBrowser(async (h) => {
   const { page } = await h.session();

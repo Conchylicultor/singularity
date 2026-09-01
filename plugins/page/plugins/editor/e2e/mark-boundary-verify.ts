@@ -71,10 +71,9 @@
 //     fix and the Backspace-strip whose neighbour is a decorator;
 //
 // Manual-only; nothing runs this automatically.
-// Usage: bun plugins/page/plugins/editor/e2e/mark-boundary-verify.ts [--base <url>] [--out /tmp/mark-boundary]
+// Usage: bun plugins/page/plugins/editor/e2e/mark-boundary-verify.ts [--url <deploy>] [--out /tmp/mark-boundary]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -85,7 +84,6 @@ import { blockText, caretState, openBlankPage } from "./support/blank-page";
 import { caretLinear, pressUntilLinear } from "./support/caret";
 import { makeRunsReader } from "./support/runs";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/mark-boundary");
 
 const r = report();
@@ -290,7 +288,7 @@ await withBrowser(async (h) => {
     pageUrl,
     pageId,
     blockId: firstId,
-  } = await openBlankPage(page, base, {
+  } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

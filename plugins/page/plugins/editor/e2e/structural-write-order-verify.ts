@@ -19,15 +19,13 @@
 // ops in issue order locally. Only server truth can disagree, and only server
 // truth is what survives a reload.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/structural-write-order-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/structural-write-order-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 
 /** How many times the zero-delay burst is repeated. A reorder is a RACE. */
@@ -67,7 +65,7 @@ await withBrowser(async (h) => {
       }));
     }, pageId);
 
-  const { pageId } = await openBlankPage(page, base, { settleMs: 3000 });
+  const { pageId } = await openBlankPage(page, { settleMs: 3000 });
 
   // Every round starts on an EMPTY `text` block, so `- ` really is a
   // line-leading marker and the shortcut really fires.

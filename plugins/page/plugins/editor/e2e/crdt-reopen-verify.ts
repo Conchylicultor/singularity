@@ -30,16 +30,15 @@
 // plugins/page/plugins/editor/web/__tests__/live-state-yjs-provider.test.ts;
 // this e2e pins the end-to-end invariant against regressions in either layer.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/crdt-reopen-verify.ts [--base <url>] [--out /tmp/crdt-reopen]
+// Usage: bun plugins/page/plugins/editor/e2e/crdt-reopen-verify.ts [--url <deploy>] [--out /tmp/crdt-reopen]
 import {
-  ELEMENT_TIMEOUT_MS,
+  agentFetch,
   arg,
-  baseUrl,
+  ELEMENT_TIMEOUT_MS,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 // This script lives inside the editor plugin, which declares `yjs` as a
 // dependency — so the bare specifier resolves by ordinary walk-up. (Before the
@@ -49,7 +48,6 @@ import {
 import * as Y from "yjs";
 import { blockText, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-reopen");
 
 const TYPED = "quantum flamingo orchestra rehearsal";
@@ -118,7 +116,7 @@ const r = report();
 await withBrowser(async (h) => {
   const { context: ctx, page } = await h.session();
 
-  const { pageUrl, pageId, block, blockId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId, block, blockId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

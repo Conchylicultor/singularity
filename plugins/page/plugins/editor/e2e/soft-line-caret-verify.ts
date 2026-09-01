@@ -12,16 +12,14 @@
 //  C. An inline decorator (a `@date` chip) is crossed by ONE ArrowLeft /
 //     ArrowRight, landing on a caret position that is actually painted.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/soft-line-caret-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/soft-line-caret-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { openBlankPage, editableBlocks } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 
 interface CaretProbe {
@@ -112,7 +110,7 @@ await withBrowser(async (h) => {
   console.log("\n=== Scenario A/B: empty soft lines ===");
   {
     const { context, page } = await h.session();
-    await openBlankPage(page, base, { settleMs: 3000, timeoutMs: 120_000 });
+    await openBlankPage(page, { settleMs: 3000, timeoutMs: 120_000 });
 
     // Block 1: "aaa" / "bbb" / "" / ""   (four visual lines, two of them empty)
     await page.keyboard.type("aaa");
@@ -191,7 +189,7 @@ await withBrowser(async (h) => {
   console.log("\n=== Scenario C: inline decorator crossing ===");
   {
     const { context, page } = await h.session();
-    await openBlankPage(page, base, { settleMs: 3000, timeoutMs: 120_000 });
+    await openBlankPage(page, { settleMs: 3000, timeoutMs: 120_000 });
 
     // "pre [chip] yy" — text on BOTH sides, the case the user reported.
     await page.keyboard.type("pre @today");

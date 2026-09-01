@@ -2,15 +2,14 @@
 // Flow: open Pages → create a page → /image → upload a file →
 // assert <img> renders → drag the resize handle → report the persisted width.
 //
-// Usage: bun plugins/page/plugins/image/e2e/image-block.ts [--base <url>] [--image <path>]
+// Usage: bun plugins/page/plugins/image/e2e/image-block.ts [--url <deploy>] [--image <path>]
 import {
   arg,
-  baseUrl,
+  pathUrl,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const IMG = arg("image", "/tmp/test-image.png");
 const OUT = "/tmp/imgblock";
 
@@ -20,7 +19,7 @@ await withBrowser(async (h) => {
   // probe, and the block's upload path chatters at log/warn level too.
   page.on("console", (m) => console.log("  [page]", m.type(), m.text()));
 
-  await page.goto(`${BASE}/pages`);
+  await page.goto(pathUrl("/pages"));
   await page.waitForTimeout(2500);
 
   // 1. Create a new page.

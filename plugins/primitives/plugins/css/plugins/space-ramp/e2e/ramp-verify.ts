@@ -13,10 +13,10 @@
 //
 // Usage:
 //   ./singularity run plugins/primitives/plugins/css/plugins/space-ramp/e2e/ramp-verify.ts \
-//     [--base http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
-  baseUrl,
+  pathUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -25,7 +25,6 @@ import {
   SPACE_STEPS,
 } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 
-const base = baseUrl();
 const r = report("space-ramp");
 
 // The property each family writes, and which one probe reads back.
@@ -59,7 +58,7 @@ const families = Object.keys(RAMP_CLASSES) as Array<keyof typeof RAMP_CLASSES>;
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  await page.goto(`${base}/agents`, { waitUntil: "domcontentloaded" });
+  await page.goto(pathUrl("/agents"), { waitUntil: "domcontentloaded" });
   // The ramp lives in the global stylesheet, so any painted app state will do.
   await page.locator("button").first().waitFor({ timeout: 30_000 });
 
@@ -152,7 +151,7 @@ await withBrowser(async (h) => {
 
   r.note(
     `probed ${families.length} families × ${SPACE_STEPS.length} steps = ` +
-      `${families.length * SPACE_STEPS.length} classes at ${base}`,
+      `${families.length * SPACE_STEPS.length} classes at ${pathUrl("/agents")}`,
   );
 });
 

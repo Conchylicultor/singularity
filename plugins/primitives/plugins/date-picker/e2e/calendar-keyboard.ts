@@ -22,10 +22,9 @@
 //  5. alignment: every row's seven cells share the previous row's column lefts
 //     and widths, within 1px.
 //
-// Usage: bun plugins/primitives/plugins/date-picker/e2e/calendar-keyboard.ts [--base <url>] [--out /tmp/calendar-kb] [--headed]
+// Usage: bun plugins/primitives/plugins/date-picker/e2e/calendar-keyboard.ts [--url <deploy>] [--out /tmp/calendar-kb] [--headed]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -35,7 +34,6 @@ import type { Locator, Page } from "playwright";
 
 import { addDays, fromISODay, toISODay } from "../core";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/calendar-kb");
 
 const r = report("date-picker calendar keyboard + alignment");
@@ -97,7 +95,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
 
   // ── 1. reach a live Calendar ───────────────────────────────────────────────
-  const { block, pageUrl } = await openBlankPage(page, base, {
+  const { block, pageUrl } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

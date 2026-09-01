@@ -20,15 +20,13 @@
 // truth for the block that was indented, BY ID. Only `withPageForest`'s lock
 // makes the split's read happen after the indent's commit.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/structural-atomicity-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/structural-atomicity-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 
 /** How many times the zero-delay Tab+Enter burst runs. A lost update is a RACE. */
@@ -68,7 +66,7 @@ await withBrowser(async (h) => {
       );
     });
 
-  const { pageId } = await openBlankPage(page, base, { settleMs: 3000 });
+  const { pageId } = await openBlankPage(page, { settleMs: 3000 });
 
   // A stable top-level parent for every round to indent under.
   await page.keyboard.type("head");

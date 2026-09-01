@@ -14,14 +14,14 @@
 //     field-scoped `data` UPDATE) for the pre-restore block id and assert it is
 //     NOT resurrected — an update never creates, by definition.
 //
-// Usage: bun plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts [--url <deploy>] [--out <path>]
 import {
+  agentFetch,
   arg,
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   blockDocText,
@@ -35,7 +35,6 @@ import {
 } from "@plugins/page/plugins/editor/e2e";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-restore");
 
 interface TextRun {
@@ -60,7 +59,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 const fetchBlocks = (pageId: string): Promise<BlockRow[]> =>
-  fetchJson<BlockRow[]>(`${base}/api/pages/${pageId}/blocks`);
+  fetchJson<BlockRow[]>(pathUrl(`/api/pages/${pageId}/blocks`));
 
 const rowText = (row: BlockRow | undefined): string =>
   (row?.data?.text ?? []).map((run) => run.text ?? "").join("");
@@ -72,7 +71,7 @@ await withBrowser(async (h) => {
   const r = report();
   const { page: pageA } = await h.session({ label: "A" });
 
-  const { pageUrl, pageId, block } = await openBlankPage(pageA, base, {
+  const { pageUrl, pageId, block } = await openBlankPage(pageA, {
     settleMs: 3000,
   });
   console.log("pageId:", pageId);
@@ -82,7 +81,7 @@ await withBrowser(async (h) => {
   await pageA.waitForTimeout(8000);
 
   const versionsAfterV1 = await fetchJson<VersionRow[]>(
-    `${base}/api/history/pages/${pageId}/versions`,
+    pathUrl(`/api/history/pages/${pageId}/versions`),
   );
   r.ok(
     "v1 snapshot recorded",
@@ -100,7 +99,7 @@ await withBrowser(async (h) => {
   await pageA.waitForTimeout(1800); // > projection debounce (1s), < snapshot debounce (4s)
 
   const versions = await fetchJson<VersionRow[]>(
-    `${base}/api/history/pages/${pageId}/versions`,
+    pathUrl(`/api/history/pages/${pageId}/versions`),
   );
   const v1Version = versions[versions.length - 1];
   const v2Rows = await fetchBlocks(pageId);

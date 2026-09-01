@@ -14,19 +14,18 @@
 //
 // Usage:
 //   ./singularity run plugins/primitives/plugins/pane/e2e/surface-match.ts \
-//     --page <pageId> --conv <conversationId> [--base http://<worktree>.localhost:9000]
+//     --page <pageId> --conv <conversationId> [--url http://<worktree>.localhost:9000]
 
 import type { Page } from "playwright";
 import {
-  baseUrl,
   numArg,
+  pathUrl,
   report,
   requireArg,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const PAGE_ID = requireArg(
   "page",
   "usage: surface-match.ts --page <pageId> --conv <conversationId>",
@@ -61,7 +60,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session({ colorScheme: "dark" });
 
   // ---- 1. chrome route reads -------------------------------------------
-  await page.goto(`${BASE}/pages/page/${PAGE_ID}`);
+  await page.goto(pathUrl(`/pages/page/${PAGE_ID}`));
   await page.waitForTimeout(waitMs);
   const pagesActive = await activeRows(page).allInnerTexts();
   // `pageDetailPane` is the route's title owner, so the document title leads
@@ -74,7 +73,7 @@ await withBrowser(async (h) => {
   );
   await snap(page, OUT, "1-pages-highlight");
 
-  await page.goto(`${BASE}/agents/c/${CONV_ID}`);
+  await page.goto(pathUrl(`/agents/c/${CONV_ID}`));
   await page.waitForTimeout(waitMs);
   const convActive = await activeRows(page).allInnerTexts();
   r.ok(
@@ -149,12 +148,12 @@ await withBrowser(async (h) => {
   r.ok("customizer opened without a crash", (await crashCount(page)) === 0);
   await snap(page, OUT, "3-theme-customizer");
 
-  await page.goto(`${BASE}/agents/c/${CONV_ID}`);
+  await page.goto(pathUrl(`/agents/c/${CONV_ID}`));
   await page.waitForTimeout(waitMs);
 
   // ---- 3. bespoke-surface apps -----------------------------------------
   for (const app of ["browser", "home", "sonata", "website"]) {
-    await page.goto(`${BASE}/${app}`);
+    await page.goto(pathUrl(`/${app}`));
     await page.waitForTimeout(waitMs);
     const crashes = await crashCount(page);
     const body = (await page.locator("body").innerText()).trim();
@@ -170,7 +169,7 @@ await withBrowser(async (h) => {
   // Deliberately the final step: the pen wraps every reorderable contribution
   // in a drag handle that swallows pointer events, so anything clicked after it
   // would fail for reasons that have nothing to do with the route.
-  await page.goto(`${BASE}/agents/c/${CONV_ID}`);
+  await page.goto(pathUrl(`/agents/c/${CONV_ID}`));
   await page.waitForTimeout(waitMs);
   await barHost.hover();
   await page.waitForTimeout(500);

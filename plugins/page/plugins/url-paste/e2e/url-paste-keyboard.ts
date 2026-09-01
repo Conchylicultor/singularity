@@ -14,19 +14,18 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--base <url>]
+//   ./singularity run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--url <deploy>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {
   arg,
-  baseUrl,
   boot,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const ORIGIN = baseUrl();
 const OUT = arg("out", "/tmp/url-paste-keyboard");
 
 const MENU = '[data-caret-trigger="url-paste"]';
@@ -51,7 +50,7 @@ await withBrowser(async (h) => {
 
   const SCRATCH_TITLE = "zz url-paste e2e";
 
-  await boot(page, `${ORIGIN}/pages`, {
+  await boot(page, pathUrl("/pages"), {
     marker: "text=Pages",
     timeoutMs: 90_000,
   });

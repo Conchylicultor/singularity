@@ -14,8 +14,8 @@
 //     --seconds 8
 
 import {
-  baseUrl,
   numArg,
+  pageUrl,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
@@ -52,7 +52,7 @@ declare global {
 // and `window[g]` would no longer resolve to the API above.
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;
 
-const url = baseUrl();
+const url = pageUrl();
 const seconds = numArg("seconds", 8);
 const top = numArg("top", 12);
 

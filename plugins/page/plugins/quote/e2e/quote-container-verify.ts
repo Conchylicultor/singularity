@@ -33,10 +33,9 @@
 // any anchor-decoration selector, which would fail on a cosmetic rename rather
 // than on a regression.
 //
-// Usage: bun plugins/page/plugins/quote/e2e/quote-container-verify.ts [--base <url>] [--out /tmp/quote]
+// Usage: bun plugins/page/plugins/quote/e2e/quote-container-verify.ts [--url <deploy>] [--out /tmp/quote]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -44,7 +43,6 @@ import {
 import type { Page } from "playwright";
 import { blockText, openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/quote");
 
 const r = report();
@@ -259,7 +257,7 @@ async function convertVia(
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const doc = await openBlankPage(page, base, { settleMs: 3000 });
+  const doc = await openBlankPage(page, { settleMs: 3000 });
   const originId = doc.blockId;
   console.log("page url:", doc.pageUrl);
 

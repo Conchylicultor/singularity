@@ -29,23 +29,21 @@
 //      landing inline (and Cmd+X would have deleted the block). The no-settle
 //      timing IS the test: a settle re-tests phase D.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/caret-clipboard-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/caret-clipboard-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // "alpha" / "bravo" / "charlie" indented under it.
   await typeLines(page, ["alpha", "bravo", { text: "charlie", indent: "in" }]);

@@ -13,10 +13,9 @@
 // Observed on the unfixed build: a "Tiger" label trailing the user's own caret
 // in every block, on a single-client page.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/no-collab-cursors-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/no-collab-cursors-verify.ts [--url <deploy>]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -24,7 +23,6 @@ import {
 import { openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/no-collab-cursors");
 const r = report();
 
@@ -51,7 +49,7 @@ const LEXICAL_NAMES = [
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   /**
    * The name labels Lexical paints for remote peers: an absolutely-positioned

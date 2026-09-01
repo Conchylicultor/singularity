@@ -40,15 +40,14 @@
 //      leaves the same five-column snapshot behind.
 //
 // Manual only. Requires `./singularity build` first.
-// Usage: bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   blockIdOf,
@@ -58,7 +57,6 @@ import {
 import { fetchBlockDocText } from "@plugins/page/plugins/editor-collab/e2e";
 import { plainOf, type Block } from "@plugins/page/plugins/editor/core";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/agent-access");
 
 /** The conversation the MCP calls below are attributed to (P5 reads it back). */
@@ -300,7 +298,7 @@ async function fetchAuthors(blockId: string): Promise<string[]> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "reader" });
-  const { pageId } = await openBlankPage(page, base, { settleMs: 2500 });
+  const { pageId } = await openBlankPage(page, { settleMs: 2500 });
 
   // Three ordinary paragraphs, typed like a human so their docs are real
   // browser-authored CRDT state (not a server seed).

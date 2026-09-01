@@ -21,18 +21,16 @@
 //   5. undo past the block's own text reaches the structural stack, so the
 //      document history stays one chronological stack rather than two.
 //
-// Usage: ./singularity run plugins/page/plugins/code-block/e2e/undo-verify.ts [--base <url>]
+// Usage: ./singularity run plugins/page/plugins/code-block/e2e/undo-verify.ts [--url <deploy>]
 import {
   ELEMENT_TIMEOUT_MS,
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/code-undo");
 const r = report();
 
@@ -54,7 +52,7 @@ await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // ---- 1: ``` converts the empty text block into a code block ---------------
   await page.keyboard.type("```");

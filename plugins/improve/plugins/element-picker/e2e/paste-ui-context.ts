@@ -5,15 +5,14 @@
 // real paste event carrying the tag as text/plain → assert the chip rendered
 // (and that no literal "<ui-context" text survived in the editor).
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/paste-ui-context.ts [--base <url>] [--headed]
+// Usage: bun plugins/improve/plugins/element-picker/e2e/paste-ui-context.ts [--url <deploy>] [--headed]
 import {
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const OUT = "/tmp/paste-ui-context";
 
 // A representative capture — exactly what the element picker hands over and
@@ -27,7 +26,7 @@ const TAG =
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
   // 1. The action bar floats collapsed at the top-right — hover to reveal it,
   //    then open the Improve popover and focus its prompt editor.

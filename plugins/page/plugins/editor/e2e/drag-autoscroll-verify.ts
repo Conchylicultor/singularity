@@ -25,15 +25,13 @@
 // The pointer is held STATIONARY for every scroll assertion. That is the whole
 // point: what advances the gesture is the rAF loop, not the mouse.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/drag-autoscroll-verify.ts [--base <url>] [--headed]
+// Usage: bun plugins/page/plugins/editor/e2e/drag-autoscroll-verify.ts [--url <deploy>] [--headed]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 
 /** Lines typed by hand before the doc is doubled by copy/paste. */
@@ -197,7 +195,7 @@ await withBrowser(async (h) => {
 
   // ---- Fixture: a document several viewports tall ---------------------------
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   for (let i = 0; i < TYPED_LINES; i++) {
     await page.keyboard.type(`line ${String(i).padStart(2, "0")}`);

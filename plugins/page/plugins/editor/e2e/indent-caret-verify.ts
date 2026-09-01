@@ -13,18 +13,16 @@
 //  4. type a char → it lands at the caret, not at the block's start;
 //  5. Shift+Tab (outdent) with the caret mid-text → same assertions in reverse.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/indent-caret-verify.ts [--base <url>] [--out /tmp/ind]
+// Usage: bun plugins/page/plugins/editor/e2e/indent-caret-verify.ts [--url <deploy>] [--out /tmp/ind]
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/ind");
 const r = report();
 
@@ -74,7 +72,7 @@ async function rowPadding(page: Page, id: string): Promise<number> {
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
   console.log("page url:", page.url());
 
   // --- 1. two blocks, the second one is the mover ----------------------------

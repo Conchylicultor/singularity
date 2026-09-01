@@ -23,9 +23,8 @@
 //      the server could answer, ONE op POST covers the whole multi-root gesture,
 //      and the confirming push neither duplicates nor drops them
 //
-// Usage: bun plugins/page/plugins/editor/e2e/duplicate-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/duplicate-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   stallRoute,
   withBrowser,
@@ -38,7 +37,6 @@ import {
 import { blockSelectionDriver } from "./support/block-selection";
 import { awaitDocument } from "./support/optimistic";
 
-const base = baseUrl();
 const r = report();
 
 /** How long the server is held before answering the duplicate's op POST (phase E). */
@@ -82,7 +80,7 @@ await withBrowser(async (h) => {
     }, i);
 
   // ---- Fixture: alpha / bravo(indented under alpha) / charlie / delta --------
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   for (const word of ["alpha", "bravo", "charlie", "delta"]) {
     await page.keyboard.type(word);
@@ -217,7 +215,7 @@ await withBrowser(async (h) => {
   // a slow poll. So stall the op endpoint and assert the clones are on screen well
   // before the server could possibly have answered. Only a genuine optimistic
   // overlay passes.
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   for (let i = 0; i < N; i++) {
     await page.keyboard.type(`line ${String(i).padStart(2, "0")}`);

@@ -3,15 +3,14 @@
 // logs, it does not assert.
 //
 // Usage:
-//   ./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--url http://<worktree>.localhost:9000]
 
 import {
-  baseUrl,
+  pathUrl,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const OUT = "/tmp/tabs";
 
 /** One tab-strip button as read out of the DOM. */
@@ -37,7 +36,7 @@ await withBrowser(async (h) => {
     return labels;
   }
 
-  await page.goto(BASE);
+  await page.goto(pathUrl("/"));
   await page.waitForTimeout(3000);
   await dump("1-initial"); // expect 1 tab (home) from URL
   await snap(page, OUT, "1-initial");

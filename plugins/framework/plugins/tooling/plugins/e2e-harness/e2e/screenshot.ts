@@ -8,8 +8,10 @@
 //   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
 //     [--url <url>] [--click <aria-label>] [--out <path>] [--color-scheme dark|light]
 //
-// --url defaults to this worktree's own deploy, so the bare command screenshots
-// the app you just built. By default the screenshot inherits the host OS
+// --url takes a full page URL: its origin says which deploy, its path says which
+// screen. Omit the path (or the flag) and you get this worktree's own deploy at
+// the root, so the bare command screenshots the app you just built. --base and
+// --origin are aliases. By default the screenshot inherits the host OS
 // appearance (macOS dark/light) so a `colorMode: "system"` app renders exactly as
 // the user sees it. Pass `--color-scheme dark|light` to force one.
 //
@@ -25,12 +27,12 @@
 
 import type { Locator } from "playwright";
 import { arg, numArg } from "./args";
-import { baseUrl } from "./target";
+import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { snap } from "./shots";
 
-const url = baseUrl();
+const url = pageUrl();
 const click = arg("click");
 const out = arg("out", "/tmp/screenshot");
 const waitMs = numArg("wait", 3000);

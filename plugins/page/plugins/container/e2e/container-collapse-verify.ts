@@ -47,10 +47,9 @@
 // the `container` primitive, so `context` inherits it unchanged — which is why
 // this spec lives here and not in either consumer.
 //
-// Usage: bun plugins/page/plugins/container/e2e/container-collapse-verify.ts [--base <url>] [--out /tmp/collapse]
+// Usage: bun plugins/page/plugins/container/e2e/container-collapse-verify.ts [--url <deploy>] [--out /tmp/collapse]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -62,7 +61,6 @@ import {
   pageIdFromUrl,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/collapse");
 const r = report();
 
@@ -255,7 +253,7 @@ function bothHalvesVisible(rows: { text: string }[], whole: string): boolean {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const doc = await openBlankPage(page, base, { settleMs: 800 });
+  const doc = await openBlankPage(page, { settleMs: 800 });
   const pageId = pageIdFromUrl(doc.pageUrl);
 
   // A callout with THREE children: enough that folding hides something, and the

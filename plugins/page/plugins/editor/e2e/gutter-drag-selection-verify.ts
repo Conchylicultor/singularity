@@ -30,20 +30,18 @@
 //
 // Usage:
 //   ./singularity run plugins/page/plugins/editor/e2e/gutter-drag-selection-verify.ts \
-//     [--base <url>] [--page <page url>] [--headed]
+//     [--url <deploy>] [--page <page url>] [--headed]
 //
 // `--page` drives an EXISTING document instead of creating a blank one (it seeds
 // nothing and types nothing — the gesture is read-only), which is how this was
 // reproduced against the reported page.
 import {
   arg,
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const existingPage = arg("page");
 const r = report();
 
@@ -143,7 +141,7 @@ await withBrowser(async (h) => {
       .waitFor({ state: "visible", timeout: 60_000 });
     await page.waitForTimeout(3000);
   } else {
-    await openBlankPage(page, base, { settleMs: 3000 });
+    await openBlankPage(page, { settleMs: 3000 });
     for (let i = 0; i < TYPED_LINES; i++) {
       await page.keyboard.type(`line ${String(i).padStart(2, "0")}`);
       await page.waitForTimeout(150);

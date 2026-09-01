@@ -17,8 +17,8 @@
 //     --key tasks.list --rate 10 --seconds 8
 
 import {
-  baseUrl,
   numArg,
+  pageUrl,
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -67,7 +67,7 @@ declare global {
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;
 const EMIT: typeof LIVE_STATE_EMIT_GLOBAL = LIVE_STATE_EMIT_GLOBAL;
 
-const url = baseUrl();
+const url = pageUrl();
 const key = requireArg(
   "key",
   "Usage: bun plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts --key <resourceKey> [--url <url>] [--rate 10] [--seconds 8]",

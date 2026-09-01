@@ -14,22 +14,21 @@
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
 //   ./singularity run plugins/primitives/plugins/pane/e2e/deep-link-restore.ts \
-//     --page-id block-1781024618461-ud10ib [--base <url>] [--wait <ms>]
+//     --page-id block-1781024618461-ud10ib [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).
 import {
-  baseUrl,
   numArg,
+  pathUrl,
   report,
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 
-const base = baseUrl();
 const pageId = requireArg(
   "page-id",
-  "Usage: bun plugins/primitives/plugins/pane/e2e/deep-link-restore.ts --page-id <pageId> [--base <base-url>] [--wait <ms>]",
+  "Usage: bun plugins/primitives/plugins/pane/e2e/deep-link-restore.ts --page-id <pageId> [--url <deploy>] [--wait <ms>]",
 );
 // Ceiling, not a fixed sleep: settle() polls and returns as soon as the marker
 // appears. Generous because a cold deferred tier under host contention can take
@@ -38,7 +37,7 @@ const pageId = requireArg(
 const waitMs = numArg("wait", 20000);
 
 const deepPath = `/pages/page/${pageId}`;
-const deepUrl = `${base}${deepPath}`;
+const deepUrl = pathUrl(deepPath);
 
 const r = report();
 
@@ -107,7 +106,7 @@ await withBrowser(async (h) => {
   r.ok("reload is not the NotFound surface", !reloaded.notFound);
 
   // (c) BARE `/` redirects to the default app.
-  await page.goto(`${base}/`, { waitUntil: "commit" });
+  await page.goto(pathUrl("/"), { waitUntil: "commit" });
   await settle(page, () => location.pathname !== "/");
   const bare = await snapshot(page);
   console.log("bare:", JSON.stringify(bare));

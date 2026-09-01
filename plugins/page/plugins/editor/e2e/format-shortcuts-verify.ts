@@ -37,10 +37,9 @@
 //     which shares its registration and must not regress with it.
 //
 // Manual-only; nothing runs this automatically.
-// Usage: bun plugins/page/plugins/editor/e2e/format-shortcuts-verify.ts [--base <url>] [--out /tmp/format-shortcuts]
+// Usage: bun plugins/page/plugins/editor/e2e/format-shortcuts-verify.ts [--url <deploy>] [--out /tmp/format-shortcuts]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -49,7 +48,6 @@ import type { Page } from "playwright";
 import { openBlankPage } from "./support/blank-page";
 import { makeRunsReader } from "./support/runs";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/format-shortcuts");
 
 const r = report();
@@ -190,7 +188,7 @@ await withBrowser(async (h) => {
   // The scratch page is created through the shared blank-page flow, so it carries
   // the harness's `x-singularity-origin: agent` header: the agent-origin plugin
   // segregates it out of the user's tree and sweeps it after 24h.
-  const { pageUrl, pageId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

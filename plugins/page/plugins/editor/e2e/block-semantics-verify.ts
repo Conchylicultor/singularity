@@ -25,10 +25,9 @@
 // specifically, because it is computed by the browser over the real
 // `heading` > `textbox` nesting, is the part with no jsdom equivalent.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/block-semantics-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/block-semantics-verify.ts [--url <deploy>]
 import type { Locator } from "playwright";
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -40,7 +39,6 @@ import {
 } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report("block-semantics");
 
 /** The block list itself, so the app's own chrome never counts as a heading. */
@@ -94,7 +92,7 @@ await withBrowser(async (h) => {
       BLOCK_LIST,
     );
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // ---- 1. Three markdown headings become three real headings ----------------
   //

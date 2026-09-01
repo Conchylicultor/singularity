@@ -24,10 +24,9 @@
 //     after the slash commit's own query-strip entry, which is generic to every
 //     `/` conversion, not something the wrap introduced — see step 6 in-line.)
 //
-// Usage: bun plugins/page/plugins/callout/e2e/callout-wrap-verify.ts [--base <url>] [--out /tmp/callout-wrap]
+// Usage: bun plugins/page/plugins/callout/e2e/callout-wrap-verify.ts [--url <deploy>] [--out /tmp/callout-wrap]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -39,7 +38,6 @@ import {
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/callout-wrap");
 
 const r = report();
@@ -82,7 +80,7 @@ await withBrowser(async (h) => {
     pageUrl,
     block,
     blockId: originId,
-  } = await openBlankPage(page, base, {
+  } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

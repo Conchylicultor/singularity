@@ -47,9 +47,8 @@
  *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-overfull-row.ts [--path /agents] [--headed]
  */
 import {
-  arg,
   numArg,
-  pathUrl,
+  pageUrl,
   report,
   snap,
   withBrowser,
@@ -98,9 +97,7 @@ type OverfillResult =
   { ok: true; barId: string; row: string } | { ok: false; reason: string };
 
 await withBrowser(async (h) => {
-  const explicitUrl = arg("url");
-  const path = arg("path");
-  const url = explicitUrl ?? pathUrl(path ?? "/agents");
+  const url = pageUrl("/agents");
 
   const from = numArg("from", 1400);
   const to = numArg("to", 480);

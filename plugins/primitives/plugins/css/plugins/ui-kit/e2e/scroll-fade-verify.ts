@@ -27,11 +27,10 @@
 //  4. The `/` slash menu filtered down until the list fits — NEITHER on.
 //
 // Usage: bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/scroll-fade-verify.ts \
-//          [--base <url>] [--out /tmp/scroll-fade] [--headed]
+//          [--url <deploy>] [--out /tmp/scroll-fade] [--headed]
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
   colorDistance,
   report,
   samplePixels,
@@ -41,7 +40,6 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/scroll-fade");
 const r = report();
 
@@ -474,7 +472,7 @@ await withBrowser(async (h) => {
     viewport: { width: 1280, height: 700 },
   });
 
-  const doc = await openBlankPage(page, base, { settleMs: 500 });
+  const doc = await openBlankPage(page, { settleMs: 500 });
   r.note(`throwaway page: ${doc.pageUrl}`);
 
   // ---- 1 / 2 / 3 — the "Turn into" menu -----------------------------------

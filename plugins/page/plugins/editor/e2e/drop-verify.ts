@@ -35,17 +35,15 @@
 // a real drag. Do not "strengthen" this into a claim about the browser's own
 // insert; it cannot be made here.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/drop-verify.ts [--base <url>] [--headed]
+// Usage: bun plugins/page/plugins/editor/e2e/drop-verify.ts [--url <deploy>] [--headed]
 import type { Page } from "playwright";
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockIdOf, editableBlocks, openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 interface DragSpec {
@@ -108,7 +106,7 @@ function rootParagraphs(page: Page, blockId: string): Promise<number> {
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
   // No trailing Enter: three blocks exactly, so a minted block is unambiguous.
   await typeLines(page, ["alpha", "bravo", "charlie"]);
   await page.waitForTimeout(2000); // the ~1s doc → data.text projection

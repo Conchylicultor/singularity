@@ -8,15 +8,17 @@
 //   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/perf.ts \
 //     [--url <url>] [--out <path>] [--wait-for-timeout <ms>] [--viewport-size "W,H"]
 //
-// --url defaults to this worktree's own deploy, so the bare command profiles the
-// app you just built.
+// --url takes a full page URL: its origin says which deploy, its path says which
+// screen. Omit the path (or the flag) and you get this worktree's own deploy at
+// the root, so the bare command profiles the app you just built. --base and
+// --origin are aliases.
 //
 // Outputs:
 //   - A concise summary table to stdout (so agents see it directly)
 //   - `<out>-perf.json` — full structured data for deeper Read
 
 import { arg, numArg } from "./args";
-import { baseUrl } from "./target";
+import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 
 interface LongTask {
@@ -47,7 +49,7 @@ declare global {
   }
 }
 
-const url = baseUrl();
+const url = pageUrl();
 const out = arg("out", "/tmp/perf");
 const waitMs = numArg("wait-for-timeout", 3000);
 const viewportRaw = arg("viewport-size", "1280,800").split(",").map(Number);

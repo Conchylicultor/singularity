@@ -13,7 +13,7 @@
  * `mark-boundary-verify.ts` were written against.
  *
  * It used to take `base` and every caller passed the same module-scope
- * `baseUrl()`. `agentFetch` resolves the run's target itself, so the parameter
+ * target. `agentFetch` resolves the run's target itself, so the parameter
  * was not just redundant but a way to get it wrong — and an unmarked `fetch`
  * here would create rows no cleanup could attribute. Dropped rather than
  * defaulted.

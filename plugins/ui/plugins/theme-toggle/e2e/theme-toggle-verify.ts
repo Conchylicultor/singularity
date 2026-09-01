@@ -13,16 +13,15 @@
 // change scheme at all.
 //
 // Usage:
-//   ./singularity run plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--base http://<worktree>.localhost:9000]
+//   ./singularity run plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--url http://<worktree>.localhost:9000]
 
 import {
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const OUT = "/tmp/theme-toggle";
 
 await withBrowser(async (h) => {
@@ -46,7 +45,7 @@ await withBrowser(async (h) => {
     }
   }
 
-  await page.goto(`${BASE}/agents`);
+  await page.goto(pathUrl("/agents"));
 
   // Unpinned, the action bar is a hover-revealed floating panel in the top-right
   // corner: its collapsed hitbox covers the buttons until the pointer is over it,

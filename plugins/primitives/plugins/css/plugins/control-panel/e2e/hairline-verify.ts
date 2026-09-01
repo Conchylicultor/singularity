@@ -21,7 +21,7 @@ import {
   withBrowser,
   snap,
   arg,
-  baseUrl,
+  pathUrl,
   report,
   samplePixels,
   colorDistance,
@@ -29,7 +29,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const out = arg("out", "/tmp/cp-hairline");
-const url = `${baseUrl()}/agents`;
+const url = pathUrl("/agents");
 
 /** A line is "visible" at this max-per-channel distance from the panel's own
  *  background. Measured today: 46 in dark, ~39 in light — the same contrast

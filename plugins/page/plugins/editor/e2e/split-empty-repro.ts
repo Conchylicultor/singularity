@@ -7,14 +7,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/split-empty-repro.ts [--rounds 40] [--headed]
 import {
-  baseUrl,
   numArg,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 const ROUNDS = numArg("rounds", 40);
 const DELAYS = [0, 4, 12, 25, 50, 90, 160, 300];
@@ -39,7 +37,7 @@ await withBrowser(async (h) => {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpu });
   }
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
   const failures: Failure[] = [];
 
   for (let i = 0; i < ROUNDS; i++) {

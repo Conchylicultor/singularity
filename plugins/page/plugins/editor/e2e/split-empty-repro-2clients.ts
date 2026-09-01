@@ -6,14 +6,12 @@
 //
 // Usage: bun plugins/page/plugins/editor/e2e/split-empty-repro-2clients.ts [--rounds 15] [--cpu 4]
 import {
-  baseUrl,
   numArg,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, editableBlocks, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 const ROUNDS = numArg("rounds", 15);
 const DELAYS = [0, 8, 20, 45, 90, 200];
@@ -30,7 +28,7 @@ await withBrowser(async (h) => {
     }
   }
 
-  const doc = await openBlankPage(a.page, base, { settleMs: 2500 });
+  const doc = await openBlankPage(a.page, { settleMs: 2500 });
   await b.page.goto(doc.pageUrl, { waitUntil: "domcontentloaded" });
   await editableBlocks(b.page).first().waitFor({ state: "visible" });
   await b.page.waitForTimeout(2500);

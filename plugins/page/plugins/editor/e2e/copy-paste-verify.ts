@@ -22,9 +22,8 @@
 //      such a payload, so before the guard it reached Lexical's own insert, which
 //      splits the paragraph. Real editors emit exactly this pair.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -32,7 +31,6 @@ import { editableBlocks, openBlankPage } from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 await withBrowser(async (h) => {
@@ -43,7 +41,7 @@ await withBrowser(async (h) => {
     r,
   );
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // Leave the trailing empty block; wait out the doc→data.text projection (~1s).
   await typeLines(page, ["alpha", "bravo", "charlie"], { trailingEnter: true });

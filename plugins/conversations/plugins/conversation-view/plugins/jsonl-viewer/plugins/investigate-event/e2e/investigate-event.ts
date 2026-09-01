@@ -17,10 +17,10 @@
  */
 import {
   arg,
-  pathUrl,
-  withBrowser,
   boot,
+  pathUrl,
   report,
+  withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const INVESTIGATE = '[aria-label="Launch agent to add a renderer"]';

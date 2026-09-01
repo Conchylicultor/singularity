@@ -9,9 +9,8 @@
 //
 // Measured on the unfixed build: Escape -> "0 selected", Shift+ArrowUp -> "3 selected".
 //
-// Usage: bun plugins/page/plugins/editor/e2e/block-selection-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/block-selection-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -19,13 +18,12 @@ import { editableBlocks, openBlankPage } from "./support/blank-page";
 import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // Four sibling blocks: alpha / bravo / charlie / delta, plus the trailing empty.
   await typeLines(page, ["alpha", "bravo", "charlie", "delta"], {

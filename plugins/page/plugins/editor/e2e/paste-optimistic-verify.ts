@@ -23,9 +23,8 @@
 // AND a weaker claim — "rendered before the server answered" would be satisfied
 // by 13 empty boxes. `awaitDocument` makes the wait's predicate the assertion.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/paste-optimistic-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/paste-optimistic-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   stallRoute,
   withBrowser,
@@ -38,7 +37,6 @@ import {
 import { awaitDocument } from "./support/optimistic";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 /** How long the server is held before answering the paste's op POST. */
@@ -50,7 +48,7 @@ await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   await typeLines(
     page,

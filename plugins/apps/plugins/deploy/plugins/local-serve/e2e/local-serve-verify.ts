@@ -14,10 +14,10 @@
  * to spend one.
  */
 import {
+  agentFetch,
   pathUrl,
   report,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const r = report("deploy local-serve section");

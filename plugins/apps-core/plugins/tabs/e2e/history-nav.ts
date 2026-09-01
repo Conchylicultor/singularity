@@ -2,7 +2,7 @@
 // tabs (research/2026-07-18-global-shell-history-snapshots.md).
 //
 // Usage:
-//   ./singularity run plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--base http://<worktree>.localhost:9000] [--out /tmp/histnav]
+//   ./singularity run plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--url http://<worktree>.localhost:9000] [--out /tmp/histnav]
 //
 // Scenarios (PASS/FAIL logged per assertion, exit 1 on any failure):
 //   A. /story → rail-click Settings → Back returns to /story; Forward → Settings.
@@ -18,13 +18,12 @@
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/histnav");
 
 const r = report();
@@ -143,7 +142,7 @@ await withBrowser(async (h) => {
   // ---- Scenario A: cross-app rail click pushes; Back/Forward traverse it ----
   {
     const page = pageA;
-    await page.goto(`${base}/story`);
+    await page.goto(pathUrl("/story"));
     await settle(page);
     r.ok("A: settled on /story", pathname(page) === "/story", pathname(page));
 
@@ -183,7 +182,7 @@ await withBrowser(async (h) => {
   {
     const deep = "/agents/c/conv-1784325578-uxps";
     const page = await context.newPage();
-    await page.goto(`${base}${deep}`);
+    await page.goto(pathUrl(deep));
     await settle(page);
     r.ok("B: settled on deep link", pathname(page) === deep, pathname(page));
 
@@ -236,7 +235,7 @@ await withBrowser(async (h) => {
   // ---- Scenario C: new tab (+) pushes; Back refocuses the previous tab ----
   {
     const page = await context.newPage();
-    await page.goto(`${base}/story`);
+    await page.goto(pathUrl("/story"));
     await settle(page);
     const t0 = await persistedTabs(page);
 
@@ -268,7 +267,7 @@ await withBrowser(async (h) => {
   // ---- Scenario D: reload mid-history keeps back-target (tabId survival) ----
   {
     const page = await context.newPage();
-    await page.goto(`${base}/story`);
+    await page.goto(pathUrl("/story"));
     await settle(page);
     await clickRailApp(page, "Settings");
     await page.reload();
@@ -297,7 +296,7 @@ await withBrowser(async (h) => {
 
     // 1. A populated instance to (not) inherit: the /agents tab plus whatever
     //    the `+` button opens beside it.
-    await page.goto(`${base}${startPath}`);
+    await page.goto(pathUrl(startPath));
     await settle(page);
     await page.getByRole("button", { name: /New tab|New window/ }).click();
     await page.waitForTimeout(800);
@@ -316,7 +315,7 @@ await withBrowser(async (h) => {
     // 2. The bookmark click: a REAL cross-document navigation to another app.
     //    The reported bug was the previous instance's tabs surviving alongside
     //    a newly-minted one.
-    await page.goto(`${base}${bookmarkPath}`);
+    await page.goto(pathUrl(bookmarkPath));
     await settle(page);
     const fresh = await persistedTabs(page);
     r.ok(

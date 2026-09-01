@@ -2,14 +2,14 @@
 // scrolls) should rubber-band the surface (inline translate transform); a wheel
 // on a genuinely scrollable surface should not.
 //
-// Usage: bun plugins/primitives/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts [--base <url>]
+// Usage: bun plugins/primitives/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts [--url <deploy>]
 import {
-  baseUrl,
+  pathUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const url = baseUrl();
+const url = pathUrl("/");
 const r = report();
 
 await withBrowser(async (h) => {

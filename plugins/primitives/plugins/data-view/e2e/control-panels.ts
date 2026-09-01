@@ -9,15 +9,15 @@
 //   ./singularity run plugins/primitives/plugins/data-view/e2e/control-panels.ts --out /tmp/cp
 //   ./singularity run plugins/primitives/plugins/data-view/e2e/control-panels.ts --headed
 import {
-  withBrowser,
-  snap,
   arg,
-  baseUrl,
+  pathUrl,
   report,
+  snap,
+  withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const out = arg("out", "/tmp/control-panels");
-const url = `${baseUrl()}/agents`;
+const url = pathUrl("/agents");
 
 await withBrowser(async (h) => {
   const r = report("DataView control panels");

@@ -9,7 +9,10 @@
  * the browser, so it must never import the `web`/`server` code under test.
  */
 export { arg, numArg, flag, requireArg, usage } from "./args";
-export { baseUrl, pathUrl } from "./target";
+// No origin is exported. `pathUrl` names a page this script chose; `pageUrl`
+// names the one the caller chose. There is deliberately no way to obtain the
+// bare origin — see target.ts for the collision that caused.
+export { pathUrl, pageUrl, requirePage } from "./target";
 export { agentFetch } from "./app-fetch";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
 export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";

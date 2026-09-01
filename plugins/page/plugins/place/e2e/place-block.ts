@@ -16,23 +16,21 @@
 // `page/editor/e2e/convert-in-place-verify.ts` is the real gate for that rule.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/place/e2e/place-block.ts [--base http://<worktree>.localhost:9000] [--headed]
+//   ./singularity run plugins/page/plugins/place/e2e/place-block.ts [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
-  baseUrl,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 import { PLACE_TYPE } from "@plugins/page/plugins/place/core";
 
-const BASE = baseUrl();
 const OUT = "/tmp/place-block";
 
 await withBrowser(async (h) => {
   const { page, captured } = await h.session({ colorScheme: "dark" });
 
-  const doc = await openBlankPage(page, BASE, { settleMs: 500 });
+  const doc = await openBlankPage(page, { settleMs: 500 });
   console.log(`[1] blank page ${doc.pageUrl}`);
 
   // 1) The slash menu offers the block. `/plac` rather than `/place` so the

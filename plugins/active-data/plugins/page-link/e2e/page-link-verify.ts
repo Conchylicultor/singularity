@@ -12,20 +12,19 @@
 // Usage:
 //   ./singularity run plugins/active-data/plugins/page-link/e2e/page-link-verify.ts \
 //     --conv <conversationId> --page <block-…> [--block <block-…>] \
-//     [--base http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
-  baseUrl,
-  numArg,
+  agentFetch,
   arg,
-  requireArg,
+  numArg,
+  pathUrl,
   report,
+  requireArg,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const USAGE =
   "usage: page-link-verify.ts --conv <conversationId> --page <block-id> [--block <content-block-id>]";
 const CONV = requireArg("conv", USAGE);
@@ -39,7 +38,7 @@ const r = report("active-data page-link");
 await withBrowser(async (h) => {
   const { page } = await h.session({ colorScheme: "dark" });
 
-  await page.goto(`${BASE}/agents/c/${CONV}`);
+  await page.goto(pathUrl(`/agents/c/${CONV}`));
   await page.waitForTimeout(waitMs);
   await snap(page, OUT, "1-conversation");
 
@@ -92,7 +91,7 @@ await withBrowser(async (h) => {
     );
 
     // Back to the bare conversation for the next case.
-    await page.goto(`${BASE}/agents/c/${CONV}`);
+    await page.goto(pathUrl(`/agents/c/${CONV}`));
     await page.waitForTimeout(waitMs);
   }
 

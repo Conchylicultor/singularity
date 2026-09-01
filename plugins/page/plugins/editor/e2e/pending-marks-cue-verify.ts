@@ -59,20 +59,18 @@
 //     nothing else, so they pass identically whatever the chip is anchored to.
 //
 // Manual-only; nothing runs this automatically.
-// Usage: bun plugins/page/plugins/editor/e2e/pending-marks-cue-verify.ts [--base <url>] [--out /tmp/pending-marks-cue]
+// Usage: bun plugins/page/plugins/editor/e2e/pending-marks-cue-verify.ts [--url <deploy>] [--out /tmp/pending-marks-cue]
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { caretState, openBlankPage } from "./support/blank-page";
 import { caretLinear, pressUntilLinear } from "./support/caret";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/pending-marks-cue");
 
 const r = report();
@@ -331,7 +329,7 @@ await withBrowser(async (h) => {
     pageUrl,
     pageId,
     blockId: firstId,
-  } = await openBlankPage(page, base, { settleMs: 3000 });
+  } = await openBlankPage(page, { settleMs: 3000 });
   console.log("page url:", pageUrl);
   console.log("PAGE_ID:", pageId);
 

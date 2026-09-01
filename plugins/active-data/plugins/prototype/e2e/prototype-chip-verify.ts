@@ -11,18 +11,17 @@
 // Usage:
 //   bun plugins/active-data/plugins/prototype/e2e/prototype-chip-verify.ts \
 //     --conv <conversationId> --proto proto-1786877040-w2vi \
-//     [--base http://<worktree>.localhost:9000] [--headed]
+//     [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
-  baseUrl,
   numArg,
-  requireArg,
+  pathUrl,
   report,
+  requireArg,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const USAGE =
   "usage: prototype-chip-verify.ts --conv <conversationId> --proto <proto-id>";
 const CONV = requireArg("conv", USAGE);
@@ -35,7 +34,7 @@ const r = report("active-data prototype");
 await withBrowser(async (h) => {
   const { page } = await h.session({ colorScheme: "dark" });
 
-  await page.goto(`${BASE}/agents/c/${CONV}`);
+  await page.goto(pathUrl(`/agents/c/${CONV}`));
   await page.waitForTimeout(waitMs);
   await snap(page, OUT, "1-conversation");
 

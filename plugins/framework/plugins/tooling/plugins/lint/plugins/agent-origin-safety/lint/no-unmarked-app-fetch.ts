@@ -74,7 +74,7 @@ export default createRule({
         "the browser CONTEXT, which cannot cover a request the script makes from " +
         "Node — that is this gap. Use `agentFetch(path, init?)` from " +
         "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e, which applies " +
-        "the headers and resolves `path` against the same `--base` target.",
+        "the headers and resolves `path` against the same `--url` target.",
     },
   },
   defaultOptions: [],

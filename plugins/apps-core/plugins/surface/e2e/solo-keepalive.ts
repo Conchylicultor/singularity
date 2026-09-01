@@ -5,7 +5,7 @@
 //
 // Usage:
 //   ./singularity run plugins/apps-core/plugins/surface/e2e/solo-keepalive.ts \
-//     [--base http://<worktree>.localhost:9000] [--out /tmp/solo-keepalive] [--headed]
+//     [--url http://<worktree>.localhost:9000] [--out /tmp/solo-keepalive] [--headed]
 //
 // Why a DOM expando and not a screenshot: the old bug (a placement toggle that
 // swapped the tab container for a portal) preserved every *pixel* and destroyed
@@ -22,13 +22,12 @@
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/solo-keepalive");
 
 const r = report();
@@ -181,7 +180,7 @@ async function unpinActionBar(page: Page): Promise<void> {
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await page.goto(`${base}/agents`);
+  await page.goto(pathUrl("/agents"));
   await settle(page);
   await unpinActionBar(page);
 

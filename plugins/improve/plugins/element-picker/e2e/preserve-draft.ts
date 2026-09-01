@@ -10,15 +10,14 @@
 // again with the popover CLOSED (append path, draft restored from localStorage)
 // → assert the typed text survived both and each pick added its own chip.
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/preserve-draft.ts [--base <url>] [--headed]
+// Usage: bun plugins/improve/plugins/element-picker/e2e/preserve-draft.ts [--url <deploy>] [--headed]
 import {
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const OUT = "/tmp/element-picker-preserve-draft";
 const DRAFT = "please fix the thing";
 
@@ -28,7 +27,7 @@ const PICK_AT = { x: 20, y: 300 };
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
   const bar = page.locator('[data-source*="floating-action"]').first();
   await bar.waitFor({ state: "visible", timeout: 30_000 });

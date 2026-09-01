@@ -84,10 +84,9 @@
 //   `GET /api/pages/:pageId/blocks` — a content edge one indent deeper is
 //   evidence of nesting, not proof of a `parentId`.
 //
-// Usage: bun plugins/page/plugins/context/e2e/context-container-verify.ts [--base <url>] [--out /tmp/context]
+// Usage: bun plugins/page/plugins/context/e2e/context-container-verify.ts [--url <deploy>] [--out /tmp/context]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -99,7 +98,6 @@ import {
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/context");
 
 const r = report();
@@ -590,7 +588,7 @@ async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const { pageUrl, pageId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

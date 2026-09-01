@@ -5,18 +5,16 @@
 // This DOES spawn a real agent conversation (that is the feature), so keep the
 // prompt trivial.
 //
-// Usage: bun plugins/page/plugins/prompt/plugins/block/e2e/prompt-launch.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/prompt/plugins/block/e2e/prompt-launch.ts [--url <deploy>] [--out <path>]
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/prompt-launch");
 
 const r = report();
@@ -24,7 +22,7 @@ const r = report();
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  const { pageId, blockId } = await openBlankPage(page, base, {
+  const { pageId, blockId } = await openBlankPage(page, {
     settleMs: 2500,
   });
   console.log("page:", pageId, "seed block:", blockId);

@@ -20,10 +20,9 @@
 //     object in one press.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/media-caret-verify.ts \
-//          [--base <url>] [--out /tmp/media-caret] [--image <path>]
+//          [--url <deploy>] [--out /tmp/media-caret] [--image <path>]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -31,7 +30,6 @@ import {
 import type { Page } from "playwright";
 import { openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/media-caret");
 const image = arg("image", "/tmp/test-image.png");
 const r = report("media-caret");
@@ -114,7 +112,7 @@ await withBrowser(async (h) => {
   // phases, two questions, two sessions.
   {
     const { page } = await h.session({ label: "sweep" });
-    const doc = await openBlankPage(page, base, {
+    const doc = await openBlankPage(page, {
       settleMs: 3000,
       timeoutMs: 60_000,
     });
@@ -138,7 +136,7 @@ await withBrowser(async (h) => {
         // of failures that says nothing about the invariant. The generous
         // timeout is because this is 20+ page creations back to back on a host
         // that may also be building.
-        await openBlankPage(page, base, { settleMs: 1200, timeoutMs: 60_000 });
+        await openBlankPage(page, { settleMs: 1200, timeoutMs: 60_000 });
         await page.keyboard.type(`/${label}`, { delay: 30 });
         await page.waitForTimeout(600);
         await page.keyboard.press("Enter");
@@ -156,7 +154,7 @@ await withBrowser(async (h) => {
 
   // ── Phase 2: what the caret MEANS on a media object ───────────────────────
   const { page } = await h.session({ label: "behaviour" });
-  const doc = await openBlankPage(page, base, {
+  const doc = await openBlankPage(page, {
     settleMs: 2500,
     timeoutMs: 60_000,
   });

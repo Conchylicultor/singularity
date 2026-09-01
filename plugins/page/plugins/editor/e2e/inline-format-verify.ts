@@ -31,19 +31,17 @@
 //     row's non-empty-content rule did not steal the third backtick);
 //  7. convergence in a second browser context (cold load, fresh socket).
 //
-// Usage: bun plugins/page/plugins/editor/e2e/inline-format-verify.ts [--base <url>] [--out /tmp/inline-fmt]
+// Usage: bun plugins/page/plugins/editor/e2e/inline-format-verify.ts [--url <deploy>] [--out /tmp/inline-fmt]
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/inline-fmt");
 
 const r = report();
@@ -191,7 +189,7 @@ await withBrowser(async (h) => {
     pageUrl,
     pageId,
     blockId: firstId,
-  } = await openBlankPage(page, base, {
+  } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

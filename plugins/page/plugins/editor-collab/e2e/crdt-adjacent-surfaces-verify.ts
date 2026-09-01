@@ -5,19 +5,17 @@
 //  - an inline [[page]] link typed into a bound editor registers a backlink;
 //  - the projected data.text equals the doc text (row readers see the truth).
 //
-// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-adjacent-surfaces-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-adjacent-surfaces-verify.ts [--url <deploy>] [--out <path>]
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-adjacent");
 
 const r = report();
@@ -49,7 +47,7 @@ r.ok("target page created", createRes.ok && !!targetId, targetId);
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  const { pageId, blockId } = await openBlankPage(page, base, {
+  const { pageId, blockId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("editing pageId:", pageId, "backlink target:", targetId);

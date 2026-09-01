@@ -12,11 +12,10 @@
 //     restored, caret collapsed at the join;
 //  5. converge in a SECOND browser context (fresh socket, cold load).
 //
-// Usage: bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts [--base <url>] [--out /tmp/sm]
+// Usage: bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts [--url <deploy>] [--out /tmp/sm]
 import {
-  ELEMENT_TIMEOUT_MS,
   arg,
-  baseUrl,
+  ELEMENT_TIMEOUT_MS,
   report,
   snap,
   waitFor,
@@ -25,7 +24,6 @@ import {
 import { blockText, openBlankPage } from "./support/blank-page";
 import { caretLinear, pressUntilOffset } from "./support/caret";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/sm");
 const r = report();
 
@@ -48,7 +46,7 @@ type MergeCaret =
 await withBrowser(async (h) => {
   const { page: pageA } = await h.session({ label: "A" });
 
-  const doc = await openBlankPage(pageA, base, { settleMs: 3000 });
+  const doc = await openBlankPage(pageA, { settleMs: 3000 });
   const pageUrl = doc.pageUrl;
   console.log("page url:", pageUrl);
 

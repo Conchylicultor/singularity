@@ -11,11 +11,10 @@
 //     the same text (server round-trip through doc-update → page_block_docs →
 //     blockContentResource).
 //
-// Usage: bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts [--base <url>] [--out /tmp/crdt]
+// Usage: bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts [--url <deploy>] [--out /tmp/crdt]
 import {
-  ELEMENT_TIMEOUT_MS,
   arg,
-  baseUrl,
+  ELEMENT_TIMEOUT_MS,
   report,
   snap,
   waitFor,
@@ -23,7 +22,6 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt");
 const r = report();
 
@@ -34,7 +32,7 @@ await withBrowser(async (h) => {
 
   // Create a fresh blank page from the landing quick-create tile; the blank page
   // ships one empty text block, already focused.
-  const doc = await openBlankPage(pageA, base, { settleMs: 3000 });
+  const doc = await openBlankPage(pageA, { settleMs: 3000 });
   const pageUrl = doc.pageUrl;
   console.log("page url:", pageUrl);
 

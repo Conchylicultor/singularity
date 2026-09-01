@@ -25,9 +25,8 @@
  *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts [--path /agents] [--headed]
  */
 import {
-  arg,
   numArg,
-  pathUrl,
+  pageUrl,
   report,
   snap,
   withBrowser,
@@ -85,9 +84,7 @@ interface BarAgg {
 }
 
 await withBrowser(async (h) => {
-  const explicitUrl = arg("url");
-  const path = arg("path");
-  const url = explicitUrl ?? pathUrl(path ?? "/");
+  const url = pageUrl("/");
 
   const from = numArg("from", 1400);
   const to = numArg("to", 560);

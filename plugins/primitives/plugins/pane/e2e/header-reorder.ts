@@ -37,7 +37,7 @@
  *  - `/events/sources` — an ORDINARY pane whose header is its plain `Actions`
  *    slot. This is the surface the refactor is for, and the only one that
  *    discriminates: run this script against the pre-refactor deploy
- *    (`--base http://singularity.localhost:9000`) and this pane reports
+ *    (`--url http://singularity.localhost:9000`) and this pane reports
  *    `sortables in band=0` with edit mode ON, because `renderIsolated` painted
  *    its actions outside the list middleware. Every other pane in the app that
  *    is not a rich custom header is this one.
@@ -56,7 +56,7 @@
  * Manual only — nothing runs this automatically.
  *
  *   bun plugins/primitives/plugins/pane/e2e/header-reorder.ts \
- *     [--base http://<worktree>.localhost:9000] [--song <id>] [--headed]
+ *     [--url http://<worktree>.localhost:9000] [--song <id>] [--headed]
  */
 import {
   arg,

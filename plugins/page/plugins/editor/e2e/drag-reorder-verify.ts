@@ -30,9 +30,8 @@
 // 0 on mouse-down). `onDragStart` then saw an empty selection and every
 // multi-block drag silently degraded to a single-block `move`.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/drag-reorder-verify.ts [--base <url>] [--headed]
+// Usage: bun plugins/page/plugins/editor/e2e/drag-reorder-verify.ts [--url <deploy>] [--headed]
 import {
-  baseUrl,
   report,
   stallRoute,
   withBrowser,
@@ -45,7 +44,6 @@ import {
 import { blockSelectionDriver } from "./support/block-selection";
 import { awaitDocument } from "./support/optimistic";
 
-const base = baseUrl();
 const r = report();
 
 /** How long the server is held before answering the drag's op POST (phase D). */
@@ -145,7 +143,7 @@ await withBrowser(async (h) => {
   };
 
   // ---- Fixture: alpha / bravo / charlie / delta ------------------------------
-  const { pageId } = await openBlankPage(page, base, { settleMs: 3000 });
+  const { pageId } = await openBlankPage(page, { settleMs: 3000 });
   for (const word of ["alpha", "bravo", "charlie", "delta"]) {
     await page.keyboard.type(word);
     await page.waitForTimeout(250);
@@ -213,7 +211,7 @@ await withBrowser(async (h) => {
   // and assert the reorder is on screen well before the server could answer.
   // Only a genuine optimistic overlay passes — this is the behaviour change the
   // two `drag again to fix` disables used to deny.
-  const fresh = await openBlankPage(page, base, { settleMs: 3000 });
+  const fresh = await openBlankPage(page, { settleMs: 3000 });
   for (const word of ["one", "two", "three"]) {
     await page.keyboard.type(word);
     await page.waitForTimeout(250);
@@ -265,7 +263,7 @@ await withBrowser(async (h) => {
   // On its OWN fresh page: D ends in a reload, and a phase reading order out of
   // whatever A-D left behind would be a spec about the script rather than about
   // the editor.
-  const multi = await openBlankPage(page, base, { settleMs: 3000 });
+  const multi = await openBlankPage(page, { settleMs: 3000 });
   for (const word of [
     "alpha",
     "bravo",

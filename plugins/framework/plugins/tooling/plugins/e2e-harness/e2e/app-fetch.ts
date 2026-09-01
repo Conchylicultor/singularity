@@ -31,8 +31,8 @@ function originSource(): string {
 /**
  * `fetch` against the app under test, marked as agent-caused.
  *
- * `path` is app-relative (`/api/pages/…`); the target comes from `baseUrl()`,
- * so a script honours `--base` without restating it. Caller-supplied headers
+ * `path` is app-relative (`/api/pages/…`); the origin comes from the resolved
+ * target, so a script honours `--url` without restating it. Caller-supplied headers
  * win over nothing — the provenance headers are applied last, deliberately, so
  * a script cannot accidentally unmark itself by spreading a header object.
  */

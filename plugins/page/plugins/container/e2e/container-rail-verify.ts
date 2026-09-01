@@ -47,10 +47,9 @@
 // "Remove callout" wording is checkable). The behaviour belongs to the container
 // primitive and to the editor's rail, so `context` inherits it unchanged.
 //
-// Usage: bun plugins/page/plugins/container/e2e/container-rail-verify.ts [--base <url>] [--out /tmp/rail]
+// Usage: bun plugins/page/plugins/container/e2e/container-rail-verify.ts [--url <deploy>] [--out /tmp/rail]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -58,7 +57,6 @@ import {
 import type { Page } from "playwright";
 import { openBlankPage, pageIdFromUrl } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/rail");
 const r = report();
 
@@ -221,7 +219,7 @@ async function dragHandleOnto(
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "A" });
-  const doc = await openBlankPage(page, base, { settleMs: 800 });
+  const doc = await openBlankPage(page, { settleMs: 800 });
   const pageId = pageIdFromUrl(doc.pageUrl);
 
   // A callout with THREE children (so a fold is genuinely on offer) plus one

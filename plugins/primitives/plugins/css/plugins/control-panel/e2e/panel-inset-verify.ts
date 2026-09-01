@@ -38,7 +38,7 @@ import {
   boot,
   arg,
   flag,
-  baseUrl,
+  pathUrl,
   report,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -303,7 +303,7 @@ await withBrowser(async (h) => {
 
   // `marker`, not a fixed sleep: the app's own chrome is what the steps below
   // reach for, so "a visible button exists" is the honest readiness signal.
-  await boot(page, `${baseUrl()}${path || "/agents/tasks"}`, {
+  await boot(page, pathUrl(path || "/agents/tasks"), {
     marker: "button:visible",
     settleMs: Number(arg("boot-settle", "2500")),
   });

@@ -10,10 +10,9 @@
 // succeeded (divider present, focus really moved), so a broken flow fails loudly
 // instead of silently producing three identical screenshots.
 //
-// Usage: bun plugins/page/plugins/divider/e2e/divider-caret-verify.ts [--base <url>] [--out /tmp/divider-caret]
+// Usage: bun plugins/page/plugins/divider/e2e/divider-caret-verify.ts [--url <deploy>] [--out /tmp/divider-caret]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -21,7 +20,6 @@ import {
 import type { Page } from "playwright";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/divider-caret");
 const r = report("divider-caret");
 
@@ -75,7 +73,7 @@ await withBrowser(async (h) => {
 
   // --- divider caret cue: focused right after conversion, unfocused, then
   // refocused by keyboard --------------------------------------------------
-  const doc = await openBlankPage(page, base, { settleMs: 3000 });
+  const doc = await openBlankPage(page, { settleMs: 3000 });
   r.note(`page ${doc.pageId}, first block ${doc.blockId}`);
 
   // A paragraph ABOVE the divider, so ArrowUp/ArrowDown have somewhere to go.

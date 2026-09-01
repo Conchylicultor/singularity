@@ -15,9 +15,8 @@
 // editor takes over and applies a whole-BLOCK range (Notion's model), which the
 // existing block-selection clipboard path already serializes as indented markdown.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/cross-block-text-selection-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/cross-block-text-selection-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -25,14 +24,13 @@ import { editableBlocks, openBlankPage } from "./support/blank-page";
 import { highlightedLines } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 await withBrowser(async (h) => {
   const { context, page } = await h.session();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // A heading, a bullet, and a bullet indented under it — so the clipboard assertion
   // covers per-type markdown prefixes AND nesting, not just line breaks.

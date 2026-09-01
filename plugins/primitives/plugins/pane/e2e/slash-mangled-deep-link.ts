@@ -17,21 +17,20 @@
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
 //   ./singularity run plugins/primitives/plugins/pane/e2e/slash-mangled-deep-link.ts \
-//     --conv-id conv-1785314012-zlzw [--base <url>] [--wait <ms>]
+//     --conv-id conv-1785314012-zlzw [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).
 import {
-  baseUrl,
   numArg,
+  pathUrl,
   report,
   requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const base = baseUrl();
 const convId = requireArg(
   "conv-id",
-  "Usage: bun plugins/primitives/plugins/pane/e2e/slash-mangled-deep-link.ts --conv-id <convId> [--base <base-url>] [--wait <ms>]",
+  "Usage: bun plugins/primitives/plugins/pane/e2e/slash-mangled-deep-link.ts --conv-id <convId> [--url <deploy>] [--wait <ms>]",
 );
 const waitMs = numArg("wait", 20000);
 
@@ -60,7 +59,7 @@ await withBrowser(async (h) => {
 
   for (const v of variants) {
     const before = pageErrors.length;
-    await page.goto(`${base}${v.path}`, { waitUntil: "commit" });
+    await page.goto(pathUrl(v.path), { waitUntil: "commit" });
 
     // Poll for the URL to settle on the canonical form (the boot replace-stamp
     // rewrites the address bar in place), bounded by the ceiling.

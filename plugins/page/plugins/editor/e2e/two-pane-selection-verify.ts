@@ -18,15 +18,14 @@
 //
 // Usage:
 //   ./singularity run plugins/page/plugins/editor/e2e/two-pane-selection-verify.ts \
-//     [--base <url>] [--headed]
+//     [--url <deploy>] [--headed]
 import {
-  baseUrl,
+  pathUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const r = report();
 
 /** Lines seeded into each page — enough to drag across several rows. */
@@ -37,7 +36,7 @@ await withBrowser(async (h) => {
 
   /** Seed a fresh page with `TYPED_LINES` numbered lines; returns its page id. */
   const seedPage = async (tag: string): Promise<string> => {
-    const doc = await openBlankPage(page, base, { settleMs: 2000 });
+    const doc = await openBlankPage(page, { settleMs: 2000 });
     for (let i = 0; i < TYPED_LINES; i++) {
       await page.keyboard.type(`${tag} line ${i}`);
       await page.waitForTimeout(120);
@@ -55,7 +54,7 @@ await withBrowser(async (h) => {
   const left = await seedPage("left");
   const right = await seedPage("right");
 
-  await page.goto(`${base}/pages/page/${left}/page/${right}`, {
+  await page.goto(pathUrl(`/pages/page/${left}/page/${right}`), {
     waitUntil: "domcontentloaded",
     timeout: 60_000,
   });

@@ -17,11 +17,11 @@
  */
 import {
   arg,
-  pathUrl,
-  withBrowser,
   boot,
+  pathUrl,
   report,
   snap,
+  withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const INVESTIGATE = '[aria-label="Investigate failure"]';

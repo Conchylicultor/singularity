@@ -10,18 +10,17 @@
 //     that same block — the edits must MERGE (no lost text) and the user's
 //     caret must stay at the end of what they're typing (no jump).
 //
-// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-multitab-agent-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-multitab-agent-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
 import * as Y from "yjs";
 import {
+  agentFetch,
   arg,
-  baseUrl,
   capture,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   blockText,
@@ -31,7 +30,6 @@ import {
 } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-multitab");
 
 const r = report();
@@ -59,7 +57,7 @@ await withBrowser(async (h) => {
     pageUrl,
     block: blockA,
     blockId: block1Id,
-  } = await openBlankPage(tabA, base, { settleMs: 3000 });
+  } = await openBlankPage(tabA, { settleMs: 3000 });
 
   await tabA.keyboard.type("first block from tab A", { delay: 10 });
   // Second block for tab B to edit.

@@ -14,20 +14,18 @@
 //  4. assert `data.text` (the projection) converges to the same text;
 //  5. open a second browser context and assert it converges.
 //
-// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-newblock-verify.ts [--base <url>] [--out <path>]
+// Usage: bun plugins/page/plugins/editor-collab/e2e/crdt-newblock-verify.ts [--url <deploy>] [--out <path>]
 import {
+  agentFetch,
   arg,
-  baseUrl,
   report,
   snap,
   waitFor,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { blockDocText, fetchBlockDoc } from "./support/ydoc";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/crdt-newblock");
 
 const r = report();
@@ -46,7 +44,7 @@ await withBrowser(async (h) => {
     }
   });
 
-  const { pageUrl, pageId } = await openBlankPage(pageA, base, {
+  const { pageUrl, pageId } = await openBlankPage(pageA, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl, "pageId:", pageId);

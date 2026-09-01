@@ -9,6 +9,7 @@
  * instead of fourteen.
  */
 import type { Locator, Page } from "playwright";
+import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 /** Every editable block in the open document, in document order. */
 export function editableBlocks(page: Page): Locator {
@@ -90,10 +91,12 @@ export interface OpenBlankPageOptions {
 /**
  * Create a fresh blank page from the Pages landing quick-create tile and focus
  * its one empty text block.
+ *
+ * Resolves its own target, like `support/runs.ts` — it used to take a `base`
+ * origin that every call site filled with the same module-scope value.
  */
 export async function openBlankPage(
   page: Page,
-  base: string,
   opts: OpenBlankPageOptions = {},
 ): Promise<BlankDoc> {
   // 60s, not 30s: this ONE budget covers three separate waits (the navigation,
@@ -102,7 +105,10 @@ export async function openBlankPage(
   // declaring failure, not a delay — a healthy open costs what it costs.
   const timeout = opts.timeoutMs ?? 60_000;
 
-  await page.goto(`${base}/pages`, { waitUntil: "domcontentloaded", timeout });
+  await page.goto(pathUrl("/pages"), {
+    waitUntil: "domcontentloaded",
+    timeout,
+  });
   const tile = page.getByText("Blank page", { exact: true }).first();
   await tile.waitFor({ state: "visible", timeout });
   await tile.click();

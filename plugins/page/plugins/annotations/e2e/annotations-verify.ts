@@ -36,10 +36,9 @@
 // reason: frames are grid SIBLINGS of the rows they cover, so DOM ancestry says
 // nothing about ownership.
 //
-// Usage: bun plugins/page/plugins/annotations/e2e/annotations-verify.ts [--base <url>] [--out /tmp/annotations]
+// Usage: bun plugins/page/plugins/annotations/e2e/annotations-verify.ts [--url <deploy>] [--out /tmp/annotations]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -47,7 +46,6 @@ import {
 import type { Page } from "playwright";
 import { blockText, openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/annotations");
 
 const r = report();
@@ -376,7 +374,7 @@ async function seed(
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ label: "annotations" });
-  const { pageUrl, pageId } = await openBlankPage(page, base, {
+  const { pageUrl, pageId } = await openBlankPage(page, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

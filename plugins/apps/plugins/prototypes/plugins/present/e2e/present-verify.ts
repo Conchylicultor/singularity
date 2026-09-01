@@ -7,13 +7,13 @@
 //     [--name <prototype>] [--out <prefix>] [--headed]
 
 import {
+  agentFetch,
   arg,
   boot,
   pathUrl,
   report,
   snap,
   withBrowser,
-  agentFetch,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const out = arg("out", "/tmp/present-verify");

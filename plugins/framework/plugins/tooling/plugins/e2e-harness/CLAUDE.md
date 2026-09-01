@@ -1,5 +1,23 @@
 # e2e-harness
 
+## The target URL, and who chose the path
+
+One flag, `--url` (`--base` / `--origin` are aliases), carrying one URL that
+`target.ts` splits: the origin says which deploy, the path says which screen.
+No script can obtain the bare origin — there are only two spellings, and the
+difference is *who chose the path*:
+
+- `pathUrl("/pages")` — the page THIS SCRIPT drives. Nearly every script. The
+  root is `pathUrl("/")`.
+- `pageUrl("/agents")` — the page THE CALLER named, falling back to that
+  default. Only for tools whose job is "open the page I name": `screenshot.ts`,
+  `perf.ts`, `render-profile.ts`, `live-state-churn.ts`, `adaptive-bar-*`.
+
+So pass a page to a script that drives its own and the run FAILS at teardown,
+naming the path you gave — it would otherwise pass, having tested a screen you
+did not ask for. And a helper never takes a `base` parameter: `openBlankPage`
+and `support/runs.ts` resolve their own target.
+
 ## A script that goes green without exercising the app is worse than no script
 
 It gets cited as evidence. Two mechanisms here exist only to make that outcome

@@ -38,10 +38,9 @@
 // primitive and to the editor's selection, so `/todo` and `/context` inherit it
 // unchanged.
 //
-// Usage: bun plugins/page/plugins/container/e2e/container-selection-verify.ts [--base <url>] [--out /tmp/container-selection]
+// Usage: bun plugins/page/plugins/container/e2e/container-selection-verify.ts [--url <deploy>] [--out /tmp/container-selection]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -54,7 +53,6 @@ import {
   pageIdFromUrl,
 } from "@plugins/page/plugins/editor/e2e";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/container-selection");
 const r = report();
 
@@ -125,7 +123,7 @@ await withBrowser(async (h) => {
     r,
   );
 
-  const doc = await openBlankPage(page, base, { settleMs: 800 });
+  const doc = await openBlankPage(page, { settleMs: 800 });
   const pageId = pageIdFromUrl(doc.pageUrl);
 
   // A callout with THREE children — enough that "two of them" is a genuinely

@@ -7,21 +7,20 @@
 // instead. That is the regression this guards: the overlay's highlight label
 // must name `improve.element-picker · button`, not `shell.global-action-bar · div`.
 //
-// Usage: bun plugins/improve/plugins/element-picker/e2e/pick-pointer-events-none.ts [--base <url>] [--headed]
+// Usage: bun plugins/improve/plugins/element-picker/e2e/pick-pointer-events-none.ts [--url <deploy>] [--headed]
 import {
-  baseUrl,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const OUT = "/tmp/pick-pointer-events-none";
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
   // 1. Reveal the collapsed floating action bar and arm the picker.
   const bar = page.locator('[data-source*="floating-action"]').first();

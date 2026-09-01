@@ -26,16 +26,14 @@
 // `web/__tests__/caret-authority.test.tsx`. Rerunning this under host load (a few
 // concurrent `./singularity build`s) reproduces the original conditions.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/split-typing-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/split-typing-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { blockText, editableBlocks, openBlankPage } from "./support/blank-page";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 const LINES = ["alpha", "bravo", "charlie"];
@@ -43,7 +41,7 @@ const LINES = ["alpha", "bravo", "charlie"];
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // The repro verbatim: zero `delay`, and nothing settled around either Enter.
   // `typeLines` is where that policy lives — it must stay settle-free for this

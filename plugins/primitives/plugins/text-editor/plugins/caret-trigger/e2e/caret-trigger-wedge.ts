@@ -14,19 +14,18 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts [--base <url>]
+//   ./singularity run plugins/primitives/plugins/text-editor/plugins/caret-trigger/e2e/caret-trigger-wedge.ts [--url <deploy>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {
   arg,
-  baseUrl,
   boot,
+  pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const ORIGIN = baseUrl();
 const OUT = arg("out", "/tmp/caret-trigger");
 
 // Every trigger menu's surface carries `data-caret-trigger="<id>"`, so both
@@ -68,7 +67,7 @@ await withBrowser(async (h) => {
   // every navigation. One boot, then client-side nav, keeps the run predictable.
   const SCRATCH_TITLE = "zz caret-trigger e2e";
 
-  await boot(page, `${ORIGIN}/pages`, {
+  await boot(page, pathUrl("/pages"), {
     marker: "text=Pages",
     timeoutMs: 90_000,
   });

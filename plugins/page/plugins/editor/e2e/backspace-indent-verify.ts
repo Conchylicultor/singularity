@@ -19,11 +19,10 @@
 //                                       → press 2 merges
 //
 // Usage: bun plugins/page/plugins/editor/e2e/backspace-indent-verify.ts \
-//          [--base <url>] [--out /tmp/bsi]
+//          [--url <deploy>] [--out /tmp/bsi]
 import type { Page } from "playwright";
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -32,7 +31,6 @@ import { openBlankPage } from "./support/blank-page";
 import { caretLinear } from "./support/caret";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/bsi");
 const r = report();
 
@@ -96,7 +94,7 @@ await withBrowser(async (h) => {
 
   // --- 1. shared indentation: ONE press merges, the follower stays put -------
   {
-    await openBlankPage(page, base, { settleMs: 2500 });
+    await openBlankPage(page, { settleMs: 2500 });
     await typeLines(page, ["aaa", { text: "bbb", indent: "in" }, "ccc"]);
     await page.waitForTimeout(INDENT_OP_MS);
 
@@ -138,7 +136,7 @@ await withBrowser(async (h) => {
 
   // --- 2. excess indentation: outdent to the next line's level, then merge ---
   {
-    await openBlankPage(page, base, { settleMs: 2500 });
+    await openBlankPage(page, { settleMs: 2500 });
     await typeLines(page, [
       "aaa",
       { text: "aaa2", indent: "in" },
@@ -203,7 +201,7 @@ await withBrowser(async (h) => {
 
   // --- 3. no next visible line: the original peel-then-merge ladder ----------
   {
-    await openBlankPage(page, base, { settleMs: 2500 });
+    await openBlankPage(page, { settleMs: 2500 });
     await typeLines(page, ["aaa", { text: "bbb", indent: "in" }]);
     await page.waitForTimeout(INDENT_OP_MS);
 

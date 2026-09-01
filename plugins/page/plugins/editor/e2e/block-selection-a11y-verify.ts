@@ -20,9 +20,8 @@
 // renders host and message together — and the "don't announce into silence" guard,
 // which is a statement about what the region does NOT hold after a second Escape.
 //
-// Usage: bun plugins/page/plugins/editor/e2e/block-selection-a11y-verify.ts [--base <url>]
+// Usage: bun plugins/page/plugins/editor/e2e/block-selection-a11y-verify.ts [--url <deploy>]
 import {
-  baseUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -30,7 +29,6 @@ import { openBlankPage } from "./support/blank-page";
 import { blockSelectionDriver } from "./support/block-selection";
 import { typeLines } from "./support/type-lines";
 
-const base = baseUrl();
 const r = report();
 
 /** The polite live region's raw text — trailing space and all (see below). */
@@ -69,7 +67,7 @@ await withBrowser(async (h) => {
   const blockCount = (): Promise<number> =>
     page.evaluate(() => document.querySelectorAll("[data-block-id]").length);
 
-  await openBlankPage(page, base, { settleMs: 3000 });
+  await openBlankPage(page, { settleMs: 3000 });
 
   // ---- 1. The regions exist BEFORE anything is announced --------------------
   //

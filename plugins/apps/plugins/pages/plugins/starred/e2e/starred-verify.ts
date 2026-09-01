@@ -16,10 +16,10 @@
 
 import {
   numArg,
-  requireArg,
-  report,
-  withBrowser,
   pathUrl,
+  report,
+  requireArg,
+  withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const pageId = requireArg("page", "usage: --page <pageId> [--settle <ms>]");

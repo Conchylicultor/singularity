@@ -7,18 +7,16 @@
 //
 // Usage:
 //   1. `./singularity build` (to deploy the current worktree)
-//   2. `bun plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--base <url>]`
+//   2. `bun plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--url <deploy>]`
 //
 // Exits non-zero on any failure.
 import {
-  baseUrl,
   capture,
+  pathUrl,
   report,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
-
-const base = baseUrl();
 
 const post = async (page: Page): Promise<unknown> =>
   page.evaluate(() =>
@@ -35,7 +33,7 @@ await withBrowser(async (h) => {
   // ── scenario 1: single tab, live updates from a cross-tab POST ─────────────
   {
     const { context: ctx, page } = await h.session({ label: "s1" });
-    await page.goto(`${base}/tasks`, { waitUntil: "domcontentloaded" });
+    await page.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(1500);
     const before = await page.locator("input").count();
     await post(page);
@@ -57,11 +55,11 @@ await withBrowser(async (h) => {
     // BroadcastChannel + navigator.locks, which are per-origin-per-context. A
     // second `h.session()` would be a separate context and elect its own leader.
     const { context: ctx, page: leader } = await h.session({ label: "leader" });
-    await leader.goto(`${base}/`, { waitUntil: "domcontentloaded" });
+    await leader.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
     await leader.waitForTimeout(1500);
     const follower = await ctx.newPage();
     capture(follower, "follower");
-    await follower.goto(`${base}/tasks`, { waitUntil: "domcontentloaded" });
+    await follower.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
     await follower.waitForTimeout(2000);
     const before = await follower.locator("input").count();
     await post(follower);
@@ -79,11 +77,11 @@ await withBrowser(async (h) => {
   //    and replays its subs on `onopen` of the new socket.
   {
     const { context: ctx, page: a } = await h.session({ label: "a" });
-    await a.goto(`${base}/tasks`, { waitUntil: "domcontentloaded" });
+    await a.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
     await a.waitForTimeout(1500);
     const b = await ctx.newPage();
     capture(b, "b");
-    await b.goto(`${base}/tasks`, { waitUntil: "domcontentloaded" });
+    await b.goto(pathUrl("/tasks"), { waitUntil: "domcontentloaded" });
     await b.waitForTimeout(1500);
     await a.close();
     await b.waitForTimeout(1500);

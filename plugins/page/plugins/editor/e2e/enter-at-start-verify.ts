@@ -17,10 +17,9 @@
 //     disappears in one undo, one block left under originId, text intact;
 //  7. converge in a SECOND browser context (fresh socket, cold load).
 //
-// Usage: bun plugins/page/plugins/editor/e2e/enter-at-start-verify.ts [--base <url>] [--out /tmp/eas]
+// Usage: bun plugins/page/plugins/editor/e2e/enter-at-start-verify.ts [--url <deploy>] [--out /tmp/eas]
 import {
   arg,
-  baseUrl,
   report,
   snap,
   withBrowser,
@@ -28,7 +27,6 @@ import {
 import type { Page } from "playwright";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
 
-const base = baseUrl();
 const out = arg("out", "/tmp/eas");
 
 const r = report();
@@ -54,7 +52,7 @@ await withBrowser(async (h) => {
     pageUrl,
     block,
     blockId: originId,
-  } = await openBlankPage(pageA, base, {
+  } = await openBlankPage(pageA, {
     settleMs: 3000,
   });
   console.log("page url:", pageUrl);

@@ -6,17 +6,16 @@
 //
 // Usage:
 //   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/e2e/stats-verify.ts \
-//     --conv <conversationId> [--base http://<worktree>.localhost:9000] [--headed]
+//     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
   arg,
-  baseUrl,
+  pathUrl,
   requireArg,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const BASE = baseUrl();
 const CONV = requireArg(
   "conv",
   "--conv <conversationId> is required: the transcript to read the strip from.",
@@ -40,7 +39,7 @@ interface Strip {
 await withBrowser(async (h) => {
   const { page } = await h.session({ colorScheme: "dark" });
 
-  await page.goto(`${BASE}/agents/c/${CONV}`);
+  await page.goto(pathUrl(`/agents/c/${CONV}`));
   await page.waitForTimeout(6000);
 
   async function readStrip(tag: string): Promise<Strip> {
