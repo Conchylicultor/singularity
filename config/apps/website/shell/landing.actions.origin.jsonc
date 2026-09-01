@@ -1,0 +1,11 @@
+// @hash 0e3be3905428
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "primitives.pane:title"
+  ]
+}

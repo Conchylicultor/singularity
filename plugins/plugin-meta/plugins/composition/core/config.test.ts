@@ -94,21 +94,25 @@ test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () =
   expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
 });
 
-test("the website app seed uses the glob grammar to take the site subtree minus editor-toy", () => {
+test("the website app seed takes the whole site subtree", () => {
   const site = byName("website");
   expect(site.category).toBe("app");
   const m = manifestItemToManifest(site);
   expect(typeof m.name).toBe("string");
   expect(m.name.length).toBeGreaterThan(0);
-  expect(m.entryPoints.length).toBeGreaterThan(0);
-  // The regression guard, stated in the new glob grammar: `.**` takes the whole
-  // site subtree, then a negative trims the branch that would drag in the block
-  // editor + worktree infra (the editor-toy demo). The "actually absent from the
-  // bundle" regression lives in closure.test.ts (with a real plugin tree); here
-  // we only assert the grammar.
+  // The site is one subtree and nothing subtracted: `.**` takes it whole. The
+  // negative this used to carry (`!apps.website.demos.editor-toy.**`) named a
+  // plugin that no longer exists, and an entry pattern whose base resolves to
+  // nothing is what `composition-closure` rejects — so "no negatives" is the
+  // guard, not a detail. Whether the bundle really stays clear of worktree infra
+  // is `excludes: ["agent-runtime"]`'s job, asserted in closure.test.ts against a
+  // real plugin tree; here we only assert the grammar.
+  //
+  // `excludes` is read off the CONFIG ITEM, not off `m`: manifestItemToManifest
+  // drops it deliberately (the closure engine never reads it).
   const entries = m.entryPoints.map(String);
-  expect(entries).toContain("apps.website.**");
-  expect(entries).toContain("!apps.website.demos.editor-toy.**");
+  expect(entries).toEqual(["apps.website.**"]);
+  expect(site.excludes).toContain("agent-runtime");
 });
 
 test("served-baseline forces the toast host alongside health", () => {

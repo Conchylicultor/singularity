@@ -35,7 +35,6 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/sonata/primitives/inertial-drag`
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/shell`
-    - `apps/website/demos/app-gallery`
     - `apps/workflows/editor`
     - `build/serve-composition`
     - `conversations/conversation-view/prompt-input`

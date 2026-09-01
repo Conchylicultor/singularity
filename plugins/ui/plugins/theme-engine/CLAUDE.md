@@ -72,7 +72,6 @@
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
-    - `apps/website/demos/theme-toy`
     - `shell/toast`
     - `ui/segmented-progress-bar`
     - `ui/tab-bar/customizer`

@@ -69,11 +69,7 @@ Shared (both paths):
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
     - `apps/sonata/library`
-    - `apps/website/downloads`
-    - `apps/website/landing/pillars`
-    - `apps/website/pillars/agents`
-    - `apps/website/pillars/apps`
-    - `apps/website/pillars/platform`
+    - `apps/website/landing/fork`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/health-monitor`
     - `page/formatting/color`

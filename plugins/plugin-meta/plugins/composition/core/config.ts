@@ -209,33 +209,22 @@ export const compositionsConfig = defineConfig({
         app("file-explorer", "apps.file-explorer"),
         app("workflows", "apps.workflows"),
 
-        // The public equin site. The entry grammar takes the whole site subtree
-        // and then subtracts the one branch that would contaminate it:
-        //  1. `"apps.website.**"` seeds the `apps.website` node + its ENTIRE
-        //     subtree (the `.**` glob). Everything under the site ships by
-        //     default.
-        //  2. `"!apps.website.demos.editor-toy.**"` drops the editor-toy demo.
-        //     editor-toy embeds a live `<BlockEditor>`, and the block editor's
-        //     hard closure used to reach worktree infra:
-        //     `page.editor → reorder → config_v2.staging → infra.worktree`
-        //     (staging landed a promoted config default to git by spinning a
-        //     worktree). That taproot dragged `infra.worktree` — part of the
-        //     excluded `agent-runtime` bundle — into a site meant to be
-        //     self-contained, so the demo was left out while every other one
-        //     shipped. **That taproot is now severed**: `config_v2/staging` was
-        //     deleted outright, and reorder no longer imports it. The negative is
-        //     therefore a candidate for removal — which would give the public site
-        //     a live in-browser block editor — but ONLY `composition-closure`
-        //     adjudicates that, never an assumption here: `excludes:
-        //     ["agent-runtime"]` below is the AUTOMATED PROOF, failing if any
-        //     `→ infra.worktree` taproot survives into the site's hard closure.
-        //     Drop the negative, run the check, and keep the result.
-        //  3. `selectedContributors: ["apps.sonata.audio.piano"]` is the sampled
-        //     grand behind the app-gallery's Sonata vignette — a genuine
-        //     load-bearing soft option: it contributes `SonataAudio.Instrument`
-        //     (the axis that lives in `apps.sonata.audio.instruments`, NOT in
-        //     `sonata/shell`, so embedding a playable instrument does not drag a
-        //     second `Apps.App` in), whose owner plugin the vignette hard-imports.
+        // The public equin site: the whole `apps.website` subtree
+        // (`"apps.website.**"` seeds the `apps.website` node + its ENTIRE
+        // subtree), and nothing subtracted from it — the site is two pages and
+        // a homepage, with no branch that reaches outside itself.
+        //
+        // It used to carry a negative, `"!apps.website.demos.editor-toy.**"`,
+        // dropping the one demo whose live `<BlockEditor>` reached worktree
+        // infra through `page.editor → reorder → config_v2.staging →
+        // infra.worktree`. Both halves are gone: that taproot was severed when
+        // `config_v2/staging` was deleted, and the demos themselves were
+        // removed with the three-pillar site. If a future site page embeds a
+        // live editor again, `excludes: ["agent-runtime"]` below is the
+        // AUTOMATED PROOF that it stayed self-contained — it fails if any
+        // `→ infra.worktree` taproot survives into the site's hard closure.
+        // Never assume that here; run the check.
+        //
         // No `app-chrome`: a public site wants no rail and no tab strip
         // (`apps-core.layout` renders a chrome-less surface on its own — same as
         // the `sonata` composition). `excludes` mirrors the sonata precedent
@@ -248,19 +237,7 @@ export const compositionsConfig = defineConfig({
         // containment always carries the shared baseline (`apps-core.layout`,
         // `infra.health`, `shell.toast`, the token groups) that every app extends.
         // `excludes` names infra bundles — that is the whole vocabulary.
-        // NOT `excludes: ["sonata"]` either — the sonata bundle's containment is
-        // `apps.sonata` + subtree, which legitimately includes the
-        // instruments/keyboard/piano leaves the site bundles.
-        {
-          id: "website",
-          name: "website",
-          category: "app" as const,
-          entryPoints: ["apps.website.**", "!apps.website.demos.editor-toy.**"],
-          selectedContributors: ["apps.sonata.audio.piano"],
-          extends: ["served-baseline"],
-          excludes: ["agent-runtime", "auth"],
-          serve: "off",
-        },
+        app("website", "apps.website", [], ["agent-runtime", "auth"]),
 
         // ── Subsystems: infra closures as building blocks / inspection lenses ───
         subsystem("data", ["database"]),

@@ -26,8 +26,6 @@ no-provider default is `md`.
   - Imported by:
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
-    - `apps/website/demos/agent-run`
-    - `apps/website/demos/app-gallery`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/pending-turn`

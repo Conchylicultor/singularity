@@ -1,4 +1,4 @@
-// @hash 5effd0a7e320
+// @hash 23163353c9ab
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,9 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.website.demos.release-switcher:release-switcher",
-    "apps.website.landing.cta:cta",
-    "apps.website.landing.hero:hero",
-    "apps.website.landing.pillars:pillars"
+    "apps.website.landing.fork:fork",
+    "apps.website.landing.intro:intro"
   ]
 }

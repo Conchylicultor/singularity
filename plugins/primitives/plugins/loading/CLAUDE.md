@@ -105,7 +105,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/studio/explorer`
     - `apps/studio/explorer/excluded`
     - `apps/studio/graph`
-    - `apps/website/demos/app-gallery`
     - `apps/workflows/definitions`
     - `apps/workflows/executions`
     - `apps/workflows/steps/user-input`

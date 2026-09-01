@@ -2992,7 +2992,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/piano`
                   - `apps/sonata/audio/soundfont`
                   - `apps/sonata/track-mixer`
-                  - `apps/website/demos/app-gallery`
             - **`live-play`** — Sonata live interactive player: a headless effect that turns hand-played key presses into sustaining note-on/note-off voices, routed through the engine's shared context + master gain and the default instrument.
               - Web:
                 - Contributes:
@@ -3493,7 +3492,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/piano-roll`
                   - `apps/sonata/rich/chord-readout`
                   - `apps/sonata/rich/key-readout`
-                  - `apps/website/demos/app-gallery`
             - **`rhythm-circle`** — Generic rotating rhythm-necklace SVG: one concentric ring per track, a bead per pulse (index 0 at 12 o'clock, clockwise), filled beads for onsets, and a playhead needle. Imports nothing from Sonata — speaks only plain numbers. The spin is driven imperatively via setPhase(phase) and costs zero React renders; beads are optionally click-to-toggle.
               - Cross-plugin:
                 - Imported by: `apps/sonata/rich/rhythm-controls`
@@ -5142,193 +5140,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/studio/explorer`
               - `apps/studio/graph`
-    - **`website`** — Website — the public-facing site of Singularity (brand: equin): landing, downloads, demos.
+    - **`website`** — Website — the public-facing site of equin: the homepage's two questions, and a page for each answer.
       - Plugins:
-        - **`demos`** — Interactive toy demos of Singularity features embedded in the public site.
+        - **`landing`** — Landing-page sections of the public website: the intro, and the fork into the two questions.
           - Plugins:
-            - **`agent-run`** — Agent-run simulator on the public site's Agents page: a fake task list where the visitor launches agents and watches each race through worktree → edit → build → merge, several concurrently — a deterministic, client-only replay of the real loop.
+            - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
               - Web:
-                - Contributes: `WebsiteAgents.Section` "Agent run demo" → `AgentRunSection`
+                - Contributes: `Website.Section` "Fork" → `ForkSection`
                 - Uses:
-                  - `apps/website/pillars/agents.WebsiteAgents`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/bouncing-dots.BouncingDots`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/selection-indicator.CheckboxIndicator`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-            - **`app-gallery`** — App-gallery demo band on the public site's Apps page: a SegmentedControl over four app vignettes (Pages, Mail, Sonata, Workflows), each genuinely interactive. Pages/Mail/Workflows are toy replicas; the Sonata vignette embeds the REAL Sonata keyboard plugin and sampled grand — the app platform, playable in the browser.
-              - Web:
-                - Contributes: `WebsiteApps.Section` "App gallery demo" → `AppGallerySection`
-                - Uses:
-                  - `apps/sonata/audio/instruments.InstrumentVoices`
-                  - `apps/sonata/audio/instruments.SonataAudio`
-                  - `apps/sonata/primitives/keyboard.Keyboard`
-                  - `apps/website/pillars/apps.WebsiteApps`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/bouncing-dots.BouncingDots`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/center.Center`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/status-dot.StatusDot`
-                  - `primitives/css/surface.Surface`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
-                  - `primitives/latest-ref.useLatestRef`
-                  - `primitives/loading.Loading`
-            - **`editor-toy`** — Interactive in-memory block-editor toy on the Apps pillar page: a real <BlockEditor> running non-persisting (React state only, no server rows), with a curated text-block palette and a Reset-to-reseed control — the Pages editor, playable in the browser.
-              - Web:
-                - Contributes: `WebsiteApps.Section` "Live editor demo" → `EditorToySection`
-                - Uses:
-                  - `apps/website/pillars/apps.WebsiteApps`
-                  - `page/editor.BlockEditor`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/surface.Surface`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
-            - **`plugin-pyramid`** — Interactive pyramid composer on the public site's Platform page: the visitor toggles plugin blocks on/off and watches a sample app's regions appear or empty into labelled slots, with the top tier showing the release targets the one composition ships to — the plugins → apps → releases architecture made visible.
-              - Web:
-                - Contributes: `WebsitePlatform.Section` "Pyramid demo" → `PluginPyramidSection`
-                - Uses:
-                  - `apps/website/pillars/platform.WebsitePlatform`
-                  - `apps/website/shell.landingPane`
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/center.Center`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/surface.Surface`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.ToggleChip`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/pane.useOpenPane`
-            - **`release-switcher`** — Release-targets switcher demo band for the equin landing page: the same sample app re-hosted live in a native desktop window, a browser tab, and a window inside the equin workspace — proving one composition ships three ways.
-              - Web:
-                - Contributes: `Website.Section` "Release targets" → `ReleaseSwitcherSection`
-                - Uses:
-                  - `apps/website/demos/sample-app.SampleVignette`
-                  - `apps/website/pillars/apps.appsPane`
-                  - `apps/website/pillars/platform.platformPane`
-                  - `apps/website/shell.Website`
-                  - `primitives/css/clip.Clip`
-                  - `primitives/css/fill.Fill`
-                  - `primitives/css/pin.Pin`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
-                  - `primitives/pane.useOpenPane`
-              - Core:
-                - Exports (types):
-                  - `ReleaseTarget`
-                  - `ReleaseTargetId`
-                - Exports (values): `RELEASE_TARGETS`
-            - **`sample-app`** — Shared fake-app vignette ('Project Aurora') built from real UI primitives, reused by the site demos (theme toy, release switcher). No contributions — a pure component library plugin.
-              - Web:
-                - Uses:
-                  - `primitives/css/badge.Badge`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/cluster.Cluster`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/surface.Surface`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                - Exports (values): `SampleVignette`
-              - Cross-plugin:
-                - Imported by:
-                  - `apps/website/demos/release-switcher`
-                  - `apps/website/demos/theme-toy`
-            - **`theme-toy`** — Interactive theme-customizer toy on the public site's Platform page: a preset switcher that restyles a sample app vignette live via locally-scoped CSS variables (no config writes, no persistence) — theming as a plugin, demonstrated.
-              - Web:
-                - Contributes: `WebsitePlatform.Section` "Theme demo" → `ThemeToySection`
-                - Uses:
-                  - `apps/website/demos/sample-app.SampleVignette`
-                  - `apps/website/pillars/platform.WebsitePlatform`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/toggle-chip.SegmentedControl`
-                  - `ui/theme-engine.GlobalPresetContribution`
-                  - `ui/theme-engine.ThemeEngine`
-                  - `ui/theme-engine.ThemeScope`
-                  - `ui/theme-engine.useResolvedColorMode`
-                  - `ui/theme-engine.useTokenGroupPresets`
-        - **`downloads`** — Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
-          - Web:
-            - Contributes:
-              - `Pane.Register` "website-downloads"
-              - `WebsiteHeader` "download" → `DownloadNavItem`
-            - Uses:
-              - `apps/website/shell.WebsiteHeader`
-              - `apps/website/shell.WebsiteNavLink`
-              - `apps/website/shell.WebsitePage`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/card.Card`
-              - `primitives/css/grid.Grid`
-              - `primitives/css/spacing.Inset`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
-              - `primitives/pane.Pane`
-              - `primitives/pane.PaneChrome`
-              - `primitives/pane.useOpenPane`
-            - Exports (values): `downloadsPane`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/website/landing/cta`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
-          - Core:
-            - Exports (types):
-              - `DownloadEntry`
-              - `DownloadStatus`
-              - `Platform`
-            - Exports (values):
-              - `detectPlatform`
-              - `DOWNLOADS`
-        - **`landing`** — Landing-page sections of the public website (hero, three pillars, closing CTA).
-          - Plugins:
-            - **`cta`** — Landing closing CTA band: a short headline and a primary Download button that navigates to the downloads pane.
-              - Web:
-                - Contributes: `Website.Section` "Get started" → `CtaSection`
-                - Uses:
-                  - `apps/website/downloads.downloadsPane`
-                  - `apps/website/shell.Website`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
-                  - `primitives/pane.useOpenPane`
-            - **`hero`** — Landing hero band: the eyebrow + headline + subheadline opening statement for the equin public site.
-              - Web:
-                - Contributes: `Website.Section` "Hero" → `HeroSection`
-                - Uses:
-                  - `apps/website/shell.Website`
-                  - `primitives/css/spacing.Inset`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
-            - **`pillars`** — Landing three-pillars band: one teaser card per pillar (the apps, the agents, the platform), each opening its dedicated pillar page.
-              - Web:
-                - Contributes: `Website.Section` "Three pillars" → `PillarsSection`
-                - Uses:
-                  - `apps/website/pillars/agents.agentsPane`
-                  - `apps/website/pillars/apps.appsPane`
-                  - `apps/website/pillars/platform.platformPane`
+                  - `apps/website/questions/apps.appsPane`
+                  - `apps/website/questions/harness.harnessPane`
                   - `apps/website/shell.Website`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
@@ -5336,66 +5157,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
                   - `primitives/pane.PaneObject`
                   - `primitives/pane.useOpenPane`
-        - **`pillars`** — The three pillar pages of the public website: the apps, the agent manager, and the plugin platform.
-          - Plugins:
-            - **`agents`** — Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.
+            - **`intro`** — Landing intro band: the two opening paragraphs of the equin site — what equin is, and why the page forks into two questions.
               - Web:
-                - Slots: `WebsiteAgents.Section` ← `apps.website.demos.agent-run`, `apps.website.pillars.agents`
-                - Contributes:
-                  - `Pane.Register` "website-agents"
-                  - `WebsiteHeader` "agents" → `AgentsNavItem`
-                  - `WebsiteAgents.Section` "Hero" → `AgentsHero`
-                  - `WebsiteAgents.Section` "How it works" → `AgentsHowItWorks`
-                  - `WebsiteAgents.Section` "Closing links" → `AgentsClosing`
+                - Contributes: `Website.Section` "Intro" → `IntroSection`
                 - Uses:
-                  - `apps/website/downloads.downloadsPane`
-                  - `apps/website/pillars/apps.appsPane`
-                  - `apps/website/shell.WebsiteHeader`
-                  - `apps/website/shell.WebsiteNavLink`
-                  - `apps/website/shell.WebsitePage`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/grid.Grid`
+                  - `apps/website/shell.Website`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
-                  - `primitives/pane.Pane`
-                  - `primitives/pane.PaneChrome`
-                  - `primitives/pane.useOpenPane`
-                  - `primitives/slot-render.defineRenderSlot`
-                - Exports (values):
-                  - `agentsPane`
-                  - `WebsiteAgents`
-              - Cross-plugin:
-                - Imported by:
-                  - `apps/website/demos/agent-run`
-                  - `apps/website/landing/pillars`
-            - **`apps`** — Apps pillar page of the equin website: the /website/apps pane showcasing the real apps (Pages, Mail, Sonata, Workflows), its Apps nav link, and the WebsiteApps.Section slot demo plugins contribute into.
+        - **`questions`** — The two question pages of the public website: what apps evolve into, and what engineering looks like when no human reviews the code.
+          - Plugins:
+            - **`apps`** — The applications page of the equin website: the /website/apps pane answering 'what will apps evolve into?', its Apps nav link, and the WebsiteApps.Section slot the answer is written into.
               - Web:
-                - Slots: `WebsiteApps.Section` ← `apps.website.demos.app-gallery`, `apps.website.demos.editor-toy`, `apps.website.pillars.apps`
+                - Slots: `WebsiteApps.Section`
                 - Contributes:
                   - `Pane.Register` "website-apps"
                   - `WebsiteHeader` "apps" → `AppsNavItem`
-                  - `WebsiteApps.Section` "Hero" → `AppsHero`
-                  - `WebsiteApps.Section` "App showcase" → `AppsShowcase`
-                  - `WebsiteApps.Section` "Closing links" → `AppsClosing`
                 - Uses:
-                  - `apps/website/downloads.downloadsPane`
-                  - `apps/website/shell.landingPane`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.WebsitePage`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/grid.Grid`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
@@ -5404,52 +5190,35 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `appsPane`
                   - `WebsiteApps`
               - Cross-plugin:
-                - Imported by:
-                  - `apps/website/demos/app-gallery`
-                  - `apps/website/demos/editor-toy`
-                  - `apps/website/demos/release-switcher`
-                  - `apps/website/landing/pillars`
-                  - `apps/website/pillars/agents`
-            - **`platform`** — Platform pillar page of the equin website: the /website/platform pane telling the developer-facing behind-the-scenes story (slots, boundaries, the plugins → apps → releases pyramid), its Platform nav link, and the WebsitePlatform.Section slot demo plugins contribute into.
+                - Imported by: `apps/website/landing/fork`
+            - **`harness`** — The engineering page of the equin website: the /website/harness pane answering 'what does software engineering look like when no human reviews the code?', its Harness nav link, and the WebsiteHarness.Section slot the answer is written into.
               - Web:
-                - Slots: `WebsitePlatform.Section` ← `apps.website.demos.plugin-pyramid`, `apps.website.demos.theme-toy`, `apps.website.pillars.platform`
+                - Slots: `WebsiteHarness.Section`
                 - Contributes:
-                  - `Pane.Register` "website-platform"
-                  - `WebsiteHeader` "platform" → `PlatformNavItem`
-                  - `WebsitePlatform.Section` "Hero" → `PlatformHero`
-                  - `WebsitePlatform.Section` "Architecture" → `PlatformArchitecture`
-                  - `WebsitePlatform.Section` "Closing links" → `PlatformClosing`
+                  - `Pane.Register` "website-harness"
+                  - `WebsiteHeader` "harness" → `HarnessNavItem`
                 - Uses:
-                  - `apps/website/downloads.downloadsPane`
-                  - `apps/website/shell.landingPane`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.WebsitePage`
-                  - `primitives/css/card.Card`
-                  - `primitives/css/grid.Grid`
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-                  - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
                   - `primitives/slot-render.defineRenderSlot`
                 - Exports (values):
-                  - `platformPane`
-                  - `WebsitePlatform`
+                  - `harnessPane`
+                  - `WebsiteHarness`
               - Cross-plugin:
-                - Imported by:
-                  - `apps/website/demos/plugin-pyramid`
-                  - `apps/website/demos/release-switcher`
-                  - `apps/website/demos/theme-toy`
-                  - `apps/website/landing/pillars`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site header (wordmark + nav) every site pane wears, and defines the Website.Section landing slot.
+                - Imported by: `apps/website/landing/fork`
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the headerless landing pane, owns the shared site header (wordmark + nav) the inner pages wear, and defines the Website.Section landing slot.
           - Web:
             - Slots:
-              - `Website.Section` ← `apps.website.demos.release-switcher`, `apps.website.landing.cta`, `apps.website.landing.hero`, `apps.website.landing.pillars`
-              - `WebsiteHeader` ← `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `primitives.pane`
+              - `Website.Section` ← `apps.website.landing.fork`, `apps.website.landing.intro`
+              - `WebsiteHeader` ← `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `primitives.pane`
+              - `landingPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -5479,15 +5248,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `websiteApp`
           - Cross-plugin:
             - Imported by:
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/downloads`
-              - `apps/website/landing/cta`
-              - `apps/website/landing/hero`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
+              - `apps/website/landing/fork`
+              - `apps/website/landing/intro`
+              - `apps/website/questions/apps`
+              - `apps/website/questions/harness`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`definitions`** — Sidebar list, welcome pane, and detail pane (editable name/description, read-only step list, extensible WorkflowsDetail.Section slot) for the Workflows app.
@@ -19269,7 +19033,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/marker`
           - `apps/story/shell`
           - `apps/story/story-core`
-          - `apps/website/demos/editor-toy`
           - `page/annotations`
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes`
@@ -21720,12 +21483,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release`
               - `apps/studio/compositions/release/release-info`
               - `apps/studio/contributions`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/editor-toy`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/sample-app`
-              - `apps/website/downloads`
               - `apps/workflows/editor`
               - `apps/workflows/steps/branch`
               - `apps/workflows/steps/http-request`
@@ -21847,8 +21604,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/deploy/deployments`
               - `apps/deploy/remote-deploy`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/pending-turn`
@@ -21871,15 +21626,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/sample-app`
-              - `apps/website/downloads`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
+              - `apps/website/landing/fork`
               - `conversations/conversation-view/code/file-pane/markdown`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -21924,8 +21671,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/studio/explorer`
               - `apps/studio/explorer/expand-collapse`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/plugin-pyramid`
               - `apps/workflows/editor`
               - `code-explorer`
               - `config_v2/settings`
@@ -22012,7 +21757,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/scrubber`
               - `apps/studio/graph`
-              - `apps/website/demos/release-switcher`
               - `build/build-logs`
               - `code-explorer`
               - `config_v2/settings`
@@ -22068,8 +21812,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-artifact`
               - `apps/studio/explorer/membership`
               - `apps/studio/graph`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/sample-app`
               - `backup/runs-arm`
               - `config_v2/fields`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
@@ -22310,8 +22052,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/shell`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/landing/pillars`
+              - `apps/website/landing/fork`
               - `apps/website/shell`
               - `apps/workflows/editor`
               - `auth`
@@ -22407,11 +22148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/start-page`
               - `apps/sonata/library`
-              - `apps/website/downloads`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
+              - `apps/website/landing/fork`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/health-monitor`
               - `page/formatting/color`
@@ -22772,7 +22509,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
-              - `apps/website/demos/release-switcher`
               - `build`
               - `build/build-logs`
               - `config_v2/settings`
@@ -23172,7 +22908,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `RadioIndicator`
           - Cross-plugin:
             - Imported by:
-              - `apps/website/demos/agent-run`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `page/read-only-view`
               - `primitives/css/control-panel`
@@ -23294,20 +23029,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/foreign-keys`
               - `apps/studio/explorer`
               - `apps/studio/graph`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/editor-toy`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/demos/sample-app`
-              - `apps/website/demos/theme-toy`
-              - `apps/website/downloads`
-              - `apps/website/landing/cta`
-              - `apps/website/landing/hero`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
+              - `apps/website/landing/fork`
+              - `apps/website/landing/intro`
+              - `apps/website/questions/apps`
+              - `apps/website/questions/harness`
               - `apps/website/shell`
               - `apps/workflows/definitions`
               - `apps/workflows/editor`
@@ -23583,7 +23308,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
               - `apps/studio/compositions/release/release-info`
-              - `apps/website/demos/app-gallery`
               - `apps/workflows/engine`
               - `apps/workflows/executions`
               - `build/build-status`
@@ -23668,10 +23392,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
               - `apps/studio/graph`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/editor-toy`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/sample-app`
               - `apps/workflows/editor`
               - `apps/workflows/engine`
               - `conversations/agents`
@@ -23799,20 +23519,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `apps/studio/graph`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/editor-toy`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/demos/sample-app`
-              - `apps/website/demos/theme-toy`
-              - `apps/website/downloads`
-              - `apps/website/landing/cta`
-              - `apps/website/landing/hero`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
+              - `apps/website/landing/fork`
+              - `apps/website/landing/intro`
+              - `apps/website/questions/apps`
+              - `apps/website/questions/harness`
               - `apps/website/shell`
               - `apps/workflows/definitions`
               - `apps/workflows/editor`
@@ -24082,10 +23792,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release`
               - `apps/studio/graph`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/demos/theme-toy`
               - `apps/workflows/steps/http-request`
               - `apps/workflows/steps/llm-prompt`
               - `apps/workflows/steps/set-value`
@@ -24304,18 +24010,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-logs`
               - `apps/studio/explorer/membership`
               - `apps/studio/graph`
-              - `apps/website/demos/agent-run`
-              - `apps/website/demos/app-gallery`
-              - `apps/website/demos/editor-toy`
-              - `apps/website/demos/plugin-pyramid`
-              - `apps/website/demos/release-switcher`
-              - `apps/website/demos/sample-app`
-              - `apps/website/downloads`
-              - `apps/website/landing/cta`
-              - `apps/website/landing/pillars`
-              - `apps/website/pillars/agents`
-              - `apps/website/pillars/apps`
-              - `apps/website/pillars/platform`
               - `apps/website/shell`
               - `apps/workflows/definitions`
               - `apps/workflows/editor`
@@ -26142,7 +25836,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/primitives/inertial-drag`
           - `apps/sonata/primitives/keyboard`
           - `apps/sonata/shell`
-          - `apps/website/demos/app-gallery`
           - `apps/workflows/editor`
           - `build/serve-composition`
           - `conversations/conversation-view/prompt-input`
@@ -26576,7 +26269,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer`
           - `apps/studio/explorer/excluded`
           - `apps/studio/graph`
-          - `apps/website/demos/app-gallery`
           - `apps/workflows/definitions`
           - `apps/workflows/executions`
           - `apps/workflows/steps/user-input`
@@ -26934,7 +26626,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `OverscrollHintController`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -26970,6 +26662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `explorerPane.Actions` "title" → `PaneTitleItem`
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `WebsiteHeader` "title" → `PaneTitleItem`
+          - `landingPane.Actions` "title" → `PaneTitleItem`
           - `definitionsRootPane.Actions` "title" → `PaneTitleItem`
           - `definitionDetailPane.Actions` "title" → `PaneTitleItem`
           - `workflows-execution-detail.actions` "title" → `PaneTitleItem`
@@ -27197,14 +26890,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
           - `apps/studio/shell`
-          - `apps/website/demos/plugin-pyramid`
-          - `apps/website/demos/release-switcher`
-          - `apps/website/downloads`
-          - `apps/website/landing/cta`
-          - `apps/website/landing/pillars`
-          - `apps/website/pillars/agents`
-          - `apps/website/pillars/apps`
-          - `apps/website/pillars/platform`
+          - `apps/website/landing/fork`
+          - `apps/website/questions/apps`
+          - `apps/website/questions/harness`
           - `apps/website/shell`
           - `apps/workflows/definitions`
           - `apps/workflows/executions`
@@ -27814,9 +27502,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/story/render`
           - `apps/studio/explorer`
           - `apps/studio/shell`
-          - `apps/website/pillars/agents`
-          - `apps/website/pillars/apps`
-          - `apps/website/pillars/platform`
+          - `apps/website/questions/apps`
+          - `apps/website/questions/harness`
           - `apps/website/shell`
           - `apps/workflows/shell`
           - `config_v2/fields`
@@ -28653,7 +28340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×208: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.WebRegister` ×208: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "landing.actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -28682,7 +28369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×207: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.Register` ×207: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "landing.actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "story-detail.actions", "story-gallery.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "workflows-definition-detail.actions", "workflows-definitions.actions", "workflows-execution-detail.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -31444,7 +31131,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating`
-          - `apps/website/demos/theme-toy`
           - `shell/toast`
           - `ui/segmented-progress-bar`
           - `ui/tab-bar/customizer`

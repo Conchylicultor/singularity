@@ -22,7 +22,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sonata`** [60 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [11 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-    - **`website`** [18 sub-plugins] — Website — the public-facing site of Singularity (brand: equin): landing, downloads, demos.
+    - **`website`** [7 sub-plugins] — Website — the public-facing site of equin: the homepage's two questions, and a page for each answer.
     - **`workflows`** [13 sub-plugins] — Workflows app.
 
 - **`apps-core`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.

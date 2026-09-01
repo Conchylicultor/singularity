@@ -56,15 +56,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `apps/sonata/library`
     - `apps/story/renderers/blog`
     - `apps/story/renderers/slides`
-    - `apps/website/demos/agent-run`
-    - `apps/website/demos/app-gallery`
-    - `apps/website/demos/plugin-pyramid`
-    - `apps/website/demos/sample-app`
-    - `apps/website/downloads`
-    - `apps/website/landing/pillars`
-    - `apps/website/pillars/agents`
-    - `apps/website/pillars/apps`
-    - `apps/website/pillars/platform`
+    - `apps/website/landing/fork`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

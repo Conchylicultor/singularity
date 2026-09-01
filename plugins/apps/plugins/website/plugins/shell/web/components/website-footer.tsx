@@ -1,38 +1,41 @@
-import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
-const YEAR = new Date().getFullYear();
+/** The repository the site is built out of — the one link the footer carries. */
+const REPO_URL = "https://github.com/Conchylicultor/singularity";
 
 /**
  * The site-wide footer, rendered at the end of every website pane's content
- * (via `WebsitePage`) so it scrolls with the page like a real site footer. A
- * minimal two-part strip: a brand block on the left (wordmark + tagline) and a
- * muted copyright line on the right, constrained to the same reading gutter as
- * the page content.
+ * (via `WebsitePage`) so it scrolls with the page like a real site footer.
+ *
+ * One quiet line: the project, and where the code is. There is nothing to sell
+ * and nothing to download, so there is no reason for a footer with columns.
  */
 export function WebsiteFooter() {
   return (
     <footer className="border-t bg-background">
-      <Inset x="xl" y="xl">
+      <Inset x="xl" y="lg">
         <Stack
           direction="row"
-          justify="between"
+          gap="xs"
           align="center"
-          gap="lg"
-          wrap
           className="mx-auto w-full max-w-5xl"
         >
-          <Stack gap="2xs">
-            <Text variant="subheading" className="tracking-tight">
-              equin
-            </Text>
-            <Text variant="caption" tone="muted">
-              The self-evolving app for the agentic era.
-            </Text>
-          </Stack>
           <Text variant="caption" tone="muted">
-            © {YEAR} equin
+            equin ·
           </Text>
+          <a href={REPO_URL} target="_blank" rel="noreferrer noopener">
+            <Text
+              variant="caption"
+              tone="muted"
+              className="hover:text-foreground hover:underline"
+            >
+              Source
+            </Text>
+          </a>
         </Stack>
       </Inset>
     </footer>

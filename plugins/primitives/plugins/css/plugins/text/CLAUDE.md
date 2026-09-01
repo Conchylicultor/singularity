@@ -236,20 +236,10 @@ fixed raw size escapes per-site via
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `apps/studio/graph`
-    - `apps/website/demos/agent-run`
-    - `apps/website/demos/app-gallery`
-    - `apps/website/demos/editor-toy`
-    - `apps/website/demos/plugin-pyramid`
-    - `apps/website/demos/release-switcher`
-    - `apps/website/demos/sample-app`
-    - `apps/website/demos/theme-toy`
-    - `apps/website/downloads`
-    - `apps/website/landing/cta`
-    - `apps/website/landing/hero`
-    - `apps/website/landing/pillars`
-    - `apps/website/pillars/agents`
-    - `apps/website/pillars/apps`
-    - `apps/website/pillars/platform`
+    - `apps/website/landing/fork`
+    - `apps/website/landing/intro`
+    - `apps/website/questions/apps`
+    - `apps/website/questions/harness`
     - `apps/website/shell`
     - `apps/workflows/definitions`
     - `apps/workflows/editor`

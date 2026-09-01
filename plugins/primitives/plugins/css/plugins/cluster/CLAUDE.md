@@ -54,8 +54,6 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/studio/compositions/release/release-artifact`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
-    - `apps/website/demos/plugin-pyramid`
-    - `apps/website/demos/sample-app`
     - `backup/runs-arm`
     - `config_v2/fields`
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`

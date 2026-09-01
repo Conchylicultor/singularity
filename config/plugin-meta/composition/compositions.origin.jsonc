@@ -1,4 +1,4 @@
-// @hash b300647d5b82
+// @hash f5613668a54d
 {
   "manifests": [
     {
@@ -209,12 +209,9 @@
       "name": "website",
       "category": "app",
       "entryPoints": [
-        "apps.website.**",
-        "!apps.website.demos.editor-toy.**"
+        "apps.website.**"
       ],
-      "selectedContributors": [
-        "apps.sonata.audio.piano"
-      ],
+      "selectedContributors": [],
       "extends": [
         "served-baseline"
       ],

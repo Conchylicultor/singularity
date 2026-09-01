@@ -43,8 +43,10 @@
  *    is not a rich custom header is this one.
  *  - the Sonata player — the pane's own header slot carrying a rich set of
  *    contributions (transport, volume, transpose, …).
- *  - `/website/apps` — a SHARED `definePaneHeaderSlot()` borrowed by five panes:
- *    one slot, five panes, one config directive.
+ *  - `/website/apps` — a SHARED `definePaneHeaderSlot()` borrowed by the site's
+ *    inner pages: one slot, several panes, one config directive. (The website's
+ *    own homepage is deliberately NOT one of them — it wears no header at all —
+ *    so this surface must stay an inner page, never `/website`.)
  *
  * The last two were `chrome.header` custom toolbars before the refactor, whose
  * `Start`/`End` zones already rendered through `.Render`; they are here because
@@ -102,7 +104,7 @@ const SURFACES: Surface[] = [
     url: resolveSongUrl,
   },
   {
-    name: "website/apps (shared header slot, borrowed by 5 panes)",
+    name: "website/apps (shared header slot, borrowed by every inner page)",
     url: () => Promise.resolve(pathUrl("/website/apps")),
   },
 ];

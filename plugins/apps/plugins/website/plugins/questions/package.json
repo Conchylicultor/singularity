@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-questions",
+  "description": "The two question pages of the public website: what apps evolve into, and what engineering looks like when no human reviews the code.",
+  "private": true,
+  "version": "0.0.1"
+}

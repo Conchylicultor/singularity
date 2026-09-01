@@ -9,84 +9,102 @@
 // per-CONTRIBUTION id, so N rendered instances of one contribution meant N
 // duplicate dnd-kit ids in a single `DndContext`.
 //
+// The surface is a CALLER ARGUMENT, not a list baked in here. This is a reorder
+// harness, so it must not carry one app's route: the case it used to hardcode
+// (the website's editor-toy demo, whose block editor dispatched `Editor.Block`
+// under a section contribution) was deleted with that demo, and a hardcoded
+// route is exactly what let it rot unnoticed. Point it at any surface where a
+// slot is dispatched from inside a contribution:
+//
+//   --url     the page to open (path or absolute URL)
+//   --nested  a CSS selector for the content that slot dispatch renders; it is
+//             what must contain no sortable of its own
+//
 // Edit mode MUST be on: `SortableReorderItem` passes `disabled={!editMode}`,
 // dnd-kit returns no `listeners` when disabled, and `SortableItem` then spreads
 // no attributes at all — so the `aria-roledescription="sortable"` marker is
 // absent everywhere outside edit mode and the probe would read 0 both before and
-// after the fix, proving nothing.
+// after the fix, proving nothing. The `total > 0` guard below asserts that edit
+// mode really engaged, so `inside === 0` means something.
+//
+// The same invariant is pinned in-process, with no surface to go stale, by
+// `plugins/reorder/web/__tests__/item-claim.test.tsx`.
 //
 // Usage:
-//   ./singularity run plugins/reorder/e2e/claim-verify.ts [--base http://<worktree>.localhost:9000] [--headed]
+//   ./singularity run plugins/reorder/e2e/claim-verify.ts \
+//     --url /some/route --nested '[data-block-id]' \
+//     [--base http://<worktree>.localhost:9000] [--headed]
 
 import {
   pathUrl,
   report,
+  requireArg,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const SORTABLE = '[aria-roledescription="sortable"]';
 
-/** A surface where a slot is dispatched from inside a reorderable contribution. */
-interface Surface {
-  name: string;
-  url: string;
-  /** The nested content that must contain NO sortable of its own. */
-  nested: string;
-}
+const USAGE =
+  "usage: claim-verify.ts --url <path-or-url> --nested <css-selector> [--base …] [--headed]";
 
-const SURFACES: Surface[] = [
-  {
-    name: "website/apps → editor-toy → Editor.Block.Dispatch",
-    url: pathUrl("/website/apps"),
-    nested: "[data-block-id]",
-  },
-];
+/** A surface where a slot is dispatched from inside a reorderable contribution. */
+const target = requireArg("url", USAGE);
+/** The nested content that must contain NO sortable of its own. */
+const nested = requireArg("nested", USAGE);
+
+const url = target.startsWith("http") ? target : pathUrl(target);
+const name = `${target} → ${nested}`;
 
 const r = report("reorder claim");
 
 await withBrowser(async (h) => {
   const { page } = await h.session();
 
-  for (const s of SURFACES) {
-    await page.goto(s.url);
-    await page.waitForTimeout(3000);
+  await page.goto(url);
+  await page.waitForTimeout(3000);
 
-    // Pen toggle lives on the global action bar; label flips once engaged.
-    // The global action bar is a hover-revealed floating panel when unpinned, so
-    // the pen is present but pointer-intercepted until the bar is disclosed.
-    const bar = page.locator('[data-source*="floating-action"]').first();
-    if (await bar.count()) {
-      await bar.hover();
-      await page.waitForTimeout(600);
-    }
-
-    const pen = page.getByRole("button", { name: "Reorder items" });
-    if ((await pen.count()) === 0) {
-      r.fail(
-        `${s.name}: edit mode`,
-        "pen button not found — probe would be vacuous",
-      );
-      continue;
-    }
-    await pen.first().click();
-    await page.waitForTimeout(800);
-
-    const total = await page.locator(SORTABLE).count();
-    const inside = await page.locator(`${s.nested} ${SORTABLE}`).count();
-    r.note(`${s.name}: sortables on page=${total}, inside nested=${inside}`);
-
-    // Non-vacuity guard FIRST: it proves edit mode really engaged and the marker
-    // exists on this page, so the `inside === 0` assertion below means something.
-    r.ok(
-      `${s.name}: edit mode engaged`,
-      total > 0,
-      `no sortables anywhere (got ${total})`,
-    );
-    r.eq(`${s.name}: no sortable inside nested content`, inside, 0);
-
-    await page.getByRole("button", { name: "Exit edit mode" }).first().click();
-    await page.waitForTimeout(400);
+  // Pen toggle lives on the global action bar; label flips once engaged.
+  // The global action bar is a hover-revealed floating panel when unpinned, so
+  // the pen is present but pointer-intercepted until the bar is disclosed.
+  const bar = page.locator('[data-source*="floating-action"]').first();
+  if (await bar.count()) {
+    await bar.hover();
+    await page.waitForTimeout(600);
   }
+
+  const pen = page.getByRole("button", { name: "Reorder items" });
+  if ((await pen.count()) === 0) {
+    r.fail(
+      `${name}: edit mode`,
+      "pen button not found — probe would be vacuous",
+    );
+    return;
+  }
+  await pen.first().click();
+  await page.waitForTimeout(800);
+
+  const total = await page.locator(SORTABLE).count();
+  const inside = await page.locator(`${nested} ${SORTABLE}`).count();
+  r.note(`${name}: sortables on page=${total}, inside nested=${inside}`);
+
+  // Non-vacuity guards FIRST: they prove edit mode really engaged and that the
+  // nested content is even on this page, so the `inside === 0` assertion below
+  // means something.
+  r.ok(
+    `${name}: edit mode engaged`,
+    total > 0,
+    `no sortables anywhere (got ${total})`,
+  );
+  const nestedCount = await page.locator(nested).count();
+  r.ok(
+    `${name}: nested content is present`,
+    nestedCount > 0,
+    `--nested '${nested}' matched nothing — probe vacuous`,
+  );
+  r.eq(`${name}: no sortable inside nested content`, inside, 0);
+
+  await page.getByRole("button", { name: "Exit edit mode" }).first().click();
+  await page.waitForTimeout(400);
 });
 
 await r.finish();

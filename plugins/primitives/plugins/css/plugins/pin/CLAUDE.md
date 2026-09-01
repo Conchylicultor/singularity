@@ -116,7 +116,6 @@ offsets expressible on the semantic ramp.
     - `apps/sonata/progress/loop`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/songsheet`
-    - `apps/website/demos/release-switcher`
     - `build`
     - `build/build-logs`
     - `config_v2/settings`

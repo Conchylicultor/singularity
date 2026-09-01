@@ -1,20 +1,34 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "../core";
-import { Website, WebsiteHeader } from "./slots";
+import { Website } from "./slots";
 import { WebsitePage } from "./components/website-page";
 
 /**
  * The landing pane — the site's index at bare `/website`. `appIndex` marks it
- * as the app's index pane. It wears the shared site header rather than minting
- * one (`actions: WebsiteHeader`), like every other website pane. The body is the
- * long-scroll marketing page: every `Website.Section` contribution rendered
- * top-to-bottom (hero, features, demos, CTA…), then the site footer.
+ * as the app's index pane.
+ *
+ * Unlike every other website pane it does NOT borrow the shared site header:
+ * `actions` is omitted, so `Pane.define` mints this pane a header slot of its
+ * own that nothing contributes to. The homepage therefore carries no wordmark
+ * and no nav — its whole job is to state the premise and fork, and a nav row
+ * would offer the same two destinations a second time, in smaller type. The
+ * header lands on the two question pages, where the reader has somewhere to go
+ * back to.
+ *
+ * What that leaves is an EMPTY header band: `PaneChrome` always paints its
+ * `Bar` (there is no opt-out — a pane may never strand its own scrolling, and
+ * in the floating surface mode that band is the window's drag handle), so the
+ * homepage still opens with a bare strip and its hairline. Removing the strip
+ * means teaching the pane primitive to paint no band for an empty header,
+ * which is a change to that primitive, not to this page.
+ *
+ * The body is the landing page: every `Website.Section` contribution rendered
+ * top-to-bottom (intro, fork), then the site footer.
  */
 export const landingPane = Pane.define({
   id: "website-landing",
   app: websiteApp,
   appIndex: true,
-  actions: WebsiteHeader,
   component: LandingBody,
 });
 

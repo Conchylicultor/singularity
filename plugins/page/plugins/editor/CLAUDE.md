@@ -3515,7 +3515,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `apps/story/marker`
     - `apps/story/shell`
     - `apps/story/story-core`
-    - `apps/website/demos/editor-toy`
     - `page/annotations`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes`

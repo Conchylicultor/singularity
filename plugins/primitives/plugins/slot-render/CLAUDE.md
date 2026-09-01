@@ -273,9 +273,8 @@ the outcome too, with no separate code path.
     - `apps/story/render`
     - `apps/studio/explorer`
     - `apps/studio/shell`
-    - `apps/website/pillars/agents`
-    - `apps/website/pillars/apps`
-    - `apps/website/pillars/platform`
+    - `apps/website/questions/apps`
+    - `apps/website/questions/harness`
     - `apps/website/shell`
     - `apps/workflows/shell`
     - `config_v2/fields`
