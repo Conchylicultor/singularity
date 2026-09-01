@@ -125,6 +125,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `page/quote`
     - `page/url-paste`
     - `primitives/adaptive-bar`
+    - `primitives/copy-source-text`
     - `primitives/css/control-panel`
     - `primitives/css/grow-relay`
     - `primitives/css/radio-group`

@@ -139,6 +139,7 @@ need no guard; `getRangeAt` is the one read that does.
 - Cross-plugin:
   - Imported by:
     - `page/editor`
+    - `primitives/copy-source-text`
     - `primitives/diff-view`
     - `primitives/text-editor/caret-trigger`
 - Web:

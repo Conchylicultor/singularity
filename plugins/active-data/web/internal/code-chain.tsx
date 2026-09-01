@@ -1,4 +1,5 @@
 import { InlineCode } from "@plugins/primitives/plugins/markdown/web";
+import { copiesAsText } from "@plugins/primitives/plugins/copy-source-text/core";
 import {
   fullMatch,
   useActiveDataCodeCandidates,
@@ -89,7 +90,16 @@ function CodeCandidateLevel({
       // active-data exemption). `value` is the very value this candidate's own
       // `useClaim` just produced — see the SOUNDNESS note on `codeTag`.
       const Component = candidate.resolver.component;
-      return <Component content={text} value={claim.value} />;
+      // A code chip is reachable ONLY from inside a backtick-wrapped span (the
+      // syntactic gate above it), so the characters this chip replaced were
+      // `text` WITH its backticks. Declaring them is what lets the copy carry
+      // the markdown back rather than a bare word that no longer renders as a
+      // chip when pasted — see `primitives/copy-source-text`.
+      return (
+        <span className="contents" {...copiesAsText(`\`${text}\``)}>
+          <Component content={text} value={claim.value} />
+        </span>
+      );
     }
   }
 }

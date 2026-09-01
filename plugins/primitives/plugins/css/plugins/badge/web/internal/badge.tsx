@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { BadgeVariant } from "../../core";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
+import { copiesAsOwnText } from "@plugins/primitives/plugins/copy-source-text/core";
 import type React from "react";
 
 // Re-exported so every existing `import { BadgeVariant } from ".../badge/web"`
@@ -83,6 +84,15 @@ export function Badge({
         colorClass ?? VARIANT_CLASS[variant],
         className,
       )}
+      // A badge's label sits in the truncating span below, which is a flex item
+      // — and CSS blockifies every flex item. The clipboard's plain-text
+      // serializer puts a newline before and after every block-level box, so a
+      // badge in running text copies as three lines. Declaring the badge as
+      // copying its own text collapses it back to one, without touching the box
+      // model the truncation depends on. Placed BEFORE the passthrough so a
+      // caller standing in for something else (an active-data chip declaring its
+      // source token) overrides it rather than fighting it.
+      {...copiesAsOwnText}
       {...rest}
     >
       {icon}

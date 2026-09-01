@@ -15726,6 +15726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/quote`
               - `page/url-paste`
               - `primitives/adaptive-bar`
+              - `primitives/copy-source-text`
               - `primitives/css/control-panel`
               - `primitives/css/grow-relay`
               - `primitives/css/radio-group`
@@ -15961,7 +15962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.copy-source-text`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -21620,6 +21621,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `CommitRow`
         - Exports (values): `CommitRowSchema`
+    - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable.
+      - Web:
+        - Contributes: `Core.Root` → `CopySourceTextHost`
+        - Uses: `primitives/dom-selection.selectionRange`
+        - Exports (values): `installCopySourceText`
+      - Core:
+        - Exports (types): `CopySourceProps`
+        - Exports (values):
+          - `copiesAsOwnText`
+          - `copiesAsText`
+          - `COPY_SOURCE_ATTR`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Uses: `primitives/css/ui-kit.Button`
@@ -25538,6 +25550,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `page/editor`
+          - `primitives/copy-source-text`
           - `primitives/diff-view`
           - `primitives/text-editor/caret-trigger`
       - Web:
