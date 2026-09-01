@@ -6,7 +6,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
   defineDataView,
@@ -18,6 +21,7 @@ import {
   queryDeployRuns,
   type DeployRunRecord,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { DeployRunItemActions } from "../slots";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const DEPLOY_HISTORY_VIEW = defineDataView("deploy.deployment.history");
@@ -43,7 +47,10 @@ const VERB_OPTIONS: { value: string; label: string }[] = [
 function outcomeBadge(run: DeployRunRecord): ReactNode {
   if (run.status === "running") {
     return (
-      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning animate-pulse" />}>
+      <Badge
+        variant="warning"
+        icon={<StatusDot colorClass="bg-warning animate-pulse" />}
+      >
         Running
       </Badge>
     );
@@ -56,7 +63,10 @@ function outcomeBadge(run: DeployRunRecord): ReactNode {
     );
   }
   return (
-    <Badge variant="destructive" icon={<StatusDot colorClass="bg-destructive" />}>
+    <Badge
+      variant="destructive"
+      icon={<StatusDot colorClass="bg-destructive" />}
+    >
       {/* The leg names the failure when there is one: "failed on build" is a
           different fact from "failed on ship", and it is free to say. */}
       {run.phaseFailed ? `Failed on ${run.phaseFailed}` : "Failed"}
@@ -135,7 +145,9 @@ const fields: FieldDef<DeployRunRecord>[] = [
     value: (r) => r.releaseRunId,
     cell: (r) =>
       r.releaseRunId ? (
-        <span className="font-mono text-muted-foreground">{r.releaseRunId}</span>
+        <span className="font-mono text-muted-foreground">
+          {r.releaseRunId}
+        </span>
       ) : null,
     sortable: true,
     width: "16rem",
@@ -145,7 +157,9 @@ const fields: FieldDef<DeployRunRecord>[] = [
     label: "Took",
     type: "text",
     value: (r) => durationLabel(r),
-    cell: (r) => <span className="text-muted-foreground">{durationLabel(r)}</span>,
+    cell: (r) => (
+      <span className="text-muted-foreground">{durationLabel(r)}</span>
+    ),
     width: "6rem",
   },
   {
@@ -191,7 +205,11 @@ const fields: FieldDef<DeployRunRecord>[] = [
  * `deploy.runs-revision` scalar tick refreshes the loaded window in place when a
  * run opens or ends.
  */
-export function DeployHistorySection({ deploymentId }: { deploymentId: string }): ReactNode {
+export function DeployHistorySection({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
   // The tick drives an in-place refetch of the loaded window; the keyset query is
   // the source of truth. While pending, hand a null tick (no refetch) — the first
   // settled `rev` then refreshes once.
@@ -209,7 +227,10 @@ export function DeployHistorySection({ deploymentId }: { deploymentId: string })
       rowKey={(r) => r.id}
       views={["list", "table"]}
       defaultView="list"
-      viewOptions={{ list: { renderRow: (r: DeployRunRecord) => <HistoryRow run={r} /> } }}
+      viewOptions={{
+        list: { renderRow: (r: DeployRunRecord) => <HistoryRow run={r} /> },
+      }}
+      itemActions={DeployRunItemActions}
       emptyState={<>Nothing has been deployed from here yet.</>}
       dataSource={{
         changeTick,
@@ -244,7 +265,11 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
             </Badge>
           )}
           {run.releaseRunId && (
-            <Badge variant="muted" mono title={`Release run ${run.releaseRunId}`}>
+            <Badge
+              variant="muted"
+              mono
+              title={`Release run ${run.releaseRunId}`}
+            >
               {run.releaseRunId}
             </Badge>
           )}
@@ -253,7 +278,12 @@ function HistoryRow({ run }: { run: DeployRunRecord }): ReactNode {
           </Text>
         </Cluster>
         {run.status === "failed" && run.message && (
-          <Text as="p" variant="caption" tone="destructive" className="whitespace-pre-wrap">
+          <Text
+            as="p"
+            variant="caption"
+            tone="destructive"
+            className="whitespace-pre-wrap"
+          >
             {run.message}
           </Text>
         )}

@@ -1,0 +1,11 @@
+// @hash be09e3a2b234
+{
+  // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+  "items": [
+    "apps.deploy.deploy-history.investigate-failure:investigate-failure"
+  ]
+}

@@ -70,6 +70,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/browser/proxy`
     - `apps/browser/tabs`
     - `apps/browser/webview`
+    - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/deployments`
     - `apps/deploy/local-serve`
     - `apps/deploy/servers`

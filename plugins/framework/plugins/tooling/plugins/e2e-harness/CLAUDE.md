@@ -77,6 +77,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps-core/surface`
     - `apps-core/tabs`
     - `apps/agent-manager/pages-nav`
+    - `apps/deploy/deploy-history/investigate-failure`
     - `apps/deploy/local-serve`
     - `apps/deploy/remote-deploy`
     - `apps/events/event-list`

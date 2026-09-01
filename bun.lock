@@ -254,6 +254,10 @@
       "name": "@singularity/plugin-apps-deploy-deploy-history",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure": {
+      "name": "@singularity/plugin-apps-deploy-deploy-history-investigate-failure",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/deployments": {
       "name": "@singularity/plugin-apps-deploy-deployments",
       "version": "0.0.1",
@@ -5917,6 +5921,8 @@
     "@singularity/plugin-apps-deploy-composition": ["@singularity/plugin-apps-deploy-composition@workspace:plugins/apps/plugins/deploy/plugins/composition"],
 
     "@singularity/plugin-apps-deploy-deploy-history": ["@singularity/plugin-apps-deploy-deploy-history@workspace:plugins/apps/plugins/deploy/plugins/deploy-history"],
+
+    "@singularity/plugin-apps-deploy-deploy-history-investigate-failure": ["@singularity/plugin-apps-deploy-deploy-history-investigate-failure@workspace:plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure"],
 
     "@singularity/plugin-apps-deploy-deployments": ["@singularity/plugin-apps-deploy-deployments@workspace:plugins/apps/plugins/deploy/plugins/deployments"],
 

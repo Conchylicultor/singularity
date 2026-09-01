@@ -58,6 +58,7 @@ and the form defaults `openAfterLaunch` to `false`.
   - Imported by:
     - `active-data/task`
     - `apps/agent-manager/welcome`
+    - `apps/deploy/deploy-history/investigate-failure`
     - `apps/prototypes/gallery`
     - `build/build-fix`
     - `config_v2/settings/conflict-agent`
