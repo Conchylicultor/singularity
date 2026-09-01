@@ -35,6 +35,8 @@ export default {
       match: agentNotesBlock.type,
       component: AgentNotesFrame,
       cornerAnchor: AgentNotesAnchor,
+      // A wash is a filled box: its content clears every edge.
+      pad: "box",
     }),
   ],
 } satisfies PluginDefinition;

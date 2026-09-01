@@ -70,10 +70,10 @@ import {
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
-import { Editor, useFramedBlockTypes } from "../slots";
+import { Editor, useFramedBlockTypes, useFrameGeometry } from "../slots";
 import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
 import { flattenVisible } from "../internal/flatten-blocks";
-import { resolveRailSeats } from "../internal/rail-seat";
+import { resolveFramePadInsets, resolveRailSeats } from "../internal/rail-seat";
 import { resolveSelectionBands } from "../internal/selection-bands";
 import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
@@ -88,7 +88,8 @@ import { SelectionBands } from "./selection-bands";
 import {
   BLOCK_GUTTER,
   blockContentLeft,
-  frameBoxRightInset,
+  framePadX,
+  framePadY,
 } from "../internal/page-column";
 import { FrameHoverProvider, useSetFrameHover } from "../internal/frame-hover";
 import { ExternalDropOverlay } from "./external-drop-overlay";
@@ -1503,6 +1504,7 @@ function SelectionLayer({
   // wrapping the rows would change their DOM parent on every Tab across a frame
   // boundary, remounting the block's Lexical instance and losing the caret.
   const framedTypes = useFramedBlockTypes();
+  const frameGeometry = useFrameGeometry();
   const frameSpans = useMemo(
     () => computeFrameSpans(flat, framedTypes),
     [flat, framedTypes],
@@ -1520,8 +1522,29 @@ function SelectionLayer({
     [handleMap],
   );
   const railSeats = useMemo(
-    () => resolveRailSeats(flat, frameSpans, handleOf),
-    [flat, frameSpans, handleOf],
+    () =>
+      resolveRailSeats(
+        flat,
+        frameSpans,
+        handleOf,
+        (t) => frameGeometry.get(t)?.pads === true,
+        (t) => frameGeometry.get(t)?.absorbs === true,
+      ),
+    [flat, frameSpans, handleOf, frameGeometry],
+  );
+  // Each frame's OWN box insets. Per-FRAME, where the seats are per-row, and
+  // deliberately not derived from a seat: a vertical side depends on whether an
+  // enclosing frame opens or closes on the same row as this one, which is not a
+  // fact about any single row. See `FramePadInsets`.
+  const frameInsets = useMemo(
+    () =>
+      resolveFramePadInsets(
+        flat,
+        frameSpans,
+        handleOf,
+        (t) => frameGeometry.get(t)?.pads === true,
+      ),
+    [flat, frameSpans, handleOf, frameGeometry],
   );
 
   // Which container frames cover each row, outermost first. It is what a row
@@ -1691,29 +1714,39 @@ function SelectionLayer({
               >
                 {/* Frames first in DOM order so they paint BEHIND the rows they
                   span (equal stacking level → document order decides). */}
-                {frameSpans.map((span) => (
-                  <div
-                    key={`frame:${span.block.id}`}
-                    // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
-                    className="pointer-events-none relative col-start-1"
-                    style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
-                  >
-                    <Editor.BlockFrame.Dispatch
-                      type={span.block.type}
-                      data={span.block.data}
-                      blockId={span.block.id}
-                      inset={blockContentLeft(span.depth)}
-                      // This box closes one `BLOCK_INSET` further in per frame
-                      // enclosing it, its own included — read off the seat of the
-                      // row it starts on, which is the SAME count the rows inside
-                      // reserve as `padding-right`. One count, so a card's text
-                      // can never end past its own tint.
-                      rightInset={frameBoxRightInset(
-                        railSeats[span.start]?.frameCount ?? 1,
-                      )}
-                    />
-                  </div>
-                ))}
+                {frameSpans.map((span) => {
+                  const seat = railSeats[span.start];
+                  const insets = frameInsets.get(span.block.id);
+                  return (
+                    <div
+                      key={`frame:${span.block.id}`}
+                      // eslint-disable-next-line layout/no-adhoc-layout -- grid-row span placement is the point of this element; `relative` gives the frame a positioned box to paint into
+                      className="pointer-events-none relative col-start-1"
+                      style={{ gridRow: `${span.start + 1} / ${span.end + 2}` }}
+                    >
+                      <Editor.BlockFrame.Dispatch
+                        type={span.block.type}
+                        data={span.block.data}
+                        blockId={span.block.id}
+                        // The container's OWN content edge — so the box lands on
+                        // the prose x however deeply the cards nest.
+                        inset={blockContentLeft(
+                          span.depth,
+                          seat?.absorbedIndent ?? 0,
+                        )}
+                        // Three DIFFERENT counts, resolved together above: the
+                        // right edge clears every enclosing frame, while a
+                        // vertical edge clears only the ones whose pad is
+                        // reserved on this frame's own opening / closing row. A
+                        // `"rule"` container is in none of them, so its bar spans
+                        // its rows exactly.
+                        rightInset={framePadX(insets?.right ?? 0)}
+                        topInset={framePadY(insets?.top ?? 0)}
+                        bottomInset={framePadY(insets?.bottom ?? 0)}
+                      />
+                    </div>
+                  );
+                })}
                 {/* The block-selection highlight, over the frames and under the
                   rows. It is resolved here — with the whole flatten in view —
                   rather than per row, because "is the line above me selected

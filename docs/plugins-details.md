@@ -18970,6 +18970,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CollabHydrationReason`
           - `CollabHydrationReport`
           - `FormatToolbarValue`
+          - `FrameGeometry`
+          - `FramePad`
           - `MarkButtonProps`
           - `PageIconProps`
           - `PageOption`
@@ -18992,6 +18994,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Editor`
           - `filterBlockTypes`
           - `flattenSections`
+          - `FRAME_PAD_X`
+          - `FRAME_PAD_Y`
           - `frameBoxLeft`
           - `FrameHoverProvider`
           - `getBlockTextExtensions`
@@ -19014,6 +19018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useCaretEscape`
           - `useFormatToolbar`
           - `useFramedBlockTypes`
+          - `useFrameGeometry`
           - `useFrameHovered`
           - `useGroupedInsertableBlocks`
           - `useInsertableBlocks`
@@ -20120,11 +20125,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.blockTextRenderableExtensions`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
+          - `page/editor.FRAME_PAD_X`
+          - `page/editor.FRAME_PAD_Y`
+          - `page/editor.FrameGeometry`
           - `page/editor.FrameHoverProvider`
           - `page/editor.PageIcon`
           - `page/editor.TextBlockLayout`
           - `page/editor.useBlockDecorations`
           - `page/editor.useFramedBlockTypes`
+          - `page/editor.useFrameGeometry`
           - `primitives/css/inline.Inline`
           - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`

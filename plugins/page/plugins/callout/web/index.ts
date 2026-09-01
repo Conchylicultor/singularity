@@ -39,6 +39,9 @@ export default {
       match: calloutBlock.type,
       component: CalloutFrame,
       anchor: CalloutAnchor,
+      // A filled box, so its content clears every edge — text sitting on a
+      // tint's own boundary reads as a clipping bug.
+      pad: "box",
       menu: CalloutMenu,
     }),
   ],

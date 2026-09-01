@@ -35,6 +35,11 @@ export default {
       match: quoteBlock.type,
       component: QuoteFrame,
       anchor: QuoteAnchor,
+      // A rule, not a box: the bar has no right or top edge for text to land
+      // on, so padding it would only narrow the passage and stretch the bar
+      // past the lines it marks. The gap between bar and first letter is the
+      // children's own `BLOCK_INDENT`.
+      pad: "rule",
     }),
   ],
 } satisfies PluginDefinition;

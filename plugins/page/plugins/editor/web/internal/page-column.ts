@@ -13,8 +13,11 @@ import {
  * - Block **decorations paint that same content box**, so a box's own edge and
  *   the first letter of the prose above it share one x. A code block's
  *   background, a place block's card and a container's frame all sit at
- *   `[C + BLOCK_INSET, R - BLOCK_INSET]` — see `frameBoxLeft` /
- *   `frameBoxRightInset`, which is how the container family says it.
+ *   `[C + BLOCK_INSET, R]` — see `frameBoxLeft`, which is how the container
+ *   family says it. How far the CONTENT of such a box then stays off its edges
+ *   is a separate question, and a separate declaration: `FRAME_PAD_X` /
+ *   `FRAME_PAD_Y` at the foot of this file. Alignment places the edge; it has no
+ *   opinion about padding, and for a while nothing else did either.
  * - Anything a host renders *alongside* blocks that is not itself a block — the
  *   page title, the page icon, the section list — sits at `C + BLOCK_INSET`.
  *
@@ -80,9 +83,20 @@ export const MARKER_GUTTER = "1.5rem";
  * the box starts at the content edge instead of bleeding over the rail, and it
  * is what `resolveRailSeats` evaluates (at the row's own depth, or at its
  * outermost enclosing frame's) to hand each row its seat's `left`.
+ *
+ * `absorbed` is how many enclosing container frames have ABSORBED this row's
+ * indent step and replaced it with their own padding — see `FRAME_PAD_X`. Each
+ * one pulls the edge back by the difference, so the card's content sits one
+ * `FRAME_PAD_X` inside its box rather than one `BLOCK_INDENT`. Zero for every
+ * row not inside such a frame, which is why it defaults: a caller with no frames
+ * in view is asking the same question it always asked.
  */
-export function blockContentLeft(depth: number): number {
-  return BLOCK_GUTTER + depth * BLOCK_INDENT;
+export function blockContentLeft(depth: number, absorbed = 0): number {
+  return (
+    BLOCK_GUTTER +
+    depth * BLOCK_INDENT -
+    absorbed * (BLOCK_INDENT - FRAME_PAD_X)
+  );
 }
 
 /**
@@ -103,20 +117,90 @@ export function frameBoxLeft(contentEdge: number): string {
 }
 
 /**
- * The right inset of that same box, for a row (or frame) wrapped in
- * `frameCount` container frames — one `BLOCK_INSET` per enclosing frame, so a
- * nested card closes inside its parent the way its left edge opens inside it.
+ * The card's inner PADDING — the gap between the box a container frame paints
+ * and the text inside it. Declared here, once, on both axes, and read by every
+ * side of every box: the four sides can no longer disagree because there is
+ * nothing for them to disagree about.
  *
- * It is what a framed ROW reserves as `padding-right` and what the frame itself
- * pulls its right edge in by, from the one count: with both derived here, a
- * card's text can never end past its own tint, and two frames at the same depth
- * can never disagree about where the box ends.
+ * It was introduced because they did. The box's edges and its content's edges
+ * used to be computed independently, from quantities chosen for ALIGNMENT, and
+ * whatever fell out between them became the padding by accident: measured on a
+ * real page, a card had 24px on the left, **0 on the right, and 0 top and
+ * bottom** — text landing exactly on its own tint, which reads as a clipping
+ * bug. Alignment says where the box's EDGE goes; it has no opinion about how far
+ * the content must stay off it, and nothing else had one either.
  *
- * `frameCount === 0` (an unframed row) is `0`, not a token — an unframed row
- * reserves nothing.
+ * ## The left side had to be BOUGHT before this could be a free number
+ *
+ * A card's contents are its CHILDREN, one indent level deeper, and its box
+ * starts on the prose x — so the left gap is `BLOCK_INDENT` and the frame cannot
+ * shrink it by declaring anything. The first version of this constant conceded
+ * that and pinned itself to `BLOCK_INDENT`, making the other three sides agree
+ * with the one side that was already decided. It measured 24px against the
+ * design's 16, and read as visibly heavier than the mock it came from.
+ *
+ * So the frame ABSORBS that indent step and spends it as padding instead:
+ * `blockContentLeft` pulls a framed row's content edge back by
+ * `BLOCK_INDENT - FRAME_PAD_X` per absorbing frame. The box's own edge does not
+ * move (it is still the prose x), nesting still opens one pad per level, and the
+ * number is finally free.
+ *
+ * **A frame may only absorb a column nothing is standing in.** A container whose
+ * decoration is a GUTTER GLYPH (the callout's icon) puts that glyph in exactly
+ * this column, sized to `BLOCK_INDENT`; reclaiming it would crop the icon. So
+ * absorption is gated on the decoration SEAT — corner-seat containers (the
+ * annotation cards) absorb, gutter-seat ones keep the column their glyph
+ * occupies. Derived from the seat rather than declared a second time, so a
+ * container cannot claim a column it also draws in.
+ *
+ * ## Why Y is smaller than X
+ *
+ * A horizontal gap is measured to a GLYPH; a vertical one to a LINE BOX, which
+ * already carries the row's own `py-xs` at each end plus half the line's
+ * leading. Equal numbers would not read as equal — the effective vertical gap is
+ * `FRAME_PAD_Y` plus all of that. A token rather than px, so the vertical rhythm
+ * follows the density preset exactly as the lines it separates do.
  */
-export function frameBoxRightInset(frameCount: number): string {
-  return frameCount === 0
-    ? "0px"
-    : `calc(${frameCount} * ${spaceLength(BLOCK_INSET)})`;
+export const FRAME_PAD_X = 16;
+
+/** The vertical half of {@link FRAME_PAD_X}. See there for why they differ. */
+export const FRAME_PAD_Y: SpaceStep = "sm";
+
+/**
+ * `frames` pads' worth of horizontal space, as a CSS length.
+ *
+ * ONE function for every horizontal gap around a card, called with a COUNT, so
+ * the arithmetic exists once and a call site's only job is to say how many boxes
+ * it is clearing. Two counts are in play and they differ by exactly one, which
+ * is the padding:
+ *
+ * - a **row** passes the frames ENCLOSING it (its own included when it is a
+ *   padded container's anchor) and reserves that as `padding-right`;
+ * - a **frame** passes the frames enclosing it with **its own excluded**, and
+ *   pulls its box's right edge in by that.
+ *
+ * So the innermost box ends one pad outside the text it wraps, and each box
+ * further out ends one pad outside the box it wraps — the same ladder the left
+ * edge already climbs by `BLOCK_INDENT`.
+ *
+ * This used to be one count for both, which is exactly how the right gap became
+ * zero: the reserve equalled the pull, and the two edges landed on the same x.
+ */
+export function framePadX(frames: number): string {
+  return frames <= 0 ? "0px" : `${frames * FRAME_PAD_X}px`;
+}
+
+/**
+ * `frames` pads' worth of vertical space, as a CSS length — the vertical twin of
+ * {@link framePadX}, read with the same two counts.
+ *
+ * A backdrop cannot buy vertical space (it would overlap the next block rather
+ * than displace it), so the space is made by the ROWS: the first row a padded
+ * frame covers reserves `padding-top`, the last reserves `padding-bottom`, one
+ * pad per frame opening or closing there. The frame then pulls its own top and
+ * bottom edges in by the pads belonging to the frames AROUND it, which is what
+ * makes a nested card start one pad below its parent instead of on the same y.
+ */
+export function framePadY(frames: number): string {
+  return frames <= 0 ? "0px" : `calc(${frames} * ${spaceLength(FRAME_PAD_Y)})`;
 }

@@ -33,6 +33,10 @@ import {
   useFramedBlockTypes,
   BLOCK_INDENT,
   BLOCK_INSET,
+  FRAME_PAD_X,
+  FRAME_PAD_Y,
+  useFrameGeometry,
+  type FrameGeometry,
   type BlockDecoration,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
@@ -331,6 +335,7 @@ function NodeView({
   ordinal,
   contributions,
   framedTypes,
+  frameGeometry,
   decorations,
   diff,
 }: {
@@ -344,6 +349,12 @@ function NodeView({
   contributions: BlockEntry[];
   /** Container block types, derived from the live `Editor.BlockFrame` registry. */
   framedTypes: ReadonlySet<string>;
+  /**
+   * Per container type: whether its box holds its content off its edges, and
+   * whether it reclaims its children's indent step to pay for that. From the
+   * same registry, so it cannot drift from who actually paints a fill.
+   */
+  frameGeometry: ReadonlyMap<string, FrameGeometry>;
   /** Container-anchor decorations, from the same `Editor.BlockFrame` registry. */
   decorations: ReadonlyMap<string, BlockDecoration>;
   diff?: Map<string, BlockDiffKind>;
@@ -353,17 +364,42 @@ function NodeView({
   const data = asRecord(node.data);
   const kind = node.id ? diff?.get(node.id) : undefined;
 
+  // What this node's CONTENT reserves so it clears the box painted behind it.
+  //
+  // The editor hands the same reserve to its grid rows; here nesting is a real
+  // wrapper, so the wrapper carries it — one pad per side, but only for a
+  // `pad: "box"` container. A quote's bar has no edge to clear, so it reserves
+  // nothing and its passage keeps the full column.
+  //
+  const geometry = frameGeometry.get(node.type);
+  const framePad: CSSProperties = geometry?.pads
+    ? {
+        paddingRight: FRAME_PAD_X,
+        paddingTop: `var(--space-${FRAME_PAD_Y})`,
+        paddingBottom: `var(--space-${FRAME_PAD_Y})`,
+      }
+    : {};
+
+  // The LEFT pad is the child indent SPENT as padding, so a container that
+  // ABSORBS that step indents its children by the pad instead of by the full
+  // `BLOCK_INDENT` — exactly what `blockContentLeft` does on the editable
+  // surface. One that does not (its gutter glyph stands in the column) keeps the
+  // full step, and so does every ordinary block.
+  const childIndent = geometry?.absorbs ? FRAME_PAD_X : BLOCK_INDENT;
+
   // Children always render expanded (read-only). Each child list restarts its
   // own ordinal counter, reset on type change (matches the editor's numbering).
   const children =
     node.children.length > 0 ? (
-      // One depth of the editor's per-depth indent: the child forest's content
-      // box starts `BLOCK_INDENT` right of this block's.
-      <div style={{ paddingLeft: BLOCK_INDENT }}>
+      // One depth of indent: the child forest's content box starts that far
+      // right of this block's — `BLOCK_INDENT` normally, and the card's own pad
+      // when this node is a container that absorbed the step.
+      <div style={{ paddingLeft: childIndent, ...framePad }}>
         <ForestView
           forest={node.children}
           contributions={contributions}
           framedTypes={framedTypes}
+          frameGeometry={frameGeometry}
           decorations={decorations}
           diff={diff}
         />
@@ -443,11 +479,13 @@ function NodeView({
           // line is the same fallback the editor's anchored row renders. The
           // space below is a NON-BREAKING one: a lone collapsible space would
           // leave the div zero height, which is the very thing this fixes.
-          <Inset l={BLOCK_INSET}>
-            <Text as="div" variant="body" className="py-xs">
-              {" "}
-            </Text>
-          </Inset>
+          <div style={{ paddingLeft: childIndent, ...framePad }}>
+            <Inset l={BLOCK_INSET}>
+              <Text as="div" variant="body" className="py-xs">
+                {" "}
+              </Text>
+            </Inset>
+          </div>
         )}
       </>
     );
@@ -488,7 +526,7 @@ function NodeView({
   // detached snapshot (a version-history preview, the public site) — that is the
   // documented degradation, not a gap: a frame reading a side table keyed by
   // block id falls back to its static appearance there.
-  const framed = framedTypes.has(node.type) ? (
+  const withFrame = framedTypes.has(node.type) ? (
     // `group/frame` is this surface's half of the corner decoration's reveal:
     // here the frame and the lines it covers DO share an ancestor (nesting is a
     // real wrapper div, not a grid span), so a card's name can appear on plain
@@ -502,9 +540,17 @@ function NodeView({
           data={node.data}
           blockId={node.id}
           inset={0}
-          // No rail and no nesting inset to mirror: this surface's boxes run the
-          // full width of the column they are drawn in.
-          rightInset="0px"
+          // No rail, and nesting is a real WRAPPER here rather than a shared
+          // grid: an enclosing card's pad is already spent inside this node's own
+          // wrapper, so this frame has no nesting share left to pull in by. Its
+          // content's clearance comes from `framePad` above, not from here.
+          //
+          // The right edge still mirrors the left, which `frameBoxLeft` puts one
+          // `BLOCK_INSET` in — so the box spans exactly the prose column, the
+          // same claim the editable surface makes.
+          rightInset={`var(--space-${BLOCK_INSET})`}
+          topInset="0px"
+          bottomInset="0px"
         />
       }
     >
@@ -514,19 +560,21 @@ function NodeView({
     body
   );
 
-  return <DiffWrap kind={kind}>{framed}</DiffWrap>;
+  return <DiffWrap kind={kind}>{withFrame}</DiffWrap>;
 }
 
 function ForestView({
   forest,
   contributions,
   framedTypes,
+  frameGeometry,
   decorations,
   diff,
 }: {
   forest: ReadOnlyNode[];
   contributions: BlockEntry[];
   framedTypes: ReadonlySet<string>;
+  frameGeometry: ReadonlyMap<string, FrameGeometry>;
   decorations: ReadonlyMap<string, BlockDecoration>;
   diff?: Map<string, BlockDiffKind>;
 }) {
@@ -547,6 +595,7 @@ function ForestView({
           ordinal={ordinals[i] ?? 1}
           contributions={contributions}
           framedTypes={framedTypes}
+          frameGeometry={frameGeometry}
           decorations={decorations}
           diff={diff}
         />
@@ -580,6 +629,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
   // renders it through the same `TextBlockLayout` the editor uses.
   const contributions = Editor.Block.useContributions();
   const framedTypes = useFramedBlockTypes();
+  const frameGeometry = useFrameGeometry();
   const decorations = useBlockDecorations();
   return (
     // A corner decoration asks the editor's hover store whether the pointer is
@@ -592,6 +642,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
         forest={forest}
         contributions={contributions}
         framedTypes={framedTypes}
+        frameGeometry={frameGeometry}
         decorations={decorations}
         diff={diff}
       />

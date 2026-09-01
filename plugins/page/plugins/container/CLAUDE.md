@@ -143,14 +143,21 @@ are the two users today.
   computed, so shifting the flow would strand them). The single
   `layout/no-adhoc-layout` escape for the whole family lives here.
 
-  **That box is the container's own CONTENT box**, `[C + BLOCK_INSET, R −
-  BLOCK_INSET × enclosing frames]` — the same box a code block's background and a
-  place block's card already paint. It used to bleed to `C`, one `BLOCK_INSET`
-  further left, which is what "the card looks shifted" was: its edge stood 12px
-  left of every paragraph on the page and of every other decorated box. The right
-  inset and the enclosed rows' `padding-right` come from ONE count (how many
-  frames cover the row), so a card's text can never end past its own tint, and a
-  nested card closes inside its parent the way its left edge opens inside it.
+  **That box is the container's own CONTENT box**, starting at `C + BLOCK_INSET`
+  — the same box a code block's background and a place block's card already
+  paint. It used to bleed to `C`, one `BLOCK_INSET` further left, which is what
+  "the card looks shifted" was: its edge stood 12px left of every paragraph on
+  the page and of every other decorated box.
+
+  Its other three insets are the container's NESTING share of the card padding —
+  one `FRAME_PAD` per frame enclosing this one, its OWN EXCLUDED — so a nested
+  card closes one pad inside its parent, and starts one pad below it rather than
+  on the same y (every anchor row is zero-height, so without the vertical share
+  every box in a nest would share one top edge). The padding itself is reserved
+  by the ROWS, which is the half a backdrop cannot do for itself: growing upward
+  would overlap the block above rather than displace it. A container declares
+  whether it wants any (`BlockFrameMeta.pad`) — see the editor's *A card's
+  padding is declared, not left over*.
 
   The appearance channel is deliberately named `className`: the
   `no-adhoc-layout` / `no-adhoc-spacing` / `no-adhoc-radius` /

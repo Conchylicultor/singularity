@@ -40,6 +40,8 @@ export default {
       match: todoBlock.type,
       component: TodoFrame,
       cornerAnchor: TodoAnchor,
+      // A wash is a filled box: its content clears every edge.
+      pad: "box",
       menu: TodoMenu,
     }),
   ],

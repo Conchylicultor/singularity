@@ -260,12 +260,27 @@ export interface BlockFrameProps {
   inset: number;
   /**
    * How far the box's RIGHT edge pulls in from the surface's own right edge, as
-   * a CSS length — one `BLOCK_INSET` per enclosing frame, this one included, so
-   * a nested card closes inside its parent the way its left edge opens inside
-   * it. The rows inside reserve the same amount as `padding-right`, from the
-   * same count, so their text always stops before this edge.
+   * a CSS length — one `FRAME_PAD_X` per frame enclosing this one, its own
+   * EXCLUDED. The rows inside reserve one pad MORE than this (their own frame
+   * counts for them), and that difference of exactly one is the card's right
+   * padding: text stops one pad inside its own tint, and a nested card closes
+   * one pad inside its parent.
    */
   rightInset: string;
+  /**
+   * How far the box's TOP and BOTTOM edges pull in from the row range the
+   * surface gave it, as CSS lengths — the same count as `rightInset`, on the
+   * other axis, so a nested card starts one pad below its parent instead of on
+   * the same y (every container anchor is zero-height, so without this every
+   * box in a nest would share one top edge).
+   *
+   * The pad itself is made by the ROWS, not here: a backdrop that grew upward
+   * would overlap the block above rather than displace it, so the first row a
+   * padded frame covers reserves `padding-top` and the last reserves
+   * `padding-bottom`. This is only the nesting share of it.
+   */
+  topInset: string;
+  bottomInset: string;
 }
 
 /**

@@ -13,7 +13,8 @@ import {
   BLOCK_INDENT,
   blockContentLeft,
   frameBoxLeft,
-  frameBoxRightInset,
+  framePadX,
+  framePadY,
 } from "../internal/page-column";
 import { gutterFirstLineCenter, type RailSeat } from "../internal/rail-seat";
 import "./block-document-scale.css";
@@ -33,15 +34,17 @@ const ONE_EMPTY_LINE = "calc(var(--space-xs) * 2 + var(--doc-lh-body))";
 // const, so hoisting hides nothing. The exemption is written at the use site.
 const ANCHOR_COLUMN = "block-anchor absolute z-raised";
 
-// The CORNER seat: the card's name, pinned to the top-right of the box the frame
-// paints, above it and in the row layer so it can be clicked. It floats OVER the
-// content — it reserves no space and shifts nothing, which is the point: at rest
-// there is nothing there at all, and pointing at the card is what asks.
+// The CORNER seat: the card's name, pinned INSIDE the top-right corner of the box
+// the frame paints — one pad in on each axis, which is where the box's own content
+// starts, so the name lines up with the text under it on both edges. Above the
+// frame and in the row layer so it can be clicked. It floats OVER the content: it
+// reserves no space and shifts nothing, which is the point — at rest there is
+// nothing there at all, and pointing at the card is what asks.
 //
 // No `.block-anchor` (that class carries the borrowed-first-line vertical seat,
 // which is exactly what this seat does NOT want) and no width: a name is as wide
 // as it reads.
-const CORNER_COLUMN = "absolute top-0 z-raised";
+const CORNER_COLUMN = "absolute z-raised";
 
 // The selection marker: a selected block SAYS "Selected." to a screen reader,
 // because it has no attribute with which to be selected.
@@ -170,9 +173,15 @@ export function BlockRow({
   // content edge, or its enclosing frame's), which is the rail's business, not
   // this row's. A drop lands as a sibling of this row, so the line sits at this
   // row's depth.
-  const contentLeft = blockContentLeft(depth);
-  const firstLineCenter =
-    seat.borrowedFirstLineCenter ?? gutterFirstLineCenter(handle);
+  // The row's own content edge, pulled back by every frame that has absorbed its
+  // indent step to spend as padding instead (`FRAME_PAD_X`).
+  const contentLeft = blockContentLeft(depth, seat.absorbedIndent);
+  // Measured from the row's own border edge, so any card padding reserved ABOVE
+  // this row's first line has to be added — otherwise the rail's buttons seat in
+  // the card's top padding instead of beside the line they act on.
+  const firstLineCenter = `calc(${framePadY(seat.firstLinePad)} + ${
+    seat.borrowedFirstLineCenter ?? gutterFirstLineCenter(handle)
+  })`;
 
   const dropIndicator = (zone: DropZone) => (
     <div
@@ -215,6 +224,15 @@ export function BlockRow({
         style={
           {
             paddingLeft: contentLeft,
+            // The same three reserves an ordinary row makes (see the return
+            // below). All three are `0px` on an anchor WITH visible children —
+            // the resolver hands its frame's opening pad to the first row that
+            // renders a line, which is what keeps this row zero-height. They are
+            // non-zero for a CHILDLESS container, whose frame opens and closes
+            // on this row, over the one-line fallback below.
+            paddingRight: framePadX(seat.padFrames),
+            paddingTop: framePadY(seat.padFramesOpening),
+            paddingBottom: framePadY(seat.padFramesClosing),
             "--gutter-first-line-center": firstLineCenter,
           } as CSSProperties
         }
@@ -227,9 +245,14 @@ export function BlockRow({
             painted under every row it spans. */}
         {decoration?.seat === "corner" ? (
           <div
-            // eslint-disable-next-line layout/no-adhoc-layout -- the corner seat is pinned to the frame box's own right inset, a surface-computed CSS length (style below); not a ramp-expressible anchor
+            // eslint-disable-next-line layout/no-adhoc-layout -- the corner seat is pinned one pad inside the frame box's own corner, from surface-computed CSS lengths (style below); not a ramp-expressible anchor
             className={cn(CORNER_COLUMN, isDragging && "opacity-40")}
-            style={{ right: frameBoxRightInset(seat.frameCount) }}
+            // One pad MORE than the box itself pulls in by, on both axes — the
+            // box clears the frames around it, the name clears the box too.
+            style={{
+              right: framePadX(seat.padFrames),
+              top: framePadY(seat.padFrames),
+            }}
           >
             <AnchorDecoration
               component={decoration.component}
@@ -276,11 +299,14 @@ export function BlockRow({
       style={
         {
           paddingLeft: contentLeft,
-          // The other side of the same count the frames above this row close
-          // their boxes with: one `BLOCK_INSET` per enclosing frame, so this
-          // line's text stops inside the innermost tint instead of running to
-          // its edge. `0px` for an unframed row, which reserves nothing.
-          paddingRight: frameBoxRightInset(seat.frameCount),
+          // The card's padding, reserved by the rows because a backdrop cannot
+          // make space of its own. RIGHT is one pad per frame enclosing this row
+          // — one MORE than each of those frames pulls its own edge in by, and
+          // that difference is the gap. TOP/BOTTOM are only for the rows a box
+          // actually begins or ends on. All `0px` for an unframed row.
+          paddingRight: framePadX(seat.padFrames),
+          paddingTop: framePadY(seat.padFramesOpening),
+          paddingBottom: framePadY(seat.padFramesClosing),
           "--gutter-first-line-center": firstLineCenter,
         } as CSSProperties
       }

@@ -89,11 +89,15 @@ declares the token. This plugin renders chips; it owns none.
     - `page/editor.blockTextRenderableExtensions`
     - `page/editor.colorCssValue`
     - `page/editor.Editor`
+    - `page/editor.FRAME_PAD_X`
+    - `page/editor.FRAME_PAD_Y`
+    - `page/editor.FrameGeometry`
     - `page/editor.FrameHoverProvider`
     - `page/editor.PageIcon`
     - `page/editor.TextBlockLayout`
     - `page/editor.useBlockDecorations`
     - `page/editor.useFramedBlockTypes`
+    - `page/editor.useFrameGeometry`
     - `primitives/css/inline.Inline`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`

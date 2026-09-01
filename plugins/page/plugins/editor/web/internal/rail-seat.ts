@@ -40,16 +40,50 @@ export interface RailSeat {
    */
   left: number;
   /**
-   * How many container frames enclose this row, this row's own frame included
-   * when it is an anchor. The row reserves one `BLOCK_INSET` of `padding-right`
-   * per frame, and each frame pulls its box's right edge in by the same count —
-   * so a card's text stops inside its own tint, and a nested card closes inside
-   * its parent the way its left edge opens inside it.
+   * How many PADDED container frames enclose this row, its own included when it
+   * is that frame's anchor. The row reserves one `framePadX` of `padding-right`
+   * per frame; each frame pulls its box's right edge in by one FEWER (its own
+   * does not clear itself), and that difference of one IS the card's right
+   * padding. `"rule"` containers are not counted at all — a quote's bar has no
+   * right edge to clear, so a card nested in a quote is padded once, by itself.
    *
    * It rides here, on the seat, because it is the same fact `left` is: a row's
    * relationship to the frames spanning it, which only the resolver can see.
    */
-  frameCount: number;
+  padFrames: number;
+  /**
+   * How many padded frames' TOP edge sits at this row's top — the row reserves
+   * one `framePadY` of `padding-top` per frame, which is what MAKES a card's top
+   * padding (a backdrop can only overlap the block above, never displace it).
+   *
+   * Zero for a container ANCHOR that has visible children: it is deliberately
+   * zero-height, so its frame's pad is reserved by the first row that actually
+   * renders a line. Nested cards all open on that same row, hence a count.
+   */
+  padFramesOpening: number;
+  /** The same, for the frames whose BOTTOM edge sits at this row's bottom. */
+  padFramesClosing: number;
+  /**
+   * How many enclosing frames have ABSORBED this row's indent step — reclaimed
+   * the `BLOCK_INDENT` its content would have been pushed in by and spent it as
+   * `FRAME_PAD_X` instead. What `blockContentLeft` takes as `absorbed`.
+   *
+   * A container ANCHOR does not count its OWN frame: the box is measured from
+   * the anchor's content edge, so absorbing there would move the box rather than
+   * its contents. And a frame with a gutter GLYPH absorbs nothing at all — see
+   * `FRAME_PAD_X`, since the glyph stands in the column being reclaimed.
+   */
+  absorbedIndent: number;
+  /**
+   * Padded frames whose top pad lies ABOVE the line this row's gutter controls
+   * seat on — what `--gutter-first-line-center` must add, or the rail's buttons
+   * float in the card's padding instead of beside its first line.
+   *
+   * Equal to `padFramesOpening` for an ordinary row. For an ANCHOR it is the
+   * opening count of the row it BORROWS its line from, since the anchor reserves
+   * nothing itself and its own row's top is the box's top.
+   */
+  firstLinePad: number;
   /**
    * The block every rail control acts on: the outermost container whose
    * BORROWED LINE this row is, else the row's own block. Carries `childCount`
@@ -116,26 +150,49 @@ export function gutterFirstLineCenter(
 /**
  * Resolve every flat row's rail seat in one walk.
  *
- * `spans` must be `computeFrameSpans`' output over the same `flat`, and
- * `handleOf` the editor's registered-handle lookup — the two facts a row cannot
- * see from itself.
+ * `spans` must be `computeFrameSpans`' output over the same `flat`, `handleOf`
+ * the editor's registered-handle lookup, and `padsBox` / `absorbsIndent` the two
+ * halves of `useFrameGeometry()` — the facts a row cannot see from itself.
  */
 export function resolveRailSeats(
   flat: readonly FlatBlock[],
   spans: readonly FrameSpan[],
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
+  padsBox: (type: string) => boolean,
+  absorbsIndent: (type: string) => boolean,
 ): RailSeat[] {
-  const lefts = computeRailLefts(flat, spans);
-  const frameCounts = computeFrameCounts(flat, spans);
   const isAnchor = (i: number) =>
     handleOf(flat[i]!.block.type)?.anchor === true;
+  // Every pad count reads the PADDED spans only, so a `"rule"` container is
+  // invisible to the padding geometry rather than something each count has to
+  // remember to skip.
+  const padded = spans.filter((s) => padsBox(s.block.type));
+  const padFrames = computeFrameCounts(flat, padded);
+  const { opening, closing } = computeFramePadEdges(flat, padded, isAnchor);
+  // Absorption is a strict subset of padding, and it moves CONTENT EDGES — so it
+  // has to be resolved before the rail lefts, which are content edges.
+  const absorbing = spans.filter((s) => absorbsIndent(s.block.type));
+  const covering = computeFrameCounts(flat, absorbing);
+  const absorbed = flat.map(
+    (f, i) =>
+      covering[i]! -
+      // Its OWN frame absorbs from its children, never from the row the box is
+      // measured from. Subtracting it here is what keeps a card's box on the
+      // prose x while its contents move in.
+      (isAnchor(i) && absorbsIndent(f.block.type) ? 1 : 0),
+  );
+  const lefts = computeRailLefts(flat, spans, absorbed);
 
   return flat.map((f, i) => {
     const self = { block: f.block, childCount: f.childCount };
     const chain = borrowChain(flat, i, isAnchor);
     return {
       left: lefts[i]!,
-      frameCount: frameCounts[i]!,
+      absorbedIndent: absorbed[i]!,
+      padFrames: padFrames[i]!,
+      padFramesOpening: opening[i]!,
+      padFramesClosing: closing[i]!,
+      firstLinePad: opening[borrowedLineRow(flat, i, isAnchor)]!,
       // The OUTERMOST container whose borrowed line this row is (the chain is
       // ordered outermost-first), else the row itself. An anchor row has an
       // empty chain by construction — it renders no line, so no line of its own
@@ -143,7 +200,12 @@ export function resolveRailSeats(
       owner: chain[0]
         ? { block: chain[0].block, childCount: chain[0].childCount }
         : self,
-      borrowedFirstLineCenter: borrowedFirstLineCenter(flat, i, handleOf),
+      borrowedFirstLineCenter: borrowedFirstLineCenter(
+        flat,
+        i,
+        handleOf,
+        isAnchor,
+      ),
       chevron: resolveChevron(f, chain, isAnchor(i), handleOf),
     };
   });
@@ -254,11 +316,14 @@ function resolveChevron(
 function computeRailLefts(
   flat: readonly FlatBlock[],
   spans: readonly FrameSpan[],
+  absorbed: readonly number[],
 ): number[] {
-  const out = flat.map((f) => blockContentLeft(f.depth));
+  const out = flat.map((f, i) => blockContentLeft(f.depth, absorbed[i]!));
   const seated = new Array<boolean>(flat.length).fill(false);
   for (const span of spans) {
-    const left = blockContentLeft(span.depth);
+    // The frame's own content edge, which is the anchor row's — so it reads that
+    // row's absorbed count, not the covered row's.
+    const left = blockContentLeft(span.depth, absorbed[span.start]!);
     for (let i = span.start; i <= span.end; i += 1) {
       if (seated[i]) continue;
       seated[i] = true;
@@ -269,14 +334,16 @@ function computeRailLefts(
 }
 
 /**
- * How many frames cover each flat index — the one count the box's right edge and
- * the enclosed rows' `padding-right` both read, which is what keeps a card's
- * text inside its own tint however deeply the cards nest.
+ * How many of the given frames cover each flat index — the count the box's right
+ * edge and the enclosed rows' `padding-right` both read (one apart), which is
+ * what keeps a card's text inside its own tint however deeply the cards nest.
  *
  * Unlike `computeRailLefts` this ACCUMULATES rather than taking the outermost:
  * the left edge is a single seat (controls sit outside the outermost box), while
- * the right inset is a stack (each box closes one step further in, mirroring the
+ * the pad is a stack (each box closes one step further in, mirroring the
  * `BLOCK_INDENT` its children opened it by).
+ *
+ * `spans` is the PADDED subset, not every frame — see `resolveRailSeats`.
  */
 function computeFrameCounts(
   flat: readonly FlatBlock[],
@@ -287,6 +354,138 @@ function computeFrameCounts(
     for (let i = span.start; i <= span.end; i += 1) out[i] = out[i]! + 1;
   }
   return out;
+}
+
+/**
+ * Which row's TOP each padded frame's pad is reserved on, and which row's BOTTOM
+ * — as a count per flat index, since nested cards open and close together.
+ *
+ * A frame's top pad cannot be reserved on its own anchor row: that row is
+ * deliberately ZERO HEIGHT while it has visible children (the decoration and the
+ * first child share one line), and padding it would grow it. So the walk skips
+ * the run of anchor rows a span opens with and lands on the first row that
+ * actually renders something — which for a CHILDLESS container is its own row,
+ * the one carrying the surface's one-empty-line fallback.
+ *
+ * The bottom is simply `span.end`: a span ends on a row that renders a line by
+ * construction (an anchor's span always extends past it to its last descendant).
+ */
+function computeFramePadEdges(
+  flat: readonly FlatBlock[],
+  spans: readonly FrameSpan[],
+  isAnchor: (i: number) => boolean,
+): { opening: number[]; closing: number[] } {
+  const opening = flat.map(() => 0);
+  const closing = flat.map(() => 0);
+  for (const span of spans) {
+    const first = frameOpenRow(span, isAnchor);
+    opening[first] = opening[first]! + 1;
+    closing[span.end] = closing[span.end]! + 1;
+  }
+  return { opening, closing };
+}
+
+/**
+ * The row a frame's box actually BEGINS on: its span's start, walked past the
+ * run of zero-height anchor rows it opens with.
+ *
+ * ONE definition, read by the two things that must agree about it — which row
+ * reserves a frame's top pad, and whether a frame shares that row with the
+ * frames around it. They disagreed while this walk was written out twice, and
+ * the symptom was a nested card with no top padding at all.
+ */
+function frameOpenRow(
+  span: FrameSpan,
+  isAnchor: (i: number) => boolean,
+): number {
+  let first = span.start;
+  while (first < span.end && isAnchor(first)) first += 1;
+  return first;
+}
+
+/**
+ * How far ONE frame pulls its own box in, per side, in pads.
+ *
+ * The three sides do NOT share a count, and that is the whole content of this
+ * type. The RIGHT inset is positional-independent — every row inside a frame
+ * reserves `padding-right` for it, so "how many padded frames enclose me" is the
+ * complete answer. The VERTICAL insets are not: a frame's pad is reserved on
+ * ONE row (the row it opens on, and the row it closes on), so an enclosing
+ * frame's pad sits above this box only when the two frames open on the SAME row.
+ *
+ * Using the horizontal count for all three is what left a card nested as a
+ * later child of another card with zero top padding: its own row reserved one
+ * pad, and its box then pulled down by one for the parent that had already
+ * spent its pad rows earlier — the two cancelling exactly.
+ */
+export interface FramePadInsets {
+  /** Padded frames enclosing this one. */
+  right: number;
+  /** …of those, the ones OPENING on the same row, whose pad sits above this box. */
+  top: number;
+  /** …and the ones CLOSING on the same row, whose pad sits below it. */
+  bottom: number;
+}
+
+/**
+ * Each frame's own box insets, keyed by the container block's id.
+ *
+ * Separate from `resolveRailSeats` because it answers a per-FRAME question where
+ * that answers a per-ROW one, and it shares the two things they must agree on —
+ * `frameOpenRow` and the padded-span filter — by calling them rather than by
+ * restating them.
+ */
+export function resolveFramePadInsets(
+  flat: readonly FlatBlock[],
+  spans: readonly FrameSpan[],
+  handleOf: (type: string) => BlockHandle<unknown> | undefined,
+  padsBox: (type: string) => boolean,
+): ReadonlyMap<string, FramePadInsets> {
+  const isAnchor = (i: number) =>
+    handleOf(flat[i]!.block.type)?.anchor === true;
+  const padded = spans.filter((s) => padsBox(s.block.type));
+  const covering = computeFrameCounts(flat, padded);
+  const out = new Map<string, FramePadInsets>();
+
+  for (const span of spans) {
+    const openRow = frameOpenRow(span, isAnchor);
+    let top = 0;
+    let bottom = 0;
+    for (const other of padded) {
+      // Spans nest and never partially overlap, so containment is a plain
+      // comparison; a span is never its own encloser.
+      if (other.start === span.start) continue;
+      if (other.start > span.start || other.end < span.end) continue;
+      if (frameOpenRow(other, isAnchor) === openRow) top += 1;
+      if (other.end === span.end) bottom += 1;
+    }
+    out.set(span.block.id, {
+      // Its own frame does not clear itself, so it comes out of the count.
+      right: covering[span.start]! - (padsBox(span.block.type) ? 1 : 0),
+      top,
+      bottom,
+    });
+  }
+  return out;
+}
+
+/**
+ * The row whose first LINE row `i`'s gutter controls seat on: the row itself,
+ * or — for a container anchor, which renders no line — the first visible
+ * descendant that does.
+ *
+ * Two things read it and must agree: which handle's `gutterFirstLineCenter` to
+ * take, and whose top pad sits above that line. Splitting the walk in two is how
+ * a card's glyph would end up centred on a line one pad away from where it is.
+ */
+function borrowedLineRow(
+  flat: readonly FlatBlock[],
+  i: number,
+  isAnchor: (i: number) => boolean,
+): number {
+  let j = i;
+  while (flat[j]!.firstVisibleChildType !== null && isAnchor(j)) j += 1;
+  return j;
 }
 
 /**
@@ -308,14 +507,9 @@ function borrowedFirstLineCenter(
   flat: readonly FlatBlock[],
   i: number,
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
+  isAnchor: (i: number) => boolean,
 ): string | undefined {
-  if (handleOf(flat[i]!.block.type)?.anchor !== true) return undefined;
-  let j = i;
-  while (
-    flat[j]!.firstVisibleChildType !== null &&
-    handleOf(flat[j]!.block.type)?.anchor === true
-  ) {
-    j += 1;
-  }
+  if (!isAnchor(i)) return undefined;
+  const j = borrowedLineRow(flat, i, isAnchor);
   return gutterFirstLineCenter(handleOf(flat[j]!.block.type));
 }

@@ -46,10 +46,12 @@ horizontal geometry. The invariant:
 > - Block **content** (text, media) insets from `C` by `BLOCK_INSET`.
 > - Block **decorations paint that same content box**, so a box's own edge and
 >   the first letter of the prose above it share one x: a code background, a
->   place card, a callout tint, a quote rule, an annotation card's wash. The
->   right edge pulls in by one `BLOCK_INSET` per enclosing container frame, the
->   same count the rows inside reserve as `padding-right`, so a card's text
->   always stops inside its own tint (`frameBoxLeft` / `frameBoxRightInset`).
+>   place card, a callout tint, a quote rule, an annotation card's wash
+>   (`frameBoxLeft`).
+> - **How far a box's CONTENT stays off those edges is a separate declaration**
+>   — `FRAME_PAD_X` / `FRAME_PAD_Y`, below. Alignment places the edge and has no
+>   opinion about padding; for a while nothing else had one either, and the four
+>   sides of a card disagreed by 24px.
 > - The two exceptions are the marks that are not boxes: the block-selection
 >   highlight and the diff rail still start at `C`, so a selected card's band
 >   surrounds its tint rather than tracing it — a highlight wants padding around
@@ -132,12 +134,14 @@ Three rules keep the exception from eating the rule it excepts:
   flag that could drift from it, and `groupFrames` short-circuits to the
   byte-identical flat mapping when the set is empty. Every non-container block
   keeps the flat guarantee exactly as before.
-- **A frame is appearance only, and horizontal geometry is not its to touch.**
-  Vertical padding is fine (it shifts rows down, harmlessly). Left padding or a
-  left border in the *flow* is not: rows seat their gutter controls against a
-  content edge the SURFACE computed (this frame's, for the rows inside it), so
-  shifting the flow would strand them. Decorations inset to the `inset` prop
-  instead.
+- **A frame is appearance only, and geometry is not its to touch.** It is a
+  BACKDROP: it has no flow of its own, so it cannot shift a row and cannot make
+  the space its own padding needs. Left padding or a left border in the *flow*
+  is not available either: rows seat their gutter controls against a content
+  edge the SURFACE computed (this frame's, for the rows inside it), so shifting
+  the flow would strand them. Decorations inset to the `inset` prop instead, and
+  padding is reserved by the rows — see *A card's padding is declared, not left
+  over*.
 - **Geometry keeps reading the DOM.** Drag/drop, drop zones and the marquee all
   measure live rects via `[data-block-id]` + `getBoundingClientRect()`, never
   React tree position, so an extra wrapper perturbs none of them.
@@ -150,6 +154,54 @@ deferred session end — see *One owner per block*) so text survives;
 
 `read-only-view` renders the forest recursively, so it dispatches the same slot
 with `inset: 0` (no hover rail there) — one contribution, both surfaces.
+
+### A card's padding is declared, not left over
+
+> The gap between the box a container paints and the text inside it is ONE
+> declared quantity per axis (`FRAME_PAD_X` / `FRAME_PAD_Y`, `page-column.ts`),
+> read by every side of every box.
+
+Before it existed, the box's edges and its content's edges were computed
+independently — from quantities chosen for ALIGNMENT — and whatever fell out
+between them became the padding by accident. Measured on the deployed app, a
+`/todo` card had **24px on the left, 0 on the right, 0 top and 0 bottom**: text
+landing exactly on its own tint, which reads as a clipping bug. The right gap was
+zero for a specific reason worth not reintroducing — the frame pulled its edge in
+by the SAME count the rows reserved as `padding-right`, so the reserve equalled
+the pull and both landed on one x. One count where two are needed.
+
+- **X is pinned to `BLOCK_INDENT`; Y is free and smaller.** The left gap is not
+  a choice: the box starts on the prose x and the card's children are one indent
+  level deeper, so it IS the indent step. `FRAME_PAD_X` is therefore declared AS
+  that constant — the other three sides are made to agree with the one that was
+  already decided. `FRAME_PAD_Y` is a token, and deliberately less: a horizontal
+  gap is measured to a glyph, a vertical one to a LINE BOX that already carries
+  the row's `py-xs` plus half its leading, so equal numbers would not read equal.
+- **Two counts, one apart, and the difference IS the padding.** A ROW reserves
+  one pad per frame enclosing it (`padFrames`); a FRAME pulls its own box in by
+  one pad per frame enclosing IT, its own excluded. So the innermost box ends one
+  pad outside the text, and each box further out ends one pad outside the box it
+  wraps.
+- **A backdrop cannot buy vertical space**, so the rows make it: the first row a
+  padded frame covers reserves `padding-top`, the last reserves `padding-bottom`
+  (`padFramesOpening` / `padFramesClosing`). The frame's `topInset`/`bottomInset`
+  are only its NESTING share — without them every box in a nest would share one
+  top edge, since every anchor row is zero-height.
+- **The reserve is never on the anchor row.** It is zero-height by design; the
+  resolver walks past the run of anchors a span opens with and lands the pad on
+  the first row that renders a line. A CHILDLESS container is the exception and
+  pads its own row, which is where its one-line fallback is.
+- **`--gutter-first-line-center` adds the pad above it** (`firstLinePad`), or the
+  rail's buttons seat in the card's top padding instead of beside its first line.
+- **Whether a container pads at all is ITS declaration** — `BlockFrameMeta.pad`,
+  required. `"box"` for a filled shape (callout, the four annotation cards);
+  `"rule"` for one that paints no box (the quote's left bar), which has no edge
+  to clear and whose passage would only be narrowed by a pad. `"rule"` frames are
+  filtered out before any pad is counted, so a card nested inside a quote is
+  padded exactly once, by itself.
+- **`read-only-view` reserves the same pad on its wrappers.** Its nesting is real
+  wrapper divs rather than a shared grid, so the wrapper carries the padding and
+  its frame has no nesting share to pull in by.
 
 ### A container that owns no text: the anchor row
 
@@ -183,8 +235,9 @@ Four rules, each closing a failure the naive version has:
   - **`anchor`** — a glyph in the `BLOCK_INDENT` column at the box's own left
     edge, seated on the first visible child's borrowed first-line centre, since
     an anchor has no line of its own to measure. The callout's icon.
-  - **`cornerAnchor`** — the card's NAME, at the box's top-right corner, hidden
-    until the pointer is inside the card. The annotation family's.
+  - **`cornerAnchor`** — the card's NAME, one pad inside the box's top-right
+    corner (so it lines up with the text under it on both edges), hidden until
+    the pointer is inside the card. The annotation family's.
 
   The corner seat needs a hover signal a frame cannot give: the frame is a grid
   SIBLING of its rows, so no ancestor holds both and `group-hover` has nothing to
@@ -3163,6 +3216,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `CollabHydrationReason`
     - `CollabHydrationReport`
     - `FormatToolbarValue`
+    - `FrameGeometry`
+    - `FramePad`
     - `MarkButtonProps`
     - `PageIconProps`
     - `PageOption`
@@ -3185,6 +3240,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor`
     - `filterBlockTypes`
     - `flattenSections`
+    - `FRAME_PAD_X`
+    - `FRAME_PAD_Y`
     - `frameBoxLeft`
     - `FrameHoverProvider`
     - `getBlockTextExtensions`
@@ -3207,6 +3264,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useCaretEscape`
     - `useFormatToolbar`
     - `useFramedBlockTypes`
+    - `useFrameGeometry`
     - `useFrameHovered`
     - `useGroupedInsertableBlocks`
     - `useInsertableBlocks`

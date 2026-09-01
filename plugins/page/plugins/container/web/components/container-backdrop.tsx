@@ -14,17 +14,20 @@ import {
  * (`BlockFrameProps`) true by construction instead of by review:
  *
  * - **Fills the surface-provided box with `absolute` insets**, at the box the
- *   surface measured: `frameBoxLeft(inset)` on the left and `rightInset` on the
- *   right. That box is the container's own CONTENT box — the same one a code
- *   block's background and a place block's card already paint — so a card's
- *   edge lands on the same x as the first letter of the prose above it, and its
- *   children's text (indented one `BLOCK_INDENT`, reserving one `BLOCK_INSET`
- *   on the right) always stops inside it.
+ *   surface measured: `frameBoxLeft(inset)` on the left and `rightInset` /
+ *   `topInset` / `bottomInset` on the other three sides. That box is the
+ *   container's own CONTENT box — the same one a code block's background and a
+ *   place block's card already paint — so a card's edge lands on the same x as
+ *   the first letter of the prose above it, and its content always stops one
+ *   `FRAME_PAD` inside it on every side.
  * - **Never `h-full`**: an explicit height would defeat the editor's grid
  *   stretch, and any vertical bleed would shift the box instead of growing it.
- *   `top: 0` / `bottom: 0` cover exactly the rows spanned — no breathing-room
- *   bleed, which a backdrop cannot buy anyway (it would overlap the next block
- *   rather than displace it; every row already carries its own `py-xs`).
+ *   The three insets only ever pull the box IN, never out — the vertical
+ *   breathing room is reserved by the ROWS (`framePadY` as their
+ *   `padding-top`/`-bottom`), which a backdrop cannot buy for itself: growing
+ *   upward would overlap the block above rather than displace it. What the
+ *   insets do here is the NESTING share, so a card inside a card starts one pad
+ *   below its parent instead of on the same y.
  * - **No horizontal offset of its own**: it takes the whole `BlockFrameProps`
  *   rather than a coordinate or two, so a consumer has nothing to add to and a
  *   later geometry field reaches every container without touching one of them.
@@ -60,8 +63,8 @@ export function ContainerBackdrop({
       style={{
         left: frameBoxLeft(frame.inset),
         right: frame.rightInset,
-        top: 0,
-        bottom: 0,
+        top: frame.topInset,
+        bottom: frame.bottomInset,
       }}
     />
   );

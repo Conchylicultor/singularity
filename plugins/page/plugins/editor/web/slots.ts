@@ -219,6 +219,13 @@ const blockSlot = defineOrderedDispatchSlot<
  */
 export type BlockFrameMeta = BlockFrameDecoration & {
   /**
+   * How far this container's CONTENT sits from the box it paints — see
+   * `FramePad`. REQUIRED: the surface is the only thing that can make the space
+   * (the frame is a backdrop and cannot displace a row), and only the container
+   * knows whether its mark is a box that needs clearing or a rule that does not.
+   */
+  pad: FramePad;
+  /**
    * Sections this container contributes to the rail popover, above the generic
    * structural actions. The prop shape is `Editor.TurnInto`'s verbatim, so
    * "menu sections contributed by a plugin" is ONE convention in this editor
@@ -257,6 +264,40 @@ export type BlockFrameMeta = BlockFrameDecoration & {
 export type BlockFrameDecoration =
   | { anchor?: ComponentType<BlockAnchorProps>; cornerAnchor?: never }
   | { cornerAnchor: ComponentType<BlockAnchorProps>; anchor?: never };
+
+/**
+ * What a container's box does to the geometry around it: whether it holds its
+ * content off its own edges, and whether it reclaims its children's indent step
+ * to pay for that. See `FRAME_PAD_X` for why the second is not simply the first.
+ */
+export interface FrameGeometry {
+  /** `pad: "box"` — one `FRAME_PAD` on all four sides. */
+  pads: boolean;
+  /**
+   * …and the column that pad comes out of is free, so a framed row's content
+   * edge pulls back by `BLOCK_INDENT - FRAME_PAD_X`. False for a container whose
+   * gutter GLYPH stands in that column.
+   */
+  absorbs: boolean;
+}
+
+/**
+ * Whether the box a container paints holds its content OFF its edges.
+ *
+ * - **`"box"`** — one `FRAME_PAD_X` / `FRAME_PAD_Y` on all four sides. What a
+ *   FILLED shape needs: a callout's tint, an annotation card's wash. Text
+ *   landing on the edge of its own fill reads as a clipping bug, and that is
+ *   exactly what every one of them did before this field existed.
+ * - **`"rule"`** — no pad at all. What a container that paints no BOX needs:
+ *   the quote's left bar has no right edge and no top edge to clear, so a pad
+ *   would only narrow the passage and grow the bar past the text it marks. The
+ *   gap between the bar and the first letter is `BLOCK_INDENT`, which the
+ *   quote's children already have and which nothing here adds to.
+ *
+ * The name says what the container DRAWS, not what it wants numerically — which
+ * is what makes a new container's answer obvious from looking at it.
+ */
+export type FramePad = "box" | "rule";
 
 /** Where the surface seats a container's decoration. */
 export type BlockDecorationSeat = "gutter" | "corner";
@@ -346,6 +387,36 @@ export function useFramedBlockTypes(): ReadonlySet<string> {
       ),
     [contributions],
   );
+}
+
+/**
+ * Block type → the two geometric facts about the box it paints, derived from the
+ * same `Editor.BlockFrame` registrations the hook above reads. Third twin on
+ * that one source of truth.
+ *
+ * ONE map rather than two sets, because the second fact is DERIVED from the
+ * first plus the decoration seat: computing it at a call site would be the rule
+ * spelled twice, and the editable and read-only surfaces both need it.
+ */
+export function useFrameGeometry(): ReadonlyMap<string, FrameGeometry> {
+  const contributions = Editor.BlockFrame.useContributions();
+  return useMemo(() => {
+    const out = new Map<string, FrameGeometry>();
+    for (const c of contributions) {
+      if (typeof c.match !== "string") continue;
+      const pads = c.pad === "box";
+      out.set(c.match, {
+        pads,
+        // A frame may only absorb a column NOTHING is standing in. A gutter
+        // glyph occupies exactly the `BLOCK_INDENT` column absorption would
+        // reclaim, so a container that draws one keeps it; a corner name (or no
+        // decoration at all) leaves it free. Read off the seat rather than
+        // declared again, so a container cannot claim a column it also draws in.
+        absorbs: pads && c.anchor === undefined,
+      });
+    }
+    return out;
+  }, [contributions]);
 }
 
 /**

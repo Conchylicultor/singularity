@@ -1,12 +1,19 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor as EditorSlots } from "./slots";
 
-export { Editor, useFramedBlockTypes, useBlockDecorations } from "./slots";
+export {
+  Editor,
+  useFramedBlockTypes,
+  useFrameGeometry,
+  useBlockDecorations,
+} from "./slots";
 export type {
   BlockContribution,
   BlockFrameMeta,
   BlockDecoration,
   BlockDecorationSeat,
+  FramePad,
+  FrameGeometry,
 } from "./slots";
 // The pointer-inside-this-card signal a corner decoration reveals itself on.
 // Both surfaces mount the provider; only the decorations subscribe.
@@ -47,11 +54,16 @@ export {
   BLOCK_INSET,
   BLOCK_INDENT,
   MARKER_GUTTER,
-  // The frame box's own edges, derived from the surface-provided `inset` /
-  // `rightInset` — exported for `ContainerBackdrop`, the ONE consumer that
+  // The frame box's own edges, derived from the surface-provided `inset` and
+  // the three insets — exported for `ContainerBackdrop`, the ONE consumer that
   // paints that box. `BLOCK_GUTTER` stays unexported: a block contribution
   // still cannot compute a content edge, only apply one it was handed.
   frameBoxLeft,
+  // The card's inner padding, for the surface that has to RESERVE it: the
+  // read-only renderer, whose nesting is real wrappers, so its rows cannot be
+  // handed a reserve the way the editor's grid rows are.
+  FRAME_PAD_X,
+  FRAME_PAD_Y,
 } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";
 // `BlockTextEditor` is deliberately NOT exported: a text-bearing block type

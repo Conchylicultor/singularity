@@ -35,6 +35,8 @@ export default {
       match: contextBlock.type,
       component: ContextFrame,
       cornerAnchor: ContextAnchor,
+      // A wash is a filled box: its content clears every edge.
+      pad: "box",
     }),
   ],
 } satisfies PluginDefinition;

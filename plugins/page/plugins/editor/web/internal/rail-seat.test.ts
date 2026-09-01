@@ -4,19 +4,26 @@ import { buildTree } from "@plugins/primitives/plugins/tree/core";
 import type { Block, BlockHandle } from "../../core";
 import { computeFrameSpans } from "./block-frames";
 import { flattenVisible } from "./flatten-blocks";
-import { blockContentLeft } from "./page-column";
-import { resolveRailSeats, type RailSeat } from "./rail-seat";
+import { BLOCK_INDENT, FRAME_PAD_X, blockContentLeft } from "./page-column";
+import {
+  resolveFramePadInsets,
+  resolveRailSeats,
+  type RailSeat,
+} from "./rail-seat";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
 const ANCHOR = "container";
+const RULE = "rule-container"; // a container that paints a bar, not a filled box
+const GLYPH = "glyph-container"; // a filled box whose gutter glyph holds the column
 const TOGGLE = "toggle"; // a `collapsible: "always"` type, whose chevron is its own
 const HEADING = "heading"; // a type whose first line is taller than the body default
 
 function handleOf(type: string): BlockHandle<unknown> | undefined {
-  if (type === ANCHOR) return { type, anchor: true } as unknown as BlockHandle<unknown>;
+  if (type === ANCHOR || type === RULE || type === GLYPH)
+    return { type, anchor: true } as unknown as BlockHandle<unknown>;
   if (type === TOGGLE)
     return { type, collapsible: "always" } as unknown as BlockHandle<unknown>;
   if (type === HEADING)
@@ -24,9 +31,16 @@ function handleOf(type: string): BlockHandle<unknown> | undefined {
   return { type } as unknown as BlockHandle<unknown>;
 }
 
-const anchorTypes = new Set([ANCHOR]);
+const anchorTypes = new Set([ANCHOR, RULE, GLYPH]);
 /** A container is a container because it contributes a FRAME — same set here. */
-const framedTypes = new Set([ANCHOR]);
+const framedTypes = new Set([ANCHOR, RULE, GLYPH]);
+/** `RULE` paints a bar, so it clears nothing; the other two paint filled boxes. */
+const padsBox = (type: string) => type === ANCHOR || type === GLYPH;
+/**
+ * …but only `ANCHOR` may reclaim its children's indent step. `GLYPH` draws in
+ * exactly that column (the callout's icon), so it pads without absorbing.
+ */
+const absorbsIndent = (type: string) => type === ANCHOR;
 
 /** The vertical seat a row with no `gutterFirstLineCenter` override resolves to. */
 const bodyCenter = "calc(var(--space-xs) + var(--doc-lh-body) / 2)";
@@ -68,7 +82,13 @@ function sortByRank(rows: Block[]): Block[] {
 /** The full pipeline a row goes through in the editor, seats included. */
 function seats(rows: Block[]): RailSeat[] {
   const flat = flattenVisible(buildTree(sortByRank(rows)), anchorTypes);
-  return resolveRailSeats(flat, computeFrameSpans(flat, framedTypes), handleOf);
+  return resolveRailSeats(
+    flat,
+    computeFrameSpans(flat, framedTypes),
+    handleOf,
+    padsBox,
+    absorbsIndent,
+  );
 }
 
 /** Which block each row's rail acts on, as ids — the whole point of the seat. */
@@ -258,6 +278,228 @@ describe("resolveRailSeats — borrowedFirstLineCenter", () => {
 });
 
 // ---------------------------------------------------------------------------
+// `absorbedIndent` — the card's left pad, bought from the child indent step
+// ---------------------------------------------------------------------------
+
+describe("resolveRailSeats — absorbedIndent: buying the left pad", () => {
+  /** Each row's own CONTENT edge, which is what the absorbed count moves. */
+  const edges = (rows: Block[]) =>
+    seats(rows).map((s, i) =>
+      blockContentLeft(depths(rows)[i]!, s.absorbedIndent),
+    );
+  const depths = (rows: Block[]) =>
+    flattenVisible(buildTree(sortByRank(rows)), anchorTypes).map(
+      (f) => f.depth,
+    );
+
+  test("a card's content sits one FRAME_PAD_X inside its box, not one BLOCK_INDENT", () => {
+    const rows = forest(row("A", null, { type: ANCHOR }), row("C", "A"));
+    const out = seats(rows);
+    // The anchor does NOT absorb its own frame: the box is measured from its
+    // content edge, so absorbing there would move the box off the prose x.
+    expect(out[0]!.absorbedIndent).toBe(0);
+    expect(out[1]!.absorbedIndent).toBe(1);
+
+    const [boxEdge, contentEdge] = edges(rows) as [number, number];
+    expect(boxEdge).toBe(blockContentLeft(0)); // unchanged: still the prose x
+    expect(contentEdge - boxEdge).toBe(FRAME_PAD_X);
+    expect(contentEdge - boxEdge).not.toBe(BLOCK_INDENT);
+  });
+
+  test("nesting opens one pad per level, and the boxes stay one pad apart", () => {
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("B", "A", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    const [outerBox, innerBox, text] = edges(rows) as [number, number, number];
+    expect(innerBox - outerBox).toBe(FRAME_PAD_X);
+    expect(text - innerBox).toBe(FRAME_PAD_X);
+  });
+
+  test("ordinary nesting INSIDE a card still steps by the full BLOCK_INDENT", () => {
+    // The card buys ONE step. A bulleted list nested inside it is ordinary
+    // document structure and must keep reading as one.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("C", "A"),
+      row("D", "C"),
+    );
+    const [, first, second] = edges(rows) as [number, number, number];
+    expect(second - first).toBe(BLOCK_INDENT);
+  });
+
+  test("a container whose GLYPH holds the column absorbs nothing", () => {
+    const rows = forest(row("G", null, { type: GLYPH }), row("C", "G"));
+    const out = seats(rows);
+    expect(out.map((s) => s.absorbedIndent)).toEqual([0, 0]);
+    const [boxEdge, contentEdge] = edges(rows) as [number, number];
+    // The full step, which is exactly the width of the column the glyph sits in.
+    expect(contentEdge - boxEdge).toBe(BLOCK_INDENT);
+  });
+
+  test("a `rule` container absorbs nothing either — it pays no pad to buy one", () => {
+    const rows = forest(row("Q", null, { type: RULE }), row("C", "Q"));
+    expect(seats(rows).map((s) => s.absorbedIndent)).toEqual([0, 0]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The pad counts — a card's own inner padding, which only the spans can see
+// ---------------------------------------------------------------------------
+
+describe("resolveRailSeats — pad counts: the card's own padding", () => {
+  /** `[padFrames, opening, closing, firstLinePad]` per row, in flat order. */
+  const pads = (rows: Block[]) =>
+    seats(rows).map((s) => [
+      s.padFrames,
+      s.padFramesOpening,
+      s.padFramesClosing,
+      s.firstLinePad,
+    ]);
+
+  test("the pad is reserved by the frame's FIRST and LAST rendering rows, never its anchor", () => {
+    // The anchor is zero-height while it has visible children; padding it would
+    // grow it, and the decoration would stop sharing a line with the first child.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("C1", "A"),
+      row("C2", "A"),
+      row("C3", "A"),
+    );
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 1], // anchor: reserves nothing, but its glyph seats below the pad
+      [1, 1, 0, 1], // first child opens the box
+      [1, 0, 0, 0],
+      [1, 0, 1, 0], // last child closes it
+    ]);
+  });
+
+  test("a one-child card opens and closes on the same row", () => {
+    const rows = forest(row("A", null, { type: ANCHOR }), row("C", "A"));
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 1],
+      [1, 1, 1, 1],
+    ]);
+  });
+
+  test("a CHILDLESS container pads its own row — the one-line fallback it renders", () => {
+    const rows = forest(row("A", null, { type: ANCHOR }), row("X", null));
+    expect(pads(rows)).toEqual([
+      [1, 1, 1, 1],
+      [0, 0, 0, 0], // the ordinary row after it reserves nothing
+    ]);
+  });
+
+  test("nested cards stack: two pads on the row they share, one box each", () => {
+    // Every anchor is zero-height, so both boxes begin at the same row — which is
+    // exactly why each frame ALSO pulls its own top edge in by the frames around
+    // it (`block-editor.tsx`), or the inner card would start on its parent's edge.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("B", "A", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 2],
+      [2, 0, 0, 2],
+      [2, 2, 2, 2],
+    ]);
+  });
+
+  test("a `rule` container is invisible to the padding — it has no box to clear", () => {
+    const rows = forest(row("Q", null, { type: RULE }), row("C", "Q"));
+    expect(pads(rows)).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ]);
+  });
+
+  test("a card inside a rule container is padded exactly once — by itself", () => {
+    const rows = forest(
+      row("Q", null, { type: RULE }),
+      row("A", "Q", { type: ANCHOR }),
+      row("C", "A"),
+    );
+    expect(pads(rows)).toEqual([
+      [0, 0, 0, 1],
+      [1, 0, 0, 1],
+      [1, 1, 1, 1],
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The frame's OWN insets — where nesting is actually decided
+// ---------------------------------------------------------------------------
+
+describe("resolveFramePadInsets — a box's three sides do not share a count", () => {
+  /** `[right, top, bottom]` per frame, keyed by container id. */
+  const insets = (rows: Block[]) => {
+    const flat = flattenVisible(buildTree(sortByRank(rows)), anchorTypes);
+    const out = resolveFramePadInsets(
+      flat,
+      computeFrameSpans(flat, framedTypes),
+      handleOf,
+      padsBox,
+    );
+    return Object.fromEntries(
+      [...out].map(([id, i]) => [id, [i.right, i.top, i.bottom]]),
+    );
+  };
+
+  test("a lone card clears nothing on any side", () => {
+    const rows = forest(row("A", null, { type: ANCHOR }), row("C", "A"));
+    expect(insets(rows)).toEqual({ A: [0, 0, 0] });
+  });
+
+  test("cards STACKED at the same opening row clear their parent on all three", () => {
+    // Both anchors are zero-height and precede the same first line, so the two
+    // boxes would otherwise begin on the same y.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("B", "A", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    expect(insets(rows)).toEqual({ A: [0, 0, 0], B: [1, 1, 1] });
+  });
+
+  test("a card starting LATER than its parent clears it horizontally only", () => {
+    // The regression this function exists for. The parent's top pad is reserved
+    // on `C` — a row the nested card's box does not cover — so pulling the nested
+    // box down for it would cancel the pad its own row reserves, leaving the card
+    // with no top padding at all. Its bottom still clears: both end on `G`.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("C", "A"),
+      row("B", "A", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    expect(insets(rows)).toEqual({ A: [0, 0, 0], B: [1, 0, 1] });
+  });
+
+  test("a card ending EARLIER than its parent clears it horizontally only", () => {
+    // The mirror: the parent's bottom pad is reserved on `T`, below this box.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("B", "A", { type: ANCHOR }),
+      row("G", "B"),
+      row("T", "A"),
+    );
+    expect(insets(rows)).toEqual({ A: [0, 0, 0], B: [1, 1, 0] });
+  });
+
+  test("a `rule` container is in none of the counts, and clears nothing itself", () => {
+    const rows = forest(
+      row("Q", null, { type: RULE }),
+      row("A", "Q", { type: ANCHOR }),
+      row("C", "A"),
+    );
+    expect(insets(rows)).toEqual({ Q: [0, 0, 0], A: [0, 0, 0] });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // `chevron` — one slot, and the one control that is NOT unconditionally `owner`
 // ---------------------------------------------------------------------------
 
@@ -312,7 +554,7 @@ describe("resolveRailSeats — chevron: one slot, resolved by who needs it most"
     expect(seat.owner.block.id).toBe("A");
   });
 
-  test("a `collapsible: \"always\"` first child keeps the slot even with no children", () => {
+  test('a `collapsible: "always"` first child keeps the slot even with no children', () => {
     // Load-bearing: for `sub-page`/`page-link` that chevron is not a fold at all
     // — it drives the composite union's page MOUNT — so taking it would remove
     // the only way to expand a nested page inline. The rail is still the
@@ -328,7 +570,10 @@ describe("resolveRailSeats — chevron: one slot, resolved by who needs it most"
   });
 
   test("a one-child container claims nothing — its fold hides nothing extra", () => {
-    const rows = forest(row("A", null, { type: ANCHOR, expanded: true }), row("C1", "A"));
+    const rows = forest(
+      row("A", null, { type: ANCHOR, expanded: true }),
+      row("C1", "A"),
+    );
     expect(chevrons(rows)[1]).toBeNull();
   });
 
