@@ -39,7 +39,11 @@ export type ContainerCornerLabelProps = {
    * the only reveal, which is exactly what the read-only surface provides.
    */
   blockId?: string;
-  /** What the card calls itself, e.g. `"Todo"`. Rendered in caps. */
+  /**
+   * What the card calls itself, e.g. `"Todo"`. Rendered exactly as written — the
+   * seat sets no casing, so what the DOM says and what the screen shows are the
+   * same string. See `CHIP_CLASS` for why that is a rule and not a default.
+   */
   name: string;
   /**
    * Keep the name visible at rest instead of only while the card is pointed at.
@@ -50,7 +54,15 @@ export type ContainerCornerLabelProps = {
    * already says is worth nothing at rest and one glance on demand.
    */
   persist?: boolean;
-  /** The card's hue, as a text-colour class. The one appearance channel. */
+  /**
+   * The card's hue, as a text-colour class. The one appearance channel.
+   *
+   * A name that only says what KIND of box this is rides its hue at reduced
+   * alpha (`text-info/80`), because it is decoration and should recede with the
+   * rest of the chip. A name carrying live STATE — `/todo`'s dispatched task
+   * status, the one case that also `persist`s — keeps the full colour that state
+   * is signalled in everywhere else, and must not be dimmed here.
+   */
   className?: string;
 } & CornerAppearance;
 
@@ -134,7 +146,29 @@ export function ContainerCornerLabel(props: ContainerCornerLabelProps) {
 }
 
 /**
- * The chip: a small caps name on a nearly-opaque, blurred ground.
+ * The chip: a small, quiet name on a nearly-opaque, blurred ground.
+ *
+ * Sentence case at the compact caption step, medium weight. The name answers a
+ * question the reader asks only occasionally — *what is this box?* — and the
+ * card's tint has already half-answered it, so the word has to be findable, not
+ * loud. It was semibold small caps on the wide tracking those need to stay
+ * legible, which is the recipe for a HEADING, and it read as one: a second title
+ * competing with the card's own first line.
+ *
+ * ## The casing is set nowhere on purpose, and that is load-bearing
+ *
+ * `text-transform` INHERITS, and Chromium's UA stylesheet sets
+ * `text-transform: none` on `<button>` — which Tailwind's preflight does not
+ * repair (it inherits `font`, `letter-spacing` and `color` there, not this). So
+ * a `uppercase` on this chip reached the static name and stopped at the popover
+ * trigger below, and the same card family rendered its own name two ways
+ * depending on whether that card happened to have something to open: `AGENT
+ * NOTES` on a card nobody had written into, `Agent notes` on one an agent had.
+ *
+ * Setting no casing at all is what makes the two arms identical BY
+ * CONSTRUCTION, rather than by a `uppercase` the trigger has to remember to
+ * re-declare. It also keeps the name one string end to end: what a screen
+ * reader, find-in-page and a test each get back is what is on screen.
  *
  * The ground is what lets it float OVER the card's first line instead of
  * reserving a strip of its own — the same thing the code block's language pill
@@ -144,7 +178,7 @@ export function ContainerCornerLabel(props: ContainerCornerLabelProps) {
  * nonsense long before it wraps usefully.
  */
 const CHIP_CLASS =
-  "bg-background/90 rounded-md px-xs py-2xs text-caption font-semibold uppercase tracking-wider whitespace-nowrap backdrop-blur-sm transition-opacity";
+  "bg-background/90 rounded-md px-xs py-2xs text-caption-compact font-medium whitespace-nowrap backdrop-blur-sm transition-opacity";
 
 /** The trigger inside the chip. The swap is state, not a CSS group — see above. */
 const TRIGGER_CLASS =

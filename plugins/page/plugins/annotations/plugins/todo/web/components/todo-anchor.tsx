@@ -58,7 +58,7 @@ export function TodoAnchor({ blockId, editor }: BlockAnchorProps) {
       <ContainerCornerLabel
         blockId={blockId}
         name="Todo"
-        className="text-warning"
+        className="text-warning/80"
       />
     );
   return <DispatchableTodoAnchor blockId={blockId} editor={editor} />;
@@ -83,7 +83,7 @@ function DispatchableTodoAnchor({
       blockId={blockId}
       editor={editor}
       name={status ? status.label : "Todo"}
-      className={status ? status.iconClassName : "text-warning"}
+      className={status ? status.iconClassName : "text-warning/80"}
       persist={status !== null}
       action={
         <Row gap="2xs" align="center">

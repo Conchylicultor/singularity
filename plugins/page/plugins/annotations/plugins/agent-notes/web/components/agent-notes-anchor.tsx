@@ -53,7 +53,7 @@ function AgentNotesName(props: { blockId?: string; editor?: BlockEditorAPI }) {
       blockId={props.blockId}
       editor={props.editor}
       name="Agent notes"
-      className="text-info"
+      className="text-info/80"
     />
   );
 }
@@ -79,7 +79,7 @@ function AuthoredAgentNotesAnchor({
       blockId={blockId}
       editor={editor}
       name="Agent notes"
-      className="text-info"
+      className="text-info/80"
       triggerLabel="Agent notes authorship"
       width="md"
       sections={({ close }) => (
