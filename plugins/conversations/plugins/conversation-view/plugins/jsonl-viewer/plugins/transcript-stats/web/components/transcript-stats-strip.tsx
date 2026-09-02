@@ -6,7 +6,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
 import {
   useJsonlConversationId,
-  usePaneScrollElement,
+  paneScrollScope,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -32,7 +32,7 @@ function Strip({ conversationId }: { conversationId: string }) {
 function StripWithEvents({ events }: { events: JsonlEvent[] }) {
   // This strip is a sibling of the transcript scroller inside the pane frame,
   // not inside it, so the scroller has to be published rather than walked to.
-  const scroller = usePaneScrollElement();
+  const scroller = paneScrollScope.useRoot();
   // The DOM numbers rows over the FILTERED transcript, so the anchor comes back
   // in those terms and has to be translated before it can slice the raw one.
   const visible = useVisibleEvents(events);
@@ -40,8 +40,12 @@ function StripWithEvents({ events }: { events: JsonlEvent[] }) {
   // cannot pin the anchor past the end — no staleness guard needed downstream.
   const ids = useMemo(() => visible.map((_, i) => String(i)), [visible]);
   const resolve = useCallback(
+    // Not-attached-yet is one commit, not "no rows": the strip re-enrols when
+    // the transcript appears. A null from the query is a genuinely absent row.
     (id: string) =>
-      scroller?.querySelector(`[data-event-index="${CSS.escape(id)}"]`) ?? null,
+      scroller.attached
+        ? scroller.root.querySelector(`[data-event-index="${CSS.escape(id)}"]`)
+        : null,
     [scroller],
   );
   const anchorId = useActiveInView(ids, resolve, { position: "furthest-read" });

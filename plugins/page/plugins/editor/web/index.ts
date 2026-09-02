@@ -38,6 +38,11 @@ export type {
 } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";
+export {
+  blockContentScope,
+  blockRowIn,
+  blockRowsIn,
+} from "./internal/block-content-scope";
 export type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
 export { caretFlightReportSink } from "./internal/caret-authority";
 export type {

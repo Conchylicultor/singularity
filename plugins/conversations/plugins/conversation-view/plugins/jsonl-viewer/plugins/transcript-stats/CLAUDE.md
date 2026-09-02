@@ -10,8 +10,8 @@
   - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+    - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-    - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
     - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
     - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`

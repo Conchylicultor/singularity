@@ -4336,6 +4336,10 @@
       "name": "@singularity/plugin-primitives-scoped-store",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scoped-store/plugins/dom-scope": {
+      "name": "@singularity/plugin-primitives-scoped-store-dom-scope",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scroll-reveal": {
       "name": "@singularity/plugin-primitives-scroll-reveal",
       "version": "0.0.1",
@@ -7821,6 +7825,8 @@
     "@singularity/plugin-primitives-row-actions": ["@singularity/plugin-primitives-row-actions@workspace:plugins/primitives/plugins/row-actions"],
 
     "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
+
+    "@singularity/plugin-primitives-scoped-store-dom-scope": ["@singularity/plugin-primitives-scoped-store-dom-scope@workspace:plugins/primitives/plugins/scoped-store/plugins/dom-scope"],
 
     "@singularity/plugin-primitives-scroll-reveal": ["@singularity/plugin-primitives-scroll-reveal@workspace:plugins/primitives/plugins/scroll-reveal"],
 

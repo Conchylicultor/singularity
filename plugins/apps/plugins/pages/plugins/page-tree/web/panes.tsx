@@ -16,6 +16,7 @@ import {
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import {
+  blockContentScope,
   BlockEditor,
   PageContentColumn,
   type BlockEditorHandle,
@@ -131,45 +132,50 @@ function PageDetailBody(): ReactElement {
   const titleRef = useRef<CaretSurface>(null);
 
   return (
-    // The breadcrumb trail is the page's single home for its title — it lives in
-    // the pane-chrome bar (passed as `title`), so the big in-body title below
-    // appears exactly once.
-    <PaneChrome
-      pane={pageDetailPane}
-      title={
-        // The trail, with the way back to the tree ahead of it — leading, like
-        // a browser's back button, and only on the surfaces that have lost the
-        // tree (the button decides that itself, painting nothing otherwise).
-        <Stack
-          direction="row"
-          align="center"
-          gap="2xs"
-          // The row yields: the button keeps its width and the trail beside it
-          // is what shortens when the column is narrow.
-          className={yieldClass("x")}
-        >
-          <BackToTreeButton />
-          <PageBreadcrumb pageId={pageId} />
-        </Stack>
-      }
-      extra={
-        <PageDetail.HeaderActions.Render>
-          {(s) => <s.component pageId={pageId} />}
-        </PageDetail.HeaderActions.Render>
-      }
-      // `PageDetail.Overlay` — the widgets that float over the page (the
-      // outline rail) — goes through PaneChrome's own overlay layer, beside
-      // the scroller and BELOW the header. A host wrapped around `PaneChrome`
-      // instead would make the header's own right-hand actions (star, version
-      // history) the top-right corner the rail pins itself onto.
-      overlay={
-        <PageDetail.Overlay.Render>
-          {(item) => <item.component pageId={pageId} />}
-        </PageDetail.Overlay.Render>
-      }
-    >
-      <PageNavigationProvider value={nav}>
-        {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
+    // The scope wraps `PaneChrome` because the outline rail is a
+    // `PageDetail.Overlay`, which PaneChrome renders as a SIBLING of the
+    // scroller — outside the editor's subtree. This is the common ancestor of
+    // the editor that publishes the block grid and the rail that reads it.
+    <blockContentScope.Provider>
+      {/* The breadcrumb trail is the page's single home for its title — it lives
+          in the pane-chrome bar (passed as `title`), so the big in-body title
+          below appears exactly once. */}
+      <PaneChrome
+        pane={pageDetailPane}
+        title={
+          // The trail, with the way back to the tree ahead of it — leading, like
+          // a browser's back button, and only on the surfaces that have lost the
+          // tree (the button decides that itself, painting nothing otherwise).
+          <Stack
+            direction="row"
+            align="center"
+            gap="2xs"
+            // The row yields: the button keeps its width and the trail beside it
+            // is what shortens when the column is narrow.
+            className={yieldClass("x")}
+          >
+            <BackToTreeButton />
+            <PageBreadcrumb pageId={pageId} />
+          </Stack>
+        }
+        extra={
+          <PageDetail.HeaderActions.Render>
+            {(s) => <s.component pageId={pageId} />}
+          </PageDetail.HeaderActions.Render>
+        }
+        // `PageDetail.Overlay` — the widgets that float over the page (the
+        // outline rail) — goes through PaneChrome's own overlay layer, beside
+        // the scroller and BELOW the header. A host wrapped around `PaneChrome`
+        // instead would make the header's own right-hand actions (star, version
+        // history) the top-right corner the rail pins itself onto.
+        overlay={
+          <PageDetail.Overlay.Render>
+            {(item) => <item.component pageId={pageId} />}
+          </PageDetail.Overlay.Render>
+        }
+      >
+        <PageNavigationProvider value={nav}>
+          {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
             the header and section list are centered on the shared reading measure,
             while the block editor spans the full pane width (centering only its
             own content via the same measure) so a marquee drag can begin from the
@@ -178,38 +184,39 @@ function PageDetailBody(): ReactElement {
             declaration of where a block's *content* starts. That is the single
             owner of the column geometry: the icon, title, sections, and every block
             land on one left edge, and this file never names the rail width. */}
-        <Stack gap="none">
-          <PageCover pageId={pageId} />
-          <Stack gap="lg" className="pb-2xl">
-            {/* Title + body form one tight unit (no flex gap between them): the
+          <Stack gap="none">
+            <PageCover pageId={pageId} />
+            <Stack gap="lg" className="pb-2xl">
+              {/* Title + body form one tight unit (no flex gap between them): the
                 only space under the title is the editor's own top padding, which
                 is click-to-edit — so there's no dead strip between title and
                 content. */}
-            <Stack gap="none">
+              <Stack gap="none">
+                <div className={READING_MEASURE}>
+                  <PageContentColumn>
+                    <PageHeader
+                      pageId={pageId}
+                      body={bodyRef}
+                      titleRef={titleRef}
+                    />
+                  </PageContentColumn>
+                </div>
+                <BlockEditor
+                  ref={bodyRef}
+                  caretBefore={titleRef}
+                  pageId={pageId}
+                  contentClassName={READING_MEASURE}
+                />
+              </Stack>
               <div className={READING_MEASURE}>
                 <PageContentColumn>
-                  <PageHeader
-                    pageId={pageId}
-                    body={bodyRef}
-                    titleRef={titleRef}
-                  />
+                  <PageDetail.Host pageId={pageId} />
                 </PageContentColumn>
               </div>
-              <BlockEditor
-                ref={bodyRef}
-                caretBefore={titleRef}
-                pageId={pageId}
-                contentClassName={READING_MEASURE}
-              />
             </Stack>
-            <div className={READING_MEASURE}>
-              <PageContentColumn>
-                <PageDetail.Host pageId={pageId} />
-              </PageContentColumn>
-            </div>
           </Stack>
-        </Stack>
-      </PageNavigationProvider>
-    </PaneChrome>
+        </PageNavigationProvider>
+      </PaneChrome>
+    </blockContentScope.Provider>
   );
 }

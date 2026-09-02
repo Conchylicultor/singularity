@@ -75,6 +75,10 @@ import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
 import { flattenVisible } from "../internal/flatten-blocks";
 import { resolveFramePadInsets, resolveRailSeats } from "../internal/rail-seat";
 import { resolveSelectionBands } from "../internal/selection-bands";
+import {
+  blockContentScope,
+  blockRowsIn,
+} from "../internal/block-content-scope";
 import { useAnchorTypes, useBlockHandles } from "../internal/block-handles";
 import { serializeForest } from "../serialize-blocks";
 import { SelectionControlProvider } from "../selection-control";
@@ -570,38 +574,27 @@ function SelectionLayer({
   const indentable = useMemo(() => canIndent(nodes, roots), [nodes, roots]);
   const outdentable = useMemo(() => canOutdent(nodes, roots), [nodes, roots]);
 
-  // `contentRef` is the centered block-content wrapper the marquee overlay is
-  // positioned within. The full-width interaction surface it sits inside — the
-  // focus target for keyboard/clipboard and the marquee's pointer origin — is
-  // owned by `useBlockSelection` below, as `containerRef`.
-  const contentRef = useRef<HTMLDivElement>(null);
+  // The centered block-content wrapper the marquee overlay is positioned within,
+  // published into `blockContentScope` so readers OUTSIDE this subtree — the
+  // outline rail, which renders beside the pane's scroller — can ask this editor
+  // which rows it has instead of scanning the document and getting another
+  // pane's. The full-width interaction surface it sits inside — the focus target
+  // for keyboard/clipboard and the marquee's pointer origin — is owned by
+  // `useBlockSelection` below, as `containerRef`.
+  const publishContentRef = blockContentScope.usePublishRef();
+  const content = blockContentScope.useScopeApi();
 
   /**
-   * THIS editor's rendered block rows, in document order — the one place the
-   * `[data-block-id]` scan is spelled, and the reason it is scoped to
-   * `contentRef` rather than to `document`.
+   * {@link rowAtPointer} over THIS editor's own rows.
    *
-   * Two page panes can be open side by side (`/pages/page/:a/page/:b`), and each
-   * mounts its own `BlockEditor` with its own rows. A document-wide scan makes
-   * every pointer question answer with the FIRST pane whose row happens to share
-   * the pointer's y — DOM order wins the contains-test — so a drag in the right
-   * pane resolved to left-pane block ids, and the range it built named blocks
-   * this editor does not have: the marquee painted and nothing selected. Rows
-   * belong to an editor, so the pointer question is asked of an editor's box.
-   *
-   * The rect reads that follow already dominate a per-frame gesture, so
-   * materialising the list costs nothing measurable next to them.
+   * `peekRootOrThrow` rather than a guard: every caller is a pointer or drag
+   * handler, which cannot fire unless the grid it is over is mounted. The old
+   * `if (!content) return []` was an absorbable empty — indistinguishable from
+   * an editor that genuinely has no rows.
    */
-  const blockRows = useCallback((): readonly HTMLElement[] => {
-    const content = contentRef.current;
-    if (!content) return [];
-    return [...content.querySelectorAll<HTMLElement>("[data-block-id]")];
-  }, []);
-
-  /** {@link rowAtPointer} over this editor's own rows. */
   const rowAt = useCallback(
-    (y: number) => rowAtPointer(blockRows(), y),
-    [blockRows],
+    (y: number) => rowAtPointer(blockRowsIn(content.peekRootOrThrow()), y),
+    [content],
   );
 
   // The block list as the range machinery reads it: order (what a range spans)
@@ -932,7 +925,7 @@ function SelectionLayer({
    * - `x` / `y` are VIEWPORT coords, frozen at pointerdown. `onEmptyClick` needs
    *   them: it compares the press against the first/last row's live
    *   `getBoundingClientRect()`, which is viewport-relative too.
-   * - `contentY` is the same press expressed in `contentRef`'s own box. The
+   * - `contentY` is the same press expressed in the content grid's own box. The
    *   marquee rectangle is an absolutely-positioned CHILD of that box, so its
    *   `top` must be scroll-invariant. Subtracting a frozen viewport `y` from a
    *   content rect re-read every frame drifts the anchor by exactly the distance
@@ -975,7 +968,7 @@ function SelectionLayer({
       const fallback = defaultTextHandle(handles);
       const firstId = flat[0]?.block.id;
       const lastBlock = flat[flat.length - 1]?.block;
-      const els = blockRows();
+      const els = blockRowsIn(content.peekRootOrThrow());
       const firstEl = els[0];
       const lastEl = els[els.length - 1];
 
@@ -1014,7 +1007,7 @@ function SelectionLayer({
       }
       const row = rowAt(y);
       if (row) {
-        const rect = contentRef.current?.getBoundingClientRect();
+        const rect = content.peekRootOrThrow().getBoundingClientRect();
         const edge: "start" | "end" =
           rect && x >= rect.left + rect.width / 2 ? "end" : "start";
         if (!focusBlockBoundary(row.id, edge)) applyRange(row.id, row.id);
@@ -1029,7 +1022,7 @@ function SelectionLayer({
       clearSelection,
       applyRange,
       focusBlockBoundary,
-      blockRows,
+      content,
       rowAt,
     ],
   );
@@ -1081,13 +1074,13 @@ function SelectionLayer({
       return;
     }
 
-    const content = contentRef.current;
-    if (content) {
+    const grid = content.peekRoot();
+    if (grid) {
       // Both ends in CONTENT coords, so the rectangle stays glued to the blocks
       // it depicts while the surface scrolls beneath the gesture. The drag
       // threshold is measured here too: a stationary pointer over a scrolling
       // surface is genuinely a drag, not a click.
-      const curContentY = clientY - content.getBoundingClientRect().top;
+      const curContentY = clientY - grid.getBoundingClientRect().top;
       const top = Math.min(start.contentY, curContentY);
       const height = Math.abs(curContentY - start.contentY);
       if (height > 3) {
@@ -1145,8 +1138,8 @@ function SelectionLayer({
       // check above already proves it is mounted. Refusing to start the gesture is
       // still the honest response to its absence — the marquee's anchor is read
       // from this box, and there is no coordinate to guess it from.
-      const content = contentRef.current;
-      if (!content) return;
+      const grid = content.peekRoot();
+      if (!grid) return;
 
       const row = el.closest("[data-block-id]");
       const inText = isInsideEditingHost(el);
@@ -1180,7 +1173,7 @@ function SelectionLayer({
         id: originId,
         x: e.clientX,
         y: e.clientY,
-        contentY: e.clientY - content.getBoundingClientRect().top,
+        contentY: e.clientY - grid.getBoundingClientRect().top,
         mode,
       };
       dragMovedRef.current = false;
@@ -1248,6 +1241,7 @@ function SelectionLayer({
       focusContainer,
       onEmptyClick,
       containerRef,
+      content,
       rowAt,
     ],
   );
@@ -1765,7 +1759,7 @@ function SelectionLayer({
                 with the list it describes, and it adds no DOM. */}
             <FrameHoverProvider>
               <div
-                ref={contentRef}
+                ref={publishContentRef}
                 // eslint-disable-next-line layout/no-adhoc-layout -- the block list is a single-column grid so container frames can span row lines; the ramp has no primitive for line-spanning overlays
                 className={cn("relative grid grid-cols-1", contentClassName)}
                 style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}

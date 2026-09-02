@@ -26,6 +26,7 @@
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `layouts/full-pane.FullPane`
+    - `page/editor.blockContentScope`
     - `page/editor.BlockEditor`
     - `page/editor.PageIcon`
     - `primitives/css/fill.Fill`

@@ -2488,6 +2488,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
             - Uses:
               - `apps/pages/page-tree.PageDetail`
+              - `page/editor.blockContentScope`
+              - `page/editor.blockRowIn`
               - `page/editor.Editor`
               - `primitives/live-state.useResource`
               - `primitives/outline/rail.OutlineRail`
@@ -2514,6 +2516,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `infra/trash.useUndoableTrash`
+              - `page/editor.blockContentScope`
               - `page/editor.BlockEditor`
               - `page/editor.BlockEditorHandle`
               - `page/editor.CaretSurface`
@@ -4567,6 +4570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpointMutation`
               - `layouts/full-pane.FullPane`
+              - `page/editor.blockContentScope`
               - `page/editor.BlockEditor`
               - `page/editor.PageIcon`
               - `primitives/css/fill.Fill`
@@ -9139,6 +9143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/popover.InlinePopover`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.rowActionsAnchor`
+              - `primitives/scoped-store/dom-scope.defineDomScope`
               - `primitives/scroll-reveal.revealElement`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -9153,10 +9158,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `formatTokenCount`
               - `JsonlPane`
               - `JsonlViewer`
+              - `paneScrollScope`
               - `Timestamp`
               - `useJsonlConversationId`
               - `useLastAssistantEvent`
-              - `usePaneScrollElement`
               - `useRowMarkdown`
               - `useSectionExpand`
               - `useVisibleEvents`
@@ -9485,7 +9490,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
+                  - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/auto-scroll.scrollToBottom`
                   - `primitives/icon-button.IconButton`
@@ -9906,8 +9911,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.Overlay` "transcript-stats" → `TranscriptStatsStrip`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
                   - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
-                  - `conversations/conversation-view/jsonl-viewer.usePaneScrollElement`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/pin.Pin`
@@ -18760,6 +18765,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
           - `primitives/scoped-store.defineScopedStore`
+          - `primitives/scoped-store/dom-scope.defineDomScope`
           - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineDispatchSlot`
@@ -18827,7 +18833,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `BLOCK_INDENT`
           - `BLOCK_INSET`
+          - `blockContentScope`
           - `BlockEditor`
+          - `blockRowIn`
+          - `blockRowsIn`
           - `BlockTextArea`
           - `blockTextRenderableExtensions`
           - `BlockTextRenderer`
@@ -27393,8 +27402,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/audio/live-play`
           - `apps/sonata/shell`
           - `page/editor`
+          - `primitives/scoped-store/dom-scope`
           - `primitives/sync-status`
           - `primitives/undo-redo`
+      - Plugins:
+        - **`dom-scope`** — The DOM node that belongs to ONE mounted instance: defineDomScope declares a scope a descendant publishes its element into and a sibling reads, so a lookup never reaches past its own instance into another mounted copy of the same surface. A scoped store holding one element — install-sink's discipline (named throws, subscription-only render reads, peek… naming) with scoped-store's per-Provider lifetime. Readers get a { attached } union, never a nullable root, so 'not mounted yet' cannot be absorbed into 'no matches'; the declared bounds derive the check that bans document-wide lookups of those attributes.
+          - Web:
+            - Uses: `primitives/scoped-store.defineScopedStore`
+            - Exports (types):
+              - `DomScopeApi`
+              - `DomScopeHandle`
+              - `DomScopeOptions`
+              - `DomScopeRoot`
+            - Exports (values): `defineDomScope`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer`
+              - `page/editor`
     - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
       - Web:
         - Uses: `primitives/latest-ref.useLatestRef`

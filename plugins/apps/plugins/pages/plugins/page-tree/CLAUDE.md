@@ -90,6 +90,7 @@ route each render rather than remembered from how the page was opened.
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
     - `infra/trash.useUndoableTrash`
+    - `page/editor.blockContentScope`
     - `page/editor.BlockEditor`
     - `page/editor.BlockEditorHandle`
     - `page/editor.CaretSurface`

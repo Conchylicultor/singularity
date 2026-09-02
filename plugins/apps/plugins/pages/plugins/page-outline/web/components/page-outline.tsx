@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   blocksResource,
@@ -8,7 +8,11 @@ import {
   type Block,
   type BlockHandle,
 } from "@plugins/page/plugins/editor/core";
-import { Editor } from "@plugins/page/plugins/editor/web";
+import {
+  blockContentScope,
+  blockRowIn,
+  Editor,
+} from "@plugins/page/plugins/editor/web";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
 
 /** Stable empty value, so a pending read never re-renders on a fresh `[]`. */
@@ -47,29 +51,19 @@ function useHeadingTypes(): ReadonlyMap<string, HeadingType> {
 }
 
 /**
- * The heading's row in the live editor, or `null` when it is not on screen —
- * a heading inside a collapsed toggle is in the outline (it is in the document)
- * but has no DOM row, and the rail reads `null` as exactly that.
- *
- * `data-block-id` is stamped on every `BlockRow` and is already the editor's own
- * handle on a row (`rowAtPointer`, the drag/marquee geometry), so this borrows a
- * convention rather than introducing one.
- *
- * Known bound: the query is document-wide. Block ids are unique, so two panes
- * showing two DIFFERENT pages can never collide; two panes showing the SAME page
- * (or a page open beside a parent that embeds it as an expanded sub-page) both
- * resolve to whichever row is first in the DOM.
- */
-function resolveBlockRow(id: string): Element | null {
-  return document.querySelector(`[data-block-id="${CSS.escape(id)}"]`);
-}
-
-/**
  * The open page's headings, as the outline rail pinned to the right edge of the
  * pane. Mounted through `PageDetail.Overlay`.
  */
 export function PageOutline({ pageId }: { pageId: string }) {
   const headingTypes = useHeadingTypes();
+  // THIS pane's editor, never `document`. The rail renders beside the pane's
+  // scroller — outside the editor's subtree — so it cannot ref the block grid or
+  // walk up to it, and a document-wide `[data-block-id]` lookup answers with
+  // whichever editor is first in the DOM. Two panes on the same page, or the
+  // same page open in two tabs (every open tab stays mounted), then resolve
+  // every heading to the OTHER editor's rows — and a background tab's rows are
+  // `display:none`, so their rects are all zero and the rail simply dies.
+  const content = blockContentScope.useRoot();
   const result = useResource(blocksResource, { pageId });
   const blocks = result.pending ? (result.stale ?? NO_BLOCKS) : result.data;
 
@@ -79,7 +73,7 @@ export function PageOutline({ pageId }: { pageId: string }) {
     // `inDocumentOrder`, NOT `flattenVisible`: the outline is a map of the
     // DOCUMENT, so a heading nested inside a collapsed toggle still belongs in
     // it. (It resolves to no element until the toggle is opened — see
-    // `resolveBlockRow`.)
+    // `resolve` below.)
     const out: { id: string; label: string; depth: number }[] = [];
     for (const id of inDocumentOrder(toNodes(blocks), [...headings.keys()])) {
       const block = headings.get(id)!;
@@ -95,11 +89,16 @@ export function PageOutline({ pageId }: { pageId: string }) {
     return out;
   }, [blocks, headingTypes]);
 
+  const resolve = useCallback(
+    // Before the editor's grid attaches there is no row for ANY heading — one
+    // commit, and the rail re-enrols when the elements appear. A `null` from
+    // `blockRowIn` means something else entirely: that heading is in the
+    // document but has no row, because a collapsed toggle holds it.
+    (id: string) => (content.attached ? blockRowIn(content.root, id) : null),
+    [content],
+  );
+
   return (
-    <OutlineRail
-      entries={entries}
-      resolve={resolveBlockRow}
-      label="Page outline"
-    />
+    <OutlineRail entries={entries} resolve={resolve} label="Page outline" />
   );
 }

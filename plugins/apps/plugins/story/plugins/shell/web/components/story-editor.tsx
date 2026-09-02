@@ -1,4 +1,7 @@
-import { BlockEditor } from "@plugins/page/plugins/editor/web";
+import {
+  blockContentScope,
+  BlockEditor,
+} from "@plugins/page/plugins/editor/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { StoryRender } from "@plugins/apps/plugins/story/plugins/render/web";
 import { StoryHeader } from "./story-header";
@@ -39,30 +42,34 @@ function StoryEditorBody() {
   const { pageId, view, split, activeRendererId } = useStoryEditor();
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- horizontal split row filling the chrome's inert PaneScroll (h-full) so the panels keep their own independent y-scroll; no Column/Frame/Grid primitive models a flex-fill row of independent y-scroll panels
-    <div className="flex h-full min-h-0 bg-background text-foreground">
-      {split ? (
-        <>
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- left split panel: fills half-row with independent y-scroll */}
-          <div className="min-h-0 flex-1 overflow-y-auto border-r border-border">
+    // One scope for the body: the two <BlockEditor> call sites below are
+    // exclusive branches, so only ever one publishes into it.
+    <blockContentScope.Provider>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- horizontal split row filling the chrome's inert PaneScroll (h-full) so the panels keep their own independent y-scroll; no Column/Frame/Grid primitive models a flex-fill row of independent y-scroll panels */}
+      <div className="flex h-full min-h-0 bg-background text-foreground">
+        {split ? (
+          <>
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- left split panel: fills half-row with independent y-scroll */}
+            <div className="min-h-0 flex-1 overflow-y-auto border-r border-border">
+              <BlockEditor pageId={pageId} />
+            </div>
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- right split panel: fills half-row with independent y-scroll */}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <StoryRender pageId={pageId} rendererId={activeRendererId} />
+            </div>
+          </>
+        ) : view === "author" ? (
+          // eslint-disable-next-line layout/no-adhoc-layout -- single-panel fill: fills the row with y-scroll
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <BlockEditor pageId={pageId} />
           </div>
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- right split panel: fills half-row with independent y-scroll */}
+        ) : (
+          // eslint-disable-next-line layout/no-adhoc-layout -- single-panel fill: fills the row with y-scroll
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <StoryRender pageId={pageId} rendererId={activeRendererId} />
+            <StoryRender pageId={pageId} rendererId={view} />
           </div>
-        </>
-      ) : view === "author" ? (
-        // eslint-disable-next-line layout/no-adhoc-layout -- single-panel fill: fills the row with y-scroll
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <BlockEditor pageId={pageId} />
-        </div>
-      ) : (
-        // eslint-disable-next-line layout/no-adhoc-layout -- single-panel fill: fills the row with y-scroll
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <StoryRender pageId={pageId} rendererId={view} />
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </blockContentScope.Provider>
   );
 }

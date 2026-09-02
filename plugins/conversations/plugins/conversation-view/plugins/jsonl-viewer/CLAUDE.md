@@ -55,15 +55,18 @@ re-contribute a renderer matching `"unknown"` — that would make the dispatch
 report `matched: true` and silently take the investigate action away from the
 one row family that most needs it.
 
-## Overlays: get the scroller from `usePaneScrollElement()`
+## Overlays: get the scroller from `paneScrollScope.useRoot()`
 
 An `Overlay` contribution renders as a SIBLING of the transcript scroller (inside
 the pane's `relative isolate` frame), so `findScrollParent` cannot reach it and a
 global `document.querySelector("[data-pane-scroll]")` reaches the WRONG one — two
 panes can be open on the same conversation, and rows are keyed by `eventKey`
 (`user-text:<timestamp>`), which carries no conversation id. `JsonlPane` publishes
-its own scroll element; ask for it instead of rediscovering it. `data-pane-scroll`
-stays stamped for e2e scripts, not as a lookup mechanism from React.
+its own scroll element into `paneScrollScope` (a `primitives/scoped-store/dom-scope`
+scope); ask for it instead of rediscovering it. The read is a `{ attached }` union,
+so a query before the scroller mounts cannot be mistaken for "no matching rows".
+`data-pane-scroll` stays stamped for e2e scripts, not as a lookup mechanism from
+React.
 
 ## The row-action strip lives in `plugins/row-actions`
 
@@ -117,6 +120,7 @@ back.
     - `primitives/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
     - `primitives/row-actions.rowActionsAnchor`
+    - `primitives/scoped-store/dom-scope.defineDomScope`
     - `primitives/scroll-reveal.revealElement`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
@@ -131,10 +135,10 @@ back.
     - `formatTokenCount`
     - `JsonlPane`
     - `JsonlViewer`
+    - `paneScrollScope`
     - `Timestamp`
     - `useJsonlConversationId`
     - `useLastAssistantEvent`
-    - `usePaneScrollElement`
     - `useRowMarkdown`
     - `useSectionExpand`
     - `useVisibleEvents`

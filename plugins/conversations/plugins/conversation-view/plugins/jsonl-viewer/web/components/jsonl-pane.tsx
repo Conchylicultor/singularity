@@ -31,7 +31,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
-import { PaneScrollProvider } from "./pane-scroll-context";
+import { paneScrollScope } from "./pane-scroll-scope";
 import {
   usePendingTurns,
   reconcilePendingTurns,
@@ -236,25 +236,25 @@ function JsonlPaneInner({
     });
 
   // One DOM node, two readers. The sticky-scroll hook drives the scroller; the
-  // pane also PUBLISHES it (`usePaneScrollElement`) so overlay contributions —
+  // pane also PUBLISHES it into `paneScrollScope` so overlay contributions —
   // which are siblings of the scroller, not children — can scope a query to this
   // pane's transcript instead of rediscovering it with a DOM walk. A node takes
-  // one `ref`, hence the fan-out. State, not a ref, so a consumer re-renders when
-  // the element attaches.
-  const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
+  // one `ref`, hence the fan-out. Publishing is a callback ref, so the element
+  // attaching notifies the overlays without re-rendering the transcript.
+  const publishPaneScroll = paneScrollScope.usePublishRef();
   const attachScroll = useCallback(
     (node: HTMLElement | null) => {
       // `Scroll` hands back the base element type while the sticky hook types its
       // ref to the div it renders — the same node either way, as when this was
       // `ref={scrollRef}`.
       scrollRef.current = node as HTMLDivElement | null;
-      setScrollEl(node);
+      publishPaneScroll(node);
     },
-    [scrollRef],
+    [scrollRef, publishPaneScroll],
   );
 
   return (
-    <PaneScrollProvider element={scrollEl}>
+    <>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll */}
       <div className="relative min-h-0 flex-1 isolate">
         <Scroll
@@ -318,7 +318,7 @@ function JsonlPaneInner({
           className="absolute bottom-12 right-4 z-nav"
         />
       </div>
-    </PaneScrollProvider>
+    </>
   );
 }
 
@@ -334,39 +334,46 @@ export function JsonlPane({
   });
 
   return (
-    <ConversationIdProvider id={conversation.id}>
-      <Stack gap="none" className="h-full min-h-0">
-        <ResourceView
-          resource={eventsResult}
-          fallback={
-            // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
-            <div className="relative min-h-0 flex-1 isolate">
-              <Scroll axis="both" data-pane-scroll className="h-full">
-                <Loading className="px-md py-sm" />
-              </Scroll>
-            </div>
-          }
-          errorFallback={(err) => (
-            // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
-            <div className="relative min-h-0 flex-1 isolate">
-              <Scroll axis="both" data-pane-scroll className="h-full">
-                <Text
-                  as="div"
-                  variant="caption"
-                  className="px-md py-sm text-destructive"
-                >
-                  {err.message}
-                </Text>
-              </Scroll>
-            </div>
-          )}
-        >
-          {(events) => (
-            <JsonlPaneInner conversation={conversation} events={events} />
-          )}
-        </ResourceView>
-        {children}
-      </Stack>
-    </ConversationIdProvider>
+    // The scope is declared HERE, not in `JsonlPaneInner`: a component may not
+    // render a Provider and use it in its own body, and the inner pane is the
+    // one that publishes. Mounting it out here also means the loading and error
+    // branches — which render a scroller but publish nothing — leave an overlay
+    // reading them an honest `{ attached: false }` rather than a bare null.
+    <paneScrollScope.Provider>
+      <ConversationIdProvider id={conversation.id}>
+        <Stack gap="none" className="h-full min-h-0">
+          <ResourceView
+            resource={eventsResult}
+            fallback={
+              // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
+              <div className="relative min-h-0 flex-1 isolate">
+                <Scroll axis="both" data-pane-scroll className="h-full">
+                  <Loading className="px-md py-sm" />
+                </Scroll>
+              </div>
+            }
+            errorFallback={(err) => (
+              // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
+              <div className="relative min-h-0 flex-1 isolate">
+                <Scroll axis="both" data-pane-scroll className="h-full">
+                  <Text
+                    as="div"
+                    variant="caption"
+                    className="px-md py-sm text-destructive"
+                  >
+                    {err.message}
+                  </Text>
+                </Scroll>
+              </div>
+            )}
+          >
+            {(events) => (
+              <JsonlPaneInner conversation={conversation} events={events} />
+            )}
+          </ResourceView>
+          {children}
+        </Stack>
+      </ConversationIdProvider>
+    </paneScrollScope.Provider>
   );
 }

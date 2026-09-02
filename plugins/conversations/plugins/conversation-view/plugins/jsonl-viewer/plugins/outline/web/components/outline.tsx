@@ -6,7 +6,7 @@ import { scrollToBottom } from "@plugins/primitives/plugins/auto-scroll/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  usePaneScrollElement,
+  paneScrollScope,
   useVisibleEvents,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
@@ -65,11 +65,16 @@ function ConversationOutlineRail({ events }: { events: JsonlEvent[] }) {
   // conversation, and a row's key (`user-text:<timestamp>`) carries no
   // conversation id — so the other pane's rows answer to the identical selector,
   // and a global lookup would scroll the wrong transcript.
-  const scroller = usePaneScrollElement();
+  const scroller = paneScrollScope.useRoot();
 
   const resolve = useCallback(
+    // Before the transcript attaches there is no row for ANY id — one commit,
+    // and the rail re-enrols when the elements appear. Distinct from a row that
+    // is genuinely absent, which is what the null below means.
     (id: string) =>
-      scroller?.querySelector(`[data-event-key="${CSS.escape(id)}"]`) ?? null,
+      scroller.attached
+        ? scroller.root.querySelector(`[data-event-key="${CSS.escape(id)}"]`)
+        : null,
     [scroller],
   );
 
@@ -88,7 +93,11 @@ function ConversationOutlineRail({ events }: { events: JsonlEvent[] }) {
           icon={MdKeyboardArrowDown}
           label="Scroll to bottom"
           className="w-full"
-          onClick={() => scrollToBottom(scroller, { behavior: "smooth" })}
+          onClick={() =>
+            scrollToBottom(scroller.attached ? scroller.root : null, {
+              behavior: "smooth",
+            })
+          }
         />
       }
     />

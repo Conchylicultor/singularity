@@ -3210,6 +3210,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scoped-store/dom-scope.defineDomScope`
     - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineDispatchSlot`
@@ -3277,7 +3278,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Exports (values):
     - `BLOCK_INDENT`
     - `BLOCK_INSET`
+    - `blockContentScope`
     - `BlockEditor`
+    - `blockRowIn`
+    - `blockRowsIn`
     - `BlockTextArea`
     - `blockTextRenderableExtensions`
     - `BlockTextRenderer`
