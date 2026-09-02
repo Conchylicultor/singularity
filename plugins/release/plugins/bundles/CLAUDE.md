@@ -85,8 +85,9 @@ answer, and consumer copy must say so rather than soften it.
 
 `pruneReleaseRunDirs(namespace, comp, target, keep = 3)` keeps the newest `keep`
 run dirs plus every run some pointer names. `~/.singularity/state/releases/` had no
-retention at all (`pruneWorktreeReleaseArtifacts` prunes per-release *logs*, not
-run dirs) and a run dir is a whole staged app.
+retention at all, and a run dir is a whole staged app — this is the only thing that
+bounds it. A release's *logs* are bounded separately and far more cheaply, by the
+shared per-kind supervised-run transcript prune.
 
 **Known bound:** the pinned set is the pointer set only. A live Studio *preview*
 running out of an older run dir is invisible from here — previews live in the

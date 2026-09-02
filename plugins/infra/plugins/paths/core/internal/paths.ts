@@ -372,7 +372,7 @@ export const worktreeArtifacts = {
     join(worktreeDataDir(name), "build-status.json"),
   /**
    * One check run's full, untruncated transcript. ALWAYS id-keyed (like
-   * `releaseLogs`, unlike `buildStatus` directly above), and for a reason that
+   * `runTranscript`, unlike `buildStatus` directly above), and for a reason that
    * is the mirror image of the receipt's.
    *
    * A transcript is only COMPLETE once its run ends. Under a fixed path, a run
@@ -389,9 +389,6 @@ export const worktreeArtifacts = {
    */
   checkLog: (name: Namespace, runId: string): string =>
     join(worktreeDataDir(name), `check-${runId}.log`),
-  /** Per-release fallback log. Always keyed to a release run id. */
-  releaseLogs: (name: Namespace, releaseId: string): string =>
-    join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
   /**
    * DIRECTORY. Every supervised run's transcript and exit marker, for every
    * kind. See {@link runsDirFor} for why this family gets a directory of its own.

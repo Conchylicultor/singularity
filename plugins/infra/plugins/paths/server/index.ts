@@ -59,11 +59,9 @@ export { checkoutRef } from "./internal/checkout-ref";
 
 export {
   pruneWorktreeBuildArtifacts,
-  pruneWorktreeReleaseArtifacts,
   pruneWorktreeCheckArtifacts,
   pruneWorktreeRunArtifacts,
   BUILD_ARTIFACTS_RETENTION,
-  RELEASE_ARTIFACTS_RETENTION,
   CHECK_ARTIFACTS_RETENTION,
   RUN_ARTIFACTS_RETENTION,
 } from "../core/internal/prune-artifacts";

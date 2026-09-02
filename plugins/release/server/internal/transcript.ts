@@ -35,10 +35,9 @@ import { RELEASE_RUN_KIND_ID } from "./kind-id";
  *   replaces was uncapped too. The file's own bound is the supervised-run
  *   artifact prune (newest 50 runs per kind).
  *
- * A missing transcript falls back to the legacy artifact (see
- * {@link readLegacyReleaseLogs}) and then to no lines. That is not a swallowed
- * failure — the prune reaps the oldest run sets, and a run whose transcript is
- * gone genuinely has nothing to show.
+ * A missing transcript reads as no lines. That is not a swallowed failure — the
+ * prune reaps the oldest run sets, and a run whose transcript is gone genuinely
+ * has nothing to show.
  */
 export function readReleaseTranscript(releaseId: string): ReleaseLogLine[] {
   const path = worktreeArtifacts.runTranscript(
@@ -47,52 +46,13 @@ export function readReleaseTranscript(releaseId: string): ReleaseLogLine[] {
     releaseId,
   );
   const text = readIfPresent(path);
-  if (text === null) return readLegacyReleaseLogs(releaseId);
+  if (text === null) return [];
   const lines = text.split("\n");
   // A transcript ends in a newline unless the child died mid-line, so the last
   // piece is usually empty — and a genuinely unterminated last line is the one
   // most worth keeping, so it is only the empty case that is dropped.
   if (lines.at(-1) === "") lines.pop();
   return lines.map((line) => ({ text: line, stream: "stdout" as const }));
-}
-
-/** The shape the pre-supervision parent wrote into `release-logs-<id>.json`. */
-interface LegacyReleaseLogsFile {
-  exitCode: number;
-  lines: ReleaseLogLine[];
-}
-
-/**
- * LEGACY, read-only: the log pane of a release cut BEFORE this plugin moved onto
- * the supervised-run primitive.
- *
- * Nothing writes this file any more, so it is not the two-paths trap the
- * transcript exists to remove — that trap is a live path plus a recovery path,
- * where the recovery path rots because nothing exercises it until something has
- * already gone wrong. This reads a **fixed, closed set** of files that can only
- * shrink: the runs that produced them are already finished, and no new one will
- * ever appear. It also keeps the one thing the transcript genuinely cannot —
- * those lines carry a real stdout/stderr classification, because a pipe was
- * still what wrote them.
- *
- * **Ages out.** Delete this function, and the `release-logs-*.json` artifact
- * family in `paths`, once no run old enough to have one is still worth reading
- * (the files are capped at ~50 per worktree and were only ever written for
- * FAILED runs, so the set is small and static).
- */
-function readLegacyReleaseLogs(releaseId: string): ReleaseLogLine[] {
-  const raw = readIfPresent(
-    worktreeArtifacts.releaseLogs(currentWorktreeName(), releaseId),
-  );
-  if (raw === null) return [];
-  try {
-    return (JSON.parse(raw) as LegacyReleaseLogsFile).lines;
-  } catch (err) {
-    // A truncated legacy file is not worth taking the pane down for — it was
-    // written by a process that no longer exists and cannot be repaired.
-    if (!(err instanceof SyntaxError)) throw err;
-    return [];
-  }
 }
 
 /** Read a file, or null when it is not there. Any other fs error is a real fault. */

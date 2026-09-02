@@ -32,23 +32,6 @@ import {
 export const BUILD_ARTIFACTS_RETENTION = 50;
 
 /**
- * How many recent per-release fallback logs (`release-logs-<id>.json`) to retain
- * per worktree.
- *
- * A plain disk-retention bound: keep the newest 50 per-run fallback logs per
- * worktree, pruning older ones to cap disk (same disk-bound rationale as
- * {@link BUILD_ARTIFACTS_RETENTION}). The release-history UI no longer imposes a
- * matching window — it is now a composition-scoped keyset-paginated query (no
- * 50-run cap), so an old run beyond this retention is still *listed*, it just
- * shows an empty (never a broken) persisted log if its file was pruned. Only
- * *failed* releases write a log file at all (successes stream live and persist
- * nothing), so 50 log files span many more than 50 history rows in practice. Same
- * leaf-plugin constraint: `paths` must not import `release`, and every reader
- * fails soft on ENOENT.
- */
-export const RELEASE_ARTIFACTS_RETENTION = 50;
-
-/**
  * How many recent per-run check transcripts (`check-<id>.log`) to retain per
  * worktree.
  *
@@ -94,13 +77,6 @@ const BUILD_FAMILY: ArtifactFamily = {
     { prefix: "build-", suffix: ".log" },
   ],
   tmpPrefixes: ["build-", "build."],
-};
-
-// Release artifacts: a single always-id-keyed family (`release-logs-<id>.json`).
-// There is no un-suffixed alias — releases only ever write per-run logs.
-const RELEASE_FAMILY: ArtifactFamily = {
-  patterns: [{ prefix: "release-logs-", suffix: ".json" }],
-  tmpPrefixes: ["release-logs-"],
 };
 
 // Check transcripts: a single always-id-keyed family (`check-<id>.log`), where
@@ -197,9 +173,8 @@ function unlinkQuiet(dir: string, entry: string): void {
  * older sets, and sweep any crashed-write `.tmp.<pid>` leftovers for that family.
  *
  * Called by every artifact writer immediately AFTER it writes (see the build CLI's
- * writeBuildLogs/writeBuildProfile, run-build's orphan fallback, and run-release's
- * failure fallback), so writing a new set is what trims the old ones — no
- * scheduler, no polling. Writes are serialized per namespace (the DB in-flight
+ * writeBuildLogs/writeBuildProfile and run-build's orphan fallback), so writing a
+ * new set is what trims the old ones — no scheduler, no polling. Writes are serialized per namespace (the DB in-flight
  * lock), so at prune time the just-written files carry the newest mtime and are
  * always inside the keep window, never at risk.
  *
@@ -256,11 +231,6 @@ export function pruneBuildArtifactsInDir(dir: string, keep: number): void {
   pruneArtifactsInDir(dir, BUILD_FAMILY, keep);
 }
 
-/** Directory-scoped release prune, split out so it is testable against a throwaway dir. */
-export function pruneReleaseArtifactsInDir(dir: string, keep: number): void {
-  pruneArtifactsInDir(dir, RELEASE_FAMILY, keep);
-}
-
 /**
  * Directory-scoped check prune, split out so it is testable against a throwaway dir.
  *
@@ -311,14 +281,6 @@ export function pruneWorktreeBuildArtifacts(
   keep: number = BUILD_ARTIFACTS_RETENTION,
 ): void {
   pruneBuildArtifactsInDir(worktreeDataDir(name), keep);
-}
-
-/** Cap the per-release fallback logs in one worktree's data dir to the newest `keep` release ids. */
-export function pruneWorktreeReleaseArtifacts(
-  name: Namespace,
-  keep: number = RELEASE_ARTIFACTS_RETENTION,
-): void {
-  pruneReleaseArtifactsInDir(worktreeDataDir(name), keep);
 }
 
 /** Cap the per-run check transcripts in one worktree's data dir to the newest `keep` run ids. */

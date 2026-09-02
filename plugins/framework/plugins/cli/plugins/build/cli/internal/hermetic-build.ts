@@ -59,8 +59,8 @@ import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
  *     probes, the per-namespace deploy sequence,
  *   - the `build_runs` ledger, worktree-op markers, the build-progress log, the
  *     build profile and the verdict guard. A release already has its own durable
- *     artifact (`release-logs-<id>.json`); emitting build records for a run that
- *     is not a build is what polluted the build Gantt.
+ *     record — the supervised-run transcript its child writes; emitting build
+ *     records for a run that is not a build is what polluted the build Gantt.
  * Consequently `hooks` below are light: `log` still reaches the console (the
  * release streams this process's stdout as its progress), but no span, footprint
  * or step is persisted anywhere.

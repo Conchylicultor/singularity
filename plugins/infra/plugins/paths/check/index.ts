@@ -133,8 +133,7 @@ const noHardcodedPathsCheck: Check = {
 
 // Guards the per-worktree FILE layout owned by paths.ts: the `worktrees/<name>`
 // data dir (worktreeDataDir), the namespace's registration record
-// (WORKTREE_SPEC_FILE) and the build/release artifact filenames
-// (worktreeArtifacts). Re-inlining any of these re-couples a reader to a writer
+// (WORKTREE_SPEC_FILE) and the build artifact filenames (worktreeArtifacts). Re-inlining any of these re-couples a reader to a writer
 // behind paths.ts's back, exactly the drift the single source of truth exists
 // to prevent.
 //
@@ -155,8 +154,6 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   { pattern: /["'`]build-profile[^"'`\s]*\.json/, grepArg: "build-profile" },
   // build-logs artifact filename.
   { pattern: /["'`]build-logs[^"'`\s]*\.json/, grepArg: "build-logs" },
-  // release-logs artifact filename.
-  { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
   // build.log human-readable artifact filename.
   { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
   // spec.json — the namespace's registration record. Its absence here is what
@@ -240,7 +237,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
     return {
       ok: false,
       message: `inlined worktree-artifact path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import `worktreeDataDir` / `worktreeArtifacts` / `WORKTREE_SPEC_FILE` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding a per-worktree filename (spec.json, build-profile*.json, build-logs*.json, build*.log, check*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
+      hint: "Import `worktreeDataDir` / `worktreeArtifacts` / `WORKTREE_SPEC_FILE` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding a per-worktree filename (spec.json, build-profile*.json, build-logs*.json, build*.log, check*.log). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
     };
   },
 };

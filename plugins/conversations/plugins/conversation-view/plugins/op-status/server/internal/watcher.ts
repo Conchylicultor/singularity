@@ -12,7 +12,7 @@ let started = false;
 
 // Only `<slug>/ops/{build,push,check}.json` are op markers. The same tree also
 // holds build artifacts written repeatedly during every build
-// (`build-profile.json`, `build-logs.json`, `release-logs-*.json`) and gateway
+// (`build-profile.json`, `build-logs.json`) and gateway
 // `<slug>.json` registration files — all directly under `<slug>/`, so their
 // parent dir is the slug, not `ops`. Filtering on the parent-dir basename keeps
 // artifact churn from firing a full worktree re-scan + no-op push.

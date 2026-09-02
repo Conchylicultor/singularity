@@ -26,10 +26,12 @@ function runIdMs(runId: string): number {
  * Keep the `keep` newest run dirs of `<composition>-<target>` and delete the
  * rest, never touching a run some `latest-<platform>` pointer names.
  *
- * `~/.singularity/state/releases/` had no retention policy at all
- * (`pruneWorktreeReleaseArtifacts` prunes per-release LOGS, not run dirs), and a
- * run dir is a whole staged app — hundreds of megabytes. Invoked by the release
- * CLI right after the pointer write, so the pinned set is already current.
+ * `~/.singularity/state/releases/` had no retention policy at all, and a run dir
+ * is a whole staged app — hundreds of megabytes. This is the only thing that
+ * bounds it: a release's own supervised-run transcript is capped separately, by
+ * the shared per-kind run prune, and reaping a transcript reclaims kilobytes.
+ * Invoked by the release CLI right after the pointer write, so the pinned set is
+ * already current.
  *
  * **Known bound, stated rather than papered over:** the pinned set is the
  * pointer set only. A *live Studio preview* running out of an older run dir is

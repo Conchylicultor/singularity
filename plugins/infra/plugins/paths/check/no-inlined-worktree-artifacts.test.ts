@@ -1,8 +1,8 @@
 /**
  * Regression test for `paths:no-inlined-worktree-artifacts`: re-inlining the
  * per-worktree data dir (`join(dataRoot(), "worktrees", …)`), the namespace's
- * registration record (spec.json) or a raw build/release artifact filename
- * (build-profile*.json, build-logs*.json, build*.log, release-logs-*.json) must
+ * registration record (spec.json) or a raw build artifact filename
+ * (build-profile*.json, build-logs*.json, build*.log) must
  * be flagged, while lookalikes that are NOT the per-worktree layout — block
  * comments, route segments, the git-checkout `.claude/worktrees` path, an
  * unrelated `*.spec.json`, and plugin-import names — must pass through.
@@ -12,7 +12,7 @@
  * literals in scope so a real inlined path still counts. `grepCode` shells out
  * to `git grep`, so the test stands up a throwaway repo.
  *
- * The 6 {pattern, grepArg} pairs mirror the check verbatim. (`SJ` is the one
+ * The 5 {pattern, grepArg} pairs mirror the check verbatim. (`SJ` is the one
  * grepArg spelled as a split token: unlike the others it carries the full
  * filename, so written contiguously it would match its own pattern when the
  * real check scans this file.)
@@ -47,7 +47,6 @@ const PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   },
   { pattern: /["'`]build-profile[^"'`\s]*\.json/, grepArg: "build-profile" },
   { pattern: /["'`]build-logs[^"'`\s]*\.json/, grepArg: "build-logs" },
-  { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
   { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
   { pattern: /["'`]spec\.json/, grepArg: SJ },
 ];
@@ -56,7 +55,7 @@ const PATTERNS: { pattern: RegExp; grepArg: string }[] = [
 // the temp repo, but never spelled contiguously in this source file.
 const DROOT = "dataRoot" + "()"; // dataRoot()
 const BP = "build-" + "profile"; // build-profile
-const RL = "release-" + "logs"; // release-logs
+const BL = "build-" + "logs"; // build-logs
 const BLOG = "build" + ".log"; // build.log
 const BT = "`"; // a literal backtick, kept out of nested-template soup
 
@@ -65,7 +64,7 @@ const L1 = "const a = join(" + DROOT + ', "worktrees", name);';
 const L2 = 'const b = join(dir, "' + BP + '.json");';
 // `-$` + `{id}.json` split avoids the no-template-curly-in-string lint on a
 // plain string that contains a `${…}` sequence; the assembled value is identical.
-const L3 = "const c = join(dir, " + BT + RL + "-$" + "{id}.json" + BT + ");";
+const L3 = "const c = join(dir, " + BT + BL + "-$" + "{id}.json" + BT + ");";
 const L4 = 'const d = join(dir, "' + BLOG + '");';
 const L5 = 'const e = join(dir, "' + SJ + '");';
 
@@ -74,7 +73,7 @@ beforeAll(async () => {
   const fixture = [
     L1, // L1 — FLAGGED (base dir re-inline)
     L2, // L2 — FLAGGED (build-profile filename)
-    L3, // L3 — FLAGGED (release-logs template)
+    L3, // L3 — FLAGGED (build-logs template)
     L4, // L4 — FLAGGED (build.log filename)
     L5, // L5 — FLAGGED (spec.json registration record)
     "/* legacy artifact was " + BP + ".json in the shared dir */", // L6 — NOT flagged (block comment)
@@ -101,7 +100,7 @@ afterAll(() => {
 });
 
 test("inlined worktree-artifact paths are flagged; lookalikes are ignored", async () => {
-  // Mirrors the check: run all 6 patterns, collect the deduped union of
+  // Mirrors the check: run all 5 patterns, collect the deduped union of
   // `path:line:text` matches.
   const seen = new Set<string>();
   const matches: { line: number; text: string }[] = [];

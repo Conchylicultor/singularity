@@ -54,9 +54,9 @@ export { LEGACY_LAYOUT, planMigration } from "./internal/legacy-layout";
 export type { LegacyMove, MigrationStep } from "./internal/legacy-layout";
 
 // The check transcript is written by the check runner, which is a `core`-runtime
-// module — so its prune has to be reachable from `core`. The build/release prunes
-// stay `server`-only exports because every one of their writers is server-side;
-// exporting them here too would only widen the surface for no caller.
+// module — so its prune has to be reachable from `core`. The build prune stays a
+// `server`-only export because every one of its writers is server-side; exporting
+// it here too would only widen the surface for no caller.
 export {
   pruneWorktreeCheckArtifacts,
   CHECK_ARTIFACTS_RETENTION,
