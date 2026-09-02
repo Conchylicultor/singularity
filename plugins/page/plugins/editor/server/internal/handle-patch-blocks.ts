@@ -190,19 +190,9 @@ export async function applyPageBlockPatch(
       pageUntrashIds.size > 0 ||
       write.deleteRootIds.length > 0;
 
-    // Derive a primary type for the sidebar-refresh heuristic: any created
-    // row's type, else the STORED type of an updated row (an update that
-    // doesn't name `type` doesn't change it), else a deleted row's —
-    // defaulting to a content type.
-    const primaryType =
-      patch.creates[0]?.type ??
-      (updates[0] ? stored.get(updates[0].id)!.type : undefined) ??
-      deletedRows[0]?.type ??
-      "block";
-
-    return { write, didWrite, primaryType };
+    return { write, didWrite };
   });
-  const { write, didWrite, primaryType } = value;
+  const { write, didWrite } = value;
 
   // Re-trash a page root (redo of a page delete) via the chokepoint, after the
   // write transaction so its inserts/updates land first.
@@ -213,7 +203,6 @@ export async function applyPageBlockPatch(
   if (didWrite) {
     await notifyStructuralChange({
       pageId,
-      primaryType,
       deletedRows: write.deletedRows,
     });
   }

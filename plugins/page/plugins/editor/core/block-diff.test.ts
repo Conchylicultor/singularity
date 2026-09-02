@@ -7,6 +7,7 @@ import {
   isEmptyPatch,
   namesField,
   patchesFromDiff,
+  writtenIds,
 } from "./block-diff";
 import type { Block } from "./schemas";
 
@@ -31,24 +32,35 @@ describe("changedFields", () => {
   test("names ONLY the fields that differ", () => {
     const before = mk("A");
     expect(changedFields(before, before)).toEqual({});
-    expect(Object.keys(changedFields(before, mk("A", { type: "callout" })))).toEqual(["type"]);
     expect(
-      Object.keys(changedFields(before, mk("A", { data: { text: [{ text: "hi" }] } }))),
+      Object.keys(changedFields(before, mk("A", { type: "callout" }))),
+    ).toEqual(["type"]);
+    expect(
+      Object.keys(
+        changedFields(before, mk("A", { data: { text: [{ text: "hi" }] } })),
+      ),
     ).toEqual(["data"]);
-    expect(Object.keys(changedFields(before, mk("A", { expanded: false })))).toEqual([
-      "expanded",
-    ]);
+    expect(
+      Object.keys(changedFields(before, mk("A", { expanded: false }))),
+    ).toEqual(["expanded"]);
   });
 
   test("a falsy/null write is still a named field (presence, not truthiness)", () => {
-    const changes = changedFields(mk("A", { parentId: "X" }), mk("A", { parentId: null }));
+    const changes = changedFields(
+      mk("A", { parentId: "X" }),
+      mk("A", { parentId: null }),
+    );
     expect(namesField(changes, "parentId")).toBe(true);
     expect(changes.parentId).toBe(null);
   });
 
   test("compares rank by stored value, not instance identity", () => {
-    expect(changedFields(mk("A", { rank: Rank.from("m") }), mk("A", { rank: Rank.from("m") })))
-      .toEqual({});
+    expect(
+      changedFields(
+        mk("A", { rank: Rank.from("m") }),
+        mk("A", { rank: Rank.from("m") }),
+      ),
+    ).toEqual({});
   });
 });
 
@@ -83,13 +95,124 @@ describe("diffBlocks", () => {
   });
 });
 
+describe("writtenIds", () => {
+  // THE test of this function. A `Block`'s `rank` is a `Rank` INSTANCE, and the
+  // overlay's `fromNodes` mints a FRESH one per row on every reducer run — so an
+  // identity comparison here would report every row of an op's output as
+  // written. `targets` would then be "every row on the page" for every op, and
+  // the overlay's `sameTarget` relation would collapse into a tautology in which
+  // every op blocks every other one. Comparing the stored value is what keeps
+  // the relation meaningful.
+  test("a fresh Rank instance per row is NOT a write (the tautology trap)", () => {
+    const rows = [
+      mk("A", { rank: r(0) }),
+      mk("B", { rank: r(1) }),
+      mk("C", { rank: r(2) }),
+    ];
+    const reminted = rows.map((row) => ({
+      ...row,
+      rank: Rank.from(String(row.rank)),
+    }));
+    // Every rank is a different object; not one of them is a different VALUE.
+    expect(reminted.every((row, i) => row.rank !== rows[i]!.rank)).toBe(true);
+    expect(writtenIds(rows, reminted)).toEqual([]);
+  });
+
+  test("inserted ∪ changed ∪ deleted, in one before/after pair", () => {
+    const before = [mk("KEEP"), mk("CHANGED"), mk("GONE")];
+    const after = [mk("KEEP"), mk("CHANGED", { type: "heading" }), mk("NEW")];
+    expect(writtenIds(before, after).sort()).toEqual([
+      "CHANGED",
+      "GONE",
+      "NEW",
+    ]);
+  });
+
+  test("a row present on both sides with no column changed is not written", () => {
+    const rows = [mk("A"), mk("B")];
+    expect(writtenIds(rows, rows)).toEqual([]);
+    // …and the row order between the two sides is irrelevant (matching is by id).
+    expect(writtenIds(rows, [rows[1]!, rows[0]!])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// One definition of "changed".
+//
+// `writtenIds` and `changedFields` read the same private per-column table, and
+// this is the backstop for that: the ids one reports and the field set the other
+// reports must agree on every pair of rows, or the overlay's target set and the
+// patch it dispatches would be derived from two different notions of a write —
+// most easily on `data`, whose comparison is a deep walk rather than `!==`.
+// ---------------------------------------------------------------------------
+
+// Deterministic PRNG (mulberry32) so a fuzz failure is reproducible from its
+// seed. Same generator as `block-ops.test.ts`.
+function rng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** One random row of id `A`, varying every persisted column (nested `data` included). */
+function fuzzRow(rand: () => number): Block {
+  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rand() * xs.length)]!;
+  const datas: unknown[] = [
+    { text: [] },
+    { text: [{ text: "hi" }] },
+    { text: [{ text: "hi", marks: ["bold"] }] },
+    { text: [{ text: "hi" }, { text: "there" }] },
+    { text: [{ text: "there" }, { text: "hi" }] }, // same runs, other order
+    { text: "hi" }, // the legacy string projection
+    { checked: true, text: [] },
+    { checked: false, text: [] },
+    { text: [], icon: { color: "red", nodes: [{ tag: "path" }] } },
+    { text: [], icon: { nodes: [{ tag: "path" }], color: "red" } }, // key order only
+    { text: [], meta: null },
+    {},
+    null,
+  ];
+  return mk("A", {
+    parentId: pick([null, "P1", "P2"]),
+    type: pick(["text", "heading", "callout"]),
+    rank: pick([r(0), r(1), r(2)]),
+    expanded: pick([true, false]),
+    data: pick(datas),
+  });
+}
+
+describe("writtenIds ⟺ changedFields", () => {
+  test("a row is written iff some field changed (~2000 fuzzed pairs)", () => {
+    for (let seed = 1; seed <= 2000; seed++) {
+      const rand = rng(seed);
+      const before = fuzzRow(rand);
+      const after = fuzzRow(rand);
+      const written = writtenIds([before], [after]).length > 0;
+      const changed = Object.keys(changedFields(before, after)).length > 0;
+      if (written !== changed) {
+        throw new Error(
+          `seed ${seed}: writtenIds says ${written}, changedFields says ${changed}\n` +
+            `before=${JSON.stringify(before.data)} after=${JSON.stringify(after.data)}`,
+        );
+      }
+    }
+  });
+});
+
 describe("patchesFromDiff", () => {
   // THE reason this shape exists: a writer that changes one field must not
   // author the others. The projection writing `data.text` while a conversion
   // is in flight used to restate `type` and undo the user's conversion.
   test("a single-field change emits ONLY that field, in both directions", () => {
     const before = [mk("A", { type: "callout", data: { text: [] } })];
-    const after = [mk("A", { type: "callout", data: { text: [{ text: "hi" }] } })];
+    const after = [
+      mk("A", { type: "callout", data: { text: [{ text: "hi" }] } }),
+    ];
     const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
 
     expect(redo.creates).toEqual([]);
@@ -99,7 +222,9 @@ describe("patchesFromDiff", () => {
     ]);
     // The undo inverts EXACTLY the same field set — never the whole row, so it
     // cannot restate `type` either.
-    expect(undo.updates).toEqual([{ id: "A", changes: { data: { text: [] } } }]);
+    expect(undo.updates).toEqual([
+      { id: "A", changes: { data: { text: [] } } },
+    ]);
     expect(Object.keys(undo.updates[0]!.changes)).toEqual(["data"]);
   });
 
@@ -108,7 +233,10 @@ describe("patchesFromDiff", () => {
     const after = [mk("A", { type: "toggle", expanded: false, rank: r(1) })];
     const { redo, undo } = patchesFromDiff(diffBlocks(before, after));
 
-    expect(redo.updates[0]!.changes).toEqual({ type: "toggle", expanded: false });
+    expect(redo.updates[0]!.changes).toEqual({
+      type: "toggle",
+      expanded: false,
+    });
     expect(undo.updates[0]!.changes).toEqual({ type: "text", expanded: true });
     // `rank` never changed, so neither direction claims it.
     expect(namesField(undo.updates[0]!.changes, "rank")).toBe(false);

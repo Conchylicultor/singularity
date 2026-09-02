@@ -199,6 +199,10 @@ test an omission on the **older** side makes it pass when it should fail. Refusi
 costs nothing: the inverse pair is patch/patch, and `optimistic-block-ops.test.ts:695`
 already pins that the pair shares its full id set.
 
+*(Amended 2026-09-02: `opBlockIds` is now `opNamedIds`, and a structural op's target set
+is no longer built from it alone. The guard still stays — see the amendment at the end of
+this section.)*
+
 This also dissolves the ack-scoping worry: with a true subset, A's rows = A's declared
 rows ⊆ B's declared rows ⊆ B's actually-written rows, so the ack claim covers them —
 scoped deltas included, no FULL-frame precondition.
@@ -209,15 +213,38 @@ watermark-carrying frame arrives, which `page-blocks` emits on every value-chang
 push. Absorption only shortens that wait, and it costs a second consumer-supplied
 relation on the public args. Revisit if deferral measurably fails.
 
-**If it is ever taken up**, the comment at `optimistic-block-ops.ts:91-98` must carry
-*both* statements: under-approximation is safe for the symmetric `sameTarget`
+**If it is ever taken up**, the doc comment on `overlayOpTargets` must carry *both*
+statements: a target set that is not exact is safe for the symmetric `sameTarget`
 (monotone toward less cascading) and dangerous for `covers`'s **older** argument
 (monotone toward more absorption, on rows nothing vouches for). One statement without
-the other is how the old claim gets carried across. A constructible instance of the
-danger: A = split of P minting N and adopting P's children `C1..Ck` (real rows
-`{P,N,C1..Ck}`, declared `{P,N}`); B = a `bulkMove` naming exactly `{P,N}`. A naive
-`covers(B,A)` passes and the adoption is discarded — the children render at their
-pre-split parent. The `older.tag !== "patch"` guard is what makes that unspellable.
+the other is how the old claim gets carried across.
+
+**Amended 2026-09-02.** A structural op's target set is now the union of what the reducer
+measurably wrote and what the op names
+([`research/2026-09-02-page-overlay-ops-declare-rows-they-write.md`](2026-09-02-page-overlay-ops-declare-rows-they-write.md)),
+so it is no longer an under-approximation by construction. The objection to absorbing it
+changed shape rather than going away: the set is exact only against the base the op was
+**predicted** on, which need not be the base it replays against. The counterexample this
+section originally carried — A = split of `P` minting `N` and adopting `P`'s visible
+children while declaring only `{P, N}` — therefore no longer constructs, because a
+split's adopted children are in the set now. One that still does:
+
+- A = split of a **collapsed** `P`, minting `N`. Nothing is adopted at dispatch, so A's
+  set is `⊇ {P, N}` and names no child.
+- B = a `bulkMove` naming exactly `{P, N}`.
+- An expand lands between A's dispatch and A's replay, so A's replay adopts
+  `C1..Ck` after all.
+
+A naive `covers(B, A)` passes, A is absorbed, and the adoption is discarded — the
+children render at their pre-split parent. The `older.tag !== "patch"` guard is still what
+makes that unspellable.
+
+While here: "only a patch's target set is exact" is a **provenance** argument, not a shape
+one, and reading it as a shape one is how it would get generalised wrongly. `applyPatch`
+and the server writer both cascade `deleteIds` to descendants, while the target set names
+only the ids the patch itself lists. The claim holds because every patch in the wild comes
+from `patchesFromDiff(diffBlocks(before, after))`, whose `deletedIds` is already the
+post-cascade set. A hand-built patch deleting a subtree root would break it.
 
 Blocking needs none of that: over-blocking only defers, so intersection is the correct
 — and conservative — relation.
@@ -294,6 +321,17 @@ either — and it is narrow (needs the unnamed side effect, a stale-but-plausibl
 snapshot, and conflicting effects on one row). The right fix is at a better rung:
 widen `overlayOpTargets` to name the rows an op really writes. Filed as a follow-up.
 
+**Closed 2026-09-02.** An overlay op's target set is now the union of what the reducer
+measurably wrote (a before/after diff over the op's own predicted output) and what the op
+names, built once per dispatch by `predictOp`:
+[`research/2026-09-02-page-overlay-ops-declare-rows-they-write.md`](2026-09-02-page-overlay-ops-declare-rows-they-write.md).
+The shape above — A = `merge` rewriting an unnamed row T, B = a patch on T — now registers
+as same-target, so B waits for A. What remains is narrower: the set is frozen at DISPATCH,
+against the base the op was predicted on, so at replay the rows the op really writes can be
+a strict superset (adoption from a racing expand, `prevVisibleLine` resolving elsewhere, a
+cascade that grew). That bound is inherent — `sameTarget(a, b)` sees only the two ops,
+never a base, and blocking must be decided before the replay that would measure it.
+
 ## Verification
 
 1. `./singularity test plugins/primitives/plugins/optimistic-mutation` — new
@@ -338,8 +376,10 @@ widen `overlayOpTargets` to name the rows an op really writes. Filed as a follow
 
 ## Follow-ups (file as tasks, not part of this change)
 
-1. **Widen `overlayOpTargets` to name the rows an op really writes** (merge's rewritten
-   target, split's adopted children), closing the accepted residue above.
+1. ~~**Widen `overlayOpTargets` to name the rows an op really writes** (merge's rewritten
+   target, split's adopted children), closing the accepted residue above.~~ **Done
+   2026-09-02** —
+   [`research/2026-09-02-page-overlay-ops-declare-rows-they-write.md`](2026-09-02-page-overlay-ops-declare-rows-they-write.md).
 2. **Browser log ingress is unaccounted during duress.** `POST /api/logs/emit` hard-429s
    while the latch is set (`log-channels/server/internal/handle-emit.ts:12`), so
    browser-emitted channels — `live-state.jsonl` among them — thin out for the whole

@@ -13,7 +13,10 @@
 // Pure module (no React): unit-tested directly in `composition.test.ts`.
 
 import { PAGE_BLOCK_TYPE, type BlockOp, type BlockPatch } from "../../core";
-import type { BlockOverlayOp } from "./optimistic-block-ops";
+import {
+  narrowDeleteOverlayOp,
+  type BlockOverlayOp,
+} from "./optimistic-block-ops";
 
 /**
  * The pages a composite editor subscribes to: `mountedPageId → anchorBlockId`,
@@ -88,7 +91,8 @@ export function deriveMounts(
       if (!row.expanded) continue;
       let target: string | null = null;
       if (row.type === PAGE_BLOCK_TYPE) target = row.id;
-      else if (row.type === PAGE_LINK_BLOCK_TYPE) target = linkTargetPageId(row.data);
+      else if (row.type === PAGE_LINK_BLOCK_TYPE)
+        target = linkTargetPageId(row.data);
       if (target === null || mounts.has(target)) continue;
       mounts.set(target, row.id);
       queue.push(target);
@@ -128,7 +132,8 @@ export function remapUnionParents<T extends { parentId: string | null }>(
   let changed = false;
   const next: T[] = [];
   for (const row of rows) {
-    const anchorId = row.parentId === null ? undefined : anchorByPage.get(row.parentId);
+    const anchorId =
+      row.parentId === null ? undefined : anchorByPage.get(row.parentId);
     if (anchorId === undefined) {
       next.push(row);
     } else {
@@ -185,7 +190,10 @@ export function groupIdsByOwnerPage(
  * v1 mixed-page bulk guard — fail loudly rather than half-apply) or when any id
  * is unknown.
  */
-export function singleOwnerPage(rows: readonly UnionRow[], ids: readonly string[]): string {
+export function singleOwnerPage(
+  rows: readonly UnionRow[],
+  ids: readonly string[],
+): string {
   const groups = groupIdsByOwnerPage(rows, ids);
   if (groups.size !== 1) {
     throw new Error(
@@ -219,7 +227,8 @@ export function insertOwnerPage(
   const parent = rows.find((r) => r.id === parentId);
   if (!parent) return parentId;
   if (parent.type === PAGE_BLOCK_TYPE) return parent.id;
-  if (parent.pageId === null) throw new Error(`Block ${parentId} has no owning page`);
+  if (parent.pageId === null)
+    throw new Error(`Block ${parentId} has no owning page`);
   return parent.pageId;
 }
 
@@ -273,7 +282,10 @@ export function resolveOpOwnerPage(
       // selection roots: the single-page rule over them is byte-for-byte the
       // cross-page refusal the routed `bulkDuplicate` used to apply at the store
       // seam (same helper, same message).
-      return singleOwnerPage(rows, op.placements.map((p) => p.afterId));
+      return singleOwnerPage(
+        rows,
+        op.placements.map((p) => p.afterId),
+      );
   }
 }
 
@@ -300,14 +312,7 @@ export function splitOpByOwnerPage(
     if (groups.size > 1) {
       return [...groups].map(([owner, blockIds]) => ({
         owner,
-        v: {
-          tag: "op",
-          op: { kind: "delete", blockIds },
-          // The effect is exactly `buildOverlayOp`'s for this kind, narrowed to
-          // the group — so a split op is indistinguishable from one dispatched
-          // for that page alone.
-          effect: { kind: "remove", ids: blockIds },
-        },
+        v: narrowDeleteOverlayOp(v, blockIds),
       }));
     }
   }
@@ -377,7 +382,8 @@ export function translatePatchForStore(
   let changed = false;
   const creates: BlockPatch["creates"] = [];
   for (const create of patch.creates) {
-    const real = create.parentId === null ? undefined : anchorPages.get(create.parentId);
+    const real =
+      create.parentId === null ? undefined : anchorPages.get(create.parentId);
     if (real === undefined) {
       creates.push(create);
       continue;
@@ -442,5 +448,10 @@ export function translateOpForStore(
     }
     if (movesChanged) effect = { ...effect, moves };
   }
-  return op === v.op && effect === v.effect ? v : { tag: "op", op, effect };
+  // `targets` rides through untouched: it holds BLOCK ids, and only `parentId`
+  // values are anchor-translated — a block id means the same row in union space
+  // and in its owning store's space.
+  return op === v.op && effect === v.effect
+    ? v
+    : { tag: "op", op, effect, targets: v.targets };
 }

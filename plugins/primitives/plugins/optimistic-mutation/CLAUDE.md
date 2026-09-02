@@ -327,8 +327,17 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
   - **Coverage is exactly as good as `sameTarget` is accurate.** An
     under-approximating relation means less *blocking*, so two ops that really do
     interact in the fold may not register as same-target and one can leave early.
-    Accepted residue; the fix is at a better rung — make `sameTarget` name the
-    rows an op really writes.
+    That statement holds for any consumer, and the fix is the consumer's: make
+    `sameTarget` name the rows an op really writes. The page editor did so on
+    2026-09-02 — its relation is now the union of what the reducer measurably
+    wrote (a before/after diff over the op's own predicted output) and what the
+    op names, so a merge's unnamed target row and a split's adopted children are
+    covered. What remains there is that the measurement is taken at dispatch,
+    not at replay: a different base at replay can make the real write set a
+    strict superset. `overlayOpTargets`' doc comment in
+    `page/editor/web/internal/optimistic-block-ops.ts` is the detailed
+    statement; the design is
+    `research/2026-09-02-page-overlay-ops-declare-rows-they-write.md`.
 
   It closes the stuck-inverse-pair hazard the cascade existed for (undo "delete
   X", redo "restore X" dispatched before the deletion's push: every later
@@ -360,11 +369,27 @@ const { data, serverData, pending, dispatch, pendingOps, saving, failed, retry }
 - **Absorbing through the ack door** instead of blocking (when B is
   ack-confirmed and orders after A, drop A with it). Deferred, not unsound in
   principle — but it needs a **subset** relation, not `sameTarget`'s
-  intersection, or it discards A's effect on rows B never wrote. The
-  fail-closed `coversOverlayTarget` sketch (only a patch may be absorbed, since
-  only a patch's target set is exact) is in the research doc. It only shortens a
-  wait the rule already renders correctly through, so revisit it only if
-  deferral measurably fails.
+  intersection, or it discards A's effect on rows B never wrote. The fail-closed
+  `coversOverlayTarget` sketch (only a patch may be absorbed) is in the research
+  doc. It only shortens a wait the rule already renders correctly through, so
+  revisit it only if deferral measurably fails.
+
+  The objection to absorbing a structural op has **changed shape, not gone
+  away**. It used to be that such an op's target set is an under-approximation
+  *by construction*. Now the page editor measures the rows its ops write, so the
+  set is exact — but only against the base the op was predicted on, which need
+  not be the base it replays against. A symmetric intersection stays sound
+  either way, because an over-match only defers a departure; a subset test does
+  not. So the sketch's `older.tag !== "patch"` guard stays.
+
+  And the guard's own reason — "only a patch's target set is exact" — is a
+  **provenance** argument rather than a shape one, which is worth recording
+  before someone reads it as the latter. `applyPatch` and the server writer both
+  cascade `deleteIds` to descendants, while the target set names only the ids
+  the patch itself lists. The claim holds today only because every patch in the
+  wild comes from `patchesFromDiff(diffBlocks(before, after))`, whose
+  `deletedIds` is already the post-cascade set. A hand-built patch deleting a
+  subtree root would break it.
 
 ## Where the logic lives
 

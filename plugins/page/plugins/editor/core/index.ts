@@ -47,7 +47,7 @@ export {
   childrenOf,
   inDocumentOrder,
   toNodes,
-  opBlockIds,
+  opNamedIds,
   pasteAnchorId,
   blockSelectionRoots,
   withContainersSelected,
@@ -70,6 +70,7 @@ export {
   dataEqual,
   namesField,
   diffBlocks,
+  writtenIds,
   patchesFromDiff,
   isEmptyPatch,
 } from "./block-diff";

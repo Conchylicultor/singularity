@@ -11,7 +11,12 @@
 
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { PAGE_BLOCK_TYPE, type Block, type BlockOp, type BlockPatch } from "../../core";
+import {
+  PAGE_BLOCK_TYPE,
+  type Block,
+  type BlockOp,
+  type BlockPatch,
+} from "../../core";
 import type { BlockOverlayOp } from "./optimistic-block-ops";
 import {
   deriveMounts,
@@ -23,6 +28,7 @@ import {
   resolveOpOwnerPage,
   rowOwnerPage,
   singleOwnerPage,
+  splitOpByOwnerPage,
   translateOpForStore,
   translatePatchForStore,
   translateUnionParentId,
@@ -45,7 +51,10 @@ function frow(
 
 /** An expanded sub-page shell row inside a container feed. */
 function shell(id: string, opts: { expanded?: boolean } = {}): MountSourceRow {
-  return frow(id, PAGE_BLOCK_TYPE, { expanded: opts.expanded ?? true, data: { title: id } });
+  return frow(id, PAGE_BLOCK_TYPE, {
+    expanded: opts.expanded ?? true,
+    data: { title: id },
+  });
 }
 
 /** An expanded page-link row targeting `pageId`. */
@@ -54,7 +63,10 @@ function link(
   pageId: string,
   opts: { expanded?: boolean } = {},
 ): MountSourceRow {
-  return frow(id, "page-link", { expanded: opts.expanded ?? true, data: { pageId } });
+  return frow(id, "page-link", {
+    expanded: opts.expanded ?? true,
+    data: { pageId },
+  });
 }
 
 function feeds(
@@ -129,7 +141,12 @@ describe("deriveMounts", () => {
     // child-a is mounted off the base feed, but its own feed has not published:
     // its expansions appear on its first push, not before.
     const m = deriveMounts(BASE, feeds({ [BASE]: [shell("child-a")] }));
-    expect(m).toEqual(new Map([[BASE, BASE], ["child-a", "child-a"]]));
+    expect(m).toEqual(
+      new Map([
+        [BASE, BASE],
+        ["child-a", "child-a"],
+      ]),
+    );
   });
 
   test("page-link rows produce translated mounts anchored on the link row", () => {
@@ -228,7 +245,9 @@ describe("owner resolution", () => {
   });
 
   test("rowOwnerPage throws on an id absent from the union", () => {
-    expect(() => rowOwnerPage(unionRows, "ghost")).toThrow(/not in the composed document/);
+    expect(() => rowOwnerPage(unionRows, "ghost")).toThrow(
+      /not in the composed document/,
+    );
   });
 
   test("groupIdsByOwnerPage groups per page, preserving id order", () => {
@@ -242,7 +261,9 @@ describe("owner resolution", () => {
 
   test("singleOwnerPage throws on a mixed-page set (bulk guard)", () => {
     expect(singleOwnerPage(unionRows, ["a1", "a2"])).toBe("shell-a");
-    expect(() => singleOwnerPage(unionRows, ["t1", "a1"])).toThrow(/spans 2 pages/);
+    expect(() => singleOwnerPage(unionRows, ["t1", "a1"])).toThrow(
+      /spans 2 pages/,
+    );
   });
 
   test("insertOwnerPage: null → base; shell parent → the shell's own page", () => {
@@ -255,22 +276,33 @@ describe("owner resolution", () => {
   });
 
   test("insertOwnerPage: a translated anchor resolves to the mounted page", () => {
-    const rows = [...unionRows, mk("link-1", BASE, "t1", { type: "page-link" })];
-    expect(insertOwnerPage(rows, "link-1", mounts(["page-p", "link-1"]), BASE)).toBe("page-p");
+    const rows = [
+      ...unionRows,
+      mk("link-1", BASE, "t1", { type: "page-link" }),
+    ];
+    expect(
+      insertOwnerPage(rows, "link-1", mounts(["page-p", "link-1"]), BASE),
+    ).toBe("page-p");
   });
 
   test("resolveOpOwnerPage routes each op kind through its target", () => {
     const m = mounts(["shell-a", "shell-a"]);
     const owner = (op: BlockOp) => resolveOpOwnerPage(unionRows, op, m, BASE);
-    expect(owner({ kind: "split", blockId: "a1", position: 0, newId: "n1" })).toBe("shell-a");
+    expect(
+      owner({ kind: "split", blockId: "a1", position: 0, newId: "n1" }),
+    ).toBe("shell-a");
     expect(owner({ kind: "merge", blockId: "a2" })).toBe("shell-a");
     expect(owner({ kind: "delete", blockIds: ["shell-a"] })).toBe(BASE);
     expect(owner({ kind: "indent", blockIds: ["a1", "a2"] })).toBe("shell-a");
-    expect(owner({ kind: "insert", newId: "n1", type: "text", afterId: "a1" })).toBe("shell-a");
-    expect(owner({ kind: "insert", newId: "n1", type: "text", parentId: "shell-a" })).toBe(
-      "shell-a",
+    expect(
+      owner({ kind: "insert", newId: "n1", type: "text", afterId: "a1" }),
+    ).toBe("shell-a");
+    expect(
+      owner({ kind: "insert", newId: "n1", type: "text", parentId: "shell-a" }),
+    ).toBe("shell-a");
+    expect(() => owner({ kind: "outdent", blockIds: ["t1", "a1"] })).toThrow(
+      /spans 2 pages/,
     );
-    expect(() => owner({ kind: "outdent", blockIds: ["t1", "a1"] })).toThrow(/spans 2 pages/);
   });
 });
 
@@ -280,7 +312,8 @@ describe("owner resolution", () => {
 
 describe("groupPatchByOwnerPage", () => {
   const ownerOf = (id: string) =>
-    unionRows.find((r) => r.id === id)?.pageId ?? (id === "gone-a" ? "shell-a" : null);
+    unionRows.find((r) => r.id === id)?.pageId ??
+    (id === "gone-a" ? "shell-a" : null);
 
   test("groups creates by their own pageId; updates + deletes via the lookup", () => {
     const patch: BlockPatch = {
@@ -323,11 +356,18 @@ describe("groupPatchByOwnerPage", () => {
 
   test("an unresolvable id throws (never silently dropped)", () => {
     expect(() =>
-      groupPatchByOwnerPage({ creates: [], updates: [], deleteIds: ["ghost"] }, ownerOf),
+      groupPatchByOwnerPage(
+        { creates: [], updates: [], deleteIds: ["ghost"] },
+        ownerOf,
+      ),
     ).toThrow(/Cannot resolve the owning page/);
     expect(() =>
       groupPatchByOwnerPage(
-        { creates: [], updates: [{ id: "ghost", changes: { expanded: true } }], deleteIds: [] },
+        {
+          creates: [],
+          updates: [{ id: "ghost", changes: { expanded: true } }],
+          deleteIds: [],
+        },
         ownerOf,
       ),
     ).toThrow(/Cannot resolve the owning page/);
@@ -348,7 +388,10 @@ describe("translatePatchForStore", () => {
     };
     const out = translatePatchForStore(patch, anchors);
     expect(out.creates.map((u) => u.parentId)).toEqual(["page-p", BASE]);
-    expect(out.updates.map((u) => u.changes.parentId)).toEqual(["page-p", BASE]);
+    expect(out.updates.map((u) => u.changes.parentId)).toEqual([
+      "page-p",
+      BASE,
+    ]);
     expect(out.deleteIds).toEqual(["x"]);
   });
 
@@ -363,6 +406,55 @@ describe("translatePatchForStore", () => {
   });
 });
 
+describe("splitOpByOwnerPage", () => {
+  const m = mounts(["shell-a", "shell-a"]);
+
+  // A cross-page delete is the ONE kind that fans out, and each per-page op
+  // carries the WHOLE gesture's target set rather than its own slice. That is
+  // deliberate: the set is union-space, so a per-page op legitimately holds ids
+  // belonging to another page, and the worst a foreign id can do is match
+  // another op in this page's pending list — which only makes a departure WAIT.
+  test("a cross-page delete fans out per owner, each op carrying the whole gesture's targets", () => {
+    const targets: ReadonlySet<string> = new Set(["t1", "a1", "a2"]);
+    const v: Extract<BlockOverlayOp, { tag: "op" }> = {
+      tag: "op",
+      op: { kind: "delete", blockIds: ["t1", "a1"] },
+      effect: { kind: "remove", ids: ["t1", "a1"] },
+      targets,
+    };
+    const out = splitOpByOwnerPage(unionRows, v, m, BASE);
+
+    expect(out.map((o) => o.owner)).toEqual([BASE, "shell-a"]);
+    for (const { v: fanned } of out) {
+      expect(fanned.tag).toBe("op");
+      if (fanned.tag !== "op") throw new Error("expected op variant");
+      // Same SET, by reference: carried through whole, never narrowed.
+      expect(fanned.targets).toBe(targets);
+    }
+    const [base, sub] = out;
+    expect(base!.v.tag === "op" && base!.v.op).toEqual({
+      kind: "delete",
+      blockIds: ["t1"],
+    });
+    expect(sub!.v.tag === "op" && sub!.v.effect).toEqual({
+      kind: "remove",
+      ids: ["a1"],
+    });
+  });
+
+  test("a single-page op is routed whole — the same reference, targets included", () => {
+    const v: Extract<BlockOverlayOp, { tag: "op" }> = {
+      tag: "op",
+      op: { kind: "delete", blockIds: ["a1", "a2"] },
+      effect: { kind: "remove", ids: ["a1", "a2"] },
+      targets: new Set(["a1", "a2"]),
+    };
+    const out = splitOpByOwnerPage(unionRows, v, m, BASE);
+    expect(out).toEqual([{ owner: "shell-a", v }]);
+    expect(out[0]!.v).toBe(v);
+  });
+});
+
 describe("translateOpForStore", () => {
   const m = mounts(["page-p", "link-1"]);
 
@@ -371,16 +463,23 @@ describe("translateOpForStore", () => {
       tag: "op",
       op: { kind: "insert", newId: "n1", type: "text", parentId: "link-1" },
       effect: { kind: "create", ids: ["n1"] },
+      targets: new Set(["n1"]),
     };
     const outInsert = translateOpForStore(insert, m);
-    expect(outInsert.tag === "op" && outInsert.op.kind === "insert" && outInsert.op.parentId).toBe(
-      "page-p",
-    );
+    expect(
+      outInsert.tag === "op" &&
+        outInsert.op.kind === "insert" &&
+        outInsert.op.parentId,
+    ).toBe("page-p");
 
     const reparent: BlockOverlayOp = {
       tag: "op",
       op: { kind: "outdent", blockIds: ["p-nested"] },
-      effect: { kind: "reparent", moves: [{ id: "p-nested", parentId: "link-1", rank: "a1" }] },
+      effect: {
+        kind: "reparent",
+        moves: [{ id: "p-nested", parentId: "link-1", rank: "a1" }],
+      },
+      targets: new Set(["p-nested"]),
     };
     const outReparent = translateOpForStore(reparent, m);
     expect(
@@ -390,14 +489,51 @@ describe("translateOpForStore", () => {
     ).toBe("page-p");
   });
 
+  // Only PARENT ids live in anchor space. `targets` holds BLOCK ids, which mean
+  // the same row in union space and in the owning store's space — so the
+  // translation must rewrite the move's `parentId` and leave the set exactly as
+  // it found it, even when the set happens to contain the anchor's own id (the
+  // link row IS a real block).
+  test("targets ride through untouched while the reparent effect IS rewritten", () => {
+    const targets: ReadonlySet<string> = new Set(["p-nested", "link-1"]);
+    const v: BlockOverlayOp = {
+      tag: "op",
+      op: { kind: "outdent", blockIds: ["p-nested"] },
+      effect: {
+        kind: "reparent",
+        moves: [{ id: "p-nested", parentId: "link-1", rank: "a1" }],
+      },
+      targets,
+    };
+    const out = translateOpForStore(v, m);
+    if (out.tag !== "op" || out.effect.kind !== "reparent") {
+      throw new Error("expected a reparent op");
+    }
+    // The parent anchor was translated…
+    expect(out.effect.moves[0]!.parentId).toBe("page-p");
+    // …and the block ids were not: same set, same reference.
+    expect(out.targets).toBe(targets);
+    expect([...out.targets].sort()).toEqual(["link-1", "p-nested"]);
+  });
+
   test("patch tag delegates to the patch translation (cumulative anchors win)", () => {
     const patch: BlockOverlayOp = {
       tag: "patch",
-      patch: { creates: [mk("p-top", "page-p", "old-link")], updates: [], deleteIds: [] },
+      patch: {
+        creates: [mk("p-top", "page-p", "old-link")],
+        updates: [],
+        deleteIds: [],
+      },
     };
     // `old-link` is no longer a mounted anchor; the cumulative map resolves it.
-    const out = translateOpForStore(patch, m, new Map([["old-link", "page-p"]]));
-    expect(out.tag === "patch" && out.patch.creates[0]!.parentId).toBe("page-p");
+    const out = translateOpForStore(
+      patch,
+      m,
+      new Map([["old-link", "page-p"]]),
+    );
+    expect(out.tag === "patch" && out.patch.creates[0]!.parentId).toBe(
+      "page-p",
+    );
   });
 
   test("identity — the same reference — when no translated anchor is named", () => {
@@ -405,6 +541,7 @@ describe("translateOpForStore", () => {
       tag: "op",
       op: { kind: "merge", blockId: "a2" },
       effect: { kind: "remove", ids: ["a2"] },
+      targets: new Set(["a1", "a2"]),
     };
     expect(translateOpForStore(v, m)).toBe(v);
     expect(translateOpForStore(v, mounts(["shell-a", "shell-a"]))).toBe(v);

@@ -21,7 +21,6 @@ import {
   nextVisibleLine,
   runsOfNode,
   runsLength,
-  applyBlockOp,
   blockSelectionRoots,
   childrenOf,
   diffBlocks,
@@ -36,7 +35,6 @@ import {
   type Block,
   type BlockNode,
   type BlockOp,
-  type BlockOpContext,
   type BlockPatch,
   type RichText,
   type RowData,
@@ -53,10 +51,9 @@ import {
 } from "./internal/collab-session";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import {
-  buildOverlayOp,
   buildPatchOverlayOp,
+  predictOp,
   toNodes,
-  fromNodes,
 } from "./internal/optimistic-block-ops";
 import { serializeForest } from "./serialize-blocks";
 import { landCaret } from "./internal/caret-landing";
@@ -127,15 +124,6 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
       // container). There is no "block the user is on" to restore.
       return null;
   }
-}
-
-/** Run the pure reducer over full rows and project back to `Block[]`. */
-function fromOpResult(
-  before: Block[],
-  op: BlockOp,
-  ctx: BlockOpContext,
-): Block[] {
-  return fromNodes(applyBlockOp(toNodes(before), op, ctx), before);
 }
 
 /**
@@ -1175,20 +1163,14 @@ export function BlockEditorProviderInner({
   const dispatchOp = useCallback(
     (op: BlockOp) => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op, opCtx);
+      const { after, written, vars } = predictOp(op, before, opCtx);
       // An op the reducer fully refused (Tab on a first child, Shift+Tab at top
-      // level, a bulk indent whose whole run is blocked) changes nothing. Drop it
+      // level, a bulk indent whose whole run is blocked) wrote no row. Drop it
       // here rather than dispatching: an empty-effect overlay would read as
       // already-absorbed to the apply-guard, and an empty patch pair would put a
-      // do-nothing entry on the undo stack.
-      const diff = diffBlocks(before, after);
-      if (
-        diff.inserted.length === 0 &&
-        diff.updated.length === 0 &&
-        diff.deleted.length === 0
-      ) {
-        return;
-      }
+      // do-nothing entry on the undo stack. `written`, not `vars.targets`: the
+      // latter also carries the rows the op merely NAMES, so it is never empty.
+      if (written.length === 0) return;
       advanceRows(after);
       recordStructural(
         before,
@@ -1196,7 +1178,7 @@ export function BlockEditorProviderInner({
         OP_LABELS[op.kind],
         opFocusId(op, before),
       );
-      store.dispatch(buildOverlayOp(op, before, opCtx));
+      store.dispatch(vars);
     },
     [store, recordStructural, opCtx, advanceRows],
   );
@@ -1358,9 +1340,9 @@ export function BlockEditorProviderInner({
   const applyOverlay = useCallback(
     (op: BlockOp): { before: Block[]; after: Block[] } => {
       const before = rowsRef.current;
-      const after = fromOpResult(before, op, opCtx);
+      const { after, vars } = predictOp(op, before, opCtx);
       advanceRows(after);
-      store.dispatch(buildOverlayOp(op, before, opCtx));
+      store.dispatch(vars);
       return { before, after };
     },
     [store, opCtx, advanceRows],
@@ -1524,7 +1506,7 @@ export function BlockEditorProviderInner({
         // `applyOverlay`) precisely because its ordering is deferred.
         const append = targetHandle.appendRunsAtEnd;
         const before = rowsRef.current;
-        const after = fromOpResult(before, op, opCtx);
+        const { after, vars } = predictOp(op, before, opCtx);
         queueMicrotask(() => {
           // `captureBlockDocEdit` runs `append` synchronously (surgery uses
           // `discrete: true`), so a throw propagates out of the microtask
@@ -1532,7 +1514,7 @@ export function BlockEditorProviderInner({
           const docEdit = captureBlockDocEdit(blockDocOwnerOf(target.id), () =>
             append(mergingRuns),
           );
-          store.dispatch(buildOverlayOp(op, before, opCtx));
+          store.dispatch(vars);
           recordStructuralWithDocEdit(
             before,
             after,

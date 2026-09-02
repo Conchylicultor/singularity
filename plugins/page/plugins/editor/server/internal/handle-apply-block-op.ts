@@ -5,7 +5,6 @@ import { applyBlockOpEndpoint } from "../../core/endpoints";
 import {
   applyBlockOp,
   blockOpContextOf,
-  opBlockIds,
   type BlockNode,
   type BlockOpContext,
 } from "../../core/block-ops";
@@ -115,10 +114,10 @@ export const handleApplyBlockOp = implement(
         // page. A cross-page move is `handleMoveBlock`'s, which locks both forests
         // and does recompute.
 
-        return { before, after, write };
+        return { write };
       },
     );
-    const { before, after, write } = value;
+    const { write } = value;
 
     // Route a page-containing delete through the trash chokepoint (soft delete +
     // OnTrash hooks). Runs after the write transaction so the reducer's other
@@ -129,25 +128,10 @@ export const handleApplyBlockOp = implement(
     }
 
     // --- Notify (shared with the patch handler) --------------------------------
-    // The op's blocks lived on this page; derive a `type` from them (page vs
-    // content) so a page edit also refreshes the sidebar; default to a content
-    // type otherwise. An op can name SEVERAL blocks (a bulk indent/outdent), and a
-    // sub-page row can sit anywhere in the run — so prefer `page` over position.
-    // The shared helper notifies the content resource, emits `blocksChanged`, and
-    // fans out per emptied sub-page in the deleted subtree.
-    const touchedTypes = opBlockIds(body).flatMap((id) => {
-      const type =
-        before.find((b) => b.id === id)?.type ??
-        after.find((b) => b.id === id)?.type;
-      return type ? [type] : [];
-    });
-    const primaryType =
-      touchedTypes.find((t) => t === PAGE_BLOCK_TYPE) ??
-      touchedTypes[0] ??
-      "block";
+    // The shared helper emits `blocksChanged` for this page and fans out per
+    // emptied sub-page in the deleted subtree.
     await notifyStructuralChange({
       pageId: params.pageId,
-      primaryType,
       deletedRows: write.deletedRows,
     });
 

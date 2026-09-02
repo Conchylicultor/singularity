@@ -843,9 +843,19 @@ export function pasteAnchorId(
   return lastOf(inDocumentOrder(blocks, roots)) ?? focusedBlockId ?? null;
 }
 
-/** The ids a `BlockOp` names — its write targets. Shared by the optimistic
- *  overlay's op-identity predicate and the server's notify path. */
-export function opBlockIds(op: BlockOp): string[] {
+/**
+ * The ids a `BlockOp` NAMES — a pure function of the op, so it can only report
+ * what the op mentions. **It is never a write set.** The reducer writes rows the
+ * op says nothing about: a merge rewrites its unnamed target, a split adopts the
+ * origin's visible children, a delete cascades subtrees, an unwrap promotes them.
+ * The write set is `writtenIds(before, after)` (`core/block-diff.ts`), measured
+ * from the reducer's own output, and the overlay's `predictOp` unions the two.
+ *
+ * Both consumers want the NAMING, and both are sound with a superset: the
+ * server's notify path derives which block types a write touched, and the
+ * overlay adds these ids to the measured set (never intersects with it).
+ */
+export function opNamedIds(op: BlockOp): string[] {
   switch (op.kind) {
     case "split":
       return [op.blockId, op.newId];
@@ -853,27 +863,26 @@ export function opBlockIds(op: BlockOp): string[] {
       return [op.newId];
     case "merge":
     case "move":
-    // `unwrap` also re-ranks the promoted children, deliberately omitted here —
-    // the same documented under-approximation as split's adopted children and
-    // merge's rewritten target: less cascade-confirmation coverage, never a
-    // wrong drop.
+    // `unwrap` also re-ranks the promoted children, which the op does not name:
+    // it names the container it dissolves. The reducer's diff is what reports
+    // the promotion.
     case "unwrap":
       return [op.blockId];
     case "indent":
     case "outdent":
     case "delete":
       return op.blockIds;
-    // The selection's whole id set, not just its roots: a superset is sound for
-    // both consumers (cascade-confirmation identity, and the server's notify
-    // type derivation), and the roots are the reducer's to compute.
+    // The selection's whole id set, not just its roots: naming a block the
+    // reducer may refuse to move is sound for both consumers, and the roots are
+    // the reducer's to compute anyway.
     case "bulkMove":
       return op.ids;
     case "paste":
-      // ROOT ids only — the same deliberate under-approximation split/merge
-      // make. The whole planned forest is inserted in ONE transaction, so a
-      // root's presence already implies its descendants'; listing every node
-      // would make this (and the O(n) scans keyed off it) grow with the size
-      // of the paste for no extra confirmation power.
+      // ROOT ids only, and that is a statement about NAMING, not about coverage:
+      // the whole planned forest lands in ONE transaction, so a root names the
+      // insertion its descendants ride on. Listing every node would grow this
+      // (and the O(n) scans keyed off it) with the size of the paste; the rows
+      // the insert really wrote are `writtenIds`' answer, and it does list them.
       return op.forest.map((n) => n.id);
     case "duplicate":
       // Every placement's ROOT ids, for paste's reason: each clone's forest

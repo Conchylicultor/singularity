@@ -17,8 +17,9 @@ import {
   childrenOf,
   dataEqual,
   namesField,
-  opBlockIds,
+  opNamedIds,
   toNodes,
+  writtenIds,
   type BlockFieldChanges,
   type BlockNode,
   type BlockOp,
@@ -83,28 +84,61 @@ export type OpEffect =
  *    every update's NAMED fields have landed, and every deleted id is absent.
  */
 export type BlockOverlayOp =
-  | { tag: "op"; op: BlockOp; effect: OpEffect }
+  | {
+      tag: "op";
+      op: BlockOp;
+      effect: OpEffect;
+      /**
+       * The rows this op writes — see {@link overlayOpTargets} for what the set
+       * means and {@link predictOp} for how it is built. Stored rather than
+       * derived because deriving it needs the reducer, and a `ReadonlySet`
+       * rather than an array because `blockedByOlder` makes O(pending²)
+       * `sameOverlayTarget` calls over sets that are now exact (a paste names
+       * its whole forest). Nothing serialises `vars` — `describeOp` returns a
+       * string and the divergence report carries no raw vars — so a `Set` is
+       * safe to carry here.
+       */
+      targets: ReadonlySet<string>;
+    }
   | { tag: "patch"; patch: BlockPatch };
 
 /**
- * Block ids an overlay op writes — the op-identity basis for cascade
- * confirmation (`sameTarget` on `useOptimisticResource`). A patch touches its
- * upserted + deleted rows; a structural op touches the rows the `BlockOp`
- * names (`blockId`, and the minted `newId` for split/insert). Deliberately an
- * UNDER-approximation where an op has row side effects it doesn't name (e.g.
- * merge also rewrites the unnamed target row): missing a target only means
- * less cascading — the op survives until its own confirming push — never a
- * wrong drop.
+ * Block ids an overlay op writes — the op-identity basis for the overlay's
+ * ordering rule (`sameTarget` on `useOptimisticResource`), which makes an op
+ * WAIT while an older, still-pending, same-target op survives the pass.
+ *
+ * A patch's set is derived here and is exact from the patch itself: it is
+ * literally the rows the patch upserts and deletes, so storing it would only
+ * give it room to drift. A structural op's set was built at dispatch and is the
+ * UNION of what the reducer actually wrote (measured, {@link predictOp}) and
+ * what the op names (`opNamedIds`) — see `predictOp` for why the union rather
+ * than either half.
+ *
+ * **The residual bound, stated so it is not rediscovered as a defect.** An op's
+ * set is frozen at DISPATCH, against the base the op was predicted on. At replay
+ * the base can differ, so the set the op REALLY writes may be a strict superset:
+ * adoption that appeared because a racing expand landed, `prevVisibleLine`
+ * resolving to a different target, a cascade that grew. That gap is inherent —
+ * `sameTarget(a, b)` sees only `vars`, never a base, and blocking has to be
+ * decided before the replay that would measure it.
+ *
+ * Which is why this does **not** license an absorbing (subset) rule for
+ * structural ops. The objection has changed shape, not gone away: it used to be
+ * "an op's targets are an under-approximation BY CONSTRUCTION", and it is now
+ * "they are exact only against the base they were predicted on". A symmetric
+ * intersection is sound either way (an over-match only DEFERS a departure); a
+ * subset test is not, so the `older.tag !== "patch"` guard in the deferred
+ * `coversOverlayTarget` sketch stays.
  */
-function overlayOpTargets(v: BlockOverlayOp): string[] {
+function overlayOpTargets(v: BlockOverlayOp): ReadonlySet<string> {
   if (v.tag === "patch") {
-    return [
+    return new Set([
       ...v.patch.creates.map((b) => b.id),
       ...v.patch.updates.map((u) => u.id),
       ...v.patch.deleteIds,
-    ];
+    ]);
   }
-  return opBlockIds(v.op);
+  return v.targets;
 }
 
 /**
@@ -121,8 +155,14 @@ export function sameOverlayTarget(
   b: BlockOverlayOp,
 ): boolean {
   const aIds = overlayOpTargets(a);
-  const bIds = new Set(overlayOpTargets(b));
-  return aIds.some((id) => bIds.has(id));
+  const bIds = overlayOpTargets(b);
+  // Iterate the smaller set against the larger: this runs O(pending²) times per
+  // pass, and the sets are now exact (a paste's is its whole forest).
+  const [small, large] = aIds.size <= bIds.size ? [aIds, bIds] : [bIds, aIds];
+  for (const id of small) {
+    if (large.has(id)) return true;
+  }
+  return false;
 }
 
 /** Has `blocks` already absorbed `e`? Single predicate for guard + confirmation. */
@@ -414,103 +454,178 @@ export function applyOverlayOp(
   return fromNodes(applyBlockOp(toNodes(blocks), v.op, ctx), blocks);
 }
 
-/**
- * Build the overlay vars for a forest-insert op (`paste`, `duplicate`). Split out
- * from `buildOverlayOp` because neither needs a current-state snapshot: the
- * effect is exactly the root ids the caller just minted (`opBlockIds`' own
- * answer for both kinds), so there is nothing to predict off the rows.
- *
- * Deliberately NOT exported — it is `buildOverlayOp`'s helper and nothing else.
- * With no exported forest-overlay builder and neither op on `BlockStore`, a paste
- * or a duplicate can only reach the pipeline through the provider's `dispatchOp`,
- * which is the one place that records an undo entry. Exporting it again re-opens
- * the bypass.
- */
-function buildForestOverlayOp(
-  op: Extract<BlockOp, { kind: "paste" | "duplicate" }>,
-): BlockOverlayOp {
-  return { tag: "op", op, effect: { kind: "create", ids: opBlockIds(op) } };
-}
-
 /** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
 export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
   return { tag: "patch", patch };
 }
 
 /**
- * Build the overlay op for `op`, capturing its effect from the CURRENT
- * optimistic `rows` (post prior-pending ops) — this is what makes chained ops
- * compose. `ctx` must match what `applyOverlayOp` (and the server) use; it is
- * read here because the prediction runs the reducer.
+ * Run `op` against `before` ONCE and derive everything a dispatch needs: the
+ * predicted rows, the rows the reducer wrote, and the overlay vars.
+ *
+ * One function rather than the old `fromOpResult` + `buildOverlayOp` pair,
+ * because `after` has no parameter here: it cannot disagree with `before`, and
+ * it cannot be built with a different `ctx` than the effect was predicted under.
+ * That also costs one `applyBlockOp` run per dispatch instead of two.
+ *
+ * **`targets` is the UNION of what the reducer wrote and what the op names, and
+ * the union is load-bearing.** A pure before→after diff is SMALLER than the
+ * named set in real cases: an end-of-line split rewrites the origin's `data.text`
+ * byte-identically (so the origin is absent from the diff), a partially-refused
+ * indent moves fewer rows than it names, and a `bulkMove` names its whole
+ * selection while only the roots move. Dropping those would re-open the very
+ * hole this measurement closes — a later patch on the split origin would stop
+ * being blocked. The union is monotone: coverage never decreases against naming
+ * alone, and it gains merge's unnamed target, split's adopted children, delete's
+ * cascade, unwrap's promotion, and the ancestors a reveal opens.
+ *
+ * `written` is returned SEPARATELY from `vars.targets` precisely because the
+ * union is never empty, while `written.length === 0` is exactly "the reducer
+ * refused this op" — the test `dispatchOp` drops an op on.
+ *
+ * **`OpEffect` is built exactly as it was before this measurement existed.**
+ * Confirmation and the apply-guard keep the semantics that shipped; only the
+ * blocking relation widens. `ctx` must match what `applyOverlayOp` (and the
+ * server) use — both mint it through the shared `blockOpContextOf`.
  */
-export function buildOverlayOp(
+export function predictOp(
   op: BlockOp,
-  rows: Block[],
+  before: Block[],
   ctx: BlockOpContext = {},
-): BlockOverlayOp {
+): { after: Block[]; written: string[]; vars: BlockOverlayOp } {
+  const beforeNodes = toNodes(before);
+  const after = fromNodes(applyBlockOp(beforeNodes, op, ctx), before);
+  const written = writtenIds(before, after);
+  const targets = new Set([...written, ...opNamedIds(op)]);
+  return {
+    after,
+    written,
+    vars: {
+      tag: "op",
+      op,
+      effect: opEffect(op, before, after, beforeNodes),
+      targets,
+    },
+  };
+}
+
+/**
+ * The op's confirmation/apply-guard fingerprint, per kind, read off the
+ * before/after pair `predictOp` already holds.
+ *
+ * The forest kinds (`paste`, `duplicate`) need no prediction at all — their
+ * effect is exactly the ROOT ids the caller just minted, which is `opNamedIds`'
+ * own answer for both. They used to have a helper of their own, deliberately
+ * unexported so that a paste or a duplicate could only reach the pipeline
+ * through the provider's `dispatchOp` — the one place that records an undo
+ * entry. Folding it in here keeps that property by the same means: there is no
+ * exported forest-overlay builder, and neither kind is on `BlockStore`.
+ */
+function opEffect(
+  op: BlockOp,
+  before: Block[],
+  after: Block[],
+  beforeNodes: BlockNode[],
+): OpEffect {
   switch (op.kind) {
     case "split":
     case "insert":
       // The new block is created.
-      return { tag: "op", op, effect: { kind: "create", ids: [op.newId] } };
+      return { kind: "create", ids: [op.newId] };
     case "paste":
     case "duplicate":
-      return buildForestOverlayOp(op);
+      return { kind: "create", ids: opNamedIds(op) };
     case "merge":
-      return { tag: "op", op, effect: { kind: "remove", ids: [op.blockId] } };
+      return { kind: "remove", ids: [op.blockId] };
     case "delete":
-      return { tag: "op", op, effect: { kind: "remove", ids: op.blockIds } };
+      return { kind: "remove", ids: op.blockIds };
     case "unwrap": {
       // The container goes away AND its children are promoted, so the effect
       // carries both. The moved set is the container's CHILDREN, which the op
-      // does not name (`opBlockIds` deliberately under-approximates it), so read
-      // them off the pre-op forest.
-      const nodes = toNodes(rows);
-      const promoted = childrenOf(nodes, op.blockId).map((c) => c.id);
-      const moves = predictMoves(nodes, op, promoted, ctx);
+      // does not name, so read them off the pre-op forest.
+      const promoted = childrenOf(beforeNodes, op.blockId).map((c) => c.id);
       return {
-        tag: "op",
-        op,
-        effect: { kind: "unwrap", id: op.blockId, moves },
+        kind: "unwrap",
+        id: op.blockId,
+        moves: predictMoves(before, after, promoted),
       };
     }
     case "indent":
     case "outdent":
     case "move":
-    case "bulkMove": {
-      // Run the reducer once to read where the named blocks land, then key the
-      // reparent effect on their predicted parent + rank (byte-identical to the
-      // server, which runs the same reducer). Blocks the reducer refused to move
-      // (a bulk indent's first child, say) are left OUT of the effect: their
-      // parent+rank is unchanged, so listing them would make the apply-guard
-      // read the op as already-absorbed. A `bulkMove`'s `opBlockIds` is the whole
+    case "bulkMove":
+      // Key the reparent effect on where the named blocks landed (byte-identical
+      // to the server, which runs the same reducer). Blocks the reducer refused
+      // to move (a bulk indent's first child, say) are left OUT of the effect:
+      // their parent+rank is unchanged, so listing them would make the
+      // apply-guard read the op as already-absorbed. A `bulkMove` names its whole
       // selection, so the same filter reduces it to the roots that really moved.
-      const nodes = toNodes(rows);
-      const moves = predictMoves(nodes, op, opBlockIds(op), ctx);
-      return { tag: "op", op, effect: { kind: "reparent", moves } };
-    }
+      return {
+        kind: "reparent",
+        moves: predictMoves(before, after, opNamedIds(op)),
+      };
   }
 }
 
 /**
- * Where `ids` land once `op` is applied, as the reducer predicts it. Blocks that
- * did not actually move are omitted: their parent+rank is unchanged, so listing
- * them would make the apply-guard read the op as already-absorbed.
+ * Where `ids` landed, read off the before/after rows. Blocks that did not
+ * actually move are omitted: their parent+rank is unchanged, so listing them
+ * would make the apply-guard read the op as already-absorbed.
+ *
+ * **Both sides of the rank go through `String()`, and that is not defensive.**
+ * `PredictedMove.rank` is a string — `movedTo` compares `String(b.rank) ===
+ * m.rank` — while these rows are `Block`s, whose `rank` is a `Rank` INSTANCE.
+ * Emitting the instance would make every reparent effect unconfirmable: nothing
+ * would ever match, the op would stick in the overlay, and a `stalled`
+ * divergence report would follow. Comparing `prev.rank !== next.rank` by
+ * identity has the mirror failure — `fromNodes` mints a fresh `Rank` per row, so
+ * every named block would read as moved.
  */
 function predictMoves(
-  nodes: BlockNode[],
-  op: BlockOp,
+  before: Block[],
+  after: Block[],
   ids: readonly string[],
-  ctx: BlockOpContext,
 ): PredictedMove[] {
-  const before = new Map(nodes.map((b) => [b.id, b]));
-  const after = new Map(applyBlockOp(nodes, op, ctx).map((b) => [b.id, b]));
+  const beforeById = new Map(before.map((b) => [b.id, b]));
+  const afterById = new Map(after.map((b) => [b.id, b]));
   return ids.flatMap((id) => {
-    const next = after.get(id);
-    const prev = before.get(id);
+    const next = afterById.get(id);
+    const prev = beforeById.get(id);
     if (!next) return []; // vanished after apply (defensive; shouldn't happen)
-    if (prev && prev.parentId === next.parentId && prev.rank === next.rank)
+    if (
+      prev &&
+      prev.parentId === next.parentId &&
+      String(prev.rank) === String(next.rank)
+    ) {
       return [];
-    return [{ id, parentId: next.parentId, rank: next.rank }];
+    }
+    return [{ id, parentId: next.parentId, rank: String(next.rank) }];
   });
+}
+
+/**
+ * Narrow a predicted `delete` to `blockIds` — the ONE constructor for a
+ * `{tag:"op"}` value that is not a fresh prediction, so the composite's
+ * per-owner-page fan-out never spells the literal (and can never omit
+ * `targets`). The effect is byte-identical to what {@link predictOp} builds for
+ * this kind, so a fanned-out op is indistinguishable from one dispatched for
+ * that page alone.
+ *
+ * `targets` is carried through WHOLE rather than narrowed. It is the union-space
+ * set of the entire gesture, so a per-page op holds ids belonging to another
+ * page — and the worst that can do is match another op in THIS page's pending
+ * list that also names a foreign id. A spurious match only DEFERS a departure
+ * (the ordering rule makes an op wait; it never drops one), so widening here
+ * costs at most one extra pass, never an edit.
+ */
+export function narrowDeleteOverlayOp(
+  v: Extract<BlockOverlayOp, { tag: "op" }>,
+  blockIds: string[],
+): BlockOverlayOp {
+  return {
+    tag: "op",
+    op: { kind: "delete", blockIds },
+    effect: { kind: "remove", ids: blockIds },
+    targets: v.targets,
+  };
 }

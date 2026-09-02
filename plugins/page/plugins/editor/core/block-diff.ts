@@ -70,7 +70,9 @@ export const BlockFieldChangesSchema = z.object({
 
 export const BlockPatchSchema = z.object({
   creates: z.array(BlockSchema),
-  updates: z.array(z.object({ id: z.string(), changes: BlockFieldChangesSchema })),
+  updates: z.array(
+    z.object({ id: z.string(), changes: BlockFieldChangesSchema }),
+  ),
   deleteIds: z.array(z.string()),
 });
 
@@ -141,6 +143,53 @@ export function dataEqual(a: unknown, b: unknown): boolean {
 }
 
 /**
+ * The shape both row types share: a full `Block` (whose `rank` is a `Rank`
+ * instance) and a reducer `BlockNode` (whose `rank` is already its stored
+ * string). Every comparison below is written against it, so one definition of
+ * "this column changed" serves both.
+ */
+type ComparableRow = {
+  id: string;
+  parentId: string | null;
+  type: string;
+  rank: unknown;
+  expanded: boolean;
+  data?: unknown;
+};
+
+/**
+ * Does each persisted column differ between two rows of the same id? THE
+ * per-column definition, read by {@link changedFields} (which needs the changed
+ * VALUES) and by {@link writtenIds} (which needs only the ids) — so the two can
+ * never drift on what "this column changed" means.
+ *
+ * **`rank` is compared by its STRING form, and that is load-bearing.** A `Block`
+ * carries a `Rank` INSTANCE, and the overlay's `fromNodes` mints a FRESH one per
+ * row on every reducer run — so an identity comparison here would mark every row
+ * of an op's output as written, and silently turn the overlay's `sameTarget`
+ * relation into a tautology (every op would block every other op on the page).
+ * Comparing the stored value is also what admits a `BlockNode`, whose `rank` is
+ * a string to begin with.
+ */
+const COLUMN_CHANGED: Record<
+  keyof BlockFieldChanges,
+  (before: ComparableRow, after: ComparableRow) => boolean
+> = {
+  parentId: (before, after) => before.parentId !== after.parentId,
+  type: (before, after) => before.type !== after.type,
+  rank: (before, after) => String(before.rank) !== String(after.rank),
+  expanded: (before, after) => before.expanded !== after.expanded,
+  data: (before, after) => !dataEqual(before.data, after.data),
+};
+
+const COLUMN_COMPARATORS = Object.values(COLUMN_CHANGED);
+
+/** Does ANY persisted column differ? The row-level reading of the table above. */
+function rowChanged(before: ComparableRow, after: ComparableRow): boolean {
+  return COLUMN_COMPARATORS.some((changed) => changed(before, after));
+}
+
+/**
  * The persisted columns that differ between two rows of the same id, as the
  * change set that turns `before` into `after`. Empty ⇒ the row is unchanged.
  * THE definition of "what this write claims" — every producer derives its patch
@@ -148,13 +197,43 @@ export function dataEqual(a: unknown, b: unknown): boolean {
  */
 export function changedFields(before: Block, after: Block): BlockFieldChanges {
   const changes: BlockFieldChanges = {};
-  if (before.parentId !== after.parentId) changes.parentId = after.parentId;
-  if (before.type !== after.type) changes.type = after.type;
-  // `rank` is a `Rank` instance: compare by stored value, not identity.
-  if (String(before.rank) !== String(after.rank)) changes.rank = after.rank;
-  if (before.expanded !== after.expanded) changes.expanded = after.expanded;
-  if (!deepEqual(before.data, after.data)) changes.data = after.data;
+  if (COLUMN_CHANGED.parentId(before, after)) changes.parentId = after.parentId;
+  if (COLUMN_CHANGED.type(before, after)) changes.type = after.type;
+  if (COLUMN_CHANGED.rank(before, after)) changes.rank = after.rank;
+  if (COLUMN_CHANGED.expanded(before, after)) changes.expanded = after.expanded;
+  if (COLUMN_CHANGED.data(before, after)) changes.data = after.data;
   return changes;
+}
+
+/**
+ * The rows a before→after pair WROTE: inserted ∪ persisted-columns-changed ∪
+ * deleted. The measured half of an overlay op's target set — what the reducer
+ * really touched, as opposed to what the op happened to name (`opNamedIds`).
+ *
+ * Both sides are pinned to ONE type parameter, so a `Block[]` and a `BlockNode[]`
+ * can never be handed in as the two sides of one diff — the comparison would
+ * then be between a `Rank` and its own string form, i.e. between two shapes that
+ * only agree by accident.
+ *
+ * Allocates no change set: a caller that wants the values reaches for
+ * {@link diffBlocks} instead.
+ */
+export function writtenIds<T extends ComparableRow>(
+  before: readonly T[],
+  after: readonly T[],
+): string[] {
+  const beforeById = new Map(before.map((b) => [b.id, b]));
+  const afterIds = new Set(after.map((b) => b.id));
+
+  const ids: string[] = [];
+  for (const row of after) {
+    const prev = beforeById.get(row.id);
+    if (!prev || rowChanged(prev, row)) ids.push(row.id);
+  }
+  for (const row of before) {
+    if (!afterIds.has(row.id)) ids.push(row.id);
+  }
+  return ids;
 }
 
 /**
@@ -205,7 +284,8 @@ export function diffBlocks(before: Block[], after: Block[]): BlockDiff {
       continue;
     }
     const changes = changedFields(prev, row);
-    if (Object.keys(changes).length > 0) updated.push({ before: prev, after: row, changes });
+    if (Object.keys(changes).length > 0)
+      updated.push({ before: prev, after: row, changes });
   }
 
   const deletedIds: string[] = [];
@@ -231,11 +311,17 @@ export function diffBlocks(before: Block[], after: Block[]): BlockDiff {
  *   exactly the fields redo wrote to their *before* values, and delete
  *   everything that was inserted.
  */
-export function patchesFromDiff(diff: BlockDiff): { redo: BlockPatch; undo: BlockPatch } {
+export function patchesFromDiff(diff: BlockDiff): {
+  redo: BlockPatch;
+  undo: BlockPatch;
+} {
   return {
     redo: {
       creates: diff.inserted,
-      updates: diff.updated.map((u) => ({ id: u.after.id, changes: u.changes })),
+      updates: diff.updated.map((u) => ({
+        id: u.after.id,
+        changes: u.changes,
+      })),
       deleteIds: diff.deletedIds,
     },
     undo: {
@@ -252,6 +338,8 @@ export function patchesFromDiff(diff: BlockDiff): { redo: BlockPatch; undo: Bloc
 /** True when a patch would change nothing (lets the recorder skip empty diffs). */
 export function isEmptyPatch(patch: BlockPatch): boolean {
   return (
-    patch.creates.length === 0 && patch.updates.length === 0 && patch.deleteIds.length === 0
+    patch.creates.length === 0 &&
+    patch.updates.length === 0 &&
+    patch.deleteIds.length === 0
   );
 }

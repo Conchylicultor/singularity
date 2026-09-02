@@ -12,15 +12,15 @@
 import { test, expect, describe } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import type { Block } from "../../core";
+import type { Block, RichText } from "../../core";
 import {
   applyOverlayOp,
   applyPatch,
-  buildOverlayOp,
   buildPatchOverlayOp,
   isPatchAbsorbed,
   isPatchReflected,
   isReflected,
+  predictOp,
   sameOverlayTarget,
   type BlockOverlayOp,
   type OpEffect,
@@ -43,6 +43,9 @@ function mk(
   rank: string,
   opts: {
     text?: string;
+    /** `data.text` as the persisted RUNS array, for the cases where the exact
+     *  stored shape decides whether a row counts as written. */
+    runs?: RichText;
     expanded?: boolean;
     type?: string;
     pageId?: string | null;
@@ -53,7 +56,7 @@ function mk(
     pageId: opts.pageId === undefined ? "page-1" : opts.pageId,
     parentId,
     type: opts.type ?? "text",
-    data: { text: opts.text ?? id },
+    data: { text: opts.runs ?? opts.text ?? id },
     rank: Rank.from(rank),
     expanded: opts.expanded ?? false,
     createdAt: new Date("2020-01-01T00:00:00Z"),
@@ -163,10 +166,10 @@ describe("isReflected", () => {
 describe("applyOverlayOp", () => {
   test("round-trips a split (Block[] → Block[]) producing exactly one new node", () => {
     const blocks = [mk("A", null, a, { text: "helloworld" })];
-    const overlay = buildOverlayOp(
+    const overlay = predictOp(
       { kind: "split", blockId: "A", position: 5, newId: "NEW" },
       blocks,
-    );
+    ).vars;
     const out = applyOverlayOp(blocks, overlay);
 
     expect(out.length).toBe(2);
@@ -186,10 +189,10 @@ describe("applyOverlayOp", () => {
 
   test("preserves timestamps from the matching prev row by id", () => {
     const blocks = [mk("A", null, a, { text: "abc" })];
-    const overlay = buildOverlayOp(
+    const overlay = predictOp(
       { kind: "split", blockId: "A", position: 1, newId: "NEW" },
       blocks,
-    );
+    ).vars;
     const out = applyOverlayOp(blocks, overlay);
     const aNode = out.find((b) => b.id === "A")!;
     expect(aNode.createdAt).toEqual(blocks[0]!.createdAt);
@@ -203,10 +206,10 @@ describe("applyOverlayOp", () => {
 describe("idempotency", () => {
   test("applying the same split overlay op on a base that already has the newId throws", () => {
     const blocks = [mk("A", null, a, { text: "helloworld" })];
-    const overlay = buildOverlayOp(
+    const overlay = predictOp(
       { kind: "split", blockId: "A", position: 5, newId: "NEW" },
       blocks,
-    );
+    ).vars;
     const once = applyOverlayOp(blocks, overlay);
     // Replaying the same op on the already-applied base ⇒ the effect is reflected
     // ⇒ guard throws OpNoLongerApplies (so the primitive's replay would drop it).
@@ -230,15 +233,15 @@ describe("chained compose", () => {
     ];
 
     // Build the two overlay ops against the evolving optimistic state.
-    const splitOp = buildOverlayOp(
+    const splitOp = predictOp(
       { kind: "split", blockId: "C1", position: 3, newId: "NEW" },
       base,
-    );
+    ).vars;
     const afterSplit = applyOverlayOp(base, splitOp);
-    const outdentOp = buildOverlayOp(
+    const outdentOp = predictOp(
       { kind: "outdent", blockIds: ["NEW"] },
       afterSplit,
-    );
+    ).vars;
 
     // Simulate a base that already absorbed the split (server push landed):
     // re-running splitOp on it must drop (throw), while outdentOp still applies.
@@ -252,7 +255,7 @@ describe("chained compose", () => {
     expect(moved.parentId).toBe(null);
   });
 
-  test("buildOverlayOp captures the right effect per kind", () => {
+  test("predictOp captures the right effect per kind", () => {
     const r1 = a;
     const r2 = after(r1);
     const rows = [
@@ -260,7 +263,7 @@ describe("chained compose", () => {
       mk("P2", null, r2, { text: "two" }),
     ];
 
-    // `buildOverlayOp` always yields the `op`-tagged variant; assert + narrow.
+    // `predictOp` always yields the `op`-tagged variant; assert + narrow.
     const expectOp = (
       v: BlockOverlayOp,
     ): Extract<BlockOverlayOp, { tag: "op" }> => {
@@ -270,25 +273,23 @@ describe("chained compose", () => {
     };
 
     const split = expectOp(
-      buildOverlayOp(
-        { kind: "split", blockId: "P1", position: 1, newId: "S" },
-        rows,
-      ),
+      predictOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows)
+        .vars,
     );
     expect(split.effect).toEqual({ kind: "create", ids: ["S"] });
 
     const ins = expectOp(
-      buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows),
+      predictOp({ kind: "insert", newId: "I", type: "text" }, rows).vars,
     );
     expect(ins.effect).toEqual({ kind: "create", ids: ["I"] });
 
     const merge = expectOp(
-      buildOverlayOp({ kind: "merge", blockId: "P2" }, rows),
+      predictOp({ kind: "merge", blockId: "P2" }, rows).vars,
     );
     expect(merge.effect).toEqual({ kind: "remove", ids: ["P2"] });
 
     const del = expectOp(
-      buildOverlayOp({ kind: "delete", blockIds: ["P1"] }, rows),
+      predictOp({ kind: "delete", blockIds: ["P1"] }, rows).vars,
     );
     expect(del.effect).toEqual({ kind: "remove", ids: ["P1"] });
 
@@ -309,7 +310,7 @@ describe("chained compose", () => {
       mk("Y", "CA", k2, { text: "y" }),
     ];
     const anchors = { anchorTypes: new Set(["callout"]) };
-    const v = buildOverlayOp({ kind: "unwrap", blockId: "CA" }, rows, anchors);
+    const v = predictOp({ kind: "unwrap", blockId: "CA" }, rows, anchors).vars;
     if (v.tag !== "op" || v.effect.kind !== "unwrap")
       throw new Error("expected an unwrap effect");
     expect(v.effect.id).toBe("CA");
@@ -746,7 +747,8 @@ describe("sameOverlayTarget", () => {
 
   // The relation is an INTERSECTION — "do these two write any row in common" —
   // not a subset, and the difference is load-bearing. Here the split writes two
-  // rows (the origin block it truncates and the block it mints) while the patch
+  // rows (the origin block it truncates — it is in the set twice over, named by
+  // the op and measurably rewritten — and the block it mints) while the patch
   // names only the minted one. They match, yet the patch's evidence says nothing
   // about the ORIGIN row the split also rewrote.
   //
@@ -762,10 +764,10 @@ describe("sameOverlayTarget", () => {
   // `research/2026-09-01-global-overlay-ordered-fold-no-transitive-eviction.md`.
   test("target sets INTERSECT rather than nest (a split writes a row its patch never names)", () => {
     const rows = [mk("A", null, a), mk("B", null, after(a))];
-    const split = buildOverlayOp(
+    const split = predictOp(
       { kind: "split", blockId: "A", position: 1, newId: "NEW" },
       rows,
-    );
+    ).vars;
     // The projection patch: a `data`-only update on the minted block alone.
     const projection = buildPatchOverlayOp({
       creates: [],
@@ -786,18 +788,208 @@ describe("sameOverlayTarget", () => {
     );
   });
 
-  test("structural ops target the rows the BlockOp names", () => {
+  // The claim used to be "the rows the BlockOp NAMES" and that is the half that
+  // changed: a structural op's set is the union of what it names and what the
+  // reducer measurably wrote, so it now covers rows the op mentions nowhere.
+  test("structural ops target the rows the op names OR writes", () => {
     const rows = [mk("A", null, a), mk("B", null, after(a))];
-    const split = buildOverlayOp(
+    const split = predictOp(
       { kind: "split", blockId: "A", position: 1, newId: "NEW" },
       rows,
-    );
-    const del = buildOverlayOp({ kind: "delete", blockIds: ["A"] }, rows);
-    const other = buildOverlayOp({ kind: "delete", blockIds: ["B"] }, rows);
+    ).vars;
+    const del = predictOp({ kind: "delete", blockIds: ["A"] }, rows).vars;
+    const other = predictOp({ kind: "delete", blockIds: ["B"] }, rows).vars;
     expect(sameOverlayTarget(split, del)).toBe(true); // both touch A
     expect(sameOverlayTarget(split, other)).toBe(false);
     // op ↔ patch across the same row
     expect(sameOverlayTarget(del, patchOn(["A"]))).toBe(true);
     expect(sameOverlayTarget(del, patchOn(["B"]))).toBe(false);
+
+    // The widened half: `merge{blockId: B}` names B alone, yet it rewrites A —
+    // the previous visible line it folds B's runs into — so a delete of A and a
+    // patch on A both register against it.
+    const merge = predictOp({ kind: "merge", blockId: "B" }, rows).vars;
+    expect(sameOverlayTarget(merge, del)).toBe(true);
+    expect(sameOverlayTarget(merge, patchOn(["A"]))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// predictOp: `targets` is what the op NAMES ∪ what the reducer WROTE
+//
+// The naming half alone under-approximates — merge rewrites a row the op never
+// mentions, split adopts children it never mentions, delete cascades — and the
+// measured half alone is SMALLER than the naming one wherever the reducer
+// returns a row byte-identical (an identity split, an end-of-line split against
+// a caught-up projection, a partially-refused indent). Only the union covers
+// both, which is what these pin.
+// ---------------------------------------------------------------------------
+
+describe("predictOp targets", () => {
+  /** `predictOp` always yields the `op`-tagged variant; assert + narrow. */
+  const expectOpVars = (
+    v: BlockOverlayOp,
+  ): Extract<BlockOverlayOp, { tag: "op" }> => {
+    expect(v.tag).toBe("op");
+    if (v.tag !== "op") throw new Error("expected op variant");
+    return v;
+  };
+  const patchOn = (id: string): BlockOverlayOp =>
+    buildPatchOverlayOp({
+      creates: [],
+      updates: [{ id, changes: { data: { text: "typed" } } }],
+      deleteIds: [],
+    });
+
+  // The residue case the measurement exists for. `merge{blockId: M}` names only
+  // M, but `applyMerge` writes the previous visible line T as well (T's runs
+  // gain M's). Under naming alone the two ops did not register as same-target,
+  // so a later patch on T could be confirmed by a snapshot that says nothing
+  // about the merge, leave the overlay, and be clobbered when the merge replayed
+  // over T. They intersect now, so the patch waits for the merge.
+  test("merge names its unnamed target: a patch on the row it rewrites is same-target", () => {
+    const rows = [
+      mk("T", null, a, { runs: [{ text: "T" }] }),
+      mk("M", null, after(a), { runs: [{ text: "M" }] }),
+    ];
+    const merge = expectOpVars(
+      predictOp({ kind: "merge", blockId: "M" }, rows).vars,
+    );
+
+    expect([...merge.targets].sort()).toEqual(["M", "T"]);
+    expect(sameOverlayTarget(merge, patchOn("T"))).toBe(true);
+  });
+
+  // The negative twin, and it is CORRECT rather than a miss. Backspace on a
+  // blank line merges an EMPTY childless block: `mergeRuns(T, [])` is T's own
+  // runs, so the reducer writes T byte-identically and adopts nothing. The
+  // merge's replay therefore cannot clobber a patch on T — there is nothing for
+  // it to clobber — so T legitimately stays out of the set and the patch is free
+  // to leave.
+  test("an EMPTY childless merge writes its target byte-identically, so it is not a target", () => {
+    const rows = [
+      mk("T", null, a, { runs: [{ text: "T" }] }),
+      mk("M", null, after(a), { runs: [] }),
+    ];
+    const merge = expectOpVars(
+      predictOp({ kind: "merge", blockId: "M" }, rows).vars,
+    );
+
+    expect([...merge.targets]).toEqual(["M"]);
+    expect(sameOverlayTarget(merge, patchOn("T"))).toBe(false);
+  });
+
+  test("split names the children the tail adopts", () => {
+    // P is expanded with visible children, so `applySplit` reparents both onto
+    // the tail — rows the op names nowhere.
+    const rows = [
+      mk("P", null, a, { runs: [{ text: "parent" }], expanded: true }),
+      mk("C1", "P", a, { expanded: true }),
+      mk("C2", "P", after(a), { expanded: true }),
+    ];
+    const split = expectOpVars(
+      predictOp(
+        { kind: "split", blockId: "P", position: 3, newId: "NEW" },
+        rows,
+      ).vars,
+    );
+    expect([...split.targets].sort()).toEqual(["C1", "C2", "NEW", "P"]);
+  });
+
+  test("delete names the subtree it cascades, not only its roots", () => {
+    const rows = [
+      mk("P", null, a, { expanded: true }),
+      mk("C", "P", a, { expanded: true }),
+      mk("G", "C", a, { expanded: true }),
+    ];
+    const del = expectOpVars(
+      predictOp({ kind: "delete", blockIds: ["P"] }, rows).vars,
+    );
+    expect([...del.targets].sort()).toEqual(["C", "G", "P"]);
+    // The EFFECT stays the named root: one transaction removes the subtree, so
+    // the root's absence already implies its descendants'.
+    expect(del.effect).toEqual({ kind: "remove", ids: ["P"] });
+  });
+
+  // Why the union is a union and not the measured diff. In each of these the
+  // reducer writes FEWER rows than the op names, so a diff-only set would drop
+  // the origin — re-opening exactly the hole the measurement closes, since a
+  // later patch on that origin would stop being blocked.
+  test("the union is monotone: a row the reducer left byte-identical is still a target", () => {
+    // Identity split (Enter at offset 0 with a tail): the origin is returned
+    // untouched and only the empty sibling above it is minted.
+    const one = [mk("A", null, a, { runs: [{ text: "abc" }] })];
+    const identity = predictOp(
+      { kind: "split", blockId: "A", position: 0, newId: "NEW" },
+      one,
+    );
+    expect(identity.written).toEqual(["NEW"]);
+    expect(expectOpVars(identity.vars).targets.has("A")).toBe(true);
+
+    // End-of-line split against a caught-up projection: `withRuns` rewrites the
+    // origin's `data.text` to the very value it already held.
+    const endSplit = predictOp(
+      { kind: "split", blockId: "A", position: 3, newId: "NEW" },
+      one,
+    );
+    expect(endSplit.written).toEqual(["NEW"]);
+    expect(expectOpVars(endSplit.vars).targets.has("A")).toBe(true);
+
+    // A partially-refused indent: "A" is a first child of the top level, so the
+    // reducer refuses it, while "C" indents under "B".
+    const three = [
+      mk("A", null, a, { expanded: true }),
+      mk("B", null, after(a), { expanded: true }),
+      mk("C", null, after(after(a)), { expanded: true }),
+    ];
+    const indent = predictOp({ kind: "indent", blockIds: ["A", "C"] }, three);
+    expect(indent.written).toEqual(["C"]);
+    expect([...expectOpVars(indent.vars).targets].sort()).toEqual(["A", "C"]);
+  });
+
+  // Two different questions about one paste, asserted together so a later reader
+  // cannot conflate them. `targets` is "which rows does this op write" and must
+  // name the whole forest (a patch on any pasted row has to block against it);
+  // `effect.create.ids` is "what proves this op landed" and stays ROOTS-ONLY,
+  // because the forest lands in one transaction so a root's presence implies its
+  // descendants'.
+  test("paste names its whole forest in targets while its effect stays roots-only", () => {
+    const rows = [mk("A", null, a)];
+    const paste = expectOpVars(
+      predictOp(
+        {
+          kind: "paste",
+          afterId: "A",
+          forest: [
+            {
+              id: "R",
+              type: "text",
+              data: { text: [] },
+              expanded: true,
+              children: [
+                {
+                  id: "R1",
+                  type: "text",
+                  data: { text: [] },
+                  expanded: true,
+                  children: [
+                    {
+                      id: "R1a",
+                      type: "text",
+                      data: { text: [] },
+                      expanded: true,
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        rows,
+      ).vars,
+    );
+    expect([...paste.targets].sort()).toEqual(["R", "R1", "R1a"]);
+    expect(paste.effect).toEqual({ kind: "create", ids: ["R"] });
   });
 });

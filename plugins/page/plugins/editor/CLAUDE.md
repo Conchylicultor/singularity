@@ -1251,15 +1251,48 @@ transform against the text schema. The result rides as `op.tailData` because the
 pure reducer cannot see handles at all; absent means inherit. Bad payloads are
 still caught by the strict `parseBlockData` at the write boundary.
 
-`opBlockIds`' split case stays `[blockId, newId]`, deliberately omitting
-adopted children — the same documented under-approximation as merge's
-rewritten target. It feeds `sameOverlayTarget`, the overlay's ordering rule, so
-an omission means less **blocking**: two ops can interact in the fold without
-registering as same-target, and the newer one may leave while the older still
-replays. Never a wrong drop, because the relation is a symmetric intersection —
-under-naming can only fail to match. That guarantee would **invert** under a
-subset test (an omission on the *older* side makes it pass), which is one reason
-the primitive blocks rather than absorbs.
+### An op's target set is what it WRITES, not only what it names
+
+An overlay op declares a set of block rows. `sameOverlayTarget` intersects two
+such sets, and the overlay's ordering rule makes an op wait while an older
+still-pending op on an intersecting row survives the pass. That set is the
+**union of what the reducer measurably wrote and what the op names**:
+
+```
+targets = writtenIds(before, after) ∪ opNamedIds(op)
+```
+
+`predictOp` (`web/internal/optimistic-block-ops.ts`) builds it once per dispatch,
+running the reducer once and measuring its own before/after pair. So a split's
+adopted children, a merge's unnamed target row, a delete's cascade and an
+unwrap's promotion are all in the set — the reducer's output reports them, and
+the op never had to mention them.
+
+**Why the union rather than the measured diff alone.** The diff is *smaller*
+than the named set in real cases. An end-of-line split rewrites the origin's
+`data.text` byte-identically, so the origin does not appear in the diff. An
+Enter-at-start split leaves the origin untouched entirely. A partially-refused
+indent moves fewer rows than it names, and a `bulkMove` names its whole
+selection while only the roots move. Taking the diff alone would drop the origin
+row from a split's set and re-open the very hole the measurement closes: a later
+patch on that row would stop being blocked. The union is monotone — coverage
+never decreases against naming alone.
+
+**The residual bound.** The set is frozen at DISPATCH, against the base the op
+was predicted on. At replay the base can differ, so the set the op really writes
+may be a strict superset: adoption that appeared because a racing expand landed,
+`prevVisibleLine` resolving to a different target, a cascade that grew. That is
+inherent — `sameTarget(a, b)` sees only the two ops, never a base, and blocking
+has to be decided before the replay that would measure it. It stays safe here
+because the relation is a symmetric intersection, and an over-match only DEFERS
+a departure. The guarantee would **invert** under a subset test (a missing id on
+the *older* side makes it pass), which is why the primitive blocks rather than
+absorbs. `overlayOpTargets`' doc comment is the canonical statement of all of
+this.
+
+This does not weaken the adoption rule above. `targets` is a prediction recorded
+*alongside* the op, never a flag the reducer reads — adoption is still derived
+inside the reducer from the forest the op is applied against.
 
 ## The selection highlight belongs to the RUN, not to the row
 
@@ -2070,7 +2103,9 @@ array breaks silently**: reorder a traversal on one side and the two sides inser
 - **`OpEffect.create` carries `ids: string[]`** — ROOT ids only. The forest lands
   in ONE transaction, so a root's presence implies its descendants'; listing every
   node would grow the confirmation scans with the paste for no extra power.
-  `opBlockIds` makes the same call.
+  `opNamedIds` makes the same call, and it is a statement about NAMING only: the
+  rows a paste actually wrote are `writtenIds`' answer, which does list the whole
+  forest, and that is what reaches the op's `targets`.
 - **A missing anchor refuses the whole paste** (as `applyInsert` does for a
   missing `afterId`) — guessing another parent would drop content somewhere the
   user never asked for.
@@ -3501,7 +3536,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `namesField`
     - `newBlockId`
     - `nextVisibleLine`
-    - `opBlockIds`
+    - `opNamedIds`
     - `PAGE_BLOCK_TYPE`
     - `pageBlockHandle`
     - `pageBlockMarkdown`
@@ -3550,6 +3585,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `withContainersSelected`
     - `withMintedIds`
     - `withRuns`
+    - `writtenIds`
     - `xmlTextContentLength`
     - `xmlTextToRuns`
 - Cross-plugin:
