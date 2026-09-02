@@ -71,7 +71,7 @@ await withBrowser(async (h) => {
     await page.evaluate(
       ({ t, exact }: { t: string; exact: boolean }) => {
         const btn = Array.from(
-          document.querySelectorAll<HTMLElement>('.cp-panel button'),
+          document.querySelectorAll<HTMLElement>(".cp-panel button"),
         ).find((b) => {
           const label = b.innerText.trim();
           return exact
@@ -94,7 +94,7 @@ await withBrowser(async (h) => {
   r.ok("filter panel offers Save as preset", (await save.count()) > 0);
   await clickInPanel("Save as preset");
 
-  await page.locator('.cp-panel input').first().fill(PRESET);
+  await page.locator(".cp-panel input").first().fill(PRESET);
   await page.waitForTimeout(300);
   await clickInPanel("Save preset", true);
   await page.waitForTimeout(600);
