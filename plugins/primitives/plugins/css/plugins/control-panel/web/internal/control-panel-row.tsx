@@ -1,6 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
+import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import type React from "react";
 import { useCallback, useId } from "react";
 import { MdCheck, MdDragIndicator } from "react-icons/md";
@@ -26,21 +30,49 @@ interface ControlPanelRowCommon {
     ref?: React.Ref<HTMLElement>;
   };
   /**
-   * Trailing cell content — a count, a type name, a chip. PRESENTATIONAL by
-   * contract: the row itself is the click target, so an interactive control here
-   * would be a nested one. Ignored when `select="switch"`, which owns the cell.
+   * Trailing cell content — a count, a type name, a chip. PRESENTATIONAL: it
+   * carries no click target of its own. On a row with no `actions` that is a
+   * hard contract (the row IS the click target, so an interactive control here
+   * would be a nested one); on a row WITH `actions` the interactive trailing
+   * content is the action cluster, and this still sits in front of it as plain
+   * text. Ignored when `select="switch"`, which owns the cell.
    */
   trailing?: React.ReactNode;
+  /**
+   * Row actions — a hover-revealed cluster of `IconButton`s at the row's
+   * trailing edge, rendered through the `row-actions` primitive.
+   *
+   * Passing it switches the row to its SECOND construction: the row box becomes
+   * a non-interactive `<div>` and the selectable part becomes an inner subgrid
+   * spanning every track but the trailing one, so the action buttons are the
+   * click target's SIBLINGS rather than its descendants. See the component doc.
+   */
+  actions?: React.ReactNode;
   tone?: ControlPanelRowTone;
   /** Muted foreground — for a secondary row ("New field", "Add filter"). */
   muted?: boolean;
+  /**
+   * Disables the row's SELECTION — not the whole row.
+   *
+   * On a row with no `actions` those are the same thing, and it reads as it
+   * always has: the row is inert and dimmed. On a row WITH `actions` the
+   * dimming and the inertness land on the inner select element only, and the
+   * action cluster stays live. That is the honest meaning of the prop, and it is
+   * the case that actually occurs: a saved preset whose fields have all left the
+   * schema cannot be applied, but it is exactly the preset you want to delete.
+   */
   disabled?: boolean;
   /** Makes the row a `<button>`. */
   onSelect?: () => void;
   /** Makes the row an `<a>`. */
   href?: string;
   className?: string;
-  /** Forwarded to the row box, for DnD / scroll-into-view. */
+  /**
+   * Forwarded to the row BOX — the outermost node — in both constructions, for
+   * DnD / scroll-into-view. Deliberately not the inner select element on the
+   * `actions` path: a ref that changed node the day a row grew an action would
+   * hand a dnd transform a box that leaves the trailing cell behind.
+   */
   ref?: React.Ref<HTMLElement>;
   children: React.ReactNode;
 }
@@ -58,6 +90,12 @@ interface ControlPanelRowCommon {
  * it into the check/radio arm made an icon + switch row unspellable, and the one
  * surface that wanted one moved a real glyph into the label cell instead —
  * misaligning its text against every other row in the panel.
+ *
+ * `actions` is excluded from that same switch arm, and for the mirror-image
+ * reason: the switch is drawn IN the trailing cell, so a cluster there would be
+ * a second occupant of a cell that already has an owner — and a toggle sharing
+ * its box with a trash button is a mis-click waiting to happen. Excluded at the
+ * type level rather than dropped at render, the same way `icon` is.
  */
 export type ControlPanelRowProps =
   | (ControlPanelRowCommon & {
@@ -74,6 +112,7 @@ export type ControlPanelRowProps =
       select: "switch";
       checked: boolean;
       icon?: React.ReactNode;
+      actions?: never;
     });
 
 /**
@@ -107,16 +146,33 @@ const HANDLE_REVEAL =
  * is a `<Line>`-based FLEX row whose `icon` is a leading flex child, so the
  * label's x depends on whether an icon is present — that IS the 12/14/20/38px
  * misalignment this vocabulary exists to remove, and flex has no track that
- * occupies width when empty. Its trailing slot is hover-revealed and
- * overlay-pinned; the panel's trailing cell is in-flow and presentational.
- * Adding a grid mode plus a panel-only geometry axis to a primitive with 50+
- * call sites costs more than eight lines of duplicated element inference. The
- * two stay in step by sharing TOKENS (`--pad-row-x`, `--control-height-md`, the
- * surface-following hover fill), not code.
+ * occupies width when empty. Adding a grid mode plus a panel-only geometry axis
+ * to a primitive with 50+ call sites costs more than eight lines of duplicated
+ * element inference. The two stay in step by sharing TOKENS (`--pad-row-x`,
+ * `--control-height-md`, the surface-following hover fill), not code.
  *
  * The host element is INFERRED, never authored — `href` → `<a>`,
  * `onSelect`/`disabled` → `<button>`, else a plain `<div>`. Same rule as `Row`,
  * so an author learns it once.
+ *
+ * ## Two constructions, chosen by `actions`
+ *
+ * **Without `actions`** the inferred element IS the row box: one node carrying
+ * `cp-row`, with the four cells as its direct children. That is the shape ~50
+ * call sites render today, and it is the reason the trailing cell is
+ * presentational — a `<button>` inside a `<button>` is invalid DOM.
+ *
+ * **With `actions`** the row splits, the same way `css/row`'s `Row` splits when
+ * it is handed both a click target and an action cluster. The box is always a
+ * non-interactive `<div>`, and the selectable part becomes an inner element
+ * spanning every track but the last — so the action buttons are that element's
+ * SIBLINGS rather than its descendants, which is the only construction in which
+ * both are legal at once. The inner element is a CSS **subgrid**: the panel's
+ * tracks pass straight through it, so the gutter, icon and label cells land on
+ * exactly the rails they land on in the other construction and invariant #1
+ * never learns that this row is built differently. `col-[1/-2]` is written
+ * track-count agnostic because `cp-row` has 2/3/4-track templates depending on
+ * what the PANEL occupies, and a hardcoded span would break in three of them.
  */
 export function ControlPanelRow({
   icon,
@@ -126,6 +182,7 @@ export function ControlPanelRow({
   handle,
   handleProps,
   trailing,
+  actions,
   tone = "default",
   muted,
   disabled,
@@ -139,6 +196,7 @@ export function ControlPanelRow({
   const isLink = href != null;
   const isButton = !isLink && (onSelect != null || disabled != null);
   const interactive = isLink || isButton;
+  const hasActions = actions != null;
 
   // One callback ref for three possible hosts. A `RefObject`'s `current` is
   // MUTABLE, so `RefObject<HTMLElement>` is not assignable to
@@ -198,8 +256,23 @@ export function ControlPanelRow({
     tone === "danger" && "text-destructive",
     interactive &&
       (tone === "danger" ? "hover:bg-destructive/10" : "hover:bg-hover-fill"),
-    interactive && "focus-ring",
-    disabled && "pointer-events-none opacity-50",
+    // WHO gets rung is the one class that differs between the two
+    // constructions, and each spelling is inert on the other path.
+    // `focus-ring` is `&:focus-visible`, which a `<div>` box can never satisfy;
+    // `focus-ring-from` is `:has(> [data-focus-ring]:focus-visible)`, and the
+    // select element IS a direct child, so keyboard focus on the SELECTION
+    // rings the whole row — while focus on an action button inside the cluster
+    // rings only that button. `focus-ring-within` would light both at once,
+    // which is two indicators for one focus.
+    interactive && (hasActions ? "focus-ring-from" : "focus-ring"),
+    // The actions cluster brings its OWN hover group rather than piggybacking
+    // on `group/cp-row`, so the trailing cluster reveals only when this class is
+    // on the row it belongs to. Same construction as `RuleRow` and `SettingRow`.
+    hasActions && rowActionsAnchor,
+    // Only the no-actions construction dims and deadens the WHOLE row: with
+    // actions, `disabled` scopes to the selection (see the prop doc) and the
+    // treatment moves onto the inner select element below.
+    !hasActions && disabled && "pointer-events-none opacity-50",
     className,
   );
 
@@ -226,7 +299,7 @@ export function ControlPanelRow({
   // took its place. A check or radio indicator counts as an icon — it occupies
   // that column exactly as a glyph does — but a switch does not, because its
   // indicator is in the trailing cell.
-  const cells = (
+  const leadingCells = (
     <>
       <span
         {...handleProps}
@@ -254,15 +327,63 @@ export function ControlPanelRow({
       <HintedLabelCell hint={hint} descriptionId={hintId}>
         {children}
       </HintedLabelCell>
-      <span
-        data-cp-cell="trailing"
-        className="flex items-center gap-2xs text-caption text-muted-foreground"
-      >
-        {trailingContent}
-      </span>
     </>
   );
 
+  const trailingCell = (
+    <span
+      data-cp-cell="trailing"
+      className="flex items-center gap-2xs text-caption text-muted-foreground"
+    >
+      {trailingContent}
+    </span>
+  );
+
+  // ── The actions construction ────────────────────────────────────────
+  //
+  // The box is a `<div>` whatever the row's props say, so the action buttons
+  // have a legal place to live; the element the props DID infer moves inside it
+  // as the selectable region. Everything that describes the SELECTION goes with
+  // it — the role and `aria-checked`, the description, the disabled state, the
+  // focus nomination — and everything that describes the ROW stays on the box.
+  if (hasActions) {
+    return (
+      <div ref={hostRef} className={rowClass}>
+        <SelectRegion
+          href={href}
+          onSelect={onSelect}
+          disabled={disabled}
+          isLink={isLink}
+          isButton={isButton}
+          selection={selection}
+          described={described}
+        >
+          {leadingCells}
+        </SelectRegion>
+        {/* `col-[-2/-1]` is the trailing track, named the same track-count
+            agnostic way the select region names its span: `cp-row` is a 2-, 3-
+            or 4-track grid depending on what the PANEL occupies, and only the
+            end-relative line numbers are the same line in all three.
+
+            `pin={null}` for the reason `RuleRow` gives: the track already
+            reserves this space, so the cluster belongs IN FLOW; pinning it would
+            float it over the label cell and paint a `--scrim` this row has no
+            tint to publish. The cluster also supplies the xs control density and
+            the click / pointerdown guards, so an action press never reaches the
+            selection beside it. */}
+        <span
+          data-cp-cell="trailing"
+          className="col-[-2/-1] flex items-center gap-2xs text-caption text-muted-foreground"
+        >
+          {trailingContent}
+          <RowActions pin={null}>{actions}</RowActions>
+        </span>
+      </div>
+    );
+  }
+
+  // ── The plain construction ──────────────────────────────────────────
+  //
   // Three concrete elements, not one `<Tag>` variable. A capitalized local
   // holding an element type reads to React Compiler as a component CREATED
   // during render (`react-hooks/static-components`) — its identity changes each
@@ -280,7 +401,8 @@ export function ControlPanelRow({
         {...selection}
         {...described}
       >
-        {cells}
+        {leadingCells}
+        {trailingCell}
       </a>
     );
   }
@@ -295,16 +417,118 @@ export function ControlPanelRow({
         {...selection}
         {...described}
       >
-        {cells}
+        {leadingCells}
+        {trailingCell}
       </button>
     );
   }
   return (
     <div ref={hostRef} className={rowClass} {...described}>
-      {cells}
+      {leadingCells}
+      {trailingCell}
     </div>
   );
 }
+
+/**
+ * The selectable region of a row that carries `actions` — the element the row's
+ * props inferred, rendered INSIDE the row box instead of as it.
+ *
+ * It is a subgrid, and that is the whole trick: `grid-cols-subgrid` makes the
+ * panel's own tracks pass through this element unchanged, so the three cells it
+ * holds land on exactly the rails they would as direct children of `cp-row`.
+ * There is deliberately NO `gap` here — a subgrid inherits the parent grid's
+ * column gap, and restating it is how the leading cells drift off the panel rail.
+ *
+ * `self-stretch` against the row's `align-items: center`, so the click target
+ * fills the row's full `--cp-row-h` height rather than only its content's: an
+ * inferred-height target would leave a few dead pixels above and below the label
+ * that the un-split construction has never had.
+ *
+ * Three concrete elements again rather than one `<Tag>` local, for the reason
+ * spelled out at the call site.
+ */
+function SelectRegion({
+  href,
+  onSelect,
+  disabled,
+  isLink,
+  isButton,
+  selection,
+  described,
+  children,
+}: {
+  href?: string;
+  onSelect?: () => void;
+  disabled?: boolean;
+  isLink: boolean;
+  isButton: boolean;
+  selection: SelectionAttrs | undefined;
+  described: DescribedAttrs | undefined;
+  children: React.ReactNode;
+}) {
+  const className = cn(
+    "grid grid-cols-subgrid col-[1/-2] self-stretch items-center min-w-0",
+    // `outline-none`: the ring is painted by the row BOX (`focus-ring-from`), so
+    // the UA outline would be a second, tighter indicator inside it.
+    "rounded-md text-left outline-none",
+    // The disabled treatment, scoped to the selection. `pointer-events-none` as
+    // well as the attribute, because a `<a>`/`<span>` region takes no `disabled`
+    // — and the row box around it must stay live either way, so its actions
+    // still work.
+    disabled && "pointer-events-none opacity-50",
+  );
+  // Nominates this node as the one whose focus rings the box, written `=""` like
+  // every other marker attribute in the repo — presence is the whole signal.
+  const focus = { "data-focus-ring": "", "data-cp-select": "" };
+
+  if (isLink) {
+    return (
+      <a
+        href={href}
+        onClick={onSelect}
+        className={className}
+        {...focus}
+        {...selection}
+        {...described}
+      >
+        {children}
+      </a>
+    );
+  }
+  if (isButton) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onSelect}
+        className={className}
+        {...focus}
+        {...selection}
+        {...described}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <span className={className} {...focus} {...described}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * The two attribute bags the row computes once and then hands to whichever
+ * element ends up being the selection — the row host on the plain path, the
+ * inner region on the actions path. Named types rather than inferred ones so
+ * both spreads typecheck as JSX attributes instead of as an index signature.
+ */
+type SelectionAttrs = {
+  role: "checkbox" | "radio" | "switch";
+  "aria-checked": boolean;
+};
+type DescribedAttrs = { "aria-describedby": string };
 
 const SELECT_ROLE: Record<
   ControlPanelRowSelect,

@@ -11,6 +11,16 @@ export interface FilterPresetsController {
   savePreset: (label: string, group: FilterGroup) => void;
   deletePreset: (id: string) => void;
   renamePreset: (id: string, label: string) => void;
+  /**
+   * Put a deleted preset back where it was — the other half of the one-click
+   * trash on a preset row, whose toast offers Undo. Takes the INDEX as well as
+   * the preset because a preset's position in the list is part of what the user
+   * had; restoring it onto the end would be a different list.
+   *
+   * Idempotent on identity: a preset already present is moved rather than
+   * duplicated, so a double Undo cannot mint a twin.
+   */
+  restorePreset: (preset: FilterPreset, index: number) => void;
 }
 
 /** Stable id for a new preset row — mirrors view-core's `newId`, so the
@@ -68,17 +78,39 @@ export function useFilterPresets(storageKey: string): FilterPresetsController {
     if (pendingRef.current) return;
     setMirror((prev) => {
       const incoming = JSON.parse(persistedJson) as FilterPreset[];
-      return JSON.stringify(prev) === JSON.stringify(incoming) ? prev : incoming;
+      return JSON.stringify(prev) === JSON.stringify(incoming)
+        ? prev
+        : incoming;
     });
   }, [persistedJson]);
 
+  // Freshest mirror for the updater below, so `commit` closes over nothing.
+  const mirrorRef = useLatestRef(mirror);
+
   // `commit` stays referentially stable and writes through the freshest
   // setConfig off the stable `setConfigRef.current`.
-  const commit = useCallback((next: FilterPreset[]) => {
-    pendingRef.current = true;
-    setMirror(next);
-    setConfigRef.current("filterPresets", next);
-  }, []);
+  //
+  // It takes an UPDATER rather than the next list, and reads `prev` off a ref
+  // rather than out of a closure: two actions between renders (delete, then Undo
+  // from the toast) would otherwise both compute from the same stale list and
+  // the second would silently drop the first. Deliberately NOT a `setMirror`
+  // updater — the config write beside it is a side effect, and React invokes a
+  // state updater twice under StrictMode.
+  //
+  // The ref is written FORWARD after the update for the same reason: it is
+  // otherwise only refreshed in render, so back-to-back commits in one tick
+  // would each read the pre-tick list. The render-phase write then re-lands the
+  // identical value.
+  const commit = useCallback(
+    (update: (prev: FilterPreset[]) => FilterPreset[]) => {
+      const next = update(mirrorRef.current);
+      pendingRef.current = true;
+      mirrorRef.current = next;
+      setMirror(next);
+      setConfigRef.current("filterPresets", next);
+    },
+    [],
+  );
 
   // The config truth has caught up to (or past) our optimistic write → drop the
   // pending guard so the reconcile effect resumes following external truth.
@@ -90,27 +122,47 @@ export function useFilterPresets(storageKey: string): FilterPresetsController {
 
   const savePreset = useCallback(
     (label: string, group: FilterGroup) => {
-      commit([...mirror, { id: presetId(), label, group }]);
+      commit((prev) => [...prev, { id: presetId(), label, group }]);
     },
-    [commit, mirror],
+    [commit],
   );
 
   const deletePreset = useCallback(
     (id: string) => {
-      commit(mirror.filter((p) => p.id !== id));
+      commit((prev) => prev.filter((p) => p.id !== id));
     },
-    [commit, mirror],
+    [commit],
   );
 
   const renamePreset = useCallback(
     (id: string, label: string) => {
-      commit(mirror.map((p) => (p.id === id ? { ...p, label } : p)));
+      commit((prev) => prev.map((p) => (p.id === id ? { ...p, label } : p)));
     },
-    [commit, mirror],
+    [commit],
+  );
+
+  const restorePreset = useCallback(
+    (preset: FilterPreset, index: number) => {
+      commit((prev) => {
+        const without = prev.filter((p) => p.id !== preset.id);
+        // Clamped, not asserted: presets can have left the list from another
+        // tab while the toast was on screen, and landing at the end is a better
+        // answer there than throwing at the user who pressed Undo.
+        without.splice(Math.min(index, without.length), 0, preset);
+        return without;
+      });
+    },
+    [commit],
   );
 
   return useMemo(
-    () => ({ presets: mirror, savePreset, deletePreset, renamePreset }),
-    [mirror, savePreset, deletePreset, renamePreset],
+    () => ({
+      presets: mirror,
+      savePreset,
+      deletePreset,
+      renamePreset,
+      restorePreset,
+    }),
+    [mirror, savePreset, deletePreset, renamePreset, restorePreset],
   );
 }

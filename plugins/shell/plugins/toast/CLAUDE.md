@@ -29,6 +29,7 @@
     - `debug/profiling/ops`
     - `infra/health`
     - `page/editor`
+    - `primitives/data-view`
     - `shell/notifications`
 - Core:
   - Exports (types):

@@ -42,6 +42,158 @@ describe("ControlPanel.Row — the host element is inferred", () => {
   });
 });
 
+// The row's SECOND construction. Adding `actions` is the one prop that changes
+// the row's markup shape, so both shapes are pinned here: a future edit that
+// "unifies" them breaks whichever of the two it did not have in mind.
+describe("ControlPanel.Row — `actions` splits the row", () => {
+  it("makes the box non-interactive and the SELECTION the button", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          onSelect={vi.fn()}
+          actions={
+            <button type="button" aria-label="Delete preset">
+              x
+            </button>
+          }
+        >
+          Recently updated
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    // The row box is a plain `<div>`; the click target moved inside it.
+    const box = container.querySelector(".cp-row")!;
+    expect(box.tagName).toBe("DIV");
+    const select = box.querySelector("[data-cp-select]")!;
+    expect(select.tagName).toBe("BUTTON");
+    expect(select.getAttribute("data-focus-ring")).toBe("");
+
+    // And the two interactive things are SIBLINGS, never nested — which is the
+    // whole reason this construction exists. A `<button>` inside a `<button>` is
+    // invalid DOM, and it is what the trailing cell used to be forbidden for.
+    const del = screen.getByRole("button", { name: "Delete preset" });
+    expect(select.contains(del)).toBe(false);
+    expect(box.contains(del)).toBe(true);
+    expect(del.closest("button")).toBe(del);
+  });
+
+  it("passes the panel's tracks through the selection as a subgrid", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          select="radio"
+          checked
+          onSelect={vi.fn()}
+          trailing="3 rules"
+          actions={<button type="button" aria-label="Delete" />}
+        >
+          Recently updated
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    const box = container.querySelector(".cp-row")!;
+    // Two direct children: the selection (spanning every track but the last)
+    // and the trailing cell (the last). jsdom applies no stylesheet, so what is
+    // asserted is the CONTRACT the CSS reads — the rendered geometry is
+    // `fixtures/control-panel/row-actions-rail`'s job.
+    const select = box.querySelector("[data-cp-select]")!;
+    expect([...box.children]).toEqual([
+      select,
+      box.querySelector('[data-cp-cell="trailing"]'),
+    ]);
+    const classes = select.className.split(/\s+/);
+    expect(classes).toContain("grid-cols-subgrid");
+    expect(classes).toContain("col-[1/-2]");
+    // NO column gap of its own: a subgrid inherits the parent grid's, and
+    // restating it is how the leading cells drift off the panel's rail.
+    expect(classes.filter((c) => /^gap/.test(c))).toEqual([]);
+    // The three leading cells live inside it, in order, and the selection still
+    // reports its own state from the node that IS the control.
+    expect(
+      [...select.children].map((c) => c.getAttribute("data-cp-cell")),
+    ).toEqual(["gutter", "icon", "label"]);
+    expect(screen.getByRole("radio", { name: "Recently updated" })).toBe(
+      select,
+    );
+    // The occupancy mark is one level deeper now, and the panel's `:has()` scan
+    // is a descendant scan — so the icon track is still reserved.
+    expect(container.querySelectorAll("[data-cp-icon]").length).toBe(1);
+  });
+
+  it("scopes `disabled` to the selection, so the actions stay live", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          select="radio"
+          checked={false}
+          disabled
+          onSelect={vi.fn()}
+          actions={<button type="button" aria-label="Delete" />}
+        >
+          No matching fields
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    // The dimming and the inertness ride the inner region; the box stays live.
+    // A preset whose fields have all left the schema cannot be applied and is
+    // exactly the one you want to delete, so this is the prop's honest meaning
+    // rather than a concession.
+    const box = container.querySelector(".cp-row")!;
+    const select = box.querySelector("[data-cp-select]") as HTMLButtonElement;
+    expect(select.disabled).toBe(true);
+    expect(select.className).toContain("opacity-50");
+    const boxClasses = box.className.split(/\s+/);
+    expect(boxClasses).not.toContain("opacity-50");
+    expect(boxClasses).not.toContain("pointer-events-none");
+    expect(
+      (screen.getByRole("button", { name: "Delete" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
+  it("rings the ROW from the selection's focus, never from an action's", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row
+          onSelect={vi.fn()}
+          actions={<button type="button" aria-label="Delete" />}
+        >
+          Recently updated
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    // `focus-ring-from` is `:has(> [data-focus-ring]:focus-visible)`, and the
+    // selection is a direct child — so one ring around the whole row for the
+    // row's own focus, and none when an action button inside the cluster is
+    // focused (it rings itself). `focus-ring-within` would light both at once.
+    const classes = container.querySelector(".cp-row")!.className.split(/\s+/);
+    expect(classes).toContain("focus-ring-from");
+    expect(classes).not.toContain("focus-ring");
+    expect(classes).not.toContain("focus-ring-within");
+  });
+
+  it("leaves a row WITHOUT actions exactly as it was", () => {
+    const { container } = render(
+      <ControlPanel>
+        <ControlPanel.Row onSelect={vi.fn()} trailing="3">
+          Recently updated
+        </ControlPanel.Row>
+      </ControlPanel>,
+    );
+    // ~50 call sites render this shape: the inferred element IS the row box, and
+    // the four cells are its DIRECT children. The split construction must stay
+    // opt-in — "unifying" the two is what would silently move every one of them.
+    const box = container.querySelector(".cp-row")!;
+    expect(box.tagName).toBe("BUTTON");
+    expect(box).toBe(screen.getByRole("button", { name: /Recently updated/ }));
+    expect(
+      [...box.children].map((c) => c.getAttribute("data-cp-cell")),
+    ).toEqual(["gutter", "icon", "label", "trailing"]);
+    expect(box.querySelector("[data-cp-select]")).toBeNull();
+    expect(box.className.split(/\s+/)).toContain("focus-ring");
+  });
+});
+
 // One selection language per meaning. The single-select row is the one most
 // likely to drift back: a highlighted row reads as HOVER, so "selected" has to
 // be a mark that appears, never a fill.

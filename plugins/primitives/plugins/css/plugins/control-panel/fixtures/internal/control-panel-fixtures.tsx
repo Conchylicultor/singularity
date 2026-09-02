@@ -9,7 +9,13 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ReactNode } from "react";
-import { MdCallSplit, MdClose, MdSort, MdVisibility } from "react-icons/md";
+import {
+  MdCallSplit,
+  MdClose,
+  MdDelete,
+  MdSort,
+  MdVisibility,
+} from "react-icons/md";
 
 // ── The control-panel geometry gate ─────────────────────────────────
 //
@@ -98,6 +104,13 @@ function RailMarker({ id }: { id: string }) {
 function RowRail({ id }: { id: string }) {
   return <span data-geo={id} className="inline-block h-0 w-0 align-middle" />;
 }
+
+/**
+ * A handler that exists only so a fixture row INFERS the interactive element it
+ * is there to measure. Module-level, so it is one identity across every render
+ * the harness drives rather than a fresh closure per pass.
+ */
+const NOOP = () => {};
 
 /** The `menu` width role, in px — the width a control panel actually opens at. */
 const MENU_ROLE_WIDTH = 262;
@@ -578,6 +591,104 @@ export const controlPanelFixtures: HarnessFixture[] = [
         gap: 0,
       },
       { kind: "leftPack", after: "rail-text", slot: "plain-row-label", gap: 0 },
+      { kind: "noClip" },
+    ],
+  },
+
+  // ── Invariant #1, across the row's SECOND construction ────────────
+  //
+  // A row that carries `actions` is not the same markup as one that does not:
+  // its box becomes a non-interactive `<div>` and the selectable part moves
+  // inside it as a subgrid spanning every track but the trailing one, so the
+  // action buttons can be that element's siblings rather than its descendants.
+  //
+  // Which means the panel's tracks now reach a row's cells through one more box
+  // than they used to, and that box is the one thing that can silently undo
+  // invariant #1 — a subgrid restating the column gap, or a plain `grid` where
+  // a subgrid was meant, lands the leading cells somewhere new while every
+  // screenshot still looks like a row. So the fixture puts both constructions
+  // in ONE panel and measures the second against a rail the FIRST published:
+  // two genuinely different markup shapes reporting the same two x's.
+  {
+    id: "control-panel/row-actions-rail",
+    primitive: "control-panel",
+    dims: { contentLen: "short", withMeta: true, state: "idle" },
+    widths: WIDTHS,
+    render: () => (
+      <ControlPanel aria-label="Row actions rail">
+        <ControlPanel.Section
+          label={<span data-geo="section-label">Presets</span>}
+        >
+          <RailMarker id="rail-icon" />
+          {/* The plain construction — the row box IS the `<button>`, the four
+              cells are its direct children — publishing both rails. */}
+          <ControlPanel.Row
+            onSelect={NOOP}
+            icon={
+              <Fills id="plain-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+          >
+            <RowRail id="rail-text" />
+            <Fills id="plain-row-label">Visibility</Fills>
+          </ControlPanel.Row>
+          {/* The split construction, with everything that makes it awkward: an
+              icon in the leading cell (which has to arrive through the subgrid),
+              trailing text BEFORE the cluster, and a hover-revealed action. */}
+          <ControlPanel.Row
+            onSelect={NOOP}
+            icon={
+              <Fills id="actions-icon-cell">
+                <MdVisibility />
+              </Fills>
+            }
+            trailing={<span className="whitespace-nowrap">3 rules</span>}
+            actions={<IconButton icon={MdDelete} label="Delete preset" />}
+          >
+            <Fills id="actions-row-label">Recently updated</Fills>
+          </ControlPanel.Row>
+          {/* `disabled` scopes to the SELECTION here, so the row box stays live
+              and its action stays reachable — and the geometry must not move
+              for it either. */}
+          <ControlPanel.Row
+            select="radio"
+            checked={false}
+            disabled
+            onSelect={NOOP}
+            actions={<IconButton icon={MdDelete} label="Delete stale preset" />}
+          >
+            <Fills id="disabled-row-label">No matching fields</Fills>
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      </ControlPanel>
+    ),
+    invariants: [
+      // The icon rail: the panel's own inset, the section label, and the leading
+      // cell of BOTH constructions.
+      { kind: "leftPack", after: "rail-icon", slot: "section-label", gap: 0 },
+      { kind: "leftPack", after: "rail-icon", slot: "plain-icon-cell", gap: 0 },
+      {
+        kind: "leftPack",
+        after: "rail-icon",
+        slot: "actions-icon-cell",
+        gap: 0,
+      },
+      // The text rail: the split row's label starts where the un-split row's
+      // does, one subgrid deeper. This is the assertion the subgrid exists for.
+      { kind: "leftPack", after: "rail-text", slot: "plain-row-label", gap: 0 },
+      {
+        kind: "leftPack",
+        after: "rail-text",
+        slot: "actions-row-label",
+        gap: 0,
+      },
+      {
+        kind: "leftPack",
+        after: "rail-text",
+        slot: "disabled-row-label",
+        gap: 0,
+      },
       { kind: "noClip" },
     ],
   },

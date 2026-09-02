@@ -328,16 +328,74 @@ sites costs more than eight lines of duplicated element inference, so the two
 stay separate and share **tokens** (`--pad-row-x`, `--control-height-md`, the
 hover fill) rather than code.
 
-What is *not* duplicated is the hover-reveal machinery. `ControlPanel.Row`'s
-trailing cell is presentational by contract — the row itself is the click target,
-so an interactive control there would be a nested one, and `select="switch"` owns
-the cell rather than sharing it. `RuleRow` is the interactive case (its row box is
-a non-interactive `<div>`), and its trailing cluster composes `row-actions` with
-`pin={null}`: in-flow inside the reserved track, borrowing that primitive's reveal
-coupling and xs density instead of restating them.
+What is *not* duplicated is the hover-reveal machinery: every trailing cluster in
+this vocabulary — `RuleRow`'s, `Setting`'s and `Row`'s — composes `row-actions`
+at `pin={null}`, in-flow inside a track that already reserves the space,
+borrowing that primitive's reveal coupling and xs density instead of restating
+them.
+
+### The row has two constructions, and `actions` picks one
+
+**Without `actions`** the inferred element IS the row box: one node carrying
+`cp-row`, the four cells as its direct children. The trailing cell is then
+presentational by contract — the row is the click target, so a control there
+would be a nested interactive — and `select="switch"` owns that cell outright
+rather than sharing it. This is what ~50 call sites render, and it is unchanged
+byte for byte.
+
+**With `actions`** the row splits, exactly as `css/row`'s `Row` splits when it is
+handed both a click target and an action cluster: the box becomes a
+non-interactive `<div>`, and the element the props inferred moves inside it as
+the *selectable region*, a sibling of the action buttons rather than their
+ancestor. That sibling relationship is the whole point — it is the only
+arrangement in which "apply this preset" and "delete this preset" are both legal
+DOM on one row.
+
+Three things make the split invisible from the outside:
+
+- **The selectable region is a CSS `subgrid`** (`grid-cols-subgrid col-[1/-2]`),
+  so the panel's own tracks pass straight through it and the gutter, icon and
+  label cells land on exactly the rails they land on in the other construction.
+  Invariant #1 never learns that this row is built differently. It sets **no
+  `gap`** — a subgrid inherits the parent's column gap, and restating it is how
+  the leading cells drift off the rail — and its span is written end-relative
+  (`1/-2`, `-2/-1` for the trailing cell) because `cp-row` is a 2-, 3- or
+  4-track grid depending on what the panel occupies, and only the end-relative
+  line is the same line in all three. It also takes `self-stretch` against the
+  row's `align-items: center`, so the click target fills the full row height
+  instead of only its content's.
+- **The focus ring is painted by the box, from the region's focus.**
+  `focus-ring-from` on the row box plus `data-focus-ring` on the region: the
+  utility is `:has(> [data-focus-ring]:focus-visible)` and the region is a direct
+  child, so keyboard focus on the selection rings the whole row, while focus on
+  an action button rings only that button. `focus-ring-within` would light both
+  at once — two indicators for one focus.
+- **`disabled` scopes to the SELECTION, not the row.** With actions it dims and
+  deadens the inner region only; the box stays live so the actions still work.
+  That is the honest meaning of the prop and it is the case that occurs: a saved
+  preset whose fields have all left the schema cannot be applied, and is exactly
+  the one you want to delete. Without actions the two are the same thing and it
+  reads as it always has.
+
+The CSS pays one price, in the two track-dropping rules inside `@utility cp-row`:
+a row's cells are direct children in one construction and one level deeper in the
+other, so **both depths are written out** (four selectors, not a descendant
+combinator that would also reach inside a row's label). Nothing else in that
+utility learns about the second depth — the panel-level `:has([data-cp-icon])`
+scan is already a descendant scan, so it finds an occupancy mark wherever the row
+puts it.
+
+`actions` is excluded from the `select="switch"` arm at the type level, the same
+way `icon` is excluded from check/radio: the switch is drawn IN the trailing
+cell, so a cluster there would be a second occupant of a cell that already has an
+owner.
 
 Host element is **inferred, never authored**: `href` → `<a>`,
-`onSelect`/`disabled` → `<button>`, else `<div>`. Same rule as `Row`.
+`onSelect`/`disabled` → `<button>`, else `<div>`. Same rule as `Row`, and the
+same rule on both constructions — it just decides a different node in each.
+`ref` is the row BOX on both paths, deliberately: a ref that changed node the day
+a row grew an action would hand a dnd transform a box that leaves the trailing
+cell behind.
 
 ## Geometry: the `--cp-*` tokens
 

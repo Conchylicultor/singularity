@@ -1,19 +1,16 @@
 import type { ReactNode } from "react";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useFilterPresets } from "../../internal/use-filter-presets";
 import { filterPresetMatchesGroup } from "../../internal/sort-presets";
 import { useDataViewControls } from "../controls/controls-context";
-import {
-  PresetDeletePanel,
-  PresetSection,
-  type PresetEntry,
-} from "../presets/preset-section";
+import { PresetSection, type PresetEntry } from "../presets/preset-section";
 import { SavePresetPanel } from "../presets/save-preset-panel";
 
 /**
- * The filter panel's three preset surfaces — the twin of the sort ones, and for
- * the same reason each reads the presets config LIVE rather than taking it as a
- * prop: two of them are pushed pages, whose `render` closure is captured when the
- * row is clicked.
+ * The filter panel's two preset surfaces — the twin of the sort ones, and for
+ * the same reason the pushed one reads the presets config LIVE rather than
+ * taking it as a prop: a panel-stack entry's `render` closure is captured when
+ * the row is clicked.
  *
  * A filter preset has no partial-resolution notion (the whole tree applies or
  * nothing does), so every entry is applicable.
@@ -39,26 +36,36 @@ function useFilterPresetEntries(): {
       const preset = presets.presets.find((p) => p.id === id);
       if (preset) filter.setFilter(preset.group);
     },
-    deletePreset: presets.deletePreset,
+    // The row's trash is one click and takes a whole filter tree with it, which
+    // nothing can reconstruct — so the preset AND its position are captured
+    // before the delete and handed to the toast's Undo. Restoring at the end of
+    // the list would be a different list, so the index travels too.
+    deletePreset: (id) => {
+      const index = presets.presets.findIndex((p) => p.id === id);
+      const preset = presets.presets[index];
+      if (!preset) {
+        // The only rows that can fire this are rows built from this same list,
+        // so a miss is a bug in the wiring, not a state a user can reach.
+        throw new Error(`data-view: no filter preset "${id}" to delete.`);
+      }
+      presets.deletePreset(id);
+      showToast({
+        description: `Deleted preset “${preset.label}”`,
+        action: {
+          label: "Undo",
+          onClick: () => presets.restorePreset(preset, index),
+        },
+      });
+    },
   };
 }
 
 /** The "Presets" section at the top of the filter panel. Null when there are none. */
 export function FilterPresetSection(): ReactNode {
-  const { entries, apply } = useFilterPresetEntries();
+  const { entries, apply, deletePreset } = useFilterPresetEntries();
   return (
-    <PresetSection
-      entries={entries}
-      onApply={apply}
-      deletePanel={() => <FilterPresetDeletePanel />}
-    />
+    <PresetSection entries={entries} onApply={apply} onDelete={deletePreset} />
   );
-}
-
-/** The pushed "Delete a preset" page. */
-export function FilterPresetDeletePanel(): ReactNode {
-  const { entries, deletePreset } = useFilterPresetEntries();
-  return <PresetDeletePanel entries={entries} onDelete={deletePreset} />;
 }
 
 /** The pushed "Save as preset" page — captures the live filter tree on submit. */

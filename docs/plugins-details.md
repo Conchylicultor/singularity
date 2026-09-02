@@ -24604,6 +24604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.RenderSlot`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
+          - `shell/toast.showToast`
         - Exports (types):
           - `CellContributionMeta`
           - `CellEditorProps`
@@ -29550,6 +29551,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/ops`
           - `infra/health`
           - `page/editor`
+          - `primitives/data-view`
           - `shell/notifications`
       - Core:
         - Exports (types):

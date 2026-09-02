@@ -1002,8 +1002,26 @@
   .cp-panel:not(:has([data-cp-handle])):not(:has([data-cp-icon])) & {
     grid-template-columns: minmax(0, 1fr) auto;
   }
+  /* TWO DEPTHS, both written out. A row's cells are its direct children in the
+     plain construction, and one level deeper — inside `[data-cp-select]`, the
+     subgrid that spans every track but the trailing one — in the construction a
+     row takes when it carries `actions` (the click target has to be a SIBLING
+     of its action buttons, so the selectable region became its own element).
+     A loose descendant combinator would cover both in one selector and would
+     also reach into anything a row's LABEL happens to contain, so each depth is
+     named. Nothing else in this utility has to learn about the second depth: the
+     panel-level `:has([data-cp-icon])` scan is already a descendant scan, so it
+     finds an occupancy mark wherever the row puts it. */
   .cp-panel:not(:has([data-cp-handle])) & > [data-cp-cell="gutter"],
-  .cp-panel:not(:has([data-cp-icon])) & > [data-cp-cell="icon"] {
+  .cp-panel:not(:has([data-cp-icon])) & > [data-cp-cell="icon"],
+  .cp-panel:not(:has([data-cp-handle]))
+    &
+    > [data-cp-select]
+    > [data-cp-cell="gutter"],
+  .cp-panel:not(:has([data-cp-icon]))
+    &
+    > [data-cp-select]
+    > [data-cp-cell="icon"] {
     display: none;
   }
 }

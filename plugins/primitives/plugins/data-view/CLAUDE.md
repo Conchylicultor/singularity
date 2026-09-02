@@ -1211,9 +1211,11 @@ config doc (via the `presetsExtraFields` seam injected into the views descriptor
 view-core never names it). The filter panel hosts the saved presets in its top
 section (apply = write the preset's group verbatim into the live filter) plus a
 `Save as preset` footer row, exactly like sort. Both are drawn by the shared
-`web/components/presets/` pieces — including the "Delete a preset" page, which
-exists because a panel row's trailing cell is presentational by contract, so a
-per-row delete button beside a row that applies on click is unrepresentable. Hook:
+`web/components/presets/` pieces. Deleting is the row's own hover-revealed trash
+(`ControlPanel.Row`'s `actions` slot, which makes the click target a sibling of
+the button rather than its ancestor); because a lost filter tree cannot be
+reconstructed, the delete raises a toast whose Undo restores the preset at its
+original index. Hook:
 `useFilterPresets(storageKey)`; readers `readFilterPresets` /
 `filterPresetMatchesGroup` live next to the sort readers. A preset's group is
 stored opaquely as a `jsonField<FilterGroup>` (validated whole through
@@ -1498,6 +1500,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/slot-render.RenderSlot`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
+    - `shell/toast.showToast`
   - Exports (types):
     - `CellContributionMeta`
     - `CellEditorProps`
