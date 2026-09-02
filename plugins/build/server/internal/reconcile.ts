@@ -14,10 +14,12 @@ const DEBOUNCE_MS = 5_000;
 
 /**
  * Auto-build is a CONVERGENCE loop on "this checkout's HEAD is what is
- * deployed", not a queue of push events. `triggerBuild` DROPS a request that
- * arrives while a build is in flight — and a push landing mid-build is precisely
- * when one does — so the request cannot be remembered, it has to be re-derived.
- * This is that re-derivation.
+ * deployed", not a queue of push events. A build request DROPS when it arrives
+ * while a build is in flight — the claiming INSERT against
+ * `build_runs_inflight_uniq` loses, and the handler returns without spawning
+ * anything — and a push landing mid-build is precisely when one does, so the
+ * request cannot be remembered, it has to be re-derived. This is that
+ * re-derivation.
  *
  * **It takes no argument.** That is the whole point. The old design carried a
  * baseline (the commit the finished build was for) from the caller that started
@@ -27,15 +29,15 @@ const DEBOUNCE_MS = 5_000;
  * lost.
  *
  * Called at five edges — the target moving (`buildRunJob`, on the durable
- * `refAdvanced` trigger), a build reaching terminal (the supervised-run kind's
- * `finish`, in `run-state.ts`), this backend starting (`onReady`), the
- * `compositions` config changing, and the `build.composition-tick` cron.
+ * `refAdvanced` trigger), a build reaching terminal (the build job's `onEnded`,
+ * in `run-state.ts`), this backend starting (`onReady`), the `compositions`
+ * config changing, and the `build.composition-tick` cron.
  *
- * The terminal edge used to be TWO — `triggerBuild`'s `finally` for a build
+ * The terminal edge used to be TWO — the spawning call's `finally` for a build
  * whose starting backend survived, and `watchInflightBuild`'s `settle` for one
  * it did not. A build restarts the backend that spawned it, so the first almost
- * never fired; they are now one callback the supervised-run supervisor invokes
- * from whichever backend is alive when the exit marker lands.
+ * never fired; they are now one durable workflow that resumes in whichever
+ * backend is alive when the exit marker lands.
  *
  * Because the decision is stateless and idempotent (the
  * `build_runs_inflight_uniq` partial index already makes a redundant trigger a

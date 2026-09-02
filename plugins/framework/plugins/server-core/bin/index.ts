@@ -3,7 +3,6 @@ import {
   recordMemoryCheckpoint,
   notificationsWsHandler,
   handleResourceHttp,
-  collectContributions,
   reportServerError,
   markServerReady,
 } from "@plugins/framework/plugins/server-core/core";
@@ -11,27 +10,24 @@ import type {
   WsData,
   HttpHandler,
   WsHandler,
-  ServerPluginDefinition,
   LoadedServerPlugin,
 } from "@plugins/framework/plugins/server-core/core";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-// The registry import goes through the `@composition-server-registry` alias
-// (declared in tsconfig.base.json → `bin/plugins-active`). In dev this resolves
-// to `plugins-active.ts`, whose existsSync selector picks full vs. filtered at
-// runtime — identical behavior to a direct relative import. At release-compile
-// time, `release.ts` overrides this alias to resolve STATICALLY to that
-// release's filtered `core/server.composition.<name>.generated.ts`, so the bundler's closure IS the
-// composition closure (no runtime dynamic specifier to defeat `bun --compile`).
-import { serverEntries } from "@composition-server-registry";
-import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
-import { isMain, PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
+// The one boot sequence, shared with the `exec` mode. Everything below this
+// import is what `serve` adds to it: the socket bind interleaved into the
+// sequence, and the post-serving phases after it. See `shared/boot-stages.ts`
+// for the mode split and `cli/run-exec.ts` for what `exec` skips.
 import {
-  computeLoadWaves,
-  topoSortPlugins,
-} from "@plugins/framework/plugins/plugin-loader/core";
+  bootPluginGraph,
+  runAllReadyPhase,
+  runGraphPhase,
+  runShutdownHooks,
+} from "../shared/boot-stages";
+// The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
+// resolved once for both boot modes.
+import { serverEntries, hasCoreBarrel } from "./active-runtime";
+import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
+import { isMain } from "@plugins/infra/plugins/paths/core";
+import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -43,6 +39,8 @@ import {
 // and never qualifies. Boosting agent backends would lift the fleet above its
 // own builds and defeat priority isolation. See
 // research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md.
+// SERVE ONLY: an `exec` child is background work spawned under a deliberately
+// lowered priority, and boosting it would defeat that isolation.
 if (isMain() && boostInteractiveQos()) {
   console.log(
     "[boot] main backend event-loop thread raised to user-interactive QoS",
@@ -56,128 +54,6 @@ if (isMain() && boostInteractiveQos()) {
 // *directional*. The phase-boundary checkpoints recorded here are the
 // authoritative per-phase RSS numbers.
 recordMemoryCheckpoint("boot-start");
-
-// ── Load all server plugins (topological waves) ────────────────
-// Import in dependency-ordered waves over `dependsOn` rather than one flat
-// `Promise.allSettled` over every entry. `dependsOn` is the codegen-derived
-// cross-plugin import graph already carried by each entry (and already used to
-// order the register/onReady phases below). Flat concurrent import races a
-// barrel against a module that imports it: the dependent can evaluate while the
-// barrel is suspended mid-re-export and observe the barrel's uninitialized
-// `const` exports as a TDZ `ReferenceError` under Bun. Loading wave-by-wave
-// (concurrent WITHIN a wave, serialized only across edges) guarantees a
-// plugin's imports are fully evaluated before it is imported. See
-// `computeLoadWaves` for the invariant and cycle handling.
-const waves = computeLoadWaves(serverEntries);
-const byPath = new Map<string, LoadedServerPlugin>();
-const seenIds = new Set<string>();
-// Collect ALL load failures across every wave and throw once at the end — the
-// operator needs the full list, not just the first plugin to blow up.
-const loadFailures: Array<{ pluginPath: string; error: string }> = [];
-// A plugin exposes a public `core` barrel iff `plugins/<path>/core/index.ts`
-// exists (`PLUGINS_DIR` is derived from this file's own location, not cwd).
-const hasCoreBarrel = (pluginPath: string): boolean =>
-  existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"));
-for (const wave of waves) {
-  // ── Warm this wave's core barrels BEFORE loading its server barrels ──
-  // Waves order plugins so a plugin's server barrel loads after its
-  // dependencies' — but that is only HALF the invariant. A plugin's `server`
-  // barrel imports its own `core` *submodules* directly (e.g. `../core/schemas`),
-  // never the `core` *barrel index* — so loading a dependency's server does NOT
-  // evaluate that dependency's core barrel. Dependents in a later wave that
-  // import `@plugins/<dep>/core` then race the barrel's FIRST evaluation across
-  // sibling plugins in the SAME wave, re-exposing the TDZ. Evaluating each core
-  // barrel here, in its own (earlier) wave, closes that gap: it is fully
-  // evaluated before any later-wave dependent reads it. Warming a wave's cores
-  // concurrently is safe — every core they import transitively belongs to an
-  // EARLIER wave and is already evaluated, so no cold barrel is first-imported by
-  // two roots at once. Rejections here are not the reporting site: a genuinely
-  // broken core barrel re-rejects when its own (or a dependent's) server barrel
-  // imports it below, and is recorded there — so nothing is swallowed.
-  // (In a `bun --compile` release the whole graph is one bundle, so the race
-  // cannot occur and `PLUGINS_DIR` may not exist on disk; core-warming simply
-  // no-ops via `hasCoreBarrel`.)
-  const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
-  await Promise.allSettled(
-    coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)),
-  );
-
-  const results = await Promise.allSettled(
-    wave.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
-  );
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i]!;
-    const e = wave[i]!;
-    if (r.status === "rejected") {
-      console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
-      // First line of the error (`Name: message`) for the aggregated summary;
-      // the full reason/stack is on the console.error line above.
-      loadFailures.push({
-        pluginPath: e.pluginPath,
-        error: String(r.reason).split("\n")[0]!,
-      });
-      continue;
-    }
-    // `id` is derived from the unique hierarchy path, never authored. The guard
-    // is structurally unreachable but fails loud if codegen ever produces a
-    // collision, rather than letting topo sort silently drop a plugin.
-    if (seenIds.has(e.id)) {
-      throw new Error(
-        `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
-      );
-    }
-    seenIds.add(e.id);
-    const plugin = r.value.default as LoadedServerPlugin;
-    plugin.id = asPluginId(e.id);
-    byPath.set(e.pluginPath, plugin);
-  }
-}
-// A backend that cannot load its plugins MUST NOT report ready. This is the same
-// argument the file makes for `onReadyBlocking` barrier fatality below (a
-// half-loaded backend that passes its health probe silently serves a
-// degraded/half-functional app) and, like that barrier, is deliberately NOT
-// gated on `loadBearing`: a module that throws at import time is broken, full
-// stop. Aggregate every failure into one error so the whole list is visible.
-if (loadFailures.length > 0) {
-  throw new Error(
-    `[plugin] ${loadFailures.length} plugin(s) failed to load:\n` +
-      loadFailures.map((f) => `  - ${f.pluginPath}: ${f.error}`).join("\n"),
-  );
-}
-for (const e of serverEntries) {
-  const plugin = byPath.get(e.pluginPath);
-  if (!plugin) continue;
-  plugin.dependsOn = e.dependsOn
-    .map((p) => byPath.get(p))
-    .filter((d): d is LoadedServerPlugin => d !== undefined);
-}
-const ordered = topoSortPlugins([...byPath.values()]);
-recordMemoryCheckpoint("after-import");
-
-// Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
-// array holds Registration tokens returned by helpers like `Mcp.tool`,
-// `Runtime.define`, `defineJob`, `defineTriggerEvent`, and
-// `UNSAFE_installDurableHooks`. This is the only place plugins write to
-// global registries. A failure here is fatal: a half-initialized registry
-// would let `onReady` run against an inconsistent world.
-for (const p of ordered) {
-  for (const r of p.register ?? []) {
-    const end = profilerStart(`register:${p.id}`, "register", p.id, p.id);
-    try {
-      await r.register();
-    } catch (err) {
-      console.error(`[plugin.${p.id}] register failed`, err);
-      throw err;
-    } finally {
-      end();
-    }
-  }
-}
-
-// ── Contributions ──────────────────────────────────────────────
-// Collect declarative contributions from all plugins before onReady.
-// Consuming plugins call Token.getContributions() in their onReady.
-collectContributions(ordered);
 
 // ── Route tables ────────────────────────────────────────────────
 // Flatten plugin routes into lookup tables. Literal routes go in an O(1)
@@ -242,7 +118,7 @@ function matchSegments<H>(
   return null;
 }
 
-{
+function populateRoutes(ordered: LoadedServerPlugin[]): void {
   const end = profilerStart(
     "routePopulation",
     "routePopulation",
@@ -257,20 +133,11 @@ function matchSegments<H>(
     if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
   }
   end();
+
+  // Core-owned routes for the live-state primitive.
+  wsRoutes["/ws/notifications"] = notificationsWsHandler;
+  registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 }
-
-// Core-owned routes for the live-state primitive.
-wsRoutes["/ws/notifications"] = notificationsWsHandler;
-registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
-
-// ── Bind socket ─────────────────────────────────────────────────
-// Bind immediately after migrations so the gateway detects readiness and
-// starts proxying. onReady hooks run background work (graphile-worker DDL,
-// git-log reconcile, file watchers, trigger setup) that isn't needed for
-// serving HTTP/WS. Without this, the frontend loads instantly (static files)
-// but stays stuck on "Server: Reconnecting" for the entire onReady phase.
-const socketPath = Bun.env.SOCKET_PATH;
-if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
 // Default every API response to `cache-control: no-store` unless the handler set
 // its own. The browser HTTP cache storing a live-state body then 304-replaying an
@@ -313,134 +180,90 @@ async function safeHandle(
   }
 }
 
-const endSocketBind = profilerStart("socketBind", "socketBind", "Socket Bind");
-Bun.serve<WsData>({
-  unix: socketPath,
-  // Was Bun's default 10s. Under a host-saturation event-loop stall, an in-flight
-  // HTTP handler or a WS-upgrade attempt writes no bytes for >10s and Bun drops it,
-  // triggering a reconnect/resubscribe storm that amplifies the stall. This is a
-  // gateway-fronted unix-socket-only listener, so 60s still reaps genuinely dead
-  // HTTP conns within a minute while sitting above the gateway's load-scaled
-  // readiness timeout. (The live WS is separately governed by the unset,
-  // 120s-default websocket.idleTimeout — not this key.)
-  idleTimeout: 60,
-  fetch(req, server) {
-    const url = new URL(req.url);
-
-    // WebSocket upgrade
-    if (req.headers.get("upgrade") === "websocket") {
-      const handler = wsRoutes[url.pathname];
-      if (handler) {
-        server.upgrade(req, { data: { path: url.pathname } });
-        return;
-      }
-    }
-
-    // HTTP routing: literal fast-path, then :param matcher.
-    const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
-    if (literal) return safeHandle(literal, req, {}, url.pathname);
-
-    const matched = matchSegments(
-      url.pathname,
-      paramHttpRoutes,
-      (r) => (r as HttpParamRoute).method === req.method,
-    );
-    if (matched)
-      return safeHandle(matched.handler, req, matched.params, url.pathname);
-
-    return new Response("Not found", { status: 404 });
-  },
-  websocket: {
-    open(ws) {
-      wsRoutes[ws.data.path]?.open(ws);
-    },
-    message(ws, msg) {
-      wsRoutes[ws.data.path]?.message(ws, msg);
-    },
-    close(ws, code, reason) {
-      wsRoutes[ws.data.path]?.close(ws, code, reason);
-    },
-  },
-});
-
-endSocketBind();
-console.log(`Server listening on ${socketPath}`);
-
-// Run a lifecycle phase graph-driven by `dependsOn`: each plugin's `hook` starts
-// only after all its `dependsOn` parents' hooks have resolved. `topoSortPlugins`
-// guarantees every plugin appears after its deps in `ordered`, so
-// `resolved.get(d.id)` is always defined when we reach a dependent. The per-plugin
-// try/catch lives INSIDE the `.then` callback so one plugin's outcome propagates
-// (or doesn't) to the final `Promise.all` per the phase's fatality contract below.
+// ── Bind socket ─────────────────────────────────────────────────
+// Bind immediately after migrations so the gateway detects readiness and
+// starts proxying. onReady hooks run background work (graphile-worker DDL,
+// git-log reconcile, file watchers, trigger setup) that isn't needed for
+// serving HTTP/WS. Without this, the frontend loads instantly (static files)
+// but stays stuck on "Server: Reconnecting" for the entire onReady phase.
 //
-// Fatality differs by phase, because the two phases sit on opposite sides of the
-// readiness flip:
-//
-// - `onReadyBlocking` is the HARD BARRIER *before* the backend serves. Its entire
-//   contract is "this MUST finish before requests can be served correctly" — so a
-//   throw means it did NOT finish, and boot MUST abort, for EVERY plugin regardless
-//   of the plugin-wide `loadBearing` flag. `loadBearing` classifies docs detail /
-//   criticality, not barrier participation; gating the barrier on it silently
-//   promoted a degraded backend (a change-feed with no triggers, an empty config
-//   registry) behind a green `/api/health/ready`. A plugin whose blocking work is
-//   genuinely optional-for-correctness must make that explicit by handling its own
-//   failure INSIDE the hook (see `live-state-snapshot`), never by relying on the
-//   framework to swallow it.
-// - `onReady` runs AFTER the server is already serving. Killing a live, serving
-//   backend because a background poller/watcher threw is reserved for genuinely
-//   critical plugins, so that phase stays gated on `loadBearing`.
-async function runGraphPhase(
-  ordered: LoadedServerPlugin[],
-  hook: "onReadyBlocking" | "onReady",
-): Promise<void> {
-  const resolved = new Map<string, Promise<void>>();
-  for (const p of ordered) {
-    const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
-    const ready = Promise.all(deps).then(async () => {
-      const fn = p[hook];
-      if (!fn) return;
-      const end = profilerStart(`${hook}:${p.id}`, hook, p.id, p.id);
-      try {
-        await fn.call(p);
-      } catch (err) {
-        console.error(`[plugin.${p.id}] ${hook} failed`, err);
-        if (hook === "onReadyBlocking" || p.loadBearing) throw err;
-      } finally {
-        end();
-      }
-    });
-    resolved.set(p.id, ready);
-  }
-  await Promise.all(resolved.values());
-}
+// SERVE ONLY, and this is the one phase that interleaves INTO the shared boot
+// sequence — hence `beforeReadyBarrier` below rather than a call after it.
+// `SOCKET_PATH` is required here and nowhere else: an `exec` child has no
+// socket and must not need one.
+function bindSocket(ordered: LoadedServerPlugin[]): void {
+  populateRoutes(ordered);
 
-// ── onReadyBlocking ─────────────────────────────────────────────
-// Hard barrier between socket-bind and serving-ready. Plugins that MUST finish
-// before the backend can correctly serve requests (DB migrations + pool warm,
-// config registry init) run here. The phase is graph-driven by `dependsOn`
-// (exactly like `onReady` below): each plugin's blocking hook starts only after
-// all its `dependsOn` parents' blocking hooks have resolved, so DB-touching
-// plugins auto-sequence after `database`'s migrations. Once the whole phase
-// resolves we flip the readiness flag — `GET /api/health/ready` returns 200 only
-// after this point, and the gateway gates its hot-swap on that probe (so the old
-// backend keeps serving until the new one is genuinely ready). Background
-// `onReady` work runs after, now guaranteed to observe a migrated DB and a ready
-// registry. ANY plugin's rejection here aborts boot — this is a hard barrier, so
-// its fatality is NOT gated on `loadBearing` (a plugin with optional blocking work
-// handles its own failure inside the hook). See `runGraphPhase`.
-{
-  const end = profilerStart(
-    "onReadyBlocking",
-    "onReadyBlocking",
-    "Blocking Ready",
+  const socketPath = Bun.env.SOCKET_PATH;
+  if (!socketPath) throw new Error("SOCKET_PATH env var is required");
+
+  const endSocketBind = profilerStart(
+    "socketBind",
+    "socketBind",
+    "Socket Bind",
   );
-  try {
-    await runGraphPhase(ordered, "onReadyBlocking");
-  } finally {
-    end();
-  }
+  Bun.serve<WsData>({
+    unix: socketPath,
+    // Was Bun's default 10s. Under a host-saturation event-loop stall, an in-flight
+    // HTTP handler or a WS-upgrade attempt writes no bytes for >10s and Bun drops it,
+    // triggering a reconnect/resubscribe storm that amplifies the stall. This is a
+    // gateway-fronted unix-socket-only listener, so 60s still reaps genuinely dead
+    // HTTP conns within a minute while sitting above the gateway's load-scaled
+    // readiness timeout. (The live WS is separately governed by the unset,
+    // 120s-default websocket.idleTimeout — not this key.)
+    idleTimeout: 60,
+    fetch(req, server) {
+      const url = new URL(req.url);
+
+      // WebSocket upgrade
+      if (req.headers.get("upgrade") === "websocket") {
+        const handler = wsRoutes[url.pathname];
+        if (handler) {
+          server.upgrade(req, { data: { path: url.pathname } });
+          return;
+        }
+      }
+
+      // HTTP routing: literal fast-path, then :param matcher.
+      const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
+      if (literal) return safeHandle(literal, req, {}, url.pathname);
+
+      const matched = matchSegments(
+        url.pathname,
+        paramHttpRoutes,
+        (r) => (r as HttpParamRoute).method === req.method,
+      );
+      if (matched)
+        return safeHandle(matched.handler, req, matched.params, url.pathname);
+
+      return new Response("Not found", { status: 404 });
+    },
+    websocket: {
+      open(ws) {
+        wsRoutes[ws.data.path]?.open(ws);
+      },
+      message(ws, msg) {
+        wsRoutes[ws.data.path]?.message(ws, msg);
+      },
+      close(ws, code, reason) {
+        wsRoutes[ws.data.path]?.close(ws, code, reason);
+      },
+    },
+  });
+
+  endSocketBind();
+  console.log(`Server listening on ${socketPath}`);
 }
-recordMemoryCheckpoint("after-onReadyBlocking");
+
+// ── The shared boot sequence ────────────────────────────────────
+// Load waves → register → collectContributions → [bind socket] → the
+// `onReadyBlocking` barrier. Identical to what `exec` runs, minus the bind.
+const ordered = await bootPluginGraph({
+  mode: "serve",
+  entries: serverEntries,
+  hasCoreBarrel,
+  beforeReadyBarrier: bindSocket,
+});
 markServerReady();
 
 // ── onReady ─────────────────────────────────────────────────────
@@ -453,25 +276,7 @@ await runGraphPhase(ordered, "onReady");
 recordMemoryCheckpoint("after-onReady");
 
 // ── onAllReady ──────────────────────────────────────────────────
-// Phase 3 — full barrier: every plugin's `onReady` has resolved. Plugins whose
-// initialization must observe another plugin's onReady-produced state (without
-// a dependsOn edge — e.g. a schedule whose definition reads config) run here.
-// Parallel; a load-bearing plugin's rejection aborts boot.
-await Promise.all(
-  ordered.map(async (p) => {
-    if (!p.onAllReady) return;
-    const end = profilerStart(`onAllReady:${p.id}`, "onAllReady", p.id, p.id);
-    try {
-      await p.onAllReady();
-    } catch (err) {
-      console.error(`[plugin.${p.id}] onAllReady failed`, err);
-      if (p.loadBearing) throw err;
-    } finally {
-      end();
-    }
-  }),
-);
-recordMemoryCheckpoint("after-onAllReady");
+await runAllReadyPhase(ordered);
 
 // ── drainWarmups ────────────────────────────────────────────────
 // Declared heavy boot warm-ups (infra/warmup) run LAST, after every phase has
@@ -498,16 +303,7 @@ async function shutdown(signal: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[server] ${signal} received; shutting down`);
-  await Promise.all(
-    ordered.map((p) =>
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      Promise.resolve()
-        .then(() => p.onShutdown?.())
-        .catch((err) =>
-          console.error(`[plugin.${p.id}] onShutdown failed`, err),
-        ),
-    ),
-  );
+  await runShutdownHooks(ordered);
   process.exit(0);
 }
 process.on("SIGTERM", () => {

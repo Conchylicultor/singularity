@@ -56,3 +56,18 @@ export const SECRETS_DIR_DISPLAY = "~/.singularity/state/secrets";
  * No trailing slash, same convention as above.
  */
 export const USER_CONFIG_DIR_DISPLAY = "~/.singularity/state/config";
+
+/**
+ * Where each namespace's per-worktree state lives, as prose — the prose twin of
+ * the resolved `worktreeDir`. One `<namespace>/` subtree beneath it, holding
+ * that namespace's build logs, run artifacts and deploy receipt.
+ *
+ * Used by the exec runtime's identity assert, which has to tell somebody
+ * running the command by hand WHERE to find the namespace name it is missing.
+ * That is the whole job of this file: a message that names a directory should
+ * name it from the one place that knows how it is spelled, not from a literal
+ * the next rename walks past.
+ *
+ * No trailing slash, same convention as above.
+ */
+export const WORKTREES_DIR_DISPLAY = "~/.singularity/worktrees";

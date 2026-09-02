@@ -21,14 +21,15 @@ import { handlePreview, handleStopPreview } from "./internal/handle-preview";
 import { handleReleaseLogs } from "./internal/handle-logs";
 import { handleHistoryQuery } from "./internal/handle-history-query";
 import { reconcileOrphanPreviews } from "./internal/preview-manager";
-import { releaseRunKind } from "./internal/run-state";
+import { releaseJob } from "./internal/release-job";
 import { releaseRunResource } from "./internal/release-run-resource";
 import { releaseRunsRevisionResource } from "./internal/history-revision-resource";
 import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
-export { triggerRelease, runRelease } from "./internal/run-release";
-export type { TriggerReleaseOptions } from "./internal/run-release";
-export type { ReleaseOutcome } from "./internal/run-state";
+export { enqueueRelease } from "./internal/enqueue-release";
+export type { TriggerReleaseOptions } from "./internal/enqueue-release";
+export { awaitRelease } from "./internal/await-release";
+export type { ReleaseEnded } from "./internal/await-release";
 // `releaseOutDir` / `newReleaseRunId` are NOT re-exported here: they now live in
 // `@plugins/release/plugins/bundles/server`, which is DB-free and therefore
 // importable by a CLI process — import them from there.
@@ -37,10 +38,11 @@ export { Release, collectReleaseEnv } from "./internal/env-provider";
 export default {
   description:
     "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
-  // The supervised-run kind must be REGISTERED, not merely defined: the
+  // ONE token mounts both halves of the release job — the queue job and its
+  // supervised-run kind. The kind must be REGISTERED, not merely defined: the
   // primitive's own `onReady` reconciler loops the registered set, so a kind
   // that never lands here would start runs nothing ever closes.
-  register: [releaseRunKind],
+  register: [releaseJob],
   contributions: [
     Resource.Declare(releaseRunResource),
     Resource.Declare(releaseRunsRevisionResource),

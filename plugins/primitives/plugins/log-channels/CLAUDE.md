@@ -174,6 +174,7 @@ count accumulates across drops.
     - `apps/mail/sync`
     - `apps/sonata/piano-roll`
     - `apps/studio/compositions/release/release-logs`
+    - `backup`
     - `build`
     - `conversations/transcript-retention`
     - `database`

@@ -7,6 +7,11 @@
     "bin",
     "core",
     "../../../../plugins/**/cli",
+    // A `cli/` file may import a `server` barrel (the runtime matrix allows it),
+    // and server-core's `cli/` barrel boots the whole app — so this project spans
+    // the server graph and needs the same ambient declarations the server project
+    // includes (e.g. file-watcher's `@parcel/watcher/wrapper` module declaration).
+    "../../../../plugins/**/shared",
     "../../../../plugins/packages/plugins/*/shared"
   ]
 }

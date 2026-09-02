@@ -3,8 +3,9 @@
 Reusable engine for the **local composition release lifecycle** (F4): run a
 release, observe live progress/logs, see the artifact, and launch/preview it
 locally. Every part of "run a detached child and survive a restart" now belongs
-to the **supervised-run** primitive
-(`@plugins/infra/plugins/jobs/plugins/supervised-run`) — this plugin keeps only
+to the **supervised-job** wrapper
+(`@plugins/infra/plugins/jobs/plugins/supervised-job`), which composes
+`defineJob` + a `supervised-run` kind + `ctx.waitFor` — this plugin keeps only
 its own ledger, its argv, and what a finished run MEANS. The Studio app is the
 first UI consumer; the engine ships no UI of its own. Its web barrel
 (`web/index.ts`) is **registration-only** — a side-effect import
@@ -24,12 +25,15 @@ registration.)
   `RELEASE_TARGETS` is the single source of truth (web picker + server validator
   build from it). Not a slot: adding `tauri` (F5) is one line here. The icon stays
   web-only (the server never imports a UI component).
-- **Run model** (`server/internal/run-release.ts`) wraps `./singularity release
+- **Run model** (`server/internal/release-job.ts`) wraps `./singularity release
   --composition <c> --target <t> --dev --out <short-dir>` as a **supervised
-  run**. The primitive owns detach, the pid, the transcript, the boot reconcile
-  and the re-attach; `server/internal/run-state.ts` is the adapter over
-  `release_runs` (`listUnfinished` / `setPid` / `finish`), mounted in
-  `register: [releaseRunKind]`. The claiming INSERT IS the lock: the partial
+  job**: one `defineSupervisedJob` that claims, spawns detached and suspends, so
+  a twenty-minute release holds a worker slot for milliseconds. The primitive
+  owns detach, the pid, the transcript, the boot reconcile and the re-attach;
+  `server/internal/run-state.ts` is the adapter over `release_runs`
+  (`claimRelease` / `listUnfinished` / `setPid` / `closeReleaseRow`), and
+  `register: [releaseJob]` mounts both halves — the queue job and its
+  supervised-run kind — with one token. The claiming INSERT IS the lock: the partial
   unique index is scoped by **(namespace, composition)**, so concurrent releases
   of *different* compositions are legitimate and a duplicate in-flight release of
   the *same* composition loses with 23505 → `already-running`. There is no
@@ -64,42 +68,70 @@ registration.)
   Map projected into the `release.previews` external resource. Stop kills the
   process group and removes the data dir. Boot reconcile reaps dead previews.
 
-## `runRelease` is the implementation; `triggerRelease` is a wrapper
+## Starting a release, and waiting for one
 
-`runRelease(opts): Promise<ReleaseOutcome>` cuts one release and waits for it.
-`triggerRelease` is `void runRelease(...)` plus the in-process `inflight` re-entry
-guard and an error log line — so there is exactly one implementation, and the
-Studio button's behaviour is unchanged.
+There are exactly two verbs, and they are deliberately not the same call:
 
-`ReleaseOutcome` is a **discriminated result, not a throw**: `already-running` is
-a legitimate outcome a sequencing caller branches on (the Deploy app's `update`
-awaits a release between `converge` and `ship`), and it must be distinguishable
-from "the build ran and failed" and from an actual bug. The `failed` arm's
-`message` is literally the string written to `release_runs.error`, so a caller
-reporting it and a user opening the run detail read one sentence.
+- **`enqueueRelease(opts): Promise<string>`** — request one release, get back the
+  id of the run it will be. It returns as soon as the job row is in the queue.
+- **`awaitRelease(ctx, { releaseId, composition, name }): Promise<ReleaseEnded>`**
+  — wait for one, **durably**, from inside a job handler.
 
-`inflight` guards only `triggerRelease`. The authoritative lock is the claiming
-INSERT against the partial unique index, and a caller that legitimately awaits a
-release must not be dropped by a module-level boolean.
+`runRelease` is gone, and so is `internal/driving.ts`. A supervised run's outcome
+does not come back from the call that started it — it arrives at the kind's
+`finish`, driven by a file watcher — and that map existed to hand the terminal
+back to the promise the starting process was holding. It worked only while that
+process lived, which is precisely what the Deploy app's `update` could not rely
+on: it `await`ed a release in-process for tens of minutes between its converge
+and ship legs, and an unrelated `./singularity build` ended both. `ctx.waitFor`
+is that mechanism now and it is durable, so the map is deleted rather than
+generalised.
 
-**How an awaited call survives an event-driven outcome.** A supervised run's
-terminal does not come back from the call that started it — it arrives at the
-kind's `finish` callback, driven by a file watcher. `internal/driving.ts` absorbs
-that in one map: `runRelease` claims the run before spawning, `finish` hands the
-terminal straight back to it, and only a run whose sequencer is *gone* (this
-backend restarted) takes the adopting path and is closed from the ledger. The
-entry is released after the row is stamped, not at delivery — between those two
-instants the row is still open, and dropping the claim earlier would let a
-reconcile pass close a run that is being finished right now.
+**The run id is minted by the CALLER**, in `enqueueRelease`, before anything is
+claimed. That is the one thing about the input worth arguing for: a sequencing
+caller has to name the run it will wait on, because `supervisedRun.ended` is
+filtered on `(kindId, runId)`. Naming a run is not claiming it — the LOCK is
+still the job's claiming INSERT, so two enqueues of one composition both get an
+id and the second one's claim loses.
 
-`stampRelease` is the ONE terminal write, shared by both arrivals, so an orphaned
-release and a watched one cannot be recorded differently. `finished_at` is the
-exit marker's **mtime**, so a run recovered after a restart reports the duration
-it actually took rather than the gap until something noticed.
+`ReleaseEnded` is a **discriminated result, not a throw**, for the same reason
+`ReleaseOutcome` was: *another release of this composition is already running* is
+a legitimate outcome a sequencer branches on, and it must be distinguishable from
+"the build ran and failed" and from an actual bug. The `failed` arm's `message`
+is literally `release_runs.error`, so a caller reporting it and a user opening the
+run detail read one sentence.
+
+**`awaitRelease` resolves against the LEDGER, not the exit marker**, which is the
+one place it differs from every other supervised wait. `closeRow` writes the row
+before the announcement, so the row is always the complete answer by the time
+anything can wake — and unlike a marker it also states the two things a marker
+cannot: whether the run was ever claimed at all, and what sentence to show. A
+release whose claim lost the race writes no marker and has no pid, so
+`supervised-job`'s own `awaitSupervisedRun` would read it as a hard kill; the
+`never-started` arm here names the run that actually holds the lock instead.
+
+## `closeRow` stamps the row; `onEnded` says so
+
+The kind's two arms split by WHAT they do, not by which one runs:
+
+- **`closeReleaseRow`** (`run-state.ts`) — the bare terminal write, first-writer-
+  wins (`WHERE finished_at IS NULL`), reached from the supervised-run reconciler
+  in every backend. No log line, no enqueue. It is the backstop that keeps a
+  dead workflow from holding the composition's in-flight lock forever.
+- **`onEnded`** (`release-job.ts`) — the one log line saying how it went, read
+  back off the now-closed row so the sentence a user sees and the text stored on
+  the row are identical by construction.
+
+`finished_at` is the exit marker's **mtime**, so a run recovered after a restart
+reports the duration it actually took rather than the gap until something
+noticed.
+
+`failUnstartedRelease` is gone: closing the row after a spawn that never started
+is `supervised-job`'s `spawnClaimedRun`, once, for every kind.
 
 ## Intent: what a run is FOR
 
-`triggerRelease({ composition, target, intent })` takes a `ReleaseIntent`, and
+`enqueueRelease({ composition, target, intent })` takes a `ReleaseIntent`, and
 that value is the only thing that changes the argv:
 
 | intent | argv | `release_runs.kind` |
@@ -296,12 +328,14 @@ release and confirming the Cards/All/Longest/Composed tabs + toolbar render:
 
 ## Deploy handoff note
 
-The engine's run model, target registry, and `triggerRelease` are
-**remote-flow-ready**. The Deploy app now consumes this as designed: its `update`
-verb *awaits* `runRelease` for the build leg — because that build must be
-recorded in `release_runs`, which only the engine can do — and owns the transport
-and where the artifact lands. The lifecycle stays here; nothing remote is built
-here.
+The engine's run model, target registry, and `enqueueRelease` are
+**remote-flow-ready**. The Deploy app consumes this as designed: its `update`
+verb enqueues a release for the build leg — because that build must be recorded
+in `release_runs`, which only the engine can do — waits for it through
+`awaitRelease`, and owns the transport and where the artifact lands. That wait is
+a suspended workflow, not an in-process promise, which is what makes an `update`
+survive the backend restart it used to die of. The lifecycle stays here; nothing
+remote is built here.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -320,9 +354,9 @@ here.
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/jobs/supervised-run.defineSupervisedRunKind`
-    - `infra/jobs/supervised-run.startSupervisedRun`
-    - `infra/jobs/supervised-run.UnfinishedRun`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `infra/jobs/supervised-job.runEnded`
+    - `infra/jobs/supervised-job.RunEndedPayload`
     - `infra/launcher.gatewayPidFile`
     - `infra/launcher.isRunning`
     - `infra/launcher.teardownSelfContainedApp`
@@ -344,15 +378,15 @@ here.
     - `release/bundles.resolveBundle`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports (types):
-    - `ReleaseOutcome`
+    - `ReleaseEnded`
     - `TriggerReleaseOptions`
   - Exports (values):
     - `_releaseRuns`
+    - `awaitRelease`
     - `collectReleaseEnv`
+    - `enqueueRelease`
     - `Release`
-    - `runRelease`
-    - `triggerRelease`
-  - Register: `defineSupervisedRunKind('release')`
+  - Register: `defineSupervisedJob('release.run.supervised')`
   - Resources:
     - `release.history-revision` (push)
     - `release.previews` (push)

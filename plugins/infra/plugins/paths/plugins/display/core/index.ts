@@ -6,4 +6,5 @@ export {
   PROTOTYPES_DIR_DISPLAY,
   SECRETS_DIR_DISPLAY,
   USER_CONFIG_DIR_DISPLAY,
+  WORKTREES_DIR_DISPLAY,
 } from "./internal/display";

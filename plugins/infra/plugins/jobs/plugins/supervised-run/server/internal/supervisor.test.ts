@@ -34,7 +34,11 @@ import {
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import type { RunTerminal } from "../../core";
 import { defineSupervisedRunKind, type UnfinishedRun } from "./registry";
-import { reconcileSupervisedRuns } from "./supervisor";
+import {
+  isSupervisedSpawnError,
+  reconcileSupervisedRuns,
+  startSupervisedRun,
+} from "./supervisor";
 
 const worktree = currentWorktreeName();
 
@@ -209,5 +213,95 @@ describe("reconcileSupervisedRuns: a run the ledger stopped listing", () => {
     await reconcileSupervisedRuns();
     await reconcileSupervisedRuns();
     expect(finished).toHaveLength(1);
+  });
+});
+
+/**
+ * Which side of the spawn a failed start happened on.
+ *
+ * A caller that claimed its ledger row before starting has exactly one
+ * compensating action — close the row, releasing the kind's in-flight lock — and
+ * it is safe on only one side of this boundary. Before the spawn, nothing exists
+ * and the row would wedge the kind forever. After it, a real child is running,
+ * and closing the row would release the lock under it so the next request spawns
+ * a SECOND child. So the flag is asserted here, against the real function, with
+ * real files and a real (very short-lived) child.
+ */
+let setPidFails = false;
+
+const spawnKind = defineSupervisedRunKind({
+  id: "suptestspawn",
+  channel,
+  listUnfinished: () => Promise.resolve([]),
+  setPid: () =>
+    setPidFails
+      ? Promise.reject(new Error("setPid write failed"))
+      : Promise.resolve(),
+  finish: () => Promise.resolve(),
+});
+await spawnKind.register();
+
+/** Await `p` and return the Error it rejected with; throw if it resolved. */
+async function rejection(p: Promise<unknown>): Promise<Error> {
+  try {
+    await p;
+  } catch (err) {
+    return err as Error;
+  }
+  throw new Error("expected the promise to reject, but it resolved");
+}
+
+/** Both artifact paths of a run of `spawnKind`, registered for cleanup. */
+function trackArtifacts(runId: string): void {
+  created.push(
+    worktreeArtifacts.runTranscript(worktree, "suptestspawn", runId),
+  );
+  created.push(worktreeArtifacts.runTerminal(worktree, "suptestspawn", runId));
+}
+
+describe("startSupervisedRun: which side of the spawn a failure happened on", () => {
+  test("a failure before the spawn reports childStarted: false", async () => {
+    const runId = uniqueRunId("prespawn");
+    // A marker already sitting there is rejected before anything is spawned.
+    mkdirSync(worktreeArtifacts.runsDir(worktree), { recursive: true });
+    const marker = worktreeArtifacts.runTerminal(
+      worktree,
+      "suptestspawn",
+      runId,
+    );
+    created.push(marker);
+    appendFileSync(marker, "0 -\n");
+
+    const err = await rejection(
+      startSupervisedRun(spawnKind, { runId, argv: ["true"] }),
+    );
+
+    expect(isSupervisedSpawnError(err)).toBe(true);
+    if (!isSupervisedSpawnError(err)) return;
+    expect(err.childStarted).toBe(false);
+    expect(err.message).toContain("BEFORE");
+  });
+
+  test("a failure after the spawn reports childStarted: true", async () => {
+    const runId = uniqueRunId("postspawn");
+    trackArtifacts(runId);
+    setPidFails = true;
+    try {
+      // `true` exits immediately, so the child this spawns is gone by the time
+      // the assertion runs — the point is only that it EXISTED, which is what
+      // makes closing its row unsafe.
+      const err = await rejection(
+        startSupervisedRun(spawnKind, { runId, argv: ["true"] }),
+      );
+
+      expect(isSupervisedSpawnError(err)).toBe(true);
+      if (!isSupervisedSpawnError(err)) return;
+      expect(err.childStarted).toBe(true);
+      expect(err.message).toContain("AFTER");
+      // The original failure is preserved rather than replaced.
+      expect((err.cause as Error).message).toBe("setPid write failed");
+    } finally {
+      setPidFails = false;
+    }
   });
 });

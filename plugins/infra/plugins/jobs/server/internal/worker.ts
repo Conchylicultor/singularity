@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   makeWorkerUtils,
   parseCronItem,
@@ -42,9 +42,8 @@ import {
 import { armDeadline } from "./deadline";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
-import { isNonRetryableError } from "./non-retryable";
 import { markJobPermanentlyFailed } from "./introspection";
-import { _jobSteps, _jobWaits } from "./tables";
+import { classifyFailure, discardWorkflowLog } from "./workflow-log";
 
 const log = Log.channel("jobs");
 
@@ -245,6 +244,11 @@ function makeJobTaskHandler(
     await dispatch(p, {
       jobId: String(helpers.job.id),
       attempt: Number(helpers.job.attempts),
+      // The ROW's budget, not the registered job's: `enqueue(input, {
+      // maxAttempts })` overrides it per row, so only the fetched job knows how
+      // many attempts this one gets. `dispatch()` compares it against `attempt`
+      // to recognise the last attempt.
+      maxAttempts: Number(helpers.job.max_attempts),
       runnerId,
     });
   };
@@ -454,7 +458,12 @@ async function repointHoldTasks(): Promise<void> {
 // those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
-  meta: { jobId: string; attempt: number; runnerId: string },
+  meta: {
+    jobId: string;
+    attempt: number;
+    maxAttempts: number;
+    runnerId: string;
+  },
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
@@ -637,12 +646,32 @@ async function dispatch(
         // of the handler, not of the day, and retrying it three more times
         // spends `maxAttempts × deadline` of slot time to learn nothing. So it
         // dead-letters here, loudly, through the same machinery.
-        if (
-          isNonRetryableError(err) ||
-          (abort.signal.aborted && meta.attempt >= 2)
-        ) {
+        const finality = classifyFailure({
+          err,
+          deadlineAborted: abort.signal.aborted,
+          attempt: meta.attempt,
+          maxAttempts: meta.maxAttempts,
+        });
+        if (finality.collapseBudget) {
           await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
         }
+        // The workflow is over — no attempt of it will ever run again — so its
+        // step and wait logs go with it. Leaking them is a CORRECTNESS bug, not
+        // untidiness: `workflowRunId` is not unique per run. For `dedup:
+        // "singleton"` it is the constant `${jobName}:_` (registry.ts), so the
+        // NEXT enqueue of that job is the SAME workflow id. Left behind, a
+        // cached `_jobSteps` row makes `ctx.step` return a result for work the
+        // new run never did, and a `resolved` `_jobWaits` row makes
+        // `ctx.waitFor` return a stale payload instantly instead of suspending
+        // — so a singleton workflow that fails once would silently skip its own
+        // side effects forever after.
+        //
+        // Ordered AFTER the budget collapse and gated on `workflowDead`, which
+        // is the whole safety argument: replay of cached steps on a RETRY is a
+        // deliberate feature, so nothing is dropped while another attempt could
+        // still legitimately use it. If the collapse write above rejects we
+        // never get here, and graphile retries with the log intact.
+        if (finality.workflowDead) await discardWorkflowLog(workflowRunId);
         throw err;
       } finally {
         // Both timers cleared on every exit path — success, suspend, failure.
@@ -671,38 +700,8 @@ async function dispatch(
   }
   if (outcome === "suspended") return;
 
-  // Normal completion: drop the step + wait logs for this run. Trigger rows
-  // outlive this cleanup — oneShot rows are deleted by the events dispatcher
-  // after their target succeeds; an orphan from a never-fired trigger is
-  // harmless (it fires → `jobs.resume` finds no wait row → returns).
-  //
-  // Cleanup failures are logged but NOT thrown. The handler already
-  // succeeded; rethrowing would force graphile to retry an idempotent
-  // workflow whose only effect is dead-row cleanup. The leaked rows are
-  // bounded (one workflow's worth) and harmless on replay — the next
-  // dispatch of the same workflowRunId would short-circuit through the
-  // cached steps. A periodic sweep can reap them later if it ever matters.
-  //
-  // Outside the `job` entry span (it wraps only `job.run()`), so without the
-  // explicit declaration these deletes are context-less and therefore ungated,
-  // taking connections reserved for interactive work to clean up after background
-  // work. Both awaits stay inside the lane scope so their pool connections are
-  // acquired under the declaration. See
-  // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
-  try {
-    await runInBackgroundLane(async () => {
-      await db
-        .delete(_jobSteps)
-        .where(eq(_jobSteps.workflowRunId, workflowRunId));
-      await db
-        .delete(_jobWaits)
-        .where(eq(_jobWaits.workflowRunId, workflowRunId));
-    });
-    // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch (err) {
-    console.warn(
-      `[jobs] cleanup of step/wait logs failed for workflow ${workflowRunId}`,
-      err,
-    );
-  }
+  // Normal completion: drop the step + wait logs for this run. The same
+  // teardown the permanently-failed path above takes, on the same never-throw
+  // terms — see `discardWorkflowLog` for both.
+  await discardWorkflowLog(workflowRunId);
 }

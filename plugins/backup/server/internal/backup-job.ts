@@ -1,79 +1,85 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { db } from "@plugins/database/server";
-import { getConfig } from "@plugins/config_v2/server";
-import { backupConfig } from "../../shared/config";
-import { assembleArchive } from "./assemble-archive";
-import { BackupTarget } from "./contribution";
-import { _backupRuns } from "./tables";
+import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import { BACKUP_RUN_KIND } from "@plugins/backup/core";
+import { backupLog } from "./backup-log";
+import { backupTask } from "./backup-task";
+import {
+  claimBackupRun,
+  closeBackupRow,
+  listUnfinishedBackups,
+  setBackupPid,
+} from "./run-state";
 
-export const backupRunJob = defineJob({
-  name: "backup.run",
-  // minutes: assembles the archive through a `tar` subprocess, then uploads it
-  // to every configured target. Nothing shorter than the work bounds it.
-  hold: "minutes",
+/**
+ * One backup, as an ordinary durable job whose body runs in its own process.
+ *
+ * The handler claims this namespace's single in-flight slot, spawns
+ * `./singularity supervised-exec backup.run` detached, and SUSPENDS — it holds a
+ * worker slot for milliseconds, not for the length of a `pg_dump` fan-out plus a
+ * `tar` plus a Drive upload. Whichever backend is alive when the child's exit
+ * marker lands is the one that wakes and records the outcome.
+ *
+ * **This is what makes a backup survive a restart**, which it never did before:
+ * the work is no longer inside the process the deploy, the sleep or the crash
+ * takes down. The old boot-time "mark every unfinished row failed" sweep is
+ * gone with it — after this change, an unfinished row at boot usually means a
+ * backup that is still running.
+ *
+ * `runAttempts: 2` **preserves what this job already had**, and is not an opt-in
+ * to something new: the old `defineJob` carried `maxAttempts: 2`, whose retry
+ * re-ran the whole handler body — assemble from scratch, upload from scratch —
+ * which is exactly what a second spawn does. The default is 1 everywhere else
+ * because build, release and deploy never retried; backup did.
+ *
+ * It also earns its keep here in a way it would not for the others. A backup's
+ * likeliest failure is the upload leg, a network blip reaching Drive, which is
+ * the transient class a retry is for — and the fallback if we dropped it is the
+ * nightly schedule, so one failure would mean no backup for a whole day.
+ */
+export const backupRunJob = defineSupervisedJob({
+  name: "backup.run.supervised",
   input: z.object({
-    // Defaulted so cron ticks (which carry no caller input) run as "periodic".
+    // Defaulted so a caller that carries no input runs as "periodic".
     trigger: z.enum(["manual", "periodic"]).default("periodic"),
   }),
-  event: z.never(),
-  dedup: "singleton",
-  maxAttempts: 2,
-  schedule: {
-    // Recur on the user-configured cron; empty disables. Read once at worker
-    // startup (a change takes effect on the next restart).
-    cron: () => getConfig(backupConfig).periodicCron.trim() || null,
+
+  kind: {
+    id: BACKUP_RUN_KIND,
+    channel: backupLog,
+    listUnfinished: listUnfinishedBackups,
+    setPid: setBackupPid,
+    // The bare terminal stamp for a row the child never closed, and nothing
+    // else. There is no `onReattach`: a backup keeps no in-memory live view —
+    // its UI reads the ledger row, and the primitive has already restarted the
+    // transcript tail by the time `onReattach` would be called.
+    closeRow: closeBackupRow,
   },
-  run: async ({ input, ctx: { signal } }) => {
-    const runId = crypto.randomUUID();
-    await db.insert(_backupRuns).values({ id: runId, trigger: input.trigger });
 
-    let archive;
-    try {
-      archive = await assembleArchive(input.trigger, signal);
-    } catch (err) {
-      await db
-        .update(_backupRuns)
-        .set({
-          status: "failed",
-          finishedAt: new Date(),
-          targetResults: [
-            {
-              targetId: "assembler",
-              ok: false,
-              detail: err instanceof Error ? err.message : String(err),
-            },
-          ],
-        })
-        .where(eq(_backupRuns.id, runId));
-      throw err;
-    }
+  claim: (input) => claimBackupRun(input.trigger),
 
-    const targets = BackupTarget.getContributions();
-    const results = await Promise.all(
-      targets.map((t) =>
-        t.run(archive).catch((err) => ({
-          targetId: t.id,
-          ok: false as const,
-          detail: err instanceof Error ? err.message : String(err),
-        })),
-      ),
-    );
+  // The `task` arm rather than `argv`: a backup has no command line of its own.
+  // `invoke` is the only producer of an invocation, so the id in the spawned
+  // argv is a registered id by construction and the payload is checked against
+  // the task's own schema right here.
+  task: (input, runId) => backupTask.invoke({ runId, trigger: input.trigger }),
 
-    const allOk = results.every((r) => r.ok);
-    const anyOk = results.some((r) => r.ok);
-    const status = allOk ? "ok" : anyOk ? "partial" : "failed";
+  // Nothing. A backup's terminal work is entirely the row it writes, and the
+  // child writes that itself as its last act — there is no notification, no
+  // downstream reconcile, nothing outside the archive that a finished backup
+  // changes. `closeRow` covers the case where the child never got that far.
+  //
+  // Left as an explicit empty body rather than an optional field: `onEnded` is
+  // where a kind's exactly-once side effects go, and "this kind has none" is
+  // worth stating once here instead of being inferred from an absent key.
+  //
+  // In particular the manifest, the archive size and the per-target results are
+  // NOT written here, and cannot be: they are produced inside the child, and the
+  // only channel back to the parent is the database the child is already writing
+  // to. So the child writes them, and this arm has nothing left to do.
+  onEnded: async () => {},
 
-    await db
-      .update(_backupRuns)
-      .set({
-        status,
-        finishedAt: new Date(),
-        archiveSizeBytes: archive.manifest.sizeBytes,
-        manifest: archive.manifest,
-        targetResults: results,
-      })
-      .where(eq(_backupRuns.id, runId));
-  },
+  // Two spawns at most, each a genuinely fresh run: `spawn` calls `claim` again,
+  // so attempt 2 gets a new uuid, a new transcript and a new marker, and it can
+  // claim at all only because attempt 1's row is closed before the handler wakes.
+  runAttempts: 2,
 });

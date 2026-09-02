@@ -1,16 +1,17 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { decideBuilds } from "./wants-build";
-import { triggerBuild } from "./run-build";
+import { buildJob } from "./run-build";
 
 // Trailing edge of the auto-build debounce: `reconcileDeployment` re-enqueues
 // this singleton with a fresh runAt at every edge, so a burst collapses into the
 // one run that fires once the window goes quiet.
 export const buildRunDebouncedJob = defineJob({
   name: "build.run.debounced",
-  // instant, despite causing a multi-minute build: `triggerBuild` returns
-  // `void` after starting a detached `runTracked` root, so the build outlives
-  // this run() and never occupies the worker slot.
+  // instant, and honestly so: this run decides and enqueues, and the build
+  // itself is a separate workflow (`build.run.supervised`) that spawns a
+  // detached child and suspends. Nothing here holds a slot for the length of a
+  // build.
   hold: "instant",
   input: z.object({}),
   event: z.never(),
@@ -21,18 +22,18 @@ export const buildRunDebouncedJob = defineJob({
     // autoBuild was turned off), and re-asking is what makes the debounce a pure
     // coalescing optimisation rather than a correctness mechanism.
     const decision = await decideBuilds(new Date());
-    // MAIN FIRST, and only one of the two per wakeup. `triggerBuild` claims a
+    // MAIN FIRST, and only one of the two per wakeup. The build's claim is a
     // single durable in-flight slot and is deliberately target-blind, so the
-    // second call would be dropped anyway — this makes the priority explicit
+    // second request would be dropped anyway — this makes the priority explicit
     // rather than leaving it to which line runs first. Nothing is lost by
     // yielding: the main build's own terminal edge reconciles again, and the
     // composition it deferred is re-derived there and built then.
     //
-    // triggerBuild is a no-op if a build is already in-flight (durable, DB-backed
-    // lock), so a boot-time re-enqueue while a build is mid-restart is safely
-    // ignored instead of starting an overlapping build.
+    // Enqueueing while a build is already in flight is safe: the claiming INSERT
+    // against `build_runs_inflight_uniq` is what wins or loses, and the loser's
+    // handler returns without spawning anything.
     if (decision.main) {
-      triggerBuild("auto");
+      await buildJob.enqueue({ trigger: "auto" });
       return;
     }
     // ONE invocation with N targets, never N invocations: one install, one
@@ -41,7 +42,11 @@ export const buildRunDebouncedJob = defineJob({
     // `targets` were `{singularity, sonata}` would not match
     // `lastClosedAttempt`'s equality predicate, so main's reconciler would
     // conclude main was never built for that commit and build it again.
-    if (decision.compositions.length > 0)
-      triggerBuild("auto", { compositions: decision.compositions });
+    if (decision.compositions.length > 0) {
+      await buildJob.enqueue({
+        trigger: "auto",
+        compositions: decision.compositions,
+      });
+    }
   },
 });

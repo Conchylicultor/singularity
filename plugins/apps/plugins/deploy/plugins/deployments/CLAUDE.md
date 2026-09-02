@@ -139,9 +139,17 @@ Three things are load-bearing about how it is built:
 
 `DeployRun.phase` reports which leg is live, as a field rather than something a
 UI parses out of the log. It stays pointing at the leg a failed run died on.
-The build leg awaits `runRelease` from `@plugins/release/server` — the reason
-that engine became awaitable at all — because the build must be recorded in
-`release_runs`, which only the engine can do.
+
+**The sequence is a durable job** (`deploy.run`, `internal/run-deploy.ts`), not
+an in-process async function: every step is a `ctx.step` and every gap is a
+`ctx.waitFor`, so the handler returns through the jobs plugin's suspend sentinel
+and comes back as a fresh dispatch in whichever backend is alive by then. The
+middle phase enqueues a release (`enqueueRelease`) and waits for it with
+`awaitRelease` — the build must be recorded in `release_runs`, which only that
+engine can do — and the wait costs no worker slot and survives any number of
+restarts. Its `hold` is `seconds`: the spawns here are detached and suspended on,
+so what actually bounds a dispatch is one `git` read (`compareToHead`) plus a few
+indexed queries.
 
 ### Converge's idempotence contract
 
@@ -168,8 +176,14 @@ both keyed on `currentWorktreeName()`.
 - **`deploy.runs`** — the **live view**: an in-memory `Map` projected into a push
   resource (the `release.previews` shape), bounded at one entry per deployment
   row, carrying `phase` so a running `update` reports which leg it is on. It is
-  rebuilt at boot from the ledger (see _A run survives the backend_ below) and
-  never persisted, so it cannot go stale.
+  rebuilt at boot from the ledger and never persisted, so it cannot go stale.
+  Two things rebuild it, and they cover different runs: the supervised-run
+  kind's `onReattach`, for a run with a live LEG, and this plugin's own
+  `onReady` (`reconcileDeployLiveView`), for every other open run — which is the
+  case this migration created, an `update` sitting in its release build with no
+  leg of its own. The phase is derived rather than remembered: a named leg with
+  no transcript has not spawned, and for an `update` the only leg that is
+  named-but-unspawned is `ship`, which means the build is what is running.
 - **`deploy_runs`** — the **record**: one row per launched run, so _what is live
   on this box, and what happened before_ survives a restart. Queried back by
   `POST /api/deploy/deployments/:id/runs/query` (keyset, `deploy-history`'s
@@ -180,16 +194,25 @@ Both are written by `internal/run-state.ts` and only there, and they share the
 run's `id` so the two name one run. Two rules in that file look like fussiness
 and are correctness:
 
-- **`claimRun` INSERTs before anything is spawned.** The row is the exclusivity
-  lock and the only handle a restarted backend has on the child, so it must exist
-  first. A failed claim is a refusal the caller sees immediately — a 409 for the
-  in-flight index, a loud 500 for anything else — rather than a run that appears
-  to start and then reports that it did not.
-- **`finishRun` pushes the live view before writing the row.** Progress must not
-  wait on durability, and the history DataView refreshes off the
-  `deploy.runs-revision` tick, which fires from the change feed after the row
-  commits. The row write is first-writer-wins (`WHERE finished_at IS NULL`),
-  because the reconciler can reach the same row from the other side.
+- **`claimRun` INSERTs before anything is spawned**, and it runs in the
+  ENDPOINT, not in the job. The row is the exclusivity lock and the only handle a
+  restarted backend has on the child, so it must exist first — and its refusal is
+  a 409 that has to reach the button that was clicked, which a claim taken inside
+  a queued handler could not deliver. The endpoint then enqueues `deploy.run` and
+  returns; a failed enqueue closes the row rather than leaving the server held.
+- **The live view is DERIVED from the row, never accumulated** (`publishLiveRun`
+  is the only writer of the map). Everything the UI shows except the live `phase`
+  is on the row, so a phase change does not require the process pushing it to be
+  the one that started the run — which is not a nicety: a resumed `update` is
+  routinely in a different backend from the one that claimed it.
+- **A leg's outcome is stamped by the kind's `closeRow`, in the reconciler** —
+  not by the sequencer. That is what records a deploy's verdict whether or not
+  its workflow is still alive, and it is why the ledger no longer needs an
+  in-memory "is somebody sequencing this?" flag. `failRun` is the sequencer's
+  own terminal write and covers only the failures that are not a leg's: an
+  unreachable server, a platform nothing builds for, a release that refused, a
+  bundle that will not resolve. Both are first-writer-wins
+  (`WHERE finished_at IS NULL`).
 
 `commit_sha` comes from the pinned bundle's own manifest at the instant it
 resolves, and is null wherever it genuinely is not (a converge; a bare `ship`,
@@ -224,33 +247,56 @@ Four things follow, and none of them are optional:
   may re-derive killed-ness from `exitCode > 128`. `verb-outcome.ts` and its tests
   are where that is pinned down.
 - **The unit the primitive supervises is a _leg_, not a run.** A `converge` or a
-  `ship` is one leg; an `update` is two, with an in-process release build between
-  them that spawns nothing of its own. Each leg needs its own transcript and exit
+  `ship` is one leg; an `update` is two, with a release build between them that
+  spawns nothing of its own here. Each leg needs its own transcript and exit
   marker, so its supervised id is `<runId>.converge` / `<runId>.ship`
-  (`internal/legs.ts` owns the grammar), and the ledger row records which leg it
-  is waiting on — durably, _before_ that leg is spawned, since it is the only
-  thing a restarted backend has to find the child with.
+  (`internal/legs.ts` owns the grammar — a dot, because a run id is already full
+  of dashes), and the ledger row records which leg it is waiting on — durably,
+  _before_ that leg is spawned, since it is the only thing a restarted backend
+  has to find the child with.
+- **`listUnfinished` reports a leg only once it has actually been SPAWNED.** The
+  row names its next leg before that leg exists — an `update` points at `ship`
+  for the whole length of its release build, tens of minutes with no child of its
+  own and this backend's pid on the row. Offer that leg to the reconciler and the
+  close rule reads it as a run whose process disappeared the moment this backend
+  restarts, and closes a deploy that is going perfectly well. `legStarted` is the
+  crisp signal: the primitive creates the transcript file before it spawns, and
+  nothing else creates it.
 - **`listUnfinished` is scoped to `launched_from`.** A worktree DB is a fork of
   main's and inherits its rows; unscoped, a worktree would adopt and close another
   machine's runs. The column is deliberately not called `namespace` — a deploy
   targets a remote host, so the worktree is the _launcher_, which is also why the
   runs-arm reads `namespace: null`.
 
-**The outcome now arrives at a callback, and the sequence is still a sequence.**
-A supervised leg's outcome comes back from the kind's `finish`, driven by a file
-watcher, not from the call that started it. Read literally that turns `runUpdate`
-into a state machine; it does not have to be one. While _this_ process is driving
-the run it is also the one `finish` can hand the outcome to, so `legs.ts` keeps
-one map of waiting sequencers and `runUpdate` stays ordinary straight-line code.
-The absence of a waiter is then the honest signal that this process did not start
-the leg, and `closeAdoptedLeg` handles that case alone.
+**The sequence survives the restart too, and that is what the two in-memory maps
+were standing in for.** `legs.ts` used to hold a `waiters` map (per leg) and a
+`driving` set (per run), and `run-state.ts` asked both before closing a row:
+a supervised leg's outcome arrives at the kind's `finish` rather than at the call
+that started it, so while _this_ process was driving the run it was handed the
+outcome directly, and the absence of a waiter meant the sequencer was gone. Both
+are deleted. The sequence is a suspended workflow now, so "is somebody sequencing
+this run" is not a question anyone has to answer from process memory.
 
-What genuinely cannot survive a restart is the _sequence_: an update's middle leg
-is an in-process `runRelease`, with nothing durable to resume from. So an adopted
-converge that succeeded is recorded as a **failure** saying the update was
-interrupted — stamping it `succeeded` would claim a deploy went out when nothing
-was shipped. Its final `ship` leg, and every single-verb run, get their real
-verdict, which is the whole win.
+**Which leg ends the RUN is a pure function of the row.** `closeDeployRow` closes
+the ledger unless the leg both succeeded AND is not the verb's `finalLeg` — i.e.
+an `update`'s converge, the one ending that means "more is coming". Every other
+ending is the run's. That rule is readable by a reconciler in any backend, which
+is exactly why no flag is needed.
+
+**The sequence waits on two facts, and the pid is not one of them.** `awaitLeg`
+suspends on `supervisedRun.ended` for that leg and, on every wake, looks at the
+leg's exit marker and at whether the run's row is still open. It deliberately
+does NOT re-apply the close rule's other half (no marker + a dead pid ⇒ hard
+kill): that arm lives in the supervised-run reconciler, which reaches the leg
+through `listUnfinished` and stamps the row through `closeRow`, so a SIGKILLed
+leg arrives here as a **closed row** rather than as a pid check. One rule, in one
+place, and the sequence reads its result instead of re-deriving it.
+
+The old third arm — "an update's converge succeeded and the sequence was cut, so
+record the run as an interrupted failure" — is gone, because the thing it
+described cannot happen any more. That sentence existed because the middle leg
+was an in-process `await runRelease(...)` with nothing durable to resume from.
+An `update` now keeps going across the restart, which was the whole point.
 
 ### The row is a list row; the record lives in the pane
 
@@ -352,6 +398,12 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/jobs.abortDurableRun`
+    - `infra/jobs.defineJob`
+    - `infra/jobs.isSuspendSignal`
+    - `infra/jobs.JobCtx`
+    - `infra/jobs/supervised-job.runEnded`
+    - `infra/jobs/supervised-job.RunEndedPayload`
     - `infra/jobs/supervised-run.defineSupervisedRunKind`
     - `infra/jobs/supervised-run.startSupervisedRun`
     - `infra/jobs/supervised-run.UnfinishedRun`
@@ -368,7 +420,8 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `primitives/keyset.orderByClauses`
     - `primitives/keyset.seekPredicate`
     - `primitives/log-channels.defineLogSink`
-    - `release.runRelease`
+    - `release.awaitRelease`
+    - `release.enqueueRelease`
     - `release/bundles.compareToHead`
     - `release/bundles.resolveBundle`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deployments/server/internal/tables.ts`
@@ -379,6 +432,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
   - Register:
     - `defineJob('retention.deploy_runs')`
     - `defineSupervisedRunKind('deploy')`
+    - `defineJob('deploy.run')`
   - Resources:
     - `deploy.deployments` (push)
     - `deploy.runs` (push)

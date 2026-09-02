@@ -400,6 +400,64 @@ async function onArtifactEvents(
   for (const { kind, runId } of finished) await settleFromMarker(kind, runId);
 }
 
+/**
+ * Globally-shared brand, so `isSupervisedSpawnError` survives module identity
+ * differing between the throw and the catch (HMR, a worktree linking this
+ * plugin through two paths). Same reason `SuspendSignal` and
+ * `NonRetryableError` carry one.
+ */
+const SPAWN_ERROR_BRAND: unique symbol = Symbol.for(
+  "@plugins/supervised-run:SupervisedSpawnError",
+) as never;
+
+/**
+ * `startSupervisedRun` failed — and, load-bearingly, **which side of the spawn
+ * it failed on**.
+ *
+ * A caller that has already claimed its ledger row has one compensating action
+ * available (close the row, releasing the kind's in-flight lock) and it is only
+ * safe on ONE side of that boundary:
+ *
+ * - **`childStarted: false`** — no process exists and none ever will, so the row
+ *   would stay open forever with a live seeded pid and wedge the kind. Closing
+ *   it is the repair.
+ * - **`childStarted: true`** — `Bun.spawn` returned and the child is running; the
+ *   failure was in the bookkeeping after it (the `setPid` write, the watcher).
+ *   The run genuinely exists: it will write its transcript and its exit marker,
+ *   and the reconciler settles it through the ordinary path. **Closing the row
+ *   here would release the in-flight lock while the child is still running**, so
+ *   the next enqueue claims cleanly and spawns a SECOND child — two concurrent
+ *   builds against one checkout, two converges against one remote. That is
+ *   precisely the overlap the partial unique index exists to prevent.
+ *
+ * The flag is derived from whether the pid was actually assigned, not from a
+ * hand-maintained list of which call sites throw where — so it cannot drift as
+ * this function grows. The original error is always the `cause`.
+ */
+export class SupervisedSpawnError extends Error {
+  readonly [SPAWN_ERROR_BRAND] = true;
+  constructor(
+    message: string,
+    /** Whether `Bun.spawn` had already returned a live child when this failed. */
+    readonly childStarted: boolean,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = "SupervisedSpawnError";
+  }
+}
+
+/** Brand check that survives module-identity differences. Never `instanceof`. */
+export function isSupervisedSpawnError(
+  err: unknown,
+): err is SupervisedSpawnError {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    (err as Record<symbol, unknown>)[SPAWN_ERROR_BRAND] === true
+  );
+}
+
 export interface StartedRun {
   /**
    * The pid of the supervising shim, which is also the process-group id — the
@@ -453,67 +511,84 @@ export async function startSupervisedRun(
     envOverrides?: Record<string, string>;
   },
 ): Promise<StartedRun> {
-  assertRegistered(kind);
-  assertRunId(kind.id, opts.runId);
-
-  const worktree = currentWorktreeName();
-  const transcriptPath = worktreeArtifacts.runTranscript(
-    worktree,
-    kind.id,
-    opts.runId,
-  );
-  const terminalPath = worktreeArtifacts.runTerminal(
-    worktree,
-    kind.id,
-    opts.runId,
-  );
-  // A marker already sitting there means this run id has been used before, and
-  // the new run would be read as finished the instant anything reconciled it.
-  // Loud at the caller, where the id was minted.
-  if (existsSync(terminalPath)) {
-    throw new Error(
-      `[supervised-run] ${kind.id}: run id ${JSON.stringify(opts.runId)} already ` +
-        `has an exit marker at ${terminalPath} — run ids must be unique.`,
+  // `null` until `Bun.spawn` returns, which is what makes the boundary in
+  // `SupervisedSpawnError.childStarted` an OBSERVATION rather than a
+  // classification of error sites.
+  let pid: number | null = null;
+  try {
+    return await startOrThrow();
+  } catch (err) {
+    throw new SupervisedSpawnError(
+      `[supervised-run] ${kind.id}: run ${opts.runId} failed to start ` +
+        `${pid === null ? "BEFORE" : "AFTER"} its child was spawned: ` +
+        `${err instanceof Error ? err.message : String(err)}`,
+      pid !== null,
+      { cause: err },
     );
   }
-  mkdirSync(worktreeArtifacts.runsDir(worktree), { recursive: true });
 
-  // Append, not truncate: `"a"` also creates the file, so the transcript exists
-  // before the child does and the tail has something to open from the first
-  // pump onwards.
-  const fd = openSync(transcriptPath, "a");
-  let pid: number;
-  try {
-    const shim = supervisedArgv(opts.argv, terminalPath);
-    const proc = Bun.spawn(shim.argv, {
-      cwd: opts.cwd,
-      stdin: "ignore",
-      stdout: fd,
-      stderr: fd,
-      detached: true,
-      env: { ...process.env, ...shim.env, ...opts.envOverrides },
-    });
-    pid = proc.pid;
-  } finally {
-    // The child holds its own duplicate of the descriptor, so the parent's copy
-    // has done its job the moment the spawn returns. Closing it in `finally`
-    // means a failed spawn does not leak one either.
-    closeSync(fd);
+  async function startOrThrow(): Promise<StartedRun> {
+    assertRegistered(kind);
+    assertRunId(kind.id, opts.runId);
+
+    const worktree = currentWorktreeName();
+    const transcriptPath = worktreeArtifacts.runTranscript(
+      worktree,
+      kind.id,
+      opts.runId,
+    );
+    const terminalPath = worktreeArtifacts.runTerminal(
+      worktree,
+      kind.id,
+      opts.runId,
+    );
+    // A marker already sitting there means this run id has been used before, and
+    // the new run would be read as finished the instant anything reconciled it.
+    // Loud at the caller, where the id was minted.
+    if (existsSync(terminalPath)) {
+      throw new Error(
+        `[supervised-run] ${kind.id}: run id ${JSON.stringify(opts.runId)} already ` +
+          `has an exit marker at ${terminalPath} — run ids must be unique.`,
+      );
+    }
+    mkdirSync(worktreeArtifacts.runsDir(worktree), { recursive: true });
+
+    // Append, not truncate: `"a"` also creates the file, so the transcript exists
+    // before the child does and the tail has something to open from the first
+    // pump onwards.
+    const fd = openSync(transcriptPath, "a");
+    try {
+      const shim = supervisedArgv(opts.argv, terminalPath);
+      const proc = Bun.spawn(shim.argv, {
+        cwd: opts.cwd,
+        stdin: "ignore",
+        stdout: fd,
+        stderr: fd,
+        detached: true,
+        env: { ...process.env, ...shim.env, ...opts.envOverrides },
+      });
+      pid = proc.pid;
+    } finally {
+      // The child holds its own duplicate of the descriptor, so the parent's copy
+      // has done its job the moment the spawn returns. Closing it in `finally`
+      // means a failed spawn does not leak one either.
+      closeSync(fd);
+    }
+
+    // Cap this kind's artifacts now that the newest set exists — the same
+    // "writing a new set trims the old ones" rule the build and release prunes
+    // follow, so there is no sweeper to schedule and nothing to forget.
+    pruneWorktreeRunArtifacts(worktree, kind.id);
+
+    await kind.spec.setPid(opts.runId, pid);
+    track(kind, opts.runId, pid);
+    await syncWatcher();
+    // Close the subscribe race: a very short run can finish while
+    // `parcel.subscribe` is still setting up, and the subscription only reports
+    // events from after it completes. One settle here catches that missed write.
+    await settleFromMarker(kind, opts.runId);
+    return { pid };
   }
-
-  // Cap this kind's artifacts now that the newest set exists — the same
-  // "writing a new set trims the old ones" rule the build and release prunes
-  // follow, so there is no sweeper to schedule and nothing to forget.
-  pruneWorktreeRunArtifacts(worktree, kind.id);
-
-  await kind.spec.setPid(opts.runId, pid);
-  track(kind, opts.runId, pid);
-  await syncWatcher();
-  // Close the subscribe race: a very short run can finish while
-  // `parcel.subscribe` is still setting up, and the subscription only reports
-  // events from after it completes. One settle here catches that missed write.
-  await settleFromMarker(kind, opts.runId);
-  return { pid };
 }
 
 /** What signalling a run actually did. Never a bare boolean — the arms differ. */

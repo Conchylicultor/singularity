@@ -116,6 +116,7 @@ and re-export it from `core/index.ts`. See
     - `ATTEMPT_CONV_AGG_TABLE`
     - `ATTEMPT_PUSH_AGG_TABLE`
     - `compileCreateView`
+    - `DERIVED_TABLE_STATE_TABLE`
     - `DERIVED_VIEW_STATE_TABLE_NAME`
     - `IMPERATIVE_PUBLIC_TABLE_CONSTS`
     - `IMPERATIVE_PUBLIC_TABLE_NAMES`

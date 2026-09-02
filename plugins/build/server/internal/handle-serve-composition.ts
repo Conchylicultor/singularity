@@ -1,7 +1,7 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { isServableCompositionId } from "@plugins/plugin-meta/plugins/composition/core";
 import { serveCompositionEndpoint } from "../../core/endpoints";
-import { triggerBuild } from "./run-build";
+import { buildJob } from "./run-build";
 
 /**
  * Build and serve one composition from THIS checkout.
@@ -15,7 +15,7 @@ import { triggerBuild } from "./run-build";
  */
 export const handleServeComposition = implement(
   serveCompositionEndpoint,
-  ({ body }) => {
+  async ({ body }) => {
     // The loud boundary under the inert toggles. A serve build provisions a
     // gateway namespace for the composition, and the main composition's
     // namespace already belongs to this checkout's own build — serving it would
@@ -28,6 +28,9 @@ export const handleServeComposition = implement(
           `this checkout's own build, so a serve build never provisions it.`,
       );
     }
-    triggerBuild("manual", { compositions: [body.composition] });
+    await buildJob.enqueue({
+      trigger: "manual",
+      compositions: [body.composition],
+    });
   },
 );

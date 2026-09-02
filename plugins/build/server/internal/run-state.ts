@@ -1,23 +1,18 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
-import {
-  defineSupervisedRunKind,
-  type UnfinishedRun,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
-import { buildDetailRoute } from "@plugins/build/core";
+import { buildDetailRoute, isMainCompositionBuild } from "@plugins/build/core";
 import {
   buildStatusOf,
   killedSignalName,
 } from "@plugins/build/plugins/build-status/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
-import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentResource } from "@plugins/build/plugins/deployment/server";
 import { reconcileDeployment } from "./reconcile";
-import { buildLog } from "./build-log";
 
 /** The index the claiming INSERT contends on — see `run-ledger`'s `tables.ts`. */
 const INFLIGHT_UQ = "build_runs_inflight_uniq";
@@ -42,14 +37,10 @@ function isInflightViolation(err: unknown): boolean {
  * with this backend's own live pid so the fresh row is not read as an orphan in
  * the window before the child's pid is known.
  *
- * The pre-flight `hasLiveInflightBuild` probe this replaces is gone: it read
- * every unfinished row and tested its pid, which is a second copy of the liveness
- * question the supervised-run reconciler now answers once — and a TOCTOU window
- * in front of the write that actually decides.
- *
  * `false` means another build holds the slot. That is an ordinary outcome, not a
  * fault: auto-build is a convergence loop, so a dropped request is re-derived at
- * the next edge rather than queued.
+ * the next edge rather than queued. `defineSupervisedJob` turns that into a
+ * `null` claim, and the handler returns without spawning anything.
  */
 export async function claimBuildRun(row: {
   buildId: string;
@@ -78,55 +69,6 @@ export async function claimBuildRun(row: {
 }
 
 /**
- * Close a run that never got as far as a child — the CLI could not be spawned,
- * or a write between the claim and the spawn threw.
- *
- * It has to be closed here rather than left to the reconciler, because the
- * unfinished row IS this namespace's build lock and its seeded pid is THIS
- * backend's, which is alive: the reconciler would correctly leave it open, and
- * the lock would be held until the backend restarted. There is no exit code, and
- * none is invented — `exit_code` stays null, which `buildStatusOf` already reads
- * as `failed`, and no run that actually ran can produce it.
- *
- * No `reconcileDeployment` from here on purpose. The row is closed carrying this
- * commit, so `lastClosedAttempt` records the attempt and the convergence loop
- * will not immediately re-derive the same build — which is what stops a spawn
- * that fails every time from becoming a five-second retry loop.
- */
-export async function failUnstartedBuild(
-  buildId: string,
-  message: string,
-): Promise<void> {
-  buildLog.publish(`Build error: ${message}`, "stderr");
-  await db
-    .update(_buildRuns)
-    .set({ finishedAt: new Date() })
-    .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
-}
-
-/**
- * The build plugin's supervised-run kind: the adapter between `build_runs` and
- * the one primitive that owns detach, pid, transcript, reconcile and re-attach.
- *
- * Mounted in `register: [...]` (see `../index.ts`) rather than started here, so
- * the kind is registered before the primitive's `onReady` reconciles — a kind
- * defined but never mounted would start runs nothing ever closes.
- *
- * There is no `onReattach`: a build keeps no in-memory live view. Its UI reads
- * the ledger row plus the `build` log channel, and the primitive has already
- * restarted the transcript tail by the time `onReattach` would be called — which
- * is what makes a build's output keep scrolling across the restart the build
- * itself causes, where before it stopped dead with the pipe.
- */
-export const buildRunKind = defineSupervisedRunKind({
-  id: BUILD_RUN_KIND_ID,
-  channel: buildLog,
-  listUnfinished,
-  setPid,
-  finish: finishBuild,
-});
-
-/**
  * Every build this namespace launched that has not been stamped with an outcome.
  *
  * **Scoped to `namespace`, which is not optional.** A worktree DB is a fork of
@@ -135,7 +77,7 @@ export const buildRunKind = defineSupervisedRunKind({
  * here, and to close with an outcome nobody in this namespace observed. That is
  * the phantom "Build failed" the old reconciler's own docblock warns about.
  */
-async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
+export async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
   const rows = await db
     .select({ id: _buildRuns.id, pid: _buildRuns.pid })
     .from(_buildRuns)
@@ -149,39 +91,27 @@ async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
 }
 
 /** Record the pid of the detached `./singularity build` now serving this run. */
-async function setPid(buildId: string, pid: number): Promise<void> {
+export async function setPid(buildId: string, pid: number): Promise<void> {
   await db.update(_buildRuns).set({ pid }).where(eq(_buildRuns.id, buildId));
 }
 
 /**
- * A build has ended. THE terminal edge — the row, the bell and the convergence
- * loop, in one place, for every build however it ended and whoever is still
- * alive to see it.
+ * Stamp this run's terminal outcome if the row is still open — the whole of the
+ * supervised job's `closeRow`, and nothing else.
  *
- * **This is the repair, and it is worth stating with the measurement that
- * motivates it.** `./singularity build` restarts the very backend that spawned
- * it, so the process holding the old `await proc.exited` was routinely killed
- * before the build finished — and everything after that await went with it. On
- * `main`: 33 `Auto-build started` bells against **2** `Build succeeded` bells
- * ever recorded. The failures that did notify are the ones that failed BEFORE the
- * deploy step, i.e. before the restart. So the notification arms below have been
- * near-dead code, and the path that actually ran — `watch-inflight-build`'s
- * `settle` — closed the row and reconciled but had no bell at all. Two
- * implementations of one edge, where the written-out one is the one that rarely
- * runs: exactly the shape this migration exists to remove.
+ * A bare, idempotent, first-writer-wins write. It runs inside the supervised-run
+ * reconciler of **every** backend that sees the exit marker land, including one
+ * that knows nothing about the workflow that started the build, which is exactly
+ * what keeps a build whose workflow died from holding `build_runs_inflight_uniq`
+ * against every future build of this namespace. The bell, the deployment notify
+ * and the convergence reconcile are the workflow's to run exactly once, and live
+ * in {@link onBuildEnded}.
  *
- * Now the supervisor calls this from whichever backend is alive when the exit
- * marker lands, so a build that outlives three restarts still reaches its own
- * verdict.
- *
- * Deliberately tolerant of a row the CLI already closed. The CLI's own
- * `closeRun` is the authoritative first writer (it stamps main's row right after
- * the health probe, long before the ~100s compose-serve tail), so the UPDATE
- * below is first-writer-wins and is usually a no-op — but the notification and
- * the reconcile still have to happen, and only this callback knows the build
- * ended. That is why the row is read by id rather than by `finished_at IS NULL`.
+ * `WHERE finished_at IS NULL` because `./singularity build` closes its own row
+ * right after the health probe, ~100s before its child exits: the CLI is the
+ * authoritative first writer and this is usually a no-op.
  */
-async function finishBuild(
+export async function closeBuildRow(
   buildId: string,
   terminal: RunTerminal,
 ): Promise<void> {
@@ -189,9 +119,68 @@ async function finishBuild(
     .update(_buildRuns)
     .set({ finishedAt: terminal.finishedAt, exitCode: terminal.exitCode })
     .where(and(eq(_buildRuns.id, buildId), isNull(_buildRuns.finishedAt)));
+}
 
-  // Read back AFTER the write, so the outcome the bell describes is the one the
-  // row carries — whether this process stamped it or the CLI did first.
+/**
+ * An auto-build has claimed the slot — ring the "started" bell.
+ *
+ * Rung at the CLAIM rather than after the spawn, which is where it used to be:
+ * the supervised job's spawn step is the wrapper's, and the claim is the last
+ * moment this plugin owns before the child exists. The claim is also what the
+ * bell is really about — it is the point at which this backend committed to
+ * running a build and no other one can start.
+ *
+ * Only `auto`. A manual build already has the button that started it as its
+ * feedback; a bell would be telling the user what they just did.
+ */
+export async function notifyBuildStarted(
+  buildId: string,
+  targets: string[],
+): Promise<void> {
+  // An auto-run is no longer always a push rebuilding this checkout's own app:
+  // a served composition drifting past its rate limit mints one too, and a bell
+  // that said "triggered by a new push" for a weekly cadence would be a lie.
+  // The distinction is `isMainCompositionBuild`, never a literal.
+  const plain = isMainCompositionBuild(targets);
+  await recordNotification({
+    type: "build",
+    title: plain ? "Auto-build started" : "Auto-rebuild started",
+    description: plain
+      ? `Triggered by a new push (${buildId})`
+      : `Rebuilding ${targets.join(", ")} (${buildId})`,
+    variant: "info",
+    dedupeKey: `build-start:${buildId}`,
+  });
+}
+
+/**
+ * A build has ended — THE terminal edge, and everything that is not the row's
+ * own outcome stamp.
+ *
+ * **The row is already closed by the time this runs, and that is the ordinary
+ * case rather than an edge.** Two writers get there first: `./singularity build`
+ * stamps its own row right after the health probe (~100s before its child
+ * exits), and failing that the supervised job's `closeRow` runs in the
+ * reconciler *before* the announcement that resumes the workflow. So nothing
+ * here is gated on `finished_at IS NULL`, and the row is read BACK rather than
+ * assumed — the bell describes the outcome the ledger carries, whoever wrote it.
+ *
+ * **This is the repair the migration to a supervised run bought, and it is worth
+ * stating with the measurement.** `./singularity build` restarts the very
+ * backend that spawned it, so the process that used to hold `await proc.exited`
+ * was routinely killed before the build finished, and everything after that
+ * await went with it. On `main`: 33 `Auto-build started` bells against **2**
+ * `Build succeeded` bells, ever. Now the workflow that owns the build is durable
+ * and resumes in whichever backend is alive when the exit marker lands, so a
+ * build that outlives three restarts still reaches its own verdict.
+ *
+ * **Idempotent, because a job retry re-runs it.** Both notifications carry a
+ * `dedupeKey`, `deploymentResource.notify()` is a signal rather than a write,
+ * and `reconcileDeployment` is a stateless re-derivation whose debounce is a
+ * singleton — so running this twice costs one redundant wakeup and changes
+ * nothing.
+ */
+export async function onBuildEnded(buildId: string): Promise<void> {
   const [row] = await db
     .select({
       startedAt: _buildRuns.startedAt,
@@ -208,10 +197,10 @@ async function finishBuild(
   // The dist has been republished and the ledger row is closed, so the
   // deployment description has changed on both axes it can change on.
   deploymentResource.notify();
-  // The "a build reached terminal" convergence edge. It used to be written twice
-  // — `triggerBuild`'s `finally` for a build whose parent survived, and
-  // `watchInflightBuild`'s `settle` for one it did not — and this is the single
-  // remaining copy.
+  // The "a build reached terminal" convergence edge, and the single remaining
+  // copy of it. It terminates because the row it reads was closed BEFORE this
+  // ran: `lastClosedAttempt` sees this build's own commit as an attempt, so
+  // `wantsBuild` does not immediately ask for the same build again.
   await reconcileDeployment();
 }
 

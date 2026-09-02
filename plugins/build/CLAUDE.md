@@ -1,15 +1,15 @@
 # build
 
 Auto-build is a **convergence loop on "this checkout's HEAD is what is
-deployed"**, not a queue of push events: `triggerBuild` drops a request that
-arrives while a build is in flight, so the request is re-derived rather than
-remembered. `reconcileDeployment` (`internal/reconcile.ts`) is that
+deployed"**, not a queue of push events: a request that arrives while a build is
+in flight is DROPPED — its claiming INSERT loses the in-flight index — so the
+request is re-derived rather than remembered. `reconcileDeployment` (`internal/reconcile.ts`) is that
 re-derivation, and it **takes no argument** — there is no baseline to carry, so
 nothing is lost when a build kills the process that would have carried one.
 
 It runs at five edges: the target moving (`buildRunJob`, on the durable
-`refAdvanced` trigger), a build reaching terminal (the supervised-run kind's
-`finish`, `internal/run-state.ts`), this backend starting (`onReady`), the
+`refAdvanced` trigger), a build reaching terminal (the build job's `onEnded`,
+`internal/run-state.ts`), this backend starting (`onReady`), the
 `compositions` config changing (`watchConfig`), and the `build.composition-tick`
 cron. The decision is stateless and idempotent,
 so an extra edge is free and a missed edge degrades to "converges at the next
@@ -44,9 +44,9 @@ Two things that look like omissions and are not:
   `events.refresh-tick` refuses for its own cadence. The explicit Serve /
   Rebuild buttons still work everywhere.
 
-Main's own build wins when both want one: `triggerBuild` holds a single durable
-in-flight slot and is target-blind, and the main build's terminal edge reconciles
-again, so the composition build follows rather than being lost.
+Main's own build wins when both want one: a build claims a single durable
+in-flight slot and the claim is target-blind, and the main build's terminal edge
+reconciles again, so the composition build follows rather than being lost.
 
 The commit gate answers "has the tree moved", so editing a composition's own
 manifest row (contributors, entry points, `extends`) is deliberately NOT an
@@ -67,12 +67,12 @@ names its own columns instead of going through drizzle's `.values()` (which name
 EVERY column in the table def), so a column added by this same build no longer
 breaks the CLI's write — see `run-ledger/CLAUDE.md`.
 
-`triggerBuild(trigger, { compositions })` is what the Serve button reaches: it
-claims the same single in-flight slot and spawns `build --composition a b c`,
+`buildJob.enqueue({ trigger, compositions })` is what the Serve button reaches:
+it claims the same single in-flight slot and spawns `build --composition a b c`,
 which publishes each `<id>.<checkout>.localhost:9000` from THIS checkout. The
-option is a SET so N drifted compositions are one shared invocation, not N runs
-queued behind each other's `.build.lock`; an empty set throws rather than quietly
-meaning "the main app".
+field is a SET so N drifted compositions are one shared invocation, not N runs
+queued behind each other's `.build.lock`; an empty set is rejected by the input
+schema at the enqueue rather than quietly meaning "the main app".
 
 The slot is target-blind on purpose: a live `build --composition sonata` in this
 checkout makes a plain auto-build request be dropped. That is correct, not an
@@ -80,24 +80,67 @@ oversight — the per-checkout `.build.lock` serializes the two anyway, so the
 second would only queue behind the first and then rebuild a tree that has not
 moved. Do not "fix" it by scoping the index per target.
 
-## The build is a supervised run
+## The build is a supervised JOB
 
-`./singularity build` is a **supervised run**
-(`@plugins/infra/plugins/jobs/plugins/supervised-run`). The primitive owns
-detach, the pid, the transcript, the boot reconcile and the re-attach;
-`internal/run-state.ts` is the adapter over `build_runs` (`listUnfinished` /
-`setPid` / `finish`), mounted in `register: [buildRunKind]`. What that buys, and
-what moved:
+`./singularity build` is a **supervised job**
+(`@plugins/infra/plugins/jobs/plugins/supervised-job`) named
+`build.run.supervised`, declared once in `internal/run-build.ts`. There is no
+`triggerBuild` any more and nothing calls a spawner directly: every request —
+the Build button, the Serve button, the auto-build debounce — is
+`buildJob.enqueue({ trigger, compositions? })`.
 
-- **`triggerBuild` no longer waits for anything.** It claims the row, spawns, and
-  returns. Everything that used to sit after `await proc.exited` — the bell, the
-  row's terminal stamp, `reconcileDeployment` — is now the kind's `finish`
-  callback, called by whichever backend is alive when the exit marker lands.
-  **This is a repair, not a refactor:** the build restarts the backend that
-  spawned it, so the process holding that await was routinely killed first. On
-  `main`: 33 `Auto-build started` bells against **2** `Build succeeded` bells,
-  ever. The only failures that notified were the ones that failed before the
-  deploy step.
+The wrapper composes `defineJob` + a `supervised-run` kind + `ctx.waitFor`, and
+the handler is short at both ends and empty in the middle: claim the row, spawn
+the detached child, SUSPEND. `ctx.waitFor` returns from the handler through the
+jobs plugin's suspend sentinel, so a 20-minute build holds a worker slot for
+milliseconds and the workflow comes back as a fresh dispatch when the child's
+exit marker lands. Read `supervised-job/CLAUDE.md` before changing any of it.
+
+What each arm of `internal/run-build.ts` owns, and why the split is where it is:
+
+- **`claim`** — `claimBuildRun`, and the claiming INSERT against
+  `build_runs_inflight_uniq` IS the lock. A request that loses returns `null`,
+  the handler stops, and nothing is queued: auto-build is a convergence loop, so
+  the request is re-derived at the next edge. The `auto` "started" bell is rung
+  here, which is the last moment this plugin owns before the child exists.
+- **`argv`** — `--allow-main` before `--composition` (commander's variadic is
+  greedy up to the next flag), plus the two env overrides that are ADDED to the
+  backend's own environment: `SINGULARITY_BUILD_ID`, and
+  `SINGULARITY_BUILD_DETACHED`, which is what stops the CLI's orphan guard from
+  killing a build whose invoking backend it is about to restart.
+- **`closeRow`** — the bare `WHERE finished_at IS NULL` stamp of `finished_at` +
+  `exit_code`, and NOTHING else. It runs in the supervised-run reconciler of
+  every backend that sees the marker, including one that knows nothing about the
+  workflow, and that is what stops a dead workflow from leaving the in-flight
+  index held against every future build.
+- **`onEnded`** — the terminal WORK, exactly once, in the owning workflow: the
+  bell, `deploymentResource.notify()`, and `reconcileDeployment()`. **The row is
+  already closed by the time this runs** — the CLI stamps its own row ~100 s
+  before its child exits, and failing that `closeRow` runs before the
+  announcement that resumes the handler. So nothing here is gated on
+  `finished_at IS NULL`; the row is read BACK and the bell describes what the
+  ledger carries.
+
+`runAttempts` stays at the default **1**. A failed build stays failed and
+visible; whether to build again is the convergence loop's call, made from the
+state of the world, not a retry budget. And a non-zero exit code is DATA, not an
+exception: the handler records it and returns normally, so a failed build files
+no crash report and no dead-letter.
+
+What that buys, and what moved:
+
+- **Nothing waits for a build.** A caller enqueues and returns. Everything that
+  used to sit after `await proc.exited` — the bell, the row's terminal stamp,
+  `reconcileDeployment` — is now the durable workflow's, resumed by whichever
+  backend is alive when the exit marker lands. **This is a repair, not a
+  refactor:** the build restarts the backend that spawned it, so the process
+  holding that await was routinely killed first. On `main`: 33 `Auto-build
+  started` bells against **2** `Build succeeded` bells, ever. The only failures
+  that notified were the ones that failed before the deploy step.
+- **The in-process `inflight` boolean is gone.** It only ever collapsed two
+  clicks inside one process, and the durable claim already does that across all
+  of them. So is `failUnstartedBuild`: closing a claimed row whose spawn threw
+  is `spawnClaimedRun` in the wrapper now, once for build, release and deploy.
 - **The build log keeps scrolling across the restart.** The child's output goes
   to a transcript FILE and the supervisor publishes by tailing it, so the new
   backend re-attaches to a build already in flight. With a pipe it stopped dead
@@ -117,6 +160,28 @@ what moved:
   synthesises the same single block from the child's own transcript — which
   exists even when the parent died too, the case the old backstop could not
   cover.
+
+### Why the convergence loop still terminates
+
+The loop is `onEnded → reconcileDeployment → build.run.debounced →
+buildJob.enqueue → onEnded`, so the question is whether a finished build can
+immediately ask for itself again. It cannot, and the reason is an ORDERING that
+the migration preserves by construction: `closeRow` writes `finished_at` +
+`exit_code` **before** the `runEnded` announcement that resumes the workflow, so
+by the time `onEnded` reconciles, `lastClosedAttempt` already sees this build's
+own commit as an attempt and `wantsBuild` answers no. (Before the migration the
+same ordering held for a different reason — `finishBuild` stamped the row as its
+first statement and reconciled as its last.)
+
+The two other edges of the same argument:
+
+- A build whose SPAWN failed never reaches `onEnded` at all, so it never
+  reconciles — while `spawnClaimedRun` still closes its row with the hard-kill
+  sentinel. The attempt is recorded, `ok` is false, and the loop does not
+  re-derive it into a five-second retry storm.
+- A request that arrives mid-build is dropped by the claim, not queued, so N
+  edges firing during one build produce N cheap `instant` dispatches and one
+  build.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -193,9 +258,7 @@ what moved:
     - `infra/events.Trigger`
     - `infra/git-watcher.refAdvanced`
     - `infra/jobs.defineJob`
-    - `infra/jobs/supervised-run.defineSupervisedRunKind`
-    - `infra/jobs/supervised-run.startSupervisedRun`
-    - `infra/jobs/supervised-run.UnfinishedRun`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.checkoutRef`
     - `infra/paths.currentWorktreeName`
     - `infra/paths.isMain`
@@ -208,7 +271,7 @@ what moved:
     - `defineJob('build.run')`
     - `defineJob('build.run.debounced')`
     - `defineJob('build.composition-tick')`
-    - `defineSupervisedRunKind('build')`
+    - `defineSupervisedJob('build.run.supervised')`
   - Resources: `build.history` (keyed)
   - Routes:
     - `POST /api/build`

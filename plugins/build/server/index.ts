@@ -7,7 +7,7 @@ import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/cor
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { handleBuild } from "./internal/handle-build";
 import { handleServeComposition } from "./internal/handle-serve-composition";
-import { buildRunKind } from "./internal/run-state";
+import { buildJob } from "./internal/run-build";
 import { buildRunJob } from "./internal/build-run-job";
 import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
 import { compositionTickJob } from "./internal/composition-tick-job";
@@ -34,15 +34,11 @@ export default {
     [triggerBuildEndpoint.route]: handleBuild,
     [serveCompositionEndpoint.route]: handleServeComposition,
   },
-  // The supervised-run kind must be REGISTERED, not merely defined: the
-  // primitive's own `onReady` reconciler loops the registered set, so a kind
-  // that never lands here would start runs nothing ever closes.
-  register: [
-    buildRunJob,
-    buildRunDebouncedJob,
-    compositionTickJob,
-    buildRunKind,
-  ],
+  // `buildJob` is ONE token that mounts BOTH halves — the queue job and its
+  // supervised-run kind — and both must be registered: the primitive's own
+  // `onReady` reconciler loops the registered set of kinds, so a kind that never
+  // lands here would start runs nothing ever closes.
+  register: [buildRunJob, buildRunDebouncedJob, compositionTickJob, buildJob],
   onReady: async () => {
     // Unfinished `build_runs` rows are no longer reconciled here, and neither is
     // the boot re-adoption of a build that outlived the backend it restarted:

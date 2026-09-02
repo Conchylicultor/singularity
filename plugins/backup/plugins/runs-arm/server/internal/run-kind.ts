@@ -70,6 +70,15 @@ end)`;
  *   not a checkout, and there is no worktree it belongs to. Reading null there
  *   is the true answer; naming the worktree whose backend happened to run the
  *   job would be a fact about scheduling dressed up as a fact about the backup.
+ *
+ *   `backup_runs` **does** carry a `namespace` column, and projecting it here
+ *   would be exactly that mistake. It exists for two things that need a scope
+ *   and have none otherwise — it is what `backup_runs_inflight_uniq` contends
+ *   on, and what keeps a worktree's `listUnfinished` off the rows it inherited
+ *   from main in its DB fork. In practice it is nearly always
+ *   `MAIN_WORKTREE_NAME`, since the schedule is main-only; a worktree can still
+ *   claim one through the manual trigger. Either way it records who CLAIMED the
+ *   run, not what the run covers.
  * - `message` — a backup has no per-run failure string. What it has is a
  *   per-target one, inside `target_results`, and there is no single target
  *   whose words could stand for the run: the interesting case is precisely the

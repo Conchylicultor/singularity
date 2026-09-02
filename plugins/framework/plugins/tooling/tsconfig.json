@@ -12,6 +12,12 @@
     "plugins/*/core",
     "plugins/*/bin",
     "plugins/*/core/scripts",
-    "plugins/lint/plugins/*/lint"
+    "plugins/lint/plugins/*/lint",
+    // A check/lint file reaches plugin barrels through `check.generated.ts`'s
+    // loaders, so this project spans part of the server graph and needs the same
+    // ambient declarations the server-core and cli projects include (e.g.
+    // file-watcher's `@parcel/watcher/wrapper` module declaration).
+    "../../../../plugins/**/shared",
+    "../../../../plugins/packages/plugins/*/shared"
   ]
 }

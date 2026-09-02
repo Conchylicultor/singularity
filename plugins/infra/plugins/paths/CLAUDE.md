@@ -226,6 +226,7 @@ run everywhere.
     - `infra/corpus-index`
     - `infra/git-watcher`
     - `infra/jobs/supervised-run`
+    - `infra/jobs/supervised-task`
     - `infra/launcher`
     - `infra/warmup`
     - `infra/worktree`

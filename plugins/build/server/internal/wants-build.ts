@@ -29,7 +29,7 @@ import { buildConfig } from "../../shared";
  *
  * Closed rows only, so `ok` is always an outcome rather than a guess about a run
  * still in flight. The cost is that a reconcile firing while a build is running
- * can decide "yes" and then have `triggerBuild` drop it against the durable
+ * can decide "yes" and then have the build job's claim lose against the durable
  * in-flight lock — harmless, because the build's own terminal edge reconciles
  * again. Scoped to this namespace's own main runs: a worktree DB is forked from
  * main and inherits its rows.

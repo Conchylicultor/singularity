@@ -12,10 +12,10 @@ import type { RunOutcome } from "@plugins/runs/plugins/run-outcome/core";
  * builds its `CASE` by folding over these entries — the branch set and the
  * status set are one declaration and cannot come apart.
  *
- * The four values are what the backup job and the boot-time reconcile actually
- * write: `running` on insert, then `ok` / `partial` / `failed` from the
- * per-target tally (or `failed` from the reconcile sweep for a run whose
- * process died).
+ * The four values are what the run's two writers actually write: `running` on
+ * the claim, then `ok` / `partial` / `failed` from the child's own per-target
+ * tally — or `failed` from `closeBackupRow`, the supervised job's backstop for
+ * a child that ended without recording anything.
  *
  * `partial` maps through rather than collapsing into `failed`. Backup is the
  * only kind of run that can half-succeed — three targets of four — and that is

@@ -29,4 +29,5 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/serve-app", id: "framework.cli.serve-app", loader: () => import("@plugins/framework/plugins/cli/plugins/serve-app/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/start", id: "framework.cli.start", loader: () => import("@plugins/framework/plugins/cli/plugins/start/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/test", id: "framework.cli.test", loader: () => import("@plugins/framework/plugins/cli/plugins/test/cli"), dependsOn: [] },
+  { pluginPath: "infra/plugins/jobs/plugins/supervised-task", id: "infra.jobs.supervised-task", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-task/cli"), dependsOn: [] },
 ];

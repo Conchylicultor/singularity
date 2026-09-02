@@ -8,7 +8,12 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleRun } from "./internal/handle-run";
 import { handleRunsQuery } from "./internal/handle-runs-query";
 import { deploymentsServerResource } from "./internal/resources";
-import { deployRunsServerResource, deployVerbKind } from "./internal/run-state";
+import {
+  deployRunsServerResource,
+  deployVerbKind,
+  reconcileDeployLiveView,
+} from "./internal/run-state";
+import { deployRunJob } from "./internal/run-deploy";
 import { deployRunsRevisionServerResource } from "./internal/runs-revision-resource";
 import { deployRunRetention } from "./internal/retention";
 import {
@@ -44,6 +49,15 @@ export default {
   // `deployVerbKind` is mounted, not merely defined: the supervised-run
   // primitive's single boot reconciler loops the kinds registered by the time
   // its own `onReady` runs, so an unmounted kind would start CLI legs that
-  // nothing ever adopts or closes.
-  register: [deployRunRetention, deployVerbKind],
+  // nothing ever adopts or closes. `deployRunJob` is the sequence that drives
+  // those legs — the durable replacement for the in-process `runUpdate`.
+  register: [deployRunRetention, deployVerbKind, deployRunJob],
+  onReady: async () => {
+    // The live view is process memory and died with the last backend. The
+    // supervised-run reconciler rebuilds the runs with a live LEG
+    // (`onReattach`), but an `update` in its release build has no leg — its
+    // sequence is a suspended workflow — so this is the one thing that can put
+    // it back on screen before that workflow's next wake.
+    await reconcileDeployLiveView();
+  },
 } satisfies ServerPluginDefinition;

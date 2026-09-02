@@ -9,6 +9,26 @@ import type {
 } from "@plugins/backup/core";
 import { BackupSource } from "./contribution";
 
+/**
+ * Hard wall-clock ceiling on the `tar` below.
+ *
+ * It replaces the job's `ctx.signal`, which is gone with the in-process job: the
+ * body runs in a detached child now, and there is no job deadline in a child to
+ * abort anything. Passing a signal that never fires would have been worse than
+ * passing none — a bound in the type that is not a bound at runtime.
+ *
+ * One hour, which is the ceiling this `tar` already had: the old job was
+ * `hold: "minutes"`, whose `deadlineMs` is 3,600,000 ms, and that deadline
+ * aborting `ctx.signal` was the only thing that ever stopped it. So this is the
+ * same number, moved to where it is now knowable, and not a new policy.
+ *
+ * Not a target. A healthy archive of this machine is minutes; only a wedge —
+ * a stalled network filesystem under the staging dir — reaches an hour, and at
+ * that point the run has to end so its `.partial` can be reclaimed and the
+ * in-flight lock released.
+ */
+const ARCHIVE_TAR_TIMEOUT_MS = 60 * 60 * 1000;
+
 function formatTimestamp(): string {
   return new Date()
     .toISOString()
@@ -19,12 +39,6 @@ function formatTimestamp(): string {
 
 export async function assembleArchive(
   trigger: "manual" | "periodic",
-  /**
-   * The backup job's own `ctx.signal`. `tar` below is the longest-running child
-   * in the backup and the one worth being able to abandon: when the job's hold
-   * class deadline fires, this is what has to notice.
-   */
-  signal: AbortSignal,
 ): Promise<BackupArchive> {
   const timestamp = formatTimestamp();
   const runDir = join(BACKUPS_DIR, timestamp);
@@ -36,6 +50,32 @@ export async function assembleArchive(
   // backup. The `finally` below always reclaims staging + the partial.
   const partialPath = `${archivePath}.partial`;
 
+  // The run directory is named for the SECOND the assembly started, and nothing
+  // about that is unique. Two runs reaching here in the same second would share
+  // one staging tree, tar each other's files, and rename over each other's
+  // archive — silently, producing one file whose manifest describes neither.
+  //
+  // Two ways to get there, and the in-flight lock prevents neither: a
+  // `runAttempts: 2` retry whose first attempt failed inside the same second,
+  // and two NAMESPACES backing up at once (the unique index is per-namespace,
+  // `BACKUPS_DIR` is host-global). Both are out of reach today — a fresh exec
+  // runtime takes far longer than a second to boot, so the retry cannot get
+  // here that fast — which is precisely why the guard belongs here rather than
+  // in a comment: an unreachable race that later becomes reachable must fail
+  // loudly, not corrupt an archive nobody looks at until they need it.
+  //
+  // `recursive: false` makes the kernel answer, so there is no check-then-act
+  // window between asking and creating.
+  await mkdir(BACKUPS_DIR, { recursive: true });
+  try {
+    await mkdir(runDir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    throw new Error(
+      `[backup] run directory ${runDir} already exists — another backup started ` +
+        `in the same second. Refusing to share a staging tree and an archive path.`,
+    );
+  }
   await mkdir(stagingDir, { recursive: true });
 
   try {
@@ -64,15 +104,26 @@ export async function assembleArchive(
       JSON.stringify(manifest, null, 2),
     );
 
-    // `signal` rather than a `timeoutMs`: how long this legitimately takes is
-    // the size of everything every backup source staged, which this file cannot
-    // know and a number here would only guess at. The job that owns the run owns
-    // the deadline, and aborting it kills the tar and leaves the `.partial`
-    // sidecar the `finally` below reclaims — never a truncated `archive.tar.gz`.
+    // Bounded by this file's own ceiling, because there is no longer anyone
+    // else to own the deadline: the body runs in a detached child, which has no
+    // job and therefore no `ctx.signal`. Either way what a bound does here is
+    // the same — kill the tar, leaving the `.partial` sidecar the `finally`
+    // below reclaims, never a truncated `archive.tar.gz`.
+    //
+    // CANCELLATION is a separate mechanism and does not come through here:
+    // `killSupervisedRun` signals the whole process GROUP, which this `tar` is
+    // in, so it dies with its parent without anything having to forward a
+    // signal to it.
     const result = await spawnCaptured(
       ["tar", "-czf", partialPath, "-C", stagingDir, "."],
-      { signal },
+      { timeoutMs: ARCHIVE_TAR_TIMEOUT_MS },
     );
+    if (result.timedOut) {
+      throw new Error(
+        `tar exceeded its ${ARCHIVE_TAR_TIMEOUT_MS} ms ceiling and was killed — ` +
+          `the archive is incomplete. stderr: ${result.stderr}`,
+      );
+    }
     if (result.exitCode !== 0) {
       throw new Error(`tar failed: ${result.stderr}`);
     }

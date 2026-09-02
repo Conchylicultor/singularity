@@ -20,8 +20,8 @@ describe("leg ids", () => {
     expect(parseLegRunId(`${RUN_ID}.ship`)?.runId).toBe(RUN_ID);
   });
 
-  // `build` is a PHASE of an update, not a leg: it spawns nothing of its own, it
-  // awaits the release engine in-process. A leg id naming it would name an
+  // `build` is a PHASE of an update, not a leg: it spawns nothing of its own —
+  // it enqueues a release job and waits for it. A leg id naming it would name an
   // artifact that cannot exist.
   test("a phase that spawns nothing is not a leg", () => {
     expect(parseLegRunId(`${RUN_ID}.build`)).toBeNull();

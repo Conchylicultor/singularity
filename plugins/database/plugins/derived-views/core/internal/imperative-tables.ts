@@ -78,6 +78,18 @@ export const LIVE_STATE_TRIGGER_STATE_TABLE = "live_state_trigger_state";
 export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
 
 /**
+ * Public table created imperatively by the derived-table rebuilder
+ * (`plugins/database/plugins/derived-tables/server/internal/rebuild.ts`) — holds
+ * the rollup layer's DEFINITION signature (create + function + trigger DDL),
+ * the twin of `DERIVED_VIEW_STATE_TABLE_NAME` and `LIVE_STATE_TRIGGER_STATE_TABLE`.
+ * It gates only the definition half: each rollup's `reconcileDdl` still runs on
+ * every boot, because a rollup holds ROWS and can drift from its source with its
+ * definition unchanged. Not present in the drizzle snapshot; the
+ * orphaned-db-tables check treats it as declared.
+ */
+export const DERIVED_TABLE_STATE_TABLE = "derived_table_state";
+
+/**
  * A trigger-maintained materialized rollup ("hand-rolled IVM"): the latest
  * non-system conversation per task, maintained incrementally by STATEMENT
  * triggers on `conversations` and rebuilt from source on boot. Created
@@ -144,6 +156,7 @@ export const IMPERATIVE_PUBLIC_TABLES = {
   LIVE_STATE_TRIGGER_STATE_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
+  DERIVED_TABLE_STATE_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
   ATTEMPT_CONV_AGG_TABLE,
   ATTEMPT_PUSH_AGG_TABLE,
@@ -154,13 +167,15 @@ export const IMPERATIVE_PUBLIC_TABLES = {
  * against `pg_stat_user_tables`: the orphaned-db-tables check subtracts these
  * from the live-table set so they are never flagged as orphans.
  */
-export const IMPERATIVE_PUBLIC_TABLE_NAMES: readonly string[] =
-  Object.values(IMPERATIVE_PUBLIC_TABLES);
+export const IMPERATIVE_PUBLIC_TABLE_NAMES: readonly string[] = Object.values(
+  IMPERATIVE_PUBLIC_TABLES,
+);
 
 /**
  * The constant IDENTIFIERS (the record's keys). What a create site must
  * interpolate on its `CREATE TABLE` line, and what a sanctioned `pgTable(...)`
  * read handle must pass — i.e. what the two static checks match textually.
  */
-export const IMPERATIVE_PUBLIC_TABLE_CONSTS: readonly string[] =
-  Object.keys(IMPERATIVE_PUBLIC_TABLES);
+export const IMPERATIVE_PUBLIC_TABLE_CONSTS: readonly string[] = Object.keys(
+  IMPERATIVE_PUBLIC_TABLES,
+);

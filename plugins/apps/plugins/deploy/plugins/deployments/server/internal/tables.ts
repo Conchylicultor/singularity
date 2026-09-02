@@ -80,8 +80,8 @@ export const _deployDeployments = pgTable(
 // mid-run find the CLI child it left behind and adopt it — the supervised-run
 // contract, whose kind for this table is defined in `run-state.ts`.
 //
-// Written only by `run-state.ts` — `claimRun` opens a row, `finishRun` and the
-// supervised-run kind's `finish` stamp its outcome — so there is exactly one
+// Written only by `run-state.ts` — `claimRun` opens a row, and `failRun` or the
+// supervised-run kind's `closeRow` stamps its outcome — so there is exactly one
 // writer and the live view and the record can never disagree about a run they
 // both name by the same `id`.
 export const _deployRuns = pgTable(

@@ -3097,8 +3097,16 @@
       "name": "@singularity/plugin-infra-jobs-deadline-audit",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/jobs/plugins/supervised-job": {
+      "name": "@singularity/plugin-infra-jobs-supervised-job",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/jobs/plugins/supervised-run": {
       "name": "@singularity/plugin-infra-jobs-supervised-run",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/jobs/plugins/supervised-task": {
+      "name": "@singularity/plugin-infra-jobs-supervised-task",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/launcher": {
@@ -7256,7 +7264,11 @@
 
     "@singularity/plugin-infra-jobs-deadline-audit": ["@singularity/plugin-infra-jobs-deadline-audit@workspace:plugins/infra/plugins/jobs/plugins/deadline-audit"],
 
+    "@singularity/plugin-infra-jobs-supervised-job": ["@singularity/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
+
     "@singularity/plugin-infra-jobs-supervised-run": ["@singularity/plugin-infra-jobs-supervised-run@workspace:plugins/infra/plugins/jobs/plugins/supervised-run"],
+
+    "@singularity/plugin-infra-jobs-supervised-task": ["@singularity/plugin-infra-jobs-supervised-task@workspace:plugins/infra/plugins/jobs/plugins/supervised-task"],
 
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
 

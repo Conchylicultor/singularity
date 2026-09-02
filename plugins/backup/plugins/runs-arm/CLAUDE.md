@@ -20,7 +20,8 @@ status yields `NULL` and throws the whole page; folding the branches out of a
 
 - **`namespace`** — a backup is host-global; it archives `~/.singularity`, not a
   checkout. Naming the worktree whose backend ran the job would be a fact about
-  scheduling dressed as a fact about the backup.
+  scheduling dressed as a fact about the backup. The table _does_ have a
+  `namespace` column and this is still the right projection — see below.
 - **`message`** — a backup has no per-run failure string, only a per-target one,
   and the interesting case is where those disagree. The Targets section shows
   each target's own words instead.
@@ -29,10 +30,16 @@ status yields `NULL` and throws the whole page; folding the branches out of a
 
 The build and release arms carry an always-on `where namespace = currentWorktreeName()`,
 because a worktree DB is forked from main and inherits main's rows. This arm must
-not, and the symmetry is a trap: `backup_runs` has no namespace at all — a backup
+not, and the symmetry is a trap: this arm projects `namespace: null` — a backup
 covers the machine — so the predicate would not narrow the arm, it would delete
 every backup from the view. `null = 'att-…'` is `NULL`, not `false`, and the
 symptom is an empty section reading as "no backups yet".
+
+`backup_runs` _does_ now carry a `namespace` column, and it is not an invitation
+to project it. It records which backend CLAIMED the run, so `listUnfinished` can
+be scoped away from the rows a worktree inherits in its fork and so the in-flight
+unique index has a column to contend on. What the run covers is still the whole
+machine.
 
 So the merged view is half-scoped: builds and releases are this-worktree-only,
 backups and deploys are everything on the machine. That is the intended shape.
@@ -60,7 +67,7 @@ it would put the edge straight back.
 This arm used to contribute a `Runs.Row`: an expand/collapse card carrying the
 per-source reports and the per-target outcomes. It contributed no
 `Runs.Kind.open` on purpose, because `Row` infers a `<button>` from an `onClick`
-and a custom row lands *inside* it — so a non-activating row was the only way the
+and a custom row lands _inside_ it — so a non-activating row was the only way the
 disclosure trigger and the **Grant access** button could be real buttons rather
 than buttons nested inside one.
 
@@ -125,7 +132,7 @@ exist today — a real follow-up, and a bigger change than it looks.
 
 ## Plugin reference
 
-- Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the two detail sections carrying what no scalar column can — the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup is host-global) and for message (a backup's failure words are per-target).
+- Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the two detail sections carrying what no scalar column can — the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
 - Web:
   - Contributes:
     - `Runs.Kind`
