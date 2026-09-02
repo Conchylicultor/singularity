@@ -8,6 +8,8 @@ import { handleReport } from "./internal/handle-report";
 import { handleInvestigate } from "./internal/handle-investigate";
 import { reportsResource } from "./internal/resources";
 import { recordReport } from "./internal/record-report";
+import { ConfigV2 } from "@plugins/config_v2/server";
+import { reportsConfig } from "../core";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { _reports } from "./internal/tables";
@@ -33,6 +35,8 @@ export type {
   ReportNoiseInput,
 } from "./internal/noise-rules";
 export { ReportKind } from "./internal/report-kinds";
+export type { RecordReportResult } from "./internal/record-report";
+export type { StormSummary, StormRosterEntry } from "./internal/fan-out";
 export type {
   ReportKindSpec,
   ReportKindVariant,
@@ -48,6 +52,10 @@ export default {
   },
   contributions: [
     Resource.Declare(reportsResource),
+    // The fan-out ceiling knobs (see server/internal/fan-out.ts). Registered
+    // here so they are live-tunable from Settings → Config — the engine reads
+    // them per admit.
+    ConfigV2.Register({ descriptor: reportsConfig }),
     // Crash/report rows are deduped aggregates: a recurring fingerprint UPDATEs
     // its hot row (count++, last_seen_at) on every occurrence — a crash loop
     // fires this thousands/min. Wiring per-statement live-state invalidation onto

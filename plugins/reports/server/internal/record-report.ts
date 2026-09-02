@@ -17,13 +17,28 @@ import { _reports } from "./tables";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { ReportKind } from "./report-kinds";
+import { createFanOutGate, type StormSummary } from "./fan-out";
 import type { ReportInput } from "../../shared/types";
 
-export interface RecordReportResult {
-  reportId: string | null;
-  taskId: string | null;
-  rateLimited: boolean;
-}
+// What became of one recordReport call. A discriminated union so "the engine
+// took ownership of this occurrence" can never be misread as "recorded, with
+// no limit applied" — which is exactly what the old `{reportId: null,
+// rateLimited: false}` shed result said, untruthfully.
+export type RecordReportResult =
+  // The report landed on a `_reports` row (new or deduped onto an existing
+  // fingerprint). `rateLimited` says the bell was skipped for this occurrence.
+  | {
+      outcome: "recorded";
+      reportId: string;
+      taskId: string | null;
+      rateLimited: boolean;
+    }
+  // Buffered by the duress shed engine; it replays through this same path
+  // after the episode clears.
+  | { outcome: "shed" }
+  // Folded into a fan-out storm rollup: no row, no notification. `stormKind`
+  // is the kind of the rollup report that accounts for it.
+  | { outcome: "collapsed"; stormKind: string };
 
 // The generic one-line summary is unbounded (an aggregated error can be hundreds
 // of KB). Clamp it at the ingestion boundary so nothing downstream — the row,
@@ -100,11 +115,61 @@ const reportShed = createShedBuffer<{
   },
 });
 
+// The kind of the fan-out rollup. Naming it here is the engine's one naming of
+// a kind string, the precedent `duress-shed` above already sets: the engine
+// files the accounting, and the kind that OWNS the payload schema, the
+// fingerprint and the rendering lives in its own plugin
+// (plugins/debug/plugins/report-storm), which declares itself fanOutExempt so
+// the mechanism can never collapse its own accounting.
+const STORM_KIND = "report-storm";
+
+// The roster carries one message per collapsed fingerprint. A rollup names up
+// to stormRosterMax of them, so the per-line clamp is far tighter than the
+// row's MESSAGE_MAX — the roster is a "what was in the burst" index, not a
+// second copy of every message.
+const ROSTER_MESSAGE_MAX = 200;
+
+function stormMessage(s: StormSummary): string {
+  const seconds = Math.max(
+    1,
+    Math.round((s.windowEndedAt - s.windowStartedAt) / 1000),
+  );
+  const top = s.roster
+    .slice(0, 3)
+    .map((e) => `${e.message} ×${e.count}`)
+    .join(", ");
+  return (
+    `${s.collapsedKind}: ${s.distinctFingerprints} fingerprints raised ` +
+    `${s.occurrences} alerts in ${seconds}s past the ${s.budget}/window ceiling` +
+    (top ? ` — top: ${top}` : "")
+  );
+}
+
+// Cross-fingerprint fan-out ceiling (see fan-out.ts). The per-fingerprint
+// velocity throttle below cannot see a burst that is spread ACROSS
+// fingerprints — the 2026-09-02 incident, where 422 distinct slow-op
+// fingerprints alerted in 24 s and every guard on the path keyed on the
+// operation identity. Past the per-kind window budget, a NEWLY-alerting
+// fingerprint folds into this kind's storm accumulator instead of minting a
+// row; one rollup report per (kind, window) carries the accounting.
+const fanOut = createFanOutGate({
+  onStorm: (s) => {
+    void recordReport({
+      kind: STORM_KIND,
+      source: "server-report-storm",
+      message: stormMessage(s),
+      data: { ...s },
+    });
+  },
+});
+
 // Single entry point used by the HTTP handler, the boot-time flush, and the
 // process-level crash hooks. Every source collapses here so dedup lives in one
 // place. The engine is fully generic: it looks up the matching ReportKindSpec
-// and delegates schema validation, fingerprinting, and presentation to it. It
-// never names a kind. No report auto-creates a task — investigation tasks are
+// and delegates schema validation, fingerprinting, and presentation to it. The
+// only kind strings it names are the two accounting rollups it files itself
+// (duress-shed, report-storm), each of which owns its schema and rendering in
+// its own plugin. No report auto-creates a task — investigation tasks are
 // filed on demand by investigateReport().
 export async function recordReport(
   input: ReportInput,
@@ -156,13 +221,29 @@ export async function recordReport(
   // the report actually lands. The null result mirrors the no-row path.
   if (!spec.duressExempt) {
     const admitted = reportShed.admit({ input, fingerprint: fp });
-    if (!admitted.persist) {
-      return { reportId: null, taskId: null, rateLimited: false };
-    }
+    if (!admitted.persist) return { outcome: "shed" };
   }
 
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
   const message = clamp(rawMessage ?? "", MESSAGE_MAX);
+
+  // Fan-out gate — after the duress gate (a replayed storm is still a storm,
+  // and the duress-shed summary accounts for the replay separately) and before
+  // any durable work. A collapsed occurrence writes no row and no
+  // notification; it also skips the velocity bump below, for the same reason a
+  // shed report does — velocity suppresses bell churn on the durable path, and
+  // this occurrence never reaches the bell.
+  if (!spec.fanOutExempt) {
+    const admission = fanOut.admit({
+      kind,
+      fingerprint: fp,
+      message: clamp(message, ROSTER_MESSAGE_MAX),
+      fanOutPerWindow: spec.meta.fanOutPerWindow,
+    });
+    if (!admission.alert)
+      return { outcome: "collapsed", stormKind: STORM_KIND };
+  }
+
   const limited = bumpWindowAndCheck(fp);
   // A report whose originating bundle's graph hash differs from the graph this
   // server is serving came from an outdated frontend tab — benign version-skew.
@@ -220,7 +301,14 @@ export async function recordReport(
     }),
   );
 
-  if (!row) return { reportId: null, taskId: null, rateLimited: limited };
+  // An upsert with ON CONFLICT DO UPDATE always returns exactly one row; a
+  // missing one is an impossible state, and the result union has no honest arm
+  // for it. Fail loudly rather than hand back a "recorded" with no id.
+  if (!row) {
+    throw new Error(
+      `recordReport: upsert returned no row for fingerprint "${fp}" (kind "${kind}")`,
+    );
+  }
 
   // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The
   // throttle is ephemeral by design (see velocity.ts) — it suppresses bell
@@ -230,7 +318,12 @@ export async function recordReport(
   // (e.g. the slow-op rollup) after its first burst.
   if (limited) {
     // Keep the row's count accurate but don't churn the bus.
-    return { reportId: row.id, taskId: row.taskId, rateLimited: true };
+    return {
+      outcome: "recorded",
+      reportId: row.id,
+      taskId: row.taskId,
+      rateLimited: true,
+    };
   }
 
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
@@ -282,7 +375,12 @@ export async function recordReport(
       }),
     ),
   );
-  return { reportId: row.id, taskId: row.taskId, rateLimited: false };
+  return {
+    outcome: "recorded",
+    reportId: row.id,
+    taskId: row.taskId,
+    rateLimited: false,
+  };
 }
 
 // The validated, clamped, fingerprinted values recordReport computes before

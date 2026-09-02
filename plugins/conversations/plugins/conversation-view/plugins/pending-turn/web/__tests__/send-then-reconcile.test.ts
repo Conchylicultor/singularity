@@ -95,7 +95,8 @@ beforeEach(() => {
         ok: true,
         status: 200,
         json: async () => ({
-          reportId: null,
+          outcome: "recorded",
+          reportId: "report-stub",
           taskId: null,
           rateLimited: false,
         }),

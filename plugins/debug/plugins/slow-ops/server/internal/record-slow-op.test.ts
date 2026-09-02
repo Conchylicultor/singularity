@@ -12,7 +12,14 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { sql } from "drizzle-orm";
 import {
   createTestDb,
@@ -24,6 +31,7 @@ import type { SlowOpSample } from "../../core";
 import {
   mergeSample,
   upsertSlowOp,
+  upsertSlowOpIn,
   type RecordSlowOpInput,
 } from "./record-slow-op";
 import { _slowOps } from "./tables";
@@ -88,9 +96,9 @@ describe("mergeSample", () => {
     // newest 10 — it drops instead of evicting a newer entry.
     const merged = mergeSample(ring, snapshot(T0), 200, undefined, T0);
     expect(merged).toHaveLength(10);
-    expect(merged.some((s) => new Date(s.atTime).getTime() === T0.getTime())).toBe(
-      false,
-    );
+    expect(
+      merged.some((s) => new Date(s.atTime).getTime() === T0.getTime()),
+    ).toBe(false);
   });
 });
 
@@ -130,8 +138,18 @@ describe("upsertSlowOp (real DB)", () => {
   test("an out-of-order replay never regresses timestamps or clobbers last-* attribution", async () => {
     // A live op lands first (T2), then an in-freeze item from EARLIER (T1)
     // replays after it — the interleaving the flush can produce.
-    await upsertSlowOp(input({ durationMs: 100, thresholdMs: 50 }), T2, snapshot(T2), t.db);
-    await upsertSlowOp(input({ durationMs: 200, thresholdMs: 75 }), T1, snapshot(T1), t.db);
+    await upsertSlowOp(
+      input({ durationMs: 100, thresholdMs: 50 }),
+      T2,
+      snapshot(T2),
+      t.db,
+    );
+    await upsertSlowOp(
+      input({ durationMs: 200, thresholdMs: 75 }),
+      T1,
+      snapshot(T1),
+      t.db,
+    );
 
     const row = await readRow();
     // Aggregates accumulate order-insensitively.
@@ -153,13 +171,156 @@ describe("upsertSlowOp (real DB)", () => {
   });
 
   test("a genuinely newer occurrence advances last_seen_at and takes over last-* attribution", async () => {
-    await upsertSlowOp(input({ durationMs: 200, thresholdMs: 75 }), T1, snapshot(T1), t.db);
-    await upsertSlowOp(input({ durationMs: 100, thresholdMs: 50 }), T2, snapshot(T2), t.db);
+    await upsertSlowOp(
+      input({ durationMs: 200, thresholdMs: 75 }),
+      T1,
+      snapshot(T1),
+      t.db,
+    );
+    await upsertSlowOp(
+      input({ durationMs: 100, thresholdMs: 50 }),
+      T2,
+      snapshot(T2),
+      t.db,
+    );
 
     const row = await readRow();
     expect(row.lastSeenAt.getTime()).toBe(T2.getTime());
     expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
     expect(row.lastMs).toBe(100);
     expect(row.thresholdMs).toBe(50);
+  });
+});
+
+describe("upsertSlowOpIn (real DB, one transaction per batch)", () => {
+  let t: TestDb;
+
+  beforeAll(async () => {
+    t = await createTestDb({ prefix: "slowop_batch_test" });
+    await runMigrations(t.db);
+  });
+
+  afterAll(async () => {
+    await t.drop();
+  });
+
+  beforeEach(async () => {
+    await t.db.execute(sql`DELETE FROM slow_ops`);
+  });
+
+  // The client beacon arrives as a batch and recordSlowOpBatch drives every
+  // item through ONE transaction — the whole point of the batching, since a
+  // transaction per item is what amplified the stall it reports. What the
+  // shared transaction must NOT change is the per-item semantics, so drive the
+  // same body the batch drives and assert each item still lands on its own key
+  // with its own attribution.
+  test("distinct operations in one transaction each get their own row", async () => {
+    await t.db.transaction(async (tx) => {
+      await upsertSlowOpIn(tx, input({ operation: "op-a" }), T1, snapshot(T1));
+      await upsertSlowOpIn(tx, input({ operation: "op-b" }), T1, snapshot(T1));
+    });
+
+    const rows = await t.db.select().from(_slowOps);
+    expect(rows.map((r) => r.operation).sort()).toEqual(["op-a", "op-b"]);
+    for (const row of rows) {
+      expect(row.count).toBe(1);
+      expect(row.lastSeenAt.getTime()).toBe(T1.getTime());
+    }
+  });
+
+  // Two settles of the SAME resource inside one boot wave land in one batch, so
+  // both hit the same row through the same transaction. The onConflictDoUpdate
+  // accumulation has to hold within a transaction exactly as it does across
+  // them — the second insert must see the first one's row.
+  test("repeats of one operation in the same transaction accumulate onto one row", async () => {
+    await t.db.transaction(async (tx) => {
+      await upsertSlowOpIn(
+        tx,
+        input({ durationMs: 100, thresholdMs: 50 }),
+        T1,
+        snapshot(T1),
+      );
+      await upsertSlowOpIn(
+        tx,
+        input({ durationMs: 300, thresholdMs: 50 }),
+        T2,
+        snapshot(T2),
+      );
+    });
+
+    const rows = await t.db.select().from(_slowOps);
+    expect(rows).toHaveLength(1);
+    const row = rows[0]!;
+    expect(row.count).toBe(2);
+    expect(row.totalMs).toBe(400);
+    expect(row.maxMs).toBe(300);
+    expect(row.lastMs).toBe(300);
+    expect(row.firstSeenAt.getTime()).toBe(T1.getTime());
+    expect(row.lastSeenAt.getTime()).toBe(T2.getTime());
+    // Both samples are in the ring, newest first.
+    expect(row.recentSamples.map((s) => new Date(s.atTime).getTime())).toEqual([
+      T2.getTime(),
+      T1.getTime(),
+    ]);
+  });
+
+  // Per-item caller attribution survives the shared transaction: two routes
+  // waiting on the same resource in one batch both appear in the breakdown.
+  test("per-item callers merge independently within one transaction", async () => {
+    await t.db.transaction(async (tx) => {
+      await upsertSlowOpIn(
+        tx,
+        input({ caller: { kind: "route", label: "/a" } }),
+        T1,
+        snapshot(T1),
+      );
+      await upsertSlowOpIn(
+        tx,
+        input({ caller: { kind: "route", label: "/b" } }),
+        T1,
+        snapshot(T1),
+      );
+      await upsertSlowOpIn(
+        tx,
+        input({ caller: { kind: "route", label: "/a" } }),
+        T1,
+        snapshot(T1),
+      );
+    });
+
+    const rows = await t.db.select().from(_slowOps);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.callers.map((c) => [c.label, c.count]).sort()).toEqual([
+      ["/a", 2],
+      ["/b", 1],
+    ]);
+  });
+
+  // A batch is all-or-nothing: one item's failure rolls the whole transaction
+  // back. That is the deliberate trade the shared transaction makes, so pin it
+  // rather than leave it to be discovered.
+  test("a throw inside the batch transaction rolls back every item in it", async () => {
+    const boom = new Error("batch item failed");
+    let rejected = false;
+    await t.db
+      .transaction(async (tx) => {
+        await upsertSlowOpIn(
+          tx,
+          input({ operation: "op-a" }),
+          T1,
+          snapshot(T1),
+        );
+        throw boom;
+      })
+      .catch((err: unknown) => {
+        // Only OUR failure is expected here; anything else is a real problem
+        // and must keep propagating.
+        if (err !== boom) throw err;
+        rejected = true;
+      });
+    expect(rejected).toBe(true);
+
+    const rows = await t.db.select().from(_slowOps);
+    expect(rows).toHaveLength(0);
   });
 });

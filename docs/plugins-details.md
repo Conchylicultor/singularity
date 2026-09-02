@@ -7405,7 +7405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7621,6 +7621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/data-view/custom-columns`
       - `primitives/data-view/view-core`
       - `reorder`
+      - `reports`
       - `review/code-review`
       - `shell/global-action-bar`
       - `stats/commits`
@@ -12618,6 +12619,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `formatProfilerReport`
           - `RENDER_PROFILER_CHANNEL`
           - `RENDER_PROFILER_GLOBAL`
+    - **`report-storm`** — Report-storm renderer: a one-line Debug → Reports summary (collapsed kind + how many fingerprints raised how many alerts against the window budget) for the report-storm kind. The report-storm report kind: validates the reports engine's fan-out collapse accounting, fingerprints per (collapsed kind, window) so each window of a long incident gets its own roster, and renders the rollup task. Declares itself fanOutExempt so the ceiling can never collapse its own accounting.
+      - Web:
+        - Contributes: `Reports.KindView` → `ReportStormSummary`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "report-storm"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `ReportStormPayload`
+        - Exports (values): `ReportStormPayloadSchema`
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
       - Web:
         - Slots:
@@ -12820,6 +12834,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `_slowOps`
           - `readSlowOpMarkers`
           - `recordSlowOp`
+          - `recordSlowOpBatch`
           - `slowOpsResource`
         - Register: `defineJob('retention.slow_ops')`
         - Resources: `slow-ops` (push)
@@ -12848,6 +12863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CallerBreakdownSchema`
           - `CallerRefSchema`
           - `loadSeverity`
+          - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `slowOpConfig`
           - `slowOpFields`
           - `SlowOpMarkerSchema`
@@ -14044,6 +14060,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/claude-cli`
               - `infra/duress`
               - `infra/events`
+              - `reports`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
             - Contributes: `fields.storage` "int"
@@ -15550,6 +15567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `release`
               - `reorder`
               - `reorder/node-types`
+              - `reports`
               - `shell/toast`
               - `tasks/auto-start`
               - `tasks/launch-options`
@@ -21629,6 +21647,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/read-set`
               - `debug/read-set-shrink`
               - `debug/render-profiler`
+              - `debug/report-storm`
               - `debug/reports`
               - `debug/sentinel`
               - `debug/session-divergence`
@@ -22319,6 +22338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue`
               - `debug/queue-health`
               - `debug/read-set-shrink`
+              - `debug/report-storm`
               - `debug/sentinel`
               - `debug/session-divergence`
               - `debug/slow-ops`
@@ -28607,10 +28627,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reorder/editor.SpacerReorderItem`
               - `reorder/node-types.ReorderNodes`
 
-- **`reports`** — Reports uncaught browser errors to the server. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
+- **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
+      - `config_v2.ConfigV2`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/slot-render.defineDispatchSlot`
       - `primitives/tab-id.getTabId`
@@ -28622,10 +28644,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Contributes:
       - `resource.declare` "reports"
+      - `ConfigV2.Register` "reports"
       - `change-feed-exclusion` "reports"
       - `fork-data-exclusion` "reports"
     - Uses:
       - `build/server-build-id.getServerGraphHash`
+      - `config_v2.ConfigV2`
+      - `config_v2.getConfig`
       - `database.db`
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
@@ -28641,11 +28666,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/reports/server/internal/tables.ts`
     - Exports (types):
       - `InvestigationTaskRequest`
+      - `RecordReportResult`
       - `ReportKindSpec`
       - `ReportKindVariant`
       - `ReportNoiseInput`
       - `ReportNoiseRuleSpec`
       - `ReportRow`
+      - `StormRosterEntry`
+      - `StormSummary`
     - Exports (values):
       - `_reports`
       - `DEFAULT_REPORT_DEBOUNCE_MS`
@@ -28664,6 +28692,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `POST /api/reports/:id/investigate`
   - Core:
     - Uses:
+      - `config_v2.defineConfig`
+      - `fields/int/config.intField`
       - `primitives/live-state.resourceDescriptor`
       - `primitives/pane.defineRoute`
     - Exports (types):
@@ -28673,6 +28703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `CLIENT_REPORT_SOURCES`
       - `reportDetailRoute`
       - `ReportSchema`
+      - `reportsConfig`
       - `reportsResource`
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
@@ -28691,6 +28722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/op-rate`
       - `debug/queue-health`
       - `debug/read-set-shrink`
+      - `debug/report-storm`
       - `debug/reports`
       - `debug/sentinel`
       - `debug/session-divergence`

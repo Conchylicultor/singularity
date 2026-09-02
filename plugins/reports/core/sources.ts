@@ -18,6 +18,10 @@ export const SERVER_REPORT_SOURCES = [
   "server-session-monitor",
   "server-transcript-watcher",
   "server-duress-shed",
+  // The reports engine's own fan-out rollup: filed by recordReport when a kind
+  // blows past its per-window distinct-fingerprint ceiling and the alerts are
+  // collapsed into one accounting row.
+  "server-report-storm",
   "server-duress-monitor",
   "server-stall-monitor",
   "server-cost-monitor",

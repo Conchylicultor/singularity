@@ -161,6 +161,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `release`
     - `reorder`
     - `reorder/node-types`
+    - `reports`
     - `shell/toast`
     - `tasks/auto-start`
     - `tasks/launch-options`

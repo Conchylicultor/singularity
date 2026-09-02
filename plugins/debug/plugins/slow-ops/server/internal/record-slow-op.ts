@@ -187,38 +187,53 @@ const slowOpShed = createShedBuffer<RecordSlowOpInput>({
 // (operationKind, operation, worktree), merges the caller attribution, notifies
 // the live resource, and fires the per-operation report (fire-and-forget so a
 // slow report path never blocks recording). Failures propagate loudly.
+//
+// A single signal is a batch of one: the server-span path and the client
+// beacon stay ONE funnel, with one code path between them.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
-  // Stamp the trip instant BEFORE the shed gate: a buffered item must carry
-  // its true time through the buffer so replay writes in-freeze instants, not
-  // the flush time. Replay re-passes the same object, so the stamp survives
-  // the buffer and the ??= is a no-op on the replay pass.
-  input.occurredAt ??= new Date();
-  const occurredAt = input.occurredAt;
+  await recordSlowOpBatch([input]);
+}
 
-  // Duress shed gate on the durable-write funnel ONLY. The coherent-instant
+// The batch form. The client beacon arrives as a batch (one boot wave can
+// re-settle hundreds of resources at once), and opening a Postgres transaction
+// per item was the other half of the amplification the batching exists to stop
+// — 210 commits during a stall, against the backend that IS the stall. One
+// contention snapshot and ONE transaction cover the whole batch.
+//
+// Nothing is filtered here. Every input that clears the shed gate is upserted,
+// markered, and reported exactly as it would have been alone.
+export async function recordSlowOpBatch(
+  inputs: RecordSlowOpInput[],
+): Promise<void> {
+  // Stamp + shed-gate PER ITEM, and before anything else. Both halves are
+  // per-item by construction:
+  //
+  // - the stamp is the trip instant, taken BEFORE the shed gate so a buffered
+  //   item carries its true time through the buffer and replay writes in-freeze
+  //   instants, not the flush time. Replay re-passes the same object, so the
+  //   stamp survives the buffer and the ??= is a no-op on the replay pass;
+  // - the shed gate counts first-N per cascade key, so batching the admission
+  //   decision would change which items survive a duress episode.
+  //
+  // The gate applies to the durable-write funnel ONLY. The coherent-instant
   // trace for the same trip is captured by the CALLERS (install-slow-span /
   // handle-client-slow-op) BEFORE this call — evidence-first — and carries its
-  // own independent shed gate inside captureTrace, so first-N traces still
-  // land even when this row write is shed (and vice versa).
-  if (!slowOpShed.admit(input).persist) return;
+  // own independent shed gate inside captureTrace, so first-N traces still land
+  // even when this row write is shed (and vice versa).
+  const admitted: RecordSlowOpInput[] = [];
+  for (const input of inputs) {
+    input.occurredAt ??= new Date();
+    if (!slowOpShed.admit(input).persist) continue;
+    admitted.push(input);
+  }
+  if (admitted.length === 0) return;
 
-  const {
-    operationKind,
-    operation,
-    durationMs,
-    thresholdMs,
-    source,
-    transportColdStart,
-    transportWaitMs,
-    traceId,
-  } = input;
-
-  // One transaction so the onConflictDoUpdate row lock serializes concurrent
+  // One transaction so each onConflictDoUpdate row lock serializes concurrent
   // callers for the same key, making the callers read-merge-write race-tolerant.
   // Wrapped in runWithoutProfiling: the slow_ops upsert is itself a `db` span that
   // would otherwise re-feed the slow-op recorder (self-amplifying loop). The
   // suppression ALS propagates through every awaited query inside the callback.
-  // Hoisted out of the suppression callback so the dual-write marker below can
+  // Hoisted out of the suppression callback so the dual-write markers below can
   // reuse the same captured box state. Assigned inside the scope (the await must
   // stay there); non-null after the callback resolves.
   //
@@ -233,7 +248,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   let snapshot!: ContentionSnapshot;
   await runInBackgroundLane(() =>
     runWithoutProfiling(async () => {
-      // Capture the box state at the instant this span tripped. Cached (≤1s) so a
+      // Capture the box state at the instant this batch tripped. Cached (≤1s) so a
       // storm of slow ops collapses onto one read; inside runWithoutProfiling so
       // its own pg query never re-feeds this recorder. The await MUST stay inside
       // the suppression scope (same reason as the transaction below).
@@ -244,58 +259,102 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       // query spans the pool wrapper records) would run after the ALS scope exits
       // — defeating suppression and re-opening the self-feedback loop. The same
       // hazard applies to the enclosing lane scope: an escaped await would take
-      // its pool connection outside the background declaration.
-      await upsertSlowOp(input, occurredAt, snapshot);
+      // its pool connection outside the background declaration. That is why the
+      // per-item loop lives INSIDE this transaction callback rather than the
+      // transaction living inside a per-item loop.
+      await db.transaction(async (tx) => {
+        for (const input of admitted) {
+          await upsertSlowOpIn(tx, input, input.occurredAt!, snapshot);
+        }
+      });
     }),
   );
 
-  // Dual-write a slim marker for the health-monitor overlay (one line per
-  // recorded slow op). The snapshot was captured inside the suppression scope
-  // above; reuse it so the marker shares the box state the aggregate recorded.
-  markerChannel.publish(
-    JSON.stringify({
-      atTime: occurredAt,
-      durationMs,
-      operationKind,
-      operation,
-      loadAvg1: snapshot.loadAvg1,
-      cpuCount: snapshot.cpuCount,
-    } satisfies SlowOpMarker),
-  );
-
-  // Fire-and-forget the per-operation report. The fingerprint keys on
-  // (operationKind, operation), so each distinct slow op gets its own report; the
-  // message reflects this op's latest tripping duration.
-  const durationRounded = Math.round(durationMs);
-  void recordReport({
-    kind: "slow-op",
-    source,
-    data: {
+  for (const input of admitted) {
+    const {
       operationKind,
       operation,
       durationMs,
       thresholdMs,
-      // Optional cold-start attribution — surfaced in the report title/desc.
-      ...(transportColdStart !== undefined ? { transportColdStart } : {}),
-      ...(transportWaitMs !== undefined ? { transportWaitMs } : {}),
-      // Optional link to the coherent-instant trace captured for this trip.
-      ...(traceId !== undefined ? { traceId } : {}),
-    },
-    message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
-  });
+      source,
+      transportColdStart,
+      transportWaitMs,
+      traceId,
+    } = input;
+
+    // Dual-write a slim marker for the health-monitor overlay (one line per
+    // recorded slow op). The snapshot was captured inside the suppression scope
+    // above; reuse it so the marker shares the box state the aggregate recorded.
+    markerChannel.publish(
+      JSON.stringify({
+        atTime: input.occurredAt!,
+        durationMs,
+        operationKind,
+        operation,
+        loadAvg1: snapshot.loadAvg1,
+        cpuCount: snapshot.cpuCount,
+      } satisfies SlowOpMarker),
+    );
+
+    // Fire-and-forget the per-operation report. The fingerprint keys on
+    // (operationKind, operation), so each distinct slow op gets its own report; the
+    // message reflects this op's latest tripping duration.
+    const durationRounded = Math.round(durationMs);
+    void recordReport({
+      kind: "slow-op",
+      source,
+      data: {
+        operationKind,
+        operation,
+        durationMs,
+        thresholdMs,
+        // Optional cold-start attribution — surfaced in the report title/desc.
+        ...(transportColdStart !== undefined ? { transportColdStart } : {}),
+        ...(transportWaitMs !== undefined ? { transportWaitMs } : {}),
+        // Optional link to the coherent-instant trace captured for this trip.
+        ...(traceId !== undefined ? { traceId } : {}),
+      },
+      message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
+    });
+  }
 }
+
+/**
+ * The transaction handle `db.transaction(cb)` hands its callback. Derived from
+ * the call itself rather than named from drizzle's internals, so it tracks the
+ * driver's own type.
+ */
+type SlowOpTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // The durable upsert half of recordSlowOp, db-parametrized so the DB-backed
 // suite can drive the SQL semantics (greatest/least timestamps, the
 // newest-occurrence guards, ring ordering) against a throwaway Postgres — the
-// session-chain `recordSessionId(…, conn)` precedent. Production callers go
-// through recordSlowOp, which owns the shed gate, the lane + profiling-
-// suppression scopes, the marker dual-write, and the report.
+// session-chain `recordSessionId(…, conn)` precedent. Opens its OWN transaction
+// around one item, so a single-item caller keeps exactly the semantics it had.
+// Production callers go through recordSlowOpBatch, which owns the shed gate,
+// the lane + profiling-suppression scopes, the ONE batch transaction, the
+// marker dual-write, and the report.
 export async function upsertSlowOp(
   input: RecordSlowOpInput,
   occurredAt: Date,
   snapshot: ContentionSnapshot,
   conn: NodePgDatabase = db,
+): Promise<void> {
+  await conn.transaction(async (tx) => {
+    await upsertSlowOpIn(tx, input, occurredAt, snapshot);
+  });
+}
+
+// The body: one item's upsert against an ALREADY-OPEN transaction. The row lock
+// the onConflictDoUpdate takes is what makes the callers/waits/samples
+// read-modify-write below race-tolerant, so every caller must supply a
+// transaction — a batch shares one across its items, a lone item gets its own
+// from the wrapper above.
+export async function upsertSlowOpIn(
+  tx: SlowOpTx,
+  input: RecordSlowOpInput,
+  occurredAt: Date,
+  snapshot: ContentionSnapshot,
 ): Promise<void> {
   const {
     operationKind,
@@ -316,56 +375,54 @@ export async function upsertSlowOp(
   // expressions all read the PRE-update row, so both guards see the same
   // last_seen_at consistently.
   const isNewest = sql`${occurredAt} >= ${_slowOps.lastSeenAt}`;
-  await conn.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(_slowOps)
-      .values({
-        worktree,
-        operationKind,
-        operation,
-        count: 1,
-        totalMs: durationMs,
-        maxMs: durationMs,
-        lastMs: durationMs,
-        thresholdMs,
-        callers: [],
-        firstSeenAt: occurredAt,
-        lastSeenAt: occurredAt,
-      })
-      .onConflictDoUpdate({
-        target: [_slowOps.operationKind, _slowOps.operation, _slowOps.worktree],
-        set: {
-          count: sql`${_slowOps.count} + 1`,
-          totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
-          maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
-          lastMs: sql`case when ${isNewest} then ${durationMs} else ${_slowOps.lastMs} end`,
-          thresholdMs: sql`case when ${isNewest} then ${thresholdMs} else ${_slowOps.thresholdMs} end`,
-          firstSeenAt: sql`least(${_slowOps.firstSeenAt}, ${occurredAt})`,
-          lastSeenAt: sql`greatest(${_slowOps.lastSeenAt}, ${occurredAt})`,
-        },
-      })
-      .returning();
+  const [row] = await tx
+    .insert(_slowOps)
+    .values({
+      worktree,
+      operationKind,
+      operation,
+      count: 1,
+      totalMs: durationMs,
+      maxMs: durationMs,
+      lastMs: durationMs,
+      thresholdMs,
+      callers: [],
+      firstSeenAt: occurredAt,
+      lastSeenAt: occurredAt,
+    })
+    .onConflictDoUpdate({
+      target: [_slowOps.operationKind, _slowOps.operation, _slowOps.worktree],
+      set: {
+        count: sql`${_slowOps.count} + 1`,
+        totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
+        maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
+        lastMs: sql`case when ${isNewest} then ${durationMs} else ${_slowOps.lastMs} end`,
+        thresholdMs: sql`case when ${isNewest} then ${thresholdMs} else ${_slowOps.thresholdMs} end`,
+        firstSeenAt: sql`least(${_slowOps.firstSeenAt}, ${occurredAt})`,
+        lastSeenAt: sql`greatest(${_slowOps.lastSeenAt}, ${occurredAt})`,
+      },
+    })
+    .returning();
 
-    if (!row) throw new Error("recordSlowOp: upsert returned no row");
+  if (!row) throw new Error("recordSlowOp: upsert returned no row");
 
-    // A second read-modify-write within the same row-locked transaction so
-    // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
-    // slow op gets a contention sample); callers is merged additionally only
-    // when a caller is known (page-load passes null).
-    const callers = caller
-      ? mergeCaller(row.callers, caller, durationMs)
-      : row.callers;
-    const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
-    const recentSamples = mergeSample(
-      row.recentSamples,
-      snapshot,
-      durationMs,
-      traceId,
-      occurredAt,
-    );
-    await tx
-      .update(_slowOps)
-      .set({ callers, waits: nextWaits, recentSamples })
-      .where(eq(_slowOps.id, row.id));
-  });
+  // A second read-modify-write within the same row-locked transaction so
+  // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
+  // slow op gets a contention sample); callers is merged additionally only
+  // when a caller is known (page-load passes null).
+  const callers = caller
+    ? mergeCaller(row.callers, caller, durationMs)
+    : row.callers;
+  const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
+  const recentSamples = mergeSample(
+    row.recentSamples,
+    snapshot,
+    durationMs,
+    traceId,
+    occurredAt,
+  );
+  await tx
+    .update(_slowOps)
+    .set({ callers, waits: nextWaits, recentSamples })
+    .where(eq(_slowOps.id, row.id));
 }

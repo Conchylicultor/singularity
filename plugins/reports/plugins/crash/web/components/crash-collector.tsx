@@ -53,10 +53,14 @@ export function CrashCollector() {
           uiContext: r.uiContext ?? null,
         },
       });
-      return promise.then((result) => ({
-        reportId: result?.reportId ?? null,
-        taskId: result?.taskId ?? null,
-      }));
+      // Only a recorded report has a row for the Fix button to investigate; a
+      // shed or storm-collapsed occurrence has no id of its own (the engine
+      // accounts for it in a rollup), so the button stays disabled.
+      return promise.then((result) =>
+        result?.outcome === "recorded"
+          ? { reportId: result.reportId, taskId: result.taskId }
+          : { reportId: null, taskId: null },
+      );
     });
 
     // The live-state wedge watchdog (infra.health) emits a neutral WedgeReport;

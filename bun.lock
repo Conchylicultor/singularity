@@ -1978,6 +1978,10 @@
       "name": "@singularity/plugin-debug-render-profiler",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/report-storm": {
+      "name": "@singularity/plugin-debug-report-storm",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/reports": {
       "name": "@singularity/plugin-debug-reports",
       "version": "0.0.1",
@@ -6723,6 +6727,8 @@
     "@singularity/plugin-debug-read-set-shrink": ["@singularity/plugin-debug-read-set-shrink@workspace:plugins/debug/plugins/read-set-shrink"],
 
     "@singularity/plugin-debug-render-profiler": ["@singularity/plugin-debug-render-profiler@workspace:plugins/debug/plugins/render-profiler"],
+
+    "@singularity/plugin-debug-report-storm": ["@singularity/plugin-debug-report-storm@workspace:plugins/debug/plugins/report-storm"],
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 

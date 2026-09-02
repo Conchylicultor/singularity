@@ -39,6 +39,34 @@ title gains `— transport cold-start` and the description points the fix at
 transport/boot readiness rather than the resource. The full duration still fires
 and is still recorded — this is *attribution*, not a filter.
 
+## The client beacon is batched — transport only
+
+The browser does not POST once per slow element. `web/internal/slow-op-queue.ts`
+queues each signal, waits ~250 ms (one trailing debounce, never a poll), and
+sends the accumulated items as ONE request, chunked to
+`MAX_CLIENT_SLOW_OP_ITEMS`, `keepalive`, with a `pagehide` flush so a queued
+signal is not lost when the tab goes away. On the server, one batch is one
+contention snapshot and one Postgres transaction (`recordSlowOpBatch`).
+
+This exists because the old shape amplified the very stall it reported: during
+the 2026-09-02 incident a reconnect re-settled ~420 resources at once, and the
+op-rate monitor recorded `POST /api/slow-ops/client — 43.2s across 438 calls`,
+each call a DB transaction plus a report upsert plus a notification insert,
+against the backend that was already failing. See
+`research/2026-09-02-global-alert-fan-out-ceiling.md`.
+
+**Batching is a transport change and nothing else.** No signal is filtered,
+thresholded, deduped or delayed out of existence on the way — every element
+settle that trips today still reaches `recordSlowOp` with the same
+`transportColdStart` / `transportWaitMs` / `caller` / `clientBoot` attribution,
+and the section above still holds in full. The only loss the queue can cause is
+its 1000-item cap, and that loss is counted and sent as the batch's `dropped`
+field, which the handler writes to the `slow-ops` log channel — never silently
+discarded.
+
+`recordSlowOp(input)` is `recordSlowOpBatch([input])`, so the server-span hook
+and the client beacon remain ONE funnel with one set of semantics.
+
 ## Slow jobs (the `job` kind)
 
 Background job runs flow through the same pipeline as HTTP/loader ops. The jobs
@@ -135,6 +163,7 @@ bar).
     - `_slowOps`
     - `readSlowOpMarkers`
     - `recordSlowOp`
+    - `recordSlowOpBatch`
     - `slowOpsResource`
   - Register: `defineJob('retention.slow_ops')`
   - Resources: `slow-ops` (push)
@@ -163,6 +192,7 @@ bar).
     - `CallerBreakdownSchema`
     - `CallerRefSchema`
     - `loadSeverity`
+    - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `slowOpConfig`
     - `slowOpFields`
     - `SlowOpMarkerSchema`

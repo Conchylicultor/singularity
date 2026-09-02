@@ -86,6 +86,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `debug/queue`
     - `debug/queue-health`
     - `debug/read-set-shrink`
+    - `debug/report-storm`
     - `debug/sentinel`
     - `debug/session-divergence`
     - `debug/slow-ops`

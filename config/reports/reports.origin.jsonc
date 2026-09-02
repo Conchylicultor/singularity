@@ -1,0 +1,9 @@
+// @hash 687d525e2d25
+{
+  // How many DISTINCT fingerprints of one report kind may raise their own alert per window. A fingerprint that already alerted this window is not fan-out — its row, count and bell cooldown behave normally. Past the budget, new fingerprints fold into one report-storm rollup instead.
+  "fanOutPerWindow": 20,
+  // The budget window, and the one-shot delay before a storm rollup is filed. Each window re-grants the full budget, so collapse is temporary: a persistent problem mints its own row in the next window.
+  "fanOutWindowMs": 60000,
+  // How many collapsed fingerprints a report-storm rollup names inline. Past the cap the tail only increments the rollup's truncated + occurrence counts — the accounting survives even when the individual key does not.
+  "stormRosterMax": 50
+}

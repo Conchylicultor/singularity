@@ -115,6 +115,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `debug/read-set`
     - `debug/read-set-shrink`
     - `debug/render-profiler`
+    - `debug/report-storm`
     - `debug/reports`
     - `debug/sentinel`
     - `debug/session-divergence`
