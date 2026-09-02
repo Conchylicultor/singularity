@@ -4,7 +4,6 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "deny": ["EnterWorktree", "ExitWorktree"]
   },
   "enableAllProjectMcpServers": true,
