@@ -1,30 +1,22 @@
 import { USER_CONFIG_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import { APP_SCOPE_DIR, scopeAppId } from "@plugins/config_v2/core";
 import type {
   ConfigConflictContext,
   ConfigConflictField,
 } from "@plugins/config_v2/plugins/settings/web";
 
 /**
- * A single serialized value never grows past this. A config value can be a whole
- * list of objects; a prompt that pastes three of them verbatim buries the one
- * question it is asking.
+ * The key alone, never its two values.
+ *
+ * This used to print `mine: <json>, upstream: <json>`, clipped at 200 chars — and
+ * a config value is routinely a whole list of objects, so the agent got three
+ * truncated blobs instead of the documents they came from. It then had to guess
+ * at what the ellipsis ate. The files themselves are named below; an agent that
+ * can read them needs the key, not a preview of it.
  */
-const MAX_VALUE_CHARS = 200;
-
-/** `JSON.stringify`, clipped — and with the absent case spelled, not printed as the literal `undefined`. */
-function fmtValue(value: unknown): string {
-  const json = JSON.stringify(value);
-  // `JSON.stringify(undefined)` is `undefined`, not a string: the key is absent
-  // from that side of the conflict, which is a fact worth stating plainly.
-  if (json === undefined) return "(not set)";
-  return json.length > MAX_VALUE_CHARS
-    ? `${json.slice(0, MAX_VALUE_CHARS)}…`
-    : json;
-}
-
 function fieldLine(field: ConfigConflictField): string {
   const suffix = field.description ? ` — ${field.description}` : "";
-  return `- \`${field.key}\` — mine: \`${fmtValue(field.mine)}\`, upstream: \`${fmtValue(field.upstream)}\`${suffix}`;
+  return `- \`${field.key}\`${suffix}`;
 }
 
 /** A titled bullet list, or nothing at all — never a heading over an empty list. */
@@ -39,19 +31,73 @@ function subject(conflict: ConfigConflictContext): string {
 }
 
 /**
- * Where the user's own config lives, and why the agent cannot fix it by editing
- * a file. The config layer is forked per worktree, so the copy an agent sees
- * inside its own checkout is NOT the one the user is looking at — an agent that
- * "fixed" the conflict by editing its own fork would report success and change
- * nothing for the user.
+ * The store path with the scope's own `@app/<id>/` segment spliced in ahead of the
+ * filename — the same encoding `userScopedDir` writes on disk, so a scoped
+ * conflict names the file it is actually about rather than the base one.
  */
-function locationNote(conflict: ConfigConflictContext): string {
-  return `My own config layer lives at \`${USER_CONFIG_DIR_DISPLAY}/<worktree>/${conflict.storePath}\` and is forked per worktree, so edits you make inside your own worktree do not change mine. Report the resolution you recommend, and fix any code-level cause in the repo.`;
+function scopedStorePath(conflict: ConfigConflictContext): string {
+  const appId = scopeAppId(conflict.scopeId);
+  if (!appId) return conflict.storePath;
+  const cut = conflict.storePath.lastIndexOf("/");
+  const dir = cut < 0 ? "" : `${conflict.storePath.slice(0, cut)}/`;
+  const name = conflict.storePath.slice(cut + 1);
+  return `${dir}${APP_SCOPE_DIR}/${appId}/${name}`;
 }
 
 /**
+ * The two files that disagree, by absolute path, plus the repo file the upstream
+ * side was propagated from.
+ *
+ * Naming the paths is the point: the prompt is not trying to summarize the two
+ * documents, it is telling the agent where to read them in full. It also spells
+ * the per-worktree fork, because an agent that "fixed" the conflict by editing
+ * its own checkout's copy would report success and change nothing for the user.
+ */
+function pathsBlock(conflict: ConfigConflictContext): string {
+  const stored = scopedStorePath(conflict);
+  const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>`;
+  return [
+    "The two files that disagree — read both:",
+    `- my values: \`${base}/${stored}\``,
+    `- the new upstream default: \`${base}/${stored.replace(/\.jsonc$/, ".origin.jsonc")}\``,
+    "",
+    `That upstream file is propagated by \`./singularity build\` from the repo's \`config/${conflict.storePath}\`, which is the version-controlled default.`,
+    "My config layer is forked per worktree, so the copy in your own checkout is NOT the one I am looking at — editing it changes nothing for me.",
+  ].join("\n");
+}
+
+/**
+ * The standing rule, on every variant: resolve the conflict by hand.
+ *
+ * The prompt used to end with "fix any code-level cause in the repo" and "fix
+ * that at the source rather than papering over it in my config" — and, on the
+ * invalid variant, offered "say exactly what that fix would be". Every one of
+ * those put a repo change on the table, and an agent handed a two-file merge
+ * went and rewrote the config engine's merge instead. Resolving a conflict is
+ * reading two documents and deciding per field; nothing here asks about code, so
+ * nothing here mentions it.
+ */
+const RESOLVE_BY_HAND =
+  "**Resolve this by hand, and change no code.** Read the two files, decide field by field, and report. " +
+  "Do not edit plugin source, tests, schemas or descriptors, and do not `./singularity build` or push. " +
+  "The only file you may edit is the repo config named above, and only when I ask you to promote my values into it.";
+
+/**
+ * Point at the user's own typed guidance. The launch popover appends it verbatim
+ * under a `## Context` heading, so the prompt names that heading rather than
+ * describing it — and the sentence is a no-op when nothing was typed, which is
+ * what lets this be a fixed line in a builder that never sees the text.
+ *
+ * It goes LAST on purpose. What the user typed is the specific instruction for
+ * this one conflict; everything above it is boilerplate attached to every
+ * conflict, and the boilerplate must not outrank it.
+ */
+const FOLLOW_MY_CONTEXT =
+  "Anything I added under `## Context` below is the guidance for this conflict — follow it, and let it override anything above.";
+
+/**
  * Turn a config conflict into the first turn of an agent task: what broke, which
- * fields disagree and how, and what the agent is being asked to decide.
+ * fields disagree, where to read them, and what the agent is being asked to decide.
  *
  * Pure and total over the context — so the prompt can be built (and tested)
  * without a popover, a draft, or a live config resource.
@@ -81,28 +127,27 @@ function hashBlocks(conflict: ConfigConflictContext): string[] {
       "Fields upstream changed that I had not touched:",
       upstreamOnly.map(fieldLine),
     ),
-    locationNote(conflict),
-    "Find the `defineConfig` descriptor behind this config and what changed in it recently (`git log`), then for each field above tell me whether to keep my value or take the new default, and why. If the upstream change itself looks wrong or is missing a migration, fix that at the source rather than papering over it in my config.",
+    pathsBlock(conflict),
+    "For each field above, tell me whether to keep my value or take the new default, and why. Reading what changed upstream and why (`git log` on the repo config) is useful context for that answer.",
+    RESOLVE_BY_HAND,
+    FOLLOW_MY_CONTEXT,
   ];
 }
 
 function invalidBlocks(conflict: ConfigConflictContext): string[] {
   const issues = conflict.issues ?? [];
-  const stored = conflict.fields.filter((f) => f.status !== "unchanged");
 
   return [
     `Resolve the invalid stored config on ${subject(conflict)}.`,
-    "The stored document no longer validates against the current schema, so the app has fallen back to the code defaults and my stored values are not being used.",
+    "The stored document no longer validates against the current schema, so the app has fallen back to the built-in defaults and my stored values are not being used.",
     ...section(
       "Schema issues:",
       issues.map((issue) => `- \`${issue.path}\` — ${issue.message}`),
     ),
-    ...section(
-      "Stored values that differ from what the app runs:",
-      stored.map(fieldLine),
-    ),
-    locationNote(conflict),
-    "Find the schema change that invalidated this document — the `defineConfig` descriptor behind it and its recent history (`git log`) — then either tell me how to migrate the stored document or fix the descriptor so the stored shape still parses. If a field's type changed with no migration behind it, fix that at the source rather than asking me to retype my values.",
+    pathsBlock(conflict),
+    "Reconcile my stored document against the current one by hand, and tell me what each value should become for it to validate again. Reading what changed upstream and why (`git log` on the repo config) is useful context for that answer.",
+    RESOLVE_BY_HAND,
+    FOLLOW_MY_CONTEXT,
   ];
 }
 

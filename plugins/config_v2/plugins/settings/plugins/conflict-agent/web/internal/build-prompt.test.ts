@@ -55,11 +55,9 @@ describe("hash conflicts", () => {
       "Resolve the config conflict on the **preprompts** config (`conversations/preprompts/config.jsonc`).",
     );
     expect(prompt).toContain("Fields we both changed (these need a decision):");
-    expect(prompt).toContain('- `mode` — mine: `"fast"`, upstream: `"safe"`');
+    expect(prompt).toContain("- `mode`");
     expect(prompt).toContain("Fields upstream changed that I had not touched:");
-    expect(prompt).toContain(
-      "- `retries` — mine: `3`, upstream: `5` — How many times to retry",
-    );
+    expect(prompt).toContain("- `retries` — How many times to retry");
     // "unchanged" fields carry no decision, so they are omitted entirely.
     expect(prompt).not.toContain("untouched");
   });
@@ -79,24 +77,105 @@ describe("hash conflicts", () => {
       "(`conversations/preprompts/config.jsonc`, scope `app:sonata`)",
     );
   });
+});
 
-  test("tells the agent the config layer is forked per worktree", () => {
+// The whole point of the prompt: not a summary of the two documents, but where
+// to read them.
+describe("the conflicting paths", () => {
+  test("names the override and the origin it went stale against", () => {
     const prompt = buildConflictPrompt(ctx());
+    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/conversations/preprompts`;
+
+    expect(prompt).toContain(`- my values: \`${base}/config.jsonc\``);
     expect(prompt).toContain(
-      `\`${USER_CONFIG_DIR_DISPLAY}/<worktree>/conversations/preprompts/config.jsonc\``,
+      `- the new upstream default: \`${base}/config.origin.jsonc\``,
     );
-    expect(prompt).toContain("forked per worktree");
   });
 
-  test("asks for the descriptor's own history, and a source-level fix", () => {
-    const prompt = buildConflictPrompt(ctx());
-    expect(prompt).toContain("`defineConfig`");
-    expect(prompt).toContain("`git log`");
+  test("names the repo file the upstream default is propagated from", () => {
+    expect(buildConflictPrompt(ctx())).toContain(
+      "`config/conversations/preprompts/config.jsonc`",
+    );
+  });
+
+  test("splices the scope's own @app segment into the stored paths", () => {
+    const prompt = buildConflictPrompt(ctx({ scopeId: "app:sonata" }));
+    const base = `${USER_CONFIG_DIR_DISPLAY}/<worktree>/conversations/preprompts`;
+
+    expect(prompt).toContain(
+      `- my values: \`${base}/@app/sonata/config.jsonc\``,
+    );
+    expect(prompt).toContain(`${base}/@app/sonata/config.origin.jsonc`);
+    // The repo pointer stays the BASE path — no scoped origin is ever committed.
+    expect(prompt).toContain("`config/conversations/preprompts/config.jsonc`");
+  });
+
+  test("tells the agent the config layer is forked per worktree", () => {
+    expect(buildConflictPrompt(ctx())).toContain("forked per worktree");
+  });
+
+  test("prints no values at all — the files carry them", () => {
+    const prompt = buildConflictPrompt(
+      ctx({
+        fields: [
+          field({ key: "mode", mine: "my-secret-value", upstream: "theirs" }),
+        ],
+      }),
+    );
+
+    expect(prompt).not.toContain("my-secret-value");
+    expect(prompt).not.toContain("theirs");
+    expect(prompt).not.toContain("mine:");
+    expect(prompt).not.toContain("upstream:");
+  });
+});
+
+// The rule that exists because an agent, told to "fix any code-level cause",
+// rewrote the config engine's merge for a task that was a two-file merge.
+describe("the resolve-by-hand rule", () => {
+  test("is on both variants", () => {
+    for (const kind of ["hash", "invalid"] as const) {
+      expect(buildConflictPrompt(ctx({ kind }))).toContain(
+        "**Resolve this by hand, and change no code.**",
+      );
+    }
+  });
+
+  // Not just "does not ASK for a fix" — the prompt must not put a code change on
+  // the table at all, in any phrasing. An agent offered the option takes it.
+  test("no variant raises a code change as an option", () => {
+    for (const kind of ["hash", "invalid"] as const) {
+      const prompt = buildConflictPrompt(ctx({ kind }));
+      expect(prompt).not.toContain("fix that at the source");
+      expect(prompt).not.toContain("fix any code-level cause");
+      expect(prompt).not.toContain("code fix");
+      expect(prompt).not.toContain("code-level");
+      expect(prompt).not.toContain("defineConfig");
+    }
+  });
+});
+
+// What the user typed in the popover is the specific instruction for THIS
+// conflict; everything the builder emits is boilerplate on every conflict.
+describe("the user's own context", () => {
+  test("points at the heading the popover appends it under, and gives it priority", () => {
+    for (const kind of ["hash", "invalid"] as const) {
+      const prompt = buildConflictPrompt(ctx({ kind }));
+      expect(prompt).toContain("`## Context`");
+      expect(prompt).toContain("override anything above");
+    }
+  });
+
+  test("is the last thing said, so nothing above it reads as a correction", () => {
+    for (const kind of ["hash", "invalid"] as const) {
+      const prompt = buildConflictPrompt(ctx({ kind }));
+      expect(prompt.trimEnd().endsWith("override anything above.")).toBe(true);
+    }
   });
 });
 
 describe("invalid documents", () => {
-  test("lists the schema issues and the stored values", () => {
+  test("lists the schema issues and points at the files", () => {
     const prompt = buildConflictPrompt(
       ctx({
         kind: "invalid",
@@ -118,43 +197,16 @@ describe("invalid documents", () => {
     expect(prompt).toContain("Resolve the invalid stored config on");
     expect(prompt).toContain("- `items.6` — Expected string, received number");
     expect(prompt).toContain("- `(root)` — Expected object");
-    expect(prompt).toContain("- `items` — mine: `[1,2]`, upstream: `[]`");
     expect(prompt).toContain("no longer validates against the current schema");
+    expect(prompt).toContain("The two files that disagree — read both:");
+    expect(prompt).toContain(
+      "Reconcile my stored document against the current one by hand",
+    );
   });
 
   test("omits the issues section when the entry carried none", () => {
     const prompt = buildConflictPrompt(ctx({ kind: "invalid" }));
     expect(prompt).not.toContain("Schema issues:");
-  });
-});
-
-describe("value formatting", () => {
-  test("truncates a single long serialized value", () => {
-    const long = "x".repeat(500);
-    const prompt = buildConflictPrompt(
-      ctx({ fields: [field({ key: "blob", mine: long, upstream: "short" })] }),
-    );
-
-    expect(prompt).toContain("…");
-    expect(prompt).not.toContain(long);
-    // Clipped at the cap (plus the ellipsis), not merely shortened.
-    const line = prompt.split("\n").find((l) => l.startsWith("- `blob`"))!;
-    const mine = line.slice(
-      line.indexOf("mine: `") + 7,
-      line.indexOf("`, upstream"),
-    );
-    expect(mine).toHaveLength(201);
-    expect(mine.endsWith("…")).toBe(true);
-  });
-
-  test("spells an absent value instead of printing `undefined`", () => {
-    const prompt = buildConflictPrompt(
-      ctx({
-        fields: [field({ key: "gone", mine: undefined, upstream: "new" })],
-      }),
-    );
-
-    expect(prompt).toContain('- `gone` — mine: `(not set)`, upstream: `"new"`');
   });
 });
 

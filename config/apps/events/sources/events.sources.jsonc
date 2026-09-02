@@ -54,5 +54,34 @@
       "name": "By type",
       "view": { "type": "list", "groupBy": "type" }
     }
+  ],
+
+  // A custom column, promoted here from a personal override so it is a shipped
+  // default rather than one machine's private state. Its `id` is the join key to
+  // the per-row values in `data_view_custom_values`, and each option's `value` is
+  // what a row actually stores — so BOTH are durable external keys. Never re-mint
+  // them to tidy them up: a new id orphans every categorised source, and a new
+  // option value orphans every row holding the old one. The labels are free to
+  // change; the ids are not.
+  //
+  // A source's category is a fact about the source that no upstream field
+  // carries — the site does not publish "this is a dance school" — so it is
+  // exactly what a custom column is for: a dimension the user owns, and (like
+  // every field) a full filter / sort / group-by dimension on this DataView.
+  "customColumns": [
+    {
+      "id": "cc-34277e80-5dc0-407e-9640-3e371a70a4ca",
+      "label": "Category",
+      "type": "enum",
+      "config": {
+        "options": [
+          { "value": "05f4a68e-d5f6-4f7d-ae89-16a8afc8a498", "label": "Culture" },
+          { "value": "29e1c644-a493-4af4-b6ac-148e7e827be3", "label": "Danse" },
+          { "value": "832dfa9e-0029-4641-94bd-40a6cda4e768", "label": "Party" },
+          { "value": "5a6a8237-f264-4557-b668-1fb8425aa1c6", "label": "Social" },
+          { "value": "3070084c-36f7-4005-8bb1-6080b6d513af", "label": "Music" }
+        ]
+      }
+    }
   ]
 }
