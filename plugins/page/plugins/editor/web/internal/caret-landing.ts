@@ -61,3 +61,29 @@ function landBoundary(
   if (surface.focusBoundary) surface.focusBoundary(edge, opts);
   else surface.focus(opts);
 }
+
+/**
+ * Land the caret on the edge of `surface` that `dir` points AT — the terminal
+ * landing for a crossing that has nothing to cross to.
+ *
+ * {@link landCaret} maps a direction to an edge of the surface being ENTERED
+ * (travelling down, you come in at the top). This maps it to an edge of the
+ * surface being LEFT (travelling down, you go out at the bottom, i.e. the
+ * content's end). Same rule, opposite end of the same crossing — which is why
+ * they cannot be one function with one mapping.
+ *
+ * Only VERTICAL arrows have a use for it: vertical motion is line-based, so with
+ * no line below, "down" still means the end of the text — what a textarea, an
+ * `<input>` and every editor do on the last line. Horizontal motion is
+ * character-based, and at the very last character there is no next character, so
+ * doing nothing is the right answer there. The mapping stays total anyway: an
+ * edge is defined for all four directions, and it is the caller's business which
+ * ones deserve this rung.
+ */
+export function landCaretAtOwnEdge(
+  surface: CaretSurface,
+  dir: CaretDirection,
+  opts?: CaretLandOptions,
+): void {
+  landBoundary(surface, dir === "up" || dir === "left" ? "start" : "end", opts);
+}

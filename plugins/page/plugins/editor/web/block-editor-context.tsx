@@ -56,7 +56,7 @@ import {
   toNodes,
 } from "./internal/optimistic-block-ops";
 import { serializeForest } from "./serialize-blocks";
-import { landCaret } from "./internal/caret-landing";
+import { landCaret, landCaretAtOwnEdge } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
 import type { BlockFocusHandle } from "./internal/caret-authority";
 import type {
@@ -1873,7 +1873,23 @@ export function BlockEditorProviderInner({
         const surface: CaretSurface | null | undefined = (
           step < 0 ? caretBeforeRef.current : caretAfterRef.current
         )?.current;
-        if (!surface) return;
+        if (!surface) {
+          // The outer edge of the caret space: no block that way, and no host
+          // chrome beyond the list either. A VERTICAL arrow still means
+          // something here — with no line below, "down" means the end of the
+          // text, which is what a textarea, an `<input>` and every editor do on
+          // the last line — so the caret collapses to this block's own far edge
+          // instead of the press being swallowed. Horizontal arrows are left
+          // alone: `nav left`/`nav right` are only ever resolved AT the block's
+          // start/end, so there is no next character to move to, and Backspace
+          // at the very start must not masquerade as a caret move.
+          if (dir === "up" || dir === "down") {
+            authority.landIfMounted(blockId, (handle, land) =>
+              landCaretAtOwnEdge(handle, dir, { scroll: true, ...land }),
+            );
+          }
+          return;
+        }
         // Leaving the block list entirely: no block owns the caret anymore, so
         // drop the focused-block state (an empty block would otherwise keep
         // showing its "Type '/' for commands" placeholder while the caret sits

@@ -574,7 +574,11 @@ Implementing it is all that is needed to participate: blocks (`BlockFocusHandle`
 which widens it with `focusOffset`/`truncateAt`/`appendRunsAtEnd`), the block list
 (`BlockEditorHandle`, the host-facing ref), and host chrome (the page title over an
 `<input>`, handed to `<BlockEditor caretBefore>`; `caretAfter` exists symmetrically,
-unused). A host passing neither just gets a caret that stops at the first/last block.
+unused). A host passing neither gets the caret's terminal landing instead: a
+horizontal arrow does nothing (at the very last character there is no next
+character), while a vertical one collapses the caret to that block's own far edge
+— `landCaretAtOwnEdge`, i.e. ArrowDown on the last line lands at the end of the
+text, the way a textarea and an `<input>` do.
 
 Three rules keep this from leaking:
 
