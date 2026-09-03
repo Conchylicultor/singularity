@@ -1,5 +1,5 @@
-import { getContentionSnapshot } from "@plugins/infra/plugins/contention/server";
-import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
+import { getContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/server";
+import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 
 // The contention class: an ASYNC enrich (no captureAtTrip — a cross-process load

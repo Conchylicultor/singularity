@@ -2,7 +2,7 @@ import { resolve, sep } from "node:path";
 import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -75,7 +75,9 @@ export async function computeEditedFiles(
     // list that a destructive "Drop & Close" then acts on. runGit throws on failure;
     // the throw propagates to the resource loader (stale-safe: the live-state cascade
     // skips the push and keeps the last-known-good).
-    const mergeBase = (await runGit(["merge-base", "main", "HEAD"], worktreePath)).trim();
+    const mergeBase = (
+      await runGit(["merge-base", "main", "HEAD"], worktreePath)
+    ).trim();
 
     // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
     const diff = await runGit(

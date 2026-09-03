@@ -9,12 +9,12 @@ import {
 import {
   withHostGrant,
   inheritedGrant,
-} from "@plugins/infra/plugins/host-admission/server";
+} from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   cpuBudget,
   type Grant,
   type Lane,
-} from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   MAIN_WORKTREE_NAME,
   worktreeArtifacts,

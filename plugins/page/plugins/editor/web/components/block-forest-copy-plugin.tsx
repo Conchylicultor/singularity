@@ -7,7 +7,7 @@ import {
   CUT_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom-selection/web";
+import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import type { BlockTextPluginProps } from "../internal/block-text-extensions";

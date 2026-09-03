@@ -156,10 +156,10 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
     - `config_v2.useSetConfig`
     - `primitives/css/badge.Badge`
     - `primitives/css/ui-kit.Button`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/edit-mode-signal.useEditMode`
-    - `primitives/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/slot-render.registerSlotListMiddleware`
     - `primitives/sortable-list.rectSortingStrategy`

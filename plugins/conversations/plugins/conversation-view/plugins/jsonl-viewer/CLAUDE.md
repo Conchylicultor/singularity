@@ -62,7 +62,7 @@ the pane's `relative isolate` frame), so `findScrollParent` cannot reach it and 
 global `document.querySelector("[data-pane-scroll]")` reaches the WRONG one — two
 panes can be open on the same conversation, and rows are keyed by `eventKey`
 (`user-text:<timestamp>`), which carries no conversation id. `JsonlPane` publishes
-its own scroll element into `paneScrollScope` (a `primitives/scoped-store/dom-scope`
+its own scroll element into `paneScrollScope` (a `primitives/scope/scoped-store/dom-scope`
 scope); ask for it instead of rediscovering it. The read is a `{ attached }` union,
 so a query before the scroller mounts cannot be mistaken for "no matching rows".
 `data-pane-scroll` stays stamped for e2e scripts, not as a lookup mechanism from
@@ -104,8 +104,6 @@ back.
     - `conversations/conversation-view/pending-turn.PendingTurnCard`
     - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
     - `conversations/conversation-view/pending-turn.usePendingTurns`
-    - `primitives/auto-scroll.JumpToBottomButton`
-    - `primitives/auto-scroll.useStickyScroll`
     - `primitives/css/bouncing-dots.BouncingDots`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
@@ -114,17 +112,19 @@ back.
     - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/auto-scroll.JumpToBottomButton`
+    - `primitives/dom/auto-scroll.useStickyScroll`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
     - `primitives/row-actions.rowActionsAnchor`
-    - `primitives/scoped-store/dom-scope.defineDomScope`
-    - `primitives/scroll-reveal.revealElement`
+    - `primitives/scope/dom-scope.defineDomScope`
+    - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/surface-id.useSurfaceTabId`
   - Exports (types):
     - `EventFilterContribution`
     - `OverlayContribution`
@@ -149,7 +149,7 @@ back.
     - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
     - `conversations/transcript-watcher.transcriptChainSignature`
     - `conversations/transcript-watcher.watchTranscript`
-    - `infra/git-read-cache.createSignedMemo`
+    - `infra/git/git-read-cache.createSignedMemo`
   - Resources: `jsonl-events` (push)
 - Core:
   - Uses:

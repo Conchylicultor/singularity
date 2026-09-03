@@ -19,9 +19,9 @@ export default createRule({
       adhocScrollWrite:
         "Raw scroll writes (`{{api}}`) are banned outside the scroll-owning " +
         "primitives. For stick-to-bottom / jump-to-bottom use `useStickyScroll` " +
-        "/ `scrollToBottom` from `@plugins/primitives/plugins/auto-scroll/web`. " +
+        "/ `scrollToBottom` from `@plugins/primitives/plugins/dom/plugins/auto-scroll/web`. " +
         "For reveal-an-element-on-activation use `useRevealOnActive` / " +
-        "`revealElement` from `@plugins/primitives/plugins/scroll-reveal/web`. " +
+        "`revealElement` from `@plugins/primitives/plugins/dom/plugins/scroll-reveal/web`. " +
         "If you have a genuinely different need, extend those primitives rather " +
         "than copying them.",
     },

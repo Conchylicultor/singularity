@@ -2,7 +2,7 @@ import { useMemo, type DependencyList } from "react";
 import {
   defineScopedStore,
   type ScopedStore,
-} from "@plugins/primitives/plugins/scoped-store/web";
+} from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * The playback cursor (playhead position in quarter-note beats) as a

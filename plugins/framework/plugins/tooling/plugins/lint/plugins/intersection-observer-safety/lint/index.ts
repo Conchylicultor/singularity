@@ -8,7 +8,7 @@ export default {
   ignores: {
     // The in-view primitive is the one sanctioned home for the idiom.
     "no-raw-intersection-observer": [
-      "plugins/primitives/plugins/in-view/web/internal/in-view.ts",
+      "plugins/primitives/plugins/dom/plugins/in-view/web/internal/in-view.ts",
     ],
   },
 };

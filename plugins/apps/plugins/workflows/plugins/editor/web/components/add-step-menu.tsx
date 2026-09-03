@@ -7,14 +7,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { useStepTypeIndex } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 
 /**
  * "Add step" dropdown listing every contributed `Workflows.StepType`. Collection-
  * consumer clean: it renders whatever step types are installed, naming none.
  */
-export function AddStepMenu({ onAdd }: { onAdd: (pluginId: string, label: string) => void }) {
+export function AddStepMenu({
+  onAdd,
+}: {
+  onAdd: (pluginId: string, label: string) => void;
+}) {
   const stepTypes = useStepTypeIndex();
   const types = [...stepTypes.values()];
 
@@ -42,7 +46,10 @@ export function AddStepMenu({ onAdd }: { onAdd: (pluginId: string, label: string
           {types.map((type) => {
             const Icon = type.icon;
             return (
-              <DropdownMenuItem key={type.pluginId} onClick={() => onAdd(type.pluginId, type.label)}>
+              <DropdownMenuItem
+                key={type.pluginId}
+                onClick={() => onAdd(type.pluginId, type.label)}
+              >
                 <Icon className="size-4 text-muted-foreground" />
                 {type.label}
               </DropdownMenuItem>

@@ -1,5 +1,5 @@
-import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
+import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for the DB fork's `pg_dump | pg_restore` pipeline —

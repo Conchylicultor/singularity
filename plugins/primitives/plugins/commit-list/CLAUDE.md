@@ -41,7 +41,7 @@
     - `code-explorer/code-api`
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/commits-graph`
-    - `infra/git-watcher`
+    - `infra/git/git-watcher`
     - `review/plugin-changes`
     - `tasks/attempt-work`
     - `tasks/tasks-core`

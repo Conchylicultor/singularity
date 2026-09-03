@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-import { useInView } from "@plugins/primitives/plugins/in-view/web";
+import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 
 export interface InfiniteScrollOptions {
   hasNextPage: boolean;

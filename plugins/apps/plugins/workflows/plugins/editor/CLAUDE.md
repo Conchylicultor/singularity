@@ -32,10 +32,10 @@
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
-    - `primitives/imperative-dialog/confirm.confirmDialog`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values): `DefinitionEditor`
 - Cross-plugin:
   - Imported by: `apps/workflows/definitions`

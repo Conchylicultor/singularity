@@ -60,7 +60,7 @@ barrel.
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`
-    - `primitives/overlay-boundary.registerOverlayFallback`
+    - `primitives/overlay/overlay-boundary.registerOverlayFallback`
     - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/ui-context.collectLineageMeta`
   - Exports (types): `BoundaryErrorReport`

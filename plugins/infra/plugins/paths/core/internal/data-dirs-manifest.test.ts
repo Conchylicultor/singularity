@@ -94,7 +94,7 @@ describe("declaredSets", () => {
 
   test("reads the live registry, so computed names are included", () => {
     // The reason the manifest is derived from the EVALUATED registry rather than
-    // from parsing sources: `infra/host-admission` mints one `locks/<id>`
+    // from parsing sources: `infra/host/host-admission` mints one `locks/<id>`
     // declaration per pool, so those names appear nowhere as literals.
     defineDataDir({
       kind: "locks",

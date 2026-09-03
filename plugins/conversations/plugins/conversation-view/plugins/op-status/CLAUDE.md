@@ -29,7 +29,7 @@ lock) was indistinguishable from the agent merely "working".
   single `build.json` with its own pid) is not clobbered when the earlier build
   exits.
 - This plugin's server watches that marker tree with `createFileWatcher`
-  (mirrors `@plugins/infra/git-watcher`) and pushes the full
+  (mirrors `@plugins/infra/git/git-watcher`) and pushes the full
   `{ slug → op }` map to the `worktree-ops` live-state resource on every
   change. No polling — markers change via discrete filesystem events.
 - The banner reads the resource, keys off `basename(conversation.worktreePath)`
@@ -90,7 +90,7 @@ lock) was indistinguishable from the agent merely "working".
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
 - Server:
   - Contributes: `resource.declare` "worktree-ops"
   - Uses:

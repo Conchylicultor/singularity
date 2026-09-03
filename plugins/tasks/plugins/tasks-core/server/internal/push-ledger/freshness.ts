@@ -16,9 +16,9 @@
  */
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { lastKnownMainSha } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { attributionGeneration } from "./attribution";
 import { reconcilePushLedger, type ReconcileResult } from "./reconcile";
 

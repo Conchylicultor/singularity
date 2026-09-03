@@ -8,7 +8,7 @@ export default {
   ignores: {
     // The element-size primitive is the one sanctioned home for the idiom.
     "no-raw-resize-observer": [
-      "plugins/primitives/plugins/element-size/web/internal/element-size.ts",
+      "plugins/primitives/plugins/dom/plugins/element-size/web/internal/element-size.ts",
     ],
   },
 };

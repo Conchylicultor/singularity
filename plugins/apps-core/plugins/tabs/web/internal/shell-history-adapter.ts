@@ -10,7 +10,7 @@ import {
   getAppInstanceId,
   readAppInstance,
   stampAppInstance,
-} from "@plugins/primitives/plugins/app-instance/web";
+} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resolveAppForPath, type ActiveApp } from "@plugins/apps-core/web";
 import type { Tab } from "./tabs-store";
 
@@ -41,7 +41,7 @@ import type { Tab } from "./tabs-store";
  * `appInstance` is what lets a cold boot tell "this entry belongs to the state I
  * am restoring" from "this entry belongs to a different running app-state" — it
  * is the *which* half of the fresh-vs-preserve decision (the nav type is the
- * *whether* half). See `primitives/app-instance`.
+ * *whether* half). See `primitives/scope/app-instance`.
  */
 type CompositeState = PaneHistoryState & {
   tabId?: string;

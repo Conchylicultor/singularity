@@ -3,12 +3,12 @@ import { MdAutoAwesome, MdPushPin, MdOutlinePushPin } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
-} from "@plugins/primitives/plugins/floating-action/web";
+} from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";

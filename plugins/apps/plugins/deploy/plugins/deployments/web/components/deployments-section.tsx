@@ -11,7 +11,7 @@ import {
   useCombinedResources,
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

@@ -53,7 +53,7 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
   - Exports (types):
     - `FolderPickerPopoverProps`
     - `FolderPickerProps`

@@ -14,7 +14,7 @@ import {
 } from "lexical";
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import {
   Button,
   Input,
@@ -22,7 +22,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useFormatToolbar,

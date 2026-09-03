@@ -1,5 +1,5 @@
 import { useRef, useState, type RefObject } from "react";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 
 /**
  * Slack the row must have beyond the exact fit before folded ancestors come

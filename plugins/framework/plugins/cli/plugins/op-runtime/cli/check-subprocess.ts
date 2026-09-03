@@ -59,7 +59,7 @@
 // change smuggled into a refactor.
 
 import { BARREL_STUB_WORKTREE } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import type { Grant } from "@plugins/infra/plugins/host-admission/core";
+import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {

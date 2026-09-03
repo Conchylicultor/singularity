@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import { OutlineRail } from "@plugins/primitives/plugins/outline/plugins/rail/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { scrollToBottom } from "@plugins/primitives/plugins/auto-scroll/web";
+import { scrollToBottom } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {

@@ -11,11 +11,11 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   getContentionSnapshot,
   type ContentionSnapshot,
-} from "@plugins/infra/plugins/contention/server";
+} from "@plugins/infra/plugins/host/plugins/contention/server";
 import {
   createShedBuffer,
   type ShedSummary,
-} from "@plugins/infra/plugins/duress/server";
+} from "@plugins/infra/plugins/host/plugins/duress/server";
 import type { ReportSource } from "@plugins/reports/core";
 import type {
   CallerBreakdown,

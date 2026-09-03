@@ -2,7 +2,7 @@ import { useState } from "react";
 import { $getNodeByKey, type LexicalNode } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

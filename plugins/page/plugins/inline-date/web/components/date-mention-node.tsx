@@ -8,7 +8,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { DatePickerPanel } from "@plugins/primitives/plugins/date-picker/web";
 import { dateMentionNode, type DateMentionFields } from "../../core";
 import { DateMentionChip } from "./date-mention-chip";

@@ -7,8 +7,8 @@ import {
   LATCH_FILENAME,
   MEMO_TTL_MS,
   readDuress,
-} from "@plugins/infra/plugins/duress/plugins/latch/server";
-import type { Lane } from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { buildProfilerStart } from "./profiler";
 
 // Duress-aware admission valve (Piece 2 of

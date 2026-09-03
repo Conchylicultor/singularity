@@ -4,7 +4,7 @@ import {
   readDuress,
   refreshDuress,
   setDuress,
-} from "@plugins/infra/plugins/duress/plugins/latch/server";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   DURESS_EPISODES_CHANNEL,

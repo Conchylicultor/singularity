@@ -1,4 +1,4 @@
-// @hash f5613668a54d
+// @hash 0ffb51b05e0e
 {
   "manifests": [
     {
@@ -326,7 +326,7 @@
       "category": "subsystem",
       "entryPoints": [
         "infra.worktree.**",
-        "infra.git-watcher.**",
+        "infra.git.git-watcher.**",
         "infra.claude-cli.**",
         "apps.agent-manager.**"
       ],

@@ -140,14 +140,14 @@ bar).
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `debug/trace/engine.captureTrace`
-    - `infra/contention.ContentionSnapshot`
-    - `infra/contention.getContentionSnapshot`
-    - `infra/duress.createShedBuffer`
-    - `infra/duress.ShedSummary`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
+    - `infra/host/contention.ContentionSnapshot`
+    - `infra/host/contention.getContentionSnapshot`
+    - `infra/host/duress.createShedBuffer`
+    - `infra/host/duress.ShedSummary`
     - `infra/jobs.ceilingMsFor`
     - `infra/jobs.getJobHold`
     - `infra/jobs.getJobSlowThresholdMs`
@@ -179,7 +179,7 @@ bar).
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`
     - `fields/uuid/config.uuidField`
-    - `infra/contention.ContentionSnapshotSchema`
+    - `infra/host/contention.ContentionSnapshotSchema`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `CallerBreakdown`

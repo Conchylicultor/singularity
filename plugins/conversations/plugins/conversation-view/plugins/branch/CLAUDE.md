@@ -15,7 +15,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/launch.useLaunchConversation`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/text-editor.TextEditor`
     - `shell/notifications.toast`
 

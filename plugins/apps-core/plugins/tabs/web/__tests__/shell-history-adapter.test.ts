@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ActiveApp } from "@plugins/apps-core/web";
-import { getAppInstanceId } from "@plugins/primitives/plugins/app-instance/web";
+import { getAppInstanceId } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import type { RouteState } from "@plugins/primitives/plugins/pane/web";
 import {
   makeShellHistoryAdapter,

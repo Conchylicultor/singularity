@@ -3,7 +3,7 @@ import type {
   OpKind,
   WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
-import type { Lane } from "@plugins/infra/plugins/host-admission/core";
+import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 /**

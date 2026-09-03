@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from "react";
-import { type PaneStore, usePaneStore } from "@plugins/primitives/plugins/pane/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import {
+  type PaneStore,
+  usePaneStore,
+} from "@plugins/primitives/plugins/pane/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 
 const MIN_WIDTH = 200;
 
@@ -25,9 +28,13 @@ function stateFor(store: PaneStore): SurfaceWidths {
   return s;
 }
 
-const LS_KEY = (tabId: string, paneId: string) => `miller.width.${tabId}.${paneId}`;
+const LS_KEY = (tabId: string, paneId: string) =>
+  `miller.width.${tabId}.${paneId}`;
 
-export function hasStoredWidth(tabId: string | undefined, paneId: string): boolean {
+export function hasStoredWidth(
+  tabId: string | undefined,
+  paneId: string,
+): boolean {
   if (tabId === undefined) return false;
   try {
     return localStorage.getItem(LS_KEY(tabId, paneId)) !== null;
@@ -37,7 +44,10 @@ export function hasStoredWidth(tabId: string | undefined, paneId: string): boole
   }
 }
 
-function readStored(tabId: string | undefined, paneId: string): number | undefined {
+function readStored(
+  tabId: string | undefined,
+  paneId: string,
+): number | undefined {
   if (tabId === undefined) return undefined;
   try {
     const v = localStorage.getItem(LS_KEY(tabId, paneId));
@@ -48,11 +58,15 @@ function readStored(tabId: string | undefined, paneId: string): number | undefin
   }
 }
 
-function persistWidth(tabId: string | undefined, paneId: string, width: number) {
+function persistWidth(
+  tabId: string | undefined,
+  paneId: string,
+  width: number,
+) {
   if (tabId === undefined) return;
   try {
     localStorage.setItem(LS_KEY(tabId, paneId), String(width));
-  // eslint-disable-next-line promise-safety/no-bare-catch
+    // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
 }
 

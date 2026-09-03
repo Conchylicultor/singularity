@@ -7,7 +7,7 @@ hand it.
 
 ## The surface box is the overlay host
 
-The tab's outer box is a `<SurfaceOverlayHost>` (`primitives/surface-overlay`),
+The tab's outer box is a `<SurfaceOverlayHost>` (`primitives/overlay/surface-overlay`),
 not a plain `relative size-full` div. That box is the only element that IS the
 surface, so it is where a pane's full-surface overlay has to land: a pane can
 fill its own tab — tab bar and app rail still on screen and clickable — instead
@@ -32,6 +32,7 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `apps-core/tabs.useTabs`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.appThemeScope`
+    - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
     - `primitives/pane.PaneBasePathContext`
     - `primitives/pane.PaneSurfaceProvider`
     - `primitives/pane.useIndexMatch`
@@ -39,7 +40,6 @@ indicator's `Pin` anchors to this surface's corner, and the app render fills it.
     - `primitives/pane.useRoute`
     - `primitives/pane.useRouteState`
     - `primitives/slot-render.renderIsolated`
-    - `primitives/surface-overlay.SurfaceOverlayHost`
     - `primitives/sync-status.SyncStatusIndicator`
     - `primitives/sync-status.SyncStatusProvider`
     - `primitives/undo-redo.UndoRedoProvider`

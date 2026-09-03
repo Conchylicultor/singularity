@@ -109,7 +109,7 @@ Two more things that look wrong but are load-bearing:
 - Description: Admin operations for the database plugin — fork, backup, drop, list.
 - Server:
   - Uses:
-    - `infra/host-admission.defineHostPool`
+    - `infra/host/host-admission.defineHostPool`
     - `packages/spawn-priority.backgroundArgv`
   - Exports (types):
     - `BackupInfo`

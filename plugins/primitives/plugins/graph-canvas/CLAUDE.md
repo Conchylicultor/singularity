@@ -16,7 +16,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/lazy-component.lazyComponent`
   - Exports (types):
     - `GraphCanvasEdge`

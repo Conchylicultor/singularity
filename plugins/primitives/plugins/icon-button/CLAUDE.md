@@ -54,9 +54,9 @@ icon+count button it stands in for — carries a per-site
     - `primitives/action-presentation.useActionForm`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DensityControlled`
+    - `primitives/overlay/tooltip.Kbd`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/shortcuts.formatShortcutLabel`
-    - `primitives/tooltip.Kbd`
-    - `primitives/tooltip.WithTooltip`
   - Exports (types): `IconButtonProps`
   - Exports (values): `IconButton`
 - Cross-plugin:

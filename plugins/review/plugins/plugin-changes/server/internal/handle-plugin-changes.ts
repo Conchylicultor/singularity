@@ -5,7 +5,7 @@ import { listPushesByPushId } from "@plugins/tasks/plugins/tasks-core/server";
 import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getPluginChanges } from "../../core/endpoints";
 import { computePluginChanges } from "./compute-plugin-diff";
@@ -16,7 +16,16 @@ async function extractPluginsAtSha(sha: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), `review-${sha.slice(0, 8)}-`));
   const mainRoot = await getMainRoot();
   const archive = Bun.spawn(
-    [GIT, "--no-optional-locks", "-C", mainRoot, "archive", sha, "--", "plugins/"],
+    [
+      GIT,
+      "--no-optional-locks",
+      "-C",
+      mainRoot,
+      "archive",
+      sha,
+      "--",
+      "plugins/",
+    ],
     { stdout: "pipe", stderr: "pipe" },
   );
   const tar = Bun.spawn(["tar", "-x", "-C", dir], {
@@ -24,7 +33,10 @@ async function extractPluginsAtSha(sha: string): Promise<string> {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [archiveCode, tarCode] = await Promise.all([archive.exited, tar.exited]);
+  const [archiveCode, tarCode] = await Promise.all([
+    archive.exited,
+    tar.exited,
+  ]);
   if (archiveCode !== 0 || tarCode !== 0) {
     await rm(dir, { recursive: true, force: true });
     throw new Error(`Failed to extract plugins at ${sha}`);
@@ -63,8 +75,14 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
       // not worth a memo (unbounded growth). This path is already deduped +
       // concurrency-capped, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
-        buildPluginTree(join(headDir, "plugins"), { skipBarrelImport: true, facets: true }),
-        buildPluginTree(join(baseDir, "plugins"), { skipBarrelImport: true, facets: true }),
+        buildPluginTree(join(headDir, "plugins"), {
+          skipBarrelImport: true,
+          facets: true,
+        }),
+        buildPluginTree(join(baseDir, "plugins"), {
+          skipBarrelImport: true,
+          facets: true,
+        }),
       ]);
       const plugins = computePluginChanges(headTree, baseTree, editedFiles);
       return { plugins };
@@ -77,6 +95,9 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
   });
 }
 
-export const handlePluginChanges = implement(getPluginChanges, async ({ query }) => {
-  return handlePush(query.pushId);
-});
+export const handlePluginChanges = implement(
+  getPluginChanges,
+  async ({ query }) => {
+    return handlePush(query.pushId);
+  },
+);

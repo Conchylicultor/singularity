@@ -37,7 +37,8 @@ ruleTester.run(
       // a tab id, a correlation id. The rule must stay silent.
       { filename: SIBLING, code: `const reminderId = crypto.randomUUID();` },
       {
-        filename: "plugins/primitives/plugins/tab-id/web/tab-id.ts",
+        filename:
+          "plugins/primitives/plugins/scope/plugins/tab-id/web/tab-id.ts",
         code: `const tabId = crypto.randomUUID();`,
       },
       // …including a `block-`-prefixed template that is not a block id at all.

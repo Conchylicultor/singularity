@@ -18,7 +18,7 @@ export default createRule({
       adhocScrollIntoView:
         "`{{api}}` is banned outside the scroll-reveal primitive. Use " +
         "`useRevealOnActive` / `revealElement` from " +
-        "`@plugins/primitives/plugins/scroll-reveal/web` instead (reveals fire " +
+        "`@plugins/primitives/plugins/dom/plugins/scroll-reveal/web` instead (reveals fire " +
         "on activation transitions or explicit intent, never on remount). If " +
         "you have a genuinely different need, extend that primitive rather than " +
         "copying it.",

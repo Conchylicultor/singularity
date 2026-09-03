@@ -21,7 +21,7 @@ const isOpMarker = (p: string) => basename(dirname(p)) === "ops";
 // Watch the op-marker tree (~/.singularity/worktrees/<slug>/ops/<op>.json) and
 // push a resource update on every change. Markers are written/cleared by the
 // build/push CLI processes (a separate process from the server), so a watcher
-// is the push-based way to surface them — mirrors @plugins/infra/git-watcher.
+// is the push-based way to surface them — mirrors @plugins/infra/git/git-watcher.
 export async function startOpWatcher(): Promise<void> {
   if (started) return;
   started = true;

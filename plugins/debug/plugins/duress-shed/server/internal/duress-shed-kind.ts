@@ -1,6 +1,6 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import type { ShedSummary } from "@plugins/infra/plugins/duress/server";
+import type { ShedSummary } from "@plugins/infra/plugins/host/plugins/duress/server";
 import { DuressShedPayloadSchema, type DuressShedPayload } from "../../core";
 
 // Compile-time drift guard: consumers file `data: { ...summary }` verbatim, so
@@ -52,7 +52,9 @@ function totalOf(d: DuressShedPayload, field: "shed" | "dropped"): number {
 
 function renderDescription(row: ReportRow, d: DuressShedPayload): string {
   const episode =
-    d.episodeSetAt !== null ? new Date(d.episodeSetAt).toISOString() : "unknown";
+    d.episodeSetAt !== null
+      ? new Date(d.episodeSetAt).toISOString()
+      : "unknown";
   const lines: string[] = [];
   lines.push(
     `During a host duress episode (set at ${episode}), the **${d.kind}** ` +

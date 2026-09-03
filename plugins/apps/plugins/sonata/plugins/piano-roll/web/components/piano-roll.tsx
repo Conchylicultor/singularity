@@ -15,7 +15,7 @@ import {
   useState,
 } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   bars,
   buildTempoIndex,

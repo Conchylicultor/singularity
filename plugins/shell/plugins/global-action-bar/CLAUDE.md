@@ -32,13 +32,13 @@ imports `build` + `notifications`, which themselves contribute to
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/floating-action.FloatingAction`
-    - `primitives/floating-action.FloatingActionFadeIn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/live-state.useWindowResource`
+    - `primitives/overlay/floating-action.FloatingAction`
+    - `primitives/overlay/floating-action.FloatingActionFadeIn`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/persistent-draft.useDraft`
-    - `primitives/tooltip.WithTooltip`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.notificationsResource`
 - Server:

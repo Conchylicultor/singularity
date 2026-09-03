@@ -21,7 +21,7 @@ import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { selectionRange } from "@plugins/primitives/plugins/dom-selection/web";
+import { selectionRange } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { useFileDiff } from "../use-file-diff";

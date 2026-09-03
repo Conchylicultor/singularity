@@ -5,7 +5,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { CreateOption, DataViewDensity } from "../../../core";
 import { DataViewSlots } from "../../slots";

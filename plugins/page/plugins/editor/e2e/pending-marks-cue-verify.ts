@@ -194,7 +194,7 @@ async function cuePlacement(
  *
  * The range is rebuilt from `(anchorNode, anchorOffset)` rather than taken from
  * `getRangeAt(0)`: identical for a collapsed selection, and `getRangeAt` is
- * routed through `primitives/dom-selection` everywhere in this repo.
+ * routed through `primitives/dom/dom-selection` everywhere in this repo.
  */
 async function caretPaintsNothing(page: Page): Promise<boolean> {
   return page.evaluate(() => {

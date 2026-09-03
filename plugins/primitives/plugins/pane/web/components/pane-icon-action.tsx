@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
 interface PaneIconActionProps extends Omit<
   ComponentProps<typeof IconButton>,

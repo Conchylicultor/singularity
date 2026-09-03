@@ -18,7 +18,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import {
   hasBox,
   selectionRect,
-} from "@plugins/primitives/plugins/dom-selection/web";
+} from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * Per-surface browser tab state. Each tab is an independent navigation stack;
@@ -313,9 +313,7 @@ export function useBrowserTabs(): BrowserTabsApi {
   const actions = useMemo(
     () => ({
       select: (id: string) =>
-        store.setState((s) =>
-          s.activeId === id ? s : { ...s, activeId: id },
-        ),
+        store.setState((s) => (s.activeId === id ? s : { ...s, activeId: id })),
       open: (url = "", opts?: { background?: boolean }) =>
         store.setState((s) => {
           const tab = freshTab(s.seq, url);

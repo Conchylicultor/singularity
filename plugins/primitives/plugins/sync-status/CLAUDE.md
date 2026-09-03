@@ -157,9 +157,9 @@ non-surface mounts instead of crashing.
     - `primitives/css/spinner.Spinner`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/scoped-store.defineScopedStore`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/scope/scoped-store.defineScopedStore`
   - Exports (types):
     - `ReportSyncArgs`
     - `SyncPhase`

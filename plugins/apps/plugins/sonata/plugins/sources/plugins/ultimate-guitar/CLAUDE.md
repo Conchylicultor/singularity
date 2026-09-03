@@ -215,9 +215,9 @@ surfacing as crash tasks, not just toasts.
     - `primitives/css/ui-kit.DialogDescription`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/css/ui-kit.ScrollArea`
-    - `primitives/imperative-dialog.openDialog`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/loading.Loading`
-    - `primitives/scroll-reveal.revealElement`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
 - Server:
   - Uses:

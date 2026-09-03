@@ -2,7 +2,7 @@ import {
   appInstanceKey,
   legacyInstanceKey,
   mayAdoptLegacyPayload,
-} from "@plugins/primitives/plugins/app-instance/web";
+} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import {
   currentRoutePath,
   stripBasePath,
@@ -87,7 +87,7 @@ export interface PersistedTabs {
  * bar, link from another app) mints a fresh generation, so this key names an
  * empty slot and the tab set starts clean; a reload or a back/forward adopts
  * the generation the load belongs to and finds its tabs where it left them.
- * See `primitives/app-instance`.
+ * See `primitives/scope/app-instance`.
  */
 function storageKey(): string {
   return appInstanceKey("app-tabs");
@@ -99,7 +99,7 @@ function storageKey(): string {
  *
  * Whether this document is entitled to it at all is
  * {@link mayAdoptLegacyPayload}'s call — instance lifecycle, owned by
- * `primitives/app-instance`, which carries the full rationale. Consuming it
+ * `primitives/scope/app-instance`, which carries the full rationale. Consuming it
  * (`removeItem`) is the consumer's half: it closes the same hole from the other
  * side, so the blob cannot outlive the migrating load and be picked up later.
  * The following `savePersistedTabs` re-homes the payload under the gen-scoped

@@ -3,7 +3,7 @@ import {
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import type { Server } from "../../shared";
 import { deleteServer } from "../../shared/endpoints";
 import { DeleteServerDialog } from "./delete-server-dialog";
@@ -20,23 +20,26 @@ export function ServerDeleteAction({ server }: { server: Server }) {
     // Fire-and-forget: don't return the openDialog promise, or the button would
     // auto-pend for the dialog's whole open lifetime. `loading={…isPending}`
     // reflects the actual delete instead.
-    void openDialog((close) => (
-      <DeleteServerDialog
-        server={server}
-        onCancel={close}
-        onConfirm={() =>
-          remove
-            .mutateAsync({ params: { id: server.id } })
-            .then(() => close())
-            .catch((err: unknown) => {
-              // Expected delete failure — the global toast already reported it;
-              // keep the dialog open so the user can retry or cancel.
-              if (err instanceof EndpointError) return;
-              throw err;
-            })
-        }
-      />
-    ), { size: "sm" });
+    void openDialog(
+      (close) => (
+        <DeleteServerDialog
+          server={server}
+          onCancel={close}
+          onConfirm={() =>
+            remove
+              .mutateAsync({ params: { id: server.id } })
+              .then(() => close())
+              .catch((err: unknown) => {
+                // Expected delete failure — the global toast already reported it;
+                // keep the dialog open so the user can retry or cancel.
+                if (err instanceof EndpointError) return;
+                throw err;
+              })
+          }
+        />
+      ),
+      { size: "sm" },
+    );
   }
 
   return (

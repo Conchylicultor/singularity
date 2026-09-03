@@ -6,7 +6,7 @@ import {
   readJsonlEventsFromChain,
   transcriptChainSignature,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 // The memo under test is `jsonlEventsMemo` (jsonl-events-cache.ts), whose two halves
@@ -33,7 +33,8 @@ const tmpFiles: string[] = [];
 
 /** Chain id → the temp transcript files backing it, oldest → newest. */
 const chains = new Map<string, string[]>();
-const resolve = (id: string): Promise<string[]> => Promise.resolve(chains.get(id) ?? []);
+const resolve = (id: string): Promise<string[]> =>
+  Promise.resolve(chains.get(id) ?? []);
 
 const memo = createSignedMemo<JsonlEvent[]>({
   name: "jsonl-events-test",
@@ -49,14 +50,22 @@ const userLine = (uuid: string, parentUuid: string | null, text: string) => ({
   message: { role: "user", content: text },
 });
 
-async function writeChainFile(lines: Record<string, unknown>[]): Promise<string> {
-  const path = join(tmpdir(), `jsonl-events-cache-test-${crypto.randomUUID()}.jsonl`);
+async function writeChainFile(
+  lines: Record<string, unknown>[],
+): Promise<string> {
+  const path = join(
+    tmpdir(),
+    `jsonl-events-cache-test-${crypto.randomUUID()}.jsonl`,
+  );
   await Bun.write(path, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
   tmpFiles.push(path);
   return path;
 }
 
-async function appendLine(path: string, line: Record<string, unknown>): Promise<void> {
+async function appendLine(
+  path: string,
+  line: Record<string, unknown>,
+): Promise<void> {
   const existing = await Bun.file(path).text();
   await Bun.write(path, existing + JSON.stringify(line) + "\n");
 }

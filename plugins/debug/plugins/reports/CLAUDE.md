@@ -59,7 +59,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/tab-id.getTabId`
+    - `primitives/scope/tab-id.getTabId`
     - `reports.investigate`
     - `reports.Reports`
     - `shell/notifications.toast`

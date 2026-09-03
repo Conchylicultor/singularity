@@ -1,7 +1,7 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import type { ComponentType, MouseEventHandler } from "react";
 

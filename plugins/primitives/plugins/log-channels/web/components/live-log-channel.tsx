@@ -14,7 +14,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   JumpToBottomButton,
   useStickyScroll,
-} from "@plugins/primitives/plugins/auto-scroll/web";
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   useReconnectingWebSocket,
   wsUrl,

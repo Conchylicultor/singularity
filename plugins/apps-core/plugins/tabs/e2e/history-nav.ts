@@ -64,7 +64,7 @@ interface HistoryEntryState {
   appInstance?: string;
 }
 
-// The storage grammar below is `primitives/app-instance`'s, spelled out as
+// The storage grammar below is `primitives/scope/app-instance`'s, spelled out as
 // literals because this runs INSIDE the page (an e2e script may import only
 // `core`/`e2e` barrels, never `web`). Keys are
 // `<prefix>:<tabId>:<generation>`; `singularity.appInstances:<tabId>` holds the

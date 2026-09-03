@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * A per-surface reactive store sharing the small slice of audio state that

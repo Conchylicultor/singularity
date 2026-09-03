@@ -1,7 +1,7 @@
 import {
   createShedBuffer,
   type ShedSummary,
-} from "@plugins/infra/plugins/duress/server";
+} from "@plugins/infra/plugins/host/plugins/duress/server";
 import { recordReport } from "@plugins/reports/server";
 import type { TraceTrigger } from "../../core";
 
@@ -59,7 +59,8 @@ const traceShed = createShedBuffer<TraceShedStub>({
 // decisions without a booted config registry or a real latch. Pass null to
 // restore. Mirrors duress's _setShedConfigForTests style (internal-only, not
 // on the barrel).
-let admitOverride: ((stub: TraceShedStub) => { persist: boolean }) | null = null;
+let admitOverride: ((stub: TraceShedStub) => { persist: boolean }) | null =
+  null;
 export function _setTraceShedAdmitForTests(
   fn: ((stub: TraceShedStub) => { persist: boolean }) | null,
 ): void {
@@ -81,6 +82,8 @@ export function shouldShedTrace(trigger: TraceTrigger): boolean {
     wallTime: new Date().toISOString(),
     durationMs: trigger.durationMs,
   };
-  const { persist } = admitOverride ? admitOverride(stub) : traceShed.admit(stub);
+  const { persist } = admitOverride
+    ? admitOverride(stub)
+    : traceShed.admit(stub);
   return !persist;
 }

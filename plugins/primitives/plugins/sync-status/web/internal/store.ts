@@ -1,4 +1,4 @@
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * The lifecycle phase a single sync source reports. `idle` is the absence of a

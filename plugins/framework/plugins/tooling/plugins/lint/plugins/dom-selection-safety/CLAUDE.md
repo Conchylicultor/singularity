@@ -4,7 +4,7 @@ Contributes the repo-wide `no-raw-selection-range` ESLint rule:
 `<x>.getRangeAt(...)` is banned everywhere except the dom-selection primitive.
 
 Read the document selection's range or rect through
-[`@plugins/primitives/plugins/dom-selection/web`](../../../../../../../primitives/plugins/dom-selection/CLAUDE.md)
+[`@plugins/primitives/plugins/dom/plugins/dom-selection/web`](../../../../../../../primitives/plugins/dom/plugins/dom-selection/CLAUDE.md)
 — `selectionRange()` for the range, `selectionRect()` for its bounding box.
 
 ## Why

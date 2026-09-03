@@ -167,10 +167,10 @@ primitive exists to name.
     - `primitives/error-boundary`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
-    - `primitives/imperative-dialog/confirm`
     - `primitives/launch`
     - `primitives/log-channels`
     - `primitives/outline/rail`
+    - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/prompt-editor`
     - `primitives/setup-steps`
     - `review/code-review`

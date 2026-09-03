@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   JumpToBottomButton,
   useStickyScroll,
-} from "@plugins/primitives/plugins/auto-scroll/web";
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

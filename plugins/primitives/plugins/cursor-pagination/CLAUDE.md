@@ -5,7 +5,7 @@
 This plugin is the **single home** for the "auto-fetch the next page as a
 sentinel scrolls into view" pattern — the fetch policy, not the observer. The
 observer itself comes from
-[`primitives/in-view`](../in-view/CLAUDE.md) (`useInView`), and hand-rolling a
+[`primitives/dom/in-view`](../dom/plugins/in-view/CLAUDE.md) (`useInView`), and hand-rolling a
 `new IntersectionObserver` anywhere is now caught by the
 [`no-raw-intersection-observer`](../../../framework/plugins/tooling/plugins/lint/plugins/intersection-observer-safety/lint/no-raw-intersection-observer.ts)
 lint rule. What still belongs *here* is `fetchNextPage()` behind the error gate:
@@ -49,7 +49,7 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/in-view.useInView`
+    - `primitives/dom/in-view.useInView`
     - `primitives/loading.Loading`
   - Exports (types):
     - `CursorPage`

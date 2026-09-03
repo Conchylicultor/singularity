@@ -1,7 +1,7 @@
-import { useLayoutEffect, useState } from "react"
+import { useLayoutEffect, useState } from "react";
 
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web"
-import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web"
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
 export interface ScrollFade<T extends HTMLElement> {
   /**
@@ -10,13 +10,13 @@ export interface ScrollFade<T extends HTMLElement> {
    * Compiler forbids mutating a hook argument, and the composition belongs in
    * the component that owns the `ref` prop anyway).
    */
-  measureRef: (node: T | null) => void
+  measureRef: (node: T | null) => void;
   /** Wire to the scroller's `onScroll`. */
-  onScroll: () => void
+  onScroll: () => void;
   /** There is content above the visible window. */
-  top: boolean
+  top: boolean;
   /** There is content below the visible window. */
-  bottom: boolean
+  bottom: boolean;
 }
 
 /**
@@ -47,25 +47,32 @@ export interface ScrollFade<T extends HTMLElement> {
  * the node changes.
  */
 export function useScrollFade<T extends HTMLElement>(): ScrollFade<T> {
-  const [node, setNode] = useState<T | null>(null)
-  const [state, setState] = useState({ top: false, bottom: false })
+  const [node, setNode] = useState<T | null>(null);
+  const [state, setState] = useState({ top: false, bottom: false });
 
   const measure = useEventCallback(() => {
-    if (!node) return
+    if (!node) return;
     // 1px of slack at both ends: fractional line boxes, browser zoom and
     // `alignItemWithTrigger`'s percentage sizing routinely leave
     // `scrollTop + clientHeight` a hair short of `scrollHeight` at the true end
     // of a list — without the slack that paints a permanent bottom fade on a
     // panel already fully scrolled, and on Select, whose panel doesn't scroll
     // here at all (base-ui makes its inner list the scroller).
-    const top = node.scrollTop > 1
-    const bottom = node.scrollTop + node.clientHeight < node.scrollHeight - 1
-    setState((prev) => (prev.top === top && prev.bottom === bottom ? prev : { top, bottom }))
-  })
+    const top = node.scrollTop > 1;
+    const bottom = node.scrollTop + node.clientHeight < node.scrollHeight - 1;
+    setState((prev) =>
+      prev.top === top && prev.bottom === bottom ? prev : { top, bottom },
+    );
+  });
 
-  useResizeObserver(() => node, measure, { deps: [node] })
+  useResizeObserver(() => node, measure, { deps: [node] });
   // Intentionally no dependency list — see signal 3 above.
-  useLayoutEffect(measure)
+  useLayoutEffect(measure);
 
-  return { measureRef: setNode, onScroll: measure, top: state.top, bottom: state.bottom }
+  return {
+    measureRef: setNode,
+    onScroll: measure,
+    top: state.top,
+    bottom: state.bottom,
+  };
 }

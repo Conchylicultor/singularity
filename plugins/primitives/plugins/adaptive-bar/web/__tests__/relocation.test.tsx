@@ -7,7 +7,7 @@ import {
   type YieldEagerness,
 } from "@plugins/primitives/plugins/action-presentation/web";
 import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useReportPopupOpen } from "@plugins/primitives/plugins/popup-open/web";
+import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { AdaptiveBar, AdaptiveBarMeasure } from "../index";
 
 /**

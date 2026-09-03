@@ -8,7 +8,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { ReorderLayoutContext, type ReorderLayout } from "@plugins/reorder/web";

@@ -7,8 +7,8 @@
 - Description: Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
 - Web:
   - Uses:
-    - `primitives/auto-scroll.findScrollParent`
     - `primitives/css/coords.Placed`
+    - `primitives/dom/auto-scroll.findScrollParent`
   - Exports (types):
     - `UseVirtualRowsOptions`
     - `UseVirtualRowsResult`

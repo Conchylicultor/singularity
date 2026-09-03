@@ -1,0 +1,12 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+
+export {
+  InlinePopover,
+  type InlinePopoverProps,
+} from "./internal/inline-popover";
+
+export default {
+  description:
+    "Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.",
+  contributions: [],
+} satisfies PluginDefinition;

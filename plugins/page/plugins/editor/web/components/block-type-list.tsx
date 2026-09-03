@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useReorderedEntries } from "@plugins/reorder/web";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

@@ -115,7 +115,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useCombinedResources`

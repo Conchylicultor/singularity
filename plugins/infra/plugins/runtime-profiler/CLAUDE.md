@@ -81,13 +81,13 @@ waits }` from the aggregate's summed totals.
 Charging layers: `background-acquire` (background DB **query** gate), `background-tx-acquire`
 (background DB **transaction** lease gate) and `db-acquire` (pg pool connect wait), all
 `database/server/internal/client.ts`; `heavy-read-acquire` / `heavy-read-local`
-(`infra/host-read-pool`); `read-admit` (resource read admission) and `read-coalesce` (joined
+(`infra/host/host-read-pool`); `read-admit` (resource read admission) and `read-coalesce` (joined
 an in-flight resource read) (`server-core/core/resources.ts`); `endpoint-concurrency` /
 `endpoint-dedupe` (per-route gates, `infra/endpoints/core/implement.ts` — the `http` entry
 span encloses them, so deduped GETs record one span per request with joiners showing
 `endpoint-dedupe ≈ wall`, `selfMs ≈ 0`); `git-coalesce:<name>` (joined an in-flight git
 recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
-(`infra/git-read-cache`). A `chargeWait` with no active entry (context-less jobs/pollers)
+(`infra/git/git-read-cache`). A `chargeWait` with no active entry (context-less jobs/pollers)
 falls back to a standalone `db [layer]` span so the wait is never lost. See
 `research/2026-07-02-global-profiler-wait-propagation.md`.
 

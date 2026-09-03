@@ -1,4 +1,4 @@
-import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
+import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import { getFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   bringWindowToFront,

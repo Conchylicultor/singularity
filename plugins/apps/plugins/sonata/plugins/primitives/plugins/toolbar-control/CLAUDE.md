@@ -22,7 +22,7 @@ the frame, so each control divides its interior however it likes.
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (types): `ToolbarControlProps`
   - Exports (values): `ToolbarControl`
 - Cross-plugin:

@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-primitives-in-view",
-  "description": "IntersectionObserver idiom as a primitive: createInViewWatcher + useInView.",
-  "private": true,
-  "version": "0.0.1"
-}

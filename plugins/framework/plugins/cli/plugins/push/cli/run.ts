@@ -18,8 +18,8 @@ import {
 import {
   pushPool,
   withHostGrant,
-} from "@plugins/infra/plugins/host-admission/server";
-import { cpuBudget } from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   markWorktreeOpStart,
   setWorktreeOpPhase,

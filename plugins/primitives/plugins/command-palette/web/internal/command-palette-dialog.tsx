@@ -6,8 +6,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdSearch } from "react-icons/md";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
-import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";

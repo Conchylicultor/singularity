@@ -453,7 +453,7 @@ export const worktreeArtifacts = {
    * the root it polices.
    *
    * The set must come from the EVALUATED registry, never from parsing the
-   * `data-dirs/index.ts` sources: `infra/host-admission` derives one
+   * `data-dirs/index.ts` sources: `infra/host/host-admission` derives one
    * `locks/<id>` declaration per entry of `RESERVED_POOLS`, so a declared name
    * is not always a literal anyone can grep for.
    *

@@ -1,5 +1,5 @@
 import { MdDataObject } from "react-icons/md";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";

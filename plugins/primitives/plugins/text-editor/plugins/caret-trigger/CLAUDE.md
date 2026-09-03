@@ -114,7 +114,7 @@ not a reason to leave the primitive**; it is the `useForcedCaretQuery` case.
 `no-adhoc-caret-trigger` now enforces that: importing `CaretTriggerMenu` **or
 `FloatingSurface`** without calling `useCaretMenu` is an error. `caretAnchor` is
 plugin-private now — a thin live-anchor adapter over `selectionRect()` from
-`@plugins/primitives/plugins/dom-selection/web`, which owns the guarded read — so
+`@plugins/primitives/plugins/dom/plugins/dom-selection/web`, which owns the guarded read — so
 it is not importable at all. Aiming the rule at the panel rather than at the
 anchor helper is strictly stronger: `FloatingSurface`'s only production consumer
 is `CaretTriggerMenu`, so the rule now catches a hand-rolled caret menu *however
@@ -247,11 +247,11 @@ bun run test:dom plugins/primitives/plugins/text-editor/plugins/caret-trigger
 - Description: Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
 - Web:
   - Uses:
-    - `primitives/dom-selection.selectionRect`
-    - `primitives/floating-surface.FloatingSurface`
-    - `primitives/floating-surface.FloatingSurfaceProps`
+    - `primitives/dom/dom-selection.selectionRect`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/floating-surface.FloatingSurface`
+    - `primitives/overlay/floating-surface.FloatingSurfaceProps`
   - Exports (types):
     - `CanOpenCtx`
     - `CaretQuery`

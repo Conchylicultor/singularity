@@ -92,8 +92,8 @@ the panel until it is given something to say.
     - `database/admin.listDatabases`
     - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/endpoints.implement`
-    - `infra/host-read-pool.heavyReadSlotCount`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/host/host-read-pool.heavyReadSlotCount`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/jobs.defineJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`

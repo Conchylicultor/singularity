@@ -56,8 +56,8 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/detail-sections.DetailSection`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scoped-store.defineScopedStore`
-    - `primitives/scoped-store.ScopedStore`
+    - `primitives/scope/scoped-store.defineScopedStore`
+    - `primitives/scope/scoped-store.ScopedStore`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`

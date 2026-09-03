@@ -2,7 +2,7 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import type { OutlineEntry } from "../../core";
 import { depthStep, ROW_INDENT } from "../internal/depth";
 

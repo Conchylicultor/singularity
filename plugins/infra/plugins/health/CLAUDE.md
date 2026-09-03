@@ -18,7 +18,7 @@
     - `primitives/live-state.liveStateSocketKind`
     - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/networking.subscribeWsStatus`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
   - Exports (types): `WedgeReport`

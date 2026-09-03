@@ -1,7 +1,7 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import type { ReactNode } from "react";
 import { useCallback, useMemo, useRef } from "react";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import dagre from "dagre";
 import {
   Background,

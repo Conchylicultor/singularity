@@ -1,13 +1,13 @@
 import { type ComponentType } from "react";
 import { MdAdd } from "react-icons/md";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";

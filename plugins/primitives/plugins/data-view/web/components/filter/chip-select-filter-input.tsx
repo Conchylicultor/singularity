@@ -4,7 +4,7 @@ import {
   Button,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";

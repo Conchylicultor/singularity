@@ -172,7 +172,7 @@ export default function buildRule({
           "A genuine one-off escapes per-site with `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
         adhocStylePosition:
           'Inline `position: "{{value}}"` is banned — anchor a cursor menu via CursorAnchoredMenu ' +
-          "(@plugins/primitives/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +
+          "(@plugins/primitives/plugins/overlay/plugins/cursor-menu/web), collapse an overflowing bar via AdaptiveBar " +
           "(@plugins/primitives/plugins/adaptive-bar/web), or compose fixed/absolute through " +
           "<Overlay>/<Pin>/ViewportOverlay. Genuine one-off: " +
           "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",

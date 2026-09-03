@@ -11,7 +11,7 @@ import {
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
-import { useRevealOnActive } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import type { ExpandChange, TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
@@ -172,9 +172,7 @@ export function useOptionalRowControls(): RowControls | null {
   return useContext(RowControlsContext);
 }
 
-export function useTreeRow<T extends TreeItem>(
-  node: TreeNode<T>,
-): RowControls {
+export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   const ctx = useTreeListContext<T>();
   const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
@@ -230,10 +228,7 @@ export function useTreeRow<T extends TreeItem>(
     }
     ctx.onSelect(node.id);
   }, [ctx, node, toggleExpanded]);
-  const consumeAutoFocus = useCallback(
-    () => ctx.clearPendingFocus(),
-    [ctx],
-  );
+  const consumeAutoFocus = useCallback(() => ctx.clearPendingFocus(), [ctx]);
 
   const addChild = useCallback(async () => {
     const create = ctx.onCreate;

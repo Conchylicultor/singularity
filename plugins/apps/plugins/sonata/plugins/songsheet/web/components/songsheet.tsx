@@ -18,7 +18,7 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { SongsheetLine, type ActiveChord } from "./songsheet-line";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The

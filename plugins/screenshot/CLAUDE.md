@@ -21,7 +21,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/launch.LaunchControl`

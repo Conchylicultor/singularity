@@ -1,5 +1,5 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 

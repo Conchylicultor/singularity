@@ -181,7 +181,7 @@ looks equivalent and silently discards the caller's.
     - `improve/element-picker`
     - `page/editor`
     - `primitives/adaptive-bar`
-    - `primitives/floating-surface`
+    - `primitives/overlay/floating-surface`
     - `primitives/text-editor/paste-images`
     - `reports/viewport-escape`
     - `screenshot/draw-on-app`

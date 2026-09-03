@@ -51,8 +51,8 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"
   - Uses:
-    - `infra/git-watcher.refHeadResource`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/git/git-watcher.refHeadResource`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseGitLog`
     - `primitives/commit-list.runGit`

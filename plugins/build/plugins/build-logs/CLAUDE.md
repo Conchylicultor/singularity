@@ -10,8 +10,6 @@
   - Uses:
     - `build.BuildDetailSlots`
     - `infra/endpoints.useEndpoint`
-    - `primitives/auto-scroll.JumpToBottomButton`
-    - `primitives/auto-scroll.useStickyScroll`
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
@@ -25,6 +23,8 @@
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/auto-scroll.JumpToBottomButton`
+    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/icon-button.IconButton`
     - `primitives/networking.useReconnectingWebSocket`
     - `primitives/networking.wsUrl`

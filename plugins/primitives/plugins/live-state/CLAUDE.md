@@ -596,7 +596,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking.WsStatus`
-    - `primitives/tab-id.getTabId`
+    - `primitives/scope/tab-id.getTabId`
   - Exports (types):
     - `ChannelStatuses`
     - `CombinedResources`

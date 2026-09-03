@@ -10,7 +10,7 @@ routing every case through a scroll-owning primitive.
 everywhere except the scroll-reveal primitive.
 
 Route "reveal an element on activation" through
-[`@plugins/primitives/plugins/scroll-reveal/web`](../../../../../../../primitives/plugins/scroll-reveal/CLAUDE.md)
+[`@plugins/primitives/plugins/dom/plugins/scroll-reveal/web`](../../../../../../../primitives/plugins/dom/plugins/scroll-reveal/CLAUDE.md)
 (`useRevealOnActive` / `revealElement`) — so a reveal fires on an activation
 transition or explicit intent, never because an element remounted already-active.
 The allowlist (`ignores`) contains only the primitive's own internal
@@ -25,9 +25,9 @@ auto-scroll primitive. (Reads like `el.scrollHeight - el.scrollTop -
 el.clientHeight` are assignment sources, not targets, and are not flagged.)
 
 For stick-to-bottom / jump-to-bottom, use `useStickyScroll` / `scrollToBottom`
-from [`@plugins/primitives/plugins/auto-scroll/web`](../../../../../../../primitives/plugins/auto-scroll/CLAUDE.md).
+from [`@plugins/primitives/plugins/dom/plugins/auto-scroll/web`](../../../../../../../primitives/plugins/dom/plugins/auto-scroll/CLAUDE.md).
 For reveal-an-element-on-activation, use `useRevealOnActive` / `revealElement`
-from `@plugins/primitives/plugins/scroll-reveal/web`. The allowlist (`ignores`)
+from `@plugins/primitives/plugins/dom/plugins/scroll-reveal/web`. The allowlist (`ignores`)
 contains only the auto-scroll primitive's own scroll-owning files — no consumer
 is exempted. If you have a genuinely different need, extend those primitives
 rather than copying them.

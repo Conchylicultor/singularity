@@ -13,7 +13,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { updateActiveDraft } from "@plugins/plugin-meta/plugins/composition/web";

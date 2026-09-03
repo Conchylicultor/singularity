@@ -138,7 +138,7 @@ measured overhead on a real worktree workload is still an open task.
     - `debug/slow-ops.readSlowOpMarkers`
     - `debug/stall-monitor.recordEventLoopStall`
     - `infra/endpoints.implement`
-    - `infra/host-read-pool.heavyReadQueueDepth`
+    - `infra/host/host-read-pool.heavyReadQueueDepth`
     - `infra/paths.currentWorktreeName`
     - `infra/paths.isMain`
     - `infra/paths.listWorktreeDirs`

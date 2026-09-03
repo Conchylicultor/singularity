@@ -44,7 +44,6 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `page/code-block`
     - `page/editor`
     - `primitives/action-presentation`
-    - `primitives/auto-scroll`
     - `primitives/css/color-picker`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
@@ -52,9 +51,11 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/data-view/view-order`
+    - `primitives/dom/auto-scroll`
+    - `primitives/dom/element-size`
+    - `primitives/dom/in-view`
+    - `primitives/dom/scroll-reveal`
     - `primitives/editable-field`
-    - `primitives/element-size`
-    - `primitives/in-view`
     - `primitives/live-state`
     - `primitives/markdown`
     - `primitives/networking`
@@ -62,8 +63,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `primitives/outline/scroll-spy`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`
-    - `primitives/scoped-store`
-    - `primitives/scroll-reveal`
+    - `primitives/scope/scoped-store`
     - `primitives/shortcuts`
     - `primitives/sync-status`
     - `primitives/terminal`

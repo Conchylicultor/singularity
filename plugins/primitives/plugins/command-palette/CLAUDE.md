@@ -19,8 +19,8 @@
     - `primitives/css/ui-kit.Dialog`
     - `primitives/css/ui-kit.DialogContent`
     - `primitives/css/ui-kit.ScrollArea`
-    - `primitives/scroll-reveal.useRevealOnActive`
-    - `primitives/tooltip.Kbd`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
+    - `primitives/overlay/tooltip.Kbd`
   - Exports (types): `CommandPaletteItem`
   - Exports (values): `CommandPalette`
 

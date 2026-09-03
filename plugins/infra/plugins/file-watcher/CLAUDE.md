@@ -37,7 +37,7 @@ moved (see `apps/prototypes/files`).
     - `conversations/conversation-view/op-status`
     - `conversations/transcript-watcher`
     - `infra/corpus-index`
-    - `infra/git-watcher`
+    - `infra/git/git-watcher`
     - `infra/jobs/supervised-run`
     - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-tree`

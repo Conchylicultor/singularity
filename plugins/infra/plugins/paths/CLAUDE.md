@@ -90,7 +90,7 @@ an entry another live namespace owns is logged as owned, not failed. Only an
 entry nobody on this machine declares is an offender. Two things not to undo:
 
 - The manifest comes from the **evaluated registry**, never from parsing
-  `data-dirs/index.ts` — `infra/host-admission` mints one `locks/<id>`
+  `data-dirs/index.ts` — `infra/host/host-admission` mints one `locks/<id>`
   declaration per pool, so a declared name is not always a literal.
 - The check is `scope: "host"` and so **does not run during a build**: no
   per-worktree op can assert a root that runs ahead of its own branch. Run it
@@ -224,7 +224,7 @@ run everywhere.
     - `framework/tooling/guards`
     - `infra/claude-cli`
     - `infra/corpus-index`
-    - `infra/git-watcher`
+    - `infra/git/git-watcher`
     - `infra/jobs/supervised-run`
     - `infra/jobs/supervised-task`
     - `infra/launcher`

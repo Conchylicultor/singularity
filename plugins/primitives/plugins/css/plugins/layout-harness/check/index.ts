@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
-import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
+import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   getWorktreeRoot,
   spawnCaptured,

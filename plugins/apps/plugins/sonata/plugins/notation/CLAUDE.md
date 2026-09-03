@@ -210,7 +210,7 @@ instrument grouping — while `convert` itself stays pure.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/virtual-rows.useVirtualRows`

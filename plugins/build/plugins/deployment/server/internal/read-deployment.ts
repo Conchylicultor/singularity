@@ -2,7 +2,7 @@ import {
   REPO_ROOT,
   currentWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import {
   resolved,
   unresolved,

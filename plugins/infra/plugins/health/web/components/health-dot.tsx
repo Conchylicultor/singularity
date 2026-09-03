@@ -1,6 +1,6 @@
 import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 

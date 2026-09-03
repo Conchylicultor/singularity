@@ -1,4 +1,4 @@
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import {
   readJsonlEventsFromChain,
   resolveConversationTranscriptPaths,
@@ -42,8 +42,10 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 // research/2026-07-09-global-etag-value-coproduction.md.
 const memo = createSignedMemo<JsonlEvent[]>({
   name: "jsonl-events",
-  signature: async (id) => transcriptChainSignature(await resolveConversationTranscriptPaths(id)),
-  compute: async (id) => readJsonlEventsFromChain(await resolveConversationTranscriptPaths(id)),
+  signature: async (id) =>
+    transcriptChainSignature(await resolveConversationTranscriptPaths(id)),
+  compute: async (id) =>
+    readJsonlEventsFromChain(await resolveConversationTranscriptPaths(id)),
 });
 
 export const jsonlEventsMemo = memo;
@@ -64,7 +66,11 @@ export const jsonlEventsMemo = memo;
  * byte-identical strings — which is why both route through `transcriptChainSignature`
  * rather than agreeing by coincidence of two stat APIs' float precision.
  */
-export function primeJsonlEvents(id: string, signature: string, events: JsonlEvent[]): void {
+export function primeJsonlEvents(
+  id: string,
+  signature: string,
+  events: JsonlEvent[],
+): void {
   memo.prime(id, signature, events);
 }
 

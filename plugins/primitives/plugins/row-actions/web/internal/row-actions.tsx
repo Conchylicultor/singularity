@@ -7,7 +7,7 @@ import {
   Pin,
   type PinAnchor,
 } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
   insetClass,
   Stack,

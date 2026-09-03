@@ -6,7 +6,7 @@ import {
   defineDataView,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { MdAdd } from "react-icons/md";
 
 const HOME_APPS_VIEW = defineDataView("home.apps");

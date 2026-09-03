@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-primitives-dom-selection",
-  "description": "Guarded document-selection read as a primitive: selectionRange + selectionRect + hasBox.",
-  "private": true,
-  "version": "0.0.1"
-}

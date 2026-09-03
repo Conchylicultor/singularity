@@ -13,7 +13,7 @@ import {
   _setLatchDirForTests,
   clearDuress,
   setDuress,
-} from "@plugins/infra/plugins/duress/plugins/latch/server";
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 import { readChannelEntries } from "./persist";
 import { getChannelIds } from "./registry";

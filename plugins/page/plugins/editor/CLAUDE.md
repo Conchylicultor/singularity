@@ -847,7 +847,7 @@ guess. Rules that look redundant but are not:
   and the editor-root fallback is last-resort rather than the common empty case.
 - **The guarded selection read is not this module's.** `getSelection()` →
   `rangeCount` → `getRangeAt(0)` (which throws `IndexSizeError`) is `selectionRange()`
-  from `@plugins/primitives/plugins/dom-selection/web`, enforced by
+  from `@plugins/primitives/plugins/dom/plugins/dom-selection/web`, enforced by
   `no-raw-selection-range`; `hasBox` from the same barrel is what `usable()` states.
   Ranges this module CONSTRUCTS (`nodeLineRect`) involve no document selection and
   are untouched.
@@ -1902,7 +1902,7 @@ re-test phase D.
 
 ### "Nothing selected" is a question for the DOM, not for Lexical
 
-> A clipboard handler asks `selectionIsCollapsed()` (`primitives/dom-selection`)
+> A clipboard handler asks `selectionIsCollapsed()` (`primitives/dom/dom-selection`)
 > and claims only when the model and the document AGREE that nothing is
 > selected. **Lexical's model cannot answer this during a copy**: its
 > `$internalCreateRangeSelection` re-derives from the DOM only for an
@@ -3205,7 +3205,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/announce.announce`
-    - `primitives/auto-scroll.useEdgeAutoScroll`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
@@ -3230,10 +3229,12 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/css/viewport-overlay.ViewportOverlay`
-    - `primitives/dom-selection.hasBox`
-    - `primitives/dom-selection.selectionIsCollapsed`
-    - `primitives/dom-selection.selectionRange`
-    - `primitives/dom-selection.selectionRect`
+    - `primitives/dom/auto-scroll.useEdgeAutoScroll`
+    - `primitives/dom/dom-selection.hasBox`
+    - `primitives/dom/dom-selection.selectionIsCollapsed`
+    - `primitives/dom/dom-selection.selectionRange`
+    - `primitives/dom/dom-selection.selectionRect`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
     - `primitives/icon-picker.SvgIcon`
     - `primitives/latest-ref.useEventCallback`
@@ -3248,9 +3249,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
-    - `primitives/scoped-store.defineScopedStore`
-    - `primitives/scoped-store/dom-scope.defineDomScope`
-    - `primitives/scroll-reveal.useRevealOnActive`
+    - `primitives/scope/dom-scope.defineDomScope`
+    - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineDispatchSlot`
     - `primitives/slot-render.defineOrderedDispatchSlot`

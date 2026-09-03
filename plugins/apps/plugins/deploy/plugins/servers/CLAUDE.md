@@ -54,10 +54,10 @@ contributing a section, never by wrapping the pane.
     - `primitives/editable-field.EditableField`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
-    - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

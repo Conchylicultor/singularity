@@ -27,10 +27,10 @@
     - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
-    - `primitives/tooltip.WithTooltip`
     - `shell/notifications.toast`
     - `tasks.useTask`
 

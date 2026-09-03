@@ -3,7 +3,7 @@ import { MdWarningAmber } from "react-icons/md";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { prototypeThumbnailUrl, type ThumbnailState } from "../../core";
 
 /**

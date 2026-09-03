@@ -1,7 +1,7 @@
 import { MdForkRight } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function ForkConversationButtons({

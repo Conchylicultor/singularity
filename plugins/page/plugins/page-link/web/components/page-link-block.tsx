@@ -6,7 +6,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";

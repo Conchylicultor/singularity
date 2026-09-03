@@ -39,7 +39,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.cn`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/log-channels.clientLog`

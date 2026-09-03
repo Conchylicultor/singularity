@@ -1,5 +1,5 @@
 import { MdBuild, MdHourglassEmpty, MdScience, MdUpload } from "react-icons/md";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useWorktreeOp } from "../internal/use-worktree-op";

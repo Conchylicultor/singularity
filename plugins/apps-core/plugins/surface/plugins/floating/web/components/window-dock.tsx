@@ -7,7 +7,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { selfClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import {
   bringWindowToFront,
   restoreWindow,
@@ -16,7 +16,7 @@ import {
   windowForTab,
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { WorkspacePager } from "./workspace-pager";
 
 /**

@@ -145,7 +145,6 @@ skipped for those scripts, leaking a Chromium process per run.
     - `page/quote`
     - `page/url-paste`
     - `primitives/adaptive-bar`
-    - `primitives/copy-source-text`
     - `primitives/css/control-panel`
     - `primitives/css/grow-relay`
     - `primitives/css/radio-group`
@@ -153,8 +152,9 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/css/ui-kit`
     - `primitives/data-view`
     - `primitives/date-picker`
+    - `primitives/dom/copy-source-text`
+    - `primitives/dom/overscroll-hint`
     - `primitives/networking`
-    - `primitives/overscroll-hint`
     - `primitives/pane`
     - `primitives/row-actions`
     - `primitives/text-editor/caret-trigger`

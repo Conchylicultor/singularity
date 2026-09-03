@@ -204,8 +204,8 @@ convergence mechanisms all missing it) and the design.
     - `build/server-build-id.getServerCommit`
     - `build/server-build-id.getServerGraphHash`
     - `infra/endpoints.implement`
-    - `infra/git-read-cache.createSignedMemo`
-    - `infra/git-watcher.refHeadResource`
+    - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.refHeadResource`
     - `infra/paths.currentWorktreeName`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`

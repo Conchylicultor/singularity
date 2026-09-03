@@ -2,9 +2,9 @@ import {
   buildPluginTree,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { createGitStateMemo } from "@plugins/infra/plugins/git-read-cache/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
-import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
+import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
+import { lastKnownMainSha } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { editedFilesSignature } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 
@@ -38,7 +38,10 @@ export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
       (await runGit(["rev-parse", "main"], mainPluginsDir)).trim(),
     () =>
       withHeavyReadSlot(() =>
-        buildPluginTree(mainPluginsDir, { skipBarrelImport: true, facets: true }),
+        buildPluginTree(mainPluginsDir, {
+          skipBarrelImport: true,
+          facets: true,
+        }),
       ),
   );
 }
@@ -73,7 +76,10 @@ export function getWorktreePluginTree(
     () => editedFilesSignature(worktreePath),
     () =>
       withHeavyReadSlot(() =>
-        buildPluginTree(worktreePluginsDir, { skipBarrelImport: true, facets: true }),
+        buildPluginTree(worktreePluginsDir, {
+          skipBarrelImport: true,
+          facets: true,
+        }),
       ),
   );
 }

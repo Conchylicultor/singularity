@@ -5,7 +5,7 @@ import {
   getEndpointErrorMessage,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { OwnedNamespacesList } from "../components/owned-namespaces-list";

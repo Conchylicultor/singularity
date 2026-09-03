@@ -1,11 +1,8 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
+import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
 import type { WaitBreakdown } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  fieldsToZodObject,
-  type FieldsRecord,
-} from "@plugins/fields/core";
+import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
@@ -28,7 +25,10 @@ export type CallerBreakdown = z.infer<typeof CallerBreakdownSchema>;
 // The identity subset of a CallerBreakdown — who issued an operation, before
 // any per-occurrence counts are merged in. A SpanRef (server span parent) is
 // structurally assignable to it; client signals supply { kind: "route", ... }.
-export const CallerRefSchema = z.object({ kind: z.string(), label: z.string() });
+export const CallerRefSchema = z.object({
+  kind: z.string(),
+  label: z.string(),
+});
 export type CallerRef = z.infer<typeof CallerRefSchema>;
 
 // Per-layer wait charged to this operation (gate/lock name → summed ms): the
@@ -54,20 +54,26 @@ export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 // of the profiler's in-memory `Aggregate` + `byParent`, gated to
 // threshold-exceeding spans). Keyed by (operationKind, operation, worktree).
 export const slowOpFields = {
-  id:            uuidField(),
-  worktree:      textField(),
+  id: uuidField(),
+  worktree: textField(),
   operationKind: textField(),
-  operation:     textField(),
-  count:         intField(),
-  totalMs:       floatField(),
-  maxMs:         floatField(),
-  lastMs:        floatField(),
-  thresholdMs:   floatField(),
-  callers:       jsonField<CallerBreakdown[]>({ schema: z.array(CallerBreakdownSchema), default: [] }),
-  waits:         jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
-  recentSamples: jsonField<SlowOpSample[]>({ schema: z.array(SlowOpSampleSchema), default: [] }),
-  firstSeenAt:   dateField(),
-  lastSeenAt:    dateField(),
+  operation: textField(),
+  count: intField(),
+  totalMs: floatField(),
+  maxMs: floatField(),
+  lastMs: floatField(),
+  thresholdMs: floatField(),
+  callers: jsonField<CallerBreakdown[]>({
+    schema: z.array(CallerBreakdownSchema),
+    default: [],
+  }),
+  waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
+  recentSamples: jsonField<SlowOpSample[]>({
+    schema: z.array(SlowOpSampleSchema),
+    default: [],
+  }),
+  firstSeenAt: dateField(),
+  lastSeenAt: dateField(),
 } satisfies FieldsRecord;
 
 export const SlowOpSchema = fieldsToZodObject(slowOpFields);

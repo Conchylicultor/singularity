@@ -17,7 +17,7 @@ import {
   type Virtualizer,
   type VirtualItem,
 } from "@tanstack/react-virtual";
-import { findScrollParent } from "@plugins/primitives/plugins/auto-scroll/web";
+import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 
 export interface VirtualRowsProps<T> {
   items: readonly T[];

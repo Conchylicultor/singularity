@@ -7,7 +7,7 @@
 - Description: Exposes view factories for terminal panes; no web contributions yet.
 - Web:
   - Uses:
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/networking.useReconnectingWebSocket`
     - `primitives/networking.wsUrl`

@@ -84,7 +84,7 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import { libpqEnv, readDatabaseConfig } from "@plugins/database/core";
 import { PG_LOG_FILE } from "@plugins/database/plugins/embedded/server";
-import { type Lane } from "@plugins/infra/plugins/host-admission/core";
+import { type Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   formatSignalOrigin,
   type SignalOrigin,

@@ -1,7 +1,7 @@
 import { Toaster as Sonner } from "sonner";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { DismissAllButton } from "./dismiss-all-button";
 

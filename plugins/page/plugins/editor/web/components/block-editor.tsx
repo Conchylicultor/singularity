@@ -48,7 +48,7 @@ import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
-import { useEdgeAutoScroll } from "@plugins/primitives/plugins/auto-scroll/web";
+import { useEdgeAutoScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   canIndent,
   canOutdent,

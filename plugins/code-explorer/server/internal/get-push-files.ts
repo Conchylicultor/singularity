@@ -1,7 +1,10 @@
-import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import type {
+  EditedFile,
+  EditedFileStatus,
+} from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 
 interface FileEntry {
   status: EditedFileStatus;

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { MdCallSplit } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -37,7 +37,12 @@ export function BranchButtons({
     onLaunched: () => {
       setPrompt("");
       setOpen(false);
-      toast({ type: "conversation", title: "Branch created", description: "Forked session running in the background", variant: "success" });
+      toast({
+        type: "conversation",
+        title: "Branch created",
+        description: "Forked session running in the background",
+        variant: "success",
+      });
     },
   });
 
@@ -64,7 +69,9 @@ export function BranchButtons({
       width="3xl"
     >
       <Stack gap="md" className="p-md">
-        <Text as="div" variant="label">Branch from this conversation</Text>
+        <Text as="div" variant="label">
+          Branch from this conversation
+        </Text>
         <TextEditor
           value={prompt}
           onChange={setPrompt}

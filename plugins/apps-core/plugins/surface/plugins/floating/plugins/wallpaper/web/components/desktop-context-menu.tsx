@@ -5,7 +5,7 @@ import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit
 import {
   CursorAnchoredMenu,
   type CursorAnchor,
-} from "@plugins/primitives/plugins/cursor-menu/web";
+} from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { wallpaperConfig } from "../../core";
 import { openWallpaperPicker } from "./wallpaper-picker";

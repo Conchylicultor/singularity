@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-overlay",
+  "description": "What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), and the signal saying a popup is open beneath you (popup-open).",
+  "private": true,
+  "version": "0.0.1"
+}

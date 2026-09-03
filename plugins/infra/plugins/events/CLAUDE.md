@@ -141,7 +141,7 @@ queue-health); only the wasted retry churn is removed.
     - `conversations/conversations-view/queue`
     - `improve`
     - `infra/events-test`
-    - `infra/git-watcher`
+    - `infra/git/git-watcher`
     - `infra/jobs/supervised-job`
     - `page/attachment-block`
     - `page/editor`

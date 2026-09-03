@@ -31,7 +31,7 @@ export default {
       // already been stamped. That is why `redirectTo` preserves `history.state`
       // instead of blanking it: on a bare-root boot it lands on a stamped entry,
       // and wiping the stamp there would strand the entry (see
-      // `primitives/app-instance`, "Why two signals" — the earlier wrong premise
+      // `primitives/scope/app-instance`, "Why two signals" — the earlier wrong premise
       // here is what made a single-signal design look safe).
       "plugins/apps-core/plugins/layout/web/components/apps-layout.tsx",
       // PERMANENT — jsdom test suites. The rule protects PRODUCTION navigation

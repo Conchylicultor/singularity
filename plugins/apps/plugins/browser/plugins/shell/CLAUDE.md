@@ -27,7 +27,7 @@
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
-    - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):

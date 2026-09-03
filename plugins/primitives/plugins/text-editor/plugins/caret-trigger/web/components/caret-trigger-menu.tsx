@@ -1,9 +1,14 @@
-import { FloatingSurface, type FloatingSurfaceProps } from "@plugins/primitives/plugins/floating-surface/web";
+import {
+  FloatingSurface,
+  type FloatingSurfaceProps,
+} from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
 import { caretAnchor } from "../internal/caret-anchor";
 import type { CaretQuery } from "../internal/use-caret-trigger";
 
-export interface CaretTriggerMenuProps
-  extends Pick<FloatingSurfaceProps, "width" | "padding" | "maxHeight" | "children"> {
+export interface CaretTriggerMenuProps extends Pick<
+  FloatingSurfaceProps,
+  "width" | "padding" | "maxHeight" | "children"
+> {
   /** The `useCaretQuery` handle — supplies the reposition seed, dismissal, and id. */
   caret: CaretQuery;
   /** The surface's visibility — wire the menu's `surfaceOpen`. */
@@ -22,7 +27,12 @@ export interface CaretTriggerMenuProps
  * observable from the DOM (`e2e/caret-trigger-wedge.ts` asserts on it); the
  * `contents` wrapper takes no box, so it cannot perturb the surface's layout.
  */
-export function CaretTriggerMenu({ caret, open, children, ...rest }: CaretTriggerMenuProps) {
+export function CaretTriggerMenu({
+  caret,
+  open,
+  children,
+  ...rest
+}: CaretTriggerMenuProps) {
   return (
     <FloatingSurface
       open={open}
@@ -30,7 +40,9 @@ export function CaretTriggerMenu({ caret, open, children, ...rest }: CaretTrigge
       // — a collapsed caret in an EMPTY block yields no usable rect (the gutter-+
       // draft flow opens on a fresh empty block). Anchoring to the block's own
       // editable element still lands the menu just below it. Mirrors url-paste.
-      anchor={caretAnchor(() => caret.editor.getRootElement()?.getBoundingClientRect() ?? null)}
+      anchor={caretAnchor(
+        () => caret.editor.getRootElement()?.getBoundingClientRect() ?? null,
+      )}
       reposition={caret.query}
       onDismiss={caret.dismiss}
       {...rest}

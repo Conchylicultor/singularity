@@ -10,9 +10,9 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { buildRoute } from "@plugins/build/core";

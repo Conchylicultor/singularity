@@ -11,7 +11,7 @@
   - Contributes: `Core.Root` → `ShortcutManager`
   - Uses:
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/surface-id.useSurfaceTabId`
+    - `primitives/scope/surface-id.useSurfaceTabId`
   - Exports (types): `ShortcutDescriptor`
   - Exports (values):
     - `defineShortcut`

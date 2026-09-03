@@ -1,6 +1,6 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
-import { scrollChildIntoView } from "@plugins/primitives/plugins/auto-scroll/web";
+import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBasePathContext,
@@ -31,9 +31,13 @@ export function MillerColumns() {
       // horizontal container to align its end — a container-scoped scroll that
       // never touches any ancestor's scroll position. Omitting `block` leaves
       // the vertical offset untouched.
-      scrollChildIntoView(ref.current, ref.current.lastElementChild as HTMLElement | null, {
-        inline: "end",
-      });
+      scrollChildIntoView(
+        ref.current,
+        ref.current.lastElementChild as HTMLElement | null,
+        {
+          inline: "end",
+        },
+      );
     }
     lastLength.current = len;
   }, [match?.panes.length]);
@@ -120,7 +124,9 @@ export function MillerColumns() {
                           entry={entry}
                           isFirst={i === 0}
                           isLast={isLast}
-                          dragHandleProps={canReorder ? state.handleProps : undefined}
+                          dragHandleProps={
+                            canReorder ? state.handleProps : undefined
+                          }
                         />
                       </PluginErrorBoundary>
                     </UiRegion>

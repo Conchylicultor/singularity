@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import type { ScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import type { ScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import {
   dropScope as dropScopeEntries,
   canRedo as selectCanRedo,
@@ -62,7 +62,11 @@ export function useUndoRedo(): UndoRedoApi {
       const s = store.getState();
       if (s.replaying) return; // reverse/forward patch from a running thunk — ignore.
       const next = recordEntry(s, entry, Date.now(), s.maxDepth);
-      store.setState((prev) => ({ ...next, replaying: prev.replaying, maxDepth: prev.maxDepth }));
+      store.setState((prev) => ({
+        ...next,
+        replaying: prev.replaying,
+        maxDepth: prev.maxDepth,
+      }));
     },
     [store],
   );
@@ -70,19 +74,32 @@ export function useUndoRedo(): UndoRedoApi {
   const undo = useCallback(() => {
     const popped = popUndo(store.getState());
     if (popped === null) return;
-    store.setState((prev) => ({ ...popped.state, replaying: prev.replaying, maxDepth: prev.maxDepth }));
+    store.setState((prev) => ({
+      ...popped.state,
+      replaying: prev.replaying,
+      maxDepth: prev.maxDepth,
+    }));
     void runGuarded(store, "undo", popped.entry.undo);
   }, [store]);
 
   const redo = useCallback(() => {
     const popped = popRedo(store.getState());
     if (popped === null) return;
-    store.setState((prev) => ({ ...popped.state, replaying: prev.replaying, maxDepth: prev.maxDepth }));
+    store.setState((prev) => ({
+      ...popped.state,
+      replaying: prev.replaying,
+      maxDepth: prev.maxDepth,
+    }));
     void runGuarded(store, "redo", popped.entry.redo);
   }, [store]);
 
   const clear = useCallback(() => {
-    store.setState((prev) => ({ past: [], future: [], replaying: false, maxDepth: prev.maxDepth }));
+    store.setState((prev) => ({
+      past: [],
+      future: [],
+      replaying: false,
+      maxDepth: prev.maxDepth,
+    }));
   }, [store]);
 
   const dropScope = useCallback(

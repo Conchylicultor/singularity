@@ -3,7 +3,7 @@ import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { scrollChildIntoView } from "@plugins/primitives/plugins/auto-scroll/web";
+import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   bars,
   effectiveKeyAt,
@@ -98,8 +98,7 @@ export function ChordProgression() {
   const mode = useChordDisplayMode();
 
   const chords = useMemo(
-    () =>
-      score.annotations.filter((a): a is ChordAnn => a.type === "chord"),
+    () => score.annotations.filter((a): a is ChordAnn => a.type === "chord"),
     [score.annotations],
   );
 
@@ -113,7 +112,10 @@ export function ChordProgression() {
   const labelByChord = useMemo(() => {
     const m = new Map<ChordAnn, string>();
     for (const c of chords) {
-      m.set(c, formatChordLabel(c.data, effectiveKeyAt(score, c.start) ?? null, mode));
+      m.set(
+        c,
+        formatChordLabel(c.data, effectiveKeyAt(score, c.start) ?? null, mode),
+      );
     }
     return m;
   }, [score, chords, mode]);
@@ -147,10 +149,14 @@ export function ChordProgression() {
   // bar changes (the playhead crosses a bar boundary) — a container-scoped
   // scroll that never touches the surrounding pane.
   useEffect(() => {
-    scrollChildIntoView(containerRef.current, rowRefs.current[activeBar] ?? null, {
-      block: "center",
-      behavior: "smooth",
-    });
+    scrollChildIntoView(
+      containerRef.current,
+      rowRefs.current[activeBar] ?? null,
+      {
+        block: "center",
+        behavior: "smooth",
+      },
+    );
   }, [activeBar]);
 
   return (
@@ -239,7 +245,11 @@ function BarBody({
 }) {
   if (segs.length === 0) {
     return (
-      <div className="rounded-md bg-muted/30" style={{ height: "1.25rem" }} aria-hidden />
+      <div
+        className="rounded-md bg-muted/30"
+        style={{ height: "1.25rem" }}
+        aria-hidden
+      />
     );
   }
   return (
@@ -249,7 +259,9 @@ function BarBody({
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: segs.map((s) => `minmax(0, ${s.grow}fr)`).join(" "),
+        gridTemplateColumns: segs
+          .map((s) => `minmax(0, ${s.grow}fr)`)
+          .join(" "),
         alignItems: "center",
         gap: "0.125rem",
       }}

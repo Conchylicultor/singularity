@@ -14,7 +14,7 @@ import {
   StickyStack,
   StickyStackItem,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { MdArrowDownward, MdArrowUpward, MdUnfoldMore } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

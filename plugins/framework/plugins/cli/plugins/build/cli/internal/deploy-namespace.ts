@@ -18,7 +18,7 @@ import { configDir } from "@plugins/config_v2/data-dirs";
 import type {
   Lane,
   GrantHooks,
-} from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { type ValveDeps } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";

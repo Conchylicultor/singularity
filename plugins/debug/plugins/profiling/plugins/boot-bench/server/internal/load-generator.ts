@@ -1,6 +1,6 @@
-import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
-import { heavyReadSlotCount } from "@plugins/infra/plugins/host-read-pool/server";
+import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { heavyReadSlotCount } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // How long each occupant holds a slot per cycle before releasing and immediately

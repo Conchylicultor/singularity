@@ -17,7 +17,7 @@ const BARREL = "@plugins/packages/plugins/host-semaphore/server";
 // construction — no allowlist entry needed for them.
 const ALLOWED_PREFIXES = [
   // The registry — the one legitimate owner.
-  "plugins/infra/plugins/host-admission/server/",
+  "plugins/infra/plugins/host/plugins/host-admission/server/",
 ];
 
 // Importers not yet migrated onto `defineHostPool`. Now EMPTY — every host pool
@@ -28,7 +28,8 @@ const PENDING_MIGRATION: string[] = [];
 
 function allowed(path: string): boolean {
   return (
-    ALLOWED_PREFIXES.some((p) => path.startsWith(p)) || PENDING_MIGRATION.includes(path)
+    ALLOWED_PREFIXES.some((p) => path.startsWith(p)) ||
+    PENDING_MIGRATION.includes(path)
   );
 }
 
@@ -56,7 +57,7 @@ const check: Check = {
       message:
         `createHostSemaphore imported outside host-admission in ${offenders.length} place(s):\n    ` +
         offenders.map((m) => `${m.path}:${m.line}`).join("\n    "),
-      hint: "Declare the pool via defineHostPool from @plugins/infra/plugins/host-admission/server (which owns its CPU/RAM budget) instead of taking createHostSemaphore directly.",
+      hint: "Declare the pool via defineHostPool from @plugins/infra/plugins/host/plugins/host-admission/server (which owns its CPU/RAM budget) instead of taking createHostSemaphore directly.",
     };
   },
 };

@@ -1,9 +1,9 @@
-import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
+import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
-// SEPARATE from `heavy-read` (infra/host-read-pool), not a reuse of it:
+// SEPARATE from `heavy-read` (infra/host/host-read-pool), not a reuse of it:
 //
 // - `heavy-read` bounds cheap-ish interactive READS (edited-files, commits-graph,
 //   code navigation). A worktree mutation is a heavy WRITE (a ~3.8 s / 77 MB /

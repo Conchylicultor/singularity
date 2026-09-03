@@ -36,8 +36,8 @@ dynamic value.
   - Uses:
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
-    - `infra/git-read-cache.createGitStateMemo`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/git/git-read-cache.createGitStateMemo`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.PLUGINS_DIR`
     - `infra/warmup.defineWarmup`
   - Exports (values):

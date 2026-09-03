@@ -25,10 +25,10 @@
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.DialogTitle`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `primitives/cursor-menu.CursorAnchor`
-    - `primitives/cursor-menu.CursorAnchoredMenu`
-    - `primitives/imperative-dialog.openDialog`
     - `primitives/loading.Loading`
+    - `primitives/overlay/cursor-menu.CursorAnchor`
+    - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
   - Exports (types): `WallpaperCandidate`
   - Exports (values):

@@ -583,9 +583,9 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/css/ui-kit.PopoverMaxHeight`
     - `primitives/css/ui-kit.PopoverTrigger`
     - `primitives/icon-button.IconButton`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
-    - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `ControlPanelBlockProps`
     - `ControlPanelEmptyProps`

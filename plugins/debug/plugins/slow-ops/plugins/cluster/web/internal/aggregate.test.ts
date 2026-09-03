@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type { SlowOp, SlowOpSample } from "@plugins/debug/plugins/slow-ops/core";
-import type { ContentionSnapshot } from "@plugins/infra/plugins/contention/core";
+import type {
+  SlowOp,
+  SlowOpSample,
+} from "@plugins/debug/plugins/slow-ops/core";
+import type { ContentionSnapshot } from "@plugins/infra/plugins/host/plugins/contention/core";
 import type { ClusterWorktree } from "../../shared/endpoints";
 import {
   buildClusterAggregate,
@@ -22,7 +25,10 @@ function snapshot(over: Partial<ContentionSnapshot> = {}): ContentionSnapshot {
   };
 }
 
-function sample(atTime: string, over: Partial<SlowOpSample> = {}): SlowOpSample {
+function sample(
+  atTime: string,
+  over: Partial<SlowOpSample> = {},
+): SlowOpSample {
   return {
     atTime: new Date(atTime),
     durationMs: 1000,
@@ -120,11 +126,17 @@ describe("buildContentionTimeline", () => {
       worktree("wt-a", [
         op({
           worktree: "wt-a",
-          recentSamples: [sample("2026-06-16T00:00:01Z"), sample("2026-06-16T00:00:03Z")],
+          recentSamples: [
+            sample("2026-06-16T00:00:01Z"),
+            sample("2026-06-16T00:00:03Z"),
+          ],
         }),
       ]),
       worktree("wt-b", [
-        op({ worktree: "wt-b", recentSamples: [sample("2026-06-16T00:00:02Z")] }),
+        op({
+          worktree: "wt-b",
+          recentSamples: [sample("2026-06-16T00:00:02Z")],
+        }),
       ]),
     ]);
     expect(result.map((e) => e.atTime.toISOString())).toEqual([
@@ -155,7 +167,11 @@ describe("buildContentionTimeline", () => {
           recentSamples: [
             sample("2026-06-16T00:00:01Z", {
               durationMs: 13000,
-              snapshot: snapshot({ loadAvg1: 38, cpuCount: 12, pgActiveBackends: 47 }),
+              snapshot: snapshot({
+                loadAvg1: 38,
+                cpuCount: 12,
+                pgActiveBackends: 47,
+              }),
             }),
           ],
         }),
@@ -171,7 +187,12 @@ describe("failedWorktrees", () => {
   test("lists failed worktrees with their error", () => {
     const result = failedWorktrees([
       worktree("wt-a", [op()]),
-      { name: "wt-broken", ok: false, error: "column recent_samples does not exist", ops: [] },
+      {
+        name: "wt-broken",
+        ok: false,
+        error: "column recent_samples does not exist",
+        ops: [],
+      },
     ]);
     expect(result).toEqual([
       { name: "wt-broken", error: "column recent_samples does not exist" },

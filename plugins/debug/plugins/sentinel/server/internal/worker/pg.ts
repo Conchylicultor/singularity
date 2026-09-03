@@ -14,7 +14,7 @@ import { PgStatsRowSchema, type PgStatsRow } from "../sample-math";
 // One batched round trip: these views are cluster-global, so any database in
 // the cluster sees the whole embedded cluster. wait_event_type IS NULL rows
 // (running on CPU) are excluded — the record carries genuine wait states only.
-// The backend counts mirror infra/contention's semantics (datname IS NOT NULL)
+// The backend counts mirror infra/host/contention's semantics (datname IS NOT NULL)
 // so pgActiveBackends/pgTotalBackends keep their historical meaning.
 const PG_STATS_SQL = `SELECT
   (SELECT count(*) FROM pg_locks WHERE NOT granted) AS locks_waiting,

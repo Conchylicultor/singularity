@@ -17,7 +17,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values): `AppRail`
 - Cross-plugin:
   - Imported by: `apps-core/app-rail-framing/rail`

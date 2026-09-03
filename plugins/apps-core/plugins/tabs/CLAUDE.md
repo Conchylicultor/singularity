@@ -76,8 +76,8 @@ middle one:
 
 | Concept | Identity | Lives in |
 |---|---|---|
-| **Browser tab** | `getTabId()` (`primitives/tab-id`) | one sessionStorage namespace |
-| **App instance** | one running SPA app-state, `getAppInstanceId()` (`primitives/app-instance`) | its tab set, focus, surface mode, window geometry |
+| **Browser tab** | `getTabId()` (`primitives/scope/tab-id`) | one sessionStorage namespace |
+| **App instance** | one running SPA app-state, `getAppInstanceId()` (`primitives/scope/app-instance`) | its tab set, focus, surface mode, window geometry |
 | **In-app tab** | `tabId` in this plugin's tab set | one pane store |
 
 One browser tab hosts a *sequence* of app instances over its lifetime. Every
@@ -87,7 +87,7 @@ sees their previous tabs. Persisted keys are therefore
 `app-tabs:<tabId>:<gen>` / `app-windows:<tabId>:<gen>`, never the bare
 2-segment form. Design: `research/2026-07-24-global-app-instance-boundary.md`.
 
-**The decision table** (owned by `primitives/app-instance`, restated here
+**The decision table** (owned by `primitives/scope/app-instance`, restated here
 because it is what the tab set means):
 
 | Load | Instance | What the user sees |
@@ -133,7 +133,7 @@ Sessions opened before generations existed hold 2-segment `app-tabs:<tabId>` /
 never as a bare `??` — the two halves defend the same silent failure (the
 pre-deploy state reappearing in an instance that should have started clean) from
 opposite sides. The gate is `mayAdoptLegacyPayload()` from
-`primitives/app-instance`, which owns the predicate and its rationale (in
+`primitives/scope/app-instance`, which owns the predicate and its rationale (in
 particular why `isFreshAppInstance()` alone is *not* it); the consume
 (`removeItem`) is the consumer's half, stopping any later fresh instance in the
 same browser tab from finding the blob. Both call sites are marked for removal.
@@ -151,14 +151,6 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps-core.resolveAppForPath`
     - `apps-core.setFocusedApp`
     - `apps-core.useActiveApp`
-    - `primitives/app-instance.appInstanceKey`
-    - `primitives/app-instance.getAppInstanceId`
-    - `primitives/app-instance.getNavigationType`
-    - `primitives/app-instance.legacyInstanceKey`
-    - `primitives/app-instance.mayAdoptLegacyPayload`
-    - `primitives/app-instance.readAppInstance`
-    - `primitives/app-instance.stampAppInstance`
-    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/link-gesture.LinkGestureProps`
@@ -178,8 +170,16 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `primitives/pane.setHistoryAdapter`
     - `primitives/pane.setLiveStore`
     - `primitives/pane.stripBasePath`
+    - `primitives/scope/app-instance.appInstanceKey`
+    - `primitives/scope/app-instance.getAppInstanceId`
+    - `primitives/scope/app-instance.getNavigationType`
+    - `primitives/scope/app-instance.legacyInstanceKey`
+    - `primitives/scope/app-instance.mayAdoptLegacyPayload`
+    - `primitives/scope/app-instance.readAppInstance`
+    - `primitives/scope/app-instance.stampAppInstance`
+    - `primitives/scope/install-sink.defineInstallSink`
+    - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/shortcuts.setFocusedSurfaceId`
-    - `primitives/surface-id.useSurfaceTabId`
   - Exports (types):
     - `NavigateOptions`
     - `PlacementCapabilities`

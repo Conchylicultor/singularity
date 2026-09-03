@@ -1,7 +1,7 @@
 import { profilerStart } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { warmupRegistry, type WarmupSpec } from "./registry";
 import { yieldServer } from "./yield-server";
@@ -56,7 +56,9 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           // (runTracked) are complementary: the former is the coarse boot phase,
           // the latter gives the warm-up's internal DB/file work an ambient span
           // so it appears under its own name in the profiler instead of vanishing.
-          await runTracked(`warmup:${w.name}`, () => deps.withSlot(() => w.run()));
+          await runTracked(`warmup:${w.name}`, () =>
+            deps.withSlot(() => w.run()),
+          );
           // eslint-disable-next-line promise-safety/no-bare-catch -- a warm-up is an optimization, never a correctness dependency: every failure maps to the same handling (log loudly + keep draining the other warm-ups), so one bad warm-up can neither abort its siblings nor reject drainWarmups() into the post-serving boot path. Mirrors the framework's own onShutdown isolation loop in bin/index.ts.
         } catch (err) {
           console.error(`[warmup] ${w.name} failed`, err);

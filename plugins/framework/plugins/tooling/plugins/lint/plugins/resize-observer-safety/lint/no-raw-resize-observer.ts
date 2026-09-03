@@ -18,7 +18,7 @@ export default createRule({
       rawResizeObserver:
         "`new ResizeObserver` is banned outside the element-size primitive. " +
         "Use useElementSize / useResizeObserver from " +
-        "@plugins/primitives/plugins/element-size/web instead (reactive size, " +
+        "@plugins/primitives/plugins/dom/plugins/element-size/web instead (reactive size, " +
         "synchronous initial measure, RAF-debounced, auto cleanup). If you have " +
         "a genuinely different need, extend that primitive rather than copying it.",
     },

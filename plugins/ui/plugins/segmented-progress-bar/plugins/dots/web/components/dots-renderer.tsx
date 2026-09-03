@@ -1,4 +1,4 @@
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
@@ -49,7 +49,7 @@ export function DotsRenderer({
         </Inline>
       ))}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label offset after the dot row; inline sibling, no flex parent to own it */}
-      <Text as="span" variant="caption" className="ml-0.5 text-muted-foreground">
+      <Text variant="caption" className="ml-0.5 text-muted-foreground">
         {activeLabel}
       </Text>
     </Inline>

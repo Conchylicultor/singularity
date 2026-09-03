@@ -15,7 +15,7 @@
     - `apps/sonata/audio/instruments.SonataAudio`
     - `apps/sonata/shell.Sonata`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scope/scoped-store.defineScopedStore`
   - Exports (types): `LivePlayApi`
   - Exports (values): `useLivePlay`
 - Cross-plugin:

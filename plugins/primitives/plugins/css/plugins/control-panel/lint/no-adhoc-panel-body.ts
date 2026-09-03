@@ -76,7 +76,7 @@ const MENU_CONTENT = /^DropdownMenu\w*Content$/;
 
 /**
  * Menu surfaces that do not carry the `DropdownMenu…Content` name but ARE one.
- * `CursorAnchoredMenu` (primitives/cursor-menu) renders its children directly
+ * `CursorAnchoredMenu` (primitives/overlay/cursor-menu) renders its children directly
  * into a `DropdownMenuContent`; a separator inside it is a menu separator doing
  * its job.
  */

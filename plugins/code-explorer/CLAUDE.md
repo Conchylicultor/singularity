@@ -60,7 +60,7 @@ worktrees, which is deliberate: repo paths coincide.
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.HOME_DIR`
     - `infra/paths.REPO_ROOT`

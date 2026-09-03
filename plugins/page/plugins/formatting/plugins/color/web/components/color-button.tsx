@@ -8,18 +8,26 @@ import {
 } from "lexical";
 import { $patchStyleText } from "@lexical/selection";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useFormatToolbar, colorCssValue } from "@plugins/page/plugins/editor/web";
-import { COLOR_TOKENS, type ColorToken } from "@plugins/page/plugins/editor/core";
+import {
+  useFormatToolbar,
+  colorCssValue,
+} from "@plugins/page/plugins/editor/web";
+import {
+  COLOR_TOKENS,
+  type ColorToken,
+} from "@plugins/page/plugins/editor/core";
 
 /** Human label for each token (capitalized), for the swatch tooltip/aria. */
 function tokenLabel(token: ColorToken): string {
-  return token === "default" ? "Default" : token[0]!.toUpperCase() + token.slice(1);
+  return token === "default"
+    ? "Default"
+    : token[0]!.toUpperCase() + token.slice(1);
 }
 
 /**
@@ -104,7 +112,9 @@ export function ColorButton() {
           {COLOR_TOKENS.map((token) => {
             const fill = colorCssValue(token);
             const isActive =
-              token === "default" ? activeColor === null : activeColor === token;
+              token === "default"
+                ? activeColor === null
+                : activeColor === token;
             return (
               <button
                 key={token}

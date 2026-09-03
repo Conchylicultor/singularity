@@ -39,7 +39,7 @@
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
     - `primitives/date-picker.DatePickerPanel`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/text-editor/caret-trigger.atWordBoundary`
     - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
     - `primitives/text-editor/caret-trigger.useCaretMenu`

@@ -4,7 +4,7 @@ Contributes the repo-wide `no-raw-resize-observer` ESLint rule: `new
 ResizeObserver(...)` is banned everywhere except the element-size primitive.
 
 Route size/resize observation through
-[`@plugins/primitives/plugins/element-size/web`](../../../../../../../primitives/plugins/element-size/CLAUDE.md)
+[`@plugins/primitives/plugins/dom/plugins/element-size/web`](../../../../../../../primitives/plugins/dom/plugins/element-size/CLAUDE.md)
 (`useElementSize` / `useResizeObserver`). The allowlist (`ignores`) contains only
 the primitive's own internal implementation file — if you think you need another
 exemption, extend the primitive instead.

@@ -5,7 +5,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";

@@ -83,7 +83,7 @@ body windows, to decide whether its `RankReorderProvider` needs `measuringAlways
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
     - `primitives/virtual-rows.useVirtualRows`

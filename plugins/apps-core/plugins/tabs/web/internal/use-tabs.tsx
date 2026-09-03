@@ -22,7 +22,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
-import { getNavigationType } from "@plugins/primitives/plugins/app-instance/web";
+import { getNavigationType } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { type Placement } from "@plugins/apps-core/core";
 import {
   Apps,

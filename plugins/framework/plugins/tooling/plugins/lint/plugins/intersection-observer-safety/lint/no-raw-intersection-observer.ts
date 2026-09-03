@@ -18,7 +18,7 @@ export default createRule({
       rawIntersectionObserver:
         "`new IntersectionObserver` is banned outside the in-view primitive. " +
         "Use createInViewWatcher / useInView from " +
-        "@plugins/primitives/plugins/in-view/web instead (idempotent WeakSet " +
+        "@plugins/primitives/plugins/dom/plugins/in-view/web instead (idempotent WeakSet " +
         "enrollment, stabilised callback, deps-keyed rebuild, auto cleanup). If " +
         "you have a genuinely different need, extend that primitive rather than " +
         "copying it.",

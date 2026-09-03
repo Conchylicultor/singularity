@@ -829,10 +829,10 @@ rendered.
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/edit-mode-signal.useEditMode`
-    - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
-    - `primitives/popup-open.PopupOpenScope`
+    - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/slot-render.SlotItemLayout`
     - `primitives/ui-context.collectLineage`
   - Exports (types):

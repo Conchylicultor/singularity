@@ -4,7 +4,7 @@ Contributes the repo-wide `no-raw-intersection-observer` ESLint rule: `new
 IntersectionObserver(...)` is banned everywhere except the in-view primitive.
 
 Route "is this element on screen" observation through
-[`@plugins/primitives/plugins/in-view/web`](../../../../../../../primitives/plugins/in-view/CLAUDE.md)
+[`@plugins/primitives/plugins/dom/plugins/in-view/web`](../../../../../../../primitives/plugins/dom/plugins/in-view/CLAUDE.md)
 (`createInViewWatcher` / `useInView`). The allowlist (`ignores`) contains only
 the primitive's own internal implementation file — if you think you need another
 exemption, extend the primitive instead.

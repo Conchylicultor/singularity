@@ -207,8 +207,6 @@ The two other edges of the same argument:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
-    - `primitives/auto-scroll.JumpToBottomButton`
-    - `primitives/auto-scroll.useStickyScroll`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
@@ -220,6 +218,8 @@ The two other edges of the same argument:
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/dom/auto-scroll.JumpToBottomButton`
+    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useNotificationsChannelStatuses`
     - `primitives/live-state.useResource`
@@ -227,11 +227,11 @@ The two other edges of the same argument:
     - `primitives/log-channels.clientLog`
     - `primitives/networking.useReconnectingWebSocket`
     - `primitives/networking.wsUrl`
+    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
-    - `primitives/popover.InlinePopover`
-    - `primitives/tooltip.WithTooltip`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
@@ -256,7 +256,7 @@ The two other edges of the same argument:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.Trigger`
-    - `infra/git-watcher.refAdvanced`
+    - `infra/git/git-watcher.refAdvanced`
     - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.checkoutRef`

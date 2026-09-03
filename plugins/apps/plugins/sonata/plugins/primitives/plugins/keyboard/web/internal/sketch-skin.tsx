@@ -1,7 +1,7 @@
 import { Fragment, useId, useMemo } from "react";
 import type { SonataDrawnKeys } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { BLACK_KEY_HEIGHT_PCT, type KeyLane } from "./key-layout";
 import { litKeyColor, mix } from "./key-color";
 import {

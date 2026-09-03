@@ -1,4 +1,4 @@
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useCallback, useState } from "react";
 
 /**

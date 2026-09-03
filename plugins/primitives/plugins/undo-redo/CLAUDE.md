@@ -158,7 +158,7 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
 - Web:
   - Uses:
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (types):
     - `HistoryEntry`

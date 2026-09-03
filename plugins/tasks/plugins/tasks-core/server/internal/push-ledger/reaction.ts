@@ -1,4 +1,4 @@
-import { defineRefReaction } from "@plugins/infra/plugins/git-watcher/server";
+import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { ensurePushLedgerFresh } from "./freshness";
 
 /**

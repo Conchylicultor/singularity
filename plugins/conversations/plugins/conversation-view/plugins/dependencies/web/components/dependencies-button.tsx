@@ -1,4 +1,8 @@
-import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ButtonGroup,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdLink } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
@@ -6,11 +10,18 @@ import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
-import { tasksResource, TaskGraph, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  tasksResource,
+  TaskGraph,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -106,12 +117,21 @@ function DependenciesButtonInner({
       const depTaskId = selectedConv.taskId!;
       setBusy(depTaskId);
       try {
-        await fetchEndpoint(addTaskDependency, { id: conversation.taskId }, { body: { dependsOnTaskId: depTaskId } });
+        await fetchEndpoint(
+          addTaskDependency,
+          { id: conversation.taskId },
+          { body: { dependsOnTaskId: depTaskId } },
+        );
       } catch (err) {
         toast({
           type: "conversation",
           title: "Failed to add dependency",
-          description: err instanceof EndpointError ? (typeof err.body === "string" ? err.body : `Server responded ${err.status}`) : String(err),
+          description:
+            err instanceof EndpointError
+              ? typeof err.body === "string"
+                ? err.body
+                : `Server responded ${err.status}`
+              : String(err),
           variant: "error",
         });
       } finally {
@@ -125,7 +145,10 @@ function DependenciesButtonInner({
     async (depTaskId: string) => {
       setBusy(depTaskId);
       try {
-        await fetchEndpoint(removeTaskDependency, { id: conversation.taskId, depId: depTaskId });
+        await fetchEndpoint(removeTaskDependency, {
+          id: conversation.taskId,
+          depId: depTaskId,
+        });
       } finally {
         setBusy(null);
       }
@@ -138,12 +161,21 @@ function DependenciesButtonInner({
       const blockedTaskId = selectedConv.taskId!;
       setBusy(blockedTaskId);
       try {
-        await fetchEndpoint(addTaskDependency, { id: blockedTaskId }, { body: { dependsOnTaskId: conversation.taskId } });
+        await fetchEndpoint(
+          addTaskDependency,
+          { id: blockedTaskId },
+          { body: { dependsOnTaskId: conversation.taskId } },
+        );
       } catch (err) {
         toast({
           type: "conversation",
           title: "Failed to add dependency",
-          description: err instanceof EndpointError ? (typeof err.body === "string" ? err.body : `Server responded ${err.status}`) : String(err),
+          description:
+            err instanceof EndpointError
+              ? typeof err.body === "string"
+                ? err.body
+                : `Server responded ${err.status}`
+              : String(err),
           variant: "error",
         });
       } finally {
@@ -157,7 +189,10 @@ function DependenciesButtonInner({
     async (blockedTaskId: string) => {
       setBusy(blockedTaskId);
       try {
-        await fetchEndpoint(removeTaskDependency, { id: blockedTaskId, depId: conversation.taskId });
+        await fetchEndpoint(removeTaskDependency, {
+          id: blockedTaskId,
+          depId: conversation.taskId,
+        });
       } finally {
         setBusy(null);
       }
@@ -186,7 +221,12 @@ function DependenciesButtonInner({
           {orphanDepIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <Text as="div" variant="caption" key={id} className="text-muted-foreground">
+              <Text
+                as="div"
+                variant="caption"
+                key={id}
+                className="text-muted-foreground"
+              >
                 {t?.title ?? id}
               </Text>
             );
@@ -206,7 +246,12 @@ function DependenciesButtonInner({
           {orphanBlockedIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <Text as="div" variant="caption" key={id} className="text-muted-foreground">
+              <Text
+                as="div"
+                variant="caption"
+                key={id}
+                className="text-muted-foreground"
+              >
                 {t?.title ?? id}
               </Text>
             );
@@ -214,7 +259,9 @@ function DependenciesButtonInner({
         </div>
       )}
       {!hasAny && (
-        <Text as="div" variant="caption" className="text-muted-foreground">Click to add dependencies</Text>
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          Click to add dependencies
+        </Text>
       )}
     </Stack>
   );
@@ -231,11 +278,16 @@ function DependenciesButtonInner({
           trigger={
             <Button variant="ghost" aria-label="Blocked by">
               {hasBlockedBy && (
-                <span className="text-3xs tabular-nums">
-                  {depTaskIds.size}
-                </span>
+                <span className="text-3xs tabular-nums">{depTaskIds.size}</span>
               )}
-              <span className={cn("text-3xs", hasBlockedBy ? "text-muted-foreground" : "text-muted-foreground/40")}>
+              <span
+                className={cn(
+                  "text-3xs",
+                  hasBlockedBy
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground/40",
+                )}
+              >
                 {"←"}
               </span>
             </Button>
@@ -265,7 +317,14 @@ function DependenciesButtonInner({
           padding="sm"
           trigger={
             <Button variant="ghost" aria-label="Blocking">
-              <span className={cn("text-3xs", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
+              <span
+                className={cn(
+                  "text-3xs",
+                  hasBlocking
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground/40",
+                )}
+              >
                 {"→"}
               </span>
               {hasBlocking && (

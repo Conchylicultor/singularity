@@ -9,7 +9,7 @@ import { MdEdit, MdSend } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
-} from "@plugins/primitives/plugins/floating-action/web";
+} from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import {
   Stack,

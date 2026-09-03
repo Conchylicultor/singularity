@@ -178,13 +178,13 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/data-view.FieldDef`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
-    - `primitives/imperative-dialog.openDialog`
     - `primitives/live-state.matchResource`
+    - `primitives/overlay/imperative-dialog.openDialog`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `ConfigValues`
     - `EventSourceTypeContribution`

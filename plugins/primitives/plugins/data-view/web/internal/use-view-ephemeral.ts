@@ -19,7 +19,7 @@ import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
  * restart, leaving a filtered subset that reads as the view's whole contents.
  * `sessionStorage` keeps the only property worth persisting (an F5 does not lose
  * your place) while a new tab / browser restart start clean. Scope is the
- * *browser* tab (the `primitives/tab-id` precedent), not an app tab — two app
+ * *browser* tab (the `primitives/scope/tab-id` precedent), not an app tab — two app
  * tabs on one surface share a query, exactly as they did before.
  */
 
@@ -117,7 +117,11 @@ export interface EphemeralViewState {
   /** Apply a whole expand/collapse batch in ONE localStorage write. */
   setExpanded: (viewId: string, changes: readonly ExpandChange[]) => void;
   /** Collapse/expand a group-by section (device-local; absence = expanded). */
-  setSectionCollapsed: (viewId: string, key: string, collapsed: boolean) => void;
+  setSectionCollapsed: (
+    viewId: string,
+    key: string,
+    collapsed: boolean,
+  ) => void;
 }
 
 /**

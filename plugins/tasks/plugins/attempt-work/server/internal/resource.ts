@@ -1,5 +1,5 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
+import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { attemptWorkResource as attemptWorkDescriptor } from "../../core/resources";
 import type { AttemptWorkPayload } from "../../core/protocol";
 import { attemptWorkSignature, evictAttemptWork, getAttemptWork } from "./work";

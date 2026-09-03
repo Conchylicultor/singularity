@@ -1,4 +1,4 @@
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useConversationPreprompt } from "../internal/hooks";

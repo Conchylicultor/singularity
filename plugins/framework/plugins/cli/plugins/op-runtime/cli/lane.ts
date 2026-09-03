@@ -22,7 +22,7 @@
 // the two spellings can never drift on the lane decision. See
 // research/2026-07-10-global-host-admission-unified-budget.md.
 
-import type { Lane } from "@plugins/infra/plugins/host-admission/core";
+import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 /** Env signal naming the lane the current process's checks run in. */
 export const LANE_ENV = "SINGULARITY_LANE";

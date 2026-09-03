@@ -85,7 +85,7 @@ test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () =
   // disjointness check.
   for (const id of [
     "infra.worktree.**",
-    "infra.git-watcher.**",
+    "infra.git.git-watcher.**",
     "infra.claude-cli.**",
   ]) {
     expect(ar.entryPoints).toContain(id);

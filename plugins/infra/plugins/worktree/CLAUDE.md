@@ -36,9 +36,9 @@ the shape that would absorb it into "the setup succeeded".
 
 - Server:
   - Uses:
-    - `infra/host-admission.defineHostPool`
-    - `infra/host-admission.pushPool`
-    - `infra/host-admission.pushSlotPath`
+    - `infra/host/host-admission.defineHostPool`
+    - `infra/host/host-admission.pushPool`
+    - `infra/host/host-admission.pushSlotPath`
     - `infra/paths.GIT`
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
@@ -99,7 +99,7 @@ the shape that would absorb it into "the setup succeeded".
     - `debug/memory`
     - `debug/profiling/ops`
     - `debug/worktree-cleanup`
-    - `infra/git-watcher`
+    - `infra/git/git-watcher`
     - `infra/launcher`
     - `infra/worktree/reclaim`
     - `infra/worktree/removal-audit`

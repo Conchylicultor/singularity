@@ -21,7 +21,7 @@ import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { LineagePath } from "./lineage-path";
 
 /**

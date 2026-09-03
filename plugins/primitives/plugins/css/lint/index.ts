@@ -38,14 +38,14 @@ export default {
     "no-adhoc-layout": [
       // ── PERMANENT: the layout primitives themselves ──────────────────────
       "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, text, spacing, badge, row, ...)
-      "plugins/primitives/plugins/floating-action/web/internal/floating-action.tsx", // owns the morph/positioning mechanics (absolute panel, the rigid `trigger` collapsed-footprint wrapper) — a layout primitive, never drains
+      "plugins/primitives/plugins/overlay/plugins/floating-action/web/internal/floating-action.tsx", // owns the morph/positioning mechanics (absolute panel, the rigid `trigger` collapsed-footprint wrapper) — a layout primitive, never drains
       // The sanctioned home for the body-portaled `position: fixed` mechanic: a
       // cursor-anchored menu. It owns the raw inline `position: fixed`; everyone
       // else routes through it. (The off-screen measure strip used to sit beside
       // it here — it is gone, along with the render-everything-twice measurement
       // it existed to serve. See `primitives/adaptive-bar`, which measures the
       // real nodes in place.)
-      "plugins/primitives/plugins/cursor-menu/**",
+      "plugins/primitives/plugins/overlay/plugins/cursor-menu/**",
       // Two more layout primitives that live outside `css/plugins/` and so were
       // never covered by the glob above. They were not previously listed because
       // they were not previously VISIBLE: each parks its mechanics in a
@@ -54,7 +54,7 @@ export default {
       // spell — `absolute inset-0` IS the surface-overlay, and the
       // overflow/space-sharing recipe IS the adaptive bar — so they belong in
       // this permanent tier beside floating-action, not in a drain queue.
-      "plugins/primitives/plugins/surface-overlay/web/internal/surface-overlay.tsx",
+      "plugins/primitives/plugins/overlay/plugins/surface-overlay/web/internal/surface-overlay.tsx",
       "plugins/primitives/plugins/adaptive-bar/web/internal/adaptive-bar.tsx",
       // ── REVERTED: restored to ad-hoc layout when the <Frame> primitive was
       //    removed. These files were migrated onto <Frame> during the drain;

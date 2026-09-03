@@ -226,7 +226,7 @@ export type Dedup<S extends z.ZodType> =
  * bounds THIS backend — exactly the scope `createSemaphore(1)` had, and exactly
  * the scope it replaces. It says nothing about the other ~16 backends on the
  * box. Host-wide bounds are a different mechanism and remain
- * `infra/host-admission`'s job; reach for that when the resource is the machine
+ * `infra/host/host-admission`'s job; reach for that when the resource is the machine
  * (CPU, RAM, a shared directory), and for `serial` when the resource is this
  * process.
  *

@@ -183,7 +183,7 @@ proven by hand:
 - Description: Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
 - Server:
   - Uses:
-    - `infra/host-admission.defineHostPool`
+    - `infra/host/host-admission.defineHostPool`
     - `infra/safe-fetch.assertResolvesPublic`
     - `infra/safe-fetch.parsePublicUrl`
     - `infra/safe-fetch.safeFetch`

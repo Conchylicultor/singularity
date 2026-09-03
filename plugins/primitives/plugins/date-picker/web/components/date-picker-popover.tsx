@@ -3,8 +3,11 @@ import { useState, type ReactElement } from "react";
 import {
   InlinePopover,
   type InlinePopoverProps,
-} from "@plugins/primitives/plugins/popover/web";
-import { DatePickerPanel, type DatePickerPanelProps } from "./date-picker-panel";
+} from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import {
+  DatePickerPanel,
+  type DatePickerPanelProps,
+} from "./date-picker-panel";
 
 export interface DatePickerPopoverProps extends DatePickerPanelProps {
   /** Trigger element — open/close is merged in by the popover primitive. */

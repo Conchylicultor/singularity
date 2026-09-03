@@ -12,7 +12,7 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/select-scope.ContentScope`
     - `ui/theme-engine.useColorMode`
   - Exports (types):

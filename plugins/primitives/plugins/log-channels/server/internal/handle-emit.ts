@@ -1,5 +1,5 @@
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
+import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { emitLogs } from "../../core/endpoints";
 import { emitClientLogs } from "./client-ingress";
 

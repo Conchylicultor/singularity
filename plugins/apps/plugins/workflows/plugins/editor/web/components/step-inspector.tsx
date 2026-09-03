@@ -10,15 +10,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
-import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   updateDefinition,
@@ -93,9 +99,14 @@ export function StepInspector({
   // per step without an effect; live pushes for the *same* step re-render without
   // remounting, so a server echo can't clobber a mid-edit value. Saves are
   // debounced; the pending save flushes on step switch / unmount via the cleanup.
-  const [draftConfig, setDraftConfig] = useState<Record<string, unknown>>(step.config);
+  const [draftConfig, setDraftConfig] = useState<Record<string, unknown>>(
+    step.config,
+  );
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingRef = useRef<{ stepId: string; value: Record<string, unknown> } | null>(null);
+  const pendingRef = useRef<{
+    stepId: string;
+    value: Record<string, unknown>;
+  } | null>(null);
   const defRef = useLatestRef(def);
 
   const saveConfig = useEventCallback(
@@ -158,7 +169,9 @@ export function StepInspector({
     [NONE]: "— none (end) —",
     ...Object.fromEntries(others.map((s) => [s.id, s.label])),
   };
-  const routes = step.nextStepMapping ? Object.entries(step.nextStepMapping) : [];
+  const routes = step.nextStepMapping
+    ? Object.entries(step.nextStepMapping)
+    : [];
 
   return (
     <Surface level="raised">
@@ -168,14 +181,19 @@ export function StepInspector({
             {/* Header */}
             <Stack direction="row" align="center" justify="between" gap="sm">
               <Stack direction="row" align="center" gap="sm">
-                {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
+                {Icon ? (
+                  <Icon className="size-4 text-muted-foreground" />
+                ) : null}
                 <Text variant="label">{stepType?.label ?? step.pluginId}</Text>
               </Stack>
               <Stack direction="row" align="center" gap="sm">
                 {isEntry ? (
                   <Badge colorClass="bg-info/10 text-info">Entry</Badge>
                 ) : (
-                  <Button variant="outline" onClick={() => void persist(setEntry(def, step.id))}>
+                  <Button
+                    variant="outline"
+                    onClick={() => void persist(setEntry(def, step.id))}
+                  >
                     Set as entry
                   </Button>
                 )}
@@ -191,7 +209,9 @@ export function StepInspector({
 
             {/* Label */}
             <Stack gap="2xs">
-              <Text variant="caption" tone="muted">Label</Text>
+              <Text variant="caption" tone="muted">
+                Label
+              </Text>
               <input
                 value={labelField.value}
                 onChange={(e) => labelField.onChange(e.target.value)}
@@ -204,10 +224,15 @@ export function StepInspector({
 
             {/* Configuration */}
             <Stack gap="2xs">
-              <Text variant="caption" tone="muted">Configuration</Text>
+              <Text variant="caption" tone="muted">
+                Configuration
+              </Text>
               {ConfigComponent ? (
                 <PluginErrorBoundary label="Step configuration">
-                  <ConfigComponent config={draftConfig} onChange={onConfigChange} />
+                  <ConfigComponent
+                    config={draftConfig}
+                    onChange={onConfigChange}
+                  />
                 </PluginErrorBoundary>
               ) : (
                 <Text variant="caption" className="text-muted-foreground">
@@ -221,7 +246,9 @@ export function StepInspector({
               <Text variant="label">Routing</Text>
 
               <Stack gap="2xs">
-                <Text variant="caption" tone="muted">Default next</Text>
+                <Text variant="caption" tone="muted">
+                  Default next
+                </Text>
                 <Select
                   items={nextItems}
                   value={step.next ?? NONE}
@@ -245,10 +272,12 @@ export function StepInspector({
               </Stack>
 
               <Stack gap="2xs">
-                <Text variant="caption" tone="muted">Conditional routes</Text>
+                <Text variant="caption" tone="muted">
+                  Conditional routes
+                </Text>
                 <Text variant="caption" className="text-muted-foreground">
-                  When this step resolves a value matching a route key, execution follows that route
-                  instead of the default.
+                  When this step resolves a value matching a route key,
+                  execution follows that route instead of the default.
                 </Text>
                 {routes.map(([key, target]) => (
                   <RouteRow

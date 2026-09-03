@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
-import { findScrollParent } from "@plugins/primitives/plugins/auto-scroll/web";
+import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   createInViewWatcher,
   type InViewWatcher,
-} from "@plugins/primitives/plugins/in-view/web";
+} from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import {
   useEventCallback,
   useLatestRef,

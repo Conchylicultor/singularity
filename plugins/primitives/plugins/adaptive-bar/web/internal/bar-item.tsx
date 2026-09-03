@@ -16,7 +16,7 @@ import {
 } from "@plugins/primitives/plugins/action-presentation/web";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
-import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
   BarFormsContext,
   BarRegistryContext,

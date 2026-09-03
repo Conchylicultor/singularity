@@ -37,12 +37,12 @@ and the form defaults `openAfterLaunch` to `false`.
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/icon-button.IconButton`
+    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.Kbd`
     - `primitives/pane.PaneOpenMode`
     - `primitives/pane.useOpenPane`
-    - `primitives/popover.InlinePopover`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/text-editor.TextEditor`
-    - `primitives/tooltip.Kbd`
   - Exports (types):
     - `LaunchAgentFormProps`
     - `LaunchAgentPopoverProps`

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 // A jsdom suite, not a bun:test one, because the module under test is DOM-bound:
 // the window store hydrates and persists through `window` / `sessionStorage`, and
 // its instance-scoped storage key reaches `window.history.state` via
-// `primitives/app-instance`. It used to live beside its source under bun:test with
+// `primitives/scope/app-instance`. It used to live beside its source under bun:test with
 // a hand-built `window = { sessionStorage }` — which satisfied every
 // `typeof window === "undefined"` guard while having no `history`, so the key read
 // crashed. jsdom gives the real objects, so nothing here is stubbed and no

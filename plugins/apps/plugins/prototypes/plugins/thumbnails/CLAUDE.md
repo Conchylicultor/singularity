@@ -152,7 +152,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `primitives/css/pin.Pin`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values):
     - `PrototypeThumbnail`
     - `usePrototypeThumbnails`

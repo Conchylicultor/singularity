@@ -21,7 +21,7 @@ import {
 import {
   useStickyScroll,
   JumpToBottomButton,
-} from "@plugins/primitives/plugins/auto-scroll/web";
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

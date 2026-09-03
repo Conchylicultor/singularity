@@ -269,7 +269,7 @@ export const compositionsConfig = defineConfig({
           category: "subsystem" as const,
           entryPoints: [
             "infra.worktree.**",
-            "infra.git-watcher.**",
+            "infra.git.git-watcher.**",
             "infra.claude-cli.**",
             "apps.agent-manager.**",
           ],

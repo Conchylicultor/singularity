@@ -1,5 +1,5 @@
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
+import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { deploymentResource as deploymentDescriptor } from "../../core";
 import { deploymentEtag, readDeploymentState } from "./read-deployment";
 

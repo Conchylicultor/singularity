@@ -1,4 +1,4 @@
-import { defineDomScope } from "@plugins/primitives/plugins/scoped-store/plugins/dom-scope/web";
+import { defineDomScope } from "@plugins/primitives/plugins/scope/plugins/dom-scope/web";
 
 /**
  * The scrolling viewport of the transcript a subtree belongs to.

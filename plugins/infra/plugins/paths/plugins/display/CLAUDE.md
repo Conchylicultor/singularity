@@ -11,7 +11,7 @@ The browser cannot import it — a single `node:os` edge breaks the web bundle a
 module eval. Yet the browser is exactly where these strings are needed (the
 prototypes gallery's empty state, the two agent-launch prompts). So the
 web-safe half is its own leaf: **string literals only, no `node:*`, no import of
-the sibling `paths` module.** Same reasoning as `infra/duress/latch`, one notch
+the sibling `paths` module.** Same reasoning as `infra/host/duress/latch`, one notch
 stricter.
 
 Consumers therefore import `@plugins/infra/plugins/paths/plugins/display/core`

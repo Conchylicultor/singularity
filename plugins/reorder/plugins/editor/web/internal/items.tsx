@@ -15,7 +15,7 @@ import {
   type ReactNode,
 } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";

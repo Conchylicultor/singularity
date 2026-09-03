@@ -14,7 +14,7 @@ import {
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line";
 import { scopeSelectAllKeyDown } from "@plugins/primitives/plugins/select-scope/web";
 import { useRailGuard } from "@plugins/primitives/plugins/css/plugins/rail/web";
-import { OverlayBoundary } from "@plugins/primitives/plugins/overlay-boundary/web";
+import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { useScrollFade } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/use-scroll-fade";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 

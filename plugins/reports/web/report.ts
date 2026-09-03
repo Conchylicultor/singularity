@@ -1,5 +1,5 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ReportBody } from "../shared/types";
 import {
   submitReport,

@@ -1,4 +1,4 @@
-import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
+import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import type { PaneOptions, PaneStore } from "./pane";
 
 // ---------------------------------------------------------------------------

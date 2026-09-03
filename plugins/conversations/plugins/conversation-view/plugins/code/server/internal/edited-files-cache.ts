@@ -1,5 +1,5 @@
 import type { EditedFile } from "../../core/protocol";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { computeEditedFiles } from "./compute-edited-files";
 import { editedFilesSignature } from "./edited-files-signature";
 

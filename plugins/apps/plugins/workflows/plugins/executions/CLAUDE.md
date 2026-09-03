@@ -25,10 +25,10 @@
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
     - `primitives/error-boundary.PluginErrorBoundary`
-    - `primitives/imperative-dialog/confirm.confirmDialog`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

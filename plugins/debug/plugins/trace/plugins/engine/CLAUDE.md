@@ -80,7 +80,7 @@ op-time runs on a 5-min cadence and retries next tick.
 
 ### Duress shedding (after admission)
 
-During a host **duress episode** (`infra/duress`), an admitted non-critical trip
+During a host **duress episode** (`infra/host/duress`), an admitted non-critical trip
 past the first-N-per-trigger grant is **shed**: the entire capture — including the
 synchronous coherent-instant phase, exactly the cost shedding exists to avoid — is
 skipped and the caller sees `null`, the same contract as a rate-limited trip. Only
@@ -221,13 +221,13 @@ expandable JSON.
     - `database.db`
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
-    - `infra/duress.createShedBuffer`
-    - `infra/duress.ShedSummary`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defaultRandom`
     - `infra/entities.defineEntity`
+    - `infra/host/duress.createShedBuffer`
+    - `infra/host/duress.ShedSummary`
     - `infra/paths.currentWorktreeName`
     - `infra/retention.defineRetention`
     - `reports.recordReport`

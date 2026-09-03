@@ -280,7 +280,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 - Description: Web plugin runtime: slots, contributions, loader
 - Web:
   - Slots:
-    - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.copy-source-text`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+    - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
     - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
 - Core:
   - Uses:

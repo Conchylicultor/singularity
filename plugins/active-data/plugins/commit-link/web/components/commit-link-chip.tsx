@@ -6,7 +6,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { COMMIT_WORKTREE } from "../internal/commit-worktree";
 
@@ -38,7 +38,8 @@ export function CommitLinkChip({
             {value.subject}
           </Text>
           <Text as="span" variant="caption" tone="muted">
-            {value.authorName} · {formatRelativeTime(new Date(value.authoredAt))}
+            {value.authorName} ·{" "}
+            {formatRelativeTime(new Date(value.authoredAt))}
           </Text>
         </Stack>
       }

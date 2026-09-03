@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
-import { registerOverlayFallback } from "@plugins/primitives/plugins/overlay-boundary/web";
+import { registerOverlayFallback } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
 import { ErrorBoundaryMiddleware } from "./internal/error-boundary-middleware";
 import { CrashFallback } from "./components/crash-fallback";
 import { ErrorBoundary } from "./slots";

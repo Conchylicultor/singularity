@@ -1,6 +1,6 @@
 // The LIVE virtual element this primitive hands `FloatingSurface`'s `anchor` prop:
 // it adapts the document selection's caret rect into the shape Floating UI wants.
-// The rect READ itself is not ours — `primitives/dom-selection` owns that, and its
+// The rect READ itself is not ours — `primitives/dom/dom-selection` owns that, and its
 // three-part guard (no selection → `rangeCount === 0` → `getRangeAt` throwing
 // `IndexSizeError`) is stated once there.
 //
@@ -9,7 +9,7 @@
 // element for one primitive's `anchor` prop is the abstraction to build when a
 // SECOND consumer appears, not before.
 
-import { selectionRect } from "@plugins/primitives/plugins/dom-selection/web";
+import { selectionRect } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 
 /**
  * A live virtual anchor for `FloatingSurface`, tracking the document selection's

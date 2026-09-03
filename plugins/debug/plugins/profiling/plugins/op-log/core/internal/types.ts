@@ -1,4 +1,4 @@
-import type { Lane } from "@plugins/infra/plugins/host-admission/core";
+import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 // The one durable record for every op that competes for a host resource. Before
 // this, `push`, `build`, and `check` each hand-rolled their own lifecycle

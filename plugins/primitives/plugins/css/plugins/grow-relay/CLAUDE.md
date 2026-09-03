@@ -100,7 +100,7 @@ registration effect depends on **`sink`, not on the value**. The value is
 would re-run on every change, with the cleanup's `unregister` taking the count
 straight back down: a relay that flickers forever instead of settling. `sink` is
 memoised on `[]`, so keying on it makes that impossible rather than merely
-avoided. Same reason [`popup-open`](../../../popup-open/CLAUDE.md) memoises its
+avoided. Same reason [`popup-open`](../../../overlay/plugins/popup-open/CLAUDE.md) memoises its
 sink, which this is modelled on throughout — counted registry, render-prop scope,
 no-op default, release-as-effect-cleanup.
 

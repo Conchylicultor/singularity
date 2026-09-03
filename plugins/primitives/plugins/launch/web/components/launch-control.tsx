@@ -27,7 +27,7 @@ import {
   useDefaultModel,
   useSetDefaultModel,
 } from "@plugins/conversations/plugins/model-provider/web";
-import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";

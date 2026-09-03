@@ -16,8 +16,8 @@
     - `primitives/css/ui-kit.DialogContent`
     - `primitives/css/ui-kit.ScrollArea`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/loading.Loading`
-    - `primitives/scroll-reveal.revealElement`
     - `primitives/search.SearchInput`
   - Exports (types):
     - `QuickFindDialogProps`

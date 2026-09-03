@@ -52,13 +52,13 @@ loudly — both just produce a highlight that lags or flickers:
   they mount; a re-render never re-observes a node already watched, and a removed
   element stays collectable. Rebuilding the observer per change would make every
   arriving row cost a re-measure of the whole document. That rule now belongs to
-  [`primitives/in-view`](../../../in-view/), which holds the `WeakSet` — this hook
+  [`primitives/dom/in-view`](../../../dom/plugins/in-view/), which holds the `WeakSet` — this hook
   simply re-runs its enrollment pass and pays for the new elements only.
 
 ## The root is derived, not passed
 
 The observer's `root` is `findScrollParent()`
-(`@plugins/primitives/plugins/auto-scroll/web`) of the first element `resolve`
+(`@plugins/primitives/plugins/dom/plugins/auto-scroll/web`) of the first element `resolve`
 returns. The entries live inside the scroller by construction, so there is
 nothing for a caller to get wrong and no `root` prop to thread.
 
@@ -95,9 +95,9 @@ does that today, and the fix is a signal from the caller, not a per-render sweep
 - Description: Where the reader is in a scrolling document: useActiveInView(ids, resolve, {position}) watches the resolved elements through ONE in-view watcher and answers with either the section being read (the first id in the top third of the scroller) or how far the reader has got (the last id anywhere on screen). Holds the last answer while nothing is on screen, and enrolls elements incrementally as they mount.
 - Web:
   - Uses:
-    - `primitives/auto-scroll.findScrollParent`
-    - `primitives/in-view.createInViewWatcher`
-    - `primitives/in-view.InViewWatcher`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/in-view.InViewWatcher`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
   - Exports (types): `ReadingPosition`

@@ -3,7 +3,7 @@ import {
   appInstanceKey,
   legacyInstanceKey,
   mayAdoptLegacyPayload,
-} from "@plugins/primitives/plugins/app-instance/web";
+} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { nextSnapAction, type SnapDirection, type SnapZone } from "./use-snap";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
@@ -235,7 +235,7 @@ function reorder() {
  * sessionStorage key, namespaced per **app instance** (not per browser tab):
  * window geometry is instance state, so an external navigation starts with a
  * clean desktop while a reload / back-forward finds its windows where they
- * were. See `primitives/app-instance`.
+ * were. See `primitives/scope/app-instance`.
  */
 const LS_KEY = () => appInstanceKey("app-windows");
 
@@ -282,7 +282,7 @@ function persist() {
  * pre-generation `app-windows:<tabId>` store, read at most once ever.
  *
  * Entitlement is {@link mayAdoptLegacyPayload}'s call — instance lifecycle,
- * owned by `primitives/app-instance`, which carries the full rationale;
+ * owned by `primitives/scope/app-instance`, which carries the full rationale;
  * consuming it (`removeItem`) is the consumer's half. What is specific here is
  * the stake: a desktop full of windows is the most visible instance state there
  * is, so a leak into a fresh instance doesn't merely restore stale data, it

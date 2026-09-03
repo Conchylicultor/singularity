@@ -3,7 +3,10 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
-import { WithTooltip, Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import {
+  WithTooltip,
+  Kbd,
+} from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   useActionForm,

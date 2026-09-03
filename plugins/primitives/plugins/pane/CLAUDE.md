@@ -437,7 +437,7 @@ stays app-agnostic:
 
 Programmatic navigation ⇒ `shell:navigate`; browser traversal ⇒ `popstate`. A
 hard event contract, not idempotency-by-comparison. The adapter lives in an
-[`install-sink`](../install-sink/CLAUDE.md) filled with the
+[`install-sink`](../scope/plugins/install-sink/CLAUDE.md) filled with the
 **`defaultHistoryAdapter`** (standalone / tests), which writes the route
 verbatim and restores it straight back into the live store via
 `handleLocationChange()` — so the slot is never empty and teardown never has to
@@ -448,7 +448,7 @@ every entry into a complete SNAPSHOT of what the user was looking at —
 (refocus the tab, re-sync its app, restore the route) with zero URL parsing. See
 the tabs `CLAUDE.md` for the snapshot model.
 
-`appInstance` (from `primitives/app-instance`) names one running SPA app-state,
+`appInstance` (from `primitives/scope/app-instance`) names one running SPA app-state,
 of which a single browser tab hosts a sequence — so an entry says not just which
 tab it belonged to but which instance that tab id is meaningful in, letting a
 cold boot tell "restore the state this entry belongs to" from "this entry came
@@ -587,7 +587,7 @@ this primitive cannot import it back. Tabs installs its `navigate` into
 history adapter — the pane layer calls a cross-app destination without knowing
 tabs exists.
 
-Both are [`install-sink`](../install-sink/CLAUDE.md) sinks, which decides how
+Both are [`install-sink`](../scope/plugins/install-sink/CLAUDE.md) sinks, which decides how
 you read them: `appNavSink.useInstalled()` from a render path (subscribed, so a
 late install re-renders whoever asked early), `peek…` only from an event handler
 or an effect.
@@ -753,15 +753,15 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
     - `primitives/icon-button.IconButton`
-    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/loading.Loading`
+    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/scope/install-sink.defineInstallSink`
+    - `primitives/scope/surface-id.SurfaceIdContext`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.RenderSlot`
-    - `primitives/surface-id.SurfaceIdContext`
-    - `primitives/tooltip.WithTooltip`
   - Exports (types):
     - `AnyPane`
     - `AppNavigator`

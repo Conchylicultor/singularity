@@ -12,7 +12,7 @@ import {
 import { MdTune } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {
   ReorderNode,
@@ -24,7 +24,7 @@ import {
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { reorderDescriptors } from "./descriptors";
 import { useReorderConfig } from "./use-reorder-config";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";

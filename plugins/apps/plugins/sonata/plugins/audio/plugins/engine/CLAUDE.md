@@ -78,7 +78,7 @@ mid-session updates the live-state map, loads the new timbre, and re-schedules.
     - `primitives/css/spacing.Stack`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/scoped-store.defineScopedStore`
+    - `primitives/scope/scoped-store.defineScopedStore`
   - Exports (types):
     - `AudioGraph`
     - `LoopWindowBeats`

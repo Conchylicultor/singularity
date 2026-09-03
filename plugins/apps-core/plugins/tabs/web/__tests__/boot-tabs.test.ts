@@ -11,7 +11,7 @@ import {
   legacyInstanceKey,
   resetAppInstanceForTests,
   type NavigationType,
-} from "@plugins/primitives/plugins/app-instance/web";
+} from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { bootTabs } from "../internal/use-tabs";
 import { isDeadUnresolvedLink } from "../internal/load-scope";
 import { savePersistedTabs, type PersistedTabs } from "../internal/tabs-store";

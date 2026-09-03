@@ -8,8 +8,8 @@
  * corroboration (invariant I3): a row proves a push happened, its absence proves
  * nothing. Nothing in this file concludes "nothing landed" from an empty table.
  */
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
-import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import { attemptBranchRef } from "@plugins/infra/plugins/worktree/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";

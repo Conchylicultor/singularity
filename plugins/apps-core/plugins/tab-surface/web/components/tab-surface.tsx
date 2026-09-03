@@ -13,7 +13,7 @@ import {
   SyncStatusProvider,
   SyncStatusIndicator,
 } from "@plugins/primitives/plugins/sync-status/web";
-import { SurfaceOverlayHost } from "@plugins/primitives/plugins/surface-overlay/web";
+import { SurfaceOverlayHost } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import {
   UndoRedoProvider,
   useUndoRedoShortcuts,

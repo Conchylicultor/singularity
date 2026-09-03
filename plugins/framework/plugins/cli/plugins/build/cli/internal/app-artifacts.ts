@@ -38,14 +38,14 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
-import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
+import { withHostGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   cpuBudget,
   type Grant,
   type GrantHooks,
   type Lane,
-} from "@plugins/infra/plugins/host-admission/core";
-import { isUnderDuress } from "@plugins/infra/plugins/duress/plugins/latch/server";
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
   acquireBuildLock,
   ensureDeps,
@@ -268,7 +268,7 @@ async function execBuffered(
 
 // One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
 // (console + build.log). The calibration input for host-admission's per-holder
-// footprint constants (@plugins/infra/plugins/host-admission/core PER_UNIT_BYTES)
+// footprint constants (@plugins/infra/plugins/host/plugins/host-admission/core PER_UNIT_BYTES)
 // and any future per-build memory budget.
 //
 // Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B) — deliberately, because

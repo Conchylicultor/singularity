@@ -63,7 +63,7 @@ width, so that overdraw IS the pen pressure.
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/ui-kit.cn`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/latest-ref.useEventCallback`
   - Exports (types):
     - `KeyboardProps`

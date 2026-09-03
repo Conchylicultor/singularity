@@ -1,12 +1,15 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
+import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import {
   editedFilesResource,
   getEditedFiles,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { PluginChangesSchema, type PluginChangesResponse } from "../../core/protocol";
+import {
+  PluginChangesSchema,
+  type PluginChangesResponse,
+} from "../../core/protocol";
 import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainPluginsDir } from "./main-plugins-dir";
 import { getMainPluginTree, getWorktreePluginTree } from "./plugin-tree-cache";
@@ -26,7 +29,9 @@ function activeConversationParams(active: ReadonlySet<string>): () => Params[] {
   return () => [...active].map((conversationId) => ({ conversationId }));
 }
 
-async function computeWorktreePluginChanges(conversationId: string): Promise<PluginChangesResponse> {
+async function computeWorktreePluginChanges(
+  conversationId: string,
+): Promise<PluginChangesResponse> {
   const conversation = await getConversation(conversationId);
   if (!conversation?.worktreePath) return { plugins: [] };
 
@@ -58,9 +63,15 @@ export const pluginChangesResource = defineResource({
   debounceMs: 3000,
   dependsOn: [
     // worktree file edits → edited-files resource is keyed { id: conversationId }
-    { resource: editedFilesResource, map: (p: { id: string }) => [{ conversationId: p.id }] },
+    {
+      resource: editedFilesResource,
+      map: (p: { id: string }) => [{ conversationId: p.id }],
+    },
     // main / own-branch advance → fan out to active subscribers only
-    { resource: refHeadResource, map: activeConversationParams(activeConversations) },
+    {
+      resource: refHeadResource,
+      map: activeConversationParams(activeConversations),
+    },
   ],
   onFirstSubscribe: ({ conversationId }: Params) => {
     activeConversations.add(conversationId);

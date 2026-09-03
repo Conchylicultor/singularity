@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * Which container frames the pointer is currently inside — the signal a card's

@@ -94,7 +94,7 @@ version-mismatch → rebuild.
 - Server:
   - Uses:
     - `infra/file-watcher.createFileWatcher`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.isMain`
     - `infra/warmup.defineWarmup`
   - Exports (types):

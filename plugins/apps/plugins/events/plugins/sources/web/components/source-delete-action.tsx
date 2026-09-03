@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { MdDeleteOutline } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
   Button,

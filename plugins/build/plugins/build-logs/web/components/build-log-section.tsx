@@ -13,7 +13,7 @@ import {
 import {
   useStickyScroll,
   JumpToBottomButton,
-} from "@plugins/primitives/plugins/auto-scroll/web";
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   Collapsible,
   CollapsibleTrigger,

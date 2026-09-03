@@ -77,7 +77,7 @@ needed, extend it to fall back across `channel.jsonl.1…N`.
 ### Backpressure: the endpoint can say "stop"
 
 `POST /api/logs/emit` answers **429** while the host-global duress latch is set
-(`isUnderDuress()` from `@plugins/infra/plugins/duress/plugins/latch/server`, one
+(`isUnderDuress()` from `@plugins/infra/plugins/host/plugins/duress/plugins/latch/server`, one
 read per request, memoized to at most one `statSync` per 2 s). This is the one
 observability channel whose volume driver is *external* — a browser that keeps
 POSTing regardless of host state — so during an episode the whole request is
@@ -108,8 +108,6 @@ count accumulates across drops.
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/auto-scroll.JumpToBottomButton`
-    - `primitives/auto-scroll.useStickyScroll`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -120,6 +118,8 @@ count accumulates across drops.
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/auto-scroll.JumpToBottomButton`
+    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking.useReconnectingWebSocket`
     - `primitives/networking.wsUrl`
@@ -132,9 +132,9 @@ count accumulates across drops.
     - `LogEntryList`
 - Server:
   - Uses:
-    - `infra/duress/latch.isUnderDuress`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/host/duress/latch.isUnderDuress`
     - `infra/paths.worktreeDataDir`
   - Exports (types):
     - `LogChannel`
@@ -195,7 +195,7 @@ count accumulates across drops.
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `infra/attachments`
-    - `infra/duress`
+    - `infra/host/duress`
     - `infra/jobs`
     - `infra/worktree/removal-audit`
     - `primitives/live-state`

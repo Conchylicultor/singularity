@@ -4,13 +4,16 @@ import {
   applyStrokes,
   type Stroke,
 } from "@plugins/screenshot/plugins/draw-canvas/web";
-import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  EndpointError,
+  fetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
@@ -21,7 +24,10 @@ export function ScreenshotView({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("none");
   const [strokes, setStrokes] = useState<Stroke[]>([]);
-  const [draw, setDraw] = useState<DrawSettings>({ color: "#ef4444", width: 4 });
+  const [draw, setDraw] = useState<DrawSettings>({
+    color: "#ef4444",
+    width: 4,
+  });
   // Set to true once the blob is delivered (either via BroadcastChannel or
   // server poll) so the other path knows to bail out.
   const blobDelivered = useRef(false);
@@ -68,7 +74,11 @@ export function ScreenshotView({ id }: { id: string }) {
         // A 404 means the screenshot has not been uploaded yet — keep polling
         // until the deadline. Any other error (or a 404 past the deadline) is
         // terminal.
-        if (err instanceof EndpointError && err.status === 404 && Date.now() <= deadline) {
+        if (
+          err instanceof EndpointError &&
+          err.status === 404 &&
+          Date.now() <= deadline
+        ) {
           await new Promise((r) => setTimeout(r, 150));
           continue;
         }
@@ -110,7 +120,10 @@ export function ScreenshotView({ id }: { id: string }) {
                 blob={imageBlob}
                 tool={tool}
                 onCropCommit={async (rect) => {
-                  const base = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+                  const base =
+                    strokes.length > 0
+                      ? await applyStrokes(imageBlob, strokes)
+                      : imageBlob;
                   const next = await applyCrop(base, rect);
                   setImageBlob(next);
                   resetEdits();
@@ -126,7 +139,9 @@ export function ScreenshotView({ id }: { id: string }) {
           id={id}
           getBlob={async () => {
             if (!imageBlob) return null;
-            return strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+            return strokes.length > 0
+              ? await applyStrokes(imageBlob, strokes)
+              : imageBlob;
           }}
         />
       </div>
@@ -148,14 +163,20 @@ export function ScreenshotView({ id }: { id: string }) {
           onUndoStroke={() => setStrokes((s) => s.slice(0, -1))}
           onCopy={async () => {
             if (!imageBlob) return;
-            const blob = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+            const blob =
+              strokes.length > 0
+                ? await applyStrokes(imageBlob, strokes)
+                : imageBlob;
             await navigator.clipboard.write([
               new ClipboardItem({ "image/png": blob }),
             ]);
           }}
           onDownload={async () => {
             if (!imageBlob) return;
-            const blob = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+            const blob =
+              strokes.length > 0
+                ? await applyStrokes(imageBlob, strokes)
+                : imageBlob;
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
@@ -193,7 +214,10 @@ function ImageStage({
   // Derive the object URL in render so it exists on the first paint (no extra
   // null→url render cycle); a cleanup-only effect revokes it when it changes.
   const url = useMemo(() => URL.createObjectURL(blob), [blob]);
-  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{
+    w: number;
+    h: number;
+  } | null>(null);
   const [displayedRect, setDisplayedRect] = useState<DOMRect | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
@@ -243,17 +267,19 @@ function ImageStage({
           onCommit={onCropCommit}
         />
       )}
-      {(tool === "draw" || strokes.length > 0) && naturalSize && displayedRect && (
-        <DrawCanvas
-          displayed={displayedRect}
-          natural={naturalSize}
-          strokes={strokes}
-          onStrokesChange={onStrokesChange}
-          color={drawSettings.color}
-          width={drawSettings.width}
-          readOnly={tool !== "draw"}
-        />
-      )}
+      {(tool === "draw" || strokes.length > 0) &&
+        naturalSize &&
+        displayedRect && (
+          <DrawCanvas
+            displayed={displayedRect}
+            natural={naturalSize}
+            strokes={strokes}
+            onStrokesChange={onStrokesChange}
+            color={drawSettings.color}
+            width={drawSettings.width}
+            readOnly={tool !== "draw"}
+          />
+        )}
     </Center>
   );
 }
@@ -272,7 +298,17 @@ async function applyCrop(blob: Blob, crop: CropRect): Promise<Blob> {
   canvas.height = Math.max(1, Math.round(crop.h));
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no 2d context");
-  ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(
+    img,
+    crop.x,
+    crop.y,
+    crop.w,
+    crop.h,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),

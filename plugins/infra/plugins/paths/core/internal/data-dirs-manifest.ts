@@ -45,7 +45,7 @@ const MANIFEST_VERSION = 1;
  * The two sets an audit compares the real root against — DERIVED from the
  * evaluated registry, never from parsing `data-dirs/index.ts` sources.
  *
- * That distinction is load-bearing: `infra/host-admission` builds one
+ * That distinction is load-bearing: `infra/host/host-admission` builds one
  * `locks/<id>` declaration per entry of `RESERVED_POOLS`, so a declared name is
  * not always a literal that appears anywhere in the file. A source-scanning
  * reader would miss exactly those and report them as orphans.

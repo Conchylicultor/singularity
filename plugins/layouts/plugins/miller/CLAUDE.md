@@ -124,10 +124,10 @@ not yet supported — see the open question in
 - Web:
   - Uses:
     - `layouts/route-fallback.DeferredRouteFallback`
-    - `primitives/auto-scroll.scrollChildIntoView`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/auto-scroll.scrollChildIntoView`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
@@ -143,9 +143,9 @@ not yet supported — see the open question in
     - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneStore`
     - `primitives/pane.useRoute`
+    - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
-    - `primitives/surface-id.useSurfaceTabId`
     - `primitives/ui-context.UiRegion`
   - Exports (values):
     - `MillerColumns`

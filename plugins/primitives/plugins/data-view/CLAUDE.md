@@ -1485,13 +1485,13 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.ResolvedViewInstance`
     - `primitives/data-view/view-core.useViewModel`
     - `primitives/data-view/view-core.useViewVariants`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
     - `primitives/slot-render.defineDispatchSlot`

@@ -18,7 +18,7 @@
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/row-actions.RowActions`
     - `primitives/slot-render.renderIsolated`
   - Exports (types):

@@ -5,7 +5,7 @@ import {
   listTasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
-import { heavyReadSlotCount } from "@plugins/infra/plugins/host-read-pool/server";
+import { heavyReadSlotCount } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   ensureMainWorktreeRoot,

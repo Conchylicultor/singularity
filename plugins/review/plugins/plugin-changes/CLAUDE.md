@@ -43,10 +43,10 @@
     - `conversations/conversation-view/code.getEditedFiles`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/git-read-cache.createGitStateMemo`
-    - `infra/git-watcher.lastKnownMainSha`
-    - `infra/git-watcher.refHeadResource`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/git/git-read-cache.createGitStateMemo`
+    - `infra/git/git-watcher.lastKnownMainSha`
+    - `infra/git/git-watcher.refHeadResource`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
     - `primitives/commit-list.runGit`

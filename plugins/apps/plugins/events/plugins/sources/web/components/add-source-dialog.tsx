@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from "react";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import {
   Button,
   DialogDescription,
@@ -163,11 +163,7 @@ function AddSourceDialog({
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          variant="default"
-          disabled={create.isPending}
-          onClick={submit}
-        >
+        <Button variant="default" disabled={create.isPending} onClick={submit}>
           {create.isPending ? "Adding…" : "Add source"}
         </Button>
       </Line>

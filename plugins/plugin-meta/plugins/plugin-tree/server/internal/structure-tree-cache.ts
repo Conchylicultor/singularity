@@ -2,8 +2,8 @@ import {
   buildPluginTree,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { createGitStateMemo } from "@plugins/infra/plugins/git-read-cache/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { createGitStateMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
   createFileWatcher,
   type FileWatcher,

@@ -1,4 +1,4 @@
-import { defineDomScope } from "@plugins/primitives/plugins/scoped-store/plugins/dom-scope/web";
+import { defineDomScope } from "@plugins/primitives/plugins/scope/plugins/dom-scope/web";
 
 /**
  * ONE editor's block-content grid — the box its `[data-block-id]` rows live in.

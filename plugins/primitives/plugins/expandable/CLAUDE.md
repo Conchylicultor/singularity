@@ -48,7 +48,7 @@ therefore never depends on the current expand state — no flapping at the bound
 - Web:
   - Uses:
     - `primitives/css/spacing.Stack`
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
   - Exports (types): `ExpandableProps`
   - Exports (values): `Expandable`
 - Cross-plugin:

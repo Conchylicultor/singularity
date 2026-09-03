@@ -122,9 +122,6 @@ last desktop creates a new one; moving before the first clamps).
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
-    - `primitives/app-instance.appInstanceKey`
-    - `primitives/app-instance.legacyInstanceKey`
-    - `primitives/app-instance.mayAdoptLegacyPayload`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -144,18 +141,21 @@ last desktop creates a new one; moving before the first clamps).
     - `primitives/css/ui-kit.DropdownMenuSub`
     - `primitives/css/ui-kit.DropdownMenuSubContent`
     - `primitives/css/ui-kit.DropdownMenuSubTrigger`
-    - `primitives/cursor-menu.CursorAnchor`
-    - `primitives/cursor-menu.CursorAnchoredMenu`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`
     - `primitives/icon-button.IconButton`
-    - `primitives/install-sink.defineInstallSink`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/cursor-menu.CursorAnchor`
+    - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
+    - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/scope/app-instance.appInstanceKey`
+    - `primitives/scope/app-instance.legacyInstanceKey`
+    - `primitives/scope/app-instance.mayAdoptLegacyPayload`
+    - `primitives/scope/install-sink.defineInstallSink`
     - `primitives/shortcuts.defineShortcut`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/shortcuts.getFocusedSurfaceId`
-    - `primitives/tooltip.WithTooltip`
     - `ui/tab-bar.Tab`
     - `ui/tab-bar.TabIcon`
     - `ui/theme-engine.ThemeEngine`

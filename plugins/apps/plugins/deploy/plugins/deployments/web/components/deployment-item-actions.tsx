@@ -9,7 +9,7 @@ import {
   EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useServerHealth } from "@plugins/apps/plugins/deploy/plugins/health/web";
 import {

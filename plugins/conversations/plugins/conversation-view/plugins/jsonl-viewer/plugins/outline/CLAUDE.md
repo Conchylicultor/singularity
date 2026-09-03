@@ -51,7 +51,7 @@ current-position tracking root from the first element `resolve` returns. A
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
     - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
-    - `primitives/auto-scroll.scrollToBottom`
+    - `primitives/dom/auto-scroll.scrollToBottom`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useResource`
     - `primitives/outline/rail.OutlineRail`

@@ -1,5 +1,5 @@
 import { type CSSProperties, type ReactNode, useMemo } from "react";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

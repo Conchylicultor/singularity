@@ -102,6 +102,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
     - `primitives/multi-select.MultiSelectProvider`
     - `primitives/multi-select.SelectionBar`
@@ -110,7 +111,6 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/rank-reorder.useRankReorderItem`
     - `primitives/row-actions.RowActions`
     - `primitives/row-actions.rowActionsAnchor`
-    - `primitives/scroll-reveal.useRevealOnActive`
     - `primitives/search.filterTree`
     - `primitives/search.SearchInput`
     - `primitives/slot-render.renderIsolated`

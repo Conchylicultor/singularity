@@ -51,7 +51,7 @@ ruleTester.run(
       // Full adoption spelled with the raw panel: `FloatingSurface` paired with
       // the keyboard model is the primitive taken whole, just rendered by hand.
       `
-    import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
+    import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
     import { useCaretMenu, useCaretQuery } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
     const caret = useCaretQuery({ id: "slash", trigger: "/" });
     const { surfaceOpen, commit } = useCaretMenu(caret, { itemCount: n, onCommit: pick });
@@ -107,7 +107,7 @@ ruleTester.run(
         // the menu had no arrows / Enter — mouse-only. The rule keys on the panel,
         // so it fires whatever the anchor is (here, not a caret rect at all).
         code: `
-        import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
+        import { FloatingSurface } from "@plugins/primitives/plugins/overlay/plugins/floating-surface/web";
         const el = createElement(FloatingSurface, { anchor: elementAnchor(ref), onDismiss: close }, rows);
       `,
         errors: [

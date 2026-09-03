@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";

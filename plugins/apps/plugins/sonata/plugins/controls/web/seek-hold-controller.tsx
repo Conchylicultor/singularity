@@ -4,7 +4,7 @@ import {
   getFocusedSurfaceId,
   isEditableTarget,
 } from "@plugins/primitives/plugins/shortcuts/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /**

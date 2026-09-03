@@ -88,8 +88,8 @@ when `(overflowing || expanded) && !editMode`.
   - Uses:
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/edit-mode-signal.useEditMode`
-    - `primitives/element-size.useResizeObserver`
     - `primitives/icon-button.IconButton`
     - `primitives/sortable-list.rectSortingStrategy`
     - `reorder.ReorderLayout`

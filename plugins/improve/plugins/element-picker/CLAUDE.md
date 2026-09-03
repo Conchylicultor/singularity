@@ -123,7 +123,7 @@ Two of its fields are stamped by **this** plugin's build transform
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/slot-render.registerSlotItemAttrs`
     - `primitives/slot-render.registerSlotItemMiddleware`
     - `primitives/ui-context.appendLineage`

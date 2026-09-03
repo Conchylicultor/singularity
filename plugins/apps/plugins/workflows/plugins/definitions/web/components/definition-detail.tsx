@@ -2,7 +2,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { DefinitionEditor } from "@plugins/apps/plugins/workflows/plugins/editor/web";
 import {
@@ -49,7 +49,8 @@ export function DefinitionDetail({
   function handleDelete() {
     void confirmDialog({
       title: `Delete workflow "${def.name}"?`,
-      description: "This permanently deletes the workflow and all of its run history.",
+      description:
+        "This permanently deletes the workflow and all of its run history.",
       confirmLabel: "Delete workflow",
       onConfirm: async () => {
         await fetchEndpoint(deleteDefinition, { id: definitionId });

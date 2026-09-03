@@ -15,7 +15,7 @@ import {
 import {
   JumpToBottomButton,
   useStickyScroll,
-} from "@plugins/primitives/plugins/auto-scroll/web";
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
@@ -25,8 +25,8 @@ import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-d
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";

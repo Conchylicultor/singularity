@@ -18,7 +18,7 @@ import {
   tasksResource,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
 import type { TaskChainRelateMode, TaskChainTarget } from "@plugins/tasks/core";

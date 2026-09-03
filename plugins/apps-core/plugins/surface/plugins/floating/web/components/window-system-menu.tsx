@@ -23,9 +23,13 @@ import {
 import {
   CursorAnchoredMenu,
   type CursorAnchor,
-} from "@plugins/primitives/plugins/cursor-menu/web";
+} from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import type { Desktop, Geometry, WindowId } from "../hooks/use-floating-windows";
+import type {
+  Desktop,
+  Geometry,
+  WindowId,
+} from "../hooks/use-floating-windows";
 
 /** A merge target offered in the "Merge into ▸" submenu (another open window). */
 export interface MergeTarget {

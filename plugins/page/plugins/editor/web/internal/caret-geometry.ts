@@ -37,7 +37,7 @@ import {
 import {
   hasBox,
   selectionRange,
-} from "@plugins/primitives/plugins/dom-selection/web";
+} from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { marksOfTextNode, type Mark } from "../../core";
 import {
   $linearCaretOffset,
@@ -229,7 +229,7 @@ function $boundaryAtLinearOffset(offset: number): MarkBoundary | null {
  * A rect the layout engine actually painted. A collapsed caret is 0-wide but
  * never 0-tall.
  *
- * The predicate itself is `hasBox` from `primitives/dom-selection` — the one
+ * The predicate itself is `hasBox` from `primitives/dom/dom-selection` — the one
  * statement of "a rect with no box is not an anchor", which this module used to
  * spell out inline and `format-toolbar-plugin` spelled out a second time. What
  * stays here is only the null-tolerance every caller below relies on.

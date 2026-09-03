@@ -24,12 +24,12 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
-    - `primitives/auto-scroll.JumpToBottomButton`
-    - `primitives/auto-scroll.useStickyScroll`
     - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/auto-scroll.JumpToBottomButton`
+    - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/log-channels.LogEntryList`
     - `primitives/networking.ReconnectingEventSource`

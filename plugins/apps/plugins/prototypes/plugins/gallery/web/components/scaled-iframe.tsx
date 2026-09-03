@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   prototypeUrl,
   type PrototypeMeta,

@@ -11,7 +11,7 @@ import {
 import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";

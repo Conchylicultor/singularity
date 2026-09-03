@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { copiesAsText } from "@plugins/primitives/plugins/copy-source-text/core";
+import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
 import { inlineChipFor } from "./inline-registry";
 import { ChipBoundary } from "./chip-boundary";
 
@@ -26,7 +26,7 @@ import { ChipBoundary } from "./chip-boundary";
  * itself is handed the token but renders whatever it likes, and by the time a
  * copy handler sees the DOM the substitution has already happened. Declaring it
  * on a `display:contents` wrapper (no box, no layout effect) is what makes the
- * copy round-trip: see `primitives/copy-source-text`.
+ * copy round-trip: see `primitives/dom/copy-source-text`.
  */
 export function renderInlineChip(token: string): ReactNode | null {
   const chip = inlineChipFor(token);

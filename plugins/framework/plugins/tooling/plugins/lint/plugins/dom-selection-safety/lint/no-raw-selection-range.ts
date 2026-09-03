@@ -23,7 +23,7 @@ export default createRule({
         "when the range was invalidated between the check and the read. This repo " +
         "grew four hand-rolled copies and exactly one had all three. Use " +
         "`selectionRange()` (the range) or `selectionRect()` (its bounding box) " +
-        "from @plugins/primitives/plugins/dom-selection/web instead. Bare " +
+        "from @plugins/primitives/plugins/dom/plugins/dom-selection/web instead. Bare " +
         "`getSelection()` is NOT banned: `.toString()`, `.anchorNode`, " +
         "`.isCollapsed` and `.removeAllRanges()` need no guard — `getRangeAt` is " +
         "the one read that does.",

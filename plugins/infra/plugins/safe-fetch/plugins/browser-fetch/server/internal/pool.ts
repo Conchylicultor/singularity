@@ -1,5 +1,5 @@
-import { defineHostPool } from "@plugins/infra/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host-admission/core";
+import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,

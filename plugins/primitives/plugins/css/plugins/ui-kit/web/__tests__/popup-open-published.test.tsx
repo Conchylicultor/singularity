@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
-import { PopupOpenScope } from "@plugins/primitives/plugins/popup-open/web";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
   DropdownMenu,
   DropdownMenuContent,

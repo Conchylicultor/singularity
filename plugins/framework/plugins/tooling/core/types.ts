@@ -1,4 +1,4 @@
-import type { Grant } from "@plugins/infra/plugins/host-admission/core";
+import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 /**
  * What every check is handed when run. `grant` is the host CPU admission the

@@ -16,7 +16,7 @@ import type { DataDir } from "@plugins/infra/plugins/paths/core";
 // files in a caller-supplied declared directory: at most one holder per fd, so at
 // most `size` holders host-wide. flock auto-releases when the fd closes OR the
 // holding process dies, so a SIGKILLed server never leaks a slot — the same
-// crash-safety every host pool relies on (declared via `infra/host-admission`).
+// crash-safety every host pool relies on (declared via `infra/host/host-admission`).
 //
 // Hybrid acquire:
 //  - Fast path: an in-process *non-blocking* `flock(LOCK_NB)` sweep — microsecond

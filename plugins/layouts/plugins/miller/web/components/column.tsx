@@ -5,7 +5,7 @@ import {
   PaneLayoutContext,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
 import {
   useClearMaximize,

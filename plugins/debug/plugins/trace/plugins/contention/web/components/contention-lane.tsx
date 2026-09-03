@@ -1,11 +1,14 @@
 import { type ReactElement } from "react";
-import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
+import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text, SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Text,
+  SectionLabel,
+} from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { TraceLaneProps } from "@plugins/debug/plugins/trace/plugins/engine/web";
 
@@ -19,7 +22,9 @@ export function ContentionLane({ payload }: TraceLaneProps): ReactElement {
     return (
       <Stack gap="xs" className="px-lg py-sm">
         <SectionLabel>Contention</SectionLabel>
-        <Placeholder tone="muted">No contention snapshot for this trace.</Placeholder>
+        <Placeholder tone="muted">
+          No contention snapshot for this trace.
+        </Placeholder>
       </Stack>
     );
   }
@@ -32,12 +37,16 @@ export function ContentionLane({ payload }: TraceLaneProps): ReactElement {
       <Card>
         <Cluster>
           <Badge variant={severity} mono>
-            load {c.loadAvg1.toFixed(1)} / {c.loadAvg5.toFixed(1)} / {c.loadAvg15.toFixed(1)}
+            load {c.loadAvg1.toFixed(1)} / {c.loadAvg5.toFixed(1)} /{" "}
+            {c.loadAvg15.toFixed(1)}
           </Badge>
           <Badge variant="muted" mono>
             {c.cpuCount} cores
           </Badge>
-          <Badge variant={c.pgActiveBackends > c.cpuCount ? "warning" : "muted"} mono>
+          <Badge
+            variant={c.pgActiveBackends > c.cpuCount ? "warning" : "muted"}
+            mono
+          >
             pg {c.pgActiveBackends} active / {c.pgTotalBackends} total
           </Badge>
         </Cluster>

@@ -14,7 +14,7 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { SurfaceOverlay } from "@plugins/primitives/plugins/surface-overlay/web";
+import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import {

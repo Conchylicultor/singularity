@@ -14,7 +14,7 @@ import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
 import { reconcile, watchedDirsSync } from "./reconcile";
 
-// Mirrors infra/git-watcher's manager: module-level mutable watcher, `started`
+// Mirrors infra/git/git-watcher's manager: module-level mutable watcher, `started`
 // guard, async start/stop. The watcher set is rebuilt whenever the configured
 // folder list changes (via watchConfig) — config_v2 drives the dir set, so
 // there is no polling.
@@ -81,7 +81,9 @@ export async function startMidiFolderWatcher(): Promise<void> {
   configSub = watchConfig(midiFoldersConfig, () => {
     const reconcileNow = !firstCall;
     firstCall = false;
-    void runTracked("midi-folders:reconfigure", () => reconfigure({ reconcile: reconcileNow }));
+    void runTracked("midi-folders:reconfigure", () =>
+      reconfigure({ reconcile: reconcileNow }),
+    );
   });
 }
 

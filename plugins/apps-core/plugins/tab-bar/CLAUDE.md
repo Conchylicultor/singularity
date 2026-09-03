@@ -22,11 +22,11 @@
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/icon-button.IconButton`
-    - `primitives/scroll-reveal.useRevealOnActive`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/sortable-list.SortableItem`
     - `primitives/sortable-list.SortableList`
-    - `primitives/tooltip.WithTooltip`
     - `ui/tab-bar.Tab`
     - `ui/tab-bar.useActiveTabVariant`
 

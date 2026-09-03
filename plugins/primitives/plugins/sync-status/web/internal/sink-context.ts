@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { ScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import type { ScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import type { SyncStatusState } from "./store";
 
 /** A retry thunk held in a ref so its identity never thrashes the store. */

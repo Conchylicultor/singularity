@@ -86,7 +86,7 @@ surface's viewport.
   - Uses:
     - `primitives/css/sticky.Sticky`
     - `primitives/css/sticky.StickyProps`
-    - `primitives/element-size.useElementSize`
+    - `primitives/dom/element-size.useElementSize`
   - Exports (types):
     - `StickyStackItemProps`
     - `StickyStackProps`

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
 import { DynamicIcon } from "../../internal/dynamic-icon";

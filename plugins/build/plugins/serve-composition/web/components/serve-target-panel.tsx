@@ -10,7 +10,7 @@ import {
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {

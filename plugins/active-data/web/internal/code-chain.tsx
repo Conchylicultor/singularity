@@ -1,5 +1,5 @@
 import { InlineCode } from "@plugins/primitives/plugins/markdown/web";
-import { copiesAsText } from "@plugins/primitives/plugins/copy-source-text/core";
+import { copiesAsText } from "@plugins/primitives/plugins/dom/plugins/copy-source-text/core";
 import {
   fullMatch,
   useActiveDataCodeCandidates,
@@ -94,7 +94,7 @@ function CodeCandidateLevel({
       // syntactic gate above it), so the characters this chip replaced were
       // `text` WITH its backticks. Declaring them is what lets the copy carry
       // the markdown back rather than a bare word that no longer renders as a
-      // chip when pasted — see `primitives/copy-source-text`.
+      // chip when pasted — see `primitives/dom/copy-source-text`.
       return (
         <span className="contents" {...copiesAsText(`\`${text}\``)}>
           <Component content={text} value={claim.value} />

@@ -10,9 +10,9 @@ import {
 } from "react";
 import { getDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
+import { SurfaceIdContext } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
+import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import {
   fillSegment,
   MissingRouteParamError,
@@ -1150,7 +1150,7 @@ export function PaneSurfaceProvider({
   /** Owning app of this surface; read via {@link useSurfaceAppId}. */
   appId?: string;
   /** Stable per-surface-instance id (the tab's `tabId`); read via `useSurfaceTabId`
-   *  from `@plugins/primitives/plugins/surface-id/web`. */
+   *  from `@plugins/primitives/plugins/scope/plugins/surface-id/web`. */
   surfaceId?: string;
   /**
    * Fs plugin-path prefix of the app owning this surface (e.g.

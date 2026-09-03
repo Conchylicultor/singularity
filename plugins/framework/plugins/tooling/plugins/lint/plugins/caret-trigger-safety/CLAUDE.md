@@ -44,7 +44,7 @@ subscription, which is good hygiene regardless.
 ### 2. Taking the panel without the keyboard
 
 Fires on an import of `CaretTriggerMenu` from the caret-trigger barrel, or of
-`FloatingSurface` from `@plugins/primitives/plugins/floating-surface/web`, in a
+`FloatingSurface` from `@plugins/primitives/plugins/overlay/plugins/floating-surface/web`, in a
 file that never calls `useCaretMenu`.
 
 `FloatingSurface` is evidence because its own charter is "a focus-less,
@@ -80,7 +80,7 @@ invariant that makes "it looks right" and "it works" the same condition.
 collapsed-caret pending-marks cue. It needs no exemption: it positions itself
 inside a `ViewportOverlay` rather than taking `FloatingSurface`, and
 `caretAnchor` has left the menu barrel (it is plugin-private, over
-`selectionRect()` from `@plugins/primitives/plugins/dom-selection/web`), so the
+`selectionRect()` from `@plugins/primitives/plugins/dom/plugins/dom-selection/web`), so the
 rule keys on the menu PANEL and never sees the cue.
 
 **The named next step.** When a *second*, genuinely non-menu caret-anchored

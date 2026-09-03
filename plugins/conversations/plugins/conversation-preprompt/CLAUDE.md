@@ -47,8 +47,8 @@ never the reverse) and the feature fully opt-in and removable.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
     - `primitives/live-state.usePointResource`
-    - `primitives/popover.InlinePopover`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
   - Exports (values): `useConversationPreprompt`
 - Server:
   - Contributes:

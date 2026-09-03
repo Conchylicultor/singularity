@@ -13,8 +13,11 @@ import {
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
-import { StepDone, StepNote } from "@plugins/primitives/plugins/setup-steps/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
+import {
+  StepDone,
+  StepNote,
+} from "@plugins/primitives/plugins/setup-steps/web";
 import {
   generateSshKeypair,
   importSshPrivateKey,
@@ -27,7 +30,8 @@ import { ReplaceKeyDialog } from "./replace-key-dialog";
  * plugin's private tree and so not importable from here. A `Textarea` in
  * `css/ui-kit` is the structural fix; it is out of this change's scope.
  */
-const textareaClass = "bg-input rounded-md border px-sm py-xs font-mono text-caption";
+const textareaClass =
+  "bg-input rounded-md border px-sm py-xs font-mono text-caption";
 
 /**
  * Body of the "Create an SSH key" step: generate a managed keypair, or adopt
@@ -54,23 +58,29 @@ export function GenerateKeyStep({ server }: { server: Server }) {
     // Fire-and-forget: don't return the openDialog promise, or the button would
     // auto-pend for the dialog's whole open lifetime. `loading={…isPending}`
     // reflects the actual replace instead.
-    void openDialog((close) => (
-      <ReplaceKeyDialog
-        fingerprint={key.fingerprint}
-        onCancel={close}
-        onConfirm={() =>
-          generate
-            .mutateAsync({ params: { id: server.id }, body: { replace: true } })
-            .then(() => close())
-            .catch((err: unknown) => {
-              // Expected generate failure — the global toast already reported
-              // it; keep the dialog open so the user can retry or cancel.
-              if (err instanceof EndpointError) return;
-              throw err;
-            })
-        }
-      />
-    ), { size: "sm" });
+    void openDialog(
+      (close) => (
+        <ReplaceKeyDialog
+          fingerprint={key.fingerprint}
+          onCancel={close}
+          onConfirm={() =>
+            generate
+              .mutateAsync({
+                params: { id: server.id },
+                body: { replace: true },
+              })
+              .then(() => close())
+              .catch((err: unknown) => {
+                // Expected generate failure — the global toast already reported
+                // it; keep the dialog open so the user can retry or cancel.
+                if (err instanceof EndpointError) return;
+                throw err;
+              })
+          }
+        />
+      ),
+      { size: "sm" },
+    );
   }
 
   return (
@@ -128,7 +138,8 @@ export function GenerateKeyStep({ server }: { server: Server }) {
             <StepNote>
               An OpenSSH private key with no passphrase. Its public half is
               derived here, so the install command below works for it too.
-              {key && " This destroys the key currently stored for this server."}
+              {key &&
+                " This destroys the key currently stored for this server."}
             </StepNote>
             <textarea
               className={textareaClass}

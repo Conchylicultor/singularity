@@ -1,6 +1,6 @@
-import * as React from "react"
+import * as React from "react";
 
-import { useReportPopupOpen } from "@plugins/primitives/plugins/popup-open/web"
+import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 
 /**
  * Publishes a base-ui `Root`'s open state to the enclosing `PopupOpenScope`.
@@ -20,18 +20,18 @@ export function usePopupOpenMirror<Args extends unknown[]>({
   defaultOpen,
   onOpenChange,
 }: {
-  open?: boolean | undefined
-  defaultOpen?: boolean | undefined
-  onOpenChange?: ((open: boolean, ...args: Args) => void) | undefined
+  open?: boolean | undefined;
+  defaultOpen?: boolean | undefined;
+  onOpenChange?: ((open: boolean, ...args: Args) => void) | undefined;
 }): (open: boolean, ...args: Args) => void {
-  const [mirrored, setMirrored] = React.useState(defaultOpen ?? false)
+  const [mirrored, setMirrored] = React.useState(defaultOpen ?? false);
 
   // A controlled `open` is the truth whenever it is supplied; the mirror only
   // stands in for the uncontrolled case, where base-ui keeps the state itself.
-  useReportPopupOpen(open ?? mirrored)
+  useReportPopupOpen(open ?? mirrored);
 
   return (nextOpen, ...rest) => {
-    setMirrored(nextOpen)
-    onOpenChange?.(nextOpen, ...rest)
-  }
+    setMirrored(nextOpen);
+    onOpenChange?.(nextOpen, ...rest);
+  };
 }

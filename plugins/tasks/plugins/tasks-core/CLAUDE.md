@@ -194,10 +194,10 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `infra/events.defineTriggerEvent`
-    - `infra/git-read-cache.createSignedMemo`
-    - `infra/git-watcher.defineRefReaction`
-    - `infra/git-watcher.lastKnownMainSha`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.defineRefReaction`
+    - `infra/git/git-watcher.lastKnownMainSha`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/query-resource.compileEdges`
     - `infra/query-resource.queryResource`
     - `infra/query-resource.rel`

@@ -8,7 +8,7 @@ import {
   wsUrl,
 } from "@plugins/primitives/plugins/networking/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const TERMINAL_WS_PATH = "/ws/terminal";

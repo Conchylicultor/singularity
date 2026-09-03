@@ -105,7 +105,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/data-view/table`
     - `primitives/data-view/tree`
     - `primitives/detail-sections`
-    - `primitives/tooltip`
+    - `primitives/overlay/tooltip`
     - `reorder/editor`
     - `reports/adaptive-bar`
     - `reports/caret-flight`

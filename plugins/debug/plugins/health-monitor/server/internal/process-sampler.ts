@@ -7,9 +7,13 @@ import {
 } from "node:perf_hooks";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";
-import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
+import { heavyReadQueueDepth } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
-import { worktreeDataDir, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
+import {
+  worktreeDataDir,
+  currentWorktreeName,
+  isMain,
+} from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 import {
   startStallProfiler,
@@ -89,7 +93,10 @@ function rotateIfNeeded(): void {
   }
   if (size <= MAX_FILE_BYTES) return;
   const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
-  writeFileSync(file, lines.slice(Math.floor(lines.length / 2)).join("\n") + "\n");
+  writeFileSync(
+    file,
+    lines.slice(Math.floor(lines.length / 2)).join("\n") + "\n",
+  );
 }
 
 function tick(): void {

@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdMusicNote } from "react-icons/md";
 import {
   Button,
@@ -23,7 +17,7 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,
@@ -177,13 +171,23 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       if (target.length === 0) return;
       setError(null);
       try {
-        const tab = await fetchEndpoint(fetchUgTab, {}, { body: { url: target } });
+        const tab = await fetchEndpoint(
+          fetchUgTab,
+          {},
+          { body: { url: target } },
+        );
         const score = compile(tab);
         const endBeat = scoreEndBeat(score);
         const song = await fetchEndpoint(
           createUltimateGuitarSong,
           {},
-          { body: { ...tab, durationSec: beatToSeconds(score, endBeat), endBeat } },
+          {
+            body: {
+              ...tab,
+              durationSec: beatToSeconds(score, endBeat),
+              endBeat,
+            },
+          },
         );
         onClose();
         openSongImperative(song);
@@ -199,7 +203,9 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       if (importingId !== null) return;
       setImportingId(result.tabId);
       try {
-        await importByUrl(`https://tabs.ultimate-guitar.com/tab/${result.tabId}`);
+        await importByUrl(
+          `https://tabs.ultimate-guitar.com/tab/${result.tabId}`,
+        );
       } finally {
         setImportingId(null);
       }

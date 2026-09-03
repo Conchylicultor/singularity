@@ -17,7 +17,7 @@ Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSo
     - `infra/endpoints.useEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/text.Text`
-    - `primitives/tooltip.WithTooltip`
+    - `primitives/overlay/tooltip.WithTooltip`
 - Server:
   - Uses:
     - `infra/endpoints.implement`

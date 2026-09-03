@@ -11,8 +11,8 @@
     - `conversations/conversation-view/code/file-pane.FilePane`
     - `conversations/conversation-view/code/file-pane.useFileContent`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/loading.Loading`
-    - `primitives/scroll-reveal.revealElement`
     - `primitives/syntax-highlight.languageForPath`
     - `primitives/syntax-highlight.SHIKI_LANGS`
     - `primitives/syntax-highlight.useDarkMode`

@@ -4,7 +4,7 @@ import {
   rawCpuResidual,
   cpuBudget,
   RESERVED_POOLS,
-} from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -33,7 +33,10 @@ const check: Check = {
 
     if (residual < 1) {
       const breakdown = Object.entries(RESERVED_POOLS)
-        .map(([id, p]) => `${id}: ${p.size} × ${p.cost.cpu} = ${p.size * p.cost.cpu}`)
+        .map(
+          ([id, p]) =>
+            `${id}: ${p.size} × ${p.cost.cpu} = ${p.size * p.cost.cpu}`,
+        )
         .join("\n    ");
       return {
         ok: false,

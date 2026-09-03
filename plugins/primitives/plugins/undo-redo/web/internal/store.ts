@@ -1,4 +1,4 @@
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 import { DEFAULT_MAX_DEPTH, emptyHistory, type HistoryState } from "./stack";
 
 /**
@@ -23,7 +23,9 @@ export function initialState(maxDepth = DEFAULT_MAX_DEPTH): UndoRedoState {
 }
 
 /** Module-level factory; STATE is per-`<Provider>` mount (one history per surface). */
-export const UndoRedoStore = defineScopedStore<UndoRedoState>(() => initialState());
+export const UndoRedoStore = defineScopedStore<UndoRedoState>(() =>
+  initialState(),
+);
 
 /**
  * Thrown when a consumer's `undo`/`redo` thunk rejects. The error is surfaced

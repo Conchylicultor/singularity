@@ -15,7 +15,7 @@ reports plugin reaching into the Improve *app's* subtree is a layering
 inversion — so the shared vocabulary lives below both, in a leaf whose only
 cross-plugin dependency is `primitives/css/ui-kit` (for the portal-forward
 bridge). No cycle is possible. Same carve-out reasoning as
-`primitives/surface-id`.
+`primitives/scope/surface-id`.
 
 The name is the concept the repo already has (`<ui-context>`, `UiContextMeta`),
 and it holds the walk **next to the model the walk produces**.

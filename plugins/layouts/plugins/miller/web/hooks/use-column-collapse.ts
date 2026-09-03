@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from "react";
-import { type PaneStore, usePaneStore } from "@plugins/primitives/plugins/pane/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import {
+  type PaneStore,
+  usePaneStore,
+} from "@plugins/primitives/plugins/pane/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 
 // Collapse state is scoped per surface (per `PaneStore`): each Miller surface
 // collapses columns independently, so collapsing a column in one mounted surface
@@ -23,9 +26,14 @@ function stateFor(store: PaneStore): SurfaceCollapse {
   return s;
 }
 
-const KEY = (tabId: string, paneId: string) => `miller.collapse.${tabId}.${paneId}`;
+const KEY = (tabId: string, paneId: string) =>
+  `miller.collapse.${tabId}.${paneId}`;
 
-function read(s: SurfaceCollapse, tabId: string | undefined, paneId: string): boolean {
+function read(
+  s: SurfaceCollapse,
+  tabId: string | undefined,
+  paneId: string,
+): boolean {
   if (s.state.has(paneId)) return s.state.get(paneId)!;
   let v = false;
   if (tabId !== undefined && typeof window !== "undefined") {
@@ -60,7 +68,7 @@ export function useColumnCollapse(paneId: string): [boolean, () => void] {
     if (tabId !== undefined) {
       try {
         sessionStorage.setItem(KEY(tabId, paneId), String(next));
-      // eslint-disable-next-line promise-safety/no-bare-catch
+        // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // ignore storage errors (private mode, quota)
       }

@@ -15,7 +15,7 @@ import {
   useHiddenTrackIds,
   useTrackMixerEntries,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

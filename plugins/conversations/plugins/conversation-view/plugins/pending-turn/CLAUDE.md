@@ -144,8 +144,8 @@ and all feedback lives inside the message card itself.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/scope/tab-id.getTabId`
     - `primitives/sync-status.useReportSync`
-    - `primitives/tab-id.getTabId`
     - `reports.report`
   - Exports (types):
     - `PendingTurnRecord`

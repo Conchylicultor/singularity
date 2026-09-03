@@ -26,8 +26,8 @@
     - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/floating-action.FloatingAction`
-    - `primitives/floating-action.FloatingActionFadeIn`
+    - `primitives/overlay/floating-action.FloatingAction`
+    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `primitives/usage-rank.recordUsage`
     - `primitives/usage-rank.useUsageOrder`

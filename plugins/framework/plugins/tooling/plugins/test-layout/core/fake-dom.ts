@@ -9,7 +9,7 @@ import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
  * code branches on `typeof window === "undefined"`, a PRESENCE test: a
  * hand-built `window = { sessionStorage }` sails straight past every one of
  * those guards and then explodes on the first member the stub happens not to
- * carry — `window.history.state` in `primitives/app-instance`, which is what
+ * carry — `window.history.state` in `primitives/scope/app-instance`, which is what
  * this detector was written for. The crash lands far from the stub, inside a
  * module the suite is not even about, and the reach of the trap *grows* as the
  * guarded code grows.

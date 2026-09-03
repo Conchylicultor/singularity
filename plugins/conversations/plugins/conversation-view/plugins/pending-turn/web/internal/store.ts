@@ -3,7 +3,7 @@ import {
   EndpointError,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { report } from "@plugins/reports/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {

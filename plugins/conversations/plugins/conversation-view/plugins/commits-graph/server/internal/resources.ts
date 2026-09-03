@@ -5,7 +5,7 @@ import {
   resolved,
   unresolved,
 } from "@plugins/primitives/plugins/live-state/core";
-import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
+import { refHeadResource } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   probeHeadMain,

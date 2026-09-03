@@ -126,10 +126,10 @@ Everything that could make the standing merely *unknown* is kept out of that arm
 - Server:
   - Contributes: `resource.declare` "attempt-work"
   - Uses:
-    - `infra/git-read-cache.createSignedMemo`
-    - `infra/git-watcher.lastKnownMainSha`
-    - `infra/git-watcher.refHeadResource`
-    - `infra/host-read-pool.withHeavyReadSlot`
+    - `infra/git/git-read-cache.createSignedMemo`
+    - `infra/git/git-watcher.lastKnownMainSha`
+    - `infra/git/git-watcher.refHeadResource`
+    - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `primitives/commit-list.GitError`
     - `primitives/commit-list.runGit`

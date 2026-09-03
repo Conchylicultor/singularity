@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import type { ShortcutDescriptor } from "./types";
 import { registerShortcuts } from "./dynamic-registry";
 
@@ -9,8 +9,10 @@ import { registerShortcuts } from "./dynamic-registry";
  * static contribution and can't read React context, so surface scoping must
  * register dynamically from where the surface id is known.
  */
-export function useSurfaceShortcuts(descriptors: Omit<ShortcutDescriptor, "surfaceId">[]): void {
-  const surfaceId = useSurfaceTabId(); // from @plugins/primitives/plugins/surface-id/web
+export function useSurfaceShortcuts(
+  descriptors: Omit<ShortcutDescriptor, "surfaceId">[],
+): void {
+  const surfaceId = useSurfaceTabId(); // from @plugins/primitives/plugins/scope/plugins/surface-id/web
   useEffect(() => {
     const tagged = descriptors.map((d) => ({
       ...d,

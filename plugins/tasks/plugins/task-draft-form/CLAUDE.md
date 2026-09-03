@@ -71,8 +71,8 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/persistent-draft.useDraft`
-    - `primitives/popover.InlinePopover`
     - `primitives/shortcuts.getFocusedSurfaceId`
     - `primitives/shortcuts.subscribeFocusedSurface`
     - `primitives/slot-render.defineRenderSlot`

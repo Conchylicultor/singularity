@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { setActiveRelateContext } from "@plugins/tasks/plugins/task-draft-form/web";
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { conversationPane } from "../panes";
 

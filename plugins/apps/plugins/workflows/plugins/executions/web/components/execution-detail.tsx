@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { confirmDialog } from "@plugins/primitives/plugins/imperative-dialog/plugins/confirm/web";
+import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -19,9 +19,15 @@ import { ExecutionStatusBadge } from "./execution-status-badge";
 
 const CANCELLABLE = new Set(["pending", "running", "suspended"]);
 
-export function ExecutionDetail({ execution }: { execution: WorkflowExecution }) {
+export function ExecutionDetail({
+  execution,
+}: {
+  execution: WorkflowExecution;
+}) {
   const stepTypes = useStepTypeIndex();
-  const steps = [...execution.steps].sort((a, b) => a.executionOrder - b.executionOrder);
+  const steps = [...execution.steps].sort(
+    (a, b) => a.executionOrder - b.executionOrder,
+  );
 
   function handleCancel() {
     void confirmDialog({
@@ -38,13 +44,19 @@ export function ExecutionDetail({ execution }: { execution: WorkflowExecution })
       <Stack direction="row" align="start" justify="between" gap="md">
         <Stack gap="xs">
           <ExecutionStatusBadge status={execution.status} />
-          <Stack as="div" direction="row" gap="md" className="text-muted-foreground">
+          <Stack
+            as="div"
+            direction="row"
+            gap="md"
+            className="text-muted-foreground"
+          >
             <Text as="span" variant="caption">
               Created <RelativeTime date={new Date(execution.createdAt)} />
             </Text>
             {execution.completedAt ? (
               <Text as="span" variant="caption">
-                Completed <RelativeTime date={new Date(execution.completedAt)} />
+                Completed{" "}
+                <RelativeTime date={new Date(execution.completedAt)} />
               </Text>
             ) : null}
           </Stack>
@@ -61,7 +73,9 @@ export function ExecutionDetail({ execution }: { execution: WorkflowExecution })
       </Stack>
 
       <Stack gap="sm">
-        <Text as="h2" variant="label">Steps</Text>
+        <Text as="h2" variant="label">
+          Steps
+        </Text>
         {steps.length === 0 ? (
           <Text as="div" variant="body" className="text-muted-foreground">
             No steps ran.
@@ -72,7 +86,10 @@ export function ExecutionDetail({ execution }: { execution: WorkflowExecution })
               const type = stepTypes.get(step.stepPluginId);
               const Body = type?.executionComponent;
               return (
-                <PluginErrorBoundary key={step.id} label={`workflow step ${step.label}`}>
+                <PluginErrorBoundary
+                  key={step.id}
+                  label={`workflow step ${step.label}`}
+                >
                   <StepTraceShell
                     step={step}
                     icon={type?.icon}
@@ -98,8 +115,12 @@ function GenericStepBody({ step }: { step: WorkflowExecutionStep }) {
   if (step.input == null && step.output == null) return null;
   return (
     <Stack gap="2xs">
-      {step.input != null ? <CollapsibleValue label="Input" value={step.input} /> : null}
-      {step.output != null ? <CollapsibleValue label="Output" value={step.output} /> : null}
+      {step.input != null ? (
+        <CollapsibleValue label="Input" value={step.input} />
+      ) : null}
+      {step.output != null ? (
+        <CollapsibleValue label="Output" value={step.output} />
+      ) : null}
     </Stack>
   );
 }

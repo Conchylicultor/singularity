@@ -1,7 +1,7 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
+import { refAdvanced } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
 import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";

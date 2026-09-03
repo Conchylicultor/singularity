@@ -143,9 +143,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.formatRelativeTime`
-          - `primitives/tooltip.WithTooltip`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed. The conversation-id token at the page-editor's server boundary: locates `conv-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
         - Contributes: `ActiveData.Tag` "conv" → `ConvChip`
@@ -331,7 +331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/status-dot.StatusDot`
               - `primitives/css/text.Text`
               - `primitives/live-state.useResource`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `shell/action-bar.ActionBar`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
@@ -488,7 +488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/ui-kit.cn`
-              - `primitives/scoped-store.defineScopedStore`
+              - `primitives/scope/scoped-store.defineScopedStore`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
             - Exports (types):
@@ -717,11 +717,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -1051,10 +1051,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/editable-field.EditableField`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -1169,7 +1169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.DialogDescription`
               - `primitives/css/ui-kit.DialogTitle`
-              - `primitives/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
               - `primitives/setup-steps.StepDone`
@@ -1565,13 +1565,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
-              - `primitives/imperative-dialog.openDialog`
               - `primitives/live-state.matchResource`
+              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/tooltip.WithTooltip`
             - Exports (types):
               - `ConfigValues`
               - `EventSourceTypeContribution`
@@ -1927,7 +1927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
-              - `primitives/surface-id.useSurfaceTabId`
+              - `primitives/scope/surface-id.useSurfaceTabId`
         - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
@@ -2813,7 +2813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
-              - `primitives/element-size.useElementSize`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
@@ -2859,7 +2859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/surface-overlay.SurfaceOverlay`
+              - `primitives/overlay/surface-overlay.SurfaceOverlay`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
@@ -2890,7 +2890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/pin.Pin`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
             - Exports (values):
               - `PrototypeThumbnail`
               - `usePrototypeThumbnails`
@@ -2986,7 +2986,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
-                  - `primitives/scoped-store.defineScopedStore`
+                  - `primitives/scope/scoped-store.defineScopedStore`
                 - Exports (types):
                   - `AudioGraph`
                   - `LoopWindowBeats`
@@ -3023,7 +3023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/audio/instruments.SonataAudio`
                   - `apps/sonata/shell.Sonata`
                   - `primitives/latest-ref.useLatestRef`
-                  - `primitives/scoped-store.defineScopedStore`
+                  - `primitives/scope/scoped-store.defineScopedStore`
                 - Exports (types): `LivePlayApi`
                 - Exports (values): `useLivePlay`
               - Cross-plugin:
@@ -3080,10 +3080,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/shell.Sonata`
               - `apps/sonata/shell.useSonata`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.isEditableTarget`
               - `primitives/shortcuts.useSurfaceShortcuts`
-              - `primitives/surface-id.useSurfaceTabId`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -3265,7 +3265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
-              - `primitives/element-size.useElementSize`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
               - `primitives/virtual-rows.useVirtualRows`
@@ -3347,7 +3347,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.cn`
-              - `primitives/element-size.useElementSize`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/lazy-component.lazyComponent`
               - `primitives/log-channels.clientLog`
@@ -3496,7 +3496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/layer.Layer`
                   - `primitives/css/pin.Pin`
                   - `primitives/css/ui-kit.cn`
-                  - `primitives/element-size.useElementSize`
+                  - `primitives/dom/element-size.useElementSize`
                   - `primitives/latest-ref.useEventCallback`
                 - Exports (types):
                   - `KeyboardProps`
@@ -3527,7 +3527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
-                  - `primitives/tooltip.WithTooltip`
+                  - `primitives/overlay/tooltip.WithTooltip`
                 - Exports (types): `ToolbarControlProps`
                 - Exports (values): `ToolbarControl`
               - Cross-plugin:
@@ -3681,11 +3681,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.useCursorSelector`
                   - `apps/sonata/shell.useHasChords`
                   - `apps/sonata/shell.useSonata`
-                  - `primitives/auto-scroll.scrollChildIntoView`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/css/ui-kit.cn`
+                  - `primitives/dom/auto-scroll.scrollChildIntoView`
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
@@ -3901,8 +3901,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/detail-sections.DetailSection`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/scoped-store.defineScopedStore`
-              - `primitives/scoped-store.ScopedStore`
+              - `primitives/scope/scoped-store.defineScopedStore`
+              - `primitives/scope/scoped-store.ScopedStore`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineMountSlot`
               - `primitives/slot-render.defineRenderSlot`
@@ -3996,7 +3996,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
-              - `primitives/scroll-reveal.revealElement`
+              - `primitives/dom/scroll-reveal.revealElement`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
@@ -4137,9 +4137,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.DialogDescription`
                   - `primitives/css/ui-kit.DialogTitle`
                   - `primitives/css/ui-kit.ScrollArea`
-                  - `primitives/imperative-dialog.openDialog`
+                  - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/loading.Loading`
-                  - `primitives/scroll-reveal.revealElement`
+                  - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
               - Server:
                 - Uses:
@@ -4250,7 +4250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
               - `primitives/live-state.useResource`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/search.SearchInput`
               - `primitives/search.useTextFilter`
             - Exports (types): `TrackMixerEntry`
@@ -4754,7 +4754,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.Button`
                   - `primitives/css/ui-kit.ControlSizeProvider`
                   - `primitives/icon-button.IconButton`
-                  - `primitives/popover.InlinePopover`
+                  - `primitives/overlay/popover.InlinePopover`
                   - `primitives/search.SearchInput`
             - **`membership-summary`** — Bundle-size summary section in the composition detail pane: plugin counts per membership state.
               - Web:
@@ -5308,10 +5308,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
-              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -5351,10 +5351,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/graph-canvas.GraphCanvas`
               - `primitives/icon-button.IconButton`
-              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/tooltip.WithTooltip`
             - Exports (values): `DefinitionEditor`
           - Cross-plugin:
             - Imported by: `apps/workflows/definitions`
@@ -5497,10 +5497,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.FieldDef`
               - `primitives/error-boundary.PluginErrorBoundary`
-              - `primitives/imperative-dialog/confirm.confirmDialog`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -5755,7 +5755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
-          - `primitives/tooltip.WithTooltip`
+          - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `AppRail`
       - Cross-plugin:
         - Imported by: `apps-core/app-rail-framing/rail`
@@ -5881,9 +5881,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
-              - `primitives/app-instance.appInstanceKey`
-              - `primitives/app-instance.legacyInstanceKey`
-              - `primitives/app-instance.mayAdoptLegacyPayload`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
@@ -5903,18 +5900,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.DropdownMenuSub`
               - `primitives/css/ui-kit.DropdownMenuSubContent`
               - `primitives/css/ui-kit.DropdownMenuSubTrigger`
-              - `primitives/cursor-menu.CursorAnchor`
-              - `primitives/cursor-menu.CursorAnchoredMenu`
-              - `primitives/element-size.useElementSize`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/hover-reveal.hoverRevealClass`
               - `primitives/hover-reveal.useHoverReveal`
               - `primitives/icon-button.IconButton`
-              - `primitives/install-sink.defineInstallSink`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/cursor-menu.CursorAnchor`
+              - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
+              - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/scope/app-instance.appInstanceKey`
+              - `primitives/scope/app-instance.legacyInstanceKey`
+              - `primitives/scope/app-instance.mayAdoptLegacyPayload`
+              - `primitives/scope/install-sink.defineInstallSink`
               - `primitives/shortcuts.defineShortcut`
               - `primitives/shortcuts.formatShortcutLabel`
               - `primitives/shortcuts.getFocusedSurfaceId`
-              - `primitives/tooltip.WithTooltip`
               - `ui/tab-bar.Tab`
               - `ui/tab-bar.TabIcon`
               - `ui/theme-engine.ThemeEngine`
@@ -5949,10 +5949,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/ui-kit.DialogTitle`
                   - `primitives/css/ui-kit.DropdownMenuItem`
-                  - `primitives/cursor-menu.CursorAnchor`
-                  - `primitives/cursor-menu.CursorAnchoredMenu`
-                  - `primitives/imperative-dialog.openDialog`
                   - `primitives/loading.Loading`
+                  - `primitives/overlay/cursor-menu.CursorAnchor`
+                  - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
+                  - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
                 - Exports (types): `WallpaperCandidate`
                 - Exports (values):
@@ -6073,11 +6073,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
-          - `primitives/scroll-reveal.useRevealOnActive`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
-          - `primitives/tooltip.WithTooltip`
           - `ui/tab-bar.Tab`
           - `ui/tab-bar.useActiveTabVariant`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
@@ -6090,6 +6090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.useTabs`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.appThemeScope`
+          - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
           - `primitives/pane.PaneBasePathContext`
           - `primitives/pane.PaneSurfaceProvider`
           - `primitives/pane.useIndexMatch`
@@ -6097,7 +6098,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useRoute`
           - `primitives/pane.useRouteState`
           - `primitives/slot-render.renderIsolated`
-          - `primitives/surface-overlay.SurfaceOverlayHost`
           - `primitives/sync-status.SyncStatusIndicator`
           - `primitives/sync-status.SyncStatusProvider`
           - `primitives/undo-redo.UndoRedoProvider`
@@ -6118,14 +6118,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.resolveAppForPath`
           - `apps-core.setFocusedApp`
           - `apps-core.useActiveApp`
-          - `primitives/app-instance.appInstanceKey`
-          - `primitives/app-instance.getAppInstanceId`
-          - `primitives/app-instance.getNavigationType`
-          - `primitives/app-instance.legacyInstanceKey`
-          - `primitives/app-instance.mayAdoptLegacyPayload`
-          - `primitives/app-instance.readAppInstance`
-          - `primitives/app-instance.stampAppInstance`
-          - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/link-gesture.LinkGestureProps`
@@ -6145,8 +6137,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.setHistoryAdapter`
           - `primitives/pane.setLiveStore`
           - `primitives/pane.stripBasePath`
+          - `primitives/scope/app-instance.appInstanceKey`
+          - `primitives/scope/app-instance.getAppInstanceId`
+          - `primitives/scope/app-instance.getNavigationType`
+          - `primitives/scope/app-instance.legacyInstanceKey`
+          - `primitives/scope/app-instance.mayAdoptLegacyPayload`
+          - `primitives/scope/app-instance.readAppInstance`
+          - `primitives/scope/app-instance.stampAppInstance`
+          - `primitives/scope/install-sink.defineInstallSink`
+          - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/shortcuts.setFocusedSurfaceId`
-          - `primitives/surface-id.useSurfaceTabId`
         - Exports (types):
           - `NavigateOptions`
           - `PlacementCapabilities`
@@ -6821,8 +6821,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/app-shell.sidebarNavItem`
-      - `primitives/auto-scroll.JumpToBottomButton`
-      - `primitives/auto-scroll.useStickyScroll`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
@@ -6834,6 +6832,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.cn`
       - `primitives/css/ui-kit.ControlSizeProvider`
       - `primitives/detail-sections.defineDetailSections`
+      - `primitives/dom/auto-scroll.JumpToBottomButton`
+      - `primitives/dom/auto-scroll.useStickyScroll`
       - `primitives/icon-button.IconButton`
       - `primitives/live-state.useNotificationsChannelStatuses`
       - `primitives/live-state.useResource`
@@ -6841,11 +6841,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/log-channels.clientLog`
       - `primitives/networking.useReconnectingWebSocket`
       - `primitives/networking.wsUrl`
+      - `primitives/overlay/popover.InlinePopover`
+      - `primitives/overlay/tooltip.WithTooltip`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
-      - `primitives/popover.InlinePopover`
-      - `primitives/tooltip.WithTooltip`
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
@@ -6870,7 +6870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
       - `infra/events.Trigger`
-      - `infra/git-watcher.refAdvanced`
+      - `infra/git/git-watcher.refAdvanced`
       - `infra/jobs.defineJob`
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.checkoutRef`
@@ -6982,8 +6982,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `build.BuildDetailSlots`
           - `infra/endpoints.useEndpoint`
-          - `primitives/auto-scroll.JumpToBottomButton`
-          - `primitives/auto-scroll.useStickyScroll`
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.CollapsibleContent`
@@ -6997,6 +6995,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/auto-scroll.JumpToBottomButton`
+          - `primitives/dom/auto-scroll.useStickyScroll`
           - `primitives/icon-button.IconButton`
           - `primitives/networking.useReconnectingWebSocket`
           - `primitives/networking.wsUrl`
@@ -7098,8 +7098,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/server-build-id.getServerCommit`
           - `build/server-build-id.getServerGraphHash`
           - `infra/endpoints.implement`
-          - `infra/git-read-cache.createSignedMemo`
-          - `infra/git-watcher.refHeadResource`
+          - `infra/git/git-read-cache.createSignedMemo`
+          - `infra/git/git-watcher.refHeadResource`
           - `infra/paths.currentWorktreeName`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
@@ -7228,10 +7228,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.SegmentedOption`
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
-          - `primitives/imperative-dialog/confirm.confirmDialog`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/live-state.ResourceResult`
           - `primitives/live-state.useResource`
+          - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
           - `primitives/relative-time.RelativeTime`
           - `shell/toast.showToast`
         - Exports (types):
@@ -7325,7 +7325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
-      - `infra/host-read-pool.withHeavyReadSlot`
+      - `infra/host/host-read-pool.withHeavyReadSlot`
       - `infra/paths.GIT`
       - `infra/paths.HOME_DIR`
       - `infra/paths.REPO_ROOT`
@@ -7421,7 +7421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7630,7 +7630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/trace/engine`
       - `fields/secret/config`
       - `framework/tooling/codegen`
-      - `infra/duress`
+      - `infra/host/duress`
       - `integrations/gmail`
       - `plugin-meta/composition`
       - `primitives/data-view`
@@ -7803,10 +7803,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
-          - `primitives/popover.InlinePopover`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/syntax-highlight.HighlightedCode`
           - `shell/toast.showToast`
@@ -8452,8 +8452,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
           - `primitives/live-state.usePointResource`
-          - `primitives/popover.InlinePopover`
-          - `primitives/tooltip.WithTooltip`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/overlay/tooltip.WithTooltip`
         - Exports (values): `useConversationPreprompt`
       - Server:
         - Contributes:
@@ -8608,8 +8608,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/slot-render.defineRenderSlot`
-          - `primitives/surface-id.useSurfaceTabId`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `shell/toast.showToast`
           - `tasks/task-draft-form.setActiveRelateContext`
@@ -8713,7 +8713,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpoint`
               - `primitives/css/badge.Badge`
               - `primitives/css/text.Text`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
           - Server:
             - Uses:
               - `infra/endpoints.implement`
@@ -8732,7 +8732,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/launch.useLaunchConversation`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/text-editor.TextEditor`
               - `shell/notifications.toast`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
@@ -8740,8 +8740,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `resource.declare` "edited-files"
             - Uses:
               - `infra/file-watcher.getParcelWatcher`
-              - `infra/git-read-cache.createSignedMemo`
-              - `infra/host-read-pool.withHeavyReadSlot`
+              - `infra/git/git-read-cache.createSignedMemo`
+              - `infra/host/host-read-pool.withHeavyReadSlot`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.WorktreeGoneError`
               - `tasks/tasks-core.getConversation`
@@ -8896,8 +8896,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/code/file-pane.FilePane`
                       - `conversations/conversation-view/code/file-pane.useFileContent`
                       - `primitives/css/placeholder.Placeholder`
+                      - `primitives/dom/scroll-reveal.revealElement`
                       - `primitives/loading.Loading`
-                      - `primitives/scroll-reveal.revealElement`
                       - `primitives/syntax-highlight.languageForPath`
                       - `primitives/syntax-highlight.SHIKI_LANGS`
                       - `primitives/syntax-highlight.useDarkMode`
@@ -8930,8 +8930,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `resource.declare` "commits-graph.graph"
             - Uses:
-              - `infra/git-watcher.refHeadResource`
-              - `infra/host-read-pool.withHeavyReadSlot`
+              - `infra/git/git-watcher.refHeadResource`
+              - `infra/host/host-read-pool.withHeavyReadSlot`
               - `primitives/commit-list.LOG_FORMAT`
               - `primitives/commit-list.parseGitLog`
               - `primitives/commit-list.runGit`
@@ -8965,10 +8965,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ButtonGroup`
               - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/search.SearchInput`
               - `primitives/search.useTextFilter`
-              - `primitives/tooltip.WithTooltip`
               - `shell/notifications.toast`
               - `tasks.useTask`
         - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of as a chip of its own.
@@ -9074,7 +9074,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view.Conversation`
               - `primitives/css/spacing.Stack`
               - `primitives/launch.LaunchControl`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Web:
             - Contributes: `JsonlRowActions.Item` "fork-session" → `ForkSessionAction`
@@ -9144,8 +9144,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/pending-turn.PendingTurnCard`
               - `conversations/conversation-view/pending-turn.reconcilePendingTurns`
               - `conversations/conversation-view/pending-turn.usePendingTurns`
-              - `primitives/auto-scroll.JumpToBottomButton`
-              - `primitives/auto-scroll.useStickyScroll`
               - `primitives/css/bouncing-dots.BouncingDots`
               - `primitives/css/fill.Fill`
               - `primitives/css/rigid.rigidClass`
@@ -9154,17 +9152,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/auto-scroll.JumpToBottomButton`
+              - `primitives/dom/auto-scroll.useStickyScroll`
+              - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.rowActionsAnchor`
-              - `primitives/scoped-store/dom-scope.defineDomScope`
-              - `primitives/scroll-reveal.revealElement`
+              - `primitives/scope/dom-scope.defineDomScope`
+              - `primitives/scope/surface-id.useSurfaceTabId`
               - `primitives/slot-render.defineDispatchSlot`
               - `primitives/slot-render.defineRenderSlot`
-              - `primitives/surface-id.useSurfaceTabId`
             - Exports (types):
               - `EventFilterContribution`
               - `OverlayContribution`
@@ -9189,7 +9189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
               - `conversations/transcript-watcher.transcriptChainSignature`
               - `conversations/transcript-watcher.watchTranscript`
-              - `infra/git-read-cache.createSignedMemo`
+              - `infra/git/git-read-cache.createSignedMemo`
             - Resources: `jsonl-events` (push)
           - Core:
             - Uses:
@@ -9509,7 +9509,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer.paneScrollScope`
                   - `conversations/conversation-view/jsonl-viewer.useVisibleEvents`
-                  - `primitives/auto-scroll.scrollToBottom`
+                  - `primitives/dom/auto-scroll.scrollToBottom`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.useResource`
                   - `primitives/outline/rail.OutlineRail`
@@ -10114,7 +10114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
           - Server:
             - Contributes: `resource.declare` "worktree-ops"
             - Uses:
@@ -10152,8 +10152,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/scope/tab-id.getTabId`
               - `primitives/sync-status.useReportSync`
-              - `primitives/tab-id.getTabId`
               - `reports.report`
             - Exports (types):
               - `PendingTurnRecord`
@@ -10211,8 +10211,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.ButtonGroup`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
-              - `primitives/floating-action.FloatingAction`
-              - `primitives/floating-action.FloatingActionFadeIn`
+              - `primitives/overlay/floating-action.FloatingAction`
+              - `primitives/overlay/floating-action.FloatingActionFadeIn`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `primitives/usage-rank.recordUsage`
               - `primitives/usage-rank.useUsageOrder`
@@ -11046,10 +11046,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `improve`
       - `infra/attachments`
       - `infra/claude-cli`
-      - `infra/contention`
       - `infra/entity-extensions`
       - `infra/events`
       - `infra/events-test`
+      - `infra/host/contention`
       - `infra/jobs`
       - `infra/query-resource`
       - `infra/retention`
@@ -11094,7 +11094,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
         - Uses:
-          - `infra/host-admission.defineHostPool`
+          - `infra/host/host-admission.defineHostPool`
           - `packages/spawn-priority.backgroundArgv`
         - Exports (types):
           - `BackupInfo`
@@ -11821,7 +11821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops.readSlowOpMarkers`
           - `debug/stall-monitor.recordEventLoopStall`
           - `infra/endpoints.implement`
-          - `infra/host-read-pool.heavyReadQueueDepth`
+          - `infra/host/host-read-pool.heavyReadQueueDepth`
           - `infra/paths.currentWorktreeName`
           - `infra/paths.isMain`
           - `infra/paths.listWorktreeDirs`
@@ -12010,12 +12010,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/app-shell.sidebarNavItem`
-          - `primitives/auto-scroll.JumpToBottomButton`
-          - `primitives/auto-scroll.useStickyScroll`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/auto-scroll.JumpToBottomButton`
+          - `primitives/dom/auto-scroll.useStickyScroll`
           - `primitives/log-channels.LiveLogChannel`
           - `primitives/log-channels.LogEntryList`
           - `primitives/networking.ReconnectingEventSource`
@@ -12232,8 +12232,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/boot-snapshot.assembleBootSnapshot`
               - `infra/boot-snapshot.bootCriticalKeys`
               - `infra/endpoints.implement`
-              - `infra/host-admission.defineHostPool`
-              - `infra/host-read-pool.heavyReadSlotCount`
+              - `infra/host/host-admission.defineHostPool`
+              - `infra/host/host-read-pool.heavyReadSlotCount`
               - `infra/mcp.Mcp`
               - `tasks/tasks-core.getConversation`
             - Register: `mcpTool('benchmark_boot')`
@@ -12682,7 +12682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
-          - `primitives/tab-id.getTabId`
+          - `primitives/scope/tab-id.getTabId`
           - `reports.investigate`
           - `reports.Reports`
           - `shell/notifications.toast`
@@ -12717,11 +12717,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/health-monitor.HostSampleSchema`
           - `debug/trace/engine.captureTrace`
           - `debug/trace/engine.defineTraceEventClass`
-          - `infra/duress/latch.clearDuress`
-          - `infra/duress/latch.isUnderDuress`
-          - `infra/duress/latch.readDuress`
-          - `infra/duress/latch.refreshDuress`
-          - `infra/duress/latch.setDuress`
+          - `infra/host/duress/latch.clearDuress`
+          - `infra/host/duress/latch.isUnderDuress`
+          - `infra/host/duress/latch.readDuress`
+          - `infra/host/duress/latch.refreshDuress`
+          - `infra/host/duress/latch.setDuress`
           - `infra/paths.currentWorktreeName`
           - `infra/paths.isHostSingleton`
           - `infra/paths.listWorktreeDirs`
@@ -12828,14 +12828,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.ExcludeFromFork`
           - `database/change-feed.ExcludeFromChangeFeed`
           - `debug/trace/engine.captureTrace`
-          - `infra/contention.ContentionSnapshot`
-          - `infra/contention.getContentionSnapshot`
-          - `infra/duress.createShedBuffer`
-          - `infra/duress.ShedSummary`
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defaultRandom`
           - `infra/entities.defineEntity`
+          - `infra/host/contention.ContentionSnapshot`
+          - `infra/host/contention.getContentionSnapshot`
+          - `infra/host/duress.createShedBuffer`
+          - `infra/host/duress.ShedSummary`
           - `infra/jobs.ceilingMsFor`
           - `infra/jobs.getJobHold`
           - `infra/jobs.getJobSlowThresholdMs`
@@ -12867,7 +12867,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
           - `fields/uuid/config.uuidField`
-          - `infra/contention.ContentionSnapshotSchema`
+          - `infra/host/contention.ContentionSnapshotSchema`
           - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `CallerBreakdown`
@@ -13110,7 +13110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `trace-event-class` "contention"
             - Uses:
               - `debug/trace/engine.defineTraceEventClass`
-              - `infra/contention.getContentionSnapshot`
+              - `infra/host/contention.getContentionSnapshot`
         - **`engine`** — Trace-engine web surface: the Trace.Lane / Trace.TriggerSummary dispatch slots (with generic fallbacks so a new event class or trigger kind is visible by default), plus the trace config registration for Settings → Config. The generic slow-event trace engine: the TraceEventClass registry, captureTrace() admission + coherent-instant capture + async enrich/persist into the durable traces table, list/get endpoints, a daily 7-day sweep, and the test-trigger verification endpoint.
           - Web:
             - Slots:
@@ -13144,13 +13144,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `database/admin.ExcludeFromFork`
               - `database/change-feed.ExcludeFromChangeFeed`
-              - `infra/duress.createShedBuffer`
-              - `infra/duress.ShedSummary`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defaultRandom`
               - `infra/entities.defineEntity`
+              - `infra/host/duress.createShedBuffer`
+              - `infra/host/duress.ShedSummary`
               - `infra/paths.currentWorktreeName`
               - `infra/retention.defineRetention`
               - `reports.recordReport`
@@ -13363,8 +13363,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/admin.listDatabases`
           - `database/zero/cache-service.dropZeroReplicationArtifacts`
           - `infra/endpoints.implement`
-          - `infra/host-read-pool.heavyReadSlotCount`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/host/host-read-pool.heavyReadSlotCount`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/jobs.defineJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
@@ -13599,7 +13599,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/session-divergence`
               - `debug/stall-monitor`
               - `debug/trace/engine`
-              - `infra/duress`
+              - `infra/host/duress`
               - `tasks/tasks-core`
         - **`data-view-codec`** — Boolean field type: data-view custom-column value codec (native boolean ↔ canonical text).
           - Web:
@@ -13956,7 +13956,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/data-view.DataViewSlots`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
         - **`table`** — Enum (select) field type: data-view table cell (read-only chip cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "enum" → `EnumCell`
@@ -14075,8 +14075,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/claude-cli`
-              - `infra/duress`
               - `infra/events`
+              - `infra/host/duress`
               - `reports`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
@@ -14581,7 +14581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.Input`
               - `primitives/data-view.DataViewSlots`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
         - **`storage`** — Tags field type: DB storage capability — a Postgres jsonb column, decoded by the field's own schema so its string[] is derived rather than asserted.
           - Server:
             - Contributes: `fields.storage` "tags"
@@ -15572,7 +15572,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/quote`
               - `page/url-paste`
               - `primitives/adaptive-bar`
-              - `primitives/copy-source-text`
               - `primitives/css/control-panel`
               - `primitives/css/grow-relay`
               - `primitives/css/radio-group`
@@ -15580,8 +15579,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit`
               - `primitives/data-view`
               - `primitives/date-picker`
+              - `primitives/dom/copy-source-text`
+              - `primitives/dom/overscroll-hint`
               - `primitives/networking`
-              - `primitives/overscroll-hint`
               - `primitives/pane`
               - `primitives/row-actions`
               - `primitives/text-editor/caret-trigger`
@@ -15809,7 +15809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.copy-source-text`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -15985,7 +15985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/slot-render.registerSlotItemAttrs`
           - `primitives/slot-render.registerSlotItemMiddleware`
           - `primitives/ui-context.appendLineage`
@@ -16173,27 +16173,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/turn-summary`
           - `debug/claude-cli-calls`
           - `tasks/task-title`
-    - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
-      - Server:
-        - Uses: `database.db`
-        - Exports (types): `ContentionSnapshot`
-        - Exports (values): `getContentionSnapshot`
-      - Cross-plugin:
-        - Imported by:
-          - `debug/slow-ops`
-          - `debug/trace/contention`
-      - Core:
-        - Exports (types):
-          - `ContentionSnapshot`
-          - `ContentionTopDatabase`
-        - Exports (values):
-          - `ContentionSnapshotSchema`
-          - `ContentionTopDatabaseSchema`
     - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
       - Server:
         - Uses:
           - `infra/file-watcher.createFileWatcher`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.isMain`
           - `infra/warmup.defineWarmup`
         - Exports (types):
@@ -16205,57 +16189,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
-    - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress latch (a mtime-leased latch file the cluster sentinel sets while the box is in trouble; backends gate observability writes on the cheap synchronous isUnderDuress()) plus the shed engine: createShedBuffer routes durable observability writes through per-episode first-N persistence, a bounded in-memory buffer, and a flush-on-clear replay.
-      - Web:
-        - Contributes: `ConfigV2.WebRegister` "duress"
-        - Uses: `config_v2.ConfigV2`
-      - Server:
-        - Contributes: `ConfigV2.Register` "duress"
-        - Uses:
-          - `config_v2.ConfigV2`
-          - `config_v2.getConfig`
-          - `infra/duress/latch.duressEpisode`
-          - `infra/duress/latch.isUnderDuress`
-          - `primitives/log-channels.defineLogSink`
-        - Exports (types):
-          - `ShedBuffer`
-          - `ShedBufferOptions`
-          - `ShedCascadeStats`
-          - `ShedSummary`
-        - Exports (values): `createShedBuffer`
-      - Core:
-        - Uses:
-          - `config_v2.defineConfig`
-          - `fields/bool/config.boolField`
-          - `fields/int/config.intField`
-        - Exports (values): `duressConfig`
-      - Cross-plugin:
-        - Imported by:
-          - `debug/slow-ops`
-          - `debug/trace/engine`
-          - `reports`
-      - Plugins:
-        - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
-          - Cross-plugin:
-            - Imported by:
-              - `debug/sentinel`
-              - `infra/duress`
-              - `primitives/log-channels`
-          - Server:
-            - Exports (types): `DuressLatch`
-            - Exports (values):
-              - `_setClockForTests`
-              - `_setLatchDirForTests`
-              - `clearDuress`
-              - `duressEpisode`
-              - `duressLatchDir`
-              - `FRESHNESS_LEASE_MS`
-              - `isUnderDuress`
-              - `LATCH_FILENAME`
-              - `MEMO_TTL_MS`
-              - `readDuress`
-              - `refreshDuress`
-              - `setDuress`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
       - Core:
         - Uses:
@@ -16450,11 +16383,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-order`
           - `primitives/diff-view`
           - `primitives/folder-picker`
-          - `primitives/imperative-dialog/confirm`
           - `primitives/launch`
           - `primitives/live-state`
           - `primitives/log-channels`
           - `primitives/optimistic-mutation`
+          - `primitives/overlay/imperative-dialog/confirm`
           - `primitives/usage-rank`
           - `release`
           - `reports`
@@ -16675,7 +16608,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `improve`
           - `infra/events-test`
-          - `infra/git-watcher`
+          - `infra/git/git-watcher`
           - `infra/jobs/supervised-job`
           - `page/attachment-block`
           - `page/editor`
@@ -16798,7 +16731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/op-status`
           - `conversations/transcript-watcher`
           - `infra/corpus-index`
-          - `infra/git-watcher`
+          - `infra/git/git-watcher`
           - `infra/jobs/supervised-run`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-tree`
@@ -16809,58 +16742,60 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `createFileWatcher`
           - `getParcelWatcher`
-    - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
-      - Cross-plugin:
-        - Imported by:
-          - `build/deployment`
-          - `conversations/conversation-view/code`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `plugin-meta/plugin-tree`
-          - `review/plugin-changes`
-          - `tasks/attempt-work`
-          - `tasks/tasks-core`
-      - Server:
-        - Exports (types):
-          - `GitStateMemo`
-          - `SignedMemo`
-        - Exports (values):
-          - `createGitStateMemo`
-          - `createSignedMemo`
-    - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the refHeadResource live-state resource, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
-      - Server:
-        - Contributes: `resource.declare` "git-watcher.refHead"
-        - Uses:
-          - `infra/events.defineTriggerEvent`
-          - `infra/file-watcher.createFileWatcher`
-          - `infra/file-watcher.FileWatcher`
-          - `infra/paths.GIT`
-          - `infra/paths.isMain`
-          - `infra/paths.REPO_ROOT`
-          - `infra/worktree.ensureMainWorktreeRoot`
-          - `primitives/commit-list.GitError`
-          - `primitives/commit-list.tryRunGit`
-        - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
-        - Exports (types):
-          - `RefAdvancedPayload`
-          - `RefHead`
-          - `RefReactionSpec`
-        - Exports (values):
-          - `_refAdvancedTriggers`
-          - `defineRefReaction`
-          - `lastKnownMainSha`
-          - `refAdvanced`
-          - `refHeadResource`
-          - `RefHeadSchema`
-        - Register: `defineTriggerEvent('git.refAdvanced')`
-        - Resources: `git-watcher.refHead` (push)
-      - Cross-plugin:
-        - Imported by:
-          - `build`
-          - `build/deployment`
-          - `conversations/conversation-view/commits-graph`
-          - `review/plugin-changes`
-          - `tasks/attempt-work`
-          - `tasks/tasks-core`
+    - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
+      - Plugins:
+        - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
+          - Cross-plugin:
+            - Imported by:
+              - `build/deployment`
+              - `conversations/conversation-view/code`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `plugin-meta/plugin-tree`
+              - `review/plugin-changes`
+              - `tasks/attempt-work`
+              - `tasks/tasks-core`
+          - Server:
+            - Exports (types):
+              - `GitStateMemo`
+              - `SignedMemo`
+            - Exports (values):
+              - `createGitStateMemo`
+              - `createSignedMemo`
+        - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. On every advance it notifies the refHeadResource live-state resource, runs the registered in-process ref reactions (every backend, nothing queued in between), and emits the durable git.refAdvanced trigger event (main only).
+          - Server:
+            - Contributes: `resource.declare` "git-watcher.refHead"
+            - Uses:
+              - `infra/events.defineTriggerEvent`
+              - `infra/file-watcher.createFileWatcher`
+              - `infra/file-watcher.FileWatcher`
+              - `infra/paths.GIT`
+              - `infra/paths.isMain`
+              - `infra/paths.REPO_ROOT`
+              - `infra/worktree.ensureMainWorktreeRoot`
+              - `primitives/commit-list.GitError`
+              - `primitives/commit-list.tryRunGit`
+            - DB schema: `plugins/infra/plugins/git/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
+            - Exports (types):
+              - `RefAdvancedPayload`
+              - `RefHead`
+              - `RefReactionSpec`
+            - Exports (values):
+              - `_refAdvancedTriggers`
+              - `defineRefReaction`
+              - `lastKnownMainSha`
+              - `refAdvanced`
+              - `refHeadResource`
+              - `RefHeadSchema`
+            - Register: `defineTriggerEvent('git.refAdvanced')`
+            - Resources: `git-watcher.refHead` (push)
+          - Cross-plugin:
+            - Imported by:
+              - `build`
+              - `build/deployment`
+              - `conversations/conversation-view/commits-graph`
+              - `review/plugin-changes`
+              - `tasks/attempt-work`
+              - `tasks/tasks-core`
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
@@ -16875,7 +16810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.liveStateSocketKind`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.subscribeWsStatus`
-          - `primitives/tooltip.WithTooltip`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `shell/action-bar.ActionBar`
           - `shell/toast.showToast`
         - Exports (types): `WedgeReport`
@@ -16898,70 +16833,139 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `getHealth`
           - `HealthResponseSchema`
-    - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
-      - Server:
-        - Uses:
-          - `packages/host-semaphore.AcquireHooks`
-          - `packages/host-semaphore.createHostSemaphore`
-          - `packages/host-semaphore.HostShare`
-        - Exports (types):
-          - `HostPool`
-          - `HostPoolSpec`
-          - `PoolOccupancy`
-        - Exports (values):
-          - `cpuPool`
-          - `defineHostPool`
-          - `hostOccupancy`
-          - `inheritedGrant`
-          - `pushPool`
-          - `pushSlotPath`
-          - `withHostGrant`
-      - Cross-plugin:
-        - Imported by:
-          - `database/admin`
-          - `debug/profiling/boot-bench`
-          - `infra/host-read-pool`
-          - `infra/safe-fetch/browser-fetch`
-          - `infra/worktree`
-      - Core:
-        - Exports (types):
-          - `CpuBudget`
-          - `Grant`
-          - `GrantHooks`
-          - `Lane`
-          - `PoolCost`
-          - `ReservedPoolSpec`
-        - Exports (values):
-          - `cpuBudget`
-          - `HOST_GRANT_ENV`
-          - `HOST_LANE_ENV`
-          - `hostCpuCeiling`
-          - `hostRamCeiling`
-          - `PER_UNIT_BYTES`
-          - `rawCpuResidual`
-          - `RESERVED_POOLS`
-          - `reservedCpuCost`
-    - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
-      - Server:
-        - Uses: `infra/host-admission.defineHostPool`
-        - Exports (values):
-          - `heavyReadQueueDepth`
-          - `heavyReadSlotCount`
-          - `withHeavyReadSlot`
-      - Cross-plugin:
-        - Imported by:
-          - `code-explorer`
-          - `conversations/conversation-view/code`
-          - `conversations/conversation-view/commits-graph`
-          - `debug/health-monitor`
-          - `debug/profiling/boot-bench`
-          - `debug/worktree-cleanup`
-          - `infra/corpus-index`
-          - `infra/warmup`
-          - `plugin-meta/plugin-tree`
-          - `review/plugin-changes`
-          - `tasks/attempt-work`
-          - `tasks/tasks-core`
+    - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
+      - Plugins:
+        - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
+          - Server:
+            - Uses: `database.db`
+            - Exports (types): `ContentionSnapshot`
+            - Exports (values): `getContentionSnapshot`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/slow-ops`
+              - `debug/trace/contention`
+          - Core:
+            - Exports (types):
+              - `ContentionSnapshot`
+              - `ContentionTopDatabase`
+            - Exports (values):
+              - `ContentionSnapshotSchema`
+              - `ContentionTopDatabaseSchema`
+        - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress latch (a mtime-leased latch file the cluster sentinel sets while the box is in trouble; backends gate observability writes on the cheap synchronous isUnderDuress()) plus the shed engine: createShedBuffer routes durable observability writes through per-episode first-N persistence, a bounded in-memory buffer, and a flush-on-clear replay.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "duress"
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes: `ConfigV2.Register` "duress"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+              - `infra/host/duress/latch.duressEpisode`
+              - `infra/host/duress/latch.isUnderDuress`
+              - `primitives/log-channels.defineLogSink`
+            - Exports (types):
+              - `ShedBuffer`
+              - `ShedBufferOptions`
+              - `ShedCascadeStats`
+              - `ShedSummary`
+            - Exports (values): `createShedBuffer`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
+              - `fields/int/config.intField`
+            - Exports (values): `duressConfig`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/slow-ops`
+              - `debug/trace/engine`
+              - `reports`
+          - Plugins:
+            - **`latch`** — The host-global duress latch file (mtime-leased, set/refresh/clear by the cluster sentinel, read via the cheap synchronous isUnderDuress()). A leaf on purpose: module-eval depends only on node:fs + infra/paths — no config, no DB, no worktree identity — so env-independent processes (the CLI's build admission valve) can import it safely.
+              - Cross-plugin:
+                - Imported by:
+                  - `debug/sentinel`
+                  - `infra/host/duress`
+                  - `primitives/log-channels`
+              - Server:
+                - Exports (types): `DuressLatch`
+                - Exports (values):
+                  - `_setClockForTests`
+                  - `_setLatchDirForTests`
+                  - `clearDuress`
+                  - `duressEpisode`
+                  - `duressLatchDir`
+                  - `FRESHNESS_LEASE_MS`
+                  - `isUnderDuress`
+                  - `LATCH_FILENAME`
+                  - `MEMO_TTL_MS`
+                  - `readDuress`
+                  - `refreshDuress`
+                  - `setDuress`
+        - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
+          - Server:
+            - Uses:
+              - `packages/host-semaphore.AcquireHooks`
+              - `packages/host-semaphore.createHostSemaphore`
+              - `packages/host-semaphore.HostShare`
+            - Exports (types):
+              - `HostPool`
+              - `HostPoolSpec`
+              - `PoolOccupancy`
+            - Exports (values):
+              - `cpuPool`
+              - `defineHostPool`
+              - `hostOccupancy`
+              - `inheritedGrant`
+              - `pushPool`
+              - `pushSlotPath`
+              - `withHostGrant`
+          - Cross-plugin:
+            - Imported by:
+              - `database/admin`
+              - `debug/profiling/boot-bench`
+              - `infra/host/host-read-pool`
+              - `infra/safe-fetch/browser-fetch`
+              - `infra/worktree`
+          - Core:
+            - Exports (types):
+              - `CpuBudget`
+              - `Grant`
+              - `GrantHooks`
+              - `Lane`
+              - `PoolCost`
+              - `ReservedPoolSpec`
+            - Exports (values):
+              - `cpuBudget`
+              - `HOST_GRANT_ENV`
+              - `HOST_LANE_ENV`
+              - `hostCpuCeiling`
+              - `hostRamCeiling`
+              - `PER_UNIT_BYTES`
+              - `rawCpuResidual`
+              - `RESERVED_POOLS`
+              - `reservedCpuCost`
+        - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
+          - Server:
+            - Uses: `infra/host/host-admission.defineHostPool`
+            - Exports (values):
+              - `heavyReadQueueDepth`
+              - `heavyReadSlotCount`
+              - `withHeavyReadSlot`
+          - Cross-plugin:
+            - Imported by:
+              - `code-explorer`
+              - `conversations/conversation-view/code`
+              - `conversations/conversation-view/commits-graph`
+              - `debug/health-monitor`
+              - `debug/profiling/boot-bench`
+              - `debug/worktree-cleanup`
+              - `infra/corpus-index`
+              - `infra/warmup`
+              - `plugin-meta/plugin-tree`
+              - `review/plugin-changes`
+              - `tasks/attempt-work`
+              - `tasks/tasks-core`
     - **`html-decode`** — Decode HTML character references in raw markup source: decodeHtmlText for text, readHtmlAttr for an HTMLRewriter attribute read. Bun's HTMLRewriter decodes nothing, so every scraped value needs decoding exactly once.
       - Cross-plugin:
         - Imported by: `apps/prototypes/files`
@@ -17472,7 +17476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/guards`
           - `infra/claude-cli`
           - `infra/corpus-index`
-          - `infra/git-watcher`
+          - `infra/git/git-watcher`
           - `infra/jobs/supervised-run`
           - `infra/jobs/supervised-task`
           - `infra/launcher`
@@ -17733,7 +17737,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`browser-fetch`** — Browser-backed page read for URLs a plain HTTP client cannot read: launch-per-call headless Chromium pinned to one validated IP via --host-resolver-rules (MAP <host> <ip>,MAP * ~NOTFOUND), every intercepted request re-guarded with parsePublicUrl, cross-origin subresources proxied through safeFetch, bounded by a size-2 host pool. Throws on timeout rather than returning a partially-rendered page.
           - Server:
             - Uses:
-              - `infra/host-admission.defineHostPool`
+              - `infra/host/host-admission.defineHostPool`
               - `infra/safe-fetch.assertResolvesPublic`
               - `infra/safe-fetch.parsePublicUrl`
               - `infra/safe-fetch.safeFetch`
@@ -17906,7 +17910,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
       - Server:
         - Uses:
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.isMain`
         - Exports (types): `WarmupSpec`
         - Exports (values):
@@ -17926,9 +17930,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`worktree`**
       - Server:
         - Uses:
-          - `infra/host-admission.defineHostPool`
-          - `infra/host-admission.pushPool`
-          - `infra/host-admission.pushSlotPath`
+          - `infra/host/host-admission.defineHostPool`
+          - `infra/host/host-admission.pushPool`
+          - `infra/host/host-admission.pushSlotPath`
           - `infra/paths.GIT`
           - `infra/paths.worktreeArtifacts`
           - `infra/paths.worktreeDataDir`
@@ -17989,7 +17993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/memory`
           - `debug/profiling/ops`
           - `debug/worktree-cleanup`
-          - `infra/git-watcher`
+          - `infra/git/git-watcher`
           - `infra/launcher`
           - `infra/worktree/reclaim`
           - `infra/worktree/removal-audit`
@@ -18172,10 +18176,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `layouts/route-fallback.DeferredRouteFallback`
-          - `primitives/auto-scroll.scrollChildIntoView`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/auto-scroll.scrollChildIntoView`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
@@ -18191,9 +18195,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.usePaneMatch`
           - `primitives/pane.usePaneStore`
           - `primitives/pane.useRoute`
+          - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
-          - `primitives/surface-id.useSurfaceTabId`
           - `primitives/ui-context.UiRegion`
         - Exports (values):
           - `MillerColumns`
@@ -18249,7 +18253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HostShare`
         - Exports (values): `createHostSemaphore`
       - Cross-plugin:
-        - Imported by: `infra/host-admission`
+        - Imported by: `infra/host/host-admission`
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Imported by:
@@ -18817,7 +18821,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/announce.announce`
-          - `primitives/auto-scroll.useEdgeAutoScroll`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
@@ -18842,10 +18845,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/css/viewport-overlay.ViewportOverlay`
-          - `primitives/dom-selection.hasBox`
-          - `primitives/dom-selection.selectionIsCollapsed`
-          - `primitives/dom-selection.selectionRange`
-          - `primitives/dom-selection.selectionRect`
+          - `primitives/dom/auto-scroll.useEdgeAutoScroll`
+          - `primitives/dom/dom-selection.hasBox`
+          - `primitives/dom/dom-selection.selectionIsCollapsed`
+          - `primitives/dom/dom-selection.selectionRange`
+          - `primitives/dom/dom-selection.selectionRect`
+          - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/icon-picker.SvgIcon`
           - `primitives/latest-ref.useEventCallback`
@@ -18860,9 +18865,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
-          - `primitives/scoped-store.defineScopedStore`
-          - `primitives/scoped-store/dom-scope.defineDomScope`
-          - `primitives/scroll-reveal.useRevealOnActive`
+          - `primitives/scope/dom-scope.defineDomScope`
+          - `primitives/scope/scoped-store.defineScopedStore`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineDispatchSlot`
           - `primitives/slot-render.defineOrderedDispatchSlot`
@@ -19384,14 +19388,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.Editor`
               - `page/editor.MarkButton`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/tooltip.Kbd`
         - **`code`** — Inline-code mark button for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `CodeButton`
             - Uses:
               - `page/editor.Editor`
               - `page/editor.MarkButton`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/tooltip.Kbd`
         - **`color`** — Inline text-color control for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `ColorButton`
@@ -19405,14 +19409,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
         - **`italic`** — Italic mark button for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `ItalicButton`
             - Uses:
               - `page/editor.Editor`
               - `page/editor.MarkButton`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/tooltip.Kbd`
         - **`link`** — Inline-link control for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `LinkButton`
@@ -19427,8 +19431,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Input`
               - `primitives/icon-button.IconButton`
-              - `primitives/popover.InlinePopover`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/overlay/tooltip.Kbd`
               - `primitives/undo-redo.localUndoProps`
         - **`strikethrough`** — Strikethrough mark button for the page editor's selection toolbar.
           - Web:
@@ -19436,14 +19440,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `page/editor.Editor`
               - `page/editor.MarkButton`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/tooltip.Kbd`
         - **`underline`** — Underline mark button for the page editor's selection toolbar.
           - Web:
             - Contributes: `Editor.FormatAction` → `UnderlineButton`
             - Uses:
               - `page/editor.Editor`
               - `page/editor.MarkButton`
-              - `primitives/tooltip.Kbd`
+              - `primitives/overlay/tooltip.Kbd`
     - **`heading`** — Heading block types (H1/H2/H3) for the page editor.
       - Plugins:
         - **`heading-1`** — Heading 1 block type for the page editor. Heading 1 block type: registers its `data` schema at the server write boundary.
@@ -19545,7 +19549,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/date-picker.DatePickerPanel`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/text-editor/caret-trigger.atWordBoundary`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
@@ -19772,7 +19776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/text.textVariantClass`
               - `primitives/css/ui-kit.cn`
-              - `primitives/popover.InlinePopover`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
               - `primitives/text-editor/caret-trigger.useCaretMenu`
               - `primitives/text-editor/caret-trigger.useCaretQuery`
@@ -19827,7 +19831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/search.SearchInput`
           - `primitives/undo-redo.localUndoProps`
         - Exports (values): `pageLinkBlock`
@@ -20888,8 +20892,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/file-watcher.createFileWatcher`
           - `infra/file-watcher.FileWatcher`
-          - `infra/git-read-cache.createGitStateMemo`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/git/git-read-cache.createGitStateMemo`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.PLUGINS_DIR`
           - `infra/warmup.defineWarmup`
         - Exports (values):
@@ -21089,8 +21093,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/row.Row`
           - `primitives/css/text.Text`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/overlay/tooltip.Kbd`
           - `primitives/shortcuts.formatShortcutLabel`
-          - `primitives/tooltip.Kbd`
         - Exports (types):
           - `ActionForm`
           - `ItemFormChannel`
@@ -21122,10 +21126,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/edit-mode-signal.useEditMode`
-          - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
-          - `primitives/popup-open.PopupOpenScope`
+          - `primitives/overlay/popup-open.PopupOpenScope`
           - `primitives/slot-render.SlotItemLayout`
           - `primitives/ui-context.collectLineage`
         - Exports (types):
@@ -21211,25 +21215,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `page/editor`
           - `primitives/date-picker`
-    - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
-      - Web:
-        - Uses: `primitives/tab-id.getTabId`
-        - Exports (types): `NavigationType`
-        - Exports (values):
-          - `appInstanceKey`
-          - `getAppInstanceId`
-          - `getNavigationType`
-          - `isFreshAppInstance`
-          - `legacyInstanceKey`
-          - `mayAdoptLegacyPayload`
-          - `readAppInstance`
-          - `resetAppInstanceForTests`
-          - `RETAINED_INSTANCES`
-          - `stampAppInstance`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/surface/floating`
-          - `apps-core/tabs`
     - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
       - Web:
         - Slots: `AppShell.Framing` ← `ui.sidebar-framing`
@@ -21322,49 +21307,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
-    - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.Button`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/in-view.useInView`
-          - `primitives/latest-ref.useEventCallback`
-          - `primitives/latest-ref.useLatestRef`
-          - `primitives/persistent-draft.clearDraft`
-          - `primitives/persistent-draft.readDraft`
-          - `primitives/persistent-draft.writeDraft`
-        - Exports (types):
-          - `EdgeAutoScroll`
-          - `FindScrollParentOptions`
-          - `JumpToBottomButtonProps`
-          - `JumpToBottomView`
-          - `ScrollAlign`
-          - `ScrollChildIntoViewOptions`
-          - `ScrollToBottomOptions`
-          - `StickyScrollHandle`
-          - `StickyScrollPersist`
-          - `UseEdgeAutoScrollOptions`
-          - `UseStickyScrollOptions`
-        - Exports (values):
-          - `findScrollParent`
-          - `JumpToBottomButton`
-          - `scrollChildIntoView`
-          - `scrollToBottom`
-          - `useEdgeAutoScroll`
-          - `useStickyScroll`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/rich/chord-progression`
-          - `build`
-          - `build/build-logs`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/outline`
-          - `debug/logs`
-          - `layouts/miller`
-          - `page/editor`
-          - `primitives/log-channels`
-          - `primitives/outline/scroll-spy`
-          - `primitives/virtual-rows`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
         - Uses:
@@ -21431,7 +21373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
-          - `primitives/element-size.useResizeObserver`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/row-actions.RowActions`
           - `primitives/slot-render.renderIsolated`
         - Exports (types):
@@ -21531,8 +21473,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/edit-mode-signal.useEditMode`
-          - `primitives/element-size.useResizeObserver`
           - `primitives/icon-button.IconButton`
           - `primitives/sortable-list.rectSortingStrategy`
           - `reorder.ReorderLayout`
@@ -21556,8 +21498,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Dialog`
           - `primitives/css/ui-kit.DialogContent`
           - `primitives/css/ui-kit.ScrollArea`
-          - `primitives/scroll-reveal.useRevealOnActive`
-          - `primitives/tooltip.Kbd`
+          - `primitives/dom/scroll-reveal.useRevealOnActive`
+          - `primitives/overlay/tooltip.Kbd`
         - Exports (types): `CommandPaletteItem`
         - Exports (values): `CommandPalette`
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
@@ -21597,24 +21539,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `code-explorer/code-api`
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/commits-graph`
-          - `infra/git-watcher`
+          - `infra/git/git-watcher`
           - `review/plugin-changes`
           - `tasks/attempt-work`
           - `tasks/tasks-core`
       - Core:
         - Exports (types): `CommitRow`
         - Exports (values): `CommitRowSchema`
-    - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable.
-      - Web:
-        - Contributes: `Core.Root` → `CopySourceTextHost`
-        - Uses: `primitives/dom-selection.selectionRange`
-        - Exports (values): `installCopySourceText`
-      - Core:
-        - Exports (types): `CopySourceProps`
-        - Exports (values):
-          - `copiesAsOwnText`
-          - `copiesAsText`
-          - `COPY_SOURCE_ATTR`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Uses: `primitives/css/ui-kit.Button`
@@ -22115,9 +22046,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.PopoverMaxHeight`
               - `primitives/css/ui-kit.PopoverTrigger`
               - `primitives/icon-button.IconButton`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
-              - `primitives/tooltip.WithTooltip`
             - Exports (types):
               - `ControlPanelBlockProps`
               - `ControlPanelEmptyProps`
@@ -22307,10 +22238,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
-              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
+              - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/prompt-editor`
               - `primitives/setup-steps`
               - `review/code-review`
@@ -22440,7 +22371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/table`
               - `primitives/data-view/tree`
               - `primitives/detail-sections`
-              - `primitives/tooltip`
+              - `primitives/overlay/tooltip`
               - `reorder/editor`
               - `reports/adaptive-bar`
               - `reports/caret-flight`
@@ -23395,16 +23326,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/expandable`
               - `primitives/filter-chips`
-              - `primitives/floating-action`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
-              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/outline/rail`
+              - `primitives/overlay/floating-action`
+              - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/pane`
               - `primitives/prompt-editor`
               - `primitives/row-actions`
@@ -23550,7 +23481,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `primitives/css/sticky.Sticky`
                   - `primitives/css/sticky.StickyProps`
-                  - `primitives/element-size.useElementSize`
+                  - `primitives/dom/element-size.useElementSize`
                 - Exports (types):
                   - `StickyStackItemProps`
                   - `StickyStackProps`
@@ -23888,11 +23819,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/icon-picker`
-              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/markdown`
               - `primitives/outline/rail`
+              - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/pane`
               - `primitives/rank-reorder`
               - `primitives/setup-steps`
@@ -24030,10 +23961,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses:
               - `primitives/css/rail.useRailGuard`
-              - `primitives/element-size.useResizeObserver`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useEventCallback`
-              - `primitives/overlay-boundary.OverlayBoundary`
-              - `primitives/popup-open.useReportPopupOpen`
+              - `primitives/overlay/overlay-boundary.OverlayBoundary`
+              - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/select-scope.ContentScope`
               - `primitives/select-scope.scopeSelectAllKeyDown`
             - Exports (types):
@@ -24347,7 +24278,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/inclusion`
               - `primitives/adaptive-bar`
               - `primitives/app-shell`
-              - `primitives/auto-scroll`
               - `primitives/avatar`
               - `primitives/bar`
               - `primitives/breadcrumb`
@@ -24388,7 +24318,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/theme-boundary`
               - `primitives/css/toggle-chip`
               - `primitives/css/viewport-overlay`
-              - `primitives/cursor-menu`
               - `primitives/cursor-pagination`
               - `primitives/data-table`
               - `primitives/data-view`
@@ -24398,22 +24327,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
               - `primitives/date-picker`
-              - `primitives/floating-action`
-              - `primitives/floating-surface`
+              - `primitives/dom/auto-scroll`
               - `primitives/folder-picker`
               - `primitives/graph-canvas`
               - `primitives/hover-reveal`
               - `primitives/icon-button`
               - `primitives/icon-picker`
-              - `primitives/imperative-dialog`
-              - `primitives/imperative-dialog/confirm`
               - `primitives/launch`
               - `primitives/loading`
               - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/outline/rail`
+              - `primitives/overlay/cursor-menu`
+              - `primitives/overlay/floating-action`
+              - `primitives/overlay/floating-surface`
+              - `primitives/overlay/imperative-dialog`
+              - `primitives/overlay/imperative-dialog/confirm`
+              - `primitives/overlay/popover`
+              - `primitives/overlay/surface-overlay`
+              - `primitives/overlay/tooltip`
               - `primitives/pane`
-              - `primitives/popover`
               - `primitives/prompt-editor`
               - `primitives/prompt-editor/voice-input`
               - `primitives/row-actions`
@@ -24421,10 +24354,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/section-card`
               - `primitives/setup-steps`
               - `primitives/slot-render`
-              - `primitives/surface-overlay`
               - `primitives/text-editor`
               - `primitives/text-editor/paste-images`
-              - `primitives/tooltip`
               - `primitives/tree`
               - `primitives/ui-context`
               - `reorder`
@@ -24505,7 +24436,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `page/editor`
               - `primitives/adaptive-bar`
-              - `primitives/floating-surface`
+              - `primitives/overlay/floating-surface`
               - `primitives/text-editor/paste-images`
               - `reports/viewport-escape`
               - `screenshot/draw-on-app`
@@ -24541,27 +24472,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/pin`
               - `primitives/css/sticky`
               - `primitives/css/viewport-overlay`
-              - `primitives/surface-overlay`
+              - `primitives/overlay/surface-overlay`
           - Web:
             - Exports (types):
               - `InTreeLayer`
               - `PortaledLayer`
               - `ZLayer`
             - Exports (values): `zLayerClass`
-    - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.DropdownMenu`
-          - `primitives/css/ui-kit.DropdownMenuContent`
-          - `primitives/css/ui-kit.DropdownMenuTrigger`
-        - Exports (types):
-          - `CursorAnchor`
-          - `CursorAnchoredMenuProps`
-        - Exports (values): `CursorAnchoredMenu`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/surface/floating`
-          - `apps-core/surface/floating/wallpaper`
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
       - Web:
         - Uses:
@@ -24571,7 +24488,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/in-view.useInView`
+          - `primitives/dom/in-view.useInView`
           - `primitives/loading.Loading`
         - Exports (types):
           - `CursorPage`
@@ -24606,7 +24523,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
-          - `primitives/element-size.useElementSize`
+          - `primitives/dom/element-size.useElementSize`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
           - `primitives/virtual-rows.useVirtualRows`
@@ -24691,13 +24608,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-core.ResolvedViewInstance`
           - `primitives/data-view/view-core.useViewModel`
           - `primitives/data-view/view-core.useViewVariants`
-          - `primitives/element-size.useElementSize`
+          - `primitives/dom/element-size.useElementSize`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/search.SearchInput`
           - `primitives/search.useTextFilter`
           - `primitives/slot-render.defineDispatchSlot`
@@ -25063,7 +24980,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
-              - `primitives/element-size.useResizeObserver`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/row-actions.RowActions`
               - `primitives/row-actions.rowActionsAnchor`
               - `primitives/virtual-rows.VirtualRows`
@@ -25355,8 +25272,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/css/ui-kit.Separator`
           - `primitives/icon-button.IconButton`
-          - `primitives/popover.InlinePopover`
-          - `primitives/popover.InlinePopoverProps`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopoverProps`
         - Exports (types):
           - `CalendarProps`
           - `DatePickerPanelProps`
@@ -25443,7 +25360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
-          - `primitives/dom-selection.selectionRange`
+          - `primitives/dom/dom-selection.selectionRange`
           - `primitives/loading.Loading`
           - `primitives/syntax-highlight.getHighlighter`
           - `primitives/syntax-highlight.languageForPath`
@@ -25472,19 +25389,144 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
-    - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
-      - Cross-plugin:
-        - Imported by:
-          - `page/editor`
-          - `primitives/copy-source-text`
-          - `primitives/diff-view`
-          - `primitives/text-editor/caret-trigger`
-      - Web:
-        - Exports (values):
-          - `hasBox`
-          - `selectionIsCollapsed`
-          - `selectionRange`
-          - `selectionRect`
+    - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
+      - Plugins:
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), and the shared findScrollParent discovery.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/dom/in-view.useInView`
+              - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
+              - `primitives/persistent-draft.clearDraft`
+              - `primitives/persistent-draft.readDraft`
+              - `primitives/persistent-draft.writeDraft`
+            - Exports (types):
+              - `EdgeAutoScroll`
+              - `FindScrollParentOptions`
+              - `JumpToBottomButtonProps`
+              - `JumpToBottomView`
+              - `ScrollAlign`
+              - `ScrollChildIntoViewOptions`
+              - `ScrollToBottomOptions`
+              - `StickyScrollHandle`
+              - `StickyScrollPersist`
+              - `UseEdgeAutoScrollOptions`
+              - `UseStickyScrollOptions`
+            - Exports (values):
+              - `findScrollParent`
+              - `JumpToBottomButton`
+              - `scrollChildIntoView`
+              - `scrollToBottom`
+              - `useEdgeAutoScroll`
+              - `useStickyScroll`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/rich/chord-progression`
+              - `build`
+              - `build/build-logs`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/outline`
+              - `debug/logs`
+              - `layouts/miller`
+              - `page/editor`
+              - `primitives/log-channels`
+              - `primitives/outline/scroll-spy`
+              - `primitives/virtual-rows`
+        - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable.
+          - Web:
+            - Contributes: `Core.Root` → `CopySourceTextHost`
+            - Uses: `primitives/dom/dom-selection.selectionRange`
+            - Exports (values): `installCopySourceText`
+          - Core:
+            - Exports (types): `CopySourceProps`
+            - Exports (values):
+              - `copiesAsOwnText`
+              - `copiesAsText`
+              - `COPY_SOURCE_ATTR`
+        - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
+          - Cross-plugin:
+            - Imported by:
+              - `page/editor`
+              - `primitives/diff-view`
+              - `primitives/dom/copy-source-text`
+              - `primitives/text-editor/caret-trigger`
+          - Web:
+            - Exports (values):
+              - `hasBox`
+              - `selectionIsCollapsed`
+              - `selectionRange`
+              - `selectionRect`
+        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+          - Web:
+            - Uses: `primitives/latest-ref.useEventCallback`
+            - Exports (types):
+              - `ElementSize`
+              - `ResizeTarget`
+            - Exports (values):
+              - `useElementSize`
+              - `useResizeObserver`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating`
+              - `apps/prototypes/gallery`
+              - `apps/sonata/notation`
+              - `apps/sonata/piano-roll`
+              - `apps/sonata/primitives/keyboard`
+              - `primitives/adaptive-bar`
+              - `primitives/breadcrumb`
+              - `primitives/collapsible-wrap`
+              - `primitives/css/sticky/stack`
+              - `primitives/css/ui-kit`
+              - `primitives/data-table`
+              - `primitives/data-view`
+              - `primitives/data-view/gallery`
+              - `primitives/expandable`
+              - `primitives/graph-canvas`
+              - `primitives/outline/rail`
+              - `primitives/terminal`
+              - `reorder`
+              - `screenshot`
+              - `shell/toast`
+        - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
+          - Web:
+            - Uses: `primitives/latest-ref.useEventCallback`
+            - Exports (types):
+              - `InViewOptions`
+              - `InViewRoot`
+              - `InViewTarget`
+              - `InViewWatcher`
+            - Exports (values):
+              - `createInViewWatcher`
+              - `useInView`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/cursor-pagination`
+              - `primitives/dom/auto-scroll`
+              - `primitives/outline/scroll-spy`
+        - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
+          - Web:
+            - Contributes: `Core.Root` → `OverscrollHintController`
+        - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
+          - Web:
+            - Uses: `primitives/latest-ref.useLatestRef`
+            - Exports (types): `RevealOptions`
+            - Exports (values):
+              - `revealElement`
+              - `useRevealOnActive`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/tab-bar`
+              - `apps/sonata/songsheet`
+              - `apps/sonata/sources/ultimate-guitar`
+              - `conversations/conversation-view/code/file-pane/raw`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `page/editor`
+              - `primitives/command-palette`
+              - `primitives/outline/rail`
+              - `primitives/tree`
+              - `search/quick-find`
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
       - Cross-plugin:
         - Imported by:
@@ -25521,37 +25563,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `tasks/task-description`
           - `tasks/task-header`
-    - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
-      - Web:
-        - Uses: `primitives/latest-ref.useEventCallback`
-        - Exports (types):
-          - `ElementSize`
-          - `ResizeTarget`
-        - Exports (values):
-          - `useElementSize`
-          - `useResizeObserver`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/surface/floating`
-          - `apps/prototypes/gallery`
-          - `apps/sonata/notation`
-          - `apps/sonata/piano-roll`
-          - `apps/sonata/primitives/keyboard`
-          - `primitives/adaptive-bar`
-          - `primitives/breadcrumb`
-          - `primitives/collapsible-wrap`
-          - `primitives/css/sticky/stack`
-          - `primitives/css/ui-kit`
-          - `primitives/data-table`
-          - `primitives/data-view`
-          - `primitives/data-view/gallery`
-          - `primitives/expandable`
-          - `primitives/graph-canvas`
-          - `primitives/outline/rail`
-          - `primitives/terminal`
-          - `reorder`
-          - `screenshot`
-          - `shell/toast`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
@@ -25559,7 +25570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
           - `primitives/css/text.Text`
-          - `primitives/overlay-boundary.registerOverlayFallback`
+          - `primitives/overlay/overlay-boundary.registerOverlayFallback`
           - `primitives/slot-render.registerSlotItemMiddleware`
           - `primitives/ui-context.collectLineageMeta`
         - Exports (types): `BoundaryErrorReport`
@@ -25582,7 +25593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/css/spacing.Stack`
-          - `primitives/element-size.useResizeObserver`
+          - `primitives/dom/element-size.useResizeObserver`
         - Exports (types): `ExpandableProps`
         - Exports (values): `Expandable`
       - Cross-plugin:
@@ -25634,38 +25645,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/contributions`
           - `debug/claude-cli-calls`
           - `debug/queue`
-    - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
-      - Web:
-        - Uses:
-          - `primitives/css/spacing.insetClass`
-          - `primitives/css/spacing.StackAlign`
-          - `primitives/css/spacing.StackDirection`
-          - `primitives/css/ui-kit.cn`
-        - Exports (types):
-          - `FloatingActionFadeInProps`
-          - `FloatingActionProps`
-          - `FloatingActionTriggerAt`
-          - `FloatingAnchor`
-        - Exports (values):
-          - `FloatingAction`
-          - `FloatingActionFadeIn`
-      - Cross-plugin:
-        - Imported by:
-          - `conversations/conversation-view/prompt-templates`
-          - `primitives/outline/rail`
-          - `shell/global-action-bar`
-    - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.OverlayPanel`
-          - `primitives/css/ui-kit.PopoverMaxHeight`
-          - `primitives/css/ui-kit.PopoverPadding`
-          - `primitives/css/ui-kit.PopoverWidth`
-          - `primitives/css/viewport-overlay.ViewportOverlay`
-        - Exports (types): `FloatingSurfaceProps`
-        - Exports (values): `FloatingSurface`
-      - Cross-plugin:
-        - Imported by: `primitives/text-editor/caret-trigger`
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
       - Web:
         - Uses:
@@ -25685,7 +25664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
         - Exports (types):
           - `FolderPickerPopoverProps`
           - `FolderPickerProps`
@@ -25715,7 +25694,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.SURFACE_LEVELS`
-          - `primitives/element-size.useResizeObserver`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/lazy-component.lazyComponent`
         - Exports (types):
           - `GraphCanvasEdge`
@@ -25771,9 +25750,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/action-presentation.useActionForm`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.DensityControlled`
+          - `primitives/overlay/tooltip.Kbd`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/shortcuts.formatShortcutLabel`
-          - `primitives/tooltip.Kbd`
-          - `primitives/tooltip.WithTooltip`
         - Exports (types): `IconButtonProps`
         - Exports (values): `IconButton`
       - Cross-plugin:
@@ -25913,60 +25892,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `ICON_SVG_MAP`
           - `svgNodesToString`
-    - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
-      - Web:
-        - Contributes: `Core.Root` → `ImperativeDialogHost`
-        - Uses:
-          - `primitives/css/ui-kit.Dialog`
-          - `primitives/css/ui-kit.DialogContent`
-        - Exports (types): `DialogOptions`
-        - Exports (values): `openDialog`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/surface/floating/wallpaper`
-          - `apps/deploy/deployments`
-          - `apps/deploy/servers`
-          - `apps/deploy/ssh-setup`
-          - `apps/events/sources`
-          - `apps/sonata/sources/ultimate-guitar`
-          - `primitives/imperative-dialog/confirm`
-      - Plugins:
-        - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
-          - Web:
-            - Uses:
-              - `infra/endpoints.EndpointError`
-              - `infra/endpoints.getEndpointErrorMessage`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.DialogDescription`
-              - `primitives/css/ui-kit.DialogTitle`
-              - `primitives/imperative-dialog.openDialog`
-            - Exports (types): `ConfirmDialogOptions`
-            - Exports (values): `confirmDialog`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/workflows/definitions`
-              - `apps/workflows/editor`
-              - `apps/workflows/executions`
-              - `build/serve-composition`
-    - **`in-view`** — The one sanctioned home for new IntersectionObserver: createInViewWatcher(onChange, options) is the DOM layer, owning the WeakSet enrollment rule so a re-enrollment pass costs nothing, and useInView(target, onChange, {deps}) is the React layer — observes one element, hands the most recent entry of each batch to a stabilised callback, and rebuilds the observer only when deps change (the rebuild is what re-delivers against a still-intersecting element).
-      - Web:
-        - Uses: `primitives/latest-ref.useEventCallback`
-        - Exports (types):
-          - `InViewOptions`
-          - `InViewRoot`
-          - `InViewTarget`
-          - `InViewWatcher`
-        - Exports (values):
-          - `createInViewWatcher`
-          - `useInView`
-      - Cross-plugin:
-        - Imported by:
-          - `primitives/auto-scroll`
-          - `primitives/cursor-pagination`
-          - `primitives/outline/scroll-spy`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
       - Web:
         - Slots: `InlineTextWalkerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -25984,19 +25909,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/user-text`
           - `conversations/conversation-view/markdown-extensions`
           - `tasks/task-description`
-    - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/surface/floating`
-          - `apps-core/tabs`
-          - `primitives/overlay-boundary`
-          - `primitives/pane`
-      - Web:
-        - Exports (types):
-          - `FilledInstallSink`
-          - `InstallSink`
-          - `InstallSinkOptions`
-        - Exports (values): `defineInstallSink`
     - **`keyset`** — Field-agnostic keyset (cursor) pagination machinery. Null-aware keyset seek/order-by compiler over drizzle SQL (server) paired with the browser-safe cursor codec + sort signature (core). No data-view dependency, so any server-delegated windowed query can reuse it.
       - Cross-plugin:
         - Imported by:
@@ -26053,7 +25965,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/code-block`
           - `page/editor`
           - `primitives/action-presentation`
-          - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `primitives/css/ui-kit`
           - `primitives/data-view`
@@ -26061,9 +25972,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/tree`
           - `primitives/data-view/view-core`
           - `primitives/data-view/view-order`
+          - `primitives/dom/auto-scroll`
+          - `primitives/dom/element-size`
+          - `primitives/dom/in-view`
+          - `primitives/dom/scroll-reveal`
           - `primitives/editable-field`
-          - `primitives/element-size`
-          - `primitives/in-view`
           - `primitives/live-state`
           - `primitives/markdown`
           - `primitives/networking`
@@ -26071,8 +25984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/outline/scroll-spy`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
-          - `primitives/scoped-store`
-          - `primitives/scroll-reveal`
+          - `primitives/scope/scoped-store`
           - `primitives/shortcuts`
           - `primitives/sync-status`
           - `primitives/terminal`
@@ -26106,12 +26018,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/icon-button.IconButton`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.PaneOpenMode`
           - `primitives/pane.useOpenPane`
-          - `primitives/popover.InlinePopover`
           - `primitives/shortcuts.formatShortcutLabel`
           - `primitives/text-editor.TextEditor`
-          - `primitives/tooltip.Kbd`
         - Exports (types):
           - `LaunchAgentFormProps`
           - `LaunchAgentPopoverProps`
@@ -26182,7 +26094,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking.WsStatus`
-          - `primitives/tab-id.getTabId`
+          - `primitives/scope/tab-id.getTabId`
         - Exports (types):
           - `ChannelStatuses`
           - `CombinedResources`
@@ -26549,8 +26461,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/auto-scroll.JumpToBottomButton`
-          - `primitives/auto-scroll.useStickyScroll`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -26561,6 +26471,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.textVariantClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/dom/auto-scroll.JumpToBottomButton`
+          - `primitives/dom/auto-scroll.useStickyScroll`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking.useReconnectingWebSocket`
           - `primitives/networking.wsUrl`
@@ -26573,9 +26485,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LogEntryList`
       - Server:
         - Uses:
-          - `infra/duress/latch.isUnderDuress`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/host/duress/latch.isUnderDuress`
           - `infra/paths.worktreeDataDir`
         - Exports (types):
           - `LogChannel`
@@ -26636,7 +26548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `infra/attachments`
-          - `infra/duress`
+          - `infra/host/duress`
           - `infra/jobs`
           - `infra/worktree/removal-audit`
           - `primitives/live-state`
@@ -26790,12 +26702,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
-              - `primitives/element-size.useElementSize`
-              - `primitives/floating-action.FloatingAction`
-              - `primitives/floating-action.FloatingActionFadeIn`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/scroll-reveal.revealElement`
+              - `primitives/dom/scroll-reveal.useRevealOnActive`
               - `primitives/outline/scroll-spy.useActiveInView`
-              - `primitives/scroll-reveal.revealElement`
-              - `primitives/scroll-reveal.useRevealOnActive`
+              - `primitives/overlay/floating-action.FloatingAction`
+              - `primitives/overlay/floating-action.FloatingActionFadeIn`
             - Exports (types):
               - `OutlineEntry`
               - `OutlineRailProps`
@@ -26809,9 +26721,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`scroll-spy`** — Where the reader is in a scrolling document: useActiveInView(ids, resolve, {position}) watches the resolved elements through ONE in-view watcher and answers with either the section being read (the first id in the top third of the scroller) or how far the reader has got (the last id anywhere on screen). Holds the last answer while nothing is on screen, and enrolls elements incrementally as they mount.
           - Web:
             - Uses:
-              - `primitives/auto-scroll.findScrollParent`
-              - `primitives/in-view.createInViewWatcher`
-              - `primitives/in-view.InViewWatcher`
+              - `primitives/dom/auto-scroll.findScrollParent`
+              - `primitives/dom/in-view.createInViewWatcher`
+              - `primitives/dom/in-view.InViewWatcher`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
             - Exports (types): `ReadingPosition`
@@ -26820,20 +26732,211 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `primitives/outline/rail`
-    - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
-      - Web:
-        - Uses: `primitives/install-sink.defineInstallSink`
-        - Exports (types): `OverlayFallbackProps`
-        - Exports (values):
-          - `OverlayBoundary`
-          - `registerOverlayFallback`
-      - Cross-plugin:
-        - Imported by:
-          - `primitives/css/ui-kit`
-          - `primitives/error-boundary`
-    - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
-      - Web:
-        - Contributes: `Core.Root` → `OverscrollHintController`
+    - **`overlay`** — What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), and the signal saying a popup is open beneath you (popup-open).
+      - Plugins:
+        - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.DropdownMenu`
+              - `primitives/css/ui-kit.DropdownMenuContent`
+              - `primitives/css/ui-kit.DropdownMenuTrigger`
+            - Exports (types):
+              - `CursorAnchor`
+              - `CursorAnchoredMenuProps`
+            - Exports (values): `CursorAnchoredMenu`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating`
+              - `apps-core/surface/floating/wallpaper`
+        - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
+          - Web:
+            - Uses:
+              - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.StackAlign`
+              - `primitives/css/spacing.StackDirection`
+              - `primitives/css/ui-kit.cn`
+            - Exports (types):
+              - `FloatingActionFadeInProps`
+              - `FloatingActionProps`
+              - `FloatingActionTriggerAt`
+              - `FloatingAnchor`
+            - Exports (values):
+              - `FloatingAction`
+              - `FloatingActionFadeIn`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/prompt-templates`
+              - `primitives/outline/rail`
+              - `shell/global-action-bar`
+        - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.OverlayPanel`
+              - `primitives/css/ui-kit.PopoverMaxHeight`
+              - `primitives/css/ui-kit.PopoverPadding`
+              - `primitives/css/ui-kit.PopoverWidth`
+              - `primitives/css/viewport-overlay.ViewportOverlay`
+            - Exports (types): `FloatingSurfaceProps`
+            - Exports (values): `FloatingSurface`
+          - Cross-plugin:
+            - Imported by: `primitives/text-editor/caret-trigger`
+        - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
+          - Web:
+            - Contributes: `Core.Root` → `ImperativeDialogHost`
+            - Uses:
+              - `primitives/css/ui-kit.Dialog`
+              - `primitives/css/ui-kit.DialogContent`
+            - Exports (types): `DialogOptions`
+            - Exports (values): `openDialog`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating/wallpaper`
+              - `apps/deploy/deployments`
+              - `apps/deploy/servers`
+              - `apps/deploy/ssh-setup`
+              - `apps/events/sources`
+              - `apps/sonata/sources/ultimate-guitar`
+              - `primitives/overlay/imperative-dialog/confirm`
+          - Plugins:
+            - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
+              - Web:
+                - Uses:
+                  - `infra/endpoints.EndpointError`
+                  - `infra/endpoints.getEndpointErrorMessage`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.DialogDescription`
+                  - `primitives/css/ui-kit.DialogTitle`
+                  - `primitives/overlay/imperative-dialog.openDialog`
+                - Exports (types): `ConfirmDialogOptions`
+                - Exports (values): `confirmDialog`
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/workflows/definitions`
+                  - `apps/workflows/editor`
+                  - `apps/workflows/executions`
+                  - `build/serve-composition`
+        - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
+          - Web:
+            - Uses: `primitives/scope/install-sink.defineInstallSink`
+            - Exports (types): `OverlayFallbackProps`
+            - Exports (values):
+              - `OverlayBoundary`
+              - `registerOverlayFallback`
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/css/ui-kit`
+              - `primitives/error-boundary`
+        - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.Popover`
+              - `primitives/css/ui-kit.PopoverContent`
+              - `primitives/css/ui-kit.PopoverTrigger`
+              - `primitives/overlay/tooltip.WithTooltip`
+            - Exports (types): `InlinePopoverProps`
+            - Exports (values): `InlinePopover`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/track-mixer`
+              - `apps/studio/compositions/entry-points`
+              - `build`
+              - `config_v2/settings`
+              - `conversations/conversation-preprompt`
+              - `conversations/conversation-view/branch`
+              - `conversations/conversation-view/dependencies`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `fields/enum/inline`
+              - `fields/tags/inline`
+              - `improve/element-picker`
+              - `page/formatting/color`
+              - `page/formatting/link`
+              - `page/inline-date`
+              - `page/math/inline`
+              - `page/page-link`
+              - `primitives/data-view`
+              - `primitives/date-picker`
+              - `primitives/folder-picker`
+              - `primitives/launch`
+              - `reorder`
+              - `reorder/editor`
+              - `shell/notifications`
+              - `tasks/task-draft-form`
+        - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
+          - Cross-plugin:
+            - Imported by:
+              - `primitives/adaptive-bar`
+              - `primitives/css/ui-kit`
+              - `primitives/row-actions`
+          - Web:
+            - Exports (values):
+              - `PopupOpenScope`
+              - `useReportPopupOpen`
+        - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
+          - Web:
+            - Uses:
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.usePortalForwardedAttrs`
+              - `primitives/css/z-layers.InTreeLayer`
+              - `primitives/css/z-layers.zLayerClass`
+            - Exports (types): `SurfaceOverlayProps`
+            - Exports (values):
+              - `SurfaceOverlay`
+              - `SurfaceOverlayHost`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/tab-surface`
+              - `apps/prototypes/present`
+        - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
+          - Web:
+            - Uses:
+              - `primitives/css/inline.Inline`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.Tooltip`
+              - `primitives/css/ui-kit.TooltipContent`
+              - `primitives/css/ui-kit.TooltipTrigger`
+            - Exports (types):
+              - `KbdProps`
+              - `WithTooltipProps`
+            - Exports (values):
+              - `Kbd`
+              - `WithTooltip`
+          - Cross-plugin:
+            - Imported by:
+              - `active-data/commit-link`
+              - `apps-core/app-rail`
+              - `apps-core/surface/floating`
+              - `apps-core/tab-bar`
+              - `apps/agent-manager/worktree-switcher`
+              - `apps/events/sources`
+              - `apps/prototypes/thumbnails`
+              - `apps/sonata/primitives/toolbar-control`
+              - `apps/workflows/editor`
+              - `build`
+              - `conversations/conversation-preprompt`
+              - `conversations/conversation-view/allow-monitor`
+              - `conversations/conversation-view/dependencies`
+              - `conversations/conversation-view/fork-conversation`
+              - `conversations/conversation-view/op-status`
+              - `infra/health`
+              - `page/formatting/bold`
+              - `page/formatting/code`
+              - `page/formatting/italic`
+              - `page/formatting/link`
+              - `page/formatting/strikethrough`
+              - `page/formatting/underline`
+              - `primitives/action-presentation`
+              - `primitives/command-palette`
+              - `primitives/css/control-panel`
+              - `primitives/icon-button`
+              - `primitives/launch`
+              - `primitives/overlay/popover`
+              - `primitives/pane`
+              - `primitives/sync-status`
+              - `shell/global-action-bar`
+              - `ui/segmented-progress-bar/dots`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.workflows.definitions`, `apps.workflows.executions`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
@@ -26956,15 +27059,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/icon-button.IconButton`
-          - `primitives/install-sink.defineInstallSink`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/loading.Loading`
+          - `primitives/overlay/tooltip.WithTooltip`
+          - `primitives/scope/install-sink.defineInstallSink`
+          - `primitives/scope/surface-id.SurfaceIdContext`
           - `primitives/select-scope.ContentScope`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.RenderSlot`
-          - `primitives/surface-id.SurfaceIdContext`
-          - `primitives/tooltip.WithTooltip`
         - Exports (types):
           - `AnyPane`
           - `AppNavigator`
@@ -27261,9 +27364,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
-          - `primitives/auto-scroll`
           - `primitives/css/color-picker`
           - `primitives/detail-sections`
+          - `primitives/dom/auto-scroll`
           - `primitives/usage-rank`
           - `shell/global-action-bar`
           - `tasks/task-draft-form`
@@ -27276,51 +27379,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readDraft`
           - `useDraft`
           - `writeDraft`
-    - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.Popover`
-          - `primitives/css/ui-kit.PopoverContent`
-          - `primitives/css/ui-kit.PopoverTrigger`
-          - `primitives/tooltip.WithTooltip`
-        - Exports (types): `InlinePopoverProps`
-        - Exports (values): `InlinePopover`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/track-mixer`
-          - `apps/studio/compositions/entry-points`
-          - `build`
-          - `config_v2/settings`
-          - `conversations/conversation-preprompt`
-          - `conversations/conversation-view/branch`
-          - `conversations/conversation-view/dependencies`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `fields/enum/inline`
-          - `fields/tags/inline`
-          - `improve/element-picker`
-          - `page/formatting/color`
-          - `page/formatting/link`
-          - `page/inline-date`
-          - `page/math/inline`
-          - `page/page-link`
-          - `primitives/data-view`
-          - `primitives/date-picker`
-          - `primitives/folder-picker`
-          - `primitives/launch`
-          - `reorder`
-          - `reorder/editor`
-          - `shell/notifications`
-          - `tasks/task-draft-form`
-    - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
-      - Cross-plugin:
-        - Imported by:
-          - `primitives/adaptive-bar`
-          - `primitives/css/ui-kit`
-          - `primitives/row-actions`
-      - Web:
-        - Exports (values):
-          - `PopupOpenScope`
-          - `useReportPopupOpen`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
@@ -27478,7 +27536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/surface.Surface`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/popup-open.PopupOpenScope`
+          - `primitives/overlay/popup-open.PopupOpenScope`
         - Exports (types): `RowActionsProps`
         - Exports (values):
           - `RowActions`
@@ -27493,27 +27551,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-table`
           - `primitives/data-view/gallery`
           - `primitives/tree`
-    - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
-      - Web:
-        - Uses: `primitives/latest-ref.useLatestRef`
-        - Exports (types):
-          - `ScopedStore`
-          - `ScopedStoreHandle`
-        - Exports (values): `defineScopedStore`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/browser/shell`
-          - `apps/sonata/audio/engine`
-          - `apps/sonata/audio/live-play`
-          - `apps/sonata/shell`
-          - `page/editor`
-          - `primitives/scoped-store/dom-scope`
-          - `primitives/sync-status`
-          - `primitives/undo-redo`
+    - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
       - Plugins:
+        - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
+          - Web:
+            - Uses: `primitives/scope/tab-id.getTabId`
+            - Exports (types): `NavigationType`
+            - Exports (values):
+              - `appInstanceKey`
+              - `getAppInstanceId`
+              - `getNavigationType`
+              - `isFreshAppInstance`
+              - `legacyInstanceKey`
+              - `mayAdoptLegacyPayload`
+              - `readAppInstance`
+              - `resetAppInstanceForTests`
+              - `RETAINED_INSTANCES`
+              - `stampAppInstance`
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating`
+              - `apps-core/tabs`
         - **`dom-scope`** — The DOM node that belongs to ONE mounted instance: defineDomScope declares a scope a descendant publishes its element into and a sibling reads, so a lookup never reaches past its own instance into another mounted copy of the same surface. A scoped store holding one element — install-sink's discipline (named throws, subscription-only render reads, peek… naming) with scoped-store's per-Provider lifetime. Readers get a { attached } union, never a nullable root, so 'not mounted yet' cannot be absorbed into 'no matches'; the declared bounds derive the check that bans document-wide lookups of those attributes.
           - Web:
-            - Uses: `primitives/scoped-store.defineScopedStore`
+            - Uses: `primitives/scope/scoped-store.defineScopedStore`
             - Exports (types):
               - `DomScopeApi`
               - `DomScopeHandle`
@@ -27524,25 +27585,62 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer`
               - `page/editor`
-    - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
-      - Web:
-        - Uses: `primitives/latest-ref.useLatestRef`
-        - Exports (types): `RevealOptions`
-        - Exports (values):
-          - `revealElement`
-          - `useRevealOnActive`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/tab-bar`
-          - `apps/sonata/songsheet`
-          - `apps/sonata/sources/ultimate-guitar`
-          - `conversations/conversation-view/code/file-pane/raw`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `page/editor`
-          - `primitives/command-palette`
-          - `primitives/outline/rail`
-          - `primitives/tree`
-          - `search/quick-find`
+        - **`install-sink`** — Installed-sink primitive: defineInstallSink declares the module-level slot a higher layer installs an implementation into and a lower layer calls (the navigator, the history adapter, the overlay fallback). Presence is answerable from render ONLY through the subscribed useInstalled(), so a late install re-renders whoever asked early; the imperative sample is named peek… so install-sink/no-render-phase-peek can keep it out of render.
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/surface/floating`
+              - `apps-core/tabs`
+              - `primitives/overlay/overlay-boundary`
+              - `primitives/pane`
+          - Web:
+            - Exports (types):
+              - `FilledInstallSink`
+              - `InstallSink`
+              - `InstallSinkOptions`
+            - Exports (values): `defineInstallSink`
+        - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
+          - Web:
+            - Uses: `primitives/latest-ref.useLatestRef`
+            - Exports (types):
+              - `ScopedStore`
+              - `ScopedStoreHandle`
+            - Exports (values): `defineScopedStore`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/browser/shell`
+              - `apps/sonata/audio/engine`
+              - `apps/sonata/audio/live-play`
+              - `apps/sonata/shell`
+              - `page/editor`
+              - `primitives/scope/dom-scope`
+              - `primitives/sync-status`
+              - `primitives/undo-redo`
+        - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core/tabs`
+              - `apps/home/app-cards`
+              - `apps/sonata/controls`
+              - `conversations/conversation-view`
+              - `conversations/conversation-view/jsonl-viewer`
+              - `layouts/miller`
+              - `primitives/pane`
+              - `primitives/shortcuts`
+          - Web:
+            - Exports (values):
+              - `SurfaceIdContext`
+              - `useSurfaceTabId`
+        - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/pending-turn`
+              - `debug/reports`
+              - `primitives/live-state`
+              - `primitives/scope/app-instance`
+              - `reports`
+              - `shell/notifications`
+          - Web:
+            - Exports (values): `getTabId`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
         - Uses:
@@ -27645,7 +27743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Root` → `ShortcutManager`
         - Uses:
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/surface-id.useSurfaceTabId`
+          - `primitives/scope/surface-id.useSurfaceTabId`
         - Exports (types): `ShortcutDescriptor`
         - Exports (values):
           - `defineShortcut`
@@ -27800,36 +27898,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `rectSortingStrategy`
           - `SortableItem`
           - `SortableList`
-    - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/tabs`
-          - `apps/home/app-cards`
-          - `apps/sonata/controls`
-          - `conversations/conversation-view`
-          - `conversations/conversation-view/jsonl-viewer`
-          - `layouts/miller`
-          - `primitives/pane`
-          - `primitives/shortcuts`
-      - Web:
-        - Exports (values):
-          - `SurfaceIdContext`
-          - `useSurfaceTabId`
-    - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
-      - Web:
-        - Uses:
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.usePortalForwardedAttrs`
-          - `primitives/css/z-layers.InTreeLayer`
-          - `primitives/css/z-layers.zLayerClass`
-        - Exports (types): `SurfaceOverlayProps`
-        - Exports (values):
-          - `SurfaceOverlay`
-          - `SurfaceOverlayHost`
-      - Cross-plugin:
-        - Imported by:
-          - `apps-core/tab-surface`
-          - `apps/prototypes/present`
     - **`sync-status`** — Per-surface forced sync-status indicator: optimistic/autosave surfaces report {phase,label,retry} via useReportSync; the universal SyncStatusIndicator (mounted once per surface) renders a Google-Keep-style cloud (saving → saved → error+retry). Scoped per surface via scoped-store; tolerates no Provider.
       - Web:
         - Uses:
@@ -27837,9 +27905,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spinner.Spinner`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/relative-time.RelativeTime`
-          - `primitives/scoped-store.defineScopedStore`
-          - `primitives/tooltip.WithTooltip`
+          - `primitives/scope/scoped-store.defineScopedStore`
         - Exports (types):
           - `ReportSyncArgs`
           - `SyncPhase`
@@ -27885,17 +27953,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/diff-view`
           - `primitives/markdown`
           - `ui/tweakcn/community-browser`
-    - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
-      - Cross-plugin:
-        - Imported by:
-          - `conversations/conversation-view/pending-turn`
-          - `debug/reports`
-          - `primitives/app-instance`
-          - `primitives/live-state`
-          - `reports`
-          - `shell/notifications`
-      - Web:
-        - Exports (values): `getTabId`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
         - Uses:
@@ -27913,7 +27970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
       - Web:
         - Uses:
-          - `primitives/element-size.useResizeObserver`
+          - `primitives/dom/element-size.useResizeObserver`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking.useReconnectingWebSocket`
           - `primitives/networking.wsUrl`
@@ -27971,11 +28028,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`caret-trigger`** — Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text and a single-owner arbiter.
           - Web:
             - Uses:
-              - `primitives/dom-selection.selectionRect`
-              - `primitives/floating-surface.FloatingSurface`
-              - `primitives/floating-surface.FloatingSurfaceProps`
+              - `primitives/dom/dom-selection.selectionRect`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/floating-surface.FloatingSurface`
+              - `primitives/overlay/floating-surface.FloatingSurfaceProps`
             - Exports (types):
               - `CanOpenCtx`
               - `CaretQuery`
@@ -28102,54 +28159,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/math/inline`
                   - `primitives/text-editor`
                   - `primitives/text-editor/paste-images`
-    - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
-      - Web:
-        - Uses:
-          - `primitives/css/inline.Inline`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.Tooltip`
-          - `primitives/css/ui-kit.TooltipContent`
-          - `primitives/css/ui-kit.TooltipTrigger`
-        - Exports (types):
-          - `KbdProps`
-          - `WithTooltipProps`
-        - Exports (values):
-          - `Kbd`
-          - `WithTooltip`
-      - Cross-plugin:
-        - Imported by:
-          - `active-data/commit-link`
-          - `apps-core/app-rail`
-          - `apps-core/surface/floating`
-          - `apps-core/tab-bar`
-          - `apps/agent-manager/worktree-switcher`
-          - `apps/events/sources`
-          - `apps/prototypes/thumbnails`
-          - `apps/sonata/primitives/toolbar-control`
-          - `apps/workflows/editor`
-          - `build`
-          - `conversations/conversation-preprompt`
-          - `conversations/conversation-view/allow-monitor`
-          - `conversations/conversation-view/dependencies`
-          - `conversations/conversation-view/fork-conversation`
-          - `conversations/conversation-view/op-status`
-          - `infra/health`
-          - `page/formatting/bold`
-          - `page/formatting/code`
-          - `page/formatting/italic`
-          - `page/formatting/link`
-          - `page/formatting/strikethrough`
-          - `page/formatting/underline`
-          - `primitives/action-presentation`
-          - `primitives/command-palette`
-          - `primitives/css/control-panel`
-          - `primitives/icon-button`
-          - `primitives/launch`
-          - `primitives/pane`
-          - `primitives/popover`
-          - `primitives/sync-status`
-          - `shell/global-action-bar`
-          - `ui/segmented-progress-bar/dots`
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, resolveDropParent) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
       - Web:
         - Slots: `Tree.Disclosure` ← `ui.tree-disclosure`
@@ -28167,6 +28176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuContent`
           - `primitives/css/ui-kit.DropdownMenuItem`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
+          - `primitives/dom/scroll-reveal.useRevealOnActive`
           - `primitives/icon-button.IconButton`
           - `primitives/multi-select.MultiSelectProvider`
           - `primitives/multi-select.SelectionBar`
@@ -28175,7 +28185,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank-reorder.useRankReorderItem`
           - `primitives/row-actions.RowActions`
           - `primitives/row-actions.rowActionsAnchor`
-          - `primitives/scroll-reveal.useRevealOnActive`
           - `primitives/search.filterTree`
           - `primitives/search.SearchInput`
           - `primitives/slot-render.renderIsolated`
@@ -28290,7 +28299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses:
           - `primitives/latest-ref.useLatestRef`
-          - `primitives/scoped-store.defineScopedStore`
+          - `primitives/scope/scoped-store.defineScopedStore`
           - `primitives/shortcuts.useSurfaceShortcuts`
         - Exports (types):
           - `HistoryEntry`
@@ -28381,8 +28390,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
       - Web:
         - Uses:
-          - `primitives/auto-scroll.findScrollParent`
           - `primitives/css/coords.Placed`
+          - `primitives/dom/auto-scroll.findScrollParent`
         - Exports (types):
           - `UseVirtualRowsOptions`
           - `UseVirtualRowsResult`
@@ -28584,10 +28593,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.useSetConfig`
       - `primitives/css/badge.Badge`
       - `primitives/css/ui-kit.Button`
+      - `primitives/dom/element-size.useResizeObserver`
       - `primitives/edit-mode-signal.useEditMode`
-      - `primitives/element-size.useResizeObserver`
       - `primitives/latest-ref.useLatestRef`
-      - `primitives/popover.InlinePopover`
+      - `primitives/overlay/popover.InlinePopover`
       - `primitives/slot-render.registerSlotItemMiddleware`
       - `primitives/slot-render.registerSlotListMiddleware`
       - `primitives/sortable-list.rectSortingStrategy`
@@ -28645,7 +28654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/sortable-list.SortableItem`
           - `primitives/sortable-list.SortableList`
         - Exports (types):
@@ -28719,8 +28728,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `config_v2.ConfigV2`
       - `infra/endpoints.fetchEndpoint`
+      - `primitives/scope/tab-id.getTabId`
       - `primitives/slot-render.defineDispatchSlot`
-      - `primitives/tab-id.getTabId`
     - Exports (types): `ReportContext`
     - Exports (values):
       - `investigate`
@@ -28740,10 +28749,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/admin.ExcludeFromFork`
       - `database/change-feed.ExcludeFromChangeFeed`
       - `database/sql-column.parsedJson`
-      - `infra/duress.createShedBuffer`
-      - `infra/duress.ShedSummary`
       - `infra/endpoints.HttpError`
       - `infra/endpoints.implement`
+      - `infra/host/duress.createShedBuffer`
+      - `infra/host/duress.ShedSummary`
       - `infra/retention.defineRetention`
       - `infra/warmup.defineWarmup`
       - `shell/notifications.recordNotification`
@@ -29150,10 +29159,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code.getEditedFiles`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
-          - `infra/git-read-cache.createGitStateMemo`
-          - `infra/git-watcher.lastKnownMainSha`
-          - `infra/git-watcher.refHeadResource`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/git/git-read-cache.createGitStateMemo`
+          - `infra/git/git-watcher.lastKnownMainSha`
+          - `infra/git/git-watcher.refHeadResource`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
           - `primitives/commit-list.runGit`
@@ -29355,7 +29364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.cn`
-      - `primitives/element-size.useResizeObserver`
+      - `primitives/dom/element-size.useResizeObserver`
       - `primitives/icon-button.IconButton`
       - `primitives/latest-ref.useLatestRef`
       - `primitives/launch.LaunchControl`
@@ -29459,8 +29468,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DialogContent`
           - `primitives/css/ui-kit.ScrollArea`
           - `primitives/css/yield.yieldClass`
+          - `primitives/dom/scroll-reveal.revealElement`
           - `primitives/loading.Loading`
-          - `primitives/scroll-reveal.revealElement`
           - `primitives/search.SearchInput`
         - Exports (types):
           - `QuickFindDialogProps`
@@ -29527,13 +29536,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/floating-action.FloatingAction`
-          - `primitives/floating-action.FloatingActionFadeIn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/live-state.useWindowResource`
+          - `primitives/overlay/floating-action.FloatingAction`
+          - `primitives/overlay/floating-action.FloatingActionFadeIn`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/persistent-draft.useDraft`
-          - `primitives/tooltip.WithTooltip`
           - `shell/action-bar.ActionBar`
           - `shell/notifications.notificationsResource`
       - Server:
@@ -29558,9 +29567,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useWindowResource`
-          - `primitives/popover.InlinePopover`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/relative-time.RelativeTime`
-          - `primitives/tab-id.getTabId`
+          - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
           - `shell/toast.showToast`
         - Exports (types): `ToastArgs`
@@ -29650,7 +29659,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/element-size.useElementSize`
+          - `primitives/dom/element-size.useElementSize`
           - `primitives/select-scope.ContentScope`
           - `ui/theme-engine.useColorMode`
         - Exports (types):
@@ -30102,10 +30111,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes: `resource.declare` "attempt-work"
         - Uses:
-          - `infra/git-read-cache.createSignedMemo`
-          - `infra/git-watcher.lastKnownMainSha`
-          - `infra/git-watcher.refHeadResource`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/git/git-read-cache.createSignedMemo`
+          - `infra/git/git-watcher.lastKnownMainSha`
+          - `infra/git/git-watcher.refHeadResource`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `primitives/commit-list.GitError`
           - `primitives/commit-list.runGit`
@@ -30478,8 +30487,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/overlay/popover.InlinePopover`
           - `primitives/persistent-draft.useDraft`
-          - `primitives/popover.InlinePopover`
           - `primitives/shortcuts.getFocusedSurfaceId`
           - `primitives/shortcuts.subscribeFocusedSurface`
           - `primitives/slot-render.defineRenderSlot`
@@ -30804,10 +30813,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `infra/events.defineTriggerEvent`
-          - `infra/git-read-cache.createSignedMemo`
-          - `infra/git-watcher.defineRefReaction`
-          - `infra/git-watcher.lastKnownMainSha`
-          - `infra/host-read-pool.withHeavyReadSlot`
+          - `infra/git/git-read-cache.createSignedMemo`
+          - `infra/git/git-watcher.defineRefReaction`
+          - `infra/git/git-watcher.lastKnownMainSha`
+          - `infra/host/host-read-pool.withHeavyReadSlot`
           - `infra/query-resource.compileEdges`
           - `infra/query-resource.queryResource`
           - `infra/query-resource.rel`
@@ -31162,7 +31171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `primitives/css/inline.Inline`
               - `primitives/css/text.Text`
-              - `primitives/tooltip.WithTooltip`
+              - `primitives/overlay/tooltip.WithTooltip`
               - `ui/segmented-progress-bar.SegmentedProgressBarSlots`
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
           - Web:

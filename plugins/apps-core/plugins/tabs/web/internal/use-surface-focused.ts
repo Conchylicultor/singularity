@@ -1,4 +1,4 @@
-import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useTabs } from "./use-tabs";
 
 /**

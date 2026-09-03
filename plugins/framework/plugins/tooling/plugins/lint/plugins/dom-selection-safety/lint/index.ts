@@ -14,7 +14,7 @@ export default {
     // caller: a rule that needs an allowlist entry for a correct use is
     // enforcing less than it looks.
     "no-raw-selection-range": [
-      "plugins/primitives/plugins/dom-selection/web/internal/dom-selection.ts",
+      "plugins/primitives/plugins/dom/plugins/dom-selection/web/internal/dom-selection.ts",
     ],
   },
 };

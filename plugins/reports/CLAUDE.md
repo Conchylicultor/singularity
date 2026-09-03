@@ -32,8 +32,8 @@ read as "recorded with no id".
   - Uses:
     - `config_v2.ConfigV2`
     - `infra/endpoints.fetchEndpoint`
+    - `primitives/scope/tab-id.getTabId`
     - `primitives/slot-render.defineDispatchSlot`
-    - `primitives/tab-id.getTabId`
   - Exports (types): `ReportContext`
   - Exports (values):
     - `investigate`
@@ -53,10 +53,10 @@ read as "recorded with no id".
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`
-    - `infra/duress.createShedBuffer`
-    - `infra/duress.ShedSummary`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/host/duress.createShedBuffer`
+    - `infra/host/duress.ShedSummary`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `shell/notifications.recordNotification`

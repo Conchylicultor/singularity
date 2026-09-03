@@ -23,7 +23,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/undo-redo.localUndoProps`
   - Exports (values): `pageLinkBlock`

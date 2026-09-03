@@ -208,11 +208,11 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `debug/health-monitor.HostSampleSchema`
     - `debug/trace/engine.captureTrace`
     - `debug/trace/engine.defineTraceEventClass`
-    - `infra/duress/latch.clearDuress`
-    - `infra/duress/latch.isUnderDuress`
-    - `infra/duress/latch.readDuress`
-    - `infra/duress/latch.refreshDuress`
-    - `infra/duress/latch.setDuress`
+    - `infra/host/duress/latch.clearDuress`
+    - `infra/host/duress/latch.isUnderDuress`
+    - `infra/host/duress/latch.readDuress`
+    - `infra/host/duress/latch.refreshDuress`
+    - `infra/host/duress/latch.setDuress`
     - `infra/paths.currentWorktreeName`
     - `infra/paths.isHostSingleton`
     - `infra/paths.listWorktreeDirs`

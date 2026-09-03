@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FRESHNESS_LEASE_MS } from "@plugins/infra/plugins/duress/plugins/latch/server";
+import { FRESHNESS_LEASE_MS } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
   DuressEpisodeEventSchema,
   type ClusterSample,
@@ -78,7 +78,10 @@ interface WorkerRig {
   worker: Worker;
   frames: WorkerToMainFrame[];
   post(frame: MainToWorkerFrame): void;
-  waitFor(pred: (f: WorkerToMainFrame) => boolean, timeoutMs?: number): Promise<void>;
+  waitFor(
+    pred: (f: WorkerToMainFrame) => boolean,
+    timeoutMs?: number,
+  ): Promise<void>;
 }
 
 const tmpDirs: string[] = [];
@@ -106,7 +109,9 @@ function spawnRig(dir: string): WorkerRig {
     waitFor: (pred, timeoutMs = 10_000) =>
       new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
-          reject(new Error(`waitFor timed out; frames: ${JSON.stringify(frames)}`));
+          reject(
+            new Error(`waitFor timed out; frames: ${JSON.stringify(frames)}`),
+          );
         }, timeoutMs);
         const check = () => {
           if (frames.some(pred)) {
@@ -130,7 +135,13 @@ function newTmpDir(): string {
 }
 
 function readEpisodeLines(dir: string): DuressEpisodeEvent[] {
-  const file = join(dir, "worktrees", WORKTREE, "logs", "duress-episodes.jsonl");
+  const file = join(
+    dir,
+    "worktrees",
+    WORKTREE,
+    "logs",
+    "duress-episodes.jsonl",
+  );
   if (!existsSync(file)) return [];
   return readFileSync(file, "utf8")
     .split("\n")
@@ -147,133 +158,125 @@ afterAll(() => {
 });
 
 describe("sentinel worker latch lifecycle", () => {
-  test(
-    "trips, renews the lease while the parent thread is blocked, clears",
-    async () => {
-      const dir = newTmpDir();
-      const latchPath = join(dir, "duress.latch");
-      const rig = spawnRig(dir);
+  test("trips, renews the lease while the parent thread is blocked, clears", async () => {
+    const dir = newTmpDir();
+    const latchPath = join(dir, "duress.latch");
+    const rig = spawnRig(dir);
 
-      rig.post({
-        type: "init",
-        worktree: WORKTREE,
-        cadenceMs: CADENCE_MS,
-        thresholds: THRESHOLDS,
-        maxEpisodeHoldMs: 600_000,
-      });
-      // Pin the gatherer to a hot synthetic sample before the first tick.
-      rig.post({ type: "__sample", sample: hot() });
+    rig.post({
+      type: "init",
+      worktree: WORKTREE,
+      cadenceMs: CADENCE_MS,
+      thresholds: THRESHOLDS,
+      maxEpisodeHoldMs: 600_000,
+    });
+    // Pin the gatherer to a hot synthetic sample before the first tick.
+    rig.post({ type: "__sample", sample: hot() });
 
-      await rig.waitFor((f) => f.type === "ready");
-      await rig.waitFor((f) => f.type === "trip");
-      expect(existsSync(latchPath)).toBe(true);
-      const latch = JSON.parse(readFileSync(latchPath, "utf8")) as {
-        setAt: number;
-        reason: string;
-      };
-      expect(latch.reason).toContain("decompressionsPerSec");
+    await rig.waitFor((f) => f.type === "ready");
+    await rig.waitFor((f) => f.type === "trip");
+    expect(existsSync(latchPath)).toBe(true);
+    const latch = JSON.parse(readFileSync(latchPath, "utf8")) as {
+      setAt: number;
+      reason: string;
+    };
+    expect(latch.reason).toContain("decompressionsPerSec");
 
-      // ── The decisive half: freeze THIS thread the way main froze at 03:34.
-      const preBlockMtime = statSync(latchPath).mtimeMs;
-      const blockStart = Date.now();
-      // No event loop for 1s ≈ 10 worker ticks. Under the old in-main-loop
-      // design, renewal stopped here.
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_000);
-      const wake = Date.now();
+    // ── The decisive half: freeze THIS thread the way main froze at 03:34.
+    const preBlockMtime = statSync(latchPath).mtimeMs;
+    const blockStart = Date.now();
+    // No event loop for 1s ≈ 10 worker ticks. Under the old in-main-loop
+    // design, renewal stopped here.
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_000);
+    const wake = Date.now();
 
-      const postBlockMtime = statSync(latchPath).mtimeMs;
-      // Renewed while we were frozen: only the worker thread can have done it.
-      expect(postBlockMtime).toBeGreaterThan(preBlockMtime);
-      expect(postBlockMtime).toBeGreaterThan(blockStart);
-      // The lease held throughout (the isUnderDuress predicate).
-      expect(wake - postBlockMtime).toBeLessThan(FRESHNESS_LEASE_MS);
+    const postBlockMtime = statSync(latchPath).mtimeMs;
+    // Renewed while we were frozen: only the worker thread can have done it.
+    expect(postBlockMtime).toBeGreaterThan(preBlockMtime);
+    expect(postBlockMtime).toBeGreaterThan(blockStart);
+    // The lease held throughout (the isUnderDuress predicate).
+    expect(wake - postBlockMtime).toBeLessThan(FRESHNESS_LEASE_MS);
 
-      // ── Clear: calm samples for offTicks → latch unlinked.
-      rig.post({ type: "__sample", sample: calm() });
-      await rig.waitFor((f) => f.type === "clear");
-      expect(existsSync(latchPath)).toBe(false);
+    // ── Clear: calm samples for offTicks → latch unlinked.
+    rig.post({ type: "__sample", sample: calm() });
+    await rig.waitFor((f) => f.type === "clear");
+    expect(existsSync(latchPath)).toBe(false);
 
-      // ── WS3: the clear frame carries the duress-episode report enrichment
-      // (reason / elevated cause-signature / episodeSetAt / wall) that onset.ts
-      // turns into a `void recordReport({ kind: "duress-episode" })` on main.
-      // Asserting via the frame-handling seam (the worker emits it) proves the
-      // report has everything it needs without pulling the DB into a worker test.
-      const clearFrame = rig.frames.find((f) => f.type === "clear");
-      expect(clearFrame?.type).toBe("clear");
-      if (clearFrame?.type === "clear") {
-        expect(clearFrame.reason).toContain("decompressionsPerSec");
-        expect(clearFrame.elevated).toEqual(["decompressionsPerSec"]);
-        expect(clearFrame.episodeSetAt).toBe(latch.setAt);
-        expect(typeof clearFrame.wall).toBe("number");
-        expect(clearFrame.forced).toBe(false);
-      }
+    // ── WS3: the clear frame carries the duress-episode report enrichment
+    // (reason / elevated cause-signature / episodeSetAt / wall) that onset.ts
+    // turns into a `void recordReport({ kind: "duress-episode" })` on main.
+    // Asserting via the frame-handling seam (the worker emits it) proves the
+    // report has everything it needs without pulling the DB into a worker test.
+    const clearFrame = rig.frames.find((f) => f.type === "clear");
+    expect(clearFrame?.type).toBe("clear");
+    if (clearFrame?.type === "clear") {
+      expect(clearFrame.reason).toContain("decompressionsPerSec");
+      expect(clearFrame.elevated).toEqual(["decompressionsPerSec"]);
+      expect(clearFrame.episodeSetAt).toBe(latch.setAt);
+      expect(typeof clearFrame.wall).toBe("number");
+      expect(clearFrame.forced).toBe(false);
+    }
 
-      // ── Stage 3: trip/clear landed as schema-valid duress-episode lines.
-      const episodes = readEpisodeLines(dir);
-      expect(episodes.map((e) => e.kind)).toEqual(["trip", "clear"]);
-      const [trip, clear] = episodes as [DuressEpisodeEvent, DuressEpisodeEvent];
-      expect(trip.episodeSetAt).toBe(latch.setAt);
-      expect(clear.episodeSetAt).toBe(trip.episodeSetAt);
-      expect(clear.atMs).toBeGreaterThanOrEqual(trip.atMs);
-      expect(trip.reason).toContain("decompressionsPerSec");
+    // ── Stage 3: trip/clear landed as schema-valid duress-episode lines.
+    const episodes = readEpisodeLines(dir);
+    expect(episodes.map((e) => e.kind)).toEqual(["trip", "clear"]);
+    const [trip, clear] = episodes as [DuressEpisodeEvent, DuressEpisodeEvent];
+    expect(trip.episodeSetAt).toBe(latch.setAt);
+    expect(clear.episodeSetAt).toBe(trip.episodeSetAt);
+    expect(clear.atMs).toBeGreaterThanOrEqual(trip.atMs);
+    expect(trip.reason).toContain("decompressionsPerSec");
 
-      // ── Frame ordering sanity + graceful stop.
-      const kinds = rig.frames.map((f) => f.type);
-      expect(kinds.indexOf("ready")).toBeLessThan(kinds.indexOf("trip"));
-      expect(kinds.indexOf("trip")).toBeLessThan(kinds.indexOf("clear"));
-      expect(kinds).toContain("sample");
-      rig.post({ type: "stop" });
-      await rig.waitFor((f) => f.type === "stopped");
-    },
-    20_000,
-  );
+    // ── Frame ordering sanity + graceful stop.
+    const kinds = rig.frames.map((f) => f.type);
+    expect(kinds.indexOf("ready")).toBeLessThan(kinds.indexOf("trip"));
+    expect(kinds.indexOf("trip")).toBeLessThan(kinds.indexOf("clear"));
+    expect(kinds).toContain("sample");
+    rig.post({ type: "stop" });
+    await rig.waitFor((f) => f.type === "stopped");
+  }, 20_000);
 
-  test(
-    "a respawned worker adopts a fresh existing latch and owns its clear",
-    async () => {
-      const dir = newTmpDir();
-      const latchPath = join(dir, "duress.latch");
-      // A previous worker tripped, then died (crash / main restart): the
-      // latch exists with a fresh mtime, and the trip line is already on disk.
-      const setAt = Date.now() - 5_000;
-      writeFileSync(
-        latchPath,
-        JSON.stringify({ setAt, reason: "cluster-onset: loadRatio" }),
-      );
+  test("a respawned worker adopts a fresh existing latch and owns its clear", async () => {
+    const dir = newTmpDir();
+    const latchPath = join(dir, "duress.latch");
+    // A previous worker tripped, then died (crash / main restart): the
+    // latch exists with a fresh mtime, and the trip line is already on disk.
+    const setAt = Date.now() - 5_000;
+    writeFileSync(
+      latchPath,
+      JSON.stringify({ setAt, reason: "cluster-onset: loadRatio" }),
+    );
 
-      const rig = spawnRig(dir);
-      rig.post({
-        type: "init",
-        worktree: WORKTREE,
-        cadenceMs: CADENCE_MS,
-        thresholds: THRESHOLDS,
-        maxEpisodeHoldMs: 600_000,
-      });
-      rig.post({ type: "__sample", sample: calm() });
-      await rig.waitFor((f) => f.type === "ready");
+    const rig = spawnRig(dir);
+    rig.post({
+      type: "init",
+      worktree: WORKTREE,
+      cadenceMs: CADENCE_MS,
+      thresholds: THRESHOLDS,
+      maxEpisodeHoldMs: 600_000,
+    });
+    rig.post({ type: "__sample", sample: calm() });
+    await rig.waitFor((f) => f.type === "ready");
 
-      // Adoption: no trip frame, no trip line — straight to the clear after
-      // offTicks calm ticks, unlinking the adopted latch.
-      await rig.waitFor((f) => f.type === "clear");
-      expect(rig.frames.some((f) => f.type === "trip")).toBe(false);
-      expect(existsSync(latchPath)).toBe(false);
+    // Adoption: no trip frame, no trip line — straight to the clear after
+    // offTicks calm ticks, unlinking the adopted latch.
+    await rig.waitFor((f) => f.type === "clear");
+    expect(rig.frames.some((f) => f.type === "trip")).toBe(false);
+    expect(existsSync(latchPath)).toBe(false);
 
-      const episodes = readEpisodeLines(dir);
-      expect(episodes.map((e) => e.kind)).toEqual(["clear"]);
-      expect(episodes[0]?.episodeSetAt).toBe(setAt);
+    const episodes = readEpisodeLines(dir);
+    expect(episodes.map((e) => e.kind)).toEqual(["clear"]);
+    expect(episodes[0]?.episodeSetAt).toBe(setAt);
 
-      // An adopted episode has no trip event, so its clear frame carries an
-      // empty cause-signature but still the adopted latch's episodeSetAt — the
-      // duress-episode report renders it as "(adopted / unknown)".
-      const clearFrame = rig.frames.find((f) => f.type === "clear");
-      if (clearFrame?.type === "clear") {
-        expect(clearFrame.elevated).toEqual([]);
-        expect(clearFrame.episodeSetAt).toBe(setAt);
-      }
+    // An adopted episode has no trip event, so its clear frame carries an
+    // empty cause-signature but still the adopted latch's episodeSetAt — the
+    // duress-episode report renders it as "(adopted / unknown)".
+    const clearFrame = rig.frames.find((f) => f.type === "clear");
+    if (clearFrame?.type === "clear") {
+      expect(clearFrame.elevated).toEqual([]);
+      expect(clearFrame.episodeSetAt).toBe(setAt);
+    }
 
-      rig.post({ type: "stop" });
-      await rig.waitFor((f) => f.type === "stopped");
-    },
-    20_000,
-  );
+    rig.post({ type: "stop" });
+    await rig.waitFor((f) => f.type === "stopped");
+  }, 20_000);
 });

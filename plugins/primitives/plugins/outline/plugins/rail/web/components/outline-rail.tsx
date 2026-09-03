@@ -5,13 +5,13 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   FloatingAction,
   FloatingActionFadeIn,
-} from "@plugins/primitives/plugins/floating-action/web";
+} from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { useActiveInView } from "@plugins/primitives/plugins/outline/plugins/scroll-spy/web";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import type { OutlineEntry } from "../../core";
 import { DASH_STEP_PX } from "../internal/depth";
 import { DashStack } from "./dash-stack";

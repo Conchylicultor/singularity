@@ -104,10 +104,10 @@ contributor that hands a conflict to an agent.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/popover.InlinePopover`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/syntax-highlight.HighlightedCode`
     - `shell/toast.showToast`

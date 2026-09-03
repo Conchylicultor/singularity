@@ -140,12 +140,12 @@ closed panel `inert` and fades it out rather than unmounting it.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
-    - `primitives/element-size.useElementSize`
-    - `primitives/floating-action.FloatingAction`
-    - `primitives/floating-action.FloatingActionFadeIn`
+    - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/scroll-reveal.revealElement`
+    - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/outline/scroll-spy.useActiveInView`
-    - `primitives/scroll-reveal.revealElement`
-    - `primitives/scroll-reveal.useRevealOnActive`
+    - `primitives/overlay/floating-action.FloatingAction`
+    - `primitives/overlay/floating-action.FloatingActionFadeIn`
   - Exports (types):
     - `OutlineEntry`
     - `OutlineRailProps`

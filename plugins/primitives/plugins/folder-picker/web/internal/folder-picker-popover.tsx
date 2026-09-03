@@ -6,7 +6,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { FolderPicker } from "./folder-picker";
 import { useHostDir } from "./use-host-dir";
 

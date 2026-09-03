@@ -247,10 +247,10 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `improve`
     - `infra/attachments`
     - `infra/claude-cli`
-    - `infra/contention`
     - `infra/entity-extensions`
     - `infra/events`
     - `infra/events-test`
+    - `infra/host/contention`
     - `infra/jobs`
     - `infra/query-resource`
     - `infra/retention`

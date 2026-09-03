@@ -87,7 +87,7 @@ Two consequences for the host row:
   scrim's fade margin still reaches the row.
 
 An open popup inside the cluster holds it revealed, via `<PopupOpenScope>`
-(`primitives/popup-open`) — a typed React signal, deliberately not a
+(`primitives/overlay/popup-open`) — a typed React signal, deliberately not a
 `has-[[data-popup-open]]` CSS selector naming another library's attribute
 contract (that spelling silently rotted once). Geometry is stable by
 construction; *visibility* rests on this signal, and only the runtime asserts it:
@@ -107,7 +107,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/surface.Surface`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/popup-open.PopupOpenScope`
+    - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types): `RowActionsProps`
   - Exports (values):
     - `RowActions`

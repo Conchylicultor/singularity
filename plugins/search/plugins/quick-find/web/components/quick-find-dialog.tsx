@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { revealElement } from "@plugins/primitives/plugins/scroll-reveal/web";
+import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   Dialog,
   DialogContent,

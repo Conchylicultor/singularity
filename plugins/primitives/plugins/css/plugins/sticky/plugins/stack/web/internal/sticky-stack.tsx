@@ -2,7 +2,7 @@ import {
   Sticky,
   type StickyProps,
 } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   createContext,
   useCallback,
@@ -137,8 +137,10 @@ export function StickyStack({
   return <StickyStackContext value={value}>{children}</StickyStackContext>;
 }
 
-export interface StickyStackItemProps
-  extends Omit<StickyProps, "edge" | "offset"> {
+export interface StickyStackItemProps extends Omit<
+  StickyProps,
+  "edge" | "offset"
+> {
   /** This item's key; must be present in the provider's `keys`. */
   itemKey: string;
 }

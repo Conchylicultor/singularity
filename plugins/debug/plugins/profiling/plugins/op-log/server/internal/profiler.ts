@@ -1,7 +1,7 @@
 import type {
   GrantHooks,
   Lane,
-} from "@plugins/infra/plugins/host-admission/core";
+} from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type {
   OpenWait,
   OpKind,

@@ -15,7 +15,7 @@ import {
   tryRunGit,
   GitError,
 } from "@plugins/primitives/plugins/commit-list/server";
-import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
+import { lastKnownMainSha } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import type { AttemptPending } from "../../core/protocol";
 // The trailer grammar lives with the `pushes` table it fills, so the ledger's
 // own projection and this git-measured landed set read one definition.

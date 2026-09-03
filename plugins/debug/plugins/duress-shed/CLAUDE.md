@@ -14,7 +14,7 @@ flushes: shed items replay through their normal durable path, and the buffer's
 (`byCascade` shed/dropped counts, `replayed`, `replayErrors`, the episode's
 `setAt`).
 
-## Why the kind lives here, not in `infra/duress`
+## Why the kind lives here, not in `infra/host/duress`
 
 Import direction. `reports` gates its own durable path on the shed engine, so
 **`reports` imports `duress`** — duress can therefore never import reports

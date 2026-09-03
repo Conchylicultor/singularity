@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import {
+  Stack,
+  Inset,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 
 export interface ToolbarControlProps {
   /** Leading category icon (already sized, e.g. `<MdSpeed className="size-3.5" />`). */

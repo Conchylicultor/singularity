@@ -20,7 +20,7 @@ import { flockTry } from "@plugins/packages/plugins/flock/server";
 import {
   pushPool,
   pushSlotPath,
-} from "@plugins/infra/plugins/host-admission/server";
+} from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   worktreesDir,
   worktreeDataDir,

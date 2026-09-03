@@ -4,7 +4,7 @@ import {
   LOG_FORMAT,
   parseGitLog,
 } from "@plugins/primitives/plugins/commit-list/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
   probeHeadMain,
   readBranch,

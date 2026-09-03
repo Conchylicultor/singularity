@@ -73,7 +73,7 @@ plus a per-song reset.
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useResource`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
   - Exports (types): `TrackMixerEntry`

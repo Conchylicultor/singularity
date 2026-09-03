@@ -1,7 +1,7 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 
 export interface ExpandableProps {
   /** The content to clamp. */

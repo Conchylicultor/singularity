@@ -137,7 +137,7 @@ structurally unrepresentable.
 cycle), the animation blob, the width/padding/max-height roles, the sticky
 `header`, and the content-context resets (`SingleLineProvider value={false}` +
 `OverlayBoundary`). `PopoverContent`, `DropdownMenuContent`, `SelectContent`,
-`DialogContent` and `primitives/floating-surface` all *contain* it — they stay
+`DialogContent` and `primitives/overlay/floating-surface` all *contain* it — they stay
 separate only because they are different state machines (base-ui listbox / menu /
 dialog, plus one focus-less Floating-UI surface). `TooltipContent` deliberately
 does not: a one-line label with its own chrome, where a height clamp is
@@ -275,10 +275,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
 - Web:
   - Uses:
     - `primitives/css/rail.useRailGuard`
-    - `primitives/element-size.useResizeObserver`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/overlay-boundary.OverlayBoundary`
-    - `primitives/popup-open.useReportPopupOpen`
+    - `primitives/overlay/overlay-boundary.OverlayBoundary`
+    - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/select-scope.ContentScope`
     - `primitives/select-scope.scopeSelectAllKeyDown`
   - Exports (types):
@@ -592,7 +592,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `plugin-meta/plugin-view/inclusion`
     - `primitives/adaptive-bar`
     - `primitives/app-shell`
-    - `primitives/auto-scroll`
     - `primitives/avatar`
     - `primitives/bar`
     - `primitives/breadcrumb`
@@ -633,7 +632,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/theme-boundary`
     - `primitives/css/toggle-chip`
     - `primitives/css/viewport-overlay`
-    - `primitives/cursor-menu`
     - `primitives/cursor-pagination`
     - `primitives/data-table`
     - `primitives/data-view`
@@ -643,22 +641,26 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
-    - `primitives/floating-action`
-    - `primitives/floating-surface`
+    - `primitives/dom/auto-scroll`
     - `primitives/folder-picker`
     - `primitives/graph-canvas`
     - `primitives/hover-reveal`
     - `primitives/icon-button`
     - `primitives/icon-picker`
-    - `primitives/imperative-dialog`
-    - `primitives/imperative-dialog/confirm`
     - `primitives/launch`
     - `primitives/loading`
     - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/outline/rail`
+    - `primitives/overlay/cursor-menu`
+    - `primitives/overlay/floating-action`
+    - `primitives/overlay/floating-surface`
+    - `primitives/overlay/imperative-dialog`
+    - `primitives/overlay/imperative-dialog/confirm`
+    - `primitives/overlay/popover`
+    - `primitives/overlay/surface-overlay`
+    - `primitives/overlay/tooltip`
     - `primitives/pane`
-    - `primitives/popover`
     - `primitives/prompt-editor`
     - `primitives/prompt-editor/voice-input`
     - `primitives/row-actions`
@@ -666,10 +668,8 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/section-card`
     - `primitives/setup-steps`
     - `primitives/slot-render`
-    - `primitives/surface-overlay`
     - `primitives/text-editor`
     - `primitives/text-editor/paste-images`
-    - `primitives/tooltip`
     - `primitives/tree`
     - `primitives/ui-context`
     - `reorder`

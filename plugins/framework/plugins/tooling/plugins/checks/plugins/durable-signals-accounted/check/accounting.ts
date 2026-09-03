@@ -81,7 +81,7 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
   },
   duress: {
     consumer: "internal",
-    note: "Shed-buffer accounting prose (infra/duress). The durable shed record is the duress-shed report; this is the buffer's own log.",
+    note: "Shed-buffer accounting prose (infra/host/duress). The durable shed record is the duress-shed report; this is the buffer's own log.",
   },
   "paging-probe": {
     consumer: "internal",

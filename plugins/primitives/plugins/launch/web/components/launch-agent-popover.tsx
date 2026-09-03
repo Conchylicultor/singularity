@@ -3,7 +3,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { PopoverWidth } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";

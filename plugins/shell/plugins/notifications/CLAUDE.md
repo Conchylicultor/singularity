@@ -23,9 +23,9 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/icon-button.IconButton`
     - `primitives/live-state.useWindowResource`
-    - `primitives/popover.InlinePopover`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
-    - `primitives/tab-id.getTabId`
+    - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
   - Exports (types): `ToastArgs`

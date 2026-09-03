@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web";
+import { defineScopedStore } from "@plugins/primitives/plugins/scope/plugins/scoped-store/web";
 
 /**
  * Per-song global transpose offset (in semitones) as a PER-SURFACE scoped store

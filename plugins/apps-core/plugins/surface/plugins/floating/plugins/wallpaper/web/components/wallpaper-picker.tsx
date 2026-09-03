@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { openDialog } from "@plugins/primitives/plugins/imperative-dialog/web";
+import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
 import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -18,7 +18,9 @@ import { saveCandidate } from "../internal/save";
  * then closes.
  */
 export function openWallpaperPicker(): void {
-  void openDialog((close) => <WallpaperPickerDialog onClose={close} />, { size: "md" });
+  void openDialog((close) => <WallpaperPickerDialog onClose={close} />, {
+    size: "md",
+  });
 }
 
 function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {

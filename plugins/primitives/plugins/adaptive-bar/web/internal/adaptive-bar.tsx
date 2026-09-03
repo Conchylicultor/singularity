@@ -62,7 +62,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useRequestGrow } from "@plugins/primitives/plugins/css/plugins/grow-relay/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
-import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEditMode } from "@plugins/primitives/plugins/edit-mode-signal/web";
 import { AdaptiveBarItem } from "./bar-item";
