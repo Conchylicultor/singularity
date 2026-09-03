@@ -41,9 +41,11 @@ interface Probe {
 async function caretAt(page: Page): Promise<Probe> {
   return page.evaluate(() => {
     const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return { block: null, offset: -1, length: -1 };
+    if (!sel || sel.rangeCount === 0)
+      return { block: null, offset: -1, length: -1 };
     const anchor = sel.anchorNode;
-    const el = anchor?.nodeType === 1 ? (anchor as Element) : anchor?.parentElement;
+    const el =
+      anchor?.nodeType === 1 ? (anchor as Element) : anchor?.parentElement;
     const editable = el?.closest('[contenteditable="true"]');
     const blockEl = editable?.closest("[data-block-id]");
     if (!editable || !blockEl) return { block: null, offset: -1, length: -1 };
@@ -121,7 +123,12 @@ await withBrowser(async (h) => {
   const inTitle = await page.evaluate(
     () => document.activeElement?.tagName.toLowerCase() ?? null,
   );
-  console.log("after ArrowUp from block 1:", JSON.stringify(up), "focus:", inTitle);
+  console.log(
+    "after ArrowUp from block 1:",
+    JSON.stringify(up),
+    "focus:",
+    inTitle,
+  );
   r.ok(
     "D: ArrowUp from the first block still hands the caret to the page title",
     up.block === null && (inTitle === "input" || inTitle === "textarea"),
