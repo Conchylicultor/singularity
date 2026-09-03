@@ -25201,6 +25201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
               - `primitives/tree.RowChrome`
               - `primitives/tree.RowChromeMenuHelpers`

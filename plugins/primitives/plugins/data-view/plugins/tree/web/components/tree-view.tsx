@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { MdAdd, MdLink } from "react-icons/md";
 import {
   evaluateNode,
@@ -29,6 +29,7 @@ import {
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -467,6 +468,25 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [hierOnCreate],
   );
 
+  // Activating a row means running the consumer's activation for THAT row, so
+  // it needs the row object — which a just-created row does not have yet: the
+  // create path hands back an id, and the row only arrives with the next
+  // live-state push. Dropping the activation in that window is what left "add
+  // child" creating a page nobody was taken to. So an unresolvable id is held
+  // and activated the moment its row shows up.
+  const pendingActivationRef = useRef<string | null>(null);
+  const activateById = useEventCallback((id: string): boolean => {
+    const original = originalById.get(id);
+    if (original === undefined) return false;
+    props.rowActivation?.(original)?.();
+    return true;
+  });
+  useEffect(() => {
+    const pending = pendingActivationRef.current;
+    if (pending === null) return;
+    if (activateById(pending)) pendingActivationRef.current = null;
+  }, [originalById, activateById]);
+
   // Unwraps the projection for the consumer's row-level predicate. An ALIAS row
   // never toggles: it is a read-only reference leaf whose subtree lives at its
   // canonical place, so there is nothing under it to open.
@@ -527,8 +547,12 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       selectedId={props.selectedRowId}
       rootId={options.rootId}
       onSelect={(id) => {
-        const original = originalById.get(id);
-        if (original !== undefined) props.rowActivation?.(original)?.();
+        // A row created from the tree ("add child" / "add below") is activated
+        // by the id `onCreate` returned, one live-state round-trip BEFORE the
+        // row itself lands — so it is normal for the lookup to miss here. Hold
+        // the id and let the effect above activate it on arrival; anything that
+        // does resolve now supersedes a held one.
+        pendingActivationRef.current = activateById(id) ? null : id;
       }}
       setExpanded={setExpanded}
       onMove={onMove}
