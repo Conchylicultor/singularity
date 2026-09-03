@@ -15,11 +15,12 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/install-sink/web";
 import {
   fillSegment,
+  MissingRouteParamError,
   normalizeRoutePath,
   normalizeSegmentPattern,
   type AppRef,
-  type InferParams,
   type RouteDef,
+  type RouteParams,
 } from "../core";
 import { Pane as PaneSlots } from "./slots";
 import { useRenderSync } from "./use-render-sync";
@@ -33,25 +34,6 @@ import { definePaneHeaderSlot, type PaneHeaderSlot } from "./header-slot";
 
 export type { PaneHeaderItem } from "./components/pane-header-item";
 
-export type { InferParams } from "../core";
-
-// ---------------------------------------------------------------------------
-// Type machinery — extract `:param` and `:param*` names from a path template.
-// `InferParams` itself lives in `../core` (the single definition, shared with
-// the server); these raw helpers stay local because `HasParams` needs the
-// pre-normalized extraction (see the note on `HasParams` below).
-// ---------------------------------------------------------------------------
-
-type ParamName<S extends string> = S extends `${infer N}*` ? N : S;
-
-type ExtractParams<Path extends string> =
-  Path extends `${infer Seg}/${infer Rest}`
-    ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
-        ExtractParams<Rest>
-    : Path extends `:${infer P}`
-      ? { [K in ParamName<P>]: string }
-      : {};
-
 // ---------------------------------------------------------------------------
 // Resolve hook — mandatory for parameterized panes, opt-out with `false`.
 // ---------------------------------------------------------------------------
@@ -59,19 +41,6 @@ type ExtractParams<Path extends string> =
 export type ResolveHook<Params extends Record<string, string>> = (
   params: Params,
 ) => { pending: boolean; found: boolean };
-
-// Tests the RAW extraction (`{}` for a paramless path → keyof never), NOT
-// `InferParams`: the latter now normalizes the empty case to
-// `Record<string, never>` whose `keyof` is `string | number`, which would
-// misreport every paramless pane as paramful.
-type HasParams<Path extends string> = keyof ExtractParams<Path> extends never
-  ? false
-  : true;
-
-type ResolveField<Path extends string> =
-  HasParams<Path> extends true
-    ? { resolve: ResolveHook<InferParams<Path>> | false }
-    : { resolve?: never };
 
 let nextInstanceId = 0;
 
@@ -235,7 +204,11 @@ interface NormalizedChrome {
 
 export interface PaneInternal {
   id: string;
-  /** Default ancestors to prepend when opening this pane from scratch (no caller context). */
+  /**
+   * Ancestors to prepend when opening this pane from scratch (no caller
+   * context), root-first. Derived from the route's `parentPaneIds`, so it is
+   * the whole transitive chain rather than one declared level.
+   */
   defaultAncestors: Array<{ id: string }>;
   /** Own URL segment (no leading slash). Used by the route URL parser/builder. */
   segment: string;
@@ -1571,11 +1544,10 @@ export interface PaneObject<
   forward(): void;
   /**
    * Build a full app-rooted link to this pane (e.g. "/agents/build/r/<id>").
-   * Present ONLY on route-backed panes (defined via `Pane.define({ route })`);
-   * `undefined` on legacy segment-form panes, which have no `RouteDef` to
-   * resolve the app-relative path from. Delegates to {@link RouteDef.link}.
+   * Every pane has one: identity comes from a `RouteDef`, which is what knows
+   * the app-relative path. Delegates to {@link RouteDef.link}.
    */
-  link?: (app: AppRef, params: FullParams) => string;
+  link: (app: AppRef, params: FullParams) => string;
   Actions: PaneHeaderSlot;
   /** Internal. Consumers should not rely on this. */
   _internal: PaneInternal;
@@ -1590,9 +1562,43 @@ export interface PaneObject<
  */
 export type AnyPane = PaneObject<any, any, any, any>;
 
+/**
+ * The app-rooted URL for a pane's cross-app hand-off, or `null` when there is
+ * none to build.
+ *
+ * A pane's URL needs every ancestor's params, not just its own — the same walk
+ * `store.promote` does. But the route it currently sits in need not contain
+ * those ancestors: a pane whose parent route is paramful can be opened from
+ * anywhere, and then nothing supplies the parent's `:param`. `fillSegment`
+ * fails loud on that, which is right for a URL build — except that this one
+ * runs inside a `useMemo` DURING RENDER, where a throw takes the whole surface
+ * to its error boundary over what is merely "this pane cannot be linked from
+ * here".
+ *
+ * So exactly that failure, and only it, becomes the ABSENCE of a cross-app
+ * destination — joining the one other thing that sends a pane down the same-app
+ * branch (no installed navigator). Every other error still propagates, which is
+ * why the miss is a class to narrow on rather than a message to match.
+ */
+function crossAppUrl(
+  route: RouteDef<any, any>,
+  home: AppRef,
+  slots: PaneSlot[],
+  idx: number,
+): string | null {
+  const params: Record<string, string> = {};
+  for (let i = 0; i <= idx; i++) Object.assign(params, slots[i]!.params);
+  try {
+    return route.link(home, params);
+  } catch (err) {
+    if (err instanceof MissingRouteParamError) return null;
+    throw err;
+  }
+}
+
 function makePaneObject(
   internal: PaneInternal,
-  route?: RouteDef<any>,
+  route: RouteDef<any, any>,
 ): AnyPane {
   const { actionsSlot } = internal;
 
@@ -1719,9 +1725,10 @@ function makePaneObject(
    *    ancestors and re-root the route here. Only meaningful below the root,
    *    hence the `idx === 0` bail.
    *
-   * The home app is mandatory, so only two things can still send a pane down
-   * the same-app branch: a legacy segment pane (no `RouteDef`, so there is no
-   * URL to build) and a missing navigator (see `app-nav-sink`).
+   * The home app is mandatory and every pane has a `RouteDef`, so only two
+   * things can still send a pane down the same-app branch: a missing navigator
+   * (see `app-nav-sink`), and a route whose ancestor params this route does not
+   * carry (see {@link crossAppUrl}).
    *
    * Which destination it picked is part of the answer, not an implementation
    * detail: the chrome labels the button from it (see {@link PromoteAction}).
@@ -1743,13 +1750,14 @@ function makePaneObject(
       if (idx < 0) return null;
 
       const home = internal.app;
-      const away = !!route && home.id !== surfaceAppId && canNavigate;
-      if (away) {
-        // Params accumulate down the chain, so a pane's own URL needs every
-        // ancestor's params too — the same walk `store.promote` does.
-        const params: Record<string, string> = {};
-        for (let i = 0; i <= idx; i++) Object.assign(params, slots[i]!.params);
-        const url = route.link(home, params);
+      // Building the URL is part of DECIDING to hand off, not a step after the
+      // decision: a pane with no linkable URL from here has no cross-app
+      // destination, exactly as one with no installed navigator has none.
+      const url =
+        home.id !== surfaceAppId && canNavigate
+          ? crossAppUrl(route, home, slots, idx)
+          : null;
+      if (url !== null) {
         return {
           kind: "cross-app",
           app: home,
@@ -1835,9 +1843,7 @@ function makePaneObject(
     useToggle,
     back,
     forward,
-    // Route-backed panes can resolve a full app-rooted link; legacy panes
-    // leave this undefined (no RouteDef to derive the app-relative path).
-    link: route ? (app, params) => route.link(app, params) : undefined,
+    link: (app, params) => route.link(app, params),
     Actions: actionsSlot,
     _internal: internal,
   };
@@ -1861,24 +1867,57 @@ function normalizeChrome<Params>(
 // Pane.define — factory + registration.
 // ---------------------------------------------------------------------------
 
-// ParentParams defaults to `{}` so that top-level panes (no parent) end up
-// with `{} & InferParams<Path>` = `InferParams<Path>`. Using
-// `Record<string, never>` as the default would clash with any own params.
-type DefineArgs<
-  Path extends string,
-  ParentParams,
+/**
+ * Restores the CLOSED empty param set at the `PaneObject` boundary.
+ *
+ * `RouteParams<"">` is a bare `{}` on purpose (see `core/route.ts`): routes
+ * chain their params, and intersecting `Record<string, never>` into a child's
+ * real params would collapse every property to `never`. But `{}` is
+ * TypeScript's "any non-nullish value", so it accepts an object literal with
+ * whatever keys, so a paramless pane would silently take
+ * `openPane(p, { foo: "x" })` — a stray key nothing would ever read.
+ *
+ * So the chain keeps `{}` and only the type a CALLER is checked against gets
+ * normalized back to the key-rejecting `Record<string, never>`.
+ */
+type Closed<P> = keyof P extends never ? Record<string, never> : P;
+
+// The `resolve` field. A paramful route requires a resolve hook (or an
+// explicit `false` opt-out); a paramless route forbids it.
+//
+// Keyed on the route's OWN params, not its chained ones, because own-only is
+// what the hook is actually handed: `PaneBox` passes `entry.params`, which
+// `extractOwnParams` filtered to this pane's own segment names.
+type RouteResolveField<Own extends Record<string, string>> =
+  keyof Own extends never
+    ? { resolve?: never }
+    : { resolve: ResolveHook<Own> | false };
+
+// A route's OWN params: what its own `segment` declares, and nothing an
+// ancestor contributed. Derived from the `RouteDef`'s segment LITERAL — see the
+// note on `RouteDef` for why the own set is not a type parameter of its own.
+type OwnRouteParams<Seg extends string> = RouteParams<Seg>;
+
+// The arguments to `Pane.define`. Identity (`id` / `segment` / the ancestor
+// chain) is derived from the `RouteDef`, so the only authored fields are the
+// behavior (`component`, `chrome`, `useTitle`, `input`, `width`, `resolve`).
+//
+// Both of the route's param sets flow through (see `RouteDef`): `Params` is the
+// CHAINED set every ancestor contributes to, which is what a URL needs and so
+// what `useTitle` / `chrome.title` are handed (`fullParams`); the OWN set,
+// derived from the route's `Seg` literal, is what the pane is handed back
+// (`useParams()`, `resolve`).
+type RouteDefineArgs<
+  Params extends Record<string, string>,
+  Seg extends string,
   Options extends object,
   HintT extends object,
 > = {
-  id: string;
-  /** Optional default ancestors to prepend when opening this pane from scratch (no caller context). */
-  defaultAncestors?: Array<AnyPane>;
-  /** Own URL segment (no leading slash). */
-  segment?: Path;
+  route: RouteDef<Params, Seg>;
   /**
    * Marks this pane as {@link app}'s index/landing pane — what its bare root
-   * resolves to. Declare NO `segment`: an index pane is reached at the app's
-   * base path and has no URL of its own. See {@link PaneInternal.appIndex}.
+   * resolves to. Only legal for a segment-less route.
+   * See {@link PaneInternal.appIndex}.
    */
   appIndex?: boolean;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
@@ -1910,7 +1949,7 @@ type DefineArgs<
    * rebuilt route; never a write source.
    */
   hint?: TypeMarker<HintT>;
-  chrome?: PaneChromeConfig<ParentParams & InferParams<Path>>;
+  chrome?: PaneChromeConfig<Params>;
   /**
    * Self-contained title resolver for tab labels and the browser document
    * title (see {@link PaneInternal.useTitle}). A React hook: it may call global
@@ -1921,7 +1960,7 @@ type DefineArgs<
    * returns undefined.
    */
   useTitle?: (
-    params: ParentParams & InferParams<Path>,
+    params: Params,
     hint: Hint<HintT>,
     options: Options,
   ) => string | undefined;
@@ -1937,112 +1976,36 @@ type DefineArgs<
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
   width?: number;
-} & ResolveField<Path>;
+} & RouteResolveField<OwnRouteParams<Seg>>;
 
-// Route-form `resolve` field. A paramful route requires a resolve hook (or an
-// explicit `false` opt-out); a paramless route forbids it. Mirrors
-// `ResolveField<Path>` but keys off the route's resolved `Params` rather than a
-// raw path template.
-type RouteResolveField<Params extends Record<string, string>> =
-  keyof Params extends never
-    ? { resolve?: never }
-    : { resolve: ResolveHook<Params> | false };
-
-// Route form of `Pane.define`: identity (`id` / `segment` / `defaultAncestors`)
-// is derived from the `RouteDef`, so the only authored fields are the behavior
-// (`component`, `chrome`, `useTitle`, `input`, `width`, `resolve`). Params flow
-// from `RouteDef<Params>`, so `useParams()` returns the full flat `Params`.
-type RouteDefineArgs<
-  Params extends Record<string, string>,
-  Options extends object,
-  HintT extends object,
-> = {
-  route: RouteDef<Params>;
-  /**
-   * Marks this pane as {@link app}'s index/landing pane — what its bare root
-   * resolves to. Only legal for a segment-less route.
-   * See {@link PaneInternal.appIndex}.
-   */
-  appIndex?: boolean;
-  /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
-  app: AppRef;
-  component: ComponentType;
-  /** Borrow another pane's header slot instead of minting one. See {@link DefineArgs.actions}. */
-  actions?: PaneHeaderSlot;
-  /** Literal defaults for the pane's opener-supplied UI options. See {@link DefineArgs.options}. */
-  options?: Options;
-  /** Typed shape of the pane's optimistic {@link Hint}. See {@link DefineArgs.hint}. */
-  hint?: TypeMarker<HintT>;
-  chrome?: PaneChromeConfig<Params>;
-  useTitle?: (
-    params: Params,
-    hint: Hint<HintT>,
-    options: Options,
-  ) => string | undefined;
-  /** Declares this pane a main surface for tab-title resolution. See {@link DefineArgs.titleOwner}. */
-  titleOwner?: boolean;
-  /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
-  width?: number;
-} & RouteResolveField<Params>;
-
-// A route-backed pane always carries a (non-optional) `.link`.
-type RoutePaneObject<
-  Params extends Record<string, string>,
-  Options extends object,
-  HintT extends object,
-> = PaneObject<Params, Params, Options, HintT> & {
-  link: (app: AppRef, params: Params) => string;
-};
-
-// Route form — derive id/segment/defaultAncestors from the RouteDef.
+// Identity comes from the `RouteDef`, so a pane always carries a `.link`.
+//
+// The two param slots differ: an opener supplies the CHAINED params (that is
+// what a URL is built from), while `useParams()` returns the pane's OWN — the
+// same split `MatchEntry` makes between `fullParams` and `params`.
 function define<
   Params extends Record<string, string>,
+  Seg extends string = string,
   Options extends object = NoOptions,
   HintT extends object = NoHint,
 >(
-  args: RouteDefineArgs<Params, Options, HintT>,
-): RoutePaneObject<Params, Options, HintT>;
-// Legacy segment form — kept byte-for-byte for every unconverted pane.
-function define<
-  Path extends string = "",
-  ParentParams = {},
-  Options extends object = NoOptions,
-  HintT extends object = NoHint,
->(
-  args: DefineArgs<Path, ParentParams, Options, HintT>,
-): PaneObject<
-  ParentParams & InferParams<Path>,
-  InferParams<Path>,
-  Options,
-  HintT
->;
+  args: RouteDefineArgs<Params, Seg, Options, HintT>,
+): PaneObject<Closed<Params>, Closed<OwnRouteParams<Seg>>, Options, HintT>;
+// One overload, so the signature callers see stays generic while the body works
+// on the erased shapes (`resolve` is a conditional field; narrowing it under an
+// unresolved `Seg` is not something the implementation should have to do).
 function define(
-  args:
-    | RouteDefineArgs<Record<string, string>, PaneOptions, PaneHintBag>
-    | DefineArgs<string, unknown, PaneOptions, PaneHintBag>,
+  args: RouteDefineArgs<
+    Record<string, string>,
+    string,
+    PaneOptions,
+    PaneHintBag
+  >,
 ): AnyPane {
-  // Discriminate the two arg shapes on `route`: the route form derives
-  // id/segment/defaultAncestors from the RouteDef; the legacy form reads them
-  // directly. Narrowing on `args` (not a derived const) lets TS see which
-  // fields exist in each branch.
-  let route: RouteDef<any> | undefined;
-  let id: string;
-  let segment: string;
-  let defaultAncestors: Array<{ id: string }>;
-  if ("route" in args) {
-    route = args.route;
-    id = args.route.id;
-    segment = args.route.segment;
-    defaultAncestors = args.route.parentPaneIds.map((pid) => ({ id: pid }));
-  } else {
-    route = undefined;
-    id = args.id;
-    segment = args.segment ?? "";
-    defaultAncestors = (args.defaultAncestors ?? []).map((p) => ({
-      id: p._internal.id,
-    }));
-  }
-  segment = segment.replace(/^\/+/, "");
+  const route: RouteDef<any, any> = args.route;
+  const id = route.id;
+  const defaultAncestors = route.parentPaneIds.map((pid) => ({ id: pid }));
+  const segment = route.segment.replace(/^\/+/, "");
 
   if (segment && segment.startsWith(":")) {
     throw new Error(

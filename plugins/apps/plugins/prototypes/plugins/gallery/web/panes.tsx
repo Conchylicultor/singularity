@@ -1,11 +1,17 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import { PrototypeGallery } from "./components/prototype-gallery";
 import { PrototypeDetail } from "./components/prototype-detail";
 
+const prototypesGalleryRoute = defineRoute({
+  id: "prototypes-gallery",
+  segment: "",
+});
+
 /** The gallery root pane: bare `/prototypes`. */
 export const prototypesGalleryPane = Pane.define({
-  id: "prototypes-gallery",
+  route: prototypesGalleryRoute,
   app: prototypesApp,
   appIndex: true,
   component: PrototypesGalleryBody,
@@ -20,12 +26,16 @@ function PrototypesGalleryBody() {
   );
 }
 
+const prototypeDetailRoute = defineRoute({
+  id: "prototypes-detail",
+  segment: "proto/:name",
+  parent: prototypesGalleryRoute,
+});
+
 /** Focus / Compare detail for one prototype. */
 export const prototypeDetailPane = Pane.define({
-  id: "prototypes-detail",
+  route: prototypeDetailRoute,
   app: prototypesApp,
-  defaultAncestors: [prototypesGalleryPane],
-  segment: "proto/:name",
   resolve: false,
   component: PrototypeDetail,
   width: 720,

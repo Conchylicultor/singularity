@@ -4,10 +4,11 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { workflowExecutionsDescriptor } from "@plugins/apps/plugins/workflows/plugins/engine/core";
 import { workflowsApp } from "@plugins/apps/plugins/workflows/plugins/shell/core";
-import { definitionsRootPane } from "@plugins/apps/plugins/workflows/plugins/definitions/web";
+import { definitionsRootRoute } from "@plugins/apps/plugins/workflows/plugins/definitions/web";
 import { ExecutionDetail } from "./components/execution-detail";
 
 function useResolveExecution({ executionId }: { executionId: string }) {
@@ -19,11 +20,17 @@ function useResolveExecution({ executionId }: { executionId: string }) {
   };
 }
 
-export const executionDetailPane = Pane.define({
+const executionDetailRoute = defineRoute({
   id: "workflows-execution-detail",
-  app: workflowsApp,
-  defaultAncestors: [definitionsRootPane],
   segment: "exec/:executionId",
+  // The Workflows landing route, from the definitions plugin — an execution is
+  // opened from a workflow, so it sits under the same app root.
+  parent: definitionsRootRoute,
+});
+
+export const executionDetailPane = Pane.define({
+  route: executionDetailRoute,
+  app: workflowsApp,
   component: ExecutionDetailBody,
   resolve: useResolveExecution,
 });

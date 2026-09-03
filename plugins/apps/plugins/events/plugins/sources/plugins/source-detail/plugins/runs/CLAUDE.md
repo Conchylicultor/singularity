@@ -51,7 +51,7 @@ region is the `model-call` sub-plugin's section and **`runs` names no LLM**.
     - `apps/events/events-core.useEventSourceRuns`
     - `apps/events/sources.describeRun`
     - `apps/events/sources.EventSourceDetail`
-    - `apps/events/sources.eventSourceDetailPane`
+    - `apps/events/sources.eventSourceDetailRoute`
     - `apps/events/sources.formatDuration`
     - `apps/events/sources.RUN_OUTCOME_LABEL`
     - `apps/events/sources.RUN_OUTCOME_OPTIONS`

@@ -11,7 +11,7 @@
     - `Pane.Register` "apple-setup"
     - `Auth.Provider` "Apple Developer"
   - Uses:
-    - `auth.accountsPane`
+    - `auth.accountsRoute`
     - `auth.Auth`
     - `config_v2.useConfigRegistrations`
     - `infra/endpoints.fetchEndpoint`

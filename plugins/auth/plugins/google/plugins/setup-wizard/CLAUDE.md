@@ -9,7 +9,7 @@
   - Slots: `googleSetupPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "google-setup"
   - Uses:
-    - `auth.accountsPane`
+    - `auth.accountsRoute`
     - `auth.currentWorktreeName`
     - `auth.startConnectFlow`
     - `auth.useAccountStatus`

@@ -14,7 +14,7 @@ import {
   useOpenPane,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Opening a pane from GLOBAL CHROME — anything mounted at `Core.Root` or in the
 // tab bar, which has no `PaneSurfaceProvider` of its own: the floating action
@@ -35,16 +35,16 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const listRoute = defineRoute({ id: "chrome-list", segment: "list" });
 const listPane = Pane.define({
-  id: "chrome-list",
+  route: listRoute,
   app: testApp,
-  segment: "list",
   component: () => null,
 });
+const detailRoute = defineRoute({ id: "chrome-detail", segment: "d/:id" });
 const detailPane = Pane.define({
-  id: "chrome-detail",
+  route: detailRoute,
   app: testApp,
-  segment: "d/:id",
   resolve: false,
   component: () => null,
 });

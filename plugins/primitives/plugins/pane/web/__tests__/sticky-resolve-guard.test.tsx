@@ -7,7 +7,7 @@ import { Pane, type PaneStore } from "@plugins/primitives/plugins/pane/web";
 // suite is a unit test of the guard itself, so it reaches the internal file
 // directly (same plugin, no boundary crossed) rather than through a box.
 import { PaneResolveGuard } from "../components/pane-resolve-guard";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // Local fixture app — this suite is about the resolve guard, not pane homes.
@@ -34,10 +34,13 @@ let resolveResult: { pending: boolean; found: boolean } = {
 // A real defined pane: `Pane.define` registers it in the internal→object map
 // that the Not-Found fallback chrome (`paneObjectFor`) consults. `resolve` reads
 // the module-level `resolveResult`, so the test owns the resolve outcome.
-const testPane = Pane.define({
+const testRoute = defineRoute({
   id: "sticky-guard-test",
-  app: testApp,
   segment: "sticky/:id",
+});
+const testPane = Pane.define({
+  route: testRoute,
+  app: testApp,
   resolve: () => resolveResult,
   component: () => <div data-testid="pane-body">resolved</div>,
 });

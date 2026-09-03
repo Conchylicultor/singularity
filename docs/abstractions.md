@@ -15,7 +15,7 @@ Frontend framework for composing an app out of independent feature modules.
 - **Contribution** — a value another plugin provides to a slot; retrieved with `slot.useContributions()`.
 - **Command** — typed request-response action with one handler and many dispatchers (`defineCommand<Args, Ret>`).
 - **Active-data tag** — An inline-widget extension point where sub-plugins claim an XML tag name and render it inside markdown text via react-markdown.
-- **Pane** — A routed view unit created via `Pane.define({ id, app, path, component })` that encapsulates URL params and `pane.open(params)` navigation. `app` is the app it belongs to (mandatory), so a pane hosted by another app can always be sent home.
+- **Pane** — A routed view unit created via `Pane.define({ route, app, component })` that encapsulates URL params and `pane.open(params)` navigation. Identity (id, URL segment, ancestor chain) comes from the `RouteDef` a `defineRoute()` builds. `app` is the app it belongs to (mandatory), so a pane hosted by another app can always be sent home.
 - **View factory** — function returning a `{ title, component }` descriptor, used to hand components across plugin boundaries without leaking internals.
 - **Plugin provider** — React context that collects contributions from all registered plugins and exposes them to slots.
 - **Root slot** — the single entry point (`Core.Root`) the app shell contributes its layout to.

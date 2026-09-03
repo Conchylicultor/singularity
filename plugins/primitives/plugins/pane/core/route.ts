@@ -7,7 +7,6 @@
 
 // ---------------------------------------------------------------------------
 // Type machinery — extract `:param` and `:param*` names from a path template.
-// THE single definition of `InferParams`; pane/web imports it from here.
 // ---------------------------------------------------------------------------
 
 type ParamName<S extends string> = S extends `${infer N}*` ? N : S;
@@ -20,21 +19,28 @@ type ExtractParams<Path extends string> =
       ? { [K in ParamName<P>]: string }
       : {};
 
-export type InferParams<Path extends string> =
-  ExtractParams<Path> extends infer O
-    ? keyof O extends never
-      ? Record<string, never>
-      : { [K in keyof O]: O[K] }
-    : never;
-
-// Clean param inference for ROUTES. Unlike `InferParams` (whose empty case is
-// `Record<string, never>` to keep legacy `useParams()` indexable), the empty
-// case here is a plain `{}` with no index signature. Routes CHAIN their params
+// Param inference for a route's own segment. The empty case is a plain `{}`
+// with no index signature, deliberately: routes CHAIN their params
 // (`ParentParams & RouteParams<Seg>`), and intersecting `Record<string, never>`
 // (an `[k: string]: never` index signature) with a child's real params would
 // collapse every property to `never`. `{} & { taskId: string }` stays precise.
-type RouteParams<Path extends string> = {
-  [K in keyof ExtractParams<Path>]: ExtractParams<Path>[K];
+// The closed, key-rejecting spelling is restored once, at the `PaneObject`
+// boundary — see `Closed<>` in `web/pane.ts`.
+//
+// Exported so `Pane.define` can derive a route's OWN params from the `segment`
+// literal its `RouteDef` carries — see the note on {@link RouteDef}.
+//
+// The template is the literal `string`, NOT `ExtractParams<Path>[K]`. Those are
+// the same type for every concrete path — `ExtractParams` only ever produces
+// `string`-valued properties — but the indexed-access spelling is one TS cannot
+// evaluate while `Path` is still a type parameter, so `RouteParams<Seg>` did
+// not satisfy `Record<string, string>` (TS2344: "`ExtractParams<Seg>[K]` is not
+// assignable to `string`"). It has to: a route's own params are what
+// `Pane.define` hands `ResolveHook`, which is keyed on `Record<string, string>`
+// because URL params ARE strings. Saying `string` outright keeps that true and
+// checkable rather than forcing the constraint to be loosened to `object`.
+export type RouteParams<Path extends string> = {
+  [K in keyof ExtractParams<Path>]: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -85,6 +91,27 @@ export function defineApp(def: {
 // Throws on a missing param (fail loud — matches buildRouteUrl).
 // ---------------------------------------------------------------------------
 
+/**
+ * A segment named a `:param` nobody supplied, so this route has no URL.
+ *
+ * A TYPE rather than a message to match on, because exactly one caller has a
+ * legitimate reason to treat it as an answer instead of a crash: a pane's
+ * cross-app Expand asks for its own app-rooted URL from wherever it is being
+ * rendered, and a pane whose ancestor is paramful can sit in a route that does
+ * not contain that ancestor — nothing supplies the ancestor's param, so there
+ * genuinely is no URL to offer. That caller narrows on this class and lets
+ * every other failure propagate; a substring match on the message could not.
+ */
+export class MissingRouteParamError extends Error {
+  constructor(
+    readonly param: string,
+    readonly segment: string,
+  ) {
+    super(`Missing param "${param}" for segment "${segment}"`);
+    this.name = "MissingRouteParamError";
+  }
+}
+
 export function fillSegment(
   segment: string,
   params: Record<string, string>,
@@ -101,7 +128,7 @@ export function fillSegment(
     const name = seg.slice(1).replace(/\*$/, "");
     const val = params[name];
     if (val === undefined) {
-      throw new Error(`Missing param "${name}" for segment "${segment}"`);
+      throw new MissingRouteParamError(name, segment);
     }
     if (wildcard) {
       parts.push(...val.split("/").map(encodeURIComponent));
@@ -162,13 +189,40 @@ export function normalizeSegmentPattern(segment: string): string {
 // builds the app-relative URL, `link` prepends an app's base path.
 // ---------------------------------------------------------------------------
 
-export interface RouteDef<Params extends Record<string, string> = {}> {
+/**
+ * A route carries TWO param sets, and confusing them is a live class of bug.
+ *
+ * - The CHAINED set — every ancestor's `:name` plus this route's own. That is
+ *   what a URL needs, so it is what `path` / `link` take and what an opener
+ *   must supply. It is the `Params` parameter.
+ * - The OWN set — only the `:name`s in THIS route's `segment`. That is what the
+ *   runtime hands a pane back: `MatchEntry.params` is own-only (the accumulated
+ *   set lives beside it in `fullParams`), so a pane's `useParams()` and its
+ *   `resolve` hook see own params and nothing else.
+ *
+ * The own set is NOT a second type parameter of its own: it is a function of
+ * the `segment` this route already carries, which is why `segment` is typed by
+ * its literal. `Pane.define` reads `RouteParams<Seg>` off it. (A separate
+ * phantom `Own` parameter would appear in no member — `noUnusedParameters`
+ * rejects that, and rightly: it would be inferred positionally rather than from
+ * anything the value itself says, so annotating a route by hand could silently
+ * drop it.) Before this, a chained pane's `useParams()` claimed its ancestor's
+ * params too and returned `undefined` for them.
+ */
+export interface RouteDef<
+  Params extends Record<string, string> = {},
+  Seg extends string = string,
+> {
   readonly id: string;
-  readonly segment: string;
-  readonly parent?: RouteDef<any>;
+  /**
+   * This route's own URL fragment, e.g. `"source/:sourceId"`. Typed by its
+   * LITERAL so a consumer can derive the own param set from it (above).
+   */
+  readonly segment: Seg;
+  readonly parent?: RouteDef<any, any>;
   /** Root-first ancestor pane ids (parent chain). Empty for a root route. */
   readonly parentPaneIds: string[];
-  /** App-relative path, e.g. "/build/r/<id>". */
+  /** App-relative path, e.g. "/build/r/<id>". Takes the CHAINED params. */
   path(params: Params): string;
   /** Full app-rooted link, e.g. "/agents/build/r/<id>". Root app (basePath "/") contributes "". */
   link(app: AppRef, params: Params): string;
@@ -180,13 +234,13 @@ export function defineRoute<
 >(def: {
   id: string;
   segment: Seg;
-  parent?: RouteDef<ParentParams>;
-}): RouteDef<ParentParams & RouteParams<Seg>> {
+  parent?: RouteDef<ParentParams, any>;
+}): RouteDef<ParentParams & RouteParams<Seg>, Seg> {
   type Params = ParentParams & RouteParams<Seg>;
 
   // Root-first chain of RouteDefs, this route last.
-  const chain: RouteDef<any>[] = [];
-  for (let r: RouteDef<any> | undefined = def.parent; r; r = r.parent) {
+  const chain: RouteDef<any, any>[] = [];
+  for (let r: RouteDef<any, any> | undefined = def.parent; r; r = r.parent) {
     chain.unshift(r);
   }
   const parentPaneIds = chain.map((r) => r.id);
@@ -204,13 +258,13 @@ export function defineRoute<
     return base + path(params);
   }
 
-  const route: RouteDef<Params> = {
+  const route: RouteDef<Params, Seg> = {
     id: def.id,
     segment: def.segment,
     parent: def.parent,
     parentPaneIds,
-    path: path as RouteDef<Params>["path"],
-    link: link as RouteDef<Params>["link"],
+    path: path as RouteDef<Params, Seg>["path"],
+    link: link as RouteDef<Params, Seg>["link"],
   };
   return route;
 }

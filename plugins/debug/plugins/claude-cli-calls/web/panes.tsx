@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { CallsView } from "./components/calls-view";
 
-export const claudeCliCallsPane = Pane.define({
+const claudeCliCallsRoute = defineRoute({
   id: "claude-cli-calls",
-  app: debugApp,
   segment: "claude-cli-calls",
+});
+
+export const claudeCliCallsPane = Pane.define({
+  route: claudeCliCallsRoute,
+  app: debugApp,
   component: CallsBody,
 });
 

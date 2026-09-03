@@ -12,6 +12,15 @@ import {
 import { MdLayers } from "react-icons/md";
 
 type ContributionRow = {
+  /**
+   * This row's identity, minted in `rows()` rather than derived from what the
+   * row displays. `(plugin, slot, id)` is not unique: eight plugins register two
+   * panes from one barrel, and any two contributions to one slot whose id does
+   * not resolve spell exactly the same triple — colliding React keys, a
+   * virtualizer keying two rows the same, and a selection that always lands on
+   * the first of the pair.
+   */
+  key: string;
   plugin: PluginNode;
   slot: string;
   id?: string;
@@ -52,9 +61,17 @@ function rows(entries: FacetTableEntry[]): ContributionRow[] {
   const result: ContributionRow[] = [];
   for (const entry of entries) {
     const data = entry.data as ContributionsFacetData;
-    for (const c of data.static) {
-      result.push({ plugin: entry.node, slot: c.slot, id: contributionId(c) });
-    }
+    // A contribution's position in its own plugin's `static` array is unique by
+    // construction and stable across renders — the array is the barrel's
+    // declaration order, and every plugin appears as exactly one entry.
+    data.static.forEach((c, i) => {
+      result.push({
+        key: `${entry.node.id}#${i}:${c.slot}`,
+        plugin: entry.node,
+        slot: c.slot,
+        id: contributionId(c),
+      });
+    });
   }
   return result;
 }
@@ -65,5 +82,5 @@ export const contributionsFacetTable = defineFacetTable<ContributionRow>({
   icon: MdLayers,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.id}:${r.slot}:${r.id ?? ""}`,
+  rowKey: (r) => r.key,
 });

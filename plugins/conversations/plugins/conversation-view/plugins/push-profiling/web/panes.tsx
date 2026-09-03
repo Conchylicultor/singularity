@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { PushProfilingPaneBody } from "./components/push-profiling-pane";
 
-export const convPushProfilingPane = Pane.define({
+const convPushProfilingRoute = defineRoute({
   id: "conv-push-profiling",
-  app: agentManagerApp,
   segment: "pp",
+});
+
+export const convPushProfilingPane = Pane.define({
+  route: convPushProfilingRoute,
+  app: agentManagerApp,
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvPushProfilingBody,

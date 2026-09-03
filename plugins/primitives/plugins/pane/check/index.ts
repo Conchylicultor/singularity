@@ -18,22 +18,13 @@ function literalText(node: ts.Expression): string | null {
   return null;
 }
 
-// The set of call expressions whose first-argument object literal authors a
-// pane's URL segment. Mirrors the two define forms in pane/web/pane.ts.
+// The call expressions whose first-argument object literal authors a pane's URL
+// segment. There is exactly one: `defineRoute({ ... })`. `Pane.define` takes its
+// identity from the `RouteDef` it is handed and declares no `segment` field of
+// its own, so `Pane.define({ segment })` has no spelling to scan for.
 function isSegmentDefiningCall(node: ts.CallExpression): boolean {
   const callee = node.expression;
-  // `defineRoute({ ... })`
-  if (ts.isIdentifier(callee) && callee.text === "defineRoute") return true;
-  // `Pane.define({ ... })`
-  if (
-    ts.isPropertyAccessExpression(callee) &&
-    callee.name.text === "define" &&
-    ts.isIdentifier(callee.expression) &&
-    callee.expression.text === "Pane"
-  ) {
-    return true;
-  }
-  return false;
+  return ts.isIdentifier(callee) && callee.text === "defineRoute";
 }
 
 function collectSegments(file: string, source: string): SegmentSite[] {
@@ -75,11 +66,11 @@ const check: Check = {
   description:
     "pane URL segments must be globally unique (no two panes match the same URLs)",
   async run() {
-    // Files that may author a pane segment: any source mentioning `Pane.define`
-    // (inline segment) or `defineRoute` (segment authored on the route). Tests
-    // are excluded — they register throwaway panes that never ship.
+    // Files that may author a pane segment: any source calling `defineRoute`,
+    // which is the only place a segment is written. Tests are excluded — they
+    // register throwaway panes that never ship.
     const sources = await listCandidateSources({
-      grepArg: "Pane\\.define|defineRoute",
+      grepArg: "defineRoute",
       pathspecs: [
         "plugins/**/*.ts",
         "plugins/**/*.tsx",

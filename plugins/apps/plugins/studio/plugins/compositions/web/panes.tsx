@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import {
   useCompositionData,
@@ -54,11 +55,15 @@ export const compositionDetailPane = Pane.define({
   titleOwner: true,
 });
 
-export const comparePane = Pane.define({
+const compareRoute = defineRoute({
   id: "composition-compare",
-  app: studioApp,
-  defaultAncestors: [compositionsPane],
   segment: "compare",
+  parent: compositionsRoute,
+});
+
+export const comparePane = Pane.define({
+  route: compareRoute,
+  app: studioApp,
   component: CompareBody,
   width: 480,
 });

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -10,10 +11,14 @@ import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core"
 import { Review } from "./slots";
 import { type Source, SourceTabs, groupPushes } from "./source";
 
-export const convReviewPane = Pane.define({
+const convReviewRoute = defineRoute({
   id: "conv-review",
-  app: agentManagerApp,
   segment: "review",
+});
+
+export const convReviewPane = Pane.define({
+  route: convReviewRoute,
+  app: agentManagerApp,
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvReviewBody,

@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { BroadcastsPanel } from "./components/broadcasts-panel";
 
-export const broadcastsPane = Pane.define({
+const broadcastsRoute = defineRoute({
   id: "debug-broadcasts",
-  app: debugApp,
   segment: "broadcasts",
+});
+
+export const broadcastsPane = Pane.define({
+  route: broadcastsRoute,
+  app: debugApp,
   component: BroadcastsBody,
 });
 

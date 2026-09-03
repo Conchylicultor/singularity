@@ -1,13 +1,18 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { GraphView } from "./components/graph-view";
 
-export const graphCanvasPane = Pane.define({
+const graphCanvasRoute = defineRoute({
   id: "graph",
-  app: studioApp,
   segment: "graph",
+});
+
+export const graphCanvasPane = Pane.define({
+  route: graphCanvasRoute,
+  app: studioApp,
   component: GraphBody,
   width: 900,
   // Which plugin to center the closure subgraph on. A pane OPTION: it mirrors no

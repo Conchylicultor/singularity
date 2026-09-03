@@ -85,8 +85,8 @@ optionally set a default column width.
 
 ```ts
 Pane.define({
-  id: "tasks-root",
-  path: "/tasks",
+  route: tasksRootRoute,
+  app: agentManagerApp,
   component: TasksRoot,
   width: 320,
 });

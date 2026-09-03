@@ -23,36 +23,65 @@ Design rationale lives in:
 
 ## Define a pane
 
+A pane's **identity** is a `RouteDef` — its id, its own URL segment, and its
+place in a chain of parents. `defineRoute` states it once, and `Pane.define`
+attaches behavior to it:
+
 ```ts
-// plugins/tasks/web/panes.ts
+// web/panes.tsx — each route sits immediately above the pane it names
+const tasksRootRoute = defineRoute({ id: "tasks-root", segment: "tasks" });
+
+const taskDetailRoute = defineRoute({
+  id: "task-detail",
+  segment: "t/:taskId",
+  parent: tasksRootRoute,   // prepended when opening from scratch, and part of the URL
+});
+
 export const tasksRootPane = Pane.define({
-  id: "tasks-root", app: agentManagerApp, segment: "tasks", component: TasksRoot,
+  route: tasksRootRoute,
+  app: agentManagerApp,   // mandatory — see "A pane's home app" below
+  component: TasksRoot,
 });
 
 export const taskDetailPane = Pane.define({
-  id: "task-detail",
-  app: agentManagerApp,               // mandatory — see "A pane's home app" below
-  defaultAncestors: [tasksRootPane],  // prepend when opening from scratch
-  segment: "t/:taskId",
+  route: taskDetailRoute,
+  app: agentManagerApp,
   component: TaskDetail,
+  resolve: useResolveTask,   // required: the route has a `:param`
 });
 ```
 
+Same file is the default. Promote a route to the plugin's `core/` only when
+something outside `web/` must build the link — a server-side notification's
+`linkTo`, or another plugin naming it as a `parent`, which is why these two
+really live in `tasks/plugins/tasks-core/core/routes.ts`. Promoting one route to
+`core/` forces every ancestor route there too, so do it deliberately rather than
+by habit. Never write `export const xRoute = defineRoute({…})` in an
+`index.ts`: a barrel takes no `export const`.
+
 `Pane.define` is a pure factory: it returns a typed `PaneObject` (`.open()`,
-`.useParams()`, `.Actions()`) but does NOT make the URL routable. Register every
-pane your plugin owns with a `Pane.Register({ pane })` entry in the plugin's
-`contributions` array — a defined-but-unregistered pane compiles fine and never
-matches.
+`.useParams()`, `.link()`, `.Actions()`) but does NOT make the URL routable.
+Register every pane your plugin owns with a `Pane.Register({ pane })` entry in
+the plugin's `contributions` array — a defined-but-unregistered pane compiles
+fine and never matches.
 
 Rules:
 
-- `defaultAncestors` is only a hint for opening from scratch (no caller
-  context) — it does NOT constrain where the pane can appear. Any pane can
-  appear at any position in the route.
-- `segment` is the pane's own URL fragment (no leading slash); supports `:param`
-  and `:rest*`. Omit for "no URL segment of my own". A bare leading `:param`
-  throws at define time (add a static prefix, e.g. `t/:taskId`); global
+- `parent` is what makes the ancestor's segment part of this pane's URL, and
+  what types this pane's params as the **chained** set (`{ taskId }` plus
+  whatever the parents declare). It is also the pane's from-scratch ancestry —
+  a hint for opening with no caller context, which does NOT constrain where the
+  pane can appear. Any pane can appear at any position in the route.
+- **A pane with no ancestor gets a parentless route.** Inventing a parent
+  because it reads better adds a segment to every from-scratch URL and an extra
+  Miller column.
+- `segment` is the route's own URL fragment (no leading slash); supports
+  `:param` and `:rest*`. Use `""` for "no URL segment of my own". A bare leading
+  `:param` throws at define time (add a static prefix, e.g. `t/:taskId`); global
   uniqueness is enforced by the `pane:segments-unique` check.
+- `resolve` is required exactly when the route's own segment has a `:param`, and
+  forbidden when it does not — a paramful pane must be able to say "no such
+  entity". Opt out with `resolve: false`.
 - `width` (optional) — default column width in pixels for column layouts
   (Miller). Last column flex-grows regardless. Defaults to 400.
 - `options` / `hint` — see **Non-URL state** below.
@@ -114,7 +143,7 @@ Declare the **defaults**, not a type. The default *is* the deep-link value,
 stated once:
 
 ```ts
-Pane.define({ id: "file", segment: "f/:path", component: FileBody, options: { compact: false } });
+Pane.define({ route: fileRoute, app, component: FileBody, options: { compact: false }, resolve });
 openPane(filePane, { path }, { mode: "push", options: { compact: true } });  // partial override
 ```
 
@@ -170,9 +199,10 @@ hint.pick("title", canonical) ?? <Placeholder>Untitled</…>     // ✓ a ReactN
 ## Navigate
 
 `pane.open(params)` pushes a new URL and takes the **full ancestor + own** param
-set (the router builds the URL from the pane's `fullPath`). `close()` navigates
-to the parent, `promote()` detaches from ancestors and makes this pane the root,
-`back()`/`forward()` walk browser history.
+set — the router builds the URL by walking the route's parent chain, filling
+each segment from those params. `close()` navigates to the parent, `promote()`
+detaches from ancestors and makes this pane the root, `back()`/`forward()` walk
+browser history.
 
 ### `useOpenPane` — caller-aware navigation
 
@@ -535,7 +565,7 @@ about hosting, not an absence of ownership. The case that looks like an
 exception isn't: the theme customizer restyles whichever app you are in, and its
 home is still `settingsApp`, because Appearance is a Settings surface.
 
-Write it right after the identity field (`id:` / `route:`), importing the
+Write it right after the identity field (`route:`), importing the
 `AppRef` from the app shell's **core** barrel
 (`@plugins/apps/plugins/<app>/plugins/shell/core` — a leaf holding only
 `defineApp({...})`, so it can never close an import cycle). Test fixtures
@@ -546,9 +576,10 @@ dependency on `plugins/apps`.
 app's display name — the rail tooltip, a tab's fallback title and Expand all
 read it, so none of them restates it.
 
-Cross-app Expand additionally needs a route-backed pane (a legacy segment pane
-has no `RouteDef`, so there is no URL to build) and an installed navigator;
-missing either degrades silently to the same-app branch.
+Cross-app Expand additionally needs an installed navigator, and a URL it can
+actually build: a pane whose ancestor is paramful, opened from a route that does
+not carry that ancestor, has no link to hand over. Either one missing degrades
+silently to the same-app branch.
 
 **Why a sink for the navigation.** `apps-core/tabs` imports this primitive, so
 this primitive cannot import it back. Tabs installs its `navigate` into
@@ -567,8 +598,10 @@ One pane per app is its **landing pane** — what the app's bare root shows when
 there is no route yet (`/mail`, `/pages`, `/agents`). It says so with a boolean:
 
 ```ts
+const mailRootRoute = defineRoute({ id: "mail-root", segment: "" });
+
 export const mailRootPane = Pane.define({
-  id: "mail-root",
+  route: mailRootRoute,
   app: mailApp,
   appIndex: true,     // ← bare `/mail` resolves here
   component: MailRoot,
@@ -576,9 +609,10 @@ export const mailRootPane = Pane.define({
 ```
 
 A boolean, not a path: *which* app's root is `app.basePath`, which the pane
-already carries. Leave `segment` off — an index pane is reached at the app's
-base path and has no URL of its own. Registry sync throws on a segment-bearing
-index pane and on a second index for one app.
+already carries. `appIndex` stays on the pane while the route carries `segment:
+""` — an index pane is reached at the app's base path and has no URL of its own.
+Registry sync throws on a segment-bearing index pane and on a second index for
+one app.
 
 There is **no global fallback**: an app with no index pane shows an empty main
 area at its bare root, which is a legitimate choice (`home`, `studio`).
@@ -733,7 +767,6 @@ See "Open questions" in the design doc.
     - `AppNavigator`
     - `Hint`
     - `HistoryAdapter`
-    - `InferParams`
     - `LocationChange`
     - `MatchEntry`
     - `OpenPaneFn`
@@ -965,12 +998,13 @@ See "Open questions" in the design doc.
 - Core:
   - Exports (types):
     - `AppRef`
-    - `InferParams`
     - `RouteDef`
+    - `RouteParams`
   - Exports (values):
     - `defineApp`
     - `defineRoute`
     - `fillSegment`
+    - `MissingRouteParamError`
     - `normalizeRoutePath`
     - `normalizeSegmentPattern`
 

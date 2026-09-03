@@ -1,10 +1,15 @@
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { RecoveryView } from "./components/recovery-view";
 
-export const recoveryPane = Pane.define({
+const recoveryRoute = defineRoute({
   id: "conversations-recover",
-  app: debugApp,
   segment: "recovery",
+});
+
+export const recoveryPane = Pane.define({
+  route: recoveryRoute,
+  app: debugApp,
   component: RecoveryView,
 });

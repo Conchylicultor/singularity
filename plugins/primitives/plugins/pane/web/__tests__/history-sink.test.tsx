@@ -23,7 +23,7 @@ import {
   useSyncPaneRegistry,
   type LocationChange,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the `HistoryAdapter` seam the shell-history-snapshot refactor rests on:
 // the pane store never touches `window.history` directly — it emits push/replace
@@ -45,26 +45,26 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const rootRoute = defineRoute({ id: "hist-root", segment: "hist" });
 const rootPane = Pane.define({
-  id: "hist-root",
+  route: rootRoute,
   app: testApp,
-  segment: "hist",
   component: () => null,
 });
+const childRoute = defineRoute({ id: "hist-child", segment: "c/:id" });
 const childPane = Pane.define({
-  id: "hist-child",
+  route: childRoute,
   app: testApp,
-  segment: "c/:id",
   resolve: false,
   component: () => null,
 });
 // A pane that opts OUT of history (`chrome.history: false`) — its open/close
 // mutations REPLACE instead of push, so we can prove the mode is threaded both
 // ways through the adapter, not hard-coded.
+const noHistoryRoute = defineRoute({ id: "hist-nohistory", segment: "nh" });
 const noHistoryPane = Pane.define({
-  id: "hist-nohistory",
+  route: noHistoryRoute,
   app: testApp,
-  segment: "nh",
   component: () => null,
   chrome: { history: false },
 });

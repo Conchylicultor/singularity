@@ -41,6 +41,7 @@
   - Exports (values):
     - `definitionDetailPane`
     - `definitionsRootPane`
+    - `definitionsRootRoute`
     - `WorkflowsDetail`
 - Cross-plugin:
   - Imported by: `apps/workflows/executions`

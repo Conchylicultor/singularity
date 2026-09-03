@@ -11,7 +11,7 @@
     - `Pane.Register` "google-maps-setup"
     - `Auth.Provider` "Google Maps Platform"
   - Uses:
-    - `auth.accountsPane`
+    - `auth.accountsRoute`
     - `auth.Auth`
     - `auth.useAccountStatus`
     - `infra/endpoints.fetchEndpoint`

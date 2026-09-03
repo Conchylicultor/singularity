@@ -14,12 +14,39 @@ indistinguishable from a correct one — which is how a `docs/plugins-details.md
 whole `Contributes:` block once shipped. Slot ids come from `naming.idOf(c._slot)`, never from the
 process-global stamps, so this facet's answer cannot depend on what else ran beside it.
 
+## Pane ids are a join, not a local read
+
+A `Pane.Register` contribution names a pane *variable*; the surfaces want the
+pane's **id**, and that id is not a local fact. `Pane.define({ route })` carries
+no id at all — it is on the `defineRoute()` the `route:` identifier names, which
+for 7 of the first 22 converted panes sits in a *different* plugin's `core/`. Nor
+was it local before routes: `apps/settings/accounts` registers `accountsPane`
+imported from `@plugins/auth/web`, and showed no id for years.
+
+So `extract()` records only what one plugin's own files say — `routes` (its
+`defineRoute()`s, across `core/`/`shared/`/`web/`), `panes` (its `web/`
+`Pane.define()`s, each with a literal `id:` or a `route:` reference), and
+`paneRefs` (the barrel's imports of the pane variables it registers). `relate()`
+follows those hops with the whole tree in scope, resolving a specifier via
+`resolvePluginSpecifier`; a relative specifier can only mean the referring plugin
+itself, since relative escapes into another plugin's tree are forbidden.
+
+Two rules the scanners must keep:
+
+- **Read both fields at depth 0** of the call body. A pane body nests objects
+  (`chrome: { title }`, `options: { … }`) spelling the very same keys, and a
+  first-match-at-any-depth read takes one of those as the identity, silently.
+- **Never read identity off the imported pane object** (`pane._internal.id`, which
+  is public and tempting). All three surfaces this facet feeds build their tree
+  with `skipBarrelImport: true`, so the runtime half is empty exactly there.
+
 `extract()` collects `{ slotId, componentName, doc }` without display names.
 `relate()` fills in `slotDisplayName` by reading from the slots facet —
-`${groupName}.${memberName}` from each `SlotDef` — links each static
-contribution to its slot definer (`definerPluginId`), and populates the **slots
-facet's** per-slot reverse index (`SlotDef.contributors`, the full plugin ids
-that contribute to each slot). That last write lives here, not on the slots
+`${groupName}.${memberName}` from each `SlotDef` — resolves each `Pane.Register`
+to its `paneId` (above), links each static contribution to its slot definer
+(`definerPluginId`), and populates the **slots facet's** per-slot reverse index
+(`SlotDef.contributors`, the full plugin ids that contribute to each slot). That
+last write lives here, not on the slots
 facet, because the join needs both facets in scope and the reverse import edge
 would close a collected-dir dependency cycle.
 
@@ -51,6 +78,9 @@ shared `contributionId` helper live in `core/`.
     - `Contribution`
     - `ContributionsFacetData`
     - `DocMetaContribution`
+    - `PaneDeclaration`
+    - `RouteDeclaration`
+    - `SourceRef`
   - Exports (values):
     - `contributionId`
     - `contributionsFacetDef`

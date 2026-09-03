@@ -198,14 +198,16 @@ Those layouts in turn call `.useContributions()` on the slots they define.
 
 ## Panes: use `Pane.define`
 
-For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `Pane.define` declares a pane (path, component, typed params); `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../../../primitives/plugins/pane/CLAUDE.md).
+For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `defineRoute` declares the URL identity (id, segment, parent); `Pane.define` attaches the component and typed params to it; `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../../../primitives/plugins/pane/CLAUDE.md).
 
 ```typescript
 // web/panes.ts — the pane reads its own params via the binding it exports
+const terminalRoute = defineRoute({ id: "terminal", segment: "terminal/:worktree" });
+
 export const terminalPane = Pane.define({
-  id: "terminal",
+  route: terminalRoute,
   app: agentManagerApp, // mandatory: the app this pane BELONGS to (its AppRef)
-  path: "/terminal/:worktree",
+  resolve: useResolveWorktree, // required: the segment has a `:param`
   component: () => {
     const { worktree } = terminalPane.useParams();
     return <TerminalComponent worktree={worktree} />;

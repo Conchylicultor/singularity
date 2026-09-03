@@ -131,12 +131,19 @@ describe("contributions facet: slot ids come from the paired naming", () => {
   });
 
   test("a barrel-free extraction is untouched — no modules, nothing to read", () => {
-    expect(
-      extract({ modules: [], naming: declarePluginSlots([], "source") }),
-    ).toEqual({
+    // The static half scans a plugin dir that cannot exist, so the locally
+    // scanned join inputs (panes, routes, the barrel's pane imports) are empty
+    // too — this ctx has no files at all, not merely no barrels.
+    const empty = {
       static: [],
       runtime: [],
-    });
-    expect(extract(undefined)).toEqual({ static: [], runtime: [] });
+      panes: [],
+      routes: [],
+      paneRefs: {},
+    };
+    expect(
+      extract({ modules: [], naming: declarePluginSlots([], "source") }),
+    ).toEqual(empty);
+    expect(extract(undefined)).toEqual(empty);
   });
 });

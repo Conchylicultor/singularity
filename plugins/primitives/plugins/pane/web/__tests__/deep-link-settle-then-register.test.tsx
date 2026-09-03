@@ -12,7 +12,7 @@ import {
   Pane,
   usePaneRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // Local fixture app — this suite is about URL resolution, not pane homes.
@@ -23,16 +23,17 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const indexRoute = defineRoute({ id: "st-index", segment: "" });
 const indexPane = Pane.define({
-  id: "st-index",
+  route: indexRoute,
   app: testApp,
   appIndex: true,
   component: () => null,
 });
+const targetRoute = defineRoute({ id: "st-target", segment: "thing/:id" });
 const targetPane = Pane.define({
-  id: "st-target",
+  route: targetRoute,
   app: testApp,
-  segment: "thing/:id",
   resolve: false,
   component: () => null,
 });

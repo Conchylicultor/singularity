@@ -7,7 +7,7 @@ import {
   PaneChrome,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { paneHeaderContributions } from "../header-slot";
 import { Pane as PaneSlots } from "../slots";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
@@ -24,8 +24,9 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const headerRoute = defineRoute({ id: "hdr-pane", segment: "" });
 const headerPane = Pane.define({
-  id: "hdr-pane",
+  route: headerRoute,
   app: testApp,
   appIndex: true,
   component: () => null,

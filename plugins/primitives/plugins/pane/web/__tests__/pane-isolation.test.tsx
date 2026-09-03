@@ -12,7 +12,7 @@ import {
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 // Proves the per-tab pane-store isolation invariants the multi-tab refactor
 // relies on. Each app tab owns its own `PaneStore` (independent route +
@@ -33,10 +33,10 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const testRoute = defineRoute({ id: "iso-test", segment: "iso/:id" });
 const testPane = Pane.define({
-  id: "iso-test",
+  route: testRoute,
   app: testApp,
-  segment: "iso/:id",
   resolve: false,
   component: () => null,
 });

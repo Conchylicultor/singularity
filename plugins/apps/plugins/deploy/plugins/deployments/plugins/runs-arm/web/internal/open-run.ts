@@ -12,9 +12,9 @@ const deploymentIdOf = armText(deployRunFields, "deploy.deploymentId");
  * Where a deploy row goes when it is clicked.
  *
  * `deploymentDetailPane` nests under the server page, so opening it needs BOTH
- * ids — which is why the whole deploy pane chain had to become route-form first:
- * the legacy segment form typed a pane's params as its own segment's only, so
- * the ancestor's `serverId` was unspellable and this could not exist.
+ * ids. It can: a pane's params are its route's CHAINED set, so the ancestor's
+ * `serverId` is spellable here even though this row is nowhere near the server
+ * page.
  *
  * It lives here rather than in the barrel because a barrel may hold only
  * imports, re-exports, type aliases and the single default export — and the two

@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { ScreenshotView } from "./components/screenshot-view";
 
-export const screenshotPane = Pane.define({
+const screenshotRoute = defineRoute({
   id: "screenshot",
-  app: agentManagerApp,
   segment: "screenshot/:id",
+});
+
+export const screenshotPane = Pane.define({
+  route: screenshotRoute,
+  app: agentManagerApp,
   component: ScreenshotBody,
   resolve: false,
 });

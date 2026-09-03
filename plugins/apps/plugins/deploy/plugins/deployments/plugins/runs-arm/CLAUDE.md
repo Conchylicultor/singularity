@@ -39,12 +39,12 @@ the one thing that must not happen to it.
 ## A deploy row opens the deployment pane
 
 `open` needs BOTH `deploy.serverId` and `deploy.deploymentId`, because
-`deploymentDetailPane` nests under the server page. That is why the whole deploy
-pane chain is `Pane.define({ route })`: the legacy segment form typed a pane's
-params as its own segment's only, so the ancestor's `serverId` was unspellable
-and a deploy row could not activate from anywhere but the server page. Both
-columns are `NOT NULL`, so `open` throws on a null rather than returning — an
-impossible row, not a case to handle.
+`deploymentDetailPane` nests under the server page. It can pass both: a pane's
+params are its route's CHAINED set, so the ancestor's `serverId` is spellable
+from a runs row that is nowhere near the server page. Getting the deploy pane
+chain onto routes is what made this row activatable at all. Both columns are
+`NOT NULL`, so `open` throws on a null rather than returning — an impossible
+row, not a case to handle.
 
 ## `deploy.releaseRunId` is a plain chip
 

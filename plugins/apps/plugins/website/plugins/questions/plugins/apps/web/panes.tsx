@@ -1,4 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
@@ -6,6 +7,11 @@ import {
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { WebsiteApps } from "./slots";
 import { AppsQuestion } from "./components/apps-question";
+
+const appsRoute = defineRoute({
+  id: "website-apps",
+  segment: "apps",
+});
 
 /**
  * The applications page at `/website/apps` — the left fork of the homepage.
@@ -15,9 +21,8 @@ import { AppsQuestion } from "./components/apps-question";
  * so the site footer renders exactly once.
  */
 export const appsPane = Pane.define({
-  id: "website-apps",
+  route: appsRoute,
   app: websiteApp,
-  segment: "apps",
   actions: WebsiteHeader,
   component: AppsBody,
 });

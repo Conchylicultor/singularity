@@ -101,8 +101,8 @@ not have, **fix the pane** — do not grow this API a component seam so an arm c
 resolve a lookup at render time. Both cases that hit this were pane bugs: the
 release pane hung off a composition **uuid** while the ledger stores the **name**
 (reparented onto the paramless route it never needed an ancestor for), and the
-deployment pane's ancestor param was unspellable in the legacy `Pane.define`
-segment form (converted to `route:`, which chains params).
+deployment pane could not be handed its ancestor's `serverId` at all until the
+deploy chain was given routes, which chain a pane's params.
 
 The kind's human label is declared **only** on `Runs.Kind` — the filter chip must
 offer every registered kind, not the ones on the loaded page, so the label is a

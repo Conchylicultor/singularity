@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { defineApp, defineRoute, normalizeRoutePath } from "./route";
+import {
+  defineApp,
+  defineRoute,
+  MissingRouteParamError,
+  normalizeRoutePath,
+} from "./route";
 
 const agents = defineApp({
   id: "agent-manager",
@@ -48,6 +53,81 @@ describe("route link builder", () => {
     const detail = defineRoute({ id: "d", segment: "r/:runId" });
     // @ts-expect-error — runId is required
     expect(() => detail.path({})).toThrow(/Missing param "runId"/);
+  });
+
+  test("a wildcard param spreads its value across segments", () => {
+    const file = defineRoute({ id: "file", segment: "f/:path*" });
+    // Deliberately not a `plugins/…` path: this is a multi-segment VALUE, not a
+    // reference to anything, and `plugin-refs-resolve` reads every `plugins/…`
+    // string literal in the repo as a real plugin reference to check.
+    expect(file.path({ path: "docs/guide/intro.md" })).toBe(
+      "/f/docs/guide/intro.md",
+    );
+    // Each part is encoded on its own, so the value's own "/" separators stay
+    // separators while everything else inside a part is escaped.
+    expect(file.link(agents, { path: "a b/c#d" })).toBe(
+      "/agents/f/a%20b/c%23d",
+    );
+  });
+
+  test("an empty segment contributes nothing — the appIndex shape", () => {
+    // What an index pane's route looks like: it is reached at its app's bare
+    // root and owns no URL fragment of its own.
+    const index = defineRoute({ id: "mail-root", segment: "" });
+    expect(index.path({})).toBe("/");
+    // NOTE the trailing slash: an empty path is "/", and `link` concatenates.
+    // Harmless for the root app, and `normalizeRoutePath` preserves it.
+    expect(index.link(agents, {})).toBe("/agents/");
+    expect(index.link(rootApp, {})).toBe("/");
+    expect(index.parentPaneIds).toEqual([]);
+  });
+
+  test("a three-level chain concatenates every ancestor segment, root-first", () => {
+    const sources = defineRoute({ id: "event-sources", segment: "sources" });
+    const source = defineRoute({
+      id: "event-source-detail",
+      segment: "source/:sourceId",
+      parent: sources,
+    });
+    const run = defineRoute({
+      id: "event-source-run",
+      segment: "run/:runId",
+      parent: source,
+    });
+
+    // `parentPaneIds` is TRANSITIVE: the middle route's own ancestor is in the
+    // leaf's list. (`defaultAncestors`, the thing routes replace, was a flat
+    // one-level list that never recursed.)
+    expect(run.parentPaneIds).toEqual(["event-sources", "event-source-detail"]);
+    expect(source.parentPaneIds).toEqual(["event-sources"]);
+    expect(sources.parentPaneIds).toEqual([]);
+
+    expect(run.path({ sourceId: "s1", runId: "r1" })).toBe(
+      "/sources/source/s1/run/r1",
+    );
+    expect(run.link(agents, { sourceId: "s1", runId: "r1" })).toBe(
+      "/agents/sources/source/s1/run/r1",
+    );
+  });
+
+  test("a missing ANCESTOR param fails as a type, not just a message", () => {
+    const source = defineRoute({ id: "src-x", segment: "source/:sourceId" });
+    const run = defineRoute({
+      id: "run-x",
+      segment: "run/:runId",
+      parent: source,
+    });
+    // The chained set is what a URL needs, so the ancestor's param is required
+    // — this is a compile error too, which is the point of chaining.
+    // A NAMED class, not a bare Error: one caller (a pane's cross-app Expand,
+    // which asks for this URL during render) treats "no param, so no URL" as an
+    // answer rather than a crash, and narrows on the class to do it.
+    // @ts-expect-error — sourceId is required
+    expect(() => run.path({ runId: "r" })).toThrow(MissingRouteParamError);
+    // @ts-expect-error — sourceId is required
+    expect(() => run.path({ runId: "r" })).toThrow(
+      /Missing param "sourceId" for segment "source\/:sourceId"/,
+    );
   });
 });
 

@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { TableDetail } from "./slots";
 
-export const tableDetailPane = Pane.define({
+const tableDetailRoute = defineRoute({
   id: "table-detail",
-  app: studioApp,
   segment: "t/:pluginId/:tableName",
+});
+
+export const tableDetailPane = Pane.define({
+  route: tableDetailRoute,
+  app: studioApp,
   component: TableDetailBody,
   width: 600,
   resolve: false,

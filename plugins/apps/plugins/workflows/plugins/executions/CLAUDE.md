@@ -11,7 +11,7 @@
     - `WorkflowsDetail.Section` "Executions" → `ExecutionsSection`
     - `Pane.Register` "workflows-execution-detail"
   - Uses:
-    - `apps/workflows/definitions.definitionsRootPane`
+    - `apps/workflows/definitions.definitionsRootRoute`
     - `apps/workflows/definitions.WorkflowsDetail`
     - `apps/workflows/engine.CollapsibleValue`
     - `apps/workflows/engine.StepTraceShell`

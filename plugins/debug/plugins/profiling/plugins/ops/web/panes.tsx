@@ -1,11 +1,16 @@
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { OpDetailBody } from "./components/op-detail";
 
-export const opDetailPane = Pane.define({
+const opDetailRoute = defineRoute({
   id: "debug-profiling-op-detail",
-  app: debugApp,
   segment: "op-profile/:opId",
+});
+
+export const opDetailPane = Pane.define({
+  route: opDetailRoute,
+  app: debugApp,
   component: OpDetailBody,
   // Wider than the 380 the push detail used: this pane now hosts TWO Gantts
   // (the op's wait timeline and its step breakdown), and a Gantt row spends a

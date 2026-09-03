@@ -8,9 +8,8 @@ import { serverDetailRoute } from "@plugins/apps/plugins/deploy/plugins/servers/
  * `d/:sha` is the diff pane's, so a deployment uses `dep/…`.
  *
  * Chaining to `serverDetailRoute` is what types the pane's params as the full
- * `{ serverId, deploymentId }`: a caller with no route context (a row in the
- * merged runs list) can then open this pane from anywhere, which the legacy
- * segment form made unspellable.
+ * `{ serverId, deploymentId }`, so a caller with no route context — a row in the
+ * merged runs list — can open this pane from anywhere.
  */
 export const deploymentDetailRoute = defineRoute({
   id: "deploy-deployment-detail",

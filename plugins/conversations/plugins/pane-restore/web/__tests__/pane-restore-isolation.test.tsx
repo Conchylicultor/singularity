@@ -12,6 +12,7 @@ import {
   setLiveStore,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 // Importing the barrel registers the module-load popstate/shell:navigate
 // listener (`import "./internal/pane-restore-store"`) and exposes the reader.
@@ -28,17 +29,20 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Register the panes the conversation route uses so a live `setRoute` (which the
 // save listener observes) can build its URL. `conversation` matches the id the
 // listener gates on (`route[0].paneId === "conversation"`).
-const conversationPaneDef = Pane.define({
+const conversationRoute = defineRoute({
   id: "conversation",
-  app: agentManagerApp,
   segment: "c/:convId",
+});
+const conversationPaneDef = Pane.define({
+  route: conversationRoute,
+  app: agentManagerApp,
   resolve: false,
   component: () => null,
 });
+const fileRoute = defineRoute({ id: "file-pane", segment: "f/:path" });
 const filePaneDef = Pane.define({
-  id: "file-pane",
+  route: fileRoute,
   app: agentManagerApp,
-  segment: "f/:path",
   resolve: false,
   component: () => null,
 });

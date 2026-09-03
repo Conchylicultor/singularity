@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { StatsPanel } from "./components/stats-panel";
 
-export const statsPane = Pane.define({
+const statsRoute = defineRoute({
   id: "stats",
-  app: agentManagerApp,
   segment: "stats",
+});
+
+export const statsPane = Pane.define({
+  route: statsRoute,
+  app: agentManagerApp,
   component: StatsBody,
 });
 

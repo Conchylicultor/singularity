@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import {
   DataView,
   defineDataView,
@@ -25,10 +26,14 @@ import { EventList } from "./slots";
  */
 const EVENTS_LIST_VIEW = defineDataView("events.list");
 
-export const eventListPane = Pane.define({
+const eventListRoute = defineRoute({
   id: "event-list",
-  app: eventsApp,
   segment: "list",
+});
+
+export const eventListPane = Pane.define({
+  route: eventListRoute,
+  app: eventsApp,
   component: EventListPaneView,
   width: 560,
 });

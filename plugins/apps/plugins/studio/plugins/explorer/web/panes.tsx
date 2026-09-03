@@ -1,11 +1,16 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { ExplorerView } from "./components/explorer-view";
 
-export const explorerPane = Pane.define({
+const explorerRoute = defineRoute({
   id: "explorer",
-  app: studioApp,
   segment: "explorer",
+});
+
+export const explorerPane = Pane.define({
+  route: explorerRoute,
+  app: studioApp,
   component: ExplorerBody,
   width: 360,
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { openPane, Pane, type } from "./pane";
-import { defineApp } from "../core";
+import { defineApp, defineRoute } from "../core";
 
 // ---------------------------------------------------------------------------
 // Compile-time regression guard for the pane "write path" typing.
@@ -10,7 +10,7 @@ import { defineApp } from "../core";
 //   - a PARAMFUL pane requires exactly its declared params (no missing, no
 //     extra keys),
 //   - a PARAMLESS pane accepts only `{}` (stray keys rejected — validates the
-//     `Record<string, never>` empty case of InferParams).
+//     closed empty param set, `Record<string, never>`).
 //
 // The same closed-set discipline covers the two NON-URL surfaces:
 //   - `options` — the opener may pass a Partial of the pane's declared defaults
@@ -37,35 +37,88 @@ const testApp = defineApp({
   iconKey: "science",
 });
 
+const paramfulRoute = defineRoute({ id: "wtp-paramful", segment: "wtp/:foo" });
+
 const paramful = Pane.define({
-  id: "wtp-paramful",
+  route: paramfulRoute,
   app: testApp,
-  segment: "wtp/:foo",
   resolve: false,
   component: Dummy,
 });
 
-const paramless = Pane.define({
+const emptyParamsRoute = defineRoute({
   id: "wtp-paramless",
-  app: testApp,
   segment: "wtp-none",
+});
+
+// Doubles as the "declares neither options nor hint" fixture, which is why the
+// options/hint blocks below reject against it.
+const paramless = Pane.define({
+  route: emptyParamsRoute,
+  app: testApp,
   component: Dummy,
 });
 
+const optionedRoute = defineRoute({ id: "wtp-optioned", segment: "wtp-opt" });
+
 const optioned = Pane.define({
-  id: "wtp-optioned",
+  route: optionedRoute,
   app: testApp,
-  segment: "wtp-opt",
   component: Dummy,
   options: { focused: false },
 });
 
+const hintedRoute = defineRoute({ id: "wtp-hinted", segment: "wtp-hint" });
+
 const hinted = Pane.define({
-  id: "wtp-hinted",
+  route: hintedRoute,
   app: testApp,
-  segment: "wtp-hint",
   component: Dummy,
   hint: type<{ title: string }>(),
+});
+
+// ---------------------------------------------------------------------------
+// The closed empty param set. A route's own empty case is a bare `{}` (routes
+// CHAIN their params, and an index signature intersected into a child's real
+// params would collapse every property to `never`), so the close back to the
+// key-rejecting `Record<string, never>` happens at the `PaneObject`
+// boundary — `Closed<>`. A paramless fixture is what proves it happened.
+// ---------------------------------------------------------------------------
+
+const paramlessRoute = defineRoute({
+  id: "wtp-route-paramless",
+  segment: "wtp-route-none",
+});
+
+const routeParamless = Pane.define({
+  route: paramlessRoute,
+  app: testApp,
+  component: Dummy,
+});
+
+// A two-level chain, where a route's two param sets genuinely differ: the
+// parent owns `:pid`, the child owns `:cid`. An opener needs both (that is
+// what the URL is built from); the child pane itself only ever sees `:cid`.
+const parentRoute = defineRoute({
+  id: "wtp-route-parent",
+  segment: "wtp-p/:pid",
+});
+const childRoute = defineRoute({
+  id: "wtp-route-child",
+  segment: "wtp-c/:cid",
+  parent: parentRoute,
+});
+
+const routeChild = Pane.define({
+  route: childRoute,
+  app: testApp,
+  // OWN params — the resolve guard is handed `entry.params`, which
+  // `extractOwnParams` filtered to this pane's own segment names.
+  resolve: ({ cid }: { cid: string }) => ({
+    pending: false,
+    found: cid !== "",
+  }),
+  component: Dummy,
 });
 
 // Never called — purely a type-level harness so `liveStore` is never reached.
@@ -154,6 +207,42 @@ function typeAssertions() {
   // ---- `useInput()` is gone. Options and hints are not interchangeable. -----
   // @ts-expect-error - `useInput` no longer exists on a PaneObject
   hinted.useInput();
+
+  // ---- route form: the empty param set is closed too ------------------------
+  // @ts-expect-error - a paramless ROUTE pane accepts no params either
+  openPane(routeParamless, { foo: "x" }, { mode: "root" });
+  openPane(routeParamless, {}, { mode: "root" });
+
+  type RouteParamlessToggleParams = Parameters<
+    typeof routeParamless.useToggle
+  >[0];
+  const okRouteParamless: RouteParamlessToggleParams = {};
+  void okRouteParamless;
+  // @ts-expect-error - a paramless route pane's toggle accepts no params
+  const extraRouteParamless: RouteParamlessToggleParams = { foo: "x" };
+  void extraRouteParamless;
+
+  // ---- route form: CHAINED params in, OWN params out -----------------------
+  // The opener supplies the whole chain, because that is what the URL needs.
+  openPane(routeChild, { pid: "p", cid: "c" }, { mode: "root" });
+  // @ts-expect-error - the ancestor's `pid` is required, never silently blank
+  openPane(routeChild, { cid: "c" }, { mode: "root" });
+  // @ts-expect-error - `zz` is not a param anywhere in the chain
+  openPane(routeChild, { pid: "p", cid: "c", zz: "1" }, { mode: "root" });
+
+  // `.link()` is non-optional on a route pane, and takes the same chained set.
+  const chainedUrl: string = routeChild.link(testApp, { pid: "p", cid: "c" });
+  void chainedUrl;
+
+  // `useParams()` is OWN-only: at runtime it returns `entry.params`, which
+  // holds this pane's own segment names and nothing else. Typing the ancestor's
+  // `pid` in here would offer a key that is always `undefined`.
+  type RouteChildOwnParams = ReturnType<typeof routeChild.useParams>;
+  const ownOnly: RouteChildOwnParams = { cid: "c" };
+  void ownOnly;
+  // @ts-expect-error - `pid` is the ancestor's; this pane is never handed it
+  const ownWithAncestor: RouteChildOwnParams = { cid: "c", pid: "p" };
+  void ownWithAncestor;
 }
 
 test("pane write-path param typing guard compiles", () => {

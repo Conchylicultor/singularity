@@ -1,12 +1,17 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { LiveStateHealth } from "./components/live-state-health";
 
-export const liveStateHealthPane = Pane.define({
+const liveStateHealthRoute = defineRoute({
   id: "live-state-health",
-  app: debugApp,
   segment: "live-state",
+});
+
+export const liveStateHealthPane = Pane.define({
+  route: liveStateHealthRoute,
+  app: debugApp,
   component: LiveStateHealthBody,
 });
 

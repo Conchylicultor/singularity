@@ -1,9 +1,15 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource } from "@plugins/page/plugins/editor/core";
 import { storyApp } from "../core";
 import { StoryGallery } from "./components/story-gallery";
 import { StoryEditor } from "./components/story-editor";
+
+const storyGalleryRoute = defineRoute({
+  id: "story-gallery",
+  segment: "",
+});
 
 /**
  * The gallery index pane — Story's landing surface at bare `/story`.
@@ -12,7 +18,7 @@ import { StoryEditor } from "./components/story-editor";
  * own virtualization inside the chrome's single `PaneScroll`.
  */
 export const storyGalleryPane = Pane.define({
-  id: "story-gallery",
+  route: storyGalleryRoute,
   app: storyApp,
   appIndex: true,
   component: StoryGalleryBody,
@@ -26,6 +32,11 @@ function StoryGalleryBody() {
   );
 }
 
+const storyDetailRoute = defineRoute({
+  id: "story-detail",
+  segment: "s/:pageId",
+});
+
 /**
  * The editor pane at `/story/s/:pageId` — a real URL that survives reload and
  * back/forward. Opened with `mode:"root"` so each open replaces the route with a
@@ -34,9 +45,8 @@ function StoryGalleryBody() {
  * is its only owner — the pane carries no optimistic copy.
  */
 export const storyDetailPane = Pane.define({
-  id: "story-detail",
+  route: storyDetailRoute,
   app: storyApp,
-  segment: "s/:pageId",
   resolve: useStoryDetailResolve,
   component: StoryEditor,
 });

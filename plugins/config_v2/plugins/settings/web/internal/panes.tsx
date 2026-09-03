@@ -4,9 +4,9 @@ import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ConfigNav } from "../components/config-nav";
 import { ConfigDetail } from "../components/config-detail";
 
-// Route-backed so the panes carry a `.link(app, params)` / `.path(params)`
-// builder — the single source of truth for the `/config/cd/:configPath`
-// segments. Global chrome (e.g. the config gear baked into a picker rendered in
+// The routes are the single source of truth for the `/config/cd/:configPath`
+// segments, and what gives the panes their `.link(app, params)` / `.path(params)`
+// builders. Global chrome (e.g. the config gear baked into a picker rendered in
 // the action bar) has no pane surface to navigate, so it builds the app-relative
 // URL from `configDetailPane` and hands it to the cross-app `navigate()`.
 export const configNavRoute = defineRoute({

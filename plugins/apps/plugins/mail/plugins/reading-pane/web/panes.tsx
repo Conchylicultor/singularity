@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import {
   useResource,
   matchResource,
@@ -11,14 +12,18 @@ import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import { threadMessagesResource } from "../core";
 import { MessageList } from "./components/message-list";
 
+const threadRoute = defineRoute({
+  id: "mail-thread",
+  segment: "thread/:threadId",
+});
+
 // The reading pane: the second Miller column, opened by selecting a thread in the
 // list (`openPane(threadPane, { threadId }, { mode: "push" })`). Exported so the
 // threads plugin can reference it for selection + navigation. Registered via
 // `Pane.Register` in the default plugin definition (`index.ts`).
 export const threadPane = Pane.define({
-  id: "mail-thread",
+  route: threadRoute,
   app: mailApp,
-  segment: "thread/:threadId",
   component: ThreadPaneView,
   width: 640,
   // No existence gate: a missing/deleted thread resolves to an empty message

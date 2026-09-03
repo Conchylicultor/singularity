@@ -1585,6 +1585,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceActions`
               - `EventSourceDetail`
               - `eventSourceDetailPane`
+              - `eventSourceDetailRoute`
               - `eventSourcesPane`
               - `EXTRACTION_STATUS_HINT`
               - `EXTRACTION_STATUS_LABEL`
@@ -1733,7 +1734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `apps/events/events-core.useEventSourceRuns`
                       - `apps/events/sources.describeRun`
                       - `apps/events/sources.EventSourceDetail`
-                      - `apps/events/sources.eventSourceDetailPane`
+                      - `apps/events/sources.eventSourceDetailRoute`
                       - `apps/events/sources.formatDuration`
                       - `apps/events/sources.RUN_OUTCOME_LABEL`
                       - `apps/events/sources.RUN_OUTCOME_OPTIONS`
@@ -5318,6 +5319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `definitionDetailPane`
               - `definitionsRootPane`
+              - `definitionsRootRoute`
               - `WorkflowsDetail`
           - Cross-plugin:
             - Imported by: `apps/workflows/executions`
@@ -5481,7 +5483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WorkflowsDetail.Section` "Executions" → `ExecutionsSection`
               - `Pane.Register` "workflows-execution-detail"
             - Uses:
-              - `apps/workflows/definitions.definitionsRootPane`
+              - `apps/workflows/definitions.definitionsRootRoute`
               - `apps/workflows/definitions.WorkflowsDetail`
               - `apps/workflows/engine.CollapsibleValue`
               - `apps/workflows/engine.StepTraceShell`
@@ -6244,6 +6246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConnectResult`
     - Exports (values):
       - `accountsPane`
+      - `accountsRoute`
       - `Auth`
       - `ConnectButton`
       - `currentWorktreeName`
@@ -6391,7 +6394,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "apple-setup"
               - `Auth.Provider` "Apple Developer"
             - Uses:
-              - `auth.accountsPane`
+              - `auth.accountsRoute`
               - `auth.Auth`
               - `config_v2.useConfigRegistrations`
               - `infra/endpoints.fetchEndpoint`
@@ -6438,7 +6441,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `googleSetupPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "google-setup"
             - Uses:
-              - `auth.accountsPane`
+              - `auth.accountsRoute`
               - `auth.currentWorktreeName`
               - `auth.startConnectFlow`
               - `auth.useAccountStatus`
@@ -6473,7 +6476,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "google-maps-setup"
               - `Auth.Provider` "Google Maps Platform"
             - Uses:
-              - `auth.accountsPane`
+              - `auth.accountsRoute`
               - `auth.Auth`
               - `auth.useAccountStatus`
               - `infra/endpoints.fetchEndpoint`
@@ -20445,6 +20448,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Contribution`
               - `ContributionsFacetData`
               - `DocMetaContribution`
+              - `PaneDeclaration`
+              - `RouteDeclaration`
+              - `SourceRef`
             - Exports (values):
               - `contributionId`
               - `contributionsFacetDef`
@@ -26964,7 +26970,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AppNavigator`
           - `Hint`
           - `HistoryAdapter`
-          - `InferParams`
           - `LocationChange`
           - `MatchEntry`
           - `OpenPaneFn`
@@ -27196,12 +27201,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types):
           - `AppRef`
-          - `InferParams`
           - `RouteDef`
+          - `RouteParams`
         - Exports (values):
           - `defineApp`
           - `defineRoute`
           - `fillSegment`
+          - `MissingRouteParamError`
           - `normalizeRoutePath`
           - `normalizeSegmentPattern`
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.

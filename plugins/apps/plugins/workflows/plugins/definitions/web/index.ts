@@ -7,7 +7,11 @@ import { definitionsRootPane, definitionDetailPane } from "./panes";
 import { WorkflowsDetail } from "./slots";
 
 export { WorkflowsDetail } from "./slots";
-export { definitionsRootPane, definitionDetailPane } from "./panes";
+export {
+  definitionsRootRoute,
+  definitionsRootPane,
+  definitionDetailPane,
+} from "./panes";
 
 export default {
   description:

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -10,10 +11,14 @@ import { getPluginFacetsTree } from "../core/endpoints";
 import type { PluginNode } from "../core/types";
 import { PluginDetail } from "./components/plugin-detail";
 
-export const pluginViewPane = Pane.define({
+const pluginViewRoute = defineRoute({
   id: "plugin-view",
-  app: studioApp,
   segment: "p/:pluginId",
+});
+
+export const pluginViewPane = Pane.define({
+  route: pluginViewRoute,
+  app: studioApp,
   component: PluginViewBody,
   width: 600,
   resolve: false,

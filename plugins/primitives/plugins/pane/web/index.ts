@@ -49,7 +49,6 @@ export type {
   PaneChromeConfig,
   PaneToggleOpts,
   TypeMarker,
-  InferParams,
   PaneInternal,
   PaneOptions,
   Hint,

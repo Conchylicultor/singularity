@@ -1,20 +1,29 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { LogViewer } from "./components/log-viewer";
 
-export const logsPane = Pane.define({
+const logsRoute = defineRoute({
   id: "logs",
-  app: debugApp,
   segment: "logs",
+});
+
+export const logsPane = Pane.define({
+  route: logsRoute,
+  app: debugApp,
   component: LogsBody,
 });
 
-export const logChannelPane = Pane.define({
+const logChannelRoute = defineRoute({
   id: "logs-channel",
-  app: debugApp,
-  defaultAncestors: [logsPane],
   segment: "ch/:channel",
+  parent: logsRoute,
+});
+
+export const logChannelPane = Pane.define({
+  route: logChannelRoute,
+  app: debugApp,
   component: LogsChannelBody,
   resolve: false,
 });

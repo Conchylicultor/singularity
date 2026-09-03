@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import { SourcesList } from "./components/sources-list";
@@ -7,10 +8,14 @@ import { useEventSource } from "./internal/use-source";
 import { EventSourceDetail } from "./slots";
 
 /** The Sources surface: `/events/sources`. */
-export const eventSourcesPane = Pane.define({
+const eventSourcesRoute = defineRoute({
   id: "event-sources",
-  app: eventsApp,
   segment: "sources",
+});
+
+export const eventSourcesPane = Pane.define({
+  route: eventSourcesRoute,
+  app: eventsApp,
   component: EventSourcesPaneView,
   width: 380,
 });
@@ -18,24 +23,29 @@ export const eventSourcesPane = Pane.define({
 /**
  * One source: `/events/sources/source/:sourceId`.
  *
- * `defaultAncestors` keeps the list beside it as a Miller column, which is also
- * what puts the list segment in the URL — a pane's path is its ancestor chain,
+ * Chaining under the list keeps it beside this pane as a Miller column, which is
+ * also what puts the list segment in the URL — a pane's path is its route chain,
  * so this cannot be the design doc's `/events/s/:id` without orphaning the list.
+ * The chain is what types every descendant's params as the full `{ sourceId, … }`
+ * too, so a run can be opened by a caller holding no source route of its own.
  *
  * The `source/` prefix is mandatory AND must be globally distinct, for two
- * separate reasons: `Pane.define` REJECTS a segment starting with a bare
- * `:param` (URL-parsing ambiguity), and pane segments are matched across the
- * whole app — param names do not disambiguate, so a short `s/:sourceId` collides
- * with Story's `s/:pageId` (`pane:segments-unique` catches it at build; left
- * unfixed it throws at runtime on navigation). Spelling the noun in full is the
- * same shape `deploy/servers` uses for `server/:serverId` under its `servers`
- * list.
+ * separate reasons: a segment starting with a bare `:param` is REJECTED
+ * (URL-parsing ambiguity), and pane segments are matched across the whole app —
+ * param names do not disambiguate, so a short `s/:sourceId` collides with
+ * Story's `s/:pageId` (`pane:segments-unique` catches it at build; left unfixed
+ * it throws at runtime on navigation). Spelling the noun in full is the same
+ * shape `deploy/servers` uses for `server/:serverId` under its `servers` list.
  */
-export const eventSourceDetailPane = Pane.define({
+export const eventSourceDetailRoute = defineRoute({
   id: "event-source-detail",
-  app: eventsApp,
-  defaultAncestors: [eventSourcesPane],
   segment: "source/:sourceId",
+  parent: eventSourcesRoute,
+});
+
+export const eventSourceDetailPane = Pane.define({
+  route: eventSourceDetailRoute,
+  app: eventsApp,
   component: EventSourceDetailPaneView,
   resolve: useResolveSource,
   width: 460,

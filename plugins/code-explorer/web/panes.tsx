@@ -1,20 +1,29 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { ConvFileTreeBody } from "./components/conv-file-tree-body";
 import { GlobalFileTreeBody } from "./components/global-file-tree-body";
 
-export const globalFileTreePane = Pane.define({
+const globalFileTreeRoute = defineRoute({
   id: "global-file-tree",
-  app: agentManagerApp,
   segment: "code/:worktree",
+});
+
+const convFileTreeRoute = defineRoute({
+  id: "conv-file-tree",
+  segment: "files",
+});
+
+export const globalFileTreePane = Pane.define({
+  route: globalFileTreeRoute,
+  app: agentManagerApp,
   component: GlobalFileTreeChromedBody,
   resolve: false,
 });
 
 export const convFileTreePane = Pane.define({
-  id: "conv-file-tree",
+  route: convFileTreeRoute,
   app: agentManagerApp,
-  segment: "files",
   // Conversation-scoped satellite: promote() would strip convId from the URL.
   chrome: { promote: false },
   component: ConvFileTreeChromedBody,

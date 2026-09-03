@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -19,10 +20,14 @@ import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";
 import { SystemAgentDetail } from "./components/system-agent-detail";
 
-export const agentsRootPane = Pane.define({
+const agentsRootRoute = defineRoute({
   id: "agents-root",
-  app: agentManagerApp,
   segment: "agents",
+});
+
+export const agentsRootPane = Pane.define({
+  route: agentsRootRoute,
+  app: agentManagerApp,
   component: AgentsRoot,
   width: 320,
 });
@@ -33,29 +38,41 @@ function useResolveAgent({ id }: { id: string }) {
   return { pending: false, found: result.data.some((a) => a.id === id) };
 }
 
-export const agentDetailPane = Pane.define({
+const agentDetailRoute = defineRoute({
   id: "agent-detail",
-  app: agentManagerApp,
-  defaultAncestors: [agentsRootPane],
   segment: "ag/:id",
+  parent: agentsRootRoute,
+});
+
+export const agentDetailPane = Pane.define({
+  route: agentDetailRoute,
+  app: agentManagerApp,
   component: AgentDetailBody,
   width: 360,
   resolve: useResolveAgent,
 });
 
-export const systemAgentDetailPane = Pane.define({
+const systemAgentDetailRoute = defineRoute({
   id: "agent-system-detail",
-  app: agentManagerApp,
-  defaultAncestors: [agentsRootPane],
   segment: "system/:systemId",
+  parent: agentsRootRoute,
+});
+
+export const systemAgentDetailPane = Pane.define({
+  route: systemAgentDetailRoute,
+  app: agentManagerApp,
   component: SystemAgentDetailBody,
   resolve: false,
 });
 
-export const agentSidePane = Pane.define({
+const agentSideRoute = defineRoute({
   id: "agent-side",
-  app: agentManagerApp,
   segment: "agent/:agentId",
+});
+
+export const agentSidePane = Pane.define({
+  route: agentSideRoute,
+  app: agentManagerApp,
   component: AgentSideBody,
   chrome: {
     history: false,

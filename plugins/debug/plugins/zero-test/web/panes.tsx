@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import {
   ZeroRoot,
@@ -13,10 +14,14 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { schema, zql } from "../core";
 
-export const zeroTestPane = Pane.define({
+const zeroTestRoute = defineRoute({
   id: "zero-test",
-  app: debugApp,
   segment: "zero-test",
+});
+
+export const zeroTestPane = Pane.define({
+  route: zeroTestRoute,
+  app: debugApp,
   component: ZeroTestBody,
 });
 

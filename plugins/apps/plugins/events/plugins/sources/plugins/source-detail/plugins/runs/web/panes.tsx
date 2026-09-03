@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -23,33 +24,43 @@ import {
   RUN_OUTCOME_VARIANT,
   describeRun,
   formatDuration,
-  eventSourceDetailPane,
+  eventSourceDetailRoute,
 } from "@plugins/apps/plugins/events/plugins/sources/web";
 import { EventSourceRunDetail } from "./slots";
 
 /**
  * One run: `/events/sources/source/:sourceId/run/:runId`.
  *
- * Pane params are **own-only** (`pane.ts` design decision 6): this pane sees
- * `runId` and nothing of its ancestor's `sourceId`. That is exactly why the run
- * is fetched by its OWN id (`GET /api/events/runs/:runId`) rather than reached
- * through the source's runs list — a deep link must resolve from the URL alone,
- * not from whatever window the parent's list happens to have loaded.
+ * Chaining to `eventSourceDetailRoute` is what puts the source in the URL, and
+ * what types an opener's params as the full `{ sourceId, runId }` — so a caller
+ * that knows which source it is looking at can open a run from anywhere, not
+ * only from a route that already contains the source pane.
+ *
+ * The run is still fetched by its OWN id (`GET /api/events/runs/:runId`) rather
+ * than reached through the source's runs list, and that is unrelated to the
+ * chain: a deep link must resolve from the URL alone, not from whatever window
+ * the parent's list happens to have loaded. (`useParams()` stays own-only, so
+ * this pane reads `runId`; the source id stays the source pane's to read.)
  *
  * `run/` is globally distinct after param-name erasure — segments are matched
  * across the whole app and param names do not disambiguate. `rg 'segment: "run'`
  * finds nothing else; the nearby `r/:runId` (build) and `rel/:runId` (Studio
  * release) are why the noun is spelled in full, the same call
  * `deploy/deployments` makes with `dep/:deploymentId`.
- *
+ */
+const eventSourceRunRoute = defineRoute({
+  id: "event-source-run",
+  segment: "run/:runId",
+  parent: eventSourceDetailRoute,
+});
+
+/**
  * `titleOwner` is deliberately NOT set — the source page keeps the tab title; a
  * run is a drill-in under it, not a new main surface.
  */
 export const eventSourceRunPane = Pane.define({
-  id: "event-source-run",
+  route: eventSourceRunRoute,
   app: eventsApp,
-  defaultAncestors: [eventSourceDetailPane],
-  segment: "run/:runId",
   component: EventSourceRunPaneView,
   resolve: useResolveRun,
   useTitle: useRunTitle,

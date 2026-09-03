@@ -198,6 +198,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceActions`
     - `EventSourceDetail`
     - `eventSourceDetailPane`
+    - `eventSourceDetailRoute`
     - `eventSourcesPane`
     - `EXTRACTION_STATUS_HINT`
     - `EXTRACTION_STATUS_LABEL`

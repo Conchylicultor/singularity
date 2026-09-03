@@ -14,7 +14,7 @@ import {
   usePaneRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // A fixture app for the panes below. `Pane.define({ app })` is mandatory, but
@@ -43,8 +43,9 @@ const testApp = defineApp({
 // The app's index/landing pane: `appIndex` makes it what `testApp`'s bare root
 // (`/app`) resolves to. It is the ONLY pane we register — the deep link
 // intentionally matches nothing, reproducing the "target pane not yet loaded" gap.
+const indexRoute = defineRoute({ id: "deep-link-test-index", segment: "" });
 const indexPane = Pane.define({
-  id: "deep-link-test-index",
+  route: indexRoute,
   app: testApp,
   appIndex: true,
   component: () => null,
@@ -59,10 +60,13 @@ const testPlugin = {
 // A deep-link target pane. Registering it turns `/app/thing/:id` from an
 // `unresolved` (its plugin "not loaded yet") parse into a `matched` route,
 // modeling the deferred plugin arriving.
-const targetPane = Pane.define({
+const targetRoute = defineRoute({
   id: "deep-link-test-target",
-  app: testApp,
   segment: "thing/:id",
+});
+const targetPane = Pane.define({
+  route: targetRoute,
+  app: testApp,
   resolve: false,
   component: () => null,
 });

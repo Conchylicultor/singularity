@@ -141,10 +141,14 @@ export function SourceRunsSection({
       // makes. A ledger row is not editable and has no second meaning, so making
       // the drill-in an action would put the pane's whole content behind a
       // hover-revealed button the row body hit-tests over.
+      //
+      // Both ids, because the run's route chains under the source: the URL is
+      // `/events/sources/source/<s>/run/<r>`, so an opener supplies the whole
+      // chain. This card already knows which source it is drawing.
       onRowActivate={(run) =>
         openPane(
           eventSourceRunPane,
-          { runId: run.id },
+          { sourceId, runId: run.id },
           { mode: "push", side: "right" },
         )
       }

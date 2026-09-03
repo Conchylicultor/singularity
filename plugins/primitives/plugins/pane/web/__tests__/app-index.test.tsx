@@ -8,7 +8,7 @@ import {
   type PaneStore,
   useIndexMatch,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "./surface-fixture";
 
 // `appIndex` is a boolean, not a path: which app a pane is the index OF comes
@@ -54,8 +54,9 @@ afterEach(cleanup);
 
 describe("appIndex", () => {
   it("resolves the index pane from its own app's basePath", () => {
+    const indexRoute = defineRoute({ id: "ai-index-a", segment: "" });
     const indexPane = Pane.define({
-      id: "ai-index-a",
+      route: indexRoute,
       app: appA,
       appIndex: true,
       component: () => null,
@@ -77,8 +78,9 @@ describe("appIndex", () => {
   it("is not the index of an app it does not belong to", () => {
     // A pane whose home is app A cannot claim app B's bare root — it names no
     // path, so there is nothing to point at the wrong app.
+    const indexRoute = defineRoute({ id: "ai-index-b", segment: "" });
     const indexPane = Pane.define({
-      id: "ai-index-b",
+      route: indexRoute,
       app: appA,
       appIndex: true,
       component: () => null,
@@ -98,11 +100,14 @@ describe("appIndex", () => {
   });
 
   it("rejects an index pane that owns a URL segment", () => {
-    const bad = Pane.define({
+    const badRoute = defineRoute({
       id: "ai-index-segmented",
+      segment: "somewhere",
+    });
+    const bad = Pane.define({
+      route: badRoute,
       app: appA,
       appIndex: true,
-      segment: "somewhere",
       component: () => null,
     });
 
@@ -120,14 +125,16 @@ describe("appIndex", () => {
   });
 
   it("rejects a second index pane for the same app", () => {
+    const firstRoute = defineRoute({ id: "ai-index-first", segment: "" });
     const first = Pane.define({
-      id: "ai-index-first",
+      route: firstRoute,
       app: appA,
       appIndex: true,
       component: () => null,
     });
+    const secondRoute = defineRoute({ id: "ai-index-second", segment: "" });
     const second = Pane.define({
-      id: "ai-index-second",
+      route: secondRoute,
       app: appA,
       appIndex: true,
       component: () => null,

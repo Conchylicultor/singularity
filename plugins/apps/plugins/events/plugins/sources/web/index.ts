@@ -8,7 +8,11 @@ import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
 import { SourceToggleAction } from "./components/source-toggle-action";
 
-export { eventSourcesPane, eventSourceDetailPane } from "./panes";
+export {
+  eventSourcesPane,
+  eventSourceDetailPane,
+  eventSourceDetailRoute,
+} from "./panes";
 export { EventSourceDetail, EventSourceActions } from "./slots";
 export { SourceConfigForm } from "./components/source-config-form";
 export type { SourceConfigFormProps } from "./components/source-config-form";

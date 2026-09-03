@@ -8,7 +8,7 @@ export type {
   AuthProviderRowProps,
   AuthScopeRequirement,
 } from "./slots";
-export { accountsPane } from "./panes";
+export { accountsPane, accountsRoute } from "./panes";
 export { useAuthState, useAccountStatus } from "./hooks";
 export { ConnectButton } from "./components/connect-button";
 export { GrantAccessButton } from "./components/grant-access-button";

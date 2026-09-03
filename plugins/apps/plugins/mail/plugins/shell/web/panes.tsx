@@ -1,10 +1,16 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { mailApp } from "../core";
 import { MailRoot } from "./components/mail-root";
 
-export const mailRootPane = Pane.define({
+const mailRootRoute = defineRoute({
   id: "mail-root",
+  segment: "",
+});
+
+export const mailRootPane = Pane.define({
+  route: mailRootRoute,
   app: mailApp,
   // The Mail app's index/landing pane — what bare `/mail` resolves to, instead
   // of the global agent-manager welcome pane. It is a capability-driven

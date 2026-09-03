@@ -110,6 +110,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ConnectResult`
   - Exports (values):
     - `accountsPane`
+    - `accountsRoute`
     - `Auth`
     - `ConnectButton`
     - `currentWorktreeName`

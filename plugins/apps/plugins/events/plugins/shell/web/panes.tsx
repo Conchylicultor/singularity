@@ -1,10 +1,17 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { eventsApp } from "../core";
 import { EventsRoot } from "./components/events-root";
 
-export const eventsRootPane = Pane.define({
+// No segment of its own: an index pane is reached at its app's bare root.
+const eventsRootRoute = defineRoute({
   id: "events-root",
+  segment: "",
+});
+
+export const eventsRootPane = Pane.define({
+  route: eventsRootRoute,
   app: eventsApp,
   // The Events app's index/landing pane — what bare `/events` resolves to,
   // instead of the global agent-manager welcome pane. The events surfaces live

@@ -5,6 +5,7 @@ import {
   type,
   type Hint,
 } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -27,6 +28,11 @@ import { SectionPane } from "./components/section-pane";
 // reference them. The component identifiers below are hoisted function
 // declarations, so the forward reference is safe at runtime.
 
+const sonataLibraryRoute = defineRoute({
+  id: "sonata-library",
+  segment: "",
+});
+
 /**
  * The library index pane — Sonata's landing surface at bare `/sonata`.
  * `appIndex` marks it as the app's index pane (the empty route resolves here
@@ -34,7 +40,7 @@ import { SectionPane } from "./components/section-pane";
  * `Sonata.Home` gallery owns its scroll inside the chrome's single `PaneScroll`.
  */
 export const sonataLibraryPane = Pane.define({
-  id: "sonata-library",
+  route: sonataLibraryRoute,
   app: sonataApp,
   appIndex: true,
   component: SonataLibraryBody,
@@ -48,6 +54,11 @@ function SonataLibraryBody(): ReactElement {
   );
 }
 
+const sonataPlayerRoute = defineRoute({
+  id: "sonata-player",
+  segment: "song/:songId",
+});
+
 /**
  * The player pane at `/sonata/song/:songId` — a real URL that survives reload
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
@@ -59,9 +70,8 @@ function SonataLibraryBody(): ReactElement {
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
 export const sonataPlayerPane = Pane.define({
-  id: "sonata-player",
+  route: sonataPlayerRoute,
   app: sonataApp,
-  segment: "song/:songId",
   // Display-only optimistic label for `useTitle` (tab/document title) before the
   // songs resource settles. Structurally unwritable: `Hint.pick` hands it back
   // only alongside the canonical value, and it is never persisted. The title is

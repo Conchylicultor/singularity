@@ -1,8 +1,14 @@
 import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MailSearchBody } from "./components/mail-search-body";
 import { MailMessageBody } from "./components/mail-message-reader";
+
+const mailSearchRoute = defineRoute({
+  id: "mail-search",
+  segment: "search",
+});
 
 /**
  * On-demand mail search surface. `segment: "search"` resolves relative to the
@@ -11,12 +17,17 @@ import { MailMessageBody } from "./components/mail-message-reader";
  * pane already owns bare `/mail`.
  */
 export const mailSearchPane = Pane.define({
-  id: "mail-search",
+  route: mailSearchRoute,
   app: mailApp,
-  segment: "search",
   width: 480,
   component: MailSearchBody,
   chrome: { title: () => "Search" },
+});
+
+const mailMessageRoute = defineRoute({
+  id: "mail-message",
+  segment: "m/:messageId",
+  parent: mailSearchRoute,
 });
 
 /**
@@ -34,10 +45,8 @@ export const mailSearchPane = Pane.define({
  * `resolve: false`).
  */
 export const mailMessagePane = Pane.define({
-  id: "mail-message",
+  route: mailMessageRoute,
   app: mailApp,
-  defaultAncestors: [mailSearchPane],
-  segment: "m/:messageId",
   width: 640,
   // The envelope the search row already holds, as an optimistic DISPLAY hint so
   // the header paints before `POST /api/mail/hydrate` returns. Absent on a deep

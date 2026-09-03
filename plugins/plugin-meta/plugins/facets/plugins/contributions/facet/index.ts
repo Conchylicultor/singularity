@@ -1,8 +1,9 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { join } from "path";
-import type {
-  PluginTree,
-  PluginNode,
+import {
+  resolvePluginSpecifier,
+  type PluginTree,
+  type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   createFacet,
@@ -23,6 +24,7 @@ import {
   type Contribution,
   type ContributionsFacetData,
   type DocMetaContribution,
+  type SourceRef,
   contributionsFacetDef,
 } from "../core";
 import {
@@ -30,7 +32,9 @@ import {
   extractContributionsBlock,
   findCalls,
   parsePropsBlock,
-  parsePaneDefinitions,
+  parsePaneDeclarations,
+  parseRouteDeclarations,
+  sourceRef,
 } from "./internal/static-parse";
 
 export default createFacet<ContributionsFacetData>({
@@ -39,6 +43,14 @@ export default createFacet<ContributionsFacetData>({
   extract(ctx: ExtractContext): ContributionsFacetData {
     // Static contributions from web barrel source
     const staticContributions: Contribution[] = [];
+    // Join inputs for `relate()`. Both are LOCAL facts — what this plugin's own
+    // files declare — which is the whole reason `extract()` can stay per-plugin
+    // while pane identity has stopped being local: a route-form pane names a
+    // `defineRoute()` that usually lives in another plugin's `core/`, and there
+    // is no root or tree in `ExtractContext` to chase it with.
+    const panes = parsePaneDeclarations(ctx.dir);
+    const routes = parseRouteDeclarations(ctx.dir);
+    const paneRefs: Record<string, SourceRef> = {};
     const webIndex = readIfExists(join(ctx.dir, "web", "index.ts"));
     if (webIndex) {
       // Mask the source FULLY (comments/regex AND string interiors blanked) and
@@ -50,7 +62,6 @@ export default createFacet<ContributionsFacetData>({
       // class. `maskSource` preserves offsets 1:1, so masked and stripped align.
       const stripped = stripTypes(webIndex);
       const masked = maskSource(stripped);
-      const paneDefs = parsePaneDefinitions(join(ctx.dir, "web"));
       const block = extractContributionsBlock(masked);
       if (block !== null) {
         // parseImports masks internally via findImports, so it takes the raw
@@ -68,11 +79,13 @@ export default createFacet<ContributionsFacetData>({
           const props = parsePropsBlock(call.argsBody);
           const contribution: Contribution = { slot, props };
           if (slot === "Pane.Register" && props["pane"]) {
-            const def = paneDefs.get(props["pane"].trim());
-            if (def) {
-              contribution.paneId = def.id;
-              contribution.panePath = def.path;
-            }
+            // Record only where the registered pane variable COMES FROM; the id
+            // itself is resolved in `relate()`. A barrel can register a pane
+            // defined in another plugin's `web/` — `settings/accounts` has always
+            // registered `auth`'s `accountsPane`, and got no id for it.
+            const local = props["pane"].trim();
+            const ref = sourceRef(local, importMap);
+            if (ref?.module) paneRefs[local] = ref;
           }
           staticContributions.push(contribution);
         }
@@ -170,7 +183,13 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    return { static: staticContributions, runtime: runtimeContributions };
+    return {
+      static: staticContributions,
+      runtime: runtimeContributions,
+      panes,
+      routes,
+      paneRefs,
+    };
   },
 
   relate(rawCtx) {
@@ -208,6 +227,17 @@ export default createFacet<ContributionsFacetData>({
         c.pluginId = node.id;
       }
     }
+
+    // Resolve every `Pane.Register({ pane })` to the pane's id. This is a join,
+    // and it lives here because `relate()` is the only place the whole tree is
+    // in scope — `ExtractContext` carries a `dir` and no root.
+    //
+    // Pane identity stopped being local to the registering plugin's `web/` the
+    // moment `Pane.define({ route })` arrived: the id is on a `defineRoute()`
+    // that usually sits in another plugin's `core/`. It was already not local
+    // before that — `settings/accounts` registers `auth`'s `accountsPane` — so
+    // the old per-`web/`-dir scan simply reported nothing for it.
+    fillPaneIds(tree);
 
     // Link each static contribution back to the plugin that defines its slot
     // (used by the detail PluginLink). The slots facet's runtime walk now
@@ -307,6 +337,80 @@ export default createFacet<ContributionsFacetData>({
     return facts;
   },
 });
+
+/**
+ * The plugin a name imported through `spec` belongs to, or `null` when the
+ * specifier names no plugin in this tree.
+ *
+ * A relative specifier resolves to the referring plugin itself: relative `../`
+ * escapes into another plugin's tree are forbidden (the plugin-boundaries
+ * check's R10), so a `./routes` or `../core` can only ever be this plugin's own
+ * file. An absent specifier means the name was declared in the referring file.
+ */
+function ownerOf(
+  tree: PluginTree,
+  from: PluginNode,
+  spec: string | undefined,
+): PluginNode | null {
+  if (!spec || spec.startsWith(".")) return from;
+  return resolvePluginSpecifier(tree, spec)?.node ?? null;
+}
+
+/**
+ * The id of the route a `Pane.define({ route })` names, or undefined when the
+ * reference cannot be resolved from source.
+ *
+ * A binding name declared once in the owning plugin is the whole story. Declared
+ * twice under the same name in two of its files, the answer is ambiguous — and
+ * an ambiguous answer is no answer, never a coin-flip between two ids, since the
+ * consequence of guessing wrong is a table row attributing a pane to the wrong
+ * id rather than to none.
+ */
+function routeIdOf(
+  tree: PluginTree,
+  from: PluginNode,
+  ref: SourceRef,
+): string | undefined {
+  const owner = ownerOf(tree, from, ref.module);
+  if (!owner) return undefined;
+  const named = (getFacet(owner, contributionsFacetDef)?.routes ?? []).filter(
+    (r) => r.name === ref.name,
+  );
+  if (named.length === 0) return undefined;
+  const ids = new Set(named.map((r) => r.routeId));
+  return ids.size === 1 ? named[0]!.routeId : undefined;
+}
+
+/**
+ * Fill `paneId` on every `Pane.Register` static contribution, following the two
+ * hops a pane's identity can take: the registering barrel → the plugin whose
+ * `web/` defines the pane → the plugin whose source declares its route.
+ */
+function fillPaneIds(tree: PluginTree): void {
+  for (const node of tree.byDir.values()) {
+    const data = getFacet(node, contributionsFacetDef);
+    if (!data) continue;
+    for (const c of data.static) {
+      if (c.slot !== "Pane.Register") continue;
+      const local = c.props["pane"]?.trim();
+      if (!local) continue;
+      // No recorded ref ⇒ the pane variable is not imported into the barrel, so
+      // it is defined in this plugin's own `web/` under that very name.
+      const ref = data.paneRefs[local] ?? { name: local };
+      const owner = ownerOf(tree, node, ref.module);
+      if (!owner) continue;
+      const pane = (getFacet(owner, contributionsFacetDef)?.panes ?? []).find(
+        (p) => p.name === ref.name,
+      );
+      if (!pane) continue;
+      // The legacy segment form spells the id on the call itself; the route form
+      // spells a route, whose own id IS the pane id. The first arm dies with the
+      // legacy form.
+      const id = pane.id ?? (pane.route && routeIdOf(tree, owner, pane.route));
+      if (id) c.paneId = id;
+    }
+  }
+}
 
 /**
  * How many same-slot entries it takes before the run is folded onto one line.
