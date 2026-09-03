@@ -25,13 +25,15 @@
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).
 import {
+  ELEMENT_TIMEOUT_MS,
   numArg,
   pathUrl,
   report,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-const waitMs = numArg("wait", 20000);
+const waitMs = numArg("wait", ELEMENT_TIMEOUT_MS);
 
 /**
  * Every app that declares an index pane, and the pane id its bare root must
@@ -75,27 +77,31 @@ await withBrowser(async (h) => {
     });
 
     // `data-pane-id` is stamped by `PaneBox`, the single sanctioned way to
-    // paint a pane — so its presence IS "a pane rendered here".
-    const rendered = await page
-      .waitForSelector(`[data-pane-id="${paneId}"]`, { timeout: waitMs })
-      .then(() => true)
-      .catch(() => false);
-
-    const seen = rendered
-      ? []
-      : await page.$$eval("[data-pane-id]", (els) =>
+    // paint a pane — so its presence IS "a pane rendered here". Reading the
+    // whole set (rather than waiting on one selector) makes the failure legible:
+    // `waitFor` hands back the last value it saw, which is exactly the "what DID
+    // render" the diagnostic needs. It also never absorbs a failure — a read
+    // that throws is a real error and propagates, where a `.catch(() => false)`
+    // would have republished it as "the pane is not there".
+    const settled = await waitFor(
+      () =>
+        page.$$eval("[data-pane-id]", (els) =>
           els.map((e) => e.getAttribute("data-pane-id")),
-        );
+        ),
+      (ids) => ids.includes(paneId),
+      { timeoutMs: waitMs },
+    );
 
     r.ok(
       `${basePath} → ${paneId}`,
-      rendered,
-      rendered
+      settled.ok,
+      settled.ok
         ? undefined
-        : (seen.length
-            ? `panes present: ${seen.join(", ")}`
+        : (settled.value.length
+            ? `panes present: ${settled.value.join(", ")}`
             : "no pane rendered at all (empty main area)") +
-            " — its `appIndex: true` was most likely dropped from `Pane.define`",
+            ` after ${settled.waitedMs}ms — its \`appIndex: true\` was most` +
+            " likely dropped from `Pane.define`",
     );
 
     for (const e of pageErrors) r.fail(`${basePath}: page error`, e);
