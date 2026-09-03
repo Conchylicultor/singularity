@@ -28,7 +28,14 @@ const text = defineBlock({
   // parse-only so `<text/>` written before that dialect still comes back.
   markdown: {
     serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "" : ctx.md(d.text)),
-    tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
+    tag: {
+      name: "text",
+      body: "none",
+      // Mirrors `page/text`: no attributes, so the pin emits a bare `<text/>`
+      // rather than the derived `<text data="{&quot;text&quot;:[]}"/>`.
+      attrs: () => ({}),
+      parseAttrs: () => ({ text: [] }),
+    },
   },
 });
 
@@ -45,6 +52,10 @@ const ctx: MarkdownContext = {
   protectedSpans: [],
   // The server dialect: this module's documents are ones this codebase emitted.
   blankLines: "empty-block",
+  // The server dialect on the way out too: an empty paragraph whose position a
+  // blank line cannot state is pinned as `<text/>`, so a faithful read applied
+  // straight back plans nothing.
+  emptyBlocks: "pinned",
 };
 
 describe("pageTitleBanner", () => {

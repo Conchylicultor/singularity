@@ -3070,8 +3070,9 @@ middle materializes it, and read-only surfaces chip it from `data.text` today.
 ## Markdown is a LOSSLESS PROJECTION of the forest
 
 > Lenient on parse (foreign markdown pastes as it always did), CANONICAL on
-> serialize: anything this codebase emits re-parses to the same forest — with two
-> named exceptions, both about empty paragraphs, in the blank-line bullets below.
+> serialize: anything this codebase emits re-parses to the same forest — with one
+> named exception, a paragraph whose text is only whitespace, in the blank-line
+> bullets below.
 
 `core/markdown.ts` stays the pure orchestrator that never names a block type. Its
 void fallback is now the generic **`tag`** (`<name attrs>…</name>`, body parsed
@@ -3120,21 +3121,39 @@ covered. Design:
   document, or of a tag body — is dropped. `markdown.ts` still names no block
   type: the empty block is minted through `defaultTextHandle`, so a composition
   shipping no default text type skips blank lines as before.
-- **Two empty blocks do NOT round-trip, knowingly.** A blank line carries no
-  indentation of its own, so this dialect cannot spell an empty block at the
-  start or end of a document or container body (it is dropped — on an apply, an
-  ordinary delete of a row that owned no text, no attachments and no links), nor
-  one whose depth differs from the block after it (it comes back at that block's
-  depth). The second is a `parentId` update on apply — a move the agent never
-  made — and `touched.ts` judges `parentId`, so under `agent-access`'s
-  every-write-inside-an-`<agent-note>`-card rule it can refuse an apply that had
-  nothing to do with that block. Traded deliberately for a projection that reads
-  as prose. `page/text` KEEPS its `tag`, so `<text/>` still parses: documents
-  written before this change keep working, an agent that needs an empty block the
-  rules cannot place can still write one explicitly, and restoring exactness is
-  one ternary in `text-block.ts`.
+- **An empty block a blank line cannot place is PINNED as its tag.** A blank
+  line carries no indentation of its own, so the parser places it by the block
+  that FOLLOWS it and drops a run with nothing after it. Three positions are
+  therefore unstatable that way, and they mirror those parser rules exactly: a
+  node **with children** (which would land under them), the **first** of a
+  sibling list and the **last** of one (a leading or trailing run, dropped at a
+  document or tag-body edge). `MarkdownContext.emptyBlocks` — required, beside
+  `blankLines`, so a call site that does not state its dialect is a tsc error —
+  says what happens there. `"pinned"` emits the handle's tag form instead of the
+  blank line (`<text/>`, since `page/text`'s tag declares `attrs: () => ({})`);
+  `"blank-line"` always emits the blank line and keeps the loss.
+  - **It replaces only the LINE.** The walk still emits the node's children
+    below it, exactly as for any other flat line. Routing through the tag branch
+    would be a silent delete — a `body: "none"` tag self-closes and CONSUMES its
+    children.
+  - **It never invents a spelling.** A handle whose `tagFor()` is `null` keeps
+    the blank line, so that loss stays, honestly.
+  - **Who declares what.** `read_page` / `edit_page`
+    (`markdown-apply/server/internal/markdown-context.ts`) and the planner's own
+    re-serialization (`markdown-apply/core/plan.ts`) are `"pinned"` and MUST
+    agree — the read and the diff are one dialect or alignment diffs two. The
+    clipboard (`editor/web/internal/clipboard-write.ts`) is `"blank-line"`: a
+    human pasting into another app must never see a tag, and the internal round
+    trip travels as the structural `BLOCKS_MIME` payload anyway. The three web
+    paste sites are parse-side and state `"blank-line"` because the record is
+    one dialect.
+  - **What is still lost, and cannot be spelled:** a paragraph whose text is
+    only WHITESPACE (`" "`). It is a blank line to the tokenizer, so it
+    re-parses as empty — and the tag means *empty*, so no dialect can say it.
   Design:
-  [`research/2026-09-01-page-blank-line-empty-paragraph.md`](../../../../research/2026-09-01-page-blank-line-empty-paragraph.md).
+  [`research/2026-09-01-page-blank-line-empty-paragraph.md`](../../../../research/2026-09-01-page-blank-line-empty-paragraph.md)
+  and
+  [`research/2026-09-03-page-edit-judged-on-what-it-changed.md`](../../../../research/2026-09-03-page-edit-judged-on-what-it-changed.md).
 
 ### The page tags
 

@@ -19728,7 +19728,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `markdownNodesOfRows`
           - `pageTitleBanner`
           - `planMarkdownApply`
+          - `planWriteCount`
           - `stripPageTitleBanner`
+          - `subtractNoise`
           - `touchedBlocks`
       - Cross-plugin:
         - Imported by:

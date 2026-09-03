@@ -146,6 +146,22 @@ a whole-document write is `write_agent_note`, whose scope is one card by
 construction. The noun in `write_agent_note`'s name is also its own first error
 message — the primary mistake is passing a page id, and the name pre-empts it.
 
+### `edit_page` hands the engine the document it edited
+
+`edit_page` reads the scope, splices one string, and applies the whole document —
+so every block it did not touch still round-trips through markdown → forest, and
+any loss in that projection would reach `assertNotesOnlyPlan` as a write outside
+every card. It therefore passes the pre-splice document as
+`ApplyBlockOptions.baseline`, and the engine subtracts the writes that document
+would produce by itself before the predicate judges anything (the engine's own
+[`subtract-noise`](../../../markdown-apply/CLAUDE.md) section). The rule the tool
+enforces is unchanged; what changed is that it is now enforced against the
+caller's edit rather than against the round trip.
+
+`write_agent_note` composes its document rather than editing one, so it passes no
+baseline — there is nothing to subtract, and its apply is rooted at one card
+anyway.
+
 ## The `append` trade: `assertNotesOnlyPlan` is what a creates-only patch was
 
 `append_agent_notes` is deleted. It never went through the planner: it built the

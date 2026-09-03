@@ -78,6 +78,9 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
             // Foreign markdown: a blank line separates paragraphs, exactly as
             // for the container paste (`block-editor.tsx`).
             blankLines: "separator",
+            // Parse-side, so nothing here reads it — stated because the record
+            // is ONE dialect, as every serialize site states `blankLines`.
+            emptyBlocks: "blank-line",
           });
         }
         // Empty/unparseable forest (e.g. whitespace-only multi-line) → let the

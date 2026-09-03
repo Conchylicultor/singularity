@@ -44,7 +44,14 @@ const text = defineBlock({
   // parse-only so `<text/>` written before that dialect still comes back.
   markdown: {
     serialize: (d, ctx) => (plainOf(d.text).length === 0 ? "" : ctx.md(d.text)),
-    tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
+    tag: {
+      name: "text",
+      body: "none",
+      // Mirrors `page/text`: no attributes, so the pin emits a bare `<text/>`
+      // rather than the derived `<text data="{&quot;text&quot;:[]}"/>`.
+      attrs: () => ({}),
+      parseAttrs: () => ({ text: [] }),
+    },
   },
 });
 
@@ -68,6 +75,10 @@ const ctx: MarkdownContext = {
   protectedSpans: [],
   // The server dialect: this module's documents are ones this codebase emitted.
   blankLines: "empty-block",
+  // The server dialect on the way out too: an empty paragraph whose position a
+  // blank line cannot state is pinned as `<text/>`, so a faithful read applied
+  // straight back plans nothing.
+  emptyBlocks: "pinned",
 };
 
 const PAGE_ID = "PAGE";
@@ -269,20 +280,24 @@ describe("T3: annexing the document's prose into a boundary", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The accepted loss: an empty paragraph a blank line cannot place
+// The pin: an empty paragraph a blank line cannot place
 // ---------------------------------------------------------------------------
 //
-// An empty paragraph is a BLANK LINE, and a blank line carries no indentation of
-// its own — so it comes back at the depth of the block that FOLLOWS it. When
-// that block is shallower, the round trip is a real move the writer never made,
-// and `parentId` is a judged field, so a faithful read applied straight back is
-// REFUSED on a block the edit never mentioned. Designed behaviour rather than a
-// defect (`research/2026-09-01-page-blank-line-empty-paragraph.md`), pinned here
-// so it stays a known outcome instead of a rediscovered surprise.
+// An empty paragraph used to be a BLANK LINE unconditionally, and a blank line
+// carries no indentation of its own — so it came back at the depth of the block
+// that FOLLOWS it. Where that block was shallower the round trip was a real move
+// nobody made, and `parentId` is a judged field, so a faithful read applied
+// straight back was REFUSED on a block the edit never mentioned. That is what
+// cost `conv-1788356732-p7jw` five attempts and the note it was trying to write.
+//
+// The server dialect now PINS those positions as `<text/>`
+// (`MarkdownContext.emptyBlocks`), so the read is exact and the identity apply
+// plans nothing. Kept as the regression pin, asserting the fix rather than the
+// loss: the three tests below are the same three, flipped.
 
-describe("an empty paragraph the blank-line dialect cannot place", () => {
-  // PAGE ├ b1 text "prose" ─ b2 text ""   ← empty, b1's last child
-  //      └ b3 fence        ─ b4 text "noted"
+describe("an empty paragraph a blank line cannot place is pinned as a tag", () => {
+  // PAGE ├ b1 text "prose" ─ b2 text ""   ← empty, b1's ONLY child: both the
+  //      └ b3 fence        ─ b4 text "noted"    first and the last of its list
   const rows = (): StoredRow[] =>
     rowsOf([
       raw("text", { text: runs("prose") }, [line("")]),
@@ -307,13 +322,13 @@ describe("an empty paragraph the blank-line dialect cannot place", () => {
     return result.plan;
   };
 
-  test("the read emits the empty paragraph as a bare blank line", () => {
+  test("the read emits the empty paragraph as `<text/>`, at its own depth", () => {
     expect(
       serializeForestToMarkdown(markdownNodesOfRows(rows(), PAGE_ID), ctx),
     ).toBe(
       [
         "prose",
-        "",
+        "  <text/>",
         `<${BOUNDARY_TYPE} id="b3">`,
         "  noted",
         `</${BOUNDARY_TYPE}>`,
@@ -321,22 +336,17 @@ describe("an empty paragraph the blank-line dialect cannot place", () => {
     );
   });
 
-  test("applying it straight back is a `parentId` update on the empty block", () => {
+  test("applying it straight back plans NOTHING", () => {
     const plan = noOpApply(rows());
-    // The ROW survives — an empty paragraph owns no text, no attachments, no
-    // links — so the loss is its parent, never its id.
     expect(plan.patch.creates).toEqual([]);
     expect(plan.patch.deleteIds).toEqual([]);
-    expect(
-      plan.patch.updates.find((u) => u.id === "b2")?.changes.parentId,
-    ).toBe(PAGE_ID);
+    expect(plan.patch.updates).toEqual([]);
+    expect(plan.textEdits).toEqual([]);
   });
 
-  test("and under boundary enforcement that move refuses the whole apply", () => {
+  test("and boundary enforcement has nothing to refuse", () => {
     const existing = rows();
-    expect(violationsOf(noOpApply(existing), existing)).toEqual([
-      { blockId: "b2", how: "updated", reason: "escaped" },
-    ]);
+    expect(violationsOf(noOpApply(existing), existing)).toEqual([]);
   });
 });
 

@@ -59,6 +59,25 @@ export interface MarkdownContext {
    * serializer never asks.
    */
   blankLines: "empty-block" | "separator";
+  /**
+   * How an empty block is EMITTED when a blank line cannot state its position.
+   *
+   * `"blank-line"` — always a blank line. Honest for a HUMAN reading the text
+   * (a paste into another app must never grow a tag), and lossy in exactly the
+   * three places the parser's own blank-line rules cannot reach: a blank line
+   * carries no indentation of its own, so it lands at the depth of the block
+   * that follows it and a leading or trailing blank run is dropped outright.
+   * `"pinned"` — those three positions (a node with children, the first of its
+   * sibling list, the last of it) emit the handle's TAG form instead, so the
+   * round trip is exact. A handle whose type maps to no tag keeps the blank
+   * line and keeps the loss: the pin never invents a spelling.
+   *
+   * Required for the same reason `blankLines` is, over the other direction of
+   * the same asymmetry: only the caller knows whether the document it is about
+   * to produce will be read back by this codebase (where exactness is the whole
+   * contract) or by a person in another app (where a tag is noise).
+   */
+  emptyBlocks: "pinned" | "blank-line";
 }
 
 /**
@@ -1223,7 +1242,10 @@ export function serializeForestToMarkdown(
     // its own fresh counter (matches render-time numbering).
     let ordinal = 0;
     let prevType: string | null = null;
-    for (const n of nodes) {
+    // Indexed rather than `for…of`: the pin below asks whether a node is the
+    // FIRST or the LAST of this sibling list, and both must be exact.
+    for (let index = 0; index < nodes.length; index++) {
+      const n = nodes[index]!;
       ordinal = n.type === prevType ? ordinal + 1 : 1;
       prevType = n.type;
       const h = byType.get(n.type);
@@ -1241,7 +1263,33 @@ export function serializeForestToMarkdown(
         assertNoLineAnnotations(n);
         const line =
           resolved === null ? "" : resolved.serialize(n.data, serializeCtx);
-        out.push(...line.split("\n"));
+        // The pin. A whitespace-only line is an EMPTY block, and a blank line
+        // carries no indentation of its own — so the parser places it by the
+        // block that FOLLOWS it, and drops a run with nothing after it. Three
+        // positions are therefore unstatable that way (they mirror the parser's
+        // own rules): a node with children lands under them, the first of a
+        // sibling list is a leading run, the last is a trailing one. Emit the
+        // handle's tag form there instead, which states depth and position
+        // exactly. A handle with no tag keeps the blank line — the pin never
+        // invents a spelling, so that loss stays, honestly.
+        //
+        // It replaces only the LINE: the walk still emits `n.children` below,
+        // exactly as for any other flat line. Routing through the tag branch
+        // would be a silent delete — a `body: "none"` tag self-closes and
+        // CONSUMES its children.
+        const pinned =
+          ctx.emptyBlocks === "pinned" &&
+          line.trim() === "" &&
+          (n.children.length > 0 || index === 0 || index === nodes.length - 1)
+            ? h && tagFor(h)
+            : null;
+        if (pinned) {
+          out.push(
+            `${openTagPrefix(pinned.name, tagAttrs(pinned, n.data, serializeCtx))}/>`,
+          );
+        } else {
+          out.push(...line.split("\n"));
+        }
         out.push(...indentLines(renderList(n.children)));
         continue;
       }

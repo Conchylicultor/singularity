@@ -891,6 +891,9 @@ function SelectionLayer({
           // an empty paragraph would spray one between every two paragraphs of
           // a pasted README.
           blankLines: "separator",
+          // Parse-side, so nothing here reads it — stated because the record is
+          // ONE dialect, exactly as every serialize site states `blankLines`.
+          emptyBlocks: "blank-line",
         });
       }
       // Empty/unparseable forest (an empty or whitespace-only payload) → let the
@@ -1533,6 +1536,9 @@ function SelectionLayer({
           // an empty paragraph would spray one between every two paragraphs of
           // a pasted README.
           blankLines: "separator",
+          // Parse-side, so nothing here reads it — stated because the record is
+          // ONE dialect, exactly as every serialize site states `blankLines`.
+          emptyBlocks: "blank-line",
         });
       }
       // Empty/unparseable forest (a whitespace-only payload) → never swallow the

@@ -26,5 +26,11 @@ export function serverMarkdownContext(): MarkdownContext {
     // paragraph — never the paragraph separator it is in a document pasted from
     // somewhere else.
     blankLines: "empty-block",
+    // `read_page` hands out this document and `edit_page` reads it back, so the
+    // round trip must be EXACT: an empty paragraph a blank line cannot place is
+    // pinned as `<text/>` rather than silently moved or dropped. A loss here is
+    // not cosmetic — it reaches the boundary check as a write to a block the
+    // agent never touched, and refuses the whole edit.
+    emptyBlocks: "pinned",
   };
 }

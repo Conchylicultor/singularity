@@ -31,12 +31,18 @@ const text = defineBlock({
   defaultText: true,
   empty: () => ({ text: [] }),
   // An EMPTY paragraph is a blank line; anything else is ordinary prose. The tag
-  // is parse-only here (`serialize` wins on the way out), and stays so that
-  // `<text/>` — every document written before the blank-line dialect — keeps
-  // parsing. Mirrors `page/text`'s real declaration.
+  // is what the `"pinned"` dialect emits where a blank line cannot state the
+  // block's position, and `<text/>` parses either way. `attrs` emits nothing, or
+  // the derived projection would spell it `<text data="{&quot;text&quot;:[]}"/>`.
+  // Mirrors `page/text`'s real declaration.
   markdown: {
     serialize: (d, ctx) => (runsLength(d.text) === 0 ? "" : ctx.md(d.text)),
-    tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
+    tag: {
+      name: "text",
+      body: "none",
+      attrs: () => ({}),
+      parseAttrs: () => ({ text: [] }),
+    },
   },
 });
 
@@ -359,8 +365,16 @@ const mdCtx: MarkdownContext = {
   handles,
   protectedSpans: [],
   blankLines: "empty-block",
+  // Our own dialect on the way out too: an empty paragraph a blank line cannot
+  // place is PINNED as `<text/>`, which is what makes the round-trip property
+  // below exact rather than exact-modulo-a-filter.
+  emptyBlocks: "pinned",
 };
-const pasteCtx: MarkdownContext = { ...mdCtx, blankLines: "separator" };
+const pasteCtx: MarkdownContext = {
+  ...mdCtx,
+  blankLines: "separator",
+  emptyBlocks: "blank-line",
+};
 const parse = (md: string): SerializedBlock[] =>
   parseMarkdownToForest(md, mdCtx);
 const parsePasted = (md: string): SerializedBlock[] =>
@@ -1026,6 +1040,7 @@ describe("annotated tags (facts the block does not own)", () => {
       handles: [...handles, dispatchCard],
       protectedSpans: [],
       blankLines: "empty-block",
+      emptyBlocks: "pinned",
     };
     const md = serializeForestToMarkdown(
       [
@@ -1122,6 +1137,7 @@ describe("annotated tags (facts the block does not own)", () => {
       handles: [...handles, doubled],
       protectedSpans: [],
       blankLines: "empty-block",
+      emptyBlocks: "pinned",
     };
     expect(() => serializeForestToMarkdown([node("doubled", {})], ctx)).toThrow(
       /own `attrs` emitted one too/,
@@ -1293,13 +1309,99 @@ describe("empty paragraphs", () => {
   });
 
   test("`<text/>` still parses, so documents written before this keep working", () => {
-    // The tag is parse-only now — nothing emits it — but it is the one spelling
-    // of an empty paragraph that survives a position a blank line cannot state.
+    // Nothing EMITS it in this position (the empty paragraph sits between two
+    // siblings, which a blank line states exactly), but it is the one spelling
+    // of an empty paragraph that survives a position a blank line cannot state,
+    // and every document written before the blank-line dialect uses it.
     expect(parse("a\n<text/>\nb")).toEqual([
       node("text", { text: runs("a") }),
       empty(),
       node("text", { text: runs("b") }),
     ]);
+  });
+
+  // -------------------------------------------------------------------------
+  // The pin: three positions a blank line cannot state
+  // -------------------------------------------------------------------------
+  //
+  // A blank line carries no indentation of its own, so the parser places it by
+  // the block that FOLLOWS it and drops a run with nothing after it. Under
+  // `emptyBlocks: "pinned"` the serializer spells exactly those three positions
+  // as the handle's tag instead — the FIRST of a sibling list, the LAST of one,
+  // and one carrying CHILDREN — so what the agent-facing dialect emits reads
+  // back as the very same forest.
+
+  test("pinned: an empty paragraph FIRST in its sibling list", () => {
+    const forest = [empty(), node("text", { text: runs("a") })];
+    expect(serialize(forest)).toBe("<text/>\na");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("pinned: an empty paragraph LAST in its sibling list", () => {
+    const forest = [node("text", { text: runs("a") }), empty()];
+    expect(serialize(forest)).toBe("a\n<text/>");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("pinned: an empty paragraph that is BOTH — the only node in its list", () => {
+    // Inside a container body, so the drop it replaces is the tag-body edge one
+    // rather than the document edge.
+    const forest = [
+      { type: "quote", data: {}, expanded: true, children: [empty()] },
+    ];
+    expect(serialize(forest)).toBe("<quote>\n  <text/>\n</quote>");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("pinned: an empty paragraph WITH CHILDREN keeps them under the tag", () => {
+    // The case with no coverage before the pin, and the one most likely to be
+    // got wrong: the pin replaces the LINE only. Routing it through the tag
+    // branch would self-close a `body: "none"` tag and silently DELETE the
+    // children — so assert explicitly that they are still there, still nested,
+    // in both directions.
+    const forest = [
+      node("text", { text: runs("before") }),
+      {
+        ...empty(),
+        children: [
+          node("text", { text: runs("kid one") }),
+          node("bulleted-list", { text: runs("kid two") }),
+        ],
+      },
+      node("text", { text: runs("after") }),
+    ];
+    expect(serialize(forest)).toBe(
+      ["before", "<text/>", "  kid one", "  * kid two", "after"].join("\n"),
+    );
+    const back = parse(serialize(forest));
+    expect(back).toEqual(forest);
+    // Stated separately, because `toEqual` over the whole forest would still
+    // pass if BOTH sides had lost the children.
+    expect(back[1]!.children.map(dataText)).toEqual(["kid one", "kid two"]);
+  });
+
+  test("an empty paragraph BETWEEN two siblings is still a blank line", () => {
+    // The pin is narrow on purpose: a blank line states this position exactly,
+    // and it is what makes the projection read as prose.
+    const forest = [
+      node("text", { text: runs("a") }),
+      empty(),
+      node("text", { text: runs("b") }),
+    ];
+    expect(serialize(forest)).toBe("a\n\nb");
+  });
+
+  test("the `blank-line` dialect never pins — a human paste sees no tag", () => {
+    // What `clipboard-write.ts` declares. The loss is real and taken knowingly:
+    // the copy is worth something in another app, and the internal round trip
+    // goes through the structural clipboard flavour.
+    const humanCtx: MarkdownContext = { ...mdCtx, emptyBlocks: "blank-line" };
+    expect(
+      serializeForestToMarkdown(
+        [empty(), node("text", { text: runs("a") })],
+        humanCtx,
+      ),
+    ).toBe("\na");
   });
 
   test("a blank line lands at the depth of the block that FOLLOWS it — shallower", () => {
@@ -1450,13 +1552,12 @@ describe("round-trip property (fuzzed forest)", () => {
     children: boolean;
   }[] = [
     { type: "text", data: (r) => ({ text: pick(r) }), children: true },
-    // An empty paragraph is a BLANK LINE, which carries no indent of its own —
-    // so it cannot own children (they would re-parent onto the block above) and
-    // its depth is read off the block that follows it. `representable` below
-    // keeps the generated forest to the positions the dialect can state; the
-    // ones it cannot are the accepted loss, each pinned by its own test in
-    // `describe("empty paragraphs")`.
-    { type: "text", data: () => ({ text: [] }), children: false },
+    // An empty paragraph is a BLANK LINE where one can state its position, and
+    // the handle's `<text/>` tag where one cannot (first, last, or carrying
+    // children — see the pin in `describe("empty paragraphs")`). So it may own
+    // children here, and the property below asserts the EXACT round trip over
+    // every position the generator can produce, with no narrowing.
+    { type: "text", data: () => ({ text: [] }), children: true },
     { type: "bulleted-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "heading-1", data: (r) => ({ text: pick(r) }), children: true },
     { type: "numbered-list", data: (r) => ({ text: pick(r) }), children: true },
@@ -1560,36 +1661,6 @@ describe("round-trip property (fuzzed forest)", () => {
     return [{ text: parts.join(" "), ...(marks ? { marks } : {}) }];
   }
 
-  /** An empty text block — the one node whose markdown form is a blank line. */
-  const isEmptyText = (b: SerializedBlock): boolean =>
-    b.type === "text" && runsLength((b.data as { text: RichText }).text) === 0;
-
-  /**
-   * Drop the empty paragraphs a blank line cannot put back, so the property
-   * below stays EXACT over everything else. Exactly two positions go, and they
-   * are the two losses the design accepts:
-   *
-   *  - no sibling AFTER it: nothing follows to take a depth from, and at the end
-   *    of a document or a container body the run is never flushed at all;
-   *  - no sibling BEFORE it: a run at the start of a parse scope (the document,
-   *    or one container's body) has nothing to be the previous sibling of.
-   *
-   * Everything between two siblings round-trips exactly, at any depth and inside
-   * any container, which is what this narrowing leaves the property asserting.
-   */
-  const representable = (nodes: SerializedBlock[]): SerializedBlock[] => {
-    // To a FIXED POINT: dropping a leading empty makes the next node leading.
-    let kept = nodes;
-    for (;;) {
-      const next = kept.filter(
-        (b, i) => !isEmptyText(b) || (i > 0 && i < kept.length - 1),
-      );
-      if (next.length === kept.length) break;
-      kept = next;
-    }
-    return kept.map((b) => ({ ...b, children: representable(b.children) }));
-  };
-
   const build = (r: () => number, depth: number): SerializedBlock => {
     const gen = gens[Math.floor(r() * gens.length)]!;
     const kids: SerializedBlock[] = [];
@@ -1611,7 +1682,9 @@ describe("round-trip property (fuzzed forest)", () => {
       const generated: SerializedBlock[] = [];
       const roots = 1 + Math.floor(r() * 4);
       for (let i = 0; i < roots; i++) generated.push(build(r, 0));
-      const forest = representable(generated);
+      // No narrowing: every empty paragraph the generator places round-trips,
+      // because the pin spells the three positions a blank line cannot state.
+      const forest = generated;
       const md = serialize(forest);
       expect({ seed, forest: parse(md) }).toEqual({ seed, forest });
       // Idempotence: the emitted document is CANONICAL, so a second cycle is a
@@ -1665,9 +1738,7 @@ describe("round-trip property (fuzzed forest)", () => {
       const generated: SerializedBlock[] = [];
       const roots = 1 + Math.floor(r() * 4);
       for (let i = 0; i < roots; i++) generated.push(build(r, 0));
-      // Same narrowing as the property above, for the same reason: an empty
-      // paragraph a blank line cannot place would not come back to be stamped.
-      const stamped = stamp(representable(generated), "");
+      const stamped = stamp(generated, "");
       const parsed = parseMarkdownToForest(
         serializeForestToMarkdown(stamped, mdCtx),
         mdCtx,

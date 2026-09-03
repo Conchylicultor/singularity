@@ -13,7 +13,9 @@ import {
   documentOrderRows,
   pageTitleBanner,
   planMarkdownApply,
+  planWriteCount,
   stripPageTitleBanner,
+  subtractNoise,
   type MarkdownApplyPlan,
 } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
@@ -78,6 +80,22 @@ import { writeBlockText } from "./block-doc-text";
  * attempt to guess which half of a two-owner write to undo.
  *
  * ---------------------------------------------------------------------------
+ * The plan is the caller's EDIT, not the round trip's
+ * ---------------------------------------------------------------------------
+ *
+ * A caller edits by splicing a string into the document a read handed it, so
+ * every OTHER block on the page round-trips through markdown → forest untouched
+ * — and wherever that projection is lossy, the loss arrives here as a write the
+ * caller never asked for. Given the document the caller started from
+ * ({@link ApplyBlockOptions.baseline}), this plans that document against the
+ * SAME rows and subtracts it: what both plans write identically is round-trip
+ * loss, and what is left is the edit. See `core/subtract-noise.ts`.
+ *
+ * The subtraction happens BEFORE `assertAcceptable`, because a policy must judge
+ * what will actually be written; and the report is built off the SUBTRACTED
+ * plan, because a caller reading it is asking what its edit did.
+ *
+ * ---------------------------------------------------------------------------
  * Provenance: agent-origin does NOT apply, on purpose
  * ---------------------------------------------------------------------------
  *
@@ -105,6 +123,24 @@ export interface ApplyBlockOptions {
    */
   redact?: (rows: StoredBlock[]) => readonly StoredBlock[];
   /**
+   * The document the caller's edit was made AGAINST — what the read returned,
+   * before the caller spliced anything into it.
+   *
+   * A caller edits one string inside a whole document and hands the whole
+   * document back, so every block it did not touch still round-trips through
+   * markdown → forest. Writes this baseline would ALSO produce are that round
+   * trip's, not the caller's, and are subtracted from the plan before it is
+   * judged and before it is written (`core/subtract-noise.ts`). What is left is
+   * the edit, which is what `assertAcceptable` sees and what the report counts.
+   *
+   * It is planned against the SAME rows, the same `redact` and the same markdown
+   * dialect as the edited document — planning it from a second read would diff
+   * two different forests. Omit it when the caller composed its document rather
+   * than editing one this engine produced: there is then no round trip to
+   * subtract, and a wrong baseline would cancel real writes.
+   */
+  baseline?: string;
+  /**
    * Judge the plan BEFORE a row is written. **Throwing refuses the whole apply**,
    * and is the only way to refuse one: there is no return value, because a
    * boolean would need this module to invent the wording and the status of a
@@ -118,8 +154,10 @@ export interface ApplyBlockOptions {
    * caller normally judges with (`touchedBlocks`, `boundaryViolations`), and it
    * names no block type either.
    *
-   * Called **exactly once, synchronously**, after planning and strictly before
-   * the first `applyPageBlockPatch` — so a refusal has provably written nothing,
+   * Called **exactly once, synchronously**, after planning — and after the
+   * {@link baseline} subtraction, so the plan it judges is the one that will
+   * actually be written — and strictly before the first
+   * `applyPageBlockPatch`, so a refusal has provably written nothing,
    * exactly like the planner's own refusals above it. `rows` is the same
    * whole-partition, UNREDACTED row set the plan was built over, which is what a
    * chain walk needs: an ancestor may be a row the document never showed.
@@ -130,7 +168,10 @@ export interface ApplyBlockOptions {
    * "these two came from the same read". Keeping the hook inside the one function
    * that owns both halves makes that unreachable rather than merely discouraged.
    */
-  assertAcceptable?(plan: MarkdownApplyPlan, rows: readonly StoredBlock[]): void;
+  assertAcceptable?(
+    plan: MarkdownApplyPlan,
+    rows: readonly StoredBlock[],
+  ): void;
 }
 
 export interface ApplyReport {
@@ -149,6 +190,16 @@ export interface ApplyReport {
   createdIds: string[];
   /** Survivors whose content doc this apply spliced. */
   textEditedIds: string[];
+  /**
+   * Writes the read → edit → write round trip produced by itself, subtracted
+   * from this plan before it was judged and written (see
+   * {@link ApplyBlockOptions.baseline}). `0` when no baseline was given.
+   *
+   * Reported rather than merely dropped: a subtraction that quietly removed
+   * writes would be indistinguishable from a plan that never made them, and the
+   * number is how anyone notices the projection has become lossier.
+   */
+  absorbedWrites: number;
 }
 
 /** The `data` blob a text projection writes: the row's own, `text` replaced. */
@@ -167,33 +218,51 @@ async function applyToScope(scope: {
   title: string;
   rows: readonly StoredBlock[];
   markdown: string;
+  baseline?: string;
   redact?: ApplyBlockOptions["redact"];
   assertAcceptable?: ApplyBlockOptions["assertAcceptable"];
 }): Promise<ApplyReport> {
-  const { rootId, pageId, title, rows, markdown, redact, assertAcceptable } = scope;
-  const ctx = serverMarkdownContext();
-  // The banner comes off BEFORE the parse and only for a page ROOT — the exact
-  // mirror of where `readBlockAsMarkdown` puts it on, so what a read emitted is
-  // what an apply takes back. Built from the STORED title, never from anything
-  // in the incoming document: the test is "is this line still the one this
-  // page's own read produced", and a document cannot answer that about itself.
-  // Anything that fails the test falls through to the planner and is judged
-  // there — see `core/page-title.ts` for the four arms and why they are right.
-  const document =
-    rootId === pageId
-      ? stripPageTitleBanner(markdown, pageTitleBanner(title, ctx))
-      : markdown;
-  const incoming = parseMarkdownToForest(document, ctx);
-  const result = planMarkdownApply({
+  const {
     rootId,
     pageId,
-    // The WHOLE partition, redacted or not: the filter below prunes the planner's
-    // walk, which is the entire mechanism — see `core/plan.ts`.
-    existing: rows,
-    incoming,
-    handles: ctx.handles,
+    title,
+    rows,
+    markdown,
+    baseline,
     redact,
-  });
+    assertAcceptable,
+  } = scope;
+  const ctx = serverMarkdownContext();
+  // Everything a document has to go through to become a plan, in ONE place: the
+  // edited document and the baseline are planned by the same call, against the
+  // same rows, with the same context and the same redaction. Two spellings of
+  // this would diff two dialects, and the subtraction below would then cancel
+  // nothing while looking like it worked.
+  const planOf = (md: string) => {
+    // The banner comes off BEFORE the parse and only for a page ROOT — the exact
+    // mirror of where `readBlockAsMarkdown` puts it on, so what a read emitted is
+    // what an apply takes back. Built from the STORED title, never from anything
+    // in the incoming document: the test is "is this line still the one this
+    // page's own read produced", and a document cannot answer that about itself.
+    // Anything that fails the test falls through to the planner and is judged
+    // there — see `core/page-title.ts` for the four arms and why they are right.
+    const document =
+      rootId === pageId
+        ? stripPageTitleBanner(md, pageTitleBanner(title, ctx))
+        : md;
+    return planMarkdownApply({
+      rootId,
+      pageId,
+      // The WHOLE partition, redacted or not: the filter prunes the planner's
+      // walk, which is the entire mechanism — see `core/plan.ts`.
+      existing: rows,
+      incoming: parseMarkdownToForest(document, ctx),
+      handles: ctx.handles,
+      redact,
+    });
+  };
+
+  const result = planOf(markdown);
   // A refusal returns BEFORE any write: the planner cannot verify what it was
   // asked to do, and half-applying it would be worse than refusing it.
   if (!result.ok) {
@@ -203,15 +272,40 @@ async function applyToScope(scope: {
         `(${result.reason}): ${result.detail}`,
     );
   }
+
+  // --- The round trip's own writes come back out --------------------------
+  // Before the policy judges and before anything is written, so what is judged
+  // is what will be written. The baseline is the document the caller edited, so
+  // whatever planning it writes is loss in the markdown projection rather than
+  // anything the caller asked for — see `core/subtract-noise.ts`.
+  let plan = result.plan;
+  let absorbedWrites = 0;
+  if (baseline !== undefined) {
+    const identity = planOf(baseline);
+    if (!identity.ok) {
+      // The document a read produced cannot be applied back onto the rows it was
+      // read from. Nothing the caller did can cause this, so it is a bug in the
+      // read or the planner, and it must be loud rather than degrade into an
+      // unsubtracted apply that then refuses the caller for the engine's fault.
+      throw new Error(
+        `markdown apply: the baseline document for block ${rootId} on page ${pageId} ` +
+          `does not plan against its own rows (${identity.reason}): ${identity.detail}`,
+      );
+    }
+    const subtracted = subtractNoise(plan, identity.plan);
+    absorbedWrites = planWriteCount(plan) - planWriteCount(subtracted);
+    plan = subtracted;
+  }
+
   // The caller's own verdict on the plan, between "what would this write" and
   // "write it". It is handed the UNREDACTED rows the plan was built over, since
   // a policy reasoning about ancestry needs rows the document never showed.
   // Throwing here refuses the whole apply with nothing written — the same
   // guarantee the planner's refusal above has, and the reason this cannot be a
   // check the caller performs afterwards.
-  assertAcceptable?.(result.plan, rows);
+  assertAcceptable?.(plan, rows);
 
-  const { patch, textEdits, stats } = result.plan;
+  const { patch, textEdits, stats } = plan;
 
   // --- 1. Structure, atomically --------------------------------------------
   const { blocks } = await applyPageBlockPatch(pageId, patch);
@@ -273,6 +367,7 @@ async function applyToScope(scope: {
     survivingIds: inScope.filter((b) => !createdSet.has(b.id)).map((b) => b.id),
     createdIds,
     textEditedIds: textEdits.map((e) => e.blockId),
+    absorbedWrites,
   };
 }
 
@@ -293,6 +388,7 @@ export async function applyMarkdownToBlock(
     title,
     rows,
     markdown,
+    baseline: opts?.baseline,
     redact: opts?.redact,
     assertAcceptable: opts?.assertAcceptable,
   });
@@ -321,6 +417,7 @@ export async function applyMarkdownToPage(
     title: snapshot.page.title,
     rows: snapshot.blocks,
     markdown,
+    baseline: opts?.baseline,
     redact: opts?.redact,
     assertAcceptable: opts?.assertAcceptable,
   });

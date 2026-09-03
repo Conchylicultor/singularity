@@ -235,3 +235,38 @@ block, produces a `parentId` update on a no-op apply.
      outcome matches what this plan says: the empty paragraph moves to root, and
      under boundary enforcement the apply is refused. Confirming it behaves as
      designed is the point; it is not a bug to fix in this change.
+
+## Addendum, 2026-09-03: the accepted loss is closed
+
+The trade above ("a deliberate, understood trade — not a defect to fix later")
+was wrong about its cost, and it is now closed. Design and measurements:
+[`research/2026-09-03-page-edit-judged-on-what-it-changed.md`](2026-09-03-page-edit-judged-on-what-it-changed.md).
+
+What that trade did not anticipate: cases 1 and 2 do not surface as a cosmetic
+difference on the block they concern — they make the whole PAGE unwritable by any
+agent, for any edit. `edit_page` re-applies the entire scope document, so every
+lossy round trip anywhere on the page arrives at the boundary check as a write
+outside every card. A real refused edit measured 12 such violations, none of them
+a content write; the agent that hit it spent five attempts and gave up, and the
+refusal names one block while counting the rest, so it could not see what to fix.
+"An agent that needs an empty block the rules cannot place can still write one
+explicitly" was therefore not a workaround — the agent had to hand-place a tag
+for every such block on the page, none of which it had touched.
+
+Two changes, and both were needed:
+
+1. **The pin** — the reversal this doc predicted, taken at the SERIALIZER rather
+   than in `text-block.ts`: where a blank line cannot state an empty node's
+   position (it has children, or it is first or last of its siblings), the
+   agent-facing dialect emits the handle's tag form instead. `MarkdownContext`
+   gained a second dialect field, `emptyBlocks`, beside `blankLines`. A human
+   copying blocks out still gets blank lines and no tags.
+2. **The subtraction** — `edit_page` now hands the apply the document the edit
+   was made against, and every write that document would ALSO produce is dropped
+   before the plan is judged. This absorbs what no projection can represent (a
+   paragraph whose text is a single space re-parses as empty), which the pin
+   alone cannot fix.
+
+The rules in *The design* above are unchanged: a blank line still means an empty
+paragraph on the parse side, and foreign markdown is still exactly as lenient. It
+is only the EMISSION that gained an exception, and only for the agent dialect.

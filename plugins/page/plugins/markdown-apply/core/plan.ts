@@ -246,6 +246,9 @@ export function planMarkdownApply<R extends StoredRow>(
     handles: [...handles],
     protectedSpans: [],
     blankLines: "empty-block",
+    // Must match what the READ emits, or alignment diffs two dialects and every
+    // pinned empty paragraph reads as a change nobody made.
+    emptyBlocks: "pinned",
   };
 
   // Everything a plan may WRITE reads `oldRows`, never `existing`: the walk is

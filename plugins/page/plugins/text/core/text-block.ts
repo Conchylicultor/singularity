@@ -20,14 +20,26 @@ export const textBlock = defineBlock({
   // caller's `MarkdownContext.blankLines` dialect: our own documents say "empty
   // paragraph", a pasted README says "paragraph separator".
   //
-  // The `tag` stays, deliberately, and is insurance rather than leftovers:
-  // `<text/>` still parses, so documents written before the blank-line dialect
-  // keep working, and an empty block whose position a blank line cannot express
-  // can still be written explicitly. `serialize` wins on the way out, so nothing
-  // emits it. See `research/2026-09-01-page-blank-line-empty-paragraph.md`.
+  // The `tag` is what the `"pinned"` dialect emits for an empty paragraph whose
+  // position a blank line cannot state — the first or last of a sibling list, or
+  // one carrying children (see `MarkdownContext.emptyBlocks`). `serialize` wins
+  // everywhere else, so an ordinary empty paragraph is still a blank line, and
+  // `<text/>` keeps parsing either way: documents written before the blank-line
+  // dialect keep working.
+  //
+  // `attrs` emits NOTHING, deliberately. The derived projection JSON-encodes
+  // every non-string field into one `data` attribute, so the default would spell
+  // an empty paragraph `<text data="{&quot;text&quot;:[]}"/>` — an unreadable
+  // way to say nothing. `parseAttrs` already ignores whatever it is handed, so
+  // a bare `<text/>` parses back to exactly the same empty paragraph.
   markdown: {
     serialize: (data, ctx) =>
       runsLength(data.text) === 0 ? "" : ctx.md(data.text),
-    tag: { name: "text", body: "none", parseAttrs: () => ({ text: [] }) },
+    tag: {
+      name: "text",
+      body: "none",
+      attrs: () => ({}),
+      parseAttrs: () => ({ text: [] }),
+    },
   },
 });

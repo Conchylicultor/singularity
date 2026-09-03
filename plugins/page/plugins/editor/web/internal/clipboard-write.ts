@@ -42,6 +42,11 @@ export function writeForestToClipboard(
       // the text that names it: what we put on the clipboard writes an empty
       // paragraph as a blank line.
       blankLines: "empty-block",
+      // A human pasting this into another app must never see a tag. The internal
+      // copy/paste round trip goes through the structural `BLOCKS_MIME` flavour
+      // above, so nothing that matters is lost by spelling every empty paragraph
+      // as a blank line here.
+      emptyBlocks: "blank-line",
     }),
   );
 }

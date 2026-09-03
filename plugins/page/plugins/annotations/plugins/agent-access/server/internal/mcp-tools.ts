@@ -71,6 +71,11 @@ function applySummary(
     moved: report.stats.moved,
     text_edited: report.textEditedIds.length,
     created_ids: report.createdIds,
+    // Writes that came from re-applying the document rather than from the edit
+    // itself, dropped before the write was judged. Surfaced rather than hidden:
+    // a number climbing here is the projection becoming lossy, which nothing
+    // else in this response would show.
+    absorbed_writes: report.absorbedWrites,
   };
 }
 
@@ -123,17 +128,12 @@ Two things in the output are ADDRESSES, and both matter when you write back:
 - \`<page id="…"/>\` — a sub-page pointer. Leave the id alone: it is how a later
   write reconciles the tag against the existing sub-page instead of destroying it.
 
-The markdown is a projection of the block forest: what this returns re-parses to
-the same blocks, except for empty paragraphs in two spots. An empty paragraph is
-a blank line, and a blank line carries no indentation of its own — so one that
-sits at a different depth than the block after it comes back at that block's
-depth, and one at the very start or end of a document or of a tag's body is lost
-altogether. Feeding the document straight back therefore MOVES the first and
-DELETES the second, and both are writes like any other: under the rule that every
-write lands inside an \`<agent-note>\` card, either can get the whole edit refused
-over a block you never touched. If that happens, put an explicit \`<text/>\` back
-where the blank line was — it still parses, and it pins the empty paragraph where
-it belongs.
+The markdown is a faithful projection of the block forest: what this returns
+re-parses to exactly the same blocks. Hand a line back the way you found it and
+it is not a write — an edit is judged only on what YOU changed, so the rest of
+the document costs you nothing and you never have to repair the projection by
+hand. What that asks of you is the other half: change only the text you mean to
+change, and leave everything else byte-identical.
 
 Some tags also carry READ-ONLY attributes describing state that lives outside
 the page — facts about the block held elsewhere in the system, not text anyone
@@ -407,6 +407,11 @@ including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
 
     let cards: string[] = [];
     const report = await applyMarkdownToBlock(blockId, next, {
+      // `markdown` is what this tool read a moment ago and `next` is that same
+      // string with one splice in it, so every write the two have in common is
+      // the round trip's own and not this edit's. Without it the boundary rule
+      // below judges the caller for blocks the projection touched.
+      baseline: markdown,
       redact: redactHumanAudience,
       assertAcceptable: (plan, rows) => {
         cards = assertNotesOnlyPlan({ plan, rows, rootId: blockId });

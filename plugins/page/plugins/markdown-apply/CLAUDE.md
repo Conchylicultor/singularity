@@ -238,6 +238,39 @@ plan and either returns or throws.
   caller could commit a plan against rows it re-read, and no type can express
   "these two came from one read".
 
+## An edit is judged on what IT changed (`core/subtract-noise.ts`)
+
+A caller edits by splicing one string into the document a read gave it and
+handing the WHOLE document back, so every other block round-trips through
+markdown → forest — and wherever that projection is lossy, the loss arrives at
+`assertAcceptable` as a write the caller never made. Measured on one real refused
+edit: 12 boundary violations, none of them a content write. A policy then refuses
+the caller over blocks it never touched, naming one of them and counting the
+rest.
+
+So `ApplyBlockOptions.baseline` takes the document the edit was made against.
+`applyToScope` plans it through the SAME `planOf` — same rows, same `redact`,
+same `MarkdownContext` — and `subtractNoise` drops every write the two plans make
+identically. What is left is the edit.
+
+- **Subtract, THEN judge, then write.** A policy must judge what will actually be
+  written, and the `ApplyReport` counts the same thing, plus `absorbedWrites` so
+  the subtraction is visible rather than silent.
+- **`updates` / `deleteIds` / `textEdits` are comparable; `creates` are not.**
+  The first three key off existing row ids and the planner is otherwise
+  deterministic. Every pass mints fresh `crypto.randomUUID()` ids and a fresh
+  `new Date()`, so two passes' creates have no equality to test — and a create in
+  the baseline plan would mean the READ invented a block, which must be refused
+  loudly rather than absorbed.
+- **A baseline that does not plan against its own rows throws.** Nothing the
+  caller does can cause that, so it is the engine's bug, not an occasion to
+  degrade into an unsubtracted apply that then refuses the caller.
+- **Only a caller that EDITED an engine-produced document may pass one.**
+  `write_agent_note` composes its document from scratch and passes none: there is
+  no round trip to subtract, and a wrong baseline would cancel real writes.
+
+Design: [`research/2026-09-03-page-edit-judged-on-what-it-changed.md`](../../../../research/2026-09-03-page-edit-judged-on-what-it-changed.md).
+
 ## The write order (`server/internal/apply.ts`)
 
 Structure first (one `applyPageBlockPatch` = one locked transaction), then text
@@ -437,7 +470,9 @@ annotation in the key would make every status change look like a new block.
     - `markdownNodesOfRows`
     - `pageTitleBanner`
     - `planMarkdownApply`
+    - `planWriteCount`
     - `stripPageTitleBanner`
+    - `subtractNoise`
     - `touchedBlocks`
 - Cross-plugin:
   - Imported by:
