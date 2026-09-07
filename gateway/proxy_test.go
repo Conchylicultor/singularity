@@ -182,6 +182,50 @@ func TestNonArtifactMissKeepsSPAFallback(t *testing.T) {
 	}
 }
 
+// The SPA shell must never be replayed from a browser cache unasked. Both ways
+// it is reached — the direct hit and the SPA fallback — are asserted, because a
+// header set on only one of them still hands a new tab a stale bundle for every
+// deep link. Without Cache-Control a browser applies heuristic freshness and
+// serves its stored copy for minutes to hours after a build.
+func TestIndexIsRevalidated(t *testing.T) {
+	p := newStaticProxy(t).proxy
+	for _, upath := range []string{"/", "/tasks/t/some-route"} {
+		rec := serve(p, "alpha.localhost:9000", upath)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want 200", upath, rec.Code)
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+			t.Fatalf("%s: Cache-Control = %q, want %q", upath, got, "no-cache")
+		}
+	}
+}
+
+// An explicit /index.html never serves the document at all: http.ServeFile
+// redirects it to the directory form. That redirect is a 301, which a browser
+// caches FOREVER by default — so it has to carry the header too, or the one URL
+// we are trying to keep revalidated becomes permanently pinned to a redirect.
+func TestExplicitIndexRedirectIsRevalidated(t *testing.T) {
+	p := newStaticProxy(t).proxy
+	rec := serve(p, "alpha.localhost:9000", "/index.html")
+	if rec.Code != http.StatusMovedPermanently {
+		t.Fatalf("status = %d, want 301", rec.Code)
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+		t.Fatalf("Cache-Control = %q, want %q", got, "no-cache")
+	}
+}
+
+// The converse: a content-addressed artifact keeps whatever caching it had. Its
+// hash IS its identity, so there is nothing to revalidate, and pinning no-cache
+// on it would cost a round trip per module on every load.
+func TestArtifactIsNotForcedToRevalidate(t *testing.T) {
+	p := newStaticProxy(t).proxy
+	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
+	if got := rec.Header().Get("Cache-Control"); got != "" {
+		t.Fatalf("artifact Cache-Control = %q, want unset", got)
+	}
+}
+
 // The end-to-end statement of the fix: after a build rewrites `web` to a new
 // dist, the gateway serves the NEW dist. Previously the in-memory spec was
 // frozen at first registration, so the gateway kept serving the old path — and

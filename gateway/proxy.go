@@ -103,6 +103,31 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ─── route handlers ──────────────────────────────────────────
 
+// indexURL is the one URL in a dist whose bytes change from build to build.
+// Both places that serve the SPA shell spell it through this constant so they
+// cannot drift apart.
+const indexURL = "/index.html"
+
+// serveIndex serves the SPA shell, which must never be replayed from a browser
+// cache without asking us first.
+//
+// Every other file in a dist is content-addressed — its hash is in its path —
+// so a stale copy is simply the file that URL names. index.html is the sole
+// exception: one URL, new bytes on every build. Served with no Cache-Control at
+// all (what http.ServeFile does on its own), a browser falls back to heuristic
+// freshness — roughly a tenth of the document's age at fetch time — and replays
+// its stored copy for that window without contacting us. A tab opened after a
+// build then boots the PREVIOUS bundle, whose content-addressed URLs all still
+// resolve, so it runs old code faithfully and only the in-app "Server updated"
+// reload prompt reveals it.
+//
+// no-cache lets the browser keep storing the file but forces revalidation, which
+// an unchanged dist answers with a bodiless 304.
+func serveIndex(w http.ResponseWriter, r *http.Request, indexPath string) {
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeFile(w, r, indexPath)
+}
+
 // handleStatic serves a file from the worktree's web/dist directory. Any path
 // that doesn't match an existing file falls back to index.html so the SPA
 // client router can handle it (including paths with extensions like /file/foo.ts)
@@ -116,12 +141,16 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	}
 	upath := path.Clean(r.URL.Path)
 	if upath == "/" || upath == "." {
-		upath = "/index.html"
+		upath = indexURL
 	}
 	full := filepath.Join(webDir, upath)
 
 	info, err := os.Stat(full)
 	if err == nil && !info.IsDir() {
+		if upath == indexURL {
+			serveIndex(w, r, full)
+			return
+		}
 		http.ServeFile(w, r, full)
 		return
 	}
@@ -135,9 +164,9 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	}
 	// File not found or is a directory → SPA fallback regardless of extension.
 	// The client router decides whether it's a real route or a 404.
-	indexPath := filepath.Join(webDir, "index.html")
+	indexPath := filepath.Join(webDir, indexURL)
 	if _, ierr := os.Stat(indexPath); ierr == nil {
-		http.ServeFile(w, r, indexPath)
+		serveIndex(w, r, indexPath)
 		return
 	}
 	http.NotFound(w, r)
