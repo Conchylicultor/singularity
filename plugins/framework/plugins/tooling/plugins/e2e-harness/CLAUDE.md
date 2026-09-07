@@ -109,6 +109,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/look`
+    - `apps/sonata/pitch-layout`
     - `apps/sonata/view-options`
     - `build`
     - `code-explorer`

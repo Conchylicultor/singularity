@@ -25,10 +25,13 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Application } from "pixi.js";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type {
+  Note,
+  PitchGuide,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { SonataLook } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import type { NoteVisual } from "../../components/geometry";
-import type { BarMarker, PitchLine } from "./grid";
+import type { BarMarker } from "./grid";
 import { createPianoRollScene, type PianoRollScene } from "./scene";
 import { watchThemeColors } from "./css-color";
 
@@ -39,7 +42,7 @@ export interface PianoRollCanvasProps {
   /** Cursor-invariant note geometry (authored space; see geometry.ts). */
   visuals: NoteVisual[];
   bars: BarMarker[];
-  pitchLines: PitchLine[];
+  pitchLines: readonly PitchGuide[];
   /** Beat-domain notes for the onset tracker (see scene.ts bridge note). */
   scoreNotes: Note[];
   showLabels: boolean;

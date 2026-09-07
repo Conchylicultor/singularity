@@ -13,10 +13,11 @@
   - Uses:
     - `apps/sonata/audio/live-play.useLivePlay`
     - `apps/sonata/primitives/keyboard.Keyboard`
+    - `apps/sonata/primitives/keyboard.LabelTone`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorSelector`
     - `apps/sonata/shell.useSonata`
-    - `apps/sonata/track-mixer.blackKeyColor`
+    - `apps/sonata/track-mixer.accidentalColor`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useMutedTrackIds`
     - `apps/sonata/track-mixer.useTrackColorMap`

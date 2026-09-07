@@ -86,6 +86,23 @@ export interface KeySpeller {
   spell(pitch: number): PitchSpelling;
 }
 
+/** The seven natural pitch-classes (C D E F G A B). */
+const NATURAL_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
+
+/**
+ * True for the five accidental pitch-classes (C# D# F# G# A#).
+ *
+ * A fact about the PITCH, not about any keyboard: it lives here beside
+ * {@link accidentalGlyph} rather than in the keyboard primitive (where it was
+ * `isBlackPitch`) because the falling notes' darker shade, the label scope, and
+ * every pad colour read it — including on layouts that have no black keys at
+ * all. On the piano it happens to select the black keys; on Jankó it selects
+ * the ebony pads of rows that also carry naturals.
+ */
+export function isAccidental(pitch: number): boolean {
+  return !NATURAL_PCS.has(pc12(pitch));
+}
+
 /** Render an alteration as accidental glyph(s): -1 → "♭", +2 → "♯♯", 0 → "". */
 export function accidentalGlyph(alter: number): string {
   if (alter === 0) return "";

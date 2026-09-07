@@ -19,6 +19,7 @@
       - **`fx-core`** — Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar. Server registration of the fx-core enabled toggle.
       - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
       - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
+  - **`pitch-layout`** — Web registration of the Sonata pitch-layout config (piano / Jankó) plus its View-popover switch, and usePitchGeometry() — the one read every keyboard renderer makes for the active layout's plane. Server registration of the Sonata pitch-layout config (piano / Jankó).
   - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and contributes Plays / Last-played fields (Library.Fields) so they appear on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
   - **`primitives`** [5 sub-plugins] — Umbrella for Sonata-local client primitives.
   - **`progress`** [5 sub-plugins] — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.

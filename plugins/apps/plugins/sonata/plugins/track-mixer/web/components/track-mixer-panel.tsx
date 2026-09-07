@@ -35,7 +35,7 @@ import {
   setTrackMuted,
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
-import { TRACK_PALETTE, blackKeyColor } from "../palette";
+import { TRACK_PALETTE, accidentalColor } from "../palette";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
 type IconType = ComponentType<{ className?: string }>;
@@ -68,14 +68,14 @@ function ColorSwatch({
           type="button"
           aria-label="Track color"
           className="size-4 rounded-full border border-border/60 transition-transform hover:scale-110"
-          style={{ background: blackKeyColor(color) }}
+          style={{ background: accidentalColor(color) }}
         />
       }
     >
       <SwatchGrid
         colors={[...TRACK_PALETTE]}
         value={color}
-        renderColor={blackKeyColor}
+        renderColor={accidentalColor}
         onChange={(c) => setTrackColor(songId, trackId, c)}
       />
     </InlinePopover>

@@ -15,6 +15,8 @@ import {
   romanNumeral,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
+import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
@@ -41,9 +43,13 @@ const NO_KEYS: readonly number[] = [];
 
 /**
  * Fit a chord's inversions to a keyboard window: octave-shift them toward the
- * center of the default window, then widen that window (in whole octaves, so it
- * still starts on a C and ends on a B — `keyLayout` tiles flush only then) if
+ * center of the default window, then widen that window (in whole octaves) if
  * anything still falls outside it.
+ *
+ * This is a CONTENT fit and nothing else. Whether the resulting range tiles
+ * flush is the layout's business — `pitchGeometry` snaps its own range — so a
+ * chord that needs four octaves gets four octaves here and the keyboard decides
+ * what to do with them.
  *
  * The shift is a multiple of 12 because the keyboard illustrates chord *shape*,
  * not sounding octave: an octave shift is free, anything else would light the
@@ -147,6 +153,10 @@ export function ChordReadout() {
     return fitToWindow(root.map((_, k) => invertVoicing(root, k)));
   }, [current]);
 
+  // The pads every row is drawn on: the fitted window, laid in the active
+  // layout. One plane for all the rows — they differ only in what is lit.
+  const plane = usePitchGeometry(fitted.low, fitted.high);
+
   // The keyboard rows to draw: the inversions (all, or just root position), or a
   // single unlit keyboard when there's no chord.
   const rows: readonly (readonly number[])[] =
@@ -241,10 +251,13 @@ export function ChordReadout() {
                   </div>
                 )}
                 <Keyboard
-                  low={fitted.low}
-                  high={fitted.high}
+                  plane={plane}
                   lit={voicing}
-                  className="h-11 w-full"
+                  className="w-full"
+                  // The chip height is the layout's own choice — four rows of
+                  // Jankó pads need more room than one row of piano keys — so it
+                  // is a number from the geometry, not a size class here.
+                  style={{ height: pitchKeyboardHeight(plane.layout, "chip") }}
                 />
               </Stack>
             );

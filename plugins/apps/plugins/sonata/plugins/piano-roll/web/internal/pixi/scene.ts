@@ -40,11 +40,12 @@ import {
   SONATA_LOOK_STYLES,
   type SonataLook,
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import type { PitchGuide } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { FxNoteEvent } from "../../slots";
 import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
 import { createOnsetTracker, type OnsetTracker } from "../fx/onset-tracker";
 import { resolveCssColor } from "./css-color";
-import { createGrid, type BarMarker, type PitchLine } from "./grid";
+import { createGrid, type BarMarker } from "./grid";
 import { createLabelLayer } from "./labels";
 import { createNoteMesh } from "./note-mesh";
 
@@ -52,7 +53,7 @@ export interface PianoRollSceneInput {
   notes: NoteVisual[];
   bars: BarMarker[];
   /** Pitch-axis boundary lines (B–C octave splits + E–F mid-octave splits). */
-  pitchLines: PitchLine[];
+  pitchLines: readonly PitchGuide[];
   /** Beat-domain notes feeding the onset tracker (see the bridge note above). */
   scoreNotes: Note[];
   /** Playback tempo multiplier — wall-clock duration = authored / tempoScale. */
@@ -225,7 +226,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
           laneY: laneHeight,
           color: resolveColor(v.colorExpr),
           velocity: note.velocity / 127,
-          isBlack: v.isBlack,
+          isAccidental: v.isAccidental,
           durationSeconds: (v.y1Sec - v.y0Sec) / tempoScale,
         };
         for (const cb of noteOnSubs) cb(event);

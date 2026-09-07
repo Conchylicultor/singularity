@@ -43,7 +43,7 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
     - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
     - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
-    - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.rich.chord-label`
+    - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
     - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses:
@@ -112,6 +112,7 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
     - `apps/sonata/pedal/lane`
     - `apps/sonata/piano-keyboard`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/pitch-layout`
     - `apps/sonata/playback-history`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`

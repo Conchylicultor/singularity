@@ -29,6 +29,7 @@ RULES:
 
 - NEVER run `./singularity push` unless instructed to. The user needs to review your code first.
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
+- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`, and never `git reset` a branch onto `main` — that deletes the commits in between.
 - NEVER run `drizzle-kit generate` or the migration runner manually — always go through `./singularity build`.
 - **Review diffs are against the worktree merge-base, not `main`.** Use `git diff $(git merge-base HEAD main)` — not `git diff main`, which includes unrelated commits merged into main after the branch point.
 

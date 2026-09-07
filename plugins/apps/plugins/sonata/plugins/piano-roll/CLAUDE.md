@@ -16,13 +16,11 @@
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/primitives/inertial-drag.useInertialDrag`
     - `apps/sonata/primitives/jog-wheel.JogWheel`
-    - `apps/sonata/primitives/keyboard.isBlackPitch`
-    - `apps/sonata/primitives/keyboard.keyLayout`
     - `apps/sonata/shell.LaneInsetsProvider`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorApi`
     - `apps/sonata/shell.useSonata`
-    - `apps/sonata/track-mixer.blackKeyColor`
+    - `apps/sonata/track-mixer.accidentalColor`
     - `apps/sonata/track-mixer.useHiddenTrackIds`
     - `apps/sonata/track-mixer.useTrackColorMap`
     - `config_v2.ConfigV2`

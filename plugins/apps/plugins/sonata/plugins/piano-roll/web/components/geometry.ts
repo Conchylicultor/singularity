@@ -1,28 +1,29 @@
 import {
   accidentalGlyph,
   buildTempoIndex,
-  type KeyLane,
+  isAccidental,
   type KeySpeller,
   type Note,
+  type PitchColumn,
+  type PitchPlane,
   type Projection,
   type Score,
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  keyLayout as fractionalKeyLayout,
-  isBlackPitch,
-} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 
 /**
  * The piano roll's coordinate model — pure, framework-free, so the renderer and
  * the published `Projection` share ONE source of truth. The roll is VERTICAL,
  * Synthesia-style:
  *
- *  - X (pitch): the FULL 88-key piano (A0–C8) laid across the container width.
- *               52 white keys tile edge-to-edge; the 36 black keys sit on the
- *               white/white boundaries, narrower. `keyLayout` is the single
- *               source both the falling notes and the keyboard renderer consume,
- *               so every note lands exactly on its key.
+ *  - X (pitch): the range A0–C8 laid across the container width by the ACTIVE
+ *               keyboard layout (see the `pitch-layout` plugin) — a piano's
+ *               tiled naturals and boundary-riding accidentals, or Jankó's
+ *               uniform pads. The roll holds no key formula of its own: it is
+ *               handed one `PitchPlane` and reads its `columns`, the same pads
+ *               the keyboard below renders, so every note lands exactly on its
+ *               key. A pitch the plane does not carry has no column, and is
+ *               DROPPED rather than drawn at a fabricated position.
  *  - Y (time):  the time axis is anchored in AUTHORED (base-tempo) seconds and
  *               lives in CONTENT-SPACE (cursor-invariant):
  *               y = -seconds(beat) * pxPerSecond, where
@@ -79,26 +80,6 @@ export const SPREAD_DEFAULT = 1;
 /** Full 88-key piano range: A0 (21) … C8 (108). */
 export const KEYBOARD_LOW = 21;
 export const KEYBOARD_HIGH = 108;
-/** Number of white keys in the full 88-key range. */
-const WHITE_KEY_COUNT = 52;
-
-// The key formula lives once, in the keyboard primitive. Re-export `isBlackPitch`
-// so the roll's note builder keeps importing it from here.
-export { isBlackPitch };
-
-/**
- * Build the full 88-key layout for a given pixel width. The keyboard primitive
- * owns the fractional key geometry (white keys tile edge-to-edge; black keys
- * ride the boundaries, narrower); here we scale those 0..1 fractions to pixels
- * so the falling notes and the keyboard renderer share ONE layout. Pure.
- */
-export function keyLayout(width: number): KeyLane[] {
-  return fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH).map((k) => ({
-    ...k,
-    center: k.center * width,
-    width: k.width * width,
-  }));
-}
 
 /**
  * AUTHORED (base-tempo) seconds of a beat. The incoming score's tempo map has
@@ -119,8 +100,8 @@ export function authoredSecondsOf(
 
 /**
  * One note's render-ready visual, in resolution-independent AUTHORED space:
- * X in key-fractions of the lane width (0..1, from the keyboard primitive's
- * fractional `keyLayout`), Y in authored seconds (see `authoredSecondsOf`).
+ * X in column-fractions of the lane width (0..1, from the active layout's
+ * `PitchPlane`), Y in authored seconds (see `authoredSecondsOf`).
  * This is the contract between the pure geometry and the canvas renderer —
  * built ONCE per (score, hidden-set, colors, tempoScale); resize and scroll
  * never touch it (the renderer maps it to pixels with a single transform).
@@ -153,8 +134,8 @@ export interface NoteVisual {
   fillExpr: string;
   /** Fill opacity. 1 = fully opaque (Synthesia draws solid notes). */
   alpha: number;
-  /** Notes on black keys (sharps/flats); drives the black-key shade + FX. */
-  isBlack: boolean;
+  /** Notes on accidental pitch classes; drives the darker shade + FX. */
+  isAccidental: boolean;
   /**
    * Note-name label parts, kept apart so the accidental glyph can be rendered
    * compact + tucked against the letter. ALWAYS populated — whether labels are
@@ -176,53 +157,71 @@ export interface NoteVisual {
 export function buildNoteVisuals(input: {
   /** Score with `tempoScale` already folded into its tempo map (see header). */
   score: Score;
+  /**
+   * The pitch axis these notes fall on — the SAME plane the keyboard below
+   * renders, so a note's column is its key's column by construction. A note
+   * whose pitch has no column here is dropped.
+   */
+  plane: PitchPlane;
   /** Track ids dropped from the roll (track-mixer "hide"). */
   hiddenIds: ReadonlySet<string>;
   /** trackId → CSS color expression (track-mixer rollup). */
   colorMap: ReadonlyMap<string, string>;
   /**
-   * Base color → its Synthesia black-key (sharp/flat) shade. Injected (not
+   * Base color → its Synthesia accidental (sharp/flat) shade. Injected (not
    * imported) so this module stays free of the track-mixer barrel and its
    * React graph — keeping `buildNoteVisuals` pure + unit-testable.
    */
-  blackKeyColor: (base: string) => string;
+  accidentalColor: (base: string) => string;
   /** Key-signature-aware speller for notes left unspelled by the source. */
   speller: KeySpeller;
   /** Playback tempo multiplier (1 = authored) — cancels the score's fold. */
   tempoScale: number;
 }): NoteVisual[] {
-  const { score, hiddenIds, colorMap, blackKeyColor, speller, tempoScale } =
-    input;
+  const {
+    score,
+    plane,
+    hiddenIds,
+    colorMap,
+    accidentalColor,
+    speller,
+    tempoScale,
+  } = input;
   const tempo = buildTempoIndex(score);
-  const keys = fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH);
-  const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
-  // Out-of-range pitches degrade like `buildProjection`'s noteToRect: a
-  // white-key-wide bar pinned to the left edge (center 0), never a crash.
-  const fallbackWidth = 1 / WHITE_KEY_COUNT;
+  const byPitch = columnsByPitch(plane);
 
-  return score.notes
-    .filter((n) => !hiddenIds.has(n.track))
-    .map((n) => {
-      const k = byPitch.get(n.pitch);
-      const w = k?.width ?? fallbackWidth;
-      const center = k?.center ?? 0;
-      const s = n.spelling ?? speller.spell(n.pitch);
-      const base = colorMap.get(n.track) ?? "var(--primary)";
-      const black = isBlackPitch(n.pitch);
-      return {
-        noteId: n.id,
-        trackId: n.track,
-        xFrac: center - w / 2,
-        wFrac: w,
-        y0Sec: authoredSecondsOf(tempo, tempoScale, n.start),
-        y1Sec: authoredSecondsOf(tempo, tempoScale, n.start + n.duration),
-        colorExpr: base,
-        fillExpr: black ? blackKeyColor(base) : base,
-        alpha: 1,
-        isBlack: black,
-        label: { step: s.step, accidental: accidentalGlyph(s.alter) },
-      };
+  const visuals: NoteVisual[] = [];
+  for (const n of score.notes) {
+    if (hiddenIds.has(n.track)) continue;
+    const col = byPitch.get(n.pitch);
+    // Not on this axis: no visual at all. There is no honest place to draw a
+    // pitch the layout does not carry, and the old fallback (a white-key-wide
+    // bar pinned at x=0) drew one anyway, indistinguishable from a real note.
+    if (!col) continue;
+    const s = n.spelling ?? speller.spell(n.pitch);
+    const base = colorMap.get(n.track) ?? "var(--primary)";
+    const accidental = isAccidental(n.pitch);
+    visuals.push({
+      noteId: n.id,
+      trackId: n.track,
+      xFrac: col.center - col.width / 2,
+      wFrac: col.width,
+      y0Sec: authoredSecondsOf(tempo, tempoScale, n.start),
+      y1Sec: authoredSecondsOf(tempo, tempoScale, n.start + n.duration),
+      colorExpr: base,
+      fillExpr: accidental ? accidentalColor(base) : base,
+      alpha: 1,
+      isAccidental: accidental,
+      label: { step: s.step, accidental: accidentalGlyph(s.alter) },
     });
+  }
+  return visuals;
+}
+
+/** Pitch → its note column on `plane`. One place, so the visuals and the
+ *  projection can never disagree about which pitches the axis carries. */
+function columnsByPitch(plane: PitchPlane): Map<number, PitchColumn> {
+  return new Map(plane.columns.map((c) => [c.pitch, c]));
 }
 
 /**
@@ -233,9 +232,15 @@ export function buildNoteVisuals(input: {
  * `translateY` (see the file header), so this projection is stable while
  * playing and recomputes only on lane-size / score change.
  */
-export function buildProjection(viewport: {
+export function buildProjection(input: {
   width: number;
   height: number;
+  /**
+   * The pitch axis, in fractions. Scaled to `width` here — the ONE place
+   * fractions become pixels, so the published projection and the falling notes
+   * are the same geometry at two resolutions.
+   */
+  plane: PitchPlane;
   /** Score whose tempo map converts beats → wall-clock seconds for the Y axis. */
   score: Score;
   /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
@@ -245,9 +250,8 @@ export function buildProjection(viewport: {
    *  heights — so DOM overlays stay glued to the zoomed canvas notes. */
   spread: number;
 }): Projection {
-  const { width, height, score, tempoScale, spread } = viewport;
-  const keys = keyLayout(width);
-  const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
+  const { width, height, plane, score, tempoScale, spread } = input;
+  const byPitch = columnsByPitch(plane);
 
   // Content-space Y: a note's beat maps to a fixed pixel position independent of
   // the cursor (the cursor offset is applied downstream as one translateY).
@@ -261,11 +265,17 @@ export function buildProjection(viewport: {
   const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   const beatToY = (beat: number): number =>
     -tempo.beatToSeconds(beat) * pxPerSecond;
-  const pitchToX = (pitch: number): number => byPitch.get(pitch)?.center ?? 0;
+  // `null` for a pitch the axis does not carry — a stated "not here", not a
+  // fabricated position an overlay would anchor to (see `Projection`).
+  const pitchToX = (pitch: number): number | null => {
+    const col = byPitch.get(pitch);
+    return col ? col.center * width : null;
+  };
   const noteToRect = (note: Note) => {
-    const k = byPitch.get(note.pitch);
-    const w = k?.width ?? width / WHITE_KEY_COUNT;
-    const center = k?.center ?? 0;
+    const col = byPitch.get(note.pitch);
+    if (!col) return null;
+    const w = col.width * width;
+    const center = col.center * width;
     const endY = beatToY(note.start + note.duration);
     return {
       x: center - w / 2,
@@ -283,6 +293,6 @@ export function buildProjection(viewport: {
     beatToY,
     pitchToX,
     noteToRect,
-    keys,
+    pitchPlane: plane,
   };
 }

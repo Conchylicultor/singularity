@@ -156,7 +156,10 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
       }));
 
       // 3. Brighten: track the sounding bar (see header for the geometry).
-      if (e.durationSeconds > BRIGHTEN_MIN_SEC && liveBars.length < BRIGHTEN_MAX_LIVE) {
+      if (
+        e.durationSeconds > BRIGHTEN_MIN_SEC &&
+        liveBars.length < BRIGHTEN_MAX_LIVE
+      ) {
         const sprite = acquireSprite();
         sprite.tint = e.color;
         sprite.alpha = BRIGHTEN_ALPHA;
@@ -184,7 +187,9 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
       // that invariant ever breaks rather than silently skipping the effect.
       const noteToRect = proj.noteToRect;
       if (!noteToRect) {
-        throw new Error("fx-core: projection lacks noteToRect (pitch-plane capability expected)");
+        throw new Error(
+          "fx-core: projection lacks noteToRect (pitch-plane capability expected)",
+        );
       }
       const laneY = fx.getLaneSize().height;
       // The playback cursor drives the brighten (NOT integrated wall-clock), so
@@ -204,6 +209,9 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
         // Fresh rect per tick → resize-proof; height shrinks with the fraction
         // of the bar still above the line (pure cursor function — header).
         const rect = noteToRect(bar.note);
+        // The pitch is not on this axis (a layout may not carry it) — there is
+        // nowhere honest to paint, so skip this bar rather than invent a box.
+        if (!rect) continue;
         const h = rect.h * Math.min(1, remainingFrac);
         const s = bar.sprite;
         s.position.set(rect.x, laneY - h);
@@ -212,7 +220,8 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
         // Release fade over the note's final BRIGHTEN_RELEASE_SEC of wall-clock,
         // derived from the same cursor-driven remaining fraction.
         const remainingSec = remainingFrac * bar.dur;
-        s.alpha = BRIGHTEN_ALPHA * Math.min(1, remainingSec / BRIGHTEN_RELEASE_SEC);
+        s.alpha =
+          BRIGHTEN_ALPHA * Math.min(1, remainingSec / BRIGHTEN_RELEASE_SEC);
       }
     };
     fx.ticker.add(tick);

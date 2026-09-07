@@ -28,7 +28,6 @@ export type {
   LyricChord,
   Capability,
   Projection,
-  KeyLane,
 } from "./types";
 
 export {
@@ -48,6 +47,15 @@ export {
   mergeAnnotations,
 } from "./helpers";
 
+export type {
+  PitchLayoutId,
+  PitchKey,
+  PitchColumn,
+  PitchGuide,
+  PitchPlane,
+} from "./pitch-plane";
+export { markLaidOut } from "./pitch-plane";
+
 export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
 
@@ -60,7 +68,12 @@ export { foldLoopTime } from "./loop-fold";
 export type { ActiveNoteIndex } from "./active-note-index";
 export { buildActiveNoteIndex } from "./active-note-index";
 
-export { makeKeySpeller, accidentalGlyph, spellScore } from "./spelling";
+export {
+  makeKeySpeller,
+  accidentalGlyph,
+  isAccidental,
+  spellScore,
+} from "./spelling";
 export type { KeySpeller } from "./spelling";
 
 export {

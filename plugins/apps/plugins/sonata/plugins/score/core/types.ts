@@ -22,6 +22,8 @@
  * deep-importing a display's internals.
  */
 
+import type { PitchPlane } from "./pitch-plane";
+
 // ---------------------------------------------------------------------------
 // Full IR
 // ---------------------------------------------------------------------------
@@ -207,23 +209,6 @@ export interface Score {
 export type Capability = "time-axis" | "pitch-plane";
 
 /**
- * One piano key on the pitch axis, in screen pixels. The piano roll is vertical
- * (pitch runs horizontally across the full keyboard), so `center`/`width` are X
- * coordinates. Both the falling-note rectangles and the keyboard renderer derive
- * their geometry from this single layout, so a note lands exactly on its key.
- */
-export interface KeyLane {
-  /** MIDI note number. */
-  pitch: number;
-  /** True for the five accidental pitch classes (drawn as narrow black keys). */
-  isBlack: boolean;
-  /** Pixel center along the pitch (X) axis. */
-  center: number;
-  /** Pixel column width (white-key vs. narrower black-key). */
-  width: number;
-}
-
-/**
  * Geometry a Display publishes (via React context) so capability-compatible
  * overlays and pitch-axis decorations can anchor themselves to display
  * coordinates without knowing which display they're on. Optional accessors are
@@ -241,10 +226,24 @@ export interface Projection {
   viewport: { width: number; height: number };
   /** Present iff "time-axis": beat → screen Y (px from the top of the lane). */
   beatToY?: (beat: number) => number;
-  /** Present iff "pitch-plane": pitch → screen X (px, key center). */
-  pitchToX?: (pitch: number) => number;
-  /** Present iff both axes. */
-  noteToRect?: (note: Note) => { x: number; y: number; w: number; h: number };
-  /** Present iff "pitch-plane": the full key layout the pitch axis renders. */
-  keys?: readonly KeyLane[];
+  /**
+   * Present iff "pitch-plane": pitch → screen X (px, column center), or `null`
+   * when this axis does not carry that pitch. A missing pitch is a real
+   * possibility (a display shows a range, a score may not respect it), and it
+   * used to degrade into a white-key-wide bar pinned at x=0 — a fabricated
+   * position indistinguishable from a real one. `null` says "not on this axis"
+   * and consumers drop the note instead of drawing it somewhere false.
+   */
+  pitchToX?: (pitch: number) => number | null;
+  /** Present iff both axes. `null` when the pitch is not on this axis. */
+  noteToRect?: (
+    note: Note,
+  ) => { x: number; y: number; w: number; h: number } | null;
+  /**
+   * Present iff "pitch-plane": the pads, note columns and orientation rules the
+   * pitch axis was laid out with — the SAME plane the display built its own
+   * columns from, so a keyboard rendered from it lands on the falling notes by
+   * construction rather than by re-deriving a matching range.
+   */
+  pitchPlane?: PitchPlane;
 }

@@ -165,6 +165,7 @@ default is stated twice and can therefore drift.
     - `apps/sonata/notation`
     - `apps/sonata/pedal/lane`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/primitives/keyboard`
     - `apps/sonata/progress/bars`
     - `apps/sonata/progress/keys`
     - `apps/sonata/progress/loop`

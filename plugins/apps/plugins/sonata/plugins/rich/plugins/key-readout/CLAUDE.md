@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
   - Uses:
+    - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/rich/key-mode.saveKeyAutoDetect`
     - `apps/sonata/shell.Sonata`

@@ -6,6 +6,7 @@
 
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/pitch-layout`
     - `apps/sonata/theory`
     - `apps/sonata/voicing`
 - Core:
@@ -16,7 +17,6 @@
     - `ChordAnnotation`
     - `ChordData`
     - `KeyEntry`
-    - `KeyLane`
     - `KeySignature`
     - `KeySpeller`
     - `LoopWindowSec`
@@ -26,6 +26,11 @@
     - `Note`
     - `PedalEvent`
     - `PedalSpan`
+    - `PitchColumn`
+    - `PitchGuide`
+    - `PitchKey`
+    - `PitchLayoutId`
+    - `PitchPlane`
     - `PitchSpelling`
     - `Projection`
     - `Score`
@@ -50,9 +55,11 @@
     - `effectiveKeyAt`
     - `emptyScore`
     - `foldLoopTime`
+    - `isAccidental`
     - `isPedalDownAt`
     - `leadInBeats`
     - `makeKeySpeller`
+    - `markLaidOut`
     - `mergeAnnotations`
     - `mergeScores`
     - `nextLine`

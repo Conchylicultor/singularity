@@ -33,23 +33,13 @@ import {
   SONATA_DEFAULT_LOOK,
   SONATA_LOOK_STYLES,
 } from "@plugins/apps/plugins/sonata/plugins/look/core";
+import type { PitchGuide } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { PX_PER_SECOND } from "../../components/geometry";
 
 /** One bar marker, in authored seconds (built by the host from `bars(score)`). */
 export interface BarMarker {
   index: number;
   startSec: number;
-}
-
-/**
- * A vertical pitch-axis grid line at a natural white-key boundary.
- * `strong` marks the octave (B–C) splits, which render heavier than the
- * mid-octave (E–F) splits.
- */
-export interface PitchLine {
-  /** Left-edge fraction (0..1) of the boundary key. */
-  frac: number;
-  strong: boolean;
 }
 
 export interface GridHandle {
@@ -60,7 +50,7 @@ export interface GridHandle {
   /** Rebuild the bar lines (once per score). */
   setBars(bars: readonly BarMarker[]): void;
   /** Set the pitch-axis boundary lines (once per score). */
-  setPitchLines(lines: readonly PitchLine[]): void;
+  setPitchLines(lines: readonly PitchGuide[]): void;
   /** New vertical zoom: redraw the bar lines so each stays 1px tall under the
    *  content scale.y = PX_PER_SECOND * spread. O(bars). */
   setSpread(spread: number): void;
@@ -91,7 +81,7 @@ export function createGrid(): GridHandle {
     SONATA_LOOK_STYLES[SONATA_DEFAULT_LOOK].grid;
   barLines.alpha = ink.barLineAlpha;
 
-  let lines: readonly PitchLine[] = [];
+  let lines: readonly PitchGuide[] = [];
   let laneWidth = 0;
   let laneHeight = 0;
   // Bars + zoom retained so a spread change can redraw bar lines at the right

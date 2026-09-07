@@ -2,7 +2,7 @@ import { Fragment, useId, useMemo } from "react";
 import type { SonataDrawnKeys } from "@plugins/apps/plugins/sonata/plugins/look/core";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { BLACK_KEY_HEIGHT_PCT, type KeyLane } from "./key-layout";
+import type { PitchKey } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { litKeyColor, mix } from "./key-color";
 import {
   clamp,
@@ -73,8 +73,6 @@ const OVERDRAW_SEED_OFFSET = 977;
 const WHITE_TINT_PCT = 80;
 const BLACK_TINT_PCT = 88;
 
-type KeyGroup = "white" | "black";
-
 /** One key's drawn geometry: everything that depends on the box, and nothing
  *  that depends on whether it is lit. */
 interface KeyArt {
@@ -96,36 +94,41 @@ interface SketchArt {
 }
 
 /**
- * Map the fractional key lanes onto the measured box. White keys span the full
+ * Map the fractional key pads onto the measured box. Ivories span the full
  * height and tile edge-to-edge (a half-pixel inset each side keeps neighbours
- * from sharing one drawn edge); a black key is {@link BLACK_KEY_HEIGHT_PCT} tall
- * and tapers toward the player, which is what stops it reading as a bar stuck on
- * top of the ivory.
+ * from sharing one drawn edge); an ebony takes the box the PAD declares and
+ * tapers toward the player, which is what stops it reading as a bar stuck on top
+ * of the ivory.
  *
- * The x/width arithmetic is deliberately the same expression the key divs use in
- * `keyboard.tsx`, so the art lands exactly on its own hit target.
+ * Every extent comes from the pad itself (`top`/`height` as fractions of the
+ * keybed), so the drawn art can no longer disagree with the div that hit-tests
+ * for it — there is no second copy of the black key's 62% here to drift. The
+ * x/width arithmetic is deliberately the same expression the key divs use in
+ * `keyboard.tsx`, for the same reason.
  */
 function buildSketchArt(
-  lanes: readonly KeyLane[],
-  group: KeyGroup,
+  lanes: readonly PitchKey[],
+  accidental: boolean,
   width: number,
   height: number,
 ): SketchArt {
   const metrics = sketchMetrics(height);
   const { amp, scale } = metrics;
-  const black = group === "black";
+  const black = accidental;
 
   const keys = lanes.map((k): KeyArt => {
     const laneX = (k.center - k.width / 2) * width;
     const laneW = k.width * width;
+    const laneY = k.top * height;
+    const laneH = k.height * height;
 
     if (black) {
       const taper = laneW * 0.08;
       const box = {
         x: laneX + taper * 0.5,
-        y: 0,
+        y: laneY,
         width: laneW - taper,
-        height: (height * BLACK_KEY_HEIGHT_PCT) / 100,
+        height: laneH,
       };
       return {
         pitch: k.pitch,
@@ -143,7 +146,7 @@ function buildSketchArt(
         ghostD: null,
         shadow: {
           x: box.x + PEN.shadowOffset * scale,
-          y: 0,
+          y: box.y,
           width: box.width,
           height: box.height + PEN.shadowOvershoot * scale,
         },
@@ -153,9 +156,9 @@ function buildSketchArt(
     const inset = 0.5 * scale;
     const box = {
       x: laneX + inset,
-      y: 0,
+      y: laneY,
       width: laneW - inset * 2,
-      height,
+      height: laneH,
     };
     const shape = {
       topRadius: PEN.whiteTopRadius * scale,
@@ -175,7 +178,7 @@ function buildSketchArt(
   });
 
   // The rule belongs to the black pass so it draws over the top edge of both
-  // groups — the keys hang from it, exactly as in the prototype.
+  // tiers — the keys hang from it, exactly as in the prototype.
   const ruleY = (PEN.ruleStroke * scale) / 2;
   return {
     keys,
@@ -186,12 +189,17 @@ function buildSketchArt(
 
 export interface SketchKeysProps {
   /**
-   * The lanes of ONE group, already filtered. Pass a memoized array: the path
+   * The pads of ONE tier, already filtered. Pass a memoized array: the path
    * strings are memoized on it, and a fresh array every render would rebuild
    * every key's geometry on every note-on.
    */
-  lanes: readonly KeyLane[];
-  group: KeyGroup;
+  lanes: readonly PitchKey[];
+  /**
+   * Which pen this pass draws with — ebony or ivory. It is the pad's PITCH
+   * CLASS, not its tier: the tier is the primitive's paint order and says
+   * nothing about what a key is made of.
+   */
+  accidental: boolean;
   /** The drawn look's key palette (`SONATA_LOOK_STYLES[look].keys`, narrowed to
    *  its drawn arm by the caller — this layer only ever mounts under it). */
   palette: SonataDrawnKeys;
@@ -201,13 +209,13 @@ export interface SketchKeysProps {
 }
 
 /**
- * One group's drawn keys. Mount it as a sibling immediately BEFORE the group's
+ * One tier's drawn keys. Mount it as a sibling immediately BEFORE that tier's
  * key divs, so the divs (transparent under this look) stay on top as hit targets
  * and label hosts.
  */
 export function SketchKeys({
   lanes,
-  group,
+  accidental,
   palette,
   litColors,
 }: SketchKeysProps) {
@@ -221,18 +229,18 @@ export function SketchKeys({
   // and a readout chip) never collide on a gradient id. Its React-generated ids
   // carry punctuation, which a fragment reference tolerates but a selector does
   // not — strip it and stay boring.
-  const uid = `${useId().replace(/[^a-zA-Z0-9_-]/g, "")}-${group}`;
+  const uid = `${useId().replace(/[^a-zA-Z0-9_-]/g, "")}-${accidental ? "ebony" : "ivory"}`;
   const shadeId = `${uid}-shade`;
   const softId = `${uid}-soft`;
 
   const art = useMemo(
-    () => buildSketchArt(lanes, group, width, height),
-    [lanes, group, width, height],
+    () => buildSketchArt(lanes, accidental, width, height),
+    [lanes, accidental, width, height],
   );
 
   const { shade } = palette;
   const { scale } = art.metrics;
-  const black = group === "black";
+  const black = accidental;
   // Both derived from the palette's own ink rather than being two more fixed
   // hexes: the crease down an ebony has to be darker than the key it creases,
   // and the rule is a lighter pencil than the outlines.

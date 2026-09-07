@@ -1,0 +1,6 @@
+// @hash ad39ad091ce8
+{
+  // How pitch is laid across the roll — the falling notes, the grid, the keys below them, and the chord readouts.
+  // Allowed values: "piano", "janko"
+  "layout": "piano"
+}

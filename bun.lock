@@ -667,6 +667,10 @@
         "pixi.js": "^8.19.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/pitch-layout": {
+      "name": "@singularity/plugin-apps-sonata-pitch-layout",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/playback-history": {
       "name": "@singularity/plugin-apps-sonata-playback-history",
       "version": "0.0.1",
@@ -6111,6 +6115,8 @@
     "@singularity/plugin-apps-sonata-piano-roll-fx-ripples": ["@singularity/plugin-apps-sonata-piano-roll-fx-ripples@workspace:plugins/apps/plugins/sonata/plugins/piano-roll/plugins/fx-ripples"],
 
     "@singularity/plugin-apps-sonata-piano-roll-fx-shatter": ["@singularity/plugin-apps-sonata-piano-roll-fx-shatter@workspace:plugins/apps/plugins/sonata/plugins/piano-roll/plugins/fx-shatter"],
+
+    "@singularity/plugin-apps-sonata-pitch-layout": ["@singularity/plugin-apps-sonata-pitch-layout@workspace:plugins/apps/plugins/sonata/plugins/pitch-layout"],
 
     "@singularity/plugin-apps-sonata-playback-history": ["@singularity/plugin-apps-sonata-playback-history@workspace:plugins/apps/plugins/sonata/plugins/playback-history"],
 

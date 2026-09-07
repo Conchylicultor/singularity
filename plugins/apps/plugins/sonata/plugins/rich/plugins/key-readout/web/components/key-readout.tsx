@@ -9,6 +9,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import { pitchKeyboardHeight } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
+import { usePitchGeometry } from "@plugins/apps/plugins/sonata/plugins/pitch-layout/web";
 import {
   accidentalGlyph,
   collectKeyEntries,
@@ -70,6 +72,11 @@ export function KeyReadout() {
   // only when the key changes — not on every cursor frame.
   const entries = useMemo(() => collectKeyEntries(score), [score]);
 
+  // The pads the scale is lit on. Requested as the fixed window; a layout may
+  // snap it wider, and `plane.low`/`plane.high` below are what the lit map walks
+  // — so a snapped-open edge never sits there unlit.
+  const plane = usePitchGeometry(KB_LOW, KB_HIGH);
+
   // The active entry (key + source) at the playhead, with the same cursor-at-0
   // fallback the key chip uses so the panel is never blank on load. The selector
   // mints a fresh object each call, so pass a value-comparing `isEqual` to keep
@@ -108,7 +115,7 @@ export function KeyReadout() {
 
     // pitch → color across the window: tonic full accent (""), others tinted.
     const lit = new Map<number, string>();
-    for (let p = KB_LOW; p <= KB_HIGH; p++) {
+    for (let p = plane.low; p <= plane.high; p++) {
       const pc = ((p % 12) + 12) % 12;
       if (inScale.has(pc)) lit.set(p, pc === root ? "" : SCALE_TINT);
     }
@@ -123,7 +130,7 @@ export function KeyReadout() {
     };
 
     return { names: ordered.map((d) => d.name), lit, relative };
-  }, [current]);
+  }, [current, plane]);
 
   return (
     <Stack gap="sm">
@@ -159,10 +166,13 @@ export function KeyReadout() {
               </div>
             </Stack>
             <Keyboard
-              low={KB_LOW}
-              high={KB_HIGH}
+              plane={plane}
               lit={scale.lit}
-              className="h-11 w-full"
+              className="w-full"
+              // The chip height is the layout's own choice — four rows of Jankó
+              // pads need more room than one row of piano keys — so it is a
+              // number from the geometry, not a size class here.
+              style={{ height: pitchKeyboardHeight(plane.layout, "chip") }}
             />
           </Stack>
         </>

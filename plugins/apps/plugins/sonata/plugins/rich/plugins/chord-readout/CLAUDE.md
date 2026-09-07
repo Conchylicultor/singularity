@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
   - Uses:
+    - `apps/sonata/pitch-layout.usePitchGeometry`
     - `apps/sonata/primitives/keyboard.Keyboard`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorSelector`

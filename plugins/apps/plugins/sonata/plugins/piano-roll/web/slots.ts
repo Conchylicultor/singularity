@@ -50,7 +50,8 @@ export interface FxNoteEvent {
   color: number;
   /** Normalized velocity, 0..1. */
   velocity: number;
-  isBlack: boolean;
+  /** True on the five accidental pitch classes (sharps/flats). */
+  isAccidental: boolean;
   /** Wall-clock duration at the CURRENT tempo (authored / tempoScale). */
   durationSeconds: number;
 }

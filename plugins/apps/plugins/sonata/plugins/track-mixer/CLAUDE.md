@@ -40,7 +40,7 @@ plus a per-song reset.
   pixel-exact from Synthesia (blue `#87aacf`, green `#a2e55b`); the rest extend
   the set in the same register. The base is what the mixer swatch shows and what
   the keyboard lights with, cycled by track index. Each base also has a darker,
-  slightly-more-saturated **black-key** partner (`blackKeyColor`): exact for the
+  slightly-more-saturated **accidental** partner (`accidentalColor`): exact for the
   built-in Synthesia colors, derived by a shared darken+saturate transform for
   any other (incl. user-picked) base, so naturals vs accidentals always read
   distinctly — Synthesia's convention. The piano-roll resolves the right shade
@@ -78,7 +78,7 @@ plus a per-song reset.
     - `primitives/search.useTextFilter`
   - Exports (types): `TrackMixerEntry`
   - Exports (values):
-    - `blackKeyColor`
+    - `accidentalColor`
     - `useHiddenTrackIds`
     - `useMutedTrackIds`
     - `useTrackColorMap`

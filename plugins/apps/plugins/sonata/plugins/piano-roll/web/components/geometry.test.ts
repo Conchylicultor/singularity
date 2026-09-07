@@ -16,7 +16,11 @@ import {
   type Note,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import type { PitchLayoutId } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  PITCH_LAYOUT_LABELS,
+  pitchGeometry,
+} from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import {
   authoredSecondsOf,
   buildNoteVisuals,
@@ -24,6 +28,12 @@ import {
   KEYBOARD_HIGH,
   KEYBOARD_LOW,
 } from "./geometry";
+
+/** Every keyboard layout, so the roll's X contract is proven on all of them. */
+const LAYOUTS = Object.keys(PITCH_LAYOUT_LABELS) as PitchLayoutId[];
+const planeFor = (id: PitchLayoutId) =>
+  pitchGeometry(id, KEYBOARD_LOW, KEYBOARD_HIGH);
+const PIANO = planeFor("piano");
 
 // --- fixtures ----------------------------------------------------------------
 
@@ -55,12 +65,17 @@ const makeScore = (notes: Note[]): Score => ({
 
 const speller = makeKeySpeller();
 
-const build = (score: Score, tempoScale = 1, over?: Partial<Parameters<typeof buildNoteVisuals>[0]>) =>
+const build = (
+  score: Score,
+  tempoScale = 1,
+  over?: Partial<Parameters<typeof buildNoteVisuals>[0]>,
+) =>
   buildNoteVisuals({
     score,
+    plane: PIANO,
     hiddenIds: new Set<string>(),
     colorMap: new Map<string, string>(),
-    blackKeyColor: (base) => base,
+    accidentalColor: (base) => base,
     speller,
     tempoScale,
     ...over,
@@ -108,7 +123,14 @@ test("buildProjection scales the whole Y axis by spread (and 1 is the baseline)"
   const notes = [note(60, 0, 1), note(62, 3, 2)];
   const score = makeScore(notes);
   const at = (spread: number) =>
-    buildProjection({ width: 520, height: 400, score, tempoScale: 1, spread });
+    buildProjection({
+      width: 520,
+      height: 400,
+      plane: PIANO,
+      score,
+      tempoScale: 1,
+      spread,
+    });
 
   const base = at(1);
   const zoomed = at(2);
@@ -119,8 +141,8 @@ test("buildProjection scales the whole Y axis by spread (and 1 is the baseline)"
   }
   // Note HEIGHTS scale too — the Synthesia "taller notes" zoom (unlike tempo,
   // which leaves heights fixed). X is untouched.
-  const r1 = base.noteToRect!(notes[0]!);
-  const r2 = zoomed.noteToRect!(notes[0]!);
+  const r1 = base.noteToRect!(notes[0]!)!;
+  const r2 = zoomed.noteToRect!(notes[0]!)!;
   expect(r2.h).toBeCloseTo(r1.h * 2, 9);
   expect(r2.x).toBeCloseTo(r1.x, 9);
   expect(r2.w).toBeCloseTo(r1.w, 9);
@@ -140,31 +162,55 @@ test("alpha maps velocity 0..127 onto 0.4..1.0", () => {
   expect(v64!.alpha).toBeCloseTo(0.4 + (64 / 127) * 0.6, 10);
 });
 
-test("isBlack flags accidental pitch classes", () => {
+test("isAccidental flags accidental pitch classes", () => {
   const score = makeScore([note(60, 0, 1), note(61, 0, 1)]); // C4, C#4
   const [c, cSharp] = build(score);
-  expect(c!.isBlack).toBe(false);
-  expect(cSharp!.isBlack).toBe(true);
+  expect(c!.isAccidental).toBe(false);
+  expect(cSharp!.isAccidental).toBe(true);
   expect(c!.label).toEqual({ step: "C", accidental: "" });
   expect(cSharp!.label).toEqual({ step: "C", accidental: "♯" });
 });
 
-test("xFrac/wFrac match the keyboard primitive's fractional layout", () => {
-  const lanes = new Map(
-    fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH).map((k) => [k.pitch, k]),
-  );
-  const pitches = [21, 60, 61, 108]; // A0, C4 (white), C#4 (black), C8
+test("xFrac/wFrac are the plane's own note columns, on every layout", () => {
+  const pitches = [21, 60, 61, 108]; // A0, C4 (natural), C#4, C8
   const score = makeScore(pitches.map((p) => note(p, 0, 1)));
-  const visuals = build(score);
-  visuals.forEach((v, i) => {
-    const lane = lanes.get(pitches[i]!)!;
-    expect(v.wFrac).toBeCloseTo(lane.width, 10);
-    expect(v.xFrac).toBeCloseTo(lane.center - lane.width / 2, 10);
-  });
-  // Fractions, not pixels: everything lives in 0..1.
-  for (const v of visuals) {
-    expect(v.xFrac).toBeGreaterThanOrEqual(0);
-    expect(v.xFrac + v.wFrac).toBeLessThanOrEqual(1 + 1e-9);
+  for (const id of LAYOUTS) {
+    const plane = planeFor(id);
+    const columns = new Map(plane.columns.map((c) => [c.pitch, c]));
+    const visuals = build(score, 1, { plane });
+    visuals.forEach((v, i) => {
+      const col = columns.get(pitches[i]!)!;
+      expect(v.wFrac).toBeCloseTo(col.width, 10);
+      expect(v.xFrac).toBeCloseTo(col.center - col.width / 2, 10);
+    });
+    // Fractions, not pixels: everything lives in 0..1.
+    for (const v of visuals) {
+      expect(v.xFrac).toBeGreaterThanOrEqual(0);
+      expect(v.xFrac + v.wFrac).toBeLessThanOrEqual(1 + 1e-9);
+    }
+  }
+});
+
+test("a pitch the axis does not carry is dropped, and yields no rect", () => {
+  // MIDI 8 is below A0 (21), so no layout of the roll's range carries it.
+  const score = makeScore([note(8, 0, 1), note(60, 0, 1)]);
+  for (const id of LAYOUTS) {
+    const plane = planeFor(id);
+    const visuals = build(score, 1, { plane });
+    expect(visuals.map((v) => v.noteId)).toEqual([score.notes[1]!.id]);
+
+    const projection = buildProjection({
+      width: 520,
+      height: 400,
+      plane,
+      score,
+      tempoScale: 1,
+      spread: 1,
+    });
+    expect(projection.pitchToX!(8)).toBeNull();
+    expect(projection.noteToRect!(score.notes[0]!)).toBeNull();
+    // …and a pitch it DOES carry still gets a real box.
+    expect(projection.noteToRect!(score.notes[1]!)).not.toBeNull();
   }
 });
 

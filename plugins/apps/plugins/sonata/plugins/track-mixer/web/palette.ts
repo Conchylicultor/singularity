@@ -5,7 +5,7 @@
  * draws them. The white-key shade is the track's "base" color (the swatch shown
  * in the mixer and the color the keyboard lights with); the black-key shade is
  * its partner, applied per-note by the piano-roll renderer via
- * {@link blackKeyColor}.
+ * {@link accidentalColor}.
  *
  * The first two entries are sampled pixel-exact from Synthesia (blue + green —
  * its default right/left-hand colors); the rest extend the set in the same
@@ -13,7 +13,7 @@
  * darken+saturate transform so every track keeps the natural/sharp distinction.
  *
  * Tracks default to a color by their index in `score.tracks`; the user can
- * override the base per track (the override flows through `blackKeyColor` the
+ * override the base per track (the override flows through `accidentalColor` the
  * same way). Cycles if a score has more tracks than colors.
  */
 
@@ -33,9 +33,9 @@ export const TRACK_PALETTE = [
 
 /**
  * Exact black-key partners for the colors Synthesia ships (sampled from its
- * render). Other base colors fall through to {@link deriveBlackKey}.
+ * render). Other base colors fall through to {@link deriveAccidental}.
  */
-const EXACT_BLACK_KEY: Record<string, string> = {
+const EXACT_ACCIDENTAL: Record<string, string> = {
   "#87aacf": "#376bae", // blue
   "#a2e55b": "#569d10", // green
 };
@@ -52,14 +52,14 @@ export function defaultTrackColor(index: number): string {
  * base (the relationship the exact pairs share). Non-hex inputs (e.g. the
  * `var(--primary)` no-track fallback) are returned unchanged.
  */
-export function blackKeyColor(base: string): string {
+export function accidentalColor(base: string): string {
   const key = base.trim().toLowerCase();
-  return EXACT_BLACK_KEY[key] ?? deriveBlackKey(key);
+  return EXACT_ACCIDENTAL[key] ?? deriveAccidental(key);
 }
 
 // --- color math ----------------------------------------------------------------
 
-function deriveBlackKey(hex: string): string {
+function deriveAccidental(hex: string): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex; // not a #rrggbb literal — leave as-is (white === black)
   const [h, s, l] = rgbToHsl(rgb[0], rgb[1], rgb[2]);
@@ -77,7 +77,9 @@ function hexToRgb(hex: string): [number, number, number] | null {
 
 function rgbToHex(r: number, g: number, b: number): string {
   const ch = (v: number) =>
-    Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+    Math.max(0, Math.min(255, Math.round(v)))
+      .toString(16)
+      .padStart(2, "0");
   return `#${ch(r)}${ch(g)}${ch(b)}`;
 }
 
@@ -92,7 +94,7 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
   if (d === 0) return [0, 0, l];
   const s = d / (1 - Math.abs(2 * l - 1));
   let h: number;
-  if (max === r) h = (((g - b) / d) % 6 + 6) % 6;
+  if (max === r) h = ((((g - b) / d) % 6) + 6) % 6;
   else if (max === g) h = (b - r) / d + 2;
   else h = (r - g) / d + 4;
   return [h * 60, s, l];

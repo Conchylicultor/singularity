@@ -35,10 +35,15 @@ import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
-import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
+import {
+  asPitchLayoutId,
+  pitchGeometry,
+  pitchKeyboardHeight,
+  pitchLayoutConfig,
+} from "@plugins/apps/plugins/sonata/plugins/pitch-layout/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  blackKeyColor,
+  accidentalColor,
   useTrackColorMap,
   useHiddenTrackIds,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
@@ -74,9 +79,6 @@ export interface PianoRollProps {
   tempoScale: number;
   activeDisplayId: string;
 }
-
-/** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
-const KEYBOARD_HEIGHT = 112;
 
 /**
  * Wheel-zoom sensitivity: spread is multiplied by `exp(-deltaY * k)` per wheel
@@ -195,6 +197,16 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     [score.meta.key],
   );
 
+  // The pitch axis, read ONCE here and threaded down. Everything that touches X
+  // — the falling notes, the projection the overlays and keyboard anchor to,
+  // the grid's orientation rules, and the gutter's height — comes off this one
+  // plane, so a layout flip can never leave one surface on the old geometry.
+  const { layout } = useConfig(pitchLayoutConfig);
+  const plane = useMemo(
+    () => pitchGeometry(asPitchLayoutId(layout), KEYBOARD_LOW, KEYBOARD_HIGH),
+    [layout],
+  );
+
   // Cursor-invariant projection: depends only on lane size + score, so it (and
   // every overlay anchor) stays stable while playing — only the ScrollLayer
   // moves. The canvas draws from the SAME geometry source (buildNoteVisuals
@@ -205,11 +217,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       buildProjection({
         width: lane.width,
         height: lane.height,
+        plane,
         score,
         tempoScale,
         spread,
       }),
-    [lane.width, lane.height, score, tempoScale, spread],
+    [lane.width, lane.height, plane, score, tempoScale, spread],
   );
 
   // Tempo index, built once per score and reused by the ScrollLayer so it is
@@ -293,13 +306,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     () =>
       buildNoteVisuals({
         score,
+        plane,
         hiddenIds,
         colorMap,
-        blackKeyColor,
+        accidentalColor,
         speller,
         tempoScale,
       }),
-    [score, hiddenIds, colorMap, speller, tempoScale],
+    [score, plane, hiddenIds, colorMap, speller, tempoScale],
   );
 
   // Bar markers in authored seconds (the canvas grid + bar numbers' input).
@@ -310,24 +324,6 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         startSec: authoredSecondsOf(tempo, tempoScale, b.startBeat),
       })),
     [score, tempo, tempoScale],
-  );
-
-  // Pitch-axis separators at the two natural white-key boundaries (where
-  // adjacent white keys have no black key between them): the B–C octave split
-  // (left edge of every C, pitch class 0) rendered STRONG, and the E–F
-  // mid-octave split (left edge of every F, pitch class 5) rendered regular.
-  // Taken from the SAME fractional layout the notes use, so each line sits
-  // exactly on its key edge.
-  const pitchLines = useMemo(
-    () =>
-      fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH)
-        .map((k) => ({ pc: ((k.pitch % 12) + 12) % 12, k }))
-        .filter(({ pc }) => pc === 0 || pc === 5)
-        .map(({ pc, k }) => ({
-          frac: k.center - k.width / 2,
-          strong: pc === 0,
-        })),
-    [],
   );
 
   // Live scene + app pair, published by the canvas once Pixi init settles.
@@ -558,7 +554,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             height={lane.height}
             visuals={visuals}
             bars={barMarkers}
-            pitchLines={pitchLines}
+            pitchLines={plane.guides}
             scoreNotes={score.notes}
             showLabels={showNoteNames}
             tempoScale={tempoScale}
@@ -640,7 +636,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       <div
         // eslint-disable-next-line layout/no-adhoc-layout -- rigid footer edge of the column (fixed keyboard height); Stack has no per-child shrink-0 role and the body is a canvas Clip, not a Scroll, so Column doesn't fit
         className="relative shrink-0 border-t border-border"
-        style={{ height: KEYBOARD_HEIGHT }}
+        style={{ height: pitchKeyboardHeight(plane.layout, "keybed") }}
       >
         <PitchAxisHost projection={projection} />
       </div>
