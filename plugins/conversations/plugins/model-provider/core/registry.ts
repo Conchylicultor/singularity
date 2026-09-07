@@ -2,6 +2,7 @@ import { z } from "zod";
 import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 
 export const ConversationModelSchema = z.enum([
+  "fable-5-1",
   "fable-5",
   "opus-5",
   "opus-4-8",
@@ -31,14 +32,66 @@ export type ModelMeta = {
 };
 
 export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
-  "fable-5": { cliFlag: "claude-fable-5", label: "Fable 5", family: "fable", iconSize: "size-4" },
-  "opus-5": { cliFlag: "claude-opus-5", label: "Opus 5", family: "opus", iconSize: "size-4" },
-  "opus-4-8": { cliFlag: "claude-opus-4-8", label: "Opus 4.8", family: "opus", iconSize: "size-4", defaultHidden: true },
-  "opus-4-7": { cliFlag: "claude-opus-4-7", label: "Opus 4.7", family: "opus", iconSize: "size-4", defaultHidden: true },
-  "opus-4-6": { cliFlag: "claude-opus-4-6", label: "Opus 4.6", family: "opus", iconSize: "size-4", defaultHidden: true },
-  "sonnet-5": { cliFlag: "claude-sonnet-5", label: "Sonnet 5", family: "sonnet", iconSize: "size-3" },
-  "sonnet-4-6": { cliFlag: "claude-sonnet-4-6", label: "Sonnet 4.6", family: "sonnet", iconSize: "size-3", defaultHidden: true },
-  "haiku-4-5": { cliFlag: "claude-haiku-4-5", label: "Haiku 4.5", family: "haiku", printOnly: true, iconSize: "size-3" },
+  "fable-5-1": {
+    cliFlag: "claude-fable-5-1",
+    label: "Fable 5.1",
+    family: "fable",
+    iconSize: "size-4",
+  },
+  "fable-5": {
+    cliFlag: "claude-fable-5",
+    label: "Fable 5",
+    family: "fable",
+    iconSize: "size-4",
+    defaultHidden: true,
+  },
+  "opus-5": {
+    cliFlag: "claude-opus-5",
+    label: "Opus 5",
+    family: "opus",
+    iconSize: "size-4",
+  },
+  "opus-4-8": {
+    cliFlag: "claude-opus-4-8",
+    label: "Opus 4.8",
+    family: "opus",
+    iconSize: "size-4",
+    defaultHidden: true,
+  },
+  "opus-4-7": {
+    cliFlag: "claude-opus-4-7",
+    label: "Opus 4.7",
+    family: "opus",
+    iconSize: "size-4",
+    defaultHidden: true,
+  },
+  "opus-4-6": {
+    cliFlag: "claude-opus-4-6",
+    label: "Opus 4.6",
+    family: "opus",
+    iconSize: "size-4",
+    defaultHidden: true,
+  },
+  "sonnet-5": {
+    cliFlag: "claude-sonnet-5",
+    label: "Sonnet 5",
+    family: "sonnet",
+    iconSize: "size-3",
+  },
+  "sonnet-4-6": {
+    cliFlag: "claude-sonnet-4-6",
+    label: "Sonnet 4.6",
+    family: "sonnet",
+    iconSize: "size-3",
+    defaultHidden: true,
+  },
+  "haiku-4-5": {
+    cliFlag: "claude-haiku-4-5",
+    label: "Haiku 4.5",
+    family: "haiku",
+    printOnly: true,
+    iconSize: "size-3",
+  },
 };
 
 /**
@@ -79,12 +132,15 @@ const reportedCorruptModels = new Set<string>();
  *  is never silent even before a richer reporter is registered (e.g. server-side,
  *  or on the client before app startup wiring runs). The web runtime swaps this for
  *  a real crash report via registerModelCorruptionReporter(). */
-let corruptionSink: (message: string, raw: unknown) => void = (message) => console.error(message);
+let corruptionSink: (message: string, raw: unknown) => void = (message) =>
+  console.error(message);
 
 /** Install the sink that receives corrupt/unknown stored-model signals. Called once
  *  at web app startup to route corruption into the visible crash-report pipeline.
  *  Core stays zero-dep/environment-agnostic — the web runtime injects the reporter. */
-export function registerModelCorruptionReporter(fn: (message: string, raw: unknown) => void): void {
+export function registerModelCorruptionReporter(
+  fn: (message: string, raw: unknown) => void,
+): void {
   corruptionSink = fn;
 }
 
@@ -112,7 +168,11 @@ export function reportUnknownModel(raw: unknown): void {
  * a stored model field. Request-input schemas (API bodies) stay strict so bad input is
  * rejected loudly.
  */
-export const StoredModelSchema = tolerantEnum(ConversationModelSchema, normalizeModel, reportUnknownModel);
+export const StoredModelSchema = tolerantEnum(
+  ConversationModelSchema,
+  normalizeModel,
+  reportUnknownModel,
+);
 
 /** id → pinned Claude CLI flag (the one map). */
 export function cliFlagFor(id: ConversationModel): string {
@@ -123,7 +183,7 @@ export function cliFlagFor(id: ConversationModel): string {
 export function currentModelForTier(tier: ModelTier): ConversationModel {
   switch (tier) {
     case "fable":
-      return "fable-5";
+      return "fable-5-1";
     case "opus":
       return "opus-5";
     case "sonnet":
@@ -139,7 +199,10 @@ export function currentModelForTier(tier: ModelTier): ConversationModel {
  */
 export function idForCliName(name: string): ConversationModel | null {
   const stripped = name.replace(/-\d{8}$/, "");
-  for (const [id, meta] of Object.entries(MODEL_REGISTRY) as [ConversationModel, ModelMeta][]) {
+  for (const [id, meta] of Object.entries(MODEL_REGISTRY) as [
+    ConversationModel,
+    ModelMeta,
+  ][]) {
     if (meta.cliFlag === name || meta.cliFlag === stripped) return id;
   }
   return null;
@@ -154,7 +217,9 @@ export function idForCliName(name: string): ConversationModel | null {
  * The label is content, so it is never CSS text-transformed at the call site.
  */
 export function modelDisplayLabel(raw: string): string {
-  const id = idForCliName(raw) ?? (raw in MODEL_REGISTRY ? (raw as ConversationModel) : null);
+  const id =
+    idForCliName(raw) ??
+    (raw in MODEL_REGISTRY ? (raw as ConversationModel) : null);
   if (id) return MODEL_REGISTRY[id].label;
   const tier = MODEL_TIERS.find((t) => raw.includes(t));
   if (tier) return tier.charAt(0).toUpperCase() + tier.slice(1);

@@ -92,7 +92,7 @@ export const conversationFields = {
   // the server-side readers too.
   //
   // `DEFAULT_MODEL` is now the wire/backfill default, where the tuple form
-  // silently gave `"fable-5"` — the first entry of the enum, i.e. tuple order
+  // silently gave `"fable-5-1"` — the first entry of the enum, i.e. tuple order
   // rather than anyone's decision. Nothing observable changes: the column is
   // notNull with no DB default, so every row carries a model and the wire
   // schema's `.default()` never fires. The general factory just makes the value
