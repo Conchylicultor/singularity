@@ -22,11 +22,34 @@ export type ConfigValues<F extends FieldsRecord = FieldsRecord> =
 // avoid colliding with config_v2's `.origin.jsonc` code/git layer terminology.
 export type ConfigSource = "manual" | "reorder" | "view";
 
-export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
+// Where the bytes of this descriptor's generated `<name>.origin.jsonc` come
+// from. `descriptor` (almost everything) means the origin is a plain
+// materialization of `defaults` below. `build` means an `OriginDefaultsProvider`
+// computes them during codegen, from something only the build can see — today
+// reorder's live contribution catalog, walked out of the primed plugin tree.
+//
+// It is declared rather than inferred because it is the BASIS a staleness check
+// compares an origin's `// @hash` against. A reader that wants to know whether a
+// committed origin is current hashes `descriptor.defaults` and compares — correct
+// for the `descriptor` arm and permanently wrong for the `build` arm, whose
+// committed hash is over the materialized document and so never matches. The
+// declaration is what lets such a reader require the arm it can actually answer
+// for (`readGitLayerConfig` takes `ConfigDescriptor<F, "descriptor">`), instead of
+// a comment asking callers not to.
+export type OriginDefaultsFrom = "descriptor" | "build";
+
+export interface ConfigDescriptor<
+  F extends FieldsRecord = FieldsRecord,
+  O extends OriginDefaultsFrom = OriginDefaultsFrom,
+> {
   readonly name: string;
   readonly schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
   readonly fields: F;
   readonly defaults: ConfigValues<F>;
+  // Whether `defaults` above IS this descriptor's origin document, or only a
+  // placeholder the build replaces. Always set by `defineConfig` (defaults to
+  // `descriptor`); see {@link OriginDefaultsFrom} for why it is declared.
+  readonly originDefaultsFrom: O;
   // Optional scope axis. When set, this descriptor can be forked per scope of
   // the given kind (e.g. "app" → per-app). Omitted = global-only (base scope).
   readonly scope?: "app";

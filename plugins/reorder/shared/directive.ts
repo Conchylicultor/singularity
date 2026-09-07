@@ -44,10 +44,18 @@ import { REORDER_NODE_LEGEND } from "@plugins/fields/plugins/reorder-tree/core";
  */
 export function reorderDirectiveDescriptor(
   configName: string,
-): ConfigDescriptor<{ items: ReorderTreeFieldDef }> {
+): ConfigDescriptor<{ items: ReorderTreeFieldDef }, "build"> {
   return defineConfig({
     name: configName,
     source: "reorder",
+    // The `items` default below is `[]` — a placeholder, never this descriptor's
+    // real origin. The committed origin's `items` is the slot's full live
+    // contribution catalog, materialized during codegen by the
+    // `OriginDefaultsProvider` in `reorderable-slots-gen.ts`. Declaring that
+    // here is what stops a reader from hashing `descriptor.defaults` and
+    // concluding the committed origin is stale (it never matches, and never
+    // will).
+    originDefaultsFrom: "build",
     // A slot's on-screen order must be a deliberate, committed layout — never
     // the natural order contributions happen to load in. `./singularity build`
     // seeds the override (and re-marks it when the catalog shifts underneath);

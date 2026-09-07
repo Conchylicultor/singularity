@@ -16,7 +16,7 @@ export interface VariantRegionCore<Props> {
   /** `"app"` opts the descriptor into the per-app fork mechanism; omit for global. */
   readonly scope?: "app";
   /** The config descriptor (a single dynamic-enum `variant` field). */
-  readonly config: ConfigDescriptor<VariantRegionFields>;
+  readonly config: ConfigDescriptor<VariantRegionFields, "descriptor">;
   /**
    * The canonical frozen `variant` field reference. `DynamicEnum.Options`
    * matches by reference equality, so this MUST be the exact object stored on
@@ -33,16 +33,17 @@ export function defineVariantRegion<Props>(opts: {
   defaultVariant: string;
   scope?: "app";
 }): VariantRegionCore<Props> {
-  const config: ConfigDescriptor<VariantRegionFields> = defineConfig({
-    name: opts.id,
-    fields: {
-      variant: dynamicEnumField({
-        default: opts.defaultVariant,
-        label: `${opts.label} variant`,
-      }),
-    },
-    scope: opts.scope,
-  });
+  const config: ConfigDescriptor<VariantRegionFields, "descriptor"> =
+    defineConfig({
+      name: opts.id,
+      fields: {
+        variant: dynamicEnumField({
+          default: opts.defaultVariant,
+          label: `${opts.label} variant`,
+        }),
+      },
+      scope: opts.scope,
+    });
 
   const variantField = config.fields.variant;
 

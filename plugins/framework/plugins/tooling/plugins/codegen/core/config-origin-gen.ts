@@ -51,7 +51,11 @@ function isConfigDescriptor(v: unknown): v is ConfigDescriptor {
     typeof obj.fields === "object" &&
     obj.fields !== null &&
     typeof obj.defaults === "object" &&
-    obj.defaults !== null
+    obj.defaults !== null &&
+    // Verified, not assumed: this narrows a value out of a dynamically imported
+    // barrel, so every field the interface REQUIRES has to be checked here or
+    // the predicate is asserting one that may not be there.
+    typeof obj.originDefaultsFrom === "string"
   );
 }
 
@@ -278,7 +282,12 @@ export function setDefaultOriginDefaultsPreparer(
   defaultOriginDefaultsPreparer = preparer;
 }
 
-function renderOriginJsonc(
+/**
+ * Exported for its own unit test only — NOT part of the codegen barrel. Callers
+ * render origins through {@link renderConfigOriginContent}, which resolves the
+ * providers both the build and the `config-origins-in-sync` check must share.
+ */
+export function renderOriginJsonc(
   descriptor: ConfigDescriptor,
   hierarchyPath: string,
   originAnnotations?: OriginAnnotationsProvider,
@@ -287,8 +296,35 @@ function renderOriginJsonc(
   // An override provider supplies the materialized defaults; with no provider
   // this is `descriptor.defaults` — same value for both the body and the hash,
   // byte-identical to before the hook existed.
-  const defaults =
-    originDefaults?.(descriptor, hierarchyPath) ?? descriptor.defaults;
+  //
+  // Both directions are checked, because the descriptor's `originDefaultsFrom`
+  // is a CLAIM and the provider decides applicability on its own (by catalog
+  // membership, which this file knows nothing about). Every generated origin
+  // flows through here, in the build process and in the `config-origins-in-sync`
+  // check process alike, so this one pair of asserts covers the whole surface —
+  // and it fires while rendering, before a disagreement can be written to disk
+  // as a hash some later reader trusts.
+  const address = `${hierarchyPath}/${descriptor.name}`;
+  const materialized = originDefaults?.(descriptor, hierarchyPath);
+  if (materialized && descriptor.originDefaultsFrom === "descriptor") {
+    throw new Error(
+      `Config origin "${address}": an OriginDefaultsProvider materialized its defaults, ` +
+        `but the descriptor declares originDefaultsFrom: "descriptor". ` +
+        `Change the defineConfig call to originDefaultsFrom: "build" — a reader that hashes ` +
+        `descriptor.defaults to test this origin's freshness would always be told it is stale.`,
+    );
+  }
+  if (!materialized && descriptor.originDefaultsFrom === "build") {
+    throw new Error(
+      `Config origin "${address}": the descriptor declares originDefaultsFrom: "build", ` +
+        `but no OriginDefaultsProvider supplied defaults for it, so this origin would be ` +
+        `rendered from the descriptor's placeholder defaults. Either the descriptor should ` +
+        `declare originDefaultsFrom: "descriptor", or its provider is not installed in this ` +
+        `process — reorder's catalog preparer registers itself as a SIDE EFFECT of importing ` +
+        `the codegen core barrel, so a caller that renders origins without that import trips this.`,
+    );
+  }
+  const defaults = materialized ?? descriptor.defaults;
   const hash = computeHash(defaults as unknown as JsonValue);
   const lines: string[] = [];
   lines.push(`// @hash ${hash}`);

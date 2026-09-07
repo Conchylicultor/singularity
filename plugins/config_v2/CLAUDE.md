@@ -351,6 +351,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ConfigValues`
     - `Disposable`
     - `JsonValue`
+    - `OriginDefaultsFrom`
     - `OrphanEntry`
     - `OrphanFile`
     - `OrphanFileRole`

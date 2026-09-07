@@ -2,7 +2,12 @@ import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { pruneOrphanedConfigFiles } from "./config-origin-gen";
+import {
+  pruneOrphanedConfigFiles,
+  renderOriginJsonc,
+} from "./config-origin-gen";
+import { defineConfig } from "@plugins/config_v2/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
 let configDir: string;
 
@@ -166,4 +171,53 @@ test("is a no-op on a clean tree where every file is live", () => {
   });
 
   expect(pruned).toEqual([]);
+});
+
+// `originDefaultsFrom` is a CLAIM about who supplies the origin's defaults, and
+// the provider decides applicability on its own. Rendering is where the two meet,
+// so it asserts they agree — in both directions, since either disagreement writes
+// an `@hash` over a document some later reader would test the wrong basis against.
+
+const fields = { enabled: boolField({ label: "Enabled", default: true }) };
+
+test("throws when a provider materializes defaults a descriptor did not declare", () => {
+  const descriptor = defineConfig({ name: "toolbar", fields });
+
+  expect(() =>
+    renderOriginJsonc(descriptor, "apps/pages/shell", undefined, () => ({
+      enabled: false,
+    })),
+  ).toThrow("apps/pages/shell/toolbar");
+});
+
+test('throws when a "build" descriptor gets no materialized defaults', () => {
+  const descriptor = defineConfig({
+    name: "toolbar",
+    fields,
+    originDefaultsFrom: "build",
+  });
+
+  // No provider at all — the same shape as a provider that does not recognise
+  // this descriptor, which is what a missing preparer registration looks like.
+  expect(() => renderOriginJsonc(descriptor, "apps/pages/shell")).toThrow(
+    "apps/pages/shell/toolbar",
+  );
+});
+
+test("renders when the declaration and the provider agree", () => {
+  const declared = defineConfig({ name: "toolbar", fields });
+  expect(renderOriginJsonc(declared, "apps/pages/shell")).toContain(
+    '"enabled": true',
+  );
+
+  const built = defineConfig({
+    name: "toolbar",
+    fields,
+    originDefaultsFrom: "build",
+  });
+  expect(
+    renderOriginJsonc(built, "apps/pages/shell", undefined, () => ({
+      enabled: false,
+    })),
+  ).toContain('"enabled": false');
 });

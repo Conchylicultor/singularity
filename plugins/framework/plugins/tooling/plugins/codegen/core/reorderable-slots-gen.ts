@@ -156,7 +156,21 @@ async function collectReorderableSlots(
   );
 
   // (2) Catalog: every runtime contribution targeting a reorderable slot.
-  const catalog = new Map<string, CatalogItem[]>();
+  //
+  // Pre-seeded with an EMPTY list for every reorderable slot, before the walk
+  // that fills it. Otherwise a slot with zero bundled contributions would have no
+  // entry at all, and the provider's `undefined` would mean two different things:
+  // "this slot has nothing in it" and "this descriptor is not a reorder directive
+  // at all". `renderOriginJsonc` asserts on exactly that answer, so it has to mean
+  // only the second.
+  //
+  // Byte-neutral: `reorderTreeField`'s defaultValue is `[]`, so `{ items: [] }`
+  // renders the same body and the same hash as `descriptor.defaults`, and
+  // `buildOriginAnnotationsProvider` already treats a miss and an empty array
+  // alike.
+  const catalog = new Map<string, CatalogItem[]>(
+    [...addressOf.values()].map((address) => [address, []]),
+  );
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
     const data = getFacet(node, contributionsFacetDef);

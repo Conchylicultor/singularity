@@ -5,6 +5,7 @@ export type {
   ConfigDescriptor,
   ConfigSource,
   ConfigValues,
+  OriginDefaultsFrom,
 } from "./internal/types";
 export {
   configV2Resource,

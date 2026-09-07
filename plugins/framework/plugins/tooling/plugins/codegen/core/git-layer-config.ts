@@ -73,19 +73,28 @@ function strictReadOnlyFileConfigProxy(filePath: string): ConfigProxy {
  * — an override whose `@hash` no longer matches its origin is ignored — applied
  * one layer down, to the origin against its descriptor.
  *
- * SCOPE. The comparison basis is `descriptor.defaults`, which is the hash
- * `renderOriginJsonc` writes for every descriptor EXCEPT the ones an
- * origin-defaults provider materializes (today: reorder directives, whose
- * defaults are the live contribution catalog, built by an async preparer that
- * needs primed barrels and so cannot run from a synchronous read). Such a
- * descriptor's committed origin always reads as stale here, so it must not be
- * read through {@link readGitLayerConfig} — it would silently resolve to the
- * empty code defaults instead of the authored catalog.
+ * SCOPE. The comparison basis is `descriptor.defaults`, so this only works for a
+ * descriptor whose origin IS its defaults — `originDefaultsFrom: "descriptor"`.
+ * For the other arm (`"build"`: reorder directives, whose origin is the live
+ * contribution catalog an async preparer materializes during codegen) the
+ * committed hash is over a document `descriptor.defaults` never equals, so every
+ * read here would answer "stale". {@link readGitLayerConfig} therefore accepts
+ * only the `"descriptor"` arm — a `"build"` descriptor is a tsc error at the call
+ * site, not a caveat to remember. The throw below covers the paths where that
+ * type is erased (a cast, a bare `ConfigDescriptor` in a container, a value
+ * narrowed out of a dynamically imported barrel).
  */
 function nonStaleOriginProxy(
   descriptor: ConfigDescriptor,
   filePath: string,
 ): ConfigProxy {
+  if (descriptor.originDefaultsFrom !== "descriptor") {
+    throw new Error(
+      `readGitLayerConfig: "${descriptor.name}" declares originDefaultsFrom: "${descriptor.originDefaultsFrom}", ` +
+        `so its committed origin is materialized at build time and can never match computeHash(descriptor.defaults). ` +
+        `Read it through the build's origin renderer instead.`,
+    );
+  }
   const inner = strictReadOnlyFileConfigProxy(filePath);
   const read = (): { content: JsonValue; hash: string | null } | null => {
     const data = inner.read();
@@ -117,7 +126,7 @@ function nonStaleOriginProxy(
  * descriptor does not carry its plugin identity, so the caller supplies it.
  */
 export function readGitLayerConfig<F extends FieldsRecord>(
-  descriptor: ConfigDescriptor<F>,
+  descriptor: ConfigDescriptor<F, "descriptor">,
   opts: { root: string; hierarchyPath: string },
 ): ConfigValues<F> {
   const gitDir = join(opts.root, "config", opts.hierarchyPath);
