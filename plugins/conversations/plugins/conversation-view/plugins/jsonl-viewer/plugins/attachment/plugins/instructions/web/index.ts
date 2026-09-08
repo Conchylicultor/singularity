@@ -5,7 +5,7 @@ import { InstructionsView } from "./components/instructions-view";
 export default {
   collapsed: true,
   description:
-    "Renders the instructions attachment — the project instruction files (CLAUDE.md) the harness loaded at launch — as the opening-of-the-session plural twin of the nested-memory card.",
+    "Renders the instructions attachment in both its flavors — the launch snapshot of the project instruction files (CLAUDE.md), and the session-start re-read reporting which of them dropped out — as the plural twin of the nested-memory card.",
   contributions: [
     JsonlViewerAttachment.Renderer({
       match: "instructions",

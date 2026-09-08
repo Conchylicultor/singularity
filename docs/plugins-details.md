@@ -9502,7 +9502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
-                - **`instructions`** — Renders the instructions attachment — the project instruction files (CLAUDE.md) the harness loaded at launch — as the opening-of-the-session plural twin of the nested-memory card.
+                - **`instructions`** — Renders the instructions attachment in both its flavors — the launch snapshot of the project instruction files (CLAUDE.md), and the session-start re-read reporting which of them dropped out — as the plural twin of the nested-memory card.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
                     - Uses:
