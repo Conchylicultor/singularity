@@ -34,7 +34,7 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
     - `tasks/task-status.STATUS_META`
   - Exports (values): `TaskLinkChip`
 - Server:
-  - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b"
+  - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `active-data.inlineBoundary`

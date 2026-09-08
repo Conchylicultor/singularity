@@ -17,8 +17,8 @@ import { inlineBoundary } from "@plugins/active-data/core";
 // page that displays it.
 //
 // The trailing `(?![0-9a-z-])` is load-bearing, not decoration: `inlineBoundary`
-// appends `(?![/.])\b`, and without it a greedy group BACKTRACKS to satisfy
-// that guard — so `block-<uuid>/web` would match all but the uuid's last group
+// appends its own boundary guards, and without it a greedy group BACKTRACKS to
+// satisfy them — so `block-<uuid>/web` would match all but the uuid's last group
 // and linkify a path segment as an id.
 export const BLOCK_ID_RE = inlineBoundary(
   /block-[0-9a-z]+(?:-[0-9a-z]+)+(?![0-9a-z-])/,

@@ -61,6 +61,38 @@ await withBrowser(async (h) => {
     label.length > 0 && label !== PROTO_ID,
   );
 
+  // EVERY bare mention chips, not just the first one the scan happened to find.
+  //
+  // The check that "a chip rendered" is satisfied by one match in a transcript
+  // that mentions the id ten times, which is how a boundary guard that refused
+  // an id ENDING A SENTENCE ("…on the Trimmed page of proto-….") stayed
+  // invisible: the same message chipped its other mentions, so nothing looked
+  // broken. So assert the complement instead — after render, a bare id left as
+  // plain prose is a chip that did not happen.
+  //
+  // Paths and URLs are the legitimate non-chip mentions and are excluded by
+  // where they are, not by what they look like: markdown puts them in `code`,
+  // `pre` or `a`, none of which the linkifier walks.
+  const bare: string[] = await page
+    .locator('[data-pane-id="conversation"]')
+    .evaluateAll((panes, id) => {
+      const out: string[] = [];
+      for (const pane of panes) {
+        const walker = document.createTreeWalker(pane, NodeFilter.SHOW_TEXT);
+        for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+          if (!n.nodeValue?.includes(id)) continue;
+          if (n.parentElement?.closest("code, pre, a, button")) continue;
+          out.push(n.nodeValue.trim().slice(0, 80));
+        }
+      }
+      return out;
+    }, PROTO_ID);
+  r.ok(
+    "no bare id is left unchipped in the transcript",
+    bare.length === 0,
+    bare.length === 0 ? undefined : `still plain text: ${JSON.stringify(bare)}`,
+  );
+
   await chip.click();
   await page.waitForTimeout(2000);
   await snap(page, OUT, "2-opened");

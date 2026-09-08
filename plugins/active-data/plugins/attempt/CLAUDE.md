@@ -33,7 +33,7 @@ The id pattern matches attempt ids derived from the worktree basename
     - `tasks/attempt-view.attemptPane`
   - Exports (values): `AttemptChip`
 - Server:
-  - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b"
+  - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses: `active-data.inlineBoundary`

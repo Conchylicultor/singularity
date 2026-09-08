@@ -53,7 +53,7 @@ describe("TASK_ID_RE", () => {
    * THE backtracking case, and why it holds.
    *
    * `[a-z0-9]{4,8}` is greedy and the id's suffix is six chars, so the engine
-   * first matches all six, hits `(?![/.])` against the `/`, and fails. It then
+   * first matches all six, hits `(?!\/)` against the `/`, and fails. It then
    * backtracks to five, to four — and every one of those shorter matches ends
    * BETWEEN TWO WORD CHARACTERS, where `inlineBoundary`'s trailing `\b` finds
    * no boundary. So no truncation can satisfy the guard and the whole scan
@@ -70,6 +70,14 @@ describe("TASK_ID_RE", () => {
     expect(matches(`${id}.ts`)).toEqual([]);
     expect(matches(`/${id}`)).toEqual([]);
     expect(matches(`https://x.dev/${id}`)).toEqual([]);
+  });
+
+  test("an id ending a sentence still matches, full stop and all", () => {
+    const id = newTaskId();
+    // The sentence's full stop is NOT a suffix: nothing word-like follows it,
+    // so the greedy suffix keeps all six characters and the guard lets it
+    // through. A `.ts` above, whose dot IS followed by a letter, does not.
+    expect(firstMatch(`filed as ${id}.`)).toBe(id);
   });
 
   test("a suffix longer than the allowed eight is not an id", () => {

@@ -122,7 +122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-view.attemptPane`
         - Exports (values): `AttemptChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Contributes: `page.inline-token` "(?<!\/)att-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses: `page/editor.Editor`
       - Core:
         - Uses: `active-data.inlineBoundary`
@@ -161,7 +161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
         - Exports (values): `ConvChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Contributes: `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses: `page/editor.Editor`
       - Core:
         - Uses: `active-data.inlineBoundary`
@@ -219,7 +219,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
         - Exports (values): `PrototypeChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?![/.])\b"
+        - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses: `page/editor.Editor`
       - Core:
         - Uses:
@@ -264,7 +264,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-status.STATUS_META`
         - Exports (values): `TaskLinkChip`
       - Server:
-        - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b"
+        - Contributes: `page.inline-token` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses: `page/editor.Editor`
       - Core:
         - Uses: `active-data.inlineBoundary`

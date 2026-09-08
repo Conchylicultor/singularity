@@ -67,7 +67,7 @@ conversation.
     - `primitives/pane.useOpenPane`
   - Exports (values): `PrototypeChip`
 - Server:
-  - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?![/.])\b"
+  - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses: `page/editor.Editor`
 - Core:
   - Uses:

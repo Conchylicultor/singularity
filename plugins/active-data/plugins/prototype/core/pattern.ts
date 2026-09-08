@@ -16,9 +16,10 @@ import { PROTOTYPE_ID_RE } from "@plugins/apps/plugins/prototypes/plugins/files/
  *
  * `PROTOTYPE_ID_RE` is deliberately exported unanchored and without `g` — the
  * core shape, not a matcher — so each reading composes its own guards.
- * `inlineBoundary` adds this reading's: no leading `/` and no trailing `/` or
- * `.`, so a bare id in a sentence linkifies while `~/…/proto-…/index.html` in a
- * path does not.
+ * `inlineBoundary` adds this reading's: no leading `/`, no trailing `/`, and no
+ * trailing dot that starts a suffix, so a bare id in a sentence linkifies —
+ * including the one that ends it — while `~/…/proto-…/index.html` in a path does
+ * not.
  *
  * No extra trailing guard is needed (unlike `page-link`'s `(?![0-9a-z-])`): the
  * suffix here is a fixed `{4}` and the digits must be followed by `-`, so

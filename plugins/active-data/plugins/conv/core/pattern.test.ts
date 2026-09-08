@@ -37,10 +37,16 @@ describe("CONV_ID_RE", () => {
 
   test("a path-like or dotted context is not an id reference", () => {
     const id = newConversationId();
-    // The inlineBoundary guards: a leading `/`, or a trailing `/` or `.`.
+    // The inlineBoundary guards: a leading `/`, a trailing `/`, or a dot that
+    // starts a suffix (`.jsonl`, `.localhost`) rather than ending a sentence.
     expect(firstMatch(`${id}/turns`)).toBeUndefined();
     expect(firstMatch(`${id}.jsonl`)).toBeUndefined();
     expect(firstMatch(`/${id}`)).toBeUndefined();
+  });
+
+  test("an id ending a sentence still matches, full stop and all", () => {
+    const id = newConversationId();
+    expect(firstMatch(`see ${id}.`)).toBe(id);
   });
 
   test("an id inside a URL path is not an id reference", () => {

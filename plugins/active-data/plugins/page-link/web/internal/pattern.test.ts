@@ -45,10 +45,16 @@ describe("BLOCK_ID_RE", () => {
 
   test("a path-like or dotted context is not an id reference", () => {
     const id = newBlockId();
-    // The inlineBoundary guards: a leading `/` or a trailing `/`, `.`.
+    // The inlineBoundary guards: a leading `/`, a trailing `/`, or a dot that
+    // starts a suffix (`.ts`) rather than ending a sentence.
     expect(firstMatch(`/${id}`)).toBeUndefined();
     expect(firstMatch(`${id}/web`)).toBeUndefined();
     expect(firstMatch(`${id}.ts`)).toBeUndefined();
+  });
+
+  test("an id ending a sentence still matches, full stop and all", () => {
+    const id = newBlockId();
+    expect(firstMatch(`the note is on ${id}.`)).toBe(id);
   });
 
   test("`block-` with no id after it is not a match", () => {

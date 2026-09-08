@@ -42,13 +42,23 @@ describe("PROTOTYPE_INLINE_RE", () => {
 
   test("a path-like or dotted context is not an id reference", () => {
     const id = newPrototypeId();
-    // The inlineBoundary guards: a leading `/`, or a trailing `/` or `.`.
+    // The inlineBoundary guards: a leading `/`, a trailing `/`, or a dot that
+    // starts a suffix (`.ts`) rather than ending a sentence.
     expect(firstMatch(`/${id}`)).toBeUndefined();
     expect(
       firstMatch(`${PROTOTYPES_DIR_DISPLAY}/${id}/index.html`),
     ).toBeUndefined();
     expect(firstMatch(`${id}/index.html`)).toBeUndefined();
     expect(firstMatch(`${id}.ts`)).toBeUndefined();
+  });
+
+  test("an id ending a sentence still matches, full stop and all", () => {
+    const id = newPrototypeId();
+    // The report that prompted the guard's fix: an id most often lands at the
+    // end of the sentence that announces it, and a full stop there was reading
+    // as a domain/extension suffix — so the chip switched off exactly where it
+    // was most needed.
+    expect(firstMatch(`Done, on the Trimmed page of ${id}.`)).toBe(id);
   });
 
   test("`proto-` with no id after it is not a match", () => {
