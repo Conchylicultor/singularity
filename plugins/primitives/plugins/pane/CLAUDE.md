@@ -13,11 +13,13 @@ Design rationale lives in:
 
 - `research/2026-04-23-global-unified-pane-manager-v2.md` — core design.
 - `research/2026-04-23-global-unified-pane-manager-v3.md` — refinements
-  (`.open()` takes full params; `useParams()` is own-only; prefix matching).
+  (`.open()` — since replaced by the free `openPane` — takes full params;
+  `useParams()` is own-only; prefix matching).
 - `research/2026-04-30-plugins-miller-columns.md` — layout renderer.
 - `research/2026-05-15-global-remove-after-pane-state.md` — route-first
   architecture, `after:` removal, `input`/`useInput()` (since split into
-  `options`/`hint` — see below), `defaultAncestors`.
+  `options`/`hint` — see below), `defaultAncestors` (since replaced by the
+  route's `parent` chain).
 - `research/2026-07-10-global-pane-input-hint-vs-options.md` — why `input`
   became `options` + `hint`, and why a hint cannot be a write source.
 
@@ -59,11 +61,11 @@ really live in `tasks/plugins/tasks-core/core/routes.ts`. Promoting one route to
 by habit. Never write `export const xRoute = defineRoute({…})` in an
 `index.ts`: a barrel takes no `export const`.
 
-`Pane.define` is a pure factory: it returns a typed `PaneObject` (`.open()`,
-`.useParams()`, `.link()`, `.Actions()`) but does NOT make the URL routable.
-Register every pane your plugin owns with a `Pane.Register({ pane })` entry in
-the plugin's `contributions` array — a defined-but-unregistered pane compiles
-fine and never matches.
+`Pane.define` is a pure factory: it returns a typed `PaneObject`
+(`.useParams()`, `.link()`, `.useToggle()`, `.Actions`) but does NOT make the URL
+routable. Register every pane your plugin owns with a `Pane.Register({ pane })`
+entry in the plugin's `contributions` array — a defined-but-unregistered pane
+compiles fine and never matches.
 
 Rules:
 
@@ -198,11 +200,26 @@ hint.pick("title", canonical) ?? <Placeholder>Untitled</…>     // ✓ a ReactN
 
 ## Navigate
 
-`pane.open(params)` pushes a new URL and takes the **full ancestor + own** param
-set — the router builds the URL by walking the route's parent chain, filling
-each segment from those params. `close()` navigates to the parent, `promote()`
-detaches from ancestors and makes this pane the root, `back()`/`forward()` walk
-browser history.
+There is no `pane.open()`. Opening is a free function, `openPane(pane, params,
+opts)`, and it comes in two forms:
+
+- **`openPane` (module-level, `pane/web`)** — the imperative, non-hook open. It
+  targets the live store rather than any particular surface, and its type
+  accepts **only** `{ mode: "root" }`: with no caller position there is nothing
+  to be relative to, so the one honest thing it can do is start a fresh route.
+- **`useOpenPane()`** — the caller-aware hook, below. Same call shape, all three
+  modes.
+
+Both take the **full ancestor + own** param set, because that is what a URL
+needs. `pane.link(app, params)` builds that URL without navigating (it delegates
+to the route, which knows the parent chain); `pane.useToggle(params, opts)` is
+the open-or-close pair for a button that shows and hides one pane.
+
+The rest of `PaneObject` is unchanged: `close(instanceId)` navigates to the
+parent, `unwrap(instanceId)` removes this pane and keeps its children,
+`promote(instanceId)` detaches from ancestors and makes this pane the root, and
+`back()`/`forward()` walk browser history. `useClose()` / `usePromote()` are the
+bound-to-this-instance hook forms.
 
 ### `useOpenPane` — caller-aware navigation
 
@@ -213,7 +230,10 @@ Modes:
 - `"root"` — replace the entire route with a fresh one rooted at target.
 - `"push"` — insert target relative to the caller. `side: "right"`
   (default) appends after the caller, truncating siblings to the right.
-  `side: "left"` inserts before the caller (skipped if already an ancestor).
+  `side: "left"` inserts before the caller — **unless the target is already an
+  ancestor**, in which case it is not skipped: control falls through to the
+  right-push, so the pane is appended *after* the caller instead. A left-push at
+  a pane that is already to your left therefore duplicates it on your right.
 - `"swap"` — replace the caller's slot in-place (same pane type,
   different params), truncating children.
 
@@ -221,10 +241,19 @@ Modes:
 imperative op — the hook returns a callback and reads nothing during render — so
 it takes the surface's store when there is one and the **focused tab's** store
 otherwise, resolved when the click happens rather than when the component
-rendered (global chrome outlives the tab it was rendered beside). With no caller
-pane in the route there is nothing to be relative to, so every mode behaves as
-`"root"` does: the target opens with its default ancestors, exactly like
-clicking the same entry in a sidebar.
+rendered (global chrome outlives the tab it was rendered beside).
+
+With no caller pane in the route there is nothing to be relative to, so a
+`push` / `swap` falls back to the same non-positional open the module-level
+`openPane` performs — but **not** to `mode: "root"`, and the difference shows
+whenever the target is already somewhere in the route:
+
+- `"root"` always discards the route and rebuilds it from the target's parent
+  chain, exactly like clicking the entry in a sidebar.
+- a caller-less `"push"` / `"swap"` first looks for the target in the current
+  route. Same params and options ⇒ nothing happens; otherwise the existing slot
+  is replaced in place and everything after it is truncated. Only when the
+  target is absent is the route rebuilt from its parent chain.
 
 ## Chrome
 
@@ -413,7 +442,7 @@ Hand-rolling a `border-b` header bar inside a pane body is banned by the
 ## Router
 
 The **route store** is the single source of truth at runtime. Navigation
-APIs (`openPane`, `pane.open()`, `restoreRoute`) mutate the route
+APIs (`openPane`, `useOpenPane()`, `restoreRoute`) mutate the route
 directly. Each mutation:
 
 1. Updates `currentRoute` (the in-memory `PaneSlot[]`).
@@ -803,6 +832,7 @@ See "Open questions" in the design doc.
     - `defaultHistoryAdapter`
     - `defaultStore`
     - `definePaneHeaderSlot`
+    - `defineRoute`
     - `openPane`
     - `Pane`
     - `PaneBasePathContext`

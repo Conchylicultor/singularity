@@ -158,6 +158,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Hint`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`

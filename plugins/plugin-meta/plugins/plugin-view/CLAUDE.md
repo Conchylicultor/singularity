@@ -41,6 +41,7 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `primitives/css/text.Text`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

@@ -26,6 +26,7 @@
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

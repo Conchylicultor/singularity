@@ -34,6 +34,7 @@
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

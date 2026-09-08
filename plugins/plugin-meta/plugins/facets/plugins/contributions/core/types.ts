@@ -49,16 +49,26 @@ export interface SourceRef {
   module?: string;
 }
 
-/** A `Pane.define()` found in this plugin's `web/`. */
+/**
+ * A `Pane.define()` found in this plugin's `web/`, carrying exactly one of the
+ * two identities the call can spell — both of them a `route:`, differing only in
+ * whether that route has a name of its own.
+ */
 export interface PaneDeclaration {
   /** The `const` binding the pane is declared under — what `Pane.Register({ pane })` names. */
   name: string;
   /**
-   * Legacy identity: a literal `id:` on the `Pane.define` call itself. Dies with
-   * the legacy segment form of `Pane.define`, which has no `id` field.
+   * Inline identity: the id read DIRECTLY off a `route: defineRoute({ id })`
+   * written in place on the call. Nothing is deferred — the route has no binding
+   * to look up, so the whole identity is local and `relate()` has no hop to
+   * follow.
    */
   id?: string;
-  /** Route identity: the `route:` argument, resolved against `routes` in `relate()`. */
+  /**
+   * Referred identity: a `route:` naming a hoisted binding, resolved against
+   * `routes` in `relate()` — routinely in ANOTHER plugin's `core/`, which is why
+   * this half can only record which name in which module.
+   */
   route?: SourceRef;
 }
 

@@ -29,6 +29,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

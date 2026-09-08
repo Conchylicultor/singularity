@@ -3,8 +3,11 @@ import {
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { workflowsApp } from "@plugins/apps/plugins/workflows/plugins/shell/core";
 import { workflowDefinitionsDescriptor } from "@plugins/apps/plugins/workflows/plugins/engine/core";
@@ -42,14 +45,12 @@ function useResolveDefinition({ definitionId }: { definitionId: string }) {
   };
 }
 
-const definitionDetailRoute = defineRoute({
-  id: "workflows-definition-detail",
-  segment: "def/:definitionId",
-  parent: definitionsRootRoute,
-});
-
 export const definitionDetailPane = Pane.define({
-  route: definitionDetailRoute,
+  route: defineRoute({
+    id: "workflows-definition-detail",
+    segment: "def/:definitionId",
+    parent: definitionsRootRoute,
+  }),
   app: workflowsApp,
   component: DefinitionDetailBody,
   resolve: useResolveDefinition,

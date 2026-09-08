@@ -7,8 +7,8 @@ import {
   Pane,
   PaneChrome,
   useOpenPane,
+  defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   DataView,
@@ -22,13 +22,11 @@ import { conversationFieldDefs } from "./internal/fields";
 
 const ALL_CONVERSATIONS_VIEW = defineDataView("all-conversations");
 
-const allConversationsRoute = defineRoute({
-  id: "all-conversations",
-  segment: "all-conversations",
-});
-
 export const allConversationsPane = Pane.define({
-  route: allConversationsRoute,
+  route: defineRoute({
+    id: "all-conversations",
+    segment: "all-conversations",
+  }),
   app: agentManagerApp,
   component: AllConversationsView,
   width: 720,

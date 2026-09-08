@@ -205,11 +205,25 @@ interface NormalizedChrome {
 export interface PaneInternal {
   id: string;
   /**
-   * Ancestors to prepend when opening this pane from scratch (no caller
-   * context), root-first. Derived from the route's `parentPaneIds`, so it is
-   * the whole transitive chain rather than one declared level.
+   * Ancestor pane ids, root-first. It IS the route's `parentPaneIds` — the whole
+   * transitive chain rather than one declared level — and wears that name for
+   * two reasons: the old `defaultAncestors` re-wrapped each id in a `{ id }`
+   * object that bought nothing, and it read as a field an author writes, which
+   * it has not been since identity moved onto the `RouteDef`.
+   *
+   * It is read on BOTH open paths, under two different rules, and the second is
+   * new — say so rather than let the field quietly widen:
+   *
+   *  - FROM SCRATCH (no caller to be relative to) it is the ancestry, whole: the
+   *    route becomes the chain plus this pane. That is what it has always meant.
+   *  - RELATIVE (push / swap) the caller's own prefix stands where the ancestry
+   *    would, so it is consulted only to insert the ancestors that CARRY
+   *    something the caller supplied and that the prefix does not already hold.
+   *
+   * Neither rule constrains where the pane may appear: any pane can sit at any
+   * position in a route. See {@link chainSlots} for both rules in one place.
    */
-  defaultAncestors: Array<{ id: string }>;
+  parentPaneIds: string[];
   /** Own URL segment (no leading slash). Used by the route URL parser/builder. */
   segment: string;
   /**
@@ -852,7 +866,15 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
     if (!implOpts?.root) {
       const existingIdx = route.findIndex((s) => s.paneId === internal.id);
-      if (existingIdx >= 0) {
+      // Replacing the slot in place is only honest where the route can host
+      // this address. Without the guard, opening a deployment on a DIFFERENT
+      // server rewrote the leaf and left the old `server/:serverId` standing to
+      // its left — a route that says one server and means another, and (when
+      // the leaf params happened to match) a click that did nothing at all.
+      if (
+        existingIdx >= 0 &&
+        prefixHosts(route.slice(0, existingIdx), internal, params)
+      ) {
         const existing = route[existingIdx]!;
         const sameParams =
           Object.keys(ownParams).length ===
@@ -864,32 +886,35 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
         // opens that differ only by their optimistic hint must dedupe to the
         // same slot, or the pane remounts (or stacks) for a display-only value.
         if (sameParams && sameOptions(options, existing.options)) return;
-        const newRoute = route.slice(0, existingIdx + 1);
-        newRoute[existingIdx] = createSlot(
-          internal.id,
-          ownParams,
-          options,
-          hint,
+        // Everything right of the slot is truncated, exactly as before — but the
+        // slot is rebuilt through the same relative open as every other path, so
+        // an ancestor the caller named and the route does not yet carry is
+        // inserted instead of dropped.
+        setRoute(
+          relativeHead(
+            route.slice(0, existingIdx),
+            internal,
+            params,
+            ownParams,
+            options,
+            hint,
+          ),
+          replace,
         );
-        setRoute(newRoute, replace);
         return;
       }
     }
 
-    // Build fresh route from defaultAncestors
-    const ancestorSlots: PaneSlot[] = [];
-    for (const ancestor of internal.defaultAncestors) {
-      const ancestorInternal = registry.get(ancestor.id);
-      if (!ancestorInternal) continue;
-      // Inherit params from existing route if available
-      const existingSlot = route.find((s) => s.paneId === ancestor.id);
-      const ancestorParams = existingSlot
-        ? existingSlot.params
-        : extractOwnParams(ancestorInternal, params);
-      ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
-    }
+    // Build a fresh route from the target's declared ancestry. Nothing of the
+    // old route survives, so nothing of it is consulted either: an ancestor's
+    // params come from what the CALLER supplied. (They used to be read off a
+    // matching slot in the outgoing route when one was there, which quietly
+    // beat the caller — an open for server B landing on the page for server A.)
     setRoute(
-      [...ancestorSlots, createSlot(internal.id, ownParams, options, hint)],
+      [
+        ...chainSlots(internal, params, EMPTY, { fromScratch: true }),
+        createSlot(internal.id, ownParams, options, hint),
+      ],
       replace,
     );
   }
@@ -1326,6 +1351,200 @@ function extractOwnParams(
     if (name in allParams) own[name] = allParams[name]!;
   }
   return own;
+}
+
+// ---------------------------------------------------------------------------
+// The ancestor chain of an open — ONE algorithm, so `params` means one thing on
+// every path.
+//
+// A pane's `params` are its route's CHAINED set: every ancestor's `:name` plus
+// its own, because that is what a URL needs, and `tsc` makes an opener supply
+// all of them. Three of the four open paths nonetheless built their target's
+// slot from `extractOwnParams` alone and never looked at the ancestors, so the
+// half of the argument the caller was FORCED to pass was deleted by the callee.
+// `openPane(deploymentDetailPane, { serverId, deploymentId }, { mode: "push" })`
+// produced `/…/dep/<id>` with no server anywhere in it; Expand on that pane then
+// walked the DECLARED chain, found nothing supplying `:serverId`, fell back to
+// re-rooting, and threw out of `buildRouteUrl` — after `setRoute` had already
+// committed the route and notified, leaving the store holding an address whose
+// URL never landed.
+//
+// So there is one rule, and the three functions below are that rule applied:
+//
+//     AN OPEN NEVER DISCARDS A PARAM THE CALLER SUPPLIED.
+//
+// ---------------------------------------------------------------------------
+
+/**
+ * The target's declared ancestors, root-first, each paired with the registry
+ * entry that knows what it names — `undefined` when that pane is not registered.
+ *
+ * Unregistered is a real state, not a bug to assert away: pane registration
+ * follows PLUGIN LOAD (`useSyncPaneRegistry` rebuilds the registry from the
+ * `Pane.Register` contributions of whatever has loaded), and a pane's declared
+ * ancestor routinely lives in a different plugin from the pane itself —
+ * `task-detail` is defined in `tasks-core` while its `tasks-root` parent pane is
+ * registered by `tasks/task-detail`. Throwing here would turn a deferred-tier
+ * load window into a crash on the most-opened pane in the app. What the absence
+ * costs instead is measured in {@link chainSlots}.
+ */
+function declaredAncestors(
+  target: PaneInternal,
+): Array<{ id: string; internal: PaneInternal | undefined }> {
+  return target.parentPaneIds.map((id) => ({ id, internal: registry.get(id) }));
+}
+
+/**
+ * Can `prefix` — the slots that would survive to the left of `target` — hold
+ * this address?
+ *
+ * False when the prefix already carries a DECLARED ANCESTOR of the target with a
+ * different value for one of that ancestor's own params: a run row for server B
+ * listed inside server A's page is ordinary data, so the answer is "this
+ * position cannot host that address", and the open rebuilds from scratch rather
+ * than producing a route that says A and means B. Deliberately NOT a throw —
+ * there is nothing wrong with the caller, the program, or the data.
+ *
+ * A param the caller did not supply cannot disagree with anything, so it is
+ * skipped: the prefix's value stands and nothing is discarded.
+ */
+function prefixHosts(
+  prefix: PaneSlot[],
+  target: PaneInternal,
+  params: Record<string, string>,
+): boolean {
+  for (const { id, internal } of declaredAncestors(target)) {
+    const slot = prefix.find((s) => s.paneId === id);
+    if (!slot) continue;
+    // A slot's params are own-only by construction, so its own keys are the
+    // honest fallback for an ancestor whose pane is not registered to be asked.
+    const names = internal
+      ? segmentParamNames(internal.segment)
+      : Object.keys(slot.params);
+    for (const name of names) {
+      const wanted = params[name];
+      if (wanted !== undefined && slot.params[name] !== wanted) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * The ancestor slots to materialize ahead of `target`, root-first.
+ *
+ * FROM SCRATCH (`mode: "root"`, or an open with no caller pane to be relative
+ * to) there is no prefix, so the declared chain IS the route's ancestry and the
+ * whole of it is materialized — including ancestors that name no param, which is
+ * what puts the tasks tree beside a task detail opened from nowhere.
+ *
+ * RELATIVE (push / swap) the caller's prefix survives and already stands where
+ * those ancestors would, so only the ones that CARRY SOMETHING are inserted:
+ * an ancestor's slot holds exactly its own segment's names (`extractOwnParams`),
+ * so one that names nothing can carry nothing, and inserting it would add a
+ * Miller column nobody asked for while omitting it discards nothing. That is a
+ * derivation of the rule, not an exception to it — and it is also the empirical
+ * cut: of the relative-mode call sites whose target declares ancestors, all but
+ * one target a PARAMLESS chain (task detail under the tasks root, trace detail,
+ * report detail, prototype detail, …).
+ *
+ * By the same derivation, an ancestor the caller named NOTHING for carries
+ * nothing either, and is skipped rather than minted empty — in both modes. That
+ * is the deliberate answer to "paramful ancestor, no param supplied": minting it
+ * empty is what made `buildRouteUrl` throw AFTER the store had been mutated, and
+ * throwing here instead would crash Expand on any route that legitimately holds
+ * a pane without its ancestor (`/agents/c/<id>/dep/<d>` parses to exactly that).
+ * Skipping discards nothing and yields a shorter route that parses back to
+ * itself. Supplying SOME of a multi-param ancestor's names is the one shape that
+ * cannot be honoured either way, and throws.
+ *
+ * `prefix` is one thing: the slots that will survive to the left of the target.
+ * From scratch none do, so it is passed empty and never consulted.
+ */
+function chainSlots(
+  target: PaneInternal,
+  params: Record<string, string>,
+  prefix: PaneSlot[],
+  opts: { fromScratch: boolean },
+): PaneSlot[] {
+  const slots: PaneSlot[] = [];
+  let skippedUnregistered = false;
+
+  for (const { id, internal } of declaredAncestors(target)) {
+    if (!internal) {
+      skippedUnregistered = true;
+      continue;
+    }
+    const names = segmentParamNames(internal.segment);
+    const supplied = names.filter((name) => name in params);
+    if (supplied.length > 0 && supplied.length < names.length) {
+      throw new Error(
+        `Pane "${target.id}": ancestor "${id}" needs ${names.map((n) => `"${n}"`).join(", ")} ` +
+          `but only ${supplied.map((n) => `"${n}"`).join(", ")} was supplied. ` +
+          `An open takes the CHAINED param set — every ancestor's, plus the target's own.`,
+      );
+    }
+    const carries = names.length > 0 && supplied.length === names.length;
+    if (opts.fromScratch) {
+      if (names.length > 0 && !carries) continue;
+    } else {
+      if (!carries) continue;
+      if (prefix.some((s) => s.paneId === id)) continue;
+    }
+    slots.push(createSlot(id, extractOwnParams(internal, params)));
+  }
+
+  // An unregistered ancestor was skipped above because it cannot be
+  // materialized — a route holding a slot for an unregistered pane resolves to
+  // nothing (`resolveRoute`) and has no URL (`buildRouteUrl` throws). That skip
+  // is allowed to cost NOTHING, and here we check that it did: in relative mode
+  // `params` is exactly the target's chained set, so a key that no surviving or
+  // minted slot carries is a param the open would have discarded. (From scratch
+  // the same check is unavailable rather than unwanted: `promote` unions the
+  // params of every slot left of the pane it re-roots, so its `params` is
+  // legitimately a superset of the chain and a leftover key proves nothing. The
+  // only way to close that gap is for `PaneInternal` to carry its parents'
+  // SEGMENTS rather than only their ids, which is a change to pane identity, not
+  // to opening.)
+  if (!opts.fromScratch && skippedUnregistered) {
+    const carried = new Set(segmentParamNames(target.segment));
+    for (const slot of [...prefix, ...slots]) {
+      for (const key of Object.keys(slot.params)) carried.add(key);
+    }
+    const dropped = Object.keys(params).filter((key) => !carried.has(key));
+    if (dropped.length > 0) {
+      throw new Error(
+        `Pane "${target.id}": opening it would discard ${dropped.map((d) => `"${d}"`).join(", ")}, ` +
+          `because a declared ancestor is not registered (its plugin has not loaded). ` +
+          `Register the ancestor pane, or open the target from a route that already holds it.`,
+      );
+    }
+  }
+
+  return slots;
+}
+
+/**
+ * The route up to AND INCLUDING the target, opened relative to `prefix`.
+ *
+ * The one shape all three relative branches share, so swap / push-left /
+ * push-right cannot drift on what "relative" means. Each branch owns only which
+ * prefix it hands in and what it appends after.
+ */
+function relativeHead(
+  prefix: PaneSlot[],
+  target: PaneInternal,
+  params: Record<string, string>,
+  ownParams: Record<string, string>,
+  options: PaneOptions,
+  hint: PaneHintBag,
+): PaneSlot[] {
+  const hosted = prefixHosts(prefix, target, params);
+  const kept = hosted ? prefix : EMPTY;
+  return [
+    ...kept,
+    ...chainSlots(target, params, kept, { fromScratch: !hosted }),
+    createSlot(target.id, ownParams, options, hint),
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -1898,6 +2117,24 @@ type RouteResolveField<Own extends Record<string, string>> =
 // note on `RouteDef` for why the own set is not a type parameter of its own.
 type OwnRouteParams<Seg extends string> = RouteParams<Seg>;
 
+// The `appIndex` field. An index pane is reached at its app's BARE ROOT, so it
+// cannot own a URL segment — and now that the route's `Seg` literal is reliable
+// (see the `const Seg` note in `core/route.ts`) that stops being a boot-time
+// throw and becomes a tsc error.
+//
+// The runtime throws in `useSyncPaneRegistry` stay: they still guard the
+// untyped `AnyPane` path, and the "one index per app" half of the invariant is
+// cross-file, which no type can see.
+type AppIndexField<Seg extends string> = Seg extends "" | "/"
+  ? {
+      /**
+       * Marks this pane as its app's index/landing pane — what that app's bare
+       * root resolves to. See {@link PaneInternal.appIndex}.
+       */
+      appIndex?: boolean;
+    }
+  : { appIndex?: never };
+
 // The arguments to `Pane.define`. Identity (`id` / `segment` / the ancestor
 // chain) is derived from the `RouteDef`, so the only authored fields are the
 // behavior (`component`, `chrome`, `useTitle`, `input`, `width`, `resolve`).
@@ -1914,12 +2151,6 @@ type RouteDefineArgs<
   HintT extends object,
 > = {
   route: RouteDef<Params, Seg>;
-  /**
-   * Marks this pane as {@link app}'s index/landing pane — what its bare root
-   * resolves to. Only legal for a segment-less route.
-   * See {@link PaneInternal.appIndex}.
-   */
-  appIndex?: boolean;
   /** The app this pane belongs to (its official home). See {@link PaneInternal.app}. */
   app: AppRef;
   component: ComponentType;
@@ -1976,7 +2207,8 @@ type RouteDefineArgs<
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
   width?: number;
-} & RouteResolveField<OwnRouteParams<Seg>>;
+} & RouteResolveField<OwnRouteParams<Seg>> &
+  AppIndexField<Seg>;
 
 // Identity comes from the `RouteDef`, so a pane always carries a `.link`.
 //
@@ -1992,19 +2224,21 @@ function define<
   args: RouteDefineArgs<Params, Seg, Options, HintT>,
 ): PaneObject<Closed<Params>, Closed<OwnRouteParams<Seg>>, Options, HintT>;
 // One overload, so the signature callers see stays generic while the body works
-// on the erased shapes (`resolve` is a conditional field; narrowing it under an
-// unresolved `Seg` is not something the implementation should have to do).
+// on the erased shapes (`resolve` and `appIndex` are conditional fields;
+// narrowing them under an unresolved `Seg` is not something the implementation
+// should have to do).
+//
+// `Seg` erases to `""`, not to `string`: `""` is the arm on which BOTH
+// conditional fields are at their most permissive (`appIndex?: boolean`,
+// `resolve?: never`), and an implementation signature has to accept every call
+// the overload above admits. With `string` the two disagree — `AppIndexField`
+// would forbid `appIndex` here while the overload still offers it — and TS
+// rejects the pair outright (TS2394).
 function define(
-  args: RouteDefineArgs<
-    Record<string, string>,
-    string,
-    PaneOptions,
-    PaneHintBag
-  >,
+  args: RouteDefineArgs<Record<string, string>, "", PaneOptions, PaneHintBag>,
 ): AnyPane {
   const route: RouteDef<any, any> = args.route;
   const id = route.id;
-  const defaultAncestors = route.parentPaneIds.map((pid) => ({ id: pid }));
   const segment = route.segment.replace(/^\/+/, "");
 
   if (segment && segment.startsWith(":")) {
@@ -2032,7 +2266,7 @@ function define(
 
   const internal: PaneInternal = {
     id,
-    defaultAncestors,
+    parentPaneIds: route.parentPaneIds,
     segment,
     appIndex: args.appIndex ?? false,
     app: args.app,
@@ -2368,7 +2602,6 @@ export function useOpenPane(): OpenPaneFn {
       const targetInternal = target._internal;
       const options = opts.options ?? {};
       const hint = opts.hint ?? {};
-
       if (opts.mode === "root" || callerInstanceId === undefined) {
         store.openPaneImpl(targetInternal, params, {
           root: opts.mode === "root",
@@ -2411,14 +2644,17 @@ export function useOpenPane(): OpenPaneFn {
             (k) => ownParams[k] === existing.params[k],
           );
         if (sameParams && sameOptions(options, existing.options)) return;
-        const newRoute = currentRoute.slice(0, callerIndex + 1);
-        newRoute[callerIndex] = createSlot(
-          targetInternal.id,
-          ownParams,
-          options,
-          hint,
+        store.setRoute(
+          relativeHead(
+            currentRoute.slice(0, callerIndex),
+            targetInternal,
+            params,
+            ownParams,
+            options,
+            hint,
+          ),
+          replace,
         );
-        store.setRoute(newRoute, replace);
         return;
       }
 
@@ -2427,9 +2663,19 @@ export function useOpenPane(): OpenPaneFn {
           .slice(0, callerIndex)
           .some((s) => s.paneId === targetInternal.id);
         if (!alreadyAncestor) {
+          // The caller and everything right of it survive: a left-push inserts
+          // ahead of the caller rather than replacing anything. Only the part
+          // LEFT of the caller is the target's prefix, so only that part is
+          // rebuilt when it cannot host the address.
           const newRoute = [
-            ...currentRoute.slice(0, callerIndex),
-            createSlot(targetInternal.id, ownParams, options, hint),
+            ...relativeHead(
+              currentRoute.slice(0, callerIndex),
+              targetInternal,
+              params,
+              ownParams,
+              options,
+              hint,
+            ),
             ...currentRoute.slice(callerIndex),
           ];
           store.setRoute(newRoute, replace);
@@ -2438,11 +2684,17 @@ export function useOpenPane(): OpenPaneFn {
       }
 
       // push right (default): truncate after caller, append target
-      const newRoute = [
-        ...currentRoute.slice(0, callerIndex + 1),
-        createSlot(targetInternal.id, ownParams, options, hint),
-      ];
-      store.setRoute(newRoute, replace);
+      store.setRoute(
+        relativeHead(
+          currentRoute.slice(0, callerIndex + 1),
+          targetInternal,
+          params,
+          ownParams,
+          options,
+          hint,
+        ),
+        replace,
+      );
     },
     [resolveStore, callerInstanceId],
   ) as OpenPaneFn;

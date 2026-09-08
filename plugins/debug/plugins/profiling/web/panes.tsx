@@ -1,15 +1,16 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { GanttView } from "./components/gantt-view";
 
-const profilingRoute = defineRoute({
-  id: "debug-profiling",
-  segment: "profiling",
-});
-
 export const profilingPane = Pane.define({
-  route: profilingRoute,
+  route: defineRoute({
+    id: "debug-profiling",
+    segment: "profiling",
+  }),
   app: debugApp,
   component: ProfilingBody,
 });

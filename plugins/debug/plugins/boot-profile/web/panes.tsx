@@ -1,5 +1,8 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { BootProfileLive } from "./components/boot-profile-live";
 import { BootProfileDetail } from "./components/boot-profile-detail";
@@ -28,14 +31,12 @@ function BootProfileBody() {
 
 // Detail pane (/debug/boot-profile/<id>): a saved snapshot re-rendered through
 // the same pure Gantt. A static prefix precedes the :id param (segment grammar).
-const bootProfileDetailRoute = defineRoute({
-  id: "debug-boot-profile-detail",
-  segment: "boot-profile/:id",
-  parent: bootProfileRoute,
-});
-
 export const bootProfileDetailPane = Pane.define({
-  route: bootProfileDetailRoute,
+  route: defineRoute({
+    id: "debug-boot-profile-detail",
+    segment: "boot-profile/:id",
+    parent: bootProfileRoute,
+  }),
   app: debugApp,
   resolve: false,
   component: BootProfileDetailBody,
@@ -51,13 +52,11 @@ function BootProfileDetailBody() {
 }
 
 // Browse pane (Debug → Boot Profiles): the list of saved snapshots.
-const bootProfileListRoute = defineRoute({
-  id: "debug-boot-profiles-list",
-  segment: "boot-profiles",
-});
-
 export const bootProfileListPane = Pane.define({
-  route: bootProfileListRoute,
+  route: defineRoute({
+    id: "debug-boot-profiles-list",
+    segment: "boot-profiles",
+  }),
   app: debugApp,
   component: BootProfileListBody,
 });

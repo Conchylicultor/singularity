@@ -63,6 +63,7 @@ that have run since boot appear.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

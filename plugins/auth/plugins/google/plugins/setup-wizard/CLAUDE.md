@@ -21,6 +21,7 @@
     - `primitives/css/ui-kit.Input`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/setup-steps.Step`
     - `primitives/setup-steps.StepCommand`

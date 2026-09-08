@@ -143,8 +143,12 @@ export function SourceRunsSection({
       // hover-revealed button the row body hit-tests over.
       //
       // Both ids, because the run's route chains under the source: the URL is
-      // `/events/sources/source/<s>/run/<r>`, so an opener supplies the whole
-      // chain. This card already knows which source it is drawing.
+      // `/events/sources/source/<s>/run/<r>`, so an opener names the whole
+      // chain. Here `sourceId` is redundant rather than load-bearing — this card
+      // only ever renders inside the source pane, so the source is already the
+      // slot to the left and the push inherits it from the route. It is passed
+      // because the type asks for the chained set, and because a card that knows
+      // which source it is drawing should not be the one deciding that.
       onRowActivate={(run) =>
         openPane(
           eventSourceRunPane,

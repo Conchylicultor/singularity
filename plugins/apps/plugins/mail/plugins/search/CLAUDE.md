@@ -28,11 +28,13 @@ composes primitives.
   body renders `<InfiniteScrollFooter handle={scroll} />` — the shared load-more
   spinner + Retry + sentinel, so the `!isFetchNextPageError` hot-loop gate lives
   in the primitive, not here.
-- **`mailMessagePane`** (`segment: "m/:messageId"`, `defaultAncestors:
-  [mailSearchPane]`) — the reader. Opened to the right of a row with the row's
-  envelope handed in as `input` for an instant header; the body + attachments
-  hydrate on mount via `POST /api/mail/hydrate` (idempotent, cache-first). Only
-  `bodyText` is rendered — **`bodyHtml` is never rendered** (no sanitizer).
+- **`mailMessagePane`** (over `mailMessageRoute`: `segment: "m/:messageId"`,
+  `parent: mailSearchRoute`) — the reader. Opened to the right of a row with the
+  row's envelope handed in as a `hint` for an instant header — a display mirror
+  of server-owned state, never a write source, absent on a deep link; the body +
+  attachments hydrate on mount via `POST /api/mail/hydrate` (idempotent,
+  cache-first). Only `bodyText` is rendered — **`bodyHtml` is never rendered**
+  (no sanitizer).
 
 ## Consumes
 
@@ -82,6 +84,7 @@ composes primitives.
     - `primitives/cursor-pagination.InfiniteScrollHandle`
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.type`

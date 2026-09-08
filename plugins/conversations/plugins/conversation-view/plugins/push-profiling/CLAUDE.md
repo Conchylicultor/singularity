@@ -20,6 +20,7 @@
     - `infra/endpoints.useEndpoint`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

@@ -15,9 +15,10 @@ hydrated on demand (below).
 
 ## Web
 
-`threadPane` (`Pane.define`, `segment: "thread/:threadId"`, width 640) is **exported
-from `web/index.ts`** so the thread-list plugin can open + track it, and
-registered via `Pane.Register` in the plugin definition. Open it with
+`threadPane` (`Pane.define` over a parentless `threadRoute`, whose `segment` is
+`"thread/:threadId"`; width 640) is **exported from `web/index.ts`** so the
+thread-list plugin can open + track it, and registered via `Pane.Register` in
+the plugin definition. Open it with
 `openPane(threadPane, { threadId }, { mode: "push" })`.
 
 `ThreadPaneView` reads the live `threadMessagesResource` and renders a scrolling
@@ -82,6 +83,7 @@ parses MIME or HTML itself.
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/relative-time.RelativeTime`

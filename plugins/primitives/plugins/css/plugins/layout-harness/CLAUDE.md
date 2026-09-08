@@ -377,6 +377,7 @@ server-core tsconfig where `check`/`facet` live. The
     - `primitives/css/ui-kit.Input`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

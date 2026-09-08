@@ -105,6 +105,7 @@ contributor that hands a conflict to an agent.
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

@@ -42,6 +42,7 @@ Auth state and affordances come only from
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/slot-render.defineRenderSlot`

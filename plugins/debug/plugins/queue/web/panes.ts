@@ -1,15 +1,9 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { QueueView } from "./components/queue-view";
 
-const queueRoute = defineRoute({
-  id: "queue",
-  segment: "queue",
-});
-
 export const queuePane = Pane.define({
-  route: queueRoute,
+  route: defineRoute({ id: "queue", segment: "queue" }),
   app: debugApp,
   component: QueueView,
 });

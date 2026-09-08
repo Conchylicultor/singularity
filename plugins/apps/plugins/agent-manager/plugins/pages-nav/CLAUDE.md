@@ -7,10 +7,11 @@ by side without switching apps.
 
 **Why the toolbar and not the shell sidebar.** A sidebar button has no
 `PaneInstanceContext` — the sidebar is a sibling of the layout renderer's
-subtree — so `openPane` rebuilds the route from `defaultAncestors` instead of
-appending, replacing the conversation instead of opening beside it. The button
-renders *inside* the conversation pane, so it has a caller position and
-`useToggle`'s default `mode: "push"` inserts the tree to its right:
+subtree — so `openPane` rebuilds the route from the target's `parentPaneIds`
+(its route's parent chain) instead of appending, replacing the conversation
+instead of opening beside it. The button renders *inside* the conversation pane,
+so it has a caller position and `useToggle`'s default `mode: "push"` inserts the
+tree to its right:
 `[conversation] [pages tree]`, and clicking a page adds
 `[conversation] [pages tree] [page detail]`.
 

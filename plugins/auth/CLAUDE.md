@@ -98,6 +98,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
     - `shell/notifications.toast`

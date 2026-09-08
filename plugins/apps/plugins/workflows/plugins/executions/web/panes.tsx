@@ -3,8 +3,11 @@ import {
   useResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { workflowExecutionsDescriptor } from "@plugins/apps/plugins/workflows/plugins/engine/core";
 import { workflowsApp } from "@plugins/apps/plugins/workflows/plugins/shell/core";
@@ -20,16 +23,14 @@ function useResolveExecution({ executionId }: { executionId: string }) {
   };
 }
 
-const executionDetailRoute = defineRoute({
-  id: "workflows-execution-detail",
-  segment: "exec/:executionId",
-  // The Workflows landing route, from the definitions plugin — an execution is
-  // opened from a workflow, so it sits under the same app root.
-  parent: definitionsRootRoute,
-});
-
 export const executionDetailPane = Pane.define({
-  route: executionDetailRoute,
+  route: defineRoute({
+    id: "workflows-execution-detail",
+    segment: "exec/:executionId",
+    // The Workflows landing route, from the definitions plugin — an execution is
+    // opened from a workflow, so it sits under the same app root.
+    parent: definitionsRootRoute,
+  }),
   app: workflowsApp,
   component: ExecutionDetailBody,
   resolve: useResolveExecution,

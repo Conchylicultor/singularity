@@ -16,6 +16,7 @@
     - `config_v2/settings.ConfigNav`
     - `config_v2/settings.ConfigSidebarButton`
     - `primitives/live-state.useResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
 

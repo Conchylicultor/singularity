@@ -1,15 +1,12 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { WorkflowNodePaneBody } from "./components/workflow-node-pane";
 
-const workflowNodeRoute = defineRoute({
-  id: "workflow-node",
-  segment: "workflow-node/:toolUseId/:nodeId",
-});
-
 export const workflowNodePane = Pane.define({
-  route: workflowNodeRoute,
+  route: defineRoute({
+    id: "workflow-node",
+    segment: "workflow-node/:toolUseId/:nodeId",
+  }),
   app: agentManagerApp,
   component: WorkflowNodePaneBody,
   // Conversation-scoped satellite: promote() would strip convId from the URL.

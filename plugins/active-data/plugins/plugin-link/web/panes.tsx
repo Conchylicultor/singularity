@@ -1,6 +1,9 @@
 import { useMemo } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -12,13 +15,11 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
-const pluginConvSideRoute = defineRoute({
-  id: "plugin-conv-side",
-  segment: "plugin/:pluginId",
-});
-
 export const pluginConvSidePane = Pane.define({
-  route: pluginConvSideRoute,
+  route: defineRoute({
+    id: "plugin-conv-side",
+    segment: "plugin/:pluginId",
+  }),
   app: agentManagerApp,
   component: PluginConvSideBody,
   width: 600,

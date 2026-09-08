@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -32,9 +35,12 @@ import { EventSourceRunDetail } from "./slots";
  * One run: `/events/sources/source/:sourceId/run/:runId`.
  *
  * Chaining to `eventSourceDetailRoute` is what puts the source in the URL, and
- * what types an opener's params as the full `{ sourceId, runId }` — so a caller
- * that knows which source it is looking at can open a run from anywhere, not
- * only from a route that already contains the source pane.
+ * what types an opener's params as the full `{ sourceId, runId }`. Today the one
+ * opener is the runs section inside the source pane, so the source slot is
+ * already to its left and the push inherits it; the chained param it passes is
+ * spare. A caller holding no source route of its own would have to open with
+ * `mode: "root"`, which is the path that reads the supplied `sourceId` and
+ * builds the chain from scratch — nothing does that yet.
  *
  * The run is still fetched by its OWN id (`GET /api/events/runs/:runId`) rather
  * than reached through the source's runs list, and that is unrelated to the
@@ -47,19 +53,16 @@ import { EventSourceRunDetail } from "./slots";
  * finds nothing else; the nearby `r/:runId` (build) and `rel/:runId` (Studio
  * release) are why the noun is spelled in full, the same call
  * `deploy/deployments` makes with `dep/:deploymentId`.
- */
-const eventSourceRunRoute = defineRoute({
-  id: "event-source-run",
-  segment: "run/:runId",
-  parent: eventSourceDetailRoute,
-});
-
-/**
+ *
  * `titleOwner` is deliberately NOT set — the source page keeps the tab title; a
  * run is a drill-in under it, not a new main surface.
  */
 export const eventSourceRunPane = Pane.define({
-  route: eventSourceRunRoute,
+  route: defineRoute({
+    id: "event-source-run",
+    segment: "run/:runId",
+    parent: eventSourceDetailRoute,
+  }),
   app: eventsApp,
   component: EventSourceRunPaneView,
   resolve: useResolveRun,

@@ -1,0 +1,616 @@
+{
+  "panes": [
+    {
+      "paneId": "accounts",
+      "segment": "accounts",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "agent-detail",
+      "segment": "ag/:id",
+      "appIndex": false,
+      "parent": "agents-root"
+    },
+    {
+      "paneId": "agent-report",
+      "segment": "agent-report/:toolUseId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "agent-side",
+      "segment": "agent/:agentId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "agent-system-detail",
+      "segment": "system/:systemId",
+      "appIndex": false,
+      "parent": "agents-root"
+    },
+    {
+      "paneId": "agents-root",
+      "segment": "agents",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "all-conversations",
+      "segment": "all-conversations",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "apple-setup",
+      "segment": "apple/setup",
+      "appIndex": false,
+      "parent": "accounts"
+    },
+    {
+      "paneId": "attempt",
+      "segment": "a/:attemptId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "backup",
+      "segment": "backup",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "backup-run",
+      "segment": "br/:runId",
+      "appIndex": false,
+      "parent": "backup"
+    },
+    {
+      "paneId": "build",
+      "segment": "build",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "build-detail",
+      "segment": "r/:runId",
+      "appIndex": false,
+      "parent": "build"
+    },
+    {
+      "paneId": "claude-cli-calls",
+      "segment": "claude-cli-calls",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "commit-detail",
+      "segment": "commit/:worktree/:sha",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "composition-compare",
+      "segment": "compare",
+      "appIndex": false,
+      "parent": "compositions"
+    },
+    {
+      "paneId": "composition-detail",
+      "segment": "comp/:id",
+      "appIndex": false,
+      "parent": "compositions"
+    },
+    {
+      "paneId": "compositions",
+      "segment": "compositions",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "config-orphans",
+      "segment": "config-orphans",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "config-v2-detail",
+      "segment": "cd/:configPath",
+      "appIndex": false,
+      "parent": "config-v2-nav"
+    },
+    {
+      "paneId": "config-v2-nav",
+      "segment": "config",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "contributions",
+      "segment": "contributions",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-commits-graph",
+      "segment": "commits",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-docs",
+      "segment": "docs",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-file-tree",
+      "segment": "files",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-push-profiling",
+      "segment": "pp",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-review",
+      "segment": "review",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-summary",
+      "segment": "summary",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conv-terminal",
+      "segment": "terminal",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conversation",
+      "segment": "c/:convId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "conversations-recover",
+      "segment": "recovery",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-boot-profile",
+      "segment": "boot-profile",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-boot-profile-detail",
+      "segment": "boot-profile/:id",
+      "appIndex": false,
+      "parent": "debug-boot-profile"
+    },
+    {
+      "paneId": "debug-boot-profiles-list",
+      "segment": "boot-profiles",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-broadcasts",
+      "segment": "broadcasts",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-health-monitor",
+      "segment": "health",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-heap-snapshot",
+      "segment": "heap",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-live-state-emit",
+      "segment": "live-state-emit",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-memory",
+      "segment": "memory",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-profiling",
+      "segment": "profiling",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-profiling-build-detail",
+      "segment": "build-profile/:worktree/:buildId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-profiling-op-detail",
+      "segment": "op-profile/:opId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "debug-read-set",
+      "segment": "read-set",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "deploy-deployment-detail",
+      "segment": "dep/:deploymentId",
+      "appIndex": false,
+      "parent": "deploy-server-detail"
+    },
+    {
+      "paneId": "deploy-server-detail",
+      "segment": "server/:serverId",
+      "appIndex": false,
+      "parent": "deploy-servers"
+    },
+    {
+      "paneId": "deploy-servers",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "event-list",
+      "segment": "list",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "event-source-detail",
+      "segment": "source/:sourceId",
+      "appIndex": false,
+      "parent": "event-sources"
+    },
+    {
+      "paneId": "event-source-run",
+      "segment": "run/:runId",
+      "appIndex": false,
+      "parent": "event-source-detail"
+    },
+    {
+      "paneId": "event-sources",
+      "segment": "sources",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "events-root",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "events-test",
+      "segment": "events-test",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "explorer",
+      "segment": "explorer",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "file-peek",
+      "segment": "file/:worktree/:filePath*",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "global-file-tree",
+      "segment": "code/:worktree",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "google-maps-setup",
+      "segment": "google-maps/setup",
+      "appIndex": false,
+      "parent": "accounts"
+    },
+    {
+      "paneId": "google-setup",
+      "segment": "google/setup",
+      "appIndex": false,
+      "parent": "accounts"
+    },
+    {
+      "paneId": "graph",
+      "segment": "graph",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "layout-lab",
+      "segment": "layout-lab",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "live-state-health",
+      "segment": "live-state",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "logs",
+      "segment": "logs",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "logs-channel",
+      "segment": "ch/:channel",
+      "appIndex": false,
+      "parent": "logs"
+    },
+    {
+      "paneId": "mail-message",
+      "segment": "m/:messageId",
+      "appIndex": false,
+      "parent": "mail-search"
+    },
+    {
+      "paneId": "mail-root",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "mail-search",
+      "segment": "search",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "mail-thread",
+      "segment": "thread/:threadId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "mail-threads",
+      "segment": "threads",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "page-detail",
+      "segment": "page/:pageId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "pages-root",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "pages-tree",
+      "segment": "pages-tree",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "plugin-conv-side",
+      "segment": "plugin/:pluginId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "plugin-view",
+      "segment": "p/:pluginId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "prototypes-detail",
+      "segment": "proto/:name",
+      "appIndex": false,
+      "parent": "prototypes-gallery"
+    },
+    {
+      "paneId": "prototypes-gallery",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "queue",
+      "segment": "queue",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "release-detail",
+      "segment": "rel/:runId",
+      "appIndex": false,
+      "parent": "compositions"
+    },
+    {
+      "paneId": "render-profiler",
+      "segment": "render-profiler",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "report-detail",
+      "segment": "rep/:reportId",
+      "appIndex": false,
+      "parent": "reports"
+    },
+    {
+      "paneId": "reports",
+      "segment": "reports",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "screenshot",
+      "segment": "screenshot/:id",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "settings-config-index",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "sonata-library",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "sonata-player",
+      "segment": "song/:songId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "stats",
+      "segment": "stats",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "story-detail",
+      "segment": "s/:pageId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "story-gallery",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "table-detail",
+      "segment": "t/:pluginId/:tableName",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "task-detail",
+      "segment": "t/:taskId",
+      "appIndex": false,
+      "parent": "tasks-root"
+    },
+    {
+      "paneId": "tasks-root",
+      "segment": "tasks",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "theme-customizer",
+      "segment": "theme-customizer",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "trace-detail",
+      "segment": "x/:id",
+      "appIndex": false,
+      "parent": "traces"
+    },
+    {
+      "paneId": "traces",
+      "segment": "traces",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "website-apps",
+      "segment": "apps",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "website-harness",
+      "segment": "harness",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "website-landing",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "welcome",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "workflow-node",
+      "segment": "workflow-node/:toolUseId/:nodeId",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "workflows-definition-detail",
+      "segment": "def/:definitionId",
+      "appIndex": false,
+      "parent": "workflows-definitions"
+    },
+    {
+      "paneId": "workflows-definitions",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
+      "paneId": "workflows-execution-detail",
+      "segment": "exec/:executionId",
+      "appIndex": false,
+      "parent": "workflows-definitions"
+    },
+    {
+      "paneId": "worktree-cleanup",
+      "segment": "worktree-cleanup",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "zero-test",
+      "segment": "zero-test",
+      "appIndex": false,
+      "parent": null
+    }
+  ]
+}

@@ -121,6 +121,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

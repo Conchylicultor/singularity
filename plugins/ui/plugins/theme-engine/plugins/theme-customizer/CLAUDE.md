@@ -30,6 +30,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Separator`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/search.SearchInput`

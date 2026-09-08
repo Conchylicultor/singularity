@@ -1,16 +1,17 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { EmitPane } from "./components/emit-pane";
 
-const liveStateEmitRoute = defineRoute({
-  id: "debug-live-state-emit",
-  segment: "live-state-emit",
-});
-
 export const liveStateEmitPane = Pane.define({
-  route: liveStateEmitRoute,
+  route: defineRoute({
+    id: "debug-live-state-emit",
+    segment: "live-state-emit",
+  }),
   app: debugApp,
   component: LiveStateEmitBody,
 });

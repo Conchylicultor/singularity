@@ -19,6 +19,7 @@
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

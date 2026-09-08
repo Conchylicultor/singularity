@@ -19,6 +19,7 @@
     - `primitives/css/clip.Clip`
     - `primitives/css/ui-kit.Button`
     - `primitives/icon-button.IconButton`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/terminal.terminalPane`

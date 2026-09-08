@@ -12,9 +12,14 @@ const deploymentIdOf = armText(deployRunFields, "deploy.deploymentId");
  * Where a deploy row goes when it is clicked.
  *
  * `deploymentDetailPane` nests under the server page, so opening it needs BOTH
- * ids. It can: a pane's params are its route's CHAINED set, so the ancestor's
- * `serverId` is spellable here even though this row is nowhere near the server
- * page.
+ * ids, and both are spelled here: a pane's params are its route's CHAINED set,
+ * so the ancestor's `serverId` is nameable even though this row is nowhere near
+ * the server page. An open never discards a param the caller supplied — a
+ * relative open materializes any declared ancestor the route does not already
+ * hold and whose params the caller named — so `serverId` is what puts
+ * `server/<id>` in the URL from all three of this row's hosts (the build
+ * button's popover, and inside the build and backup panes). Trimming it to the
+ * pane's own id strands the pane without its ancestor.
  *
  * It lives here rather than in the barrel because a barrel may hold only
  * imports, re-exports, type aliases and the single default export — and the two

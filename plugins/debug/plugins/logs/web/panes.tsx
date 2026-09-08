@@ -1,6 +1,9 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { LogViewer } from "./components/log-viewer";
 
@@ -15,14 +18,12 @@ export const logsPane = Pane.define({
   component: LogsBody,
 });
 
-const logChannelRoute = defineRoute({
-  id: "logs-channel",
-  segment: "ch/:channel",
-  parent: logsRoute,
-});
-
 export const logChannelPane = Pane.define({
-  route: logChannelRoute,
+  route: defineRoute({
+    id: "logs-channel",
+    segment: "ch/:channel",
+    parent: logsRoute,
+  }),
   app: debugApp,
   component: LogsChannelBody,
   resolve: false,

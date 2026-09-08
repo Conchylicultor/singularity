@@ -41,6 +41,7 @@ contributions: [
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.useResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (types):

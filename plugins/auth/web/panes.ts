@@ -1,5 +1,4 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { AccountsPane } from "./components/accounts-pane";
 

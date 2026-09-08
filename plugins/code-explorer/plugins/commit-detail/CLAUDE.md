@@ -41,6 +41,7 @@ re-breaks every conversation-less surface.
     - `primitives/css/ui-kit.cn`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (types): `CommitInfoState`

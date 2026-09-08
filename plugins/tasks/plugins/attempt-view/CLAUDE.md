@@ -30,6 +30,7 @@
     - `primitives/launch.LaunchControl`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneInstanceContext`

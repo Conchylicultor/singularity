@@ -45,11 +45,16 @@ describe("findCalls", () => {
 
 // ── Pane / route identity ──────────────────────────────────────────
 //
-// A pane's id is spelled two ways. The legacy segment form puts a literal `id:`
-// on the `Pane.define` call. The route form puts a `route:` identifier there and
-// the id on the `defineRoute()` that identifier names — which routinely lives in
-// another plugin's `core/`, so all this half can do is record WHICH name in
-// WHICH module; `relate()` completes the join with the tree in scope.
+// A pane's identity is always a `route:`, spelled two ways. A hoisted route puts
+// an IDENTIFIER there, and the id on the `defineRoute()` that identifier names —
+// which routinely lives in another plugin's `core/`, so all this half can do is
+// record WHICH name in WHICH module; `relate()` completes the join with the tree
+// in scope. An inline route puts the whole `defineRoute({ id })` there, and the
+// id is read straight off it — nothing to join.
+//
+// A `Pane.define` spelling neither is a pane the scanner cannot name, and a
+// nameless pane is what silently empties the Studio table, the plugin-detail
+// card and the PR diff — so it throws rather than being dropped.
 
 describe("routeDeclarationsIn", () => {
   test("reads the binding name and the route id", () => {
@@ -88,16 +93,40 @@ describe("routeDeclarationsIn", () => {
 });
 
 describe("paneDeclarationsIn", () => {
-  test("legacy form: the literal id on the call", () => {
+  test("inline form: the id read straight off the route written in place", () => {
     expect(
       paneDeclarationsIn(`
       export const logsPane = Pane.define({
-        id: "logs",
+        route: defineRoute({ id: "logs", segment: "logs" }),
         app: debugApp,
-        segment: "logs",
+        component: LogsBody,
       });
     `),
     ).toEqual([{ name: "logsPane", id: "logs" }]);
+  });
+
+  // The `route:` reader used to return the LEADING IDENTIFIER of whatever stood
+  // there, so an inline call came back as the name `defineRoute` — a reference to
+  // a route no plugin declares, which `relate()` drops. The pane then lost its id
+  // with nothing anywhere saying so.
+  test("an inline route is never recorded as a reference to `defineRoute`", () => {
+    const [pane] = paneDeclarationsIn(
+      'const p = Pane.define({ route: defineRoute({ id: "real" }), app: a });',
+    );
+    expect(pane?.route).toBeUndefined();
+    expect(pane?.id).toBe("real");
+  });
+
+  // `defineRoute` is generic, so an explicit type argument is legal — and a
+  // local "is the next char a `(`" test would miss it and hand back the callee
+  // name. What counts as a call is `markerCallSpans`' answer, which walks the
+  // generic block as a balanced whole.
+  test("an inline route with an explicit type argument reads the same", () => {
+    expect(
+      paneDeclarationsIn(
+        'const p = Pane.define({ route: defineRoute<{ a: () => void }>({ id: "g" }) });',
+      ),
+    ).toEqual([{ name: "p", id: "g" }]);
   });
 
   test("route form: the route's name and the module it came from", () => {
@@ -135,11 +164,11 @@ describe("paneDeclarationsIn", () => {
     });
   });
 
-  // The reader must scope both fields to the TOP level of the call body. With a
-  // first-match-at-any-depth read, the `id` inside `chrome` becomes the pane id
-  // and the `route` inside `options` becomes its route — silently, and with no
-  // check anywhere to notice.
-  test("a nested id / route never shadows the call's own", () => {
+  // The reader must scope the `route:` read to the TOP level of the call body. A
+  // pane body nests objects spelling the very same key, and with a
+  // first-match-at-any-depth read the `route` inside `options` becomes the pane's
+  // route — silently, and with no check anywhere to notice.
+  test("a nested route never shadows the call's own", () => {
     expect(
       paneDeclarationsIn(`
       import { realRoute } from "./routes";
@@ -155,16 +184,56 @@ describe("paneDeclarationsIn", () => {
     ]);
   });
 
-  test("a call spelling neither identity is dropped rather than half-recorded", () => {
+  // Same rule for the inline arm, which matches a `defineRoute` call by OFFSET:
+  // the decoy nested in `options` is a real `defineRoute` call in the same body,
+  // so only the offset match keeps it from being taken as the pane's identity.
+  test("a nested inline route never shadows the call's own", () => {
     expect(
-      paneDeclarationsIn("const p = Pane.define({ app: someApp });"),
-    ).toEqual([]);
+      paneDeclarationsIn(`
+      export const p = Pane.define({
+        options: { route: defineRoute({ id: "decoy" }) },
+        route: defineRoute({ id: "real" }),
+        app: someApp,
+      });
+    `),
+    ).toEqual([{ name: "p", id: "real" }]);
   });
 
+  test("a call spelling no readable identity throws rather than vanishing", () => {
+    expect(() =>
+      paneDeclarationsIn("const p = Pane.define({ app: someApp });"),
+    ).toThrow(/no readable pane id/);
+  });
+
+  test("a route the scanner cannot read statically throws too", () => {
+    expect(() =>
+      paneDeclarationsIn("const p = Pane.define({ route: makeRoute(x) });"),
+    ).toThrow(/no readable pane id/);
+  });
+
+  // A default import carries no exported name to resolve a route id through, so
+  // the reference is unusable — and an unusable reference is not an identity.
+  test("a route reached through a default import throws, naming the field", () => {
+    expect(() =>
+      paneDeclarationsIn(`
+      import someRoute from "@plugins/x/core";
+      export const p = Pane.define({ route: someRoute, app: a });
+    `),
+    ).toThrow(/`route: someRoute` is a DEFAULT import/);
+  });
+
+  test("the throw names the declaration and, when given one, the file", () => {
+    expect(() =>
+      paneDeclarationsIn("const p = Pane.define({ app: a });", "web/panes.tsx"),
+    ).toThrow(/`p`.*web\/panes\.tsx:1/);
+  });
+
+  // Masked out before `markerCallSpans` ever runs, so there is no span to
+  // report on — the throw above must not fire for a call that isn't one.
   test("a Pane.define written inside a template literal is not a pane", () => {
     expect(
       paneDeclarationsIn(
-        'const tpl = `const ghostPane = Pane.define({ id: "ghost" })`;',
+        "const tpl = `const ghostPane = Pane.define({ route: ghostRoute })`;",
       ),
     ).toEqual([]);
   });

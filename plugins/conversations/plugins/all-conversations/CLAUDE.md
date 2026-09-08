@@ -21,6 +21,7 @@
     - `primitives/data-view.defineDataView`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

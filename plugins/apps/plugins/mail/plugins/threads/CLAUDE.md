@@ -85,6 +85,7 @@ landing repoint is the route STRING `/mail/threads`.
     - `primitives/data-view.defineDataView`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

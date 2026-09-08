@@ -403,9 +403,10 @@ function fillPaneIds(tree: PluginTree): void {
         (p) => p.name === ref.name,
       );
       if (!pane) continue;
-      // The legacy segment form spells the id on the call itself; the route form
-      // spells a route, whose own id IS the pane id. The first arm dies with the
-      // legacy form.
+      // An inline `route: defineRoute({ id })` already carries the id — the route
+      // has no binding, so there is nothing left to look up. A `route:` naming a
+      // hoisted binding is a reference, and that route's own id IS the pane id,
+      // sometimes from another plugin entirely.
       const id = pane.id ?? (pane.route && routeIdOf(tree, owner, pane.route));
       if (id) c.paneId = id;
     }

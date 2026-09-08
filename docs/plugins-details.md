@@ -202,6 +202,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
@@ -317,6 +318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/launch.LaunchControl`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -1244,6 +1246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/data-view.defineFieldExtensions`
               - `primitives/live-state.matchResource`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -1511,6 +1514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
@@ -1568,6 +1572,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.matchResource`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -1754,6 +1759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/data-view.FieldDef`
                       - `primitives/detail-sections.defineDetailSections`
                       - `primitives/loading.Loading`
+                      - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
@@ -2152,6 +2158,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/relative-time.RelativeTime`
@@ -2209,6 +2216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination.InfiniteScrollHandle`
               - `primitives/cursor-pagination.useInfiniteScroll`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.type`
@@ -2240,6 +2248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
@@ -2342,6 +2351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.defineDataView`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useResource`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -2694,6 +2704,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/slot-render.defineRenderSlot`
@@ -2819,6 +2830,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -2941,6 +2953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings.ConfigNav`
               - `config_v2/settings.ConfigSidebarButton`
               - `primitives/live-state.useResource`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
         - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
@@ -3136,6 +3149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Hint`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
@@ -4643,6 +4657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -4713,6 +4728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -4926,6 +4942,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-table.DataTable`
               - `primitives/filter-chips.FilterChip`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -4944,6 +4961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `plugin-meta/contributions-table.Contributions`
                   - `plugin-meta/contributions-table.defineRowClick`
                   - `primitives/detail-sections.defineDetailSections`
+                  - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                 - Exports (values):
@@ -5074,6 +5092,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.HierarchyConfig`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -5176,6 +5195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas.GraphCanvas`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -5256,6 +5276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
@@ -5278,6 +5299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Inset`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
@@ -5307,6 +5329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/pane.definePaneHeaderSlot`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -5358,6 +5381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -5547,6 +5571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -6280,6 +6305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.cn`
       - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useResource`
+      - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.useOpenPane`
       - `shell/notifications.toast`
@@ -6452,6 +6478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/setup-steps.Step`
@@ -6499,6 +6526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/setup-steps.Step`
               - `primitives/setup-steps.StepCommand`
@@ -6531,6 +6559,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.Input`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/setup-steps.Step`
@@ -7361,6 +7390,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/data-view.HierarchyConfig`
       - `primitives/icon-button.IconButton`
       - `primitives/loading.Loading`
+      - `primitives/pane.defineRoute`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
@@ -7425,6 +7455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/diff-view.DiffOrImageView`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
         - Exports (types): `CommitInfoState`
@@ -7852,6 +7883,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
@@ -8202,6 +8234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/multi-select.useMultiSelect`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -8335,6 +8368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.defineDataView`
           - `primitives/live-state.matchResource`
           - `primitives/live-state.useResource`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -8856,6 +8890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
                   - `primitives/live-state.useResource`
                   - `primitives/loading.Loading`
+                  - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
             - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
@@ -8880,6 +8915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
                   - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+                  - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.PaneChrome`
                   - `primitives/pane.useOpenPane`
@@ -8972,6 +9008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Separator`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -9725,6 +9762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
+                      - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
@@ -9955,6 +9993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/live-state.useResource`
                       - `primitives/loading.Loading`
                       - `primitives/markdown.Markdown`
+                      - `primitives/pane.defineRoute`
                       - `primitives/pane.Pane`
                       - `primitives/pane.PaneChrome`
                       - `primitives/pane.useOpenPane`
@@ -10339,6 +10378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.useEndpoint`
               - `primitives/css/text.Text`
               - `primitives/icon-button.IconButton`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -10398,6 +10438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/ui-kit.Button`
               - `primitives/icon-button.IconButton`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/terminal.terminalPane`
@@ -10820,6 +10861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
         - Exports (values): `recoveryPane`
@@ -10898,6 +10940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `shell/notifications.toast`
@@ -11633,6 +11676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11738,6 +11782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11786,6 +11831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11806,6 +11852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11852,6 +11899,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11920,6 +11968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/data-table.ColumnDef`
           - `primitives/data-table.DataTable`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -11962,6 +12011,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.SelectItem`
               - `primitives/css/ui-kit.SelectTrigger`
               - `primitives/css/ui-kit.SelectValue`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -12040,6 +12090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.LeaderInfo`
           - `primitives/live-state.useNotificationsClient`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -12067,6 +12118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/log-channels.LiveLogChannel`
           - `primitives/log-channels.LogEntryList`
           - `primitives/networking.ReconnectingEventSource`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -12098,6 +12150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `primitives/markdown.Markdown`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -12204,6 +12257,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -12304,6 +12358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/spacing.Inset`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
             - Exports (values): `buildProfileDetailPane`
@@ -12384,6 +12439,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.SectionLabel`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
@@ -12511,6 +12567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
@@ -12610,6 +12667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -12666,6 +12724,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/log-channels.clientLog`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -13399,6 +13458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -13464,6 +13524,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/live-state.ResourceView`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -16688,6 +16749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
           - `primitives/icon-button.IconButton`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
@@ -21002,6 +21064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.useOpenPane`
@@ -22485,6 +22548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Input`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
@@ -27162,6 +27226,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defaultHistoryAdapter`
           - `defaultStore`
           - `definePaneHeaderSlot`
+          - `defineRoute`
           - `openPane`
           - `Pane`
           - `PaneBasePathContext`
@@ -29122,6 +29187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/ui-kit.Button`
       - `primitives/detail-sections.defineDetailSections`
       - `primitives/live-state.useResource`
+      - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
     - Exports (types):
@@ -29423,6 +29489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/launch.LaunchControl`
       - `primitives/launch.LaunchRequest`
       - `primitives/loading.Loading`
+      - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
       - `primitives/text-editor.TextEditor`
@@ -29751,6 +29818,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/toggle-chip.ToggleChip`
+      - `primitives/pane.defineRoute`
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
@@ -30150,6 +30218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/launch.LaunchControl`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
+          - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
           - `primitives/pane.PaneInstanceContext`
@@ -31521,6 +31590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Separator`
               - `primitives/detail-sections.defineDetailSections`
+              - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/search.SearchInput`

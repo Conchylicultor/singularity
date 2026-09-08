@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
 import { SourcesList } from "./components/sources-list";

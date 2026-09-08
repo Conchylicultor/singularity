@@ -138,6 +138,7 @@ part of the query key.
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.defineFieldExtensions`
     - `primitives/live-state.matchResource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

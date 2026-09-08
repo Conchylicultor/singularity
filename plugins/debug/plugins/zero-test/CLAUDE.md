@@ -27,6 +27,7 @@
     - `primitives/css/text.Text`
     - `primitives/live-state.ResourceView`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

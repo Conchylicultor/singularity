@@ -7,6 +7,7 @@ import {
   findImports,
   maskSource,
   markerCallSpans,
+  lineAt,
   type MarkerCallSpan,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { PaneDeclaration, RouteDeclaration, SourceRef } from "../../core";
@@ -295,7 +296,27 @@ function stringField(
   return lit.kind === "value" ? lit.value : null;
 }
 
-/** A top-level field's value when it is a bare identifier, else null. */
+/**
+ * A top-level field's value when it is a bare identifier, else null.
+ *
+ * An identifier that turns out to be a CALLEE is disqualified. Returning it
+ * would mint a PHANTOM reference — an inline `route: defineRoute({ … })` read
+ * back as the name `defineRoute`, which `relate()` then looks up among the
+ * plugin's routes, finds nothing for, and drops. The pane loses its id and
+ * nothing anywhere says so. A caller that wants a call's contents reads the
+ * call's own shape instead (see the inline arm of `paneDeclarationsIn`).
+ *
+ * What counts as a call is decided by `markerCallSpans`, not by a local "is the
+ * next char an open paren" test: it walks a generic argument list as a BALANCED
+ * block, so
+ * `defineRoute<{ a: () => void }>({ … })` is recognised as the call it is rather
+ * than read as the bare name `defineRoute` — the same blind spot that scanner
+ * exists to close.
+ *
+ * The shape is read off the MASK — comments already blanked to spaces — and the
+ * name is sliced from the original at the same offsets, which `maskSource`
+ * keeps 1:1.
+ */
 function identifierField(
   body: string,
   masked: string,
@@ -303,8 +324,13 @@ function identifierField(
 ): string | null {
   const at = topLevelFieldOffset(masked, field);
   if (at === null) return null;
-  const m = /^[A-Za-z_$][\w$]*/.exec(body.slice(at));
-  return m ? m[0] : null;
+  const m = /^[A-Za-z_$][\w$]*/.exec(masked.slice(at));
+  if (!m) return null;
+  const name = m[0];
+  if (markerCallSpans(masked, name).some((s) => s.identifier === at)) {
+    return null;
+  }
+  return body.slice(at, at + name.length);
 }
 
 /**
@@ -370,18 +396,57 @@ export function parseRouteDeclarations(pluginDir: string): RouteDeclaration[] {
 }
 
 /**
+ * The literal `id` of an INLINE `route: defineRoute({ id: "…" })`, or null when
+ * the `route:` value is not such a call (or its id is not a static literal).
+ *
+ * Both readers index the SAME buffer, which is what makes the exact-offset match
+ * below sound rather than lucky: `topLevelFieldOffset` returns the offset of the
+ * value's first character within `bodyMask`, and a `MarkerCallSpan.identifier` is
+ * the offset of the marker's first character in the very buffer it scanned. So
+ * the span whose `identifier` equals that offset IS this field's call, and a
+ * `defineRoute` nested deeper in the body (an `options: { route: … }` decoy)
+ * cannot collide with it — it sits at a different offset.
+ */
+function inlineRouteId(body: string, bodyMask: string): string | null {
+  const at = topLevelFieldOffset(bodyMask, "route");
+  if (at === null) return null;
+  const span = markerCallSpans(bodyMask, ROUTE_MARKER).find(
+    (s) => s.identifier === at,
+  );
+  if (!span) return null;
+  const routeBody = objectArgBody(bodyMask, body, span);
+  if (routeBody === null) return null;
+  // An id is what a pane is addressed by, so an empty one is no id at all.
+  const id = stringField(routeBody, maskSource(routeBody), "id");
+  return id ? id : null;
+}
+
+/**
  * Every `Pane.define()` in ONE source buffer, with whichever identity the call
- * spells: a literal `id:` (the legacy segment form) or a `route:` reference (the
- * route form), which `relate()` resolves to the route's own id. A call spelling
- * neither is not a pane this scanner can name, so it is dropped.
+ * spells. A `route:` naming a hoisted binding is a REFERENCE — all this half can
+ * record is which name in which module, and `relate()` resolves it to that
+ * route's own id, routinely across a plugin boundary. A `route:` holding an
+ * inline `defineRoute({ id })` needs no join at all: the id is right there on the
+ * pane declaration, so it is read straight into `id`.
+ *
+ * A call spelling neither is a pane this scanner cannot name, and that THROWS —
+ * see below. It cannot fire for a `Pane.define` written inside a string, a
+ * template literal or a comment: `markerCallSpans` scans the FULL mask, where
+ * those interiors are already blanked, so such a call yields no span and this
+ * loop never sees it.
  *
  * The pane's identity is deliberately NOT read off the imported pane object,
  * tempting though `pane._internal.id` is: all three surfaces this facet feeds —
  * the Studio Contributions table, the plugin-detail card, and the PR diff — build
  * their tree with `skipBarrelImport: true`, so the runtime half of the facet is
  * empty exactly where the id is needed.
+ *
+ * `file` is only for the error message; the scan itself needs nothing but `src`.
  */
-export function paneDeclarationsIn(src: string): PaneDeclaration[] {
+export function paneDeclarationsIn(
+  src: string,
+  file?: string,
+): PaneDeclaration[] {
   const out: PaneDeclaration[] = [];
   if (!src.includes(PANE_MARKER)) return out;
   const masked = maskSource(src);
@@ -395,12 +460,39 @@ export function paneDeclarationsIn(src: string): PaneDeclaration[] {
     if (body === null) continue;
     const bodyMask = maskSource(body);
     const pane: PaneDeclaration = { name: decl[1]! };
-    const id = stringField(body, bodyMask, "id");
-    if (id) pane.id = id;
     const routeLocal = identifierField(body, bodyMask, "route");
-    const route = routeLocal ? sourceRef(routeLocal, imports) : null;
-    if (route) pane.route = route;
-    if (pane.id || pane.route) out.push(pane);
+    if (routeLocal) {
+      const route = sourceRef(routeLocal, imports);
+      if (route) pane.route = route;
+    } else {
+      const id = inlineRouteId(body, bodyMask);
+      if (id) pane.id = id;
+    }
+    // Not a value to absorb: a pane whose identity the scanner cannot read is a
+    // pane that would silently lose its id everywhere this facet is rendered, and
+    // no check would notice — `docs/plugins-details.md` gets its pane lines from
+    // the runtime `docLabel`, so it stays green while the Studio table, the
+    // plugin-detail card and the PR diff all go blank.
+    if (!pane.id && !pane.route) {
+      const where = file
+        ? `${file}:${lineAt(src, span.identifier)}`
+        : `line ${lineAt(src, span.identifier)}`;
+      const cause = routeLocal
+        ? `its \`route: ${routeLocal}\` is a DEFAULT import (no exported name)`
+        : "it spells no identity this scanner can read";
+      throw new Error(
+        [
+          `Pane.define declared as \`${decl[1]}\` (${where}) has no readable`,
+          `pane id: ${cause}. The two readable spellings are`,
+          "`route: someRoute` — a bare identifier declared in this file or",
+          "NAMED-imported into it — and an inline `route: defineRoute({ id })`",
+          "whose id is a non-empty string literal. A computed route",
+          '(`route: makeRoute(x)`) or a built id (`id: prefix + "-x"`) is not',
+          "statically readable: hoist the route to a `const` and name it here.",
+        ].join(" "),
+      );
+    }
+    out.push(pane);
   }
   return out;
 }
@@ -412,7 +504,7 @@ export function parsePaneDeclarations(pluginDir: string): PaneDeclaration[] {
   walkFiles(join(pluginDir, "web"), files);
   for (const f of files) {
     const src = readIfExists(f);
-    if (src) out.push(...paneDeclarationsIn(src));
+    if (src) out.push(...paneDeclarationsIn(src, f));
   }
   return out;
 }

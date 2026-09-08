@@ -21,6 +21,7 @@
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `shell/notifications.toast`

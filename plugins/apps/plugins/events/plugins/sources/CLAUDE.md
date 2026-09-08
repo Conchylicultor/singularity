@@ -116,15 +116,16 @@ type does **not** import this plugin.
 
 ## Route shape
 
-`/events/sources` and `/events/sources/source/:sourceId`. The detail pane declares
-the list as `defaultAncestors` (so they sit side by side as Miller columns), and a
-pane's URL is its ancestor chain — which is why the design doc's `/events/s/:id`
-is not reachable without orphaning the list.
+`/events/sources` and `/events/sources/source/:sourceId`. `eventSourceDetailRoute`
+chains under `eventSourcesRoute` (`parent: eventSourcesRoute`), which is what
+puts them side by side as Miller columns — and a pane's URL is its route chain,
+which is why the design doc's `/events/s/:id` is not reachable without orphaning
+the list.
 
-Do not shorten `source/` to `s/`: `Pane.define` throws on a segment starting with
-a bare `:param`, and segments are matched **globally** across apps where param
-names don't disambiguate — `s/:sourceId` collides with Story's `s/:pageId`. Same
-shape as `deploy/servers`' `server/:serverId`.
+Do not shorten `source/` to `s/`: defining a pane throws on a segment starting
+with a bare `:param`, and segments are matched **globally** across apps where
+param names don't disambiguate — `s/:sourceId` collides with Story's `s/:pageId`.
+Same shape as `deploy/servers`' `server/:serverId`.
 
 Creating a source is a dialog, not a `new` sentinel route, so `:sourceId` means
 exactly one thing.
@@ -181,6 +182,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `primitives/live-state.matchResource`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

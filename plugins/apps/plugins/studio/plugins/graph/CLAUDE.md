@@ -32,6 +32,7 @@
     - `primitives/graph-canvas.GraphCanvas`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

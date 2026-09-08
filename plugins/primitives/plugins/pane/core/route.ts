@@ -228,8 +228,23 @@ export interface RouteDef<
   link(app: AppRef, params: Params): string;
 }
 
+/**
+ * `Seg` is a `const` type parameter, and that is load-bearing rather than a
+ * nicety. Written INLINE — `Pane.define({ route: defineRoute({ … }) })` — the
+ * outer call's contextual type is an unresolved `Seg` type parameter, which
+ * widens the inner `segment` literal all the way back to `string`.
+ * `RouteParams<string>` is then `{}`, so the pane silently resolves PARAMLESS:
+ * `useParams()` returns nothing and `resolve` types as FORBIDDEN on a route
+ * that plainly has a `:param`. `const` preserves the literal through the
+ * contextual type, so the inline form means what it reads as, and "paramful
+ * pane written inline with no `resolve`" becomes a compile error instead of a
+ * silently paramless pane.
+ *
+ * Nothing already written changes shape: every call site passes a literal to a
+ * `const` binding, where the literal was already inferred.
+ */
 export function defineRoute<
-  Seg extends string,
+  const Seg extends string,
   ParentParams extends Record<string, string> = {},
 >(def: {
   id: string;

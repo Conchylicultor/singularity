@@ -1,6 +1,9 @@
 import { type ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -9,13 +12,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PagesWelcome } from "./slots";
 
-const pagesRootRoute = defineRoute({
-  id: "pages-root",
-  segment: "",
-});
-
 export const pagesRootPane = Pane.define({
-  route: pagesRootRoute,
+  route: defineRoute({ id: "pages-root", segment: "" }),
   app: pagesApp,
   // The Pages app's index/landing pane — what bare `/pages` resolves to,
   // instead of the global agent-manager welcome pane. The page tree lives in

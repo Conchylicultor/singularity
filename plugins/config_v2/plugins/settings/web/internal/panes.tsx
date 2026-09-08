@@ -1,5 +1,8 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ConfigNav } from "../components/config-nav";
 import { ConfigDetail } from "../components/config-detail";

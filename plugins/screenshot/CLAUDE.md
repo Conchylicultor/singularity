@@ -27,6 +27,7 @@
     - `primitives/launch.LaunchControl`
     - `primitives/launch.LaunchRequest`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/text-editor.TextEditor`

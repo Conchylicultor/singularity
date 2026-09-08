@@ -1,5 +1,8 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import {
   WebsitePage,
@@ -7,11 +10,6 @@ import {
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { WebsiteHarness } from "./slots";
 import { HarnessQuestion } from "./components/harness-question";
-
-const harnessRoute = defineRoute({
-  id: "website-harness",
-  segment: "harness",
-});
 
 /**
  * The engineering page at `/website/harness` — the right fork of the homepage.
@@ -21,7 +19,7 @@ const harnessRoute = defineRoute({
  * so the site footer renders exactly once.
  */
 export const harnessPane = Pane.define({
-  route: harnessRoute,
+  route: defineRoute({ id: "website-harness", segment: "harness" }),
   app: websiteApp,
   actions: WebsiteHeader,
   component: HarnessBody,

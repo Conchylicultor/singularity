@@ -33,6 +33,7 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
     - `primitives/log-channels.LiveLogChannel`
     - `primitives/log-channels.LogEntryList`
     - `primitives/networking.ReconnectingEventSource`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

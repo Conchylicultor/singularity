@@ -28,6 +28,7 @@ shell never names this page.
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

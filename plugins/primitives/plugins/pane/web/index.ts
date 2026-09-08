@@ -2,6 +2,15 @@ import { Pane as PaneSlots } from "./slots";
 import { paneHeaderContributions } from "./header-slot";
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
+// A pane's identity travels WITH the pane: `Pane.define({ route: defineRoute({…}) })`
+// is one call from one barrel. `defineRoute` itself is runtime-agnostic and lives in
+// `core/` (a server plugin builds the same link from it), but a `web/` file that
+// declares a pane has no other reason to reach the core barrel — so re-exporting the
+// factory here removes the second import from every pane file. This is a re-export of
+// the plugin's OWN core, not a proxy for another plugin's symbol.
+// `pane/no-core-define-route-in-web` keeps this the single spelling inside `web/`.
+export { defineRoute } from "../core";
+
 export {
   Pane,
   type,

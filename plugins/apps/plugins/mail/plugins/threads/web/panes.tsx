@@ -8,8 +8,8 @@ import {
   Pane,
   PaneChrome,
   useOpenPane,
+  defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import {
   DataView,
   defineDataView,
@@ -24,11 +24,6 @@ import { ThreadRow } from "./components/thread-row";
 
 const MAIL_THREADS_VIEW = defineDataView("mail-threads");
 
-const mailThreadsRoute = defineRoute({
-  id: "mail-threads",
-  segment: "threads",
-});
-
 /**
  * The one mail surface: ONE url, ONE DataView, the mailboxes as its TABS.
  *
@@ -41,7 +36,7 @@ const mailThreadsRoute = defineRoute({
  * edit persists straight back into the config row.
  */
 export const mailThreadsPane = Pane.define({
-  route: mailThreadsRoute,
+  route: defineRoute({ id: "mail-threads", segment: "threads" }),
   app: mailApp,
   component: MailThreadsPaneView,
   width: 520,

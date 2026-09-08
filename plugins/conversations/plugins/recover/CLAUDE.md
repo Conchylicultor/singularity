@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
   - Exports (values): `recoveryPane`

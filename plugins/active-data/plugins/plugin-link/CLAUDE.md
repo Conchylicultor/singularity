@@ -42,6 +42,7 @@ candidate on the token forever.
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

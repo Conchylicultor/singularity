@@ -1,5 +1,4 @@
-import { Pane, type } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { Pane, type, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MailSearchBody } from "./components/mail-search-body";
@@ -24,16 +23,10 @@ export const mailSearchPane = Pane.define({
   chrome: { title: () => "Search" },
 });
 
-const mailMessageRoute = defineRoute({
-  id: "mail-message",
-  segment: "m/:messageId",
-  parent: mailSearchRoute,
-});
-
 /**
  * The reading pane for a single message. Opened to the right of a search row
- * (`mode: "push"`, `side: "right"`) with the row's envelope handed in as
- * `input` for an instant optimistic header; the body hydrates the full message
+ * (`mode: "push"`, `side: "right"`) with the row's envelope handed in as a
+ * `hint` for an instant optimistic header; the body hydrates the full message
  * lazily on mount (self-fetch by `messageId`). Static prefix `m/` before the
  * `:messageId` param satisfies the pane router's "params need a static prefix"
  * rule.
@@ -45,7 +38,11 @@ const mailMessageRoute = defineRoute({
  * `resolve: false`).
  */
 export const mailMessagePane = Pane.define({
-  route: mailMessageRoute,
+  route: defineRoute({
+    id: "mail-message",
+    segment: "m/:messageId",
+    parent: mailSearchRoute,
+  }),
   app: mailApp,
   width: 640,
   // The envelope the search row already holds, as an optimistic DISPLAY hint so

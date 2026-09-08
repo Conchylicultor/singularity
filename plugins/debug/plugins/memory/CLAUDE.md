@@ -31,6 +31,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

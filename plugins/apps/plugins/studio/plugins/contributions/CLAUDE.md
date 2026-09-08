@@ -26,6 +26,7 @@
     - `primitives/data-table.DataTable`
     - `primitives/filter-chips.FilterChip`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

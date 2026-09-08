@@ -10,8 +10,9 @@ navigates here. That is why there is no null-id branch and Delete is
 unconditional.
 
 Delete removes the config row, clears the active-composition store, and closes
-this pane. `useClose()` returns null only for a root pane; `compositionDetailPane`
-declares `defaultAncestors: [compositionsPane]` so it is never root — the
+this pane. `useClose()` returns null only for a root pane; `compositionDetailRoute`
+chains under `compositionsRoute` (`parent: compositionsRoute`), so the list is
+always to its left and it is never root — the
 `openPane(compositionsPane, …, { mode: "root" })` fallback exists to make the
 expression total, not because it is expected to fire.
 

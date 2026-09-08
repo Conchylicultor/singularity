@@ -1,6 +1,7 @@
 import ts from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { normalizeSegmentPattern } from "../core";
+import identityManifestCheck from "./identity-manifest";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -119,4 +120,7 @@ const check: Check = {
   },
 };
 
-export default check;
+// One check per file, aggregated here — the `check/` contract is `Check |
+// Check[]`, so a second invariant about panes is a sibling file, not a second
+// plugin.
+export default [check, identityManifestCheck];

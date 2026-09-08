@@ -111,6 +111,7 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/log-channels.clientLog`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

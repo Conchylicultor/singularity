@@ -121,6 +121,7 @@ measured overhead on a real worktree workload is still an open task.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

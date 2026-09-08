@@ -25,6 +25,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Input`
     - `primitives/icon-button.IconButton`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `shell/notifications.toast`

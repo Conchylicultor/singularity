@@ -45,6 +45,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `primitives/css/ui-kit.Separator`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

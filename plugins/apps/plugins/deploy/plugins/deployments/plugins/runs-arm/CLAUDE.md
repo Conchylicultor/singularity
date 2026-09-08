@@ -39,12 +39,19 @@ the one thing that must not happen to it.
 ## A deploy row opens the deployment pane
 
 `open` needs BOTH `deploy.serverId` and `deploy.deploymentId`, because
-`deploymentDetailPane` nests under the server page. It can pass both: a pane's
-params are its route's CHAINED set, so the ancestor's `serverId` is spellable
+`deploymentDetailPane` nests under the server page. It names both: a pane's
+params are its route's CHAINED set, so the ancestor's `serverId` is nameable
 from a runs row that is nowhere near the server page. Getting the deploy pane
 chain onto routes is what made this row activatable at all. Both columns are
 `NOT NULL`, so `open` throws on a null rather than returning — an impossible
 row, not a case to handle.
+
+Name both ids even though a deploy row is clicked from three hosts (the build
+button's popover, and inside the build and backup panes) and the server pane is
+in none of their routes. An open never discards a param the caller supplied — a
+relative open materializes any declared ancestor the route does not already hold
+and whose params the caller named — so `serverId` is what puts `server/<id>` in
+the URL from all three. Trimming it strands the pane without its ancestor.
 
 ## `deploy.releaseRunId` is a plain chip
 

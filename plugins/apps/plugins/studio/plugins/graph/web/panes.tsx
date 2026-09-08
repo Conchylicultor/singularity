@@ -1,17 +1,15 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { GraphView } from "./components/graph-view";
 
-const graphCanvasRoute = defineRoute({
-  id: "graph",
-  segment: "graph",
-});
-
 export const graphCanvasPane = Pane.define({
-  route: graphCanvasRoute,
+  route: defineRoute({ id: "graph", segment: "graph" }),
   app: studioApp,
   component: GraphBody,
   width: 900,

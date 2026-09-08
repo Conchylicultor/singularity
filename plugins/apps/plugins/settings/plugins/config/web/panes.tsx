@@ -1,12 +1,10 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { settingsApp } from "@plugins/apps/plugins/settings/plugins/shell/core";
 import { ConfigNav } from "@plugins/config_v2/plugins/settings/web";
-
-const settingsConfigIndexRoute = defineRoute({
-  id: "settings-config-index",
-  segment: "",
-});
 
 // The Settings app's index pane: bare `/settings` lands on the config nav.
 // It renders the same `ConfigNav` as `configNavPane` (segment "config"), so the
@@ -16,7 +14,7 @@ const settingsConfigIndexRoute = defineRoute({
 // preserves config-detail deep-link reloads, which reconstruct the nav column
 // from the URL segment.
 export const settingsConfigIndexPane = Pane.define({
-  route: settingsConfigIndexRoute,
+  route: defineRoute({ id: "settings-config-index", segment: "" }),
   app: settingsApp,
   appIndex: true,
   component: SettingsConfigIndexBody,

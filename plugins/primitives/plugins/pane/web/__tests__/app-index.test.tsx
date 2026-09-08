@@ -107,6 +107,10 @@ describe("appIndex", () => {
     const bad = Pane.define({
       route: badRoute,
       app: appA,
+      // This combination is now a TYPE error: `appIndex` is only offered on a
+      // segment-less route. The runtime assertion below is kept as defence for
+      // the untyped `AnyPane` path, so the case still has to be constructed.
+      // @ts-expect-error appIndex is `never` on a route that owns a segment
       appIndex: true,
       component: () => null,
     });

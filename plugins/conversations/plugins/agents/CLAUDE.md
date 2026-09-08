@@ -81,6 +81,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/multi-select.useMultiSelect`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

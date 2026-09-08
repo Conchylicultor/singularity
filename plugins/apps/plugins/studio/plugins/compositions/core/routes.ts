@@ -6,7 +6,7 @@ import { defineRoute } from "@plugins/primitives/plugins/pane/core";
  * this plugin's web barrel (and with it every section component and the closure
  * store). The `build` ← `debug` pair makes the same call for the same reason.
  *
- * `Pane.define({ route })` derives the pane's id / segment / defaultAncestors
+ * `Pane.define({ route })` derives the pane's id / segment / parentPaneIds
  * from these, so a link and the pane it lands on cannot drift.
  */
 export const compositionsRoute = defineRoute({

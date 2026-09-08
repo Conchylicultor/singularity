@@ -1,15 +1,12 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { DocsPane } from "./components/docs-pane";
 
-const convDocsRoute = defineRoute({
-  id: "conv-docs",
-  segment: "docs",
-});
-
 export const convDocsPane = Pane.define({
-  route: convDocsRoute,
+  route: defineRoute({
+    id: "conv-docs",
+    segment: "docs",
+  }),
   app: agentManagerApp,
   component: DocsPane,
   // Conversation-scoped satellite: promote() would strip convId from the URL.

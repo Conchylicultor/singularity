@@ -1,13 +1,11 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { websiteApp } from "../core";
 import { Website } from "./slots";
 import { WebsitePage } from "./components/website-page";
-
-const landingRoute = defineRoute({
-  id: "website-landing",
-  segment: "",
-});
 
 /**
  * The landing pane — the site's index at bare `/website`. `appIndex` marks it
@@ -32,7 +30,7 @@ const landingRoute = defineRoute({
  * top-to-bottom (intro, fork), then the site footer.
  */
 export const landingPane = Pane.define({
-  route: landingRoute,
+  route: defineRoute({ id: "website-landing", segment: "" }),
   app: websiteApp,
   appIndex: true,
   component: LandingBody,

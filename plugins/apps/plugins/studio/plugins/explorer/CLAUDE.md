@@ -43,6 +43,7 @@ never re-ran, so plugins arriving after first mount stayed collapsed.
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.HierarchyConfig`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

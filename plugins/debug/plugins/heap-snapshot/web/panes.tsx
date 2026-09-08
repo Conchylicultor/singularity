@@ -1,16 +1,17 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { HeapPanel } from "./components/heap-panel";
 
-const heapSnapshotRoute = defineRoute({
-  id: "debug-heap-snapshot",
-  segment: "heap",
-});
-
 export const heapSnapshotPane = Pane.define({
-  route: heapSnapshotRoute,
+  route: defineRoute({
+    id: "debug-heap-snapshot",
+    segment: "heap",
+  }),
   app: debugApp,
   component: HeapSnapshotBody,
 });

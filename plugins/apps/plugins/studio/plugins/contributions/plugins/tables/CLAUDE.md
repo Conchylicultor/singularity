@@ -16,6 +16,7 @@
     - `plugin-meta/contributions-table.Contributions`
     - `plugin-meta/contributions-table.defineRowClick`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (values):

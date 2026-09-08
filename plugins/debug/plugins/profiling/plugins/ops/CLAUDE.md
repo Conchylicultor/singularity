@@ -79,6 +79,7 @@ every worktree backend from writing it concurrently.
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

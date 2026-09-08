@@ -24,6 +24,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/pane.definePaneHeaderSlot`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`

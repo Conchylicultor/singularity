@@ -19,6 +19,7 @@
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

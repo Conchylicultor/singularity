@@ -1,5 +1,6 @@
 import noAdhocPaneTitle from "./no-adhoc-pane-title";
 import noAdhocPaneToolbar from "./no-adhoc-pane-toolbar";
+import noCoreDefineRouteInWeb from "./no-core-define-route-in-web";
 import noHintFabrication from "./no-hint-fabrication";
 import noRawLocationPath from "./no-raw-location-path";
 
@@ -7,7 +8,7 @@ import noRawLocationPath from "./no-raw-location-path";
  * Lint barrel for the pane rules. The root `eslint.config.ts` auto-discovers this
  * default export and registers each rule repo-wide as `error`.
  *
- * Two of the `ignores` allowlists are intentionally EMPTY (no central allowlist —
+ * Three of the `ignores` allowlists are intentionally EMPTY (no central allowlist —
  * mirrors `icon-auto/no-adhoc-slot-icon-size` and `control-size/no-adhoc-control`):
  *
  * - `no-adhoc-pane-title` is precise — it fires only on an inline `<Text variant>`
@@ -17,6 +18,11 @@ import noRawLocationPath from "./no-raw-location-path";
  *   `pick()` (a `useHint()`-sourced or `Hint<…>`-typed binding). A deliberate
  *   override escapes per-site via
  *   `// eslint-disable-next-line pane/no-hint-fabrication -- reason`.
+ * - `no-core-define-route-in-web` is precise — it fires only on the
+ *   `defineRoute` VALUE, only on the pane core barrel's cross-plugin specifier,
+ *   only in a `web/` runtime folder. The one tree that legitimately addresses
+ *   the core barrel from `web/` is the pane plugin's own, matched in-rule by
+ *   path so it needs no entry here.
  *
  * `no-adhoc-pane-toolbar` and `no-raw-location-path` carry the two non-empty
  * lists: the files that legitimately WEAR the banned signature, and the two that
@@ -27,6 +33,7 @@ export default {
   rules: {
     "no-adhoc-pane-title": noAdhocPaneTitle,
     "no-hint-fabrication": noHintFabrication,
+    "no-core-define-route-in-web": noCoreDefineRouteInWeb,
     "no-raw-location-path": noRawLocationPath,
   },
   // Class rules are FACTORIES: they read class tokens, so they take the one
@@ -45,6 +52,7 @@ export default {
       "plugins/primitives/plugins/bar/web/internal/bar.tsx",
     ],
     "no-hint-fabrication": [],
+    "no-core-define-route-in-web": [],
     "no-raw-location-path": [
       // PERMANENT — jsdom suites POINT `window.location` at a fixture URL and
       // assert on it. They are simulating the browser environment itself, not

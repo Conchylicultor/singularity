@@ -4,8 +4,11 @@ import {
   matchResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -38,40 +41,34 @@ function useResolveAgent({ id }: { id: string }) {
   return { pending: false, found: result.data.some((a) => a.id === id) };
 }
 
-const agentDetailRoute = defineRoute({
-  id: "agent-detail",
-  segment: "ag/:id",
-  parent: agentsRootRoute,
-});
-
 export const agentDetailPane = Pane.define({
-  route: agentDetailRoute,
+  route: defineRoute({
+    id: "agent-detail",
+    segment: "ag/:id",
+    parent: agentsRootRoute,
+  }),
   app: agentManagerApp,
   component: AgentDetailBody,
   width: 360,
   resolve: useResolveAgent,
 });
 
-const systemAgentDetailRoute = defineRoute({
-  id: "agent-system-detail",
-  segment: "system/:systemId",
-  parent: agentsRootRoute,
-});
-
 export const systemAgentDetailPane = Pane.define({
-  route: systemAgentDetailRoute,
+  route: defineRoute({
+    id: "agent-system-detail",
+    segment: "system/:systemId",
+    parent: agentsRootRoute,
+  }),
   app: agentManagerApp,
   component: SystemAgentDetailBody,
   resolve: false,
 });
 
-const agentSideRoute = defineRoute({
-  id: "agent-side",
-  segment: "agent/:agentId",
-});
-
 export const agentSidePane = Pane.define({
-  route: agentSideRoute,
+  route: defineRoute({
+    id: "agent-side",
+    segment: "agent/:agentId",
+  }),
   app: agentManagerApp,
   component: AgentSideBody,
   chrome: {

@@ -1,15 +1,13 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
+import {
+  Pane,
+  PaneChrome,
+  defineRoute,
+} from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { MemoryPanel } from "./components/memory-panel";
 
-const memoryRoute = defineRoute({
-  id: "debug-memory",
-  segment: "memory",
-});
-
 export const memoryPane = Pane.define({
-  route: memoryRoute,
+  route: defineRoute({ id: "debug-memory", segment: "memory" }),
   app: debugApp,
   component: MemoryBody,
 });

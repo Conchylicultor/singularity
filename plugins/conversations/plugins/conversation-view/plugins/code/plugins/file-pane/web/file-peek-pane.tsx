@@ -2,8 +2,8 @@ import {
   Pane,
   PaneChrome,
   useOpenPane,
+  defineRoute,
 } from "@plugins/primitives/plugins/pane/web";
-import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -26,13 +26,11 @@ function fileTitle(filePath: string): string {
   return path.slice(path.lastIndexOf("/") + 1);
 }
 
-const filePeekRoute = defineRoute({
-  id: "file-peek",
-  segment: "file/:worktree/:filePath*",
-});
-
 export const filePeekPane = Pane.define({
-  route: filePeekRoute,
+  route: defineRoute({
+    id: "file-peek",
+    segment: "file/:worktree/:filePath*",
+  }),
   app: agentManagerApp,
   component: FilePeekPaneBody,
   chrome: {

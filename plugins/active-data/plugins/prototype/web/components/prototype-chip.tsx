@@ -54,7 +54,7 @@ export function PrototypeChip({
             // `push` opens the mock as a column to the RIGHT of the surface
             // holding the text, so the conversation stays beside it:
             // `/agents/c/<convId>/proto/proto-…`. The pane's own
-            // `defaultAncestors` (the gallery) are not stacked — a push is
+            // `parentPaneIds` (the gallery) are not stacked — a push is
             // relative to the caller, not a fresh route.
             openPane(prototypeDetailPane, { name: id }, { mode: "push" });
           }}

@@ -17,28 +17,44 @@ process-global stamps, so this facet's answer cannot depend on what else ran bes
 ## Pane ids are a join, not a local read
 
 A `Pane.Register` contribution names a pane *variable*; the surfaces want the
-pane's **id**, and that id is not a local fact. `Pane.define({ route })` carries
-no id at all — it is on the `defineRoute()` the `route:` identifier names, which
-for 7 of the first 22 converted panes sits in a *different* plugin's `core/`. Nor
-was it local before routes: `apps/settings/accounts` registers `accountsPane`
-imported from `@plugins/auth/web`, and showed no id for years.
+pane's **id**, and that id is usually not a local fact. `Pane.define({ route })`
+carries no id of its own — it is on the `defineRoute()` behind the `route:`. When
+that route is a hoisted binding the id lives wherever the binding does, which for
+7 of the first 22 converted panes was a *different* plugin's `core/`. Nor was it
+local before routes: `apps/settings/accounts` registers `accountsPane` imported
+from `@plugins/auth/web`, and showed no id for years. The one local case is an
+INLINE `route: defineRoute({ id })`, where the route has no binding to look up
+and the whole identity sits on the pane declaration.
 
 So `extract()` records only what one plugin's own files say — `routes` (its
 `defineRoute()`s, across `core/`/`shared/`/`web/`), `panes` (its `web/`
-`Pane.define()`s, each with a literal `id:` or a `route:` reference), and
-`paneRefs` (the barrel's imports of the pane variables it registers). `relate()`
-follows those hops with the whole tree in scope, resolving a specifier via
-`resolvePluginSpecifier`; a relative specifier can only mean the referring plugin
-itself, since relative escapes into another plugin's tree are forbidden.
+`Pane.define()`s: a `route:` naming a hoisted binding is recorded as a
+*reference* for `relate()` to resolve, while a `route:` holding an inline
+`defineRoute` has its literal id read straight off), and `paneRefs` (the barrel's
+imports of the pane variables it registers). `relate()` follows those hops with
+the whole tree in scope, resolving a specifier via `resolvePluginSpecifier`; a
+relative specifier can only mean the referring plugin itself, since relative
+escapes into another plugin's tree are forbidden.
 
-Two rules the scanners must keep:
+Three rules the scanners must keep:
 
-- **Read both fields at depth 0** of the call body. A pane body nests objects
-  (`chrome: { title }`, `options: { … }`) spelling the very same keys, and a
+- **Read `route:` at depth 0** of the call body. A pane body nests objects
+  (`chrome: { title }`, `options: { … }`) spelling the very same key, and a
   first-match-at-any-depth read takes one of those as the identity, silently.
+  The inline arm matches its `defineRoute` call by exact offset for the same
+  reason — an `options: { route: defineRoute(…) }` decoy is a real call too.
 - **Never read identity off the imported pane object** (`pane._internal.id`, which
   is public and tempting). All three surfaces this facet feeds build their tree
   with `skipBarrelImport: true`, so the runtime half is empty exactly there.
+- **A `Pane.define` whose identity cannot be read THROWS**, rather than being
+  dropped. Dropping it is invisible: `docs/plugins-details.md` takes its pane
+  lines from the runtime `docLabel`, so `plugins-doc-in-sync` stays green while
+  the Studio table, the plugin-detail card and the PR diff all lose the id. The
+  two readable spellings are a bare `route:` identifier (declared in the file or
+  named-imported into it) and an inline `route: defineRoute({ id: "…" })` whose
+  id is a literal string. A `Pane.define` written inside a string, a template
+  literal or a comment is masked away before the scan and never reaches this
+  rule.
 
 `extract()` collects `{ slotId, componentName, doc }` without display names.
 `relate()` fills in `slotDisplayName` by reading from the slots facet —

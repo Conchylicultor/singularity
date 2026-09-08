@@ -22,6 +22,7 @@
     - `primitives/css/clip.Clip`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
   - Exports (values): `buildProfileDetailPane`

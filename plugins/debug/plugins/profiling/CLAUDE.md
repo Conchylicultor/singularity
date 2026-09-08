@@ -29,6 +29,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

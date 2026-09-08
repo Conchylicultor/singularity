@@ -106,6 +106,7 @@ unbounded.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/loading.Loading`
+    - `primitives/pane.defineRoute`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
