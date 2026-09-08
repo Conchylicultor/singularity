@@ -5,7 +5,7 @@ import { HookErrorView } from "./components/hook-error-view";
 export default {
   collapsed: true,
   description:
-    "Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled) as a destructive, expanded-by-default error card surfacing the failing command, exit code, and stderr.",
+    "Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled, hook_stopped_continuation) as a destructive, expanded-by-default error card surfacing the failing command, exit code, stderr, and the guard message that stopped the agent.",
   contributions: [
     JsonlViewerAttachment.Renderer({
       match: "hook_non_blocking_error",
@@ -17,6 +17,13 @@ export default {
     }),
     JsonlViewerAttachment.Renderer({
       match: "hook_cancelled",
+      component: HookErrorView,
+    }),
+    // A guard that stopped the agent mid-turn is a hook outcome the reader must
+    // not miss, so it shares this plugin's loud chrome instead of inventing a
+    // quieter one of its own.
+    JsonlViewerAttachment.Renderer({
+      match: "hook_stopped_continuation",
       component: HookErrorView,
     }),
   ],

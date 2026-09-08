@@ -271,8 +271,8 @@
         - Plugins:
           - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
-          - **`attachment`** [12 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
-          - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
+          - **`attachment`** [27 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
+          - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
           - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
           - **`event-counter`** — Displays the total event count in the conversation toolbar.
           - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.

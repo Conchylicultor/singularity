@@ -9,7 +9,7 @@
   - Contributes: `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
-    - `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`
+    - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
 

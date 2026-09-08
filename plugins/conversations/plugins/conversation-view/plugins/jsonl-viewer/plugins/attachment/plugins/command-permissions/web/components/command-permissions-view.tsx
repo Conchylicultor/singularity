@@ -14,17 +14,26 @@ export function CommandPermissionsView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label="Command Permissions"
-      note={`(${tools.length})`}
+      label="Command permissions"
+      note={`· ${tools.length} tool${tools.length === 1 ? "" : "s"}`}
     >
       {tools.length === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No permissions granted.
         </Text>
       ) : (
         <Stack as="div" gap="2xs" className="font-mono">
           {tools.map((tool) => (
-            <Text as="p" variant="caption" key={tool} className="text-muted-foreground">
+            <Text
+              as="p"
+              variant="caption"
+              key={tool}
+              className="text-muted-foreground"
+            >
               {tool}
             </Text>
           ))}

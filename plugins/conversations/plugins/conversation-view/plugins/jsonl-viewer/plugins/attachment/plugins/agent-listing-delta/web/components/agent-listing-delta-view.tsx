@@ -26,7 +26,10 @@ function parseAgents(lines: string[]): ParsedAgent[] {
       const body = line.slice(2);
       const colonIdx = body.indexOf(": ");
       if (colonIdx === -1) return { name: body, description: "" };
-      return { name: body.slice(0, colonIdx), description: body.slice(colonIdx + 2) };
+      return {
+        name: body.slice(0, colonIdx),
+        description: body.slice(colonIdx + 2),
+      };
     });
 }
 
@@ -37,33 +40,54 @@ export function AgentListingDeltaView({ event }: AttachmentRendererProps) {
   const added = agents.length || (att.addedTypes?.length ?? 0);
 
   const counts = att.isInitial
-    ? `(${added})`
-    : [added > 0 ? `+${added}` : null, removed.length > 0 ? `−${removed.length}` : null]
+    ? `${added} agent${added === 1 ? "" : "s"}`
+    : [
+        added > 0 ? `+${added}` : null,
+        removed.length > 0 ? `−${removed.length}` : null,
+      ]
         .filter(Boolean)
-        .join(" ") || "(no changes)";
+        .join(" ") || "no changes";
 
   return (
     <CollapsibleCard
-      label={att.isInitial ? "Agents Available" : "Agents Delta"}
-      note={att.isInitial ? counts : `(${counts})`}
+      label={att.isInitial ? "Agents available" : "Agents delta"}
+      note={`· ${counts}`}
     >
       {agents.length === 0 && removed.length === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No agents listed.
         </Text>
       ) : (
         <Stack as="ul" gap="2xs">
           {agents.map((agent) => (
-            <Text as="li" variant="caption" key={agent.name} className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{agent.name}</span>
+            <Text
+              as="li"
+              variant="caption"
+              key={agent.name}
+              className="text-muted-foreground"
+            >
+              <span className="font-semibold text-foreground">
+                {agent.name}
+              </span>
               {agent.description && (
                 /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from agent name within a text line; not a flex-sibling gap */
-                <span className="ml-1.5 text-muted-foreground/60">— {agent.description}</span>
+                <span className="ml-1.5 text-muted-foreground/60">
+                  — {agent.description}
+                </span>
               )}
             </Text>
           ))}
           {removed.map((name) => (
-            <Text as="li" variant="caption" key={name} className="text-muted-foreground line-through">
+            <Text
+              as="li"
+              variant="caption"
+              key={name}
+              className="text-muted-foreground line-through"
+            >
               <span className="text-destructive no-underline">−</span> {name}
             </Text>
           ))}

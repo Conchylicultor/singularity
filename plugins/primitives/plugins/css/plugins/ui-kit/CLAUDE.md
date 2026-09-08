@@ -496,6 +496,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `conversations/conversation-view/exit-menu`
     - `conversations/conversation-view/hold-and-exit`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`

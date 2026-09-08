@@ -213,11 +213,18 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
     - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+    - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
+    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+    - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+    - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+    - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+    - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/fields-card`

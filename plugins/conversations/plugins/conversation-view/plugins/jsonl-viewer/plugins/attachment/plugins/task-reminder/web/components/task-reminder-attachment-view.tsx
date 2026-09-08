@@ -37,8 +37,8 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label="Task Reminder"
-      note={`(${count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`})`}
+      label="Task reminder"
+      note={`· ${count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`}`}
     >
       {count === 0 ? (
         <Text

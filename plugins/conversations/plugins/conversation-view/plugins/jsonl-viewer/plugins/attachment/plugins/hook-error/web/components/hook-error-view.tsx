@@ -9,6 +9,10 @@ interface HookErrorPayload {
   hookEvent?: string;
   toolUseID?: string;
   content?: string;
+  /** Only `hook_stopped_continuation` carries this: the guard's explanation of
+   *  why it cut the turn short. It IS the row's content, so it takes the place
+   *  stderr holds for the command-shaped subtypes. */
+  message?: string;
   stdout?: string;
   stderr?: string;
   exitCode?: number;
@@ -16,9 +20,12 @@ interface HookErrorPayload {
   durationMs?: number;
 }
 
-// Failure counterpart to HookSuccessView: a hook command that errored, was
-// blocked, or was cancelled. Shown loud — destructive chrome, always expanded —
-// so the failure (and its stderr) is visible without a click.
+// Failure counterpart to HookSuccessView: a hook that errored, blocked, was
+// cancelled, or stopped the agent mid-turn. Shown loud — destructive chrome,
+// always expanded — so the failure (and what it said) is visible without a
+// click. `hook_stopped_continuation` belongs here rather than in a plugin of
+// its own: a guard cutting the turn short is a loud hook outcome, and splitting
+// it out would give the same family two different chromes.
 function labelFor(subtype: string): string {
   switch (subtype) {
     case "hook_non_blocking_error":
@@ -27,6 +34,8 @@ function labelFor(subtype: string): string {
       return "Hook blocked";
     case "hook_cancelled":
       return "Hook cancelled";
+    case "hook_stopped_continuation":
+      return "Hook stopped the agent";
     default:
       return "Hook error";
   }
@@ -37,15 +46,20 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
   const exitCode = att.exitCode;
   const stderr = att.stderr?.trim();
   const stdout = att.stdout?.trim();
+  const message = att.message?.trim();
   const hook = att.hookName ?? att.hookEvent;
-  const label = hook ? `${labelFor(event.subtype)} · ${hook}` : labelFor(event.subtype);
+  const label = hook
+    ? `${labelFor(event.subtype)} · ${hook}`
+    : labelFor(event.subtype);
 
   return (
     <CollapsibleCard
       error
       defaultOpen
       label={label}
-      note={typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined}
+      note={
+        typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined
+      }
     >
       <Stack as="div" gap="2xs" className="font-mono text-muted-foreground">
         {att.command && (
@@ -56,6 +70,15 @@ export function HookErrorView({ event }: AttachmentRendererProps) {
         {typeof exitCode === "number" && (
           <Text as="p" variant="caption" className="text-destructive">
             exit {exitCode}
+          </Text>
+        )}
+        {message && (
+          <Text
+            as="p"
+            variant="caption"
+            className="whitespace-pre-wrap break-words text-destructive"
+          >
+            {message}
           </Text>
         )}
         {stderr && (

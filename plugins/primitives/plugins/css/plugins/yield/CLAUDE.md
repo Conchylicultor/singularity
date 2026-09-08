@@ -68,6 +68,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
   - Imported by:
     - `apps/pages/page-tree`
     - `apps/sonata/track-mixer`
+    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/profiling/runtime`

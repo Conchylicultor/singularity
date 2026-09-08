@@ -68,7 +68,7 @@ export interface HighlightedHtmlResult {
 /**
  * Shared async-Shiki highlight effect. Folds the four near-identical
  * `getHighlighter().then(setHtml)` + cancel-flag effects (HighlightedCode,
- * RawView, CodeWithLineNumbers, CodeBlock) into one primitive. Returns
+ * RawView, CodeListing, CodeBlock) into one primitive. Returns
  * `{ html, error }`; consumers that don't distinguish errors read `html` and a
  * `null` html means "render the plain fallback".
  *
@@ -90,7 +90,7 @@ export function useHighlightedHtml(
   // component) paints the cached markup immediately — no fallback flash, same
   // string reference, so the host's `<pre>` is never rebuilt.
   const [html, setHtml] = useState<string | null>(() =>
-    cacheKey != null ? htmlCache.get(cacheKey) ?? null : null,
+    cacheKey != null ? (htmlCache.get(cacheKey) ?? null) : null,
   );
   const [error, setError] = useState<string | null>(null);
 

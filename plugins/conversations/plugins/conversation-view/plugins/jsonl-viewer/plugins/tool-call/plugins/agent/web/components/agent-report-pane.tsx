@@ -21,7 +21,7 @@ export function AgentReportPaneBody() {
 
   if (eventsResult.pending) {
     return (
-      <PaneChrome pane={agentReportPane} title="Agent Report">
+      <PaneChrome pane={agentReportPane} title="Agent report">
         <Loading />
       </PaneChrome>
     );

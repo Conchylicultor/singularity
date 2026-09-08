@@ -70,7 +70,14 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+    - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
+    - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+    - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
     - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+    - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+    - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
+    - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/code-listing`
     - `conversations/conversation-view/jsonl-viewer/tool-call`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`

@@ -24,22 +24,36 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label="Tools Delta"
-      note={counts ? `(${counts})` : "(no changes)"}
+      label="Deferred tools"
+      note={counts ? `· ${counts}` : "· no changes"}
     >
       {added === 0 && removed === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No changes.
         </Text>
       ) : (
         <Stack as="div" gap="2xs" className="font-mono">
           {att.addedNames?.map((name) => (
-            <Text as="p" variant="caption" key={name} className="text-muted-foreground">
+            <Text
+              as="p"
+              variant="caption"
+              key={name}
+              className="text-muted-foreground"
+            >
               <span className="text-success">+</span> {name}
             </Text>
           ))}
           {att.removedNames?.map((name) => (
-            <Text as="p" variant="caption" key={name} className="text-muted-foreground line-through">
+            <Text
+              as="p"
+              variant="caption"
+              key={name}
+              className="text-muted-foreground line-through"
+            >
               <span className="text-destructive no-underline">−</span> {name}
             </Text>
           ))}

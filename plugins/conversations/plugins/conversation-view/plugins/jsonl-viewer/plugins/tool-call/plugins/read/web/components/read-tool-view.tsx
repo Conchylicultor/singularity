@@ -6,7 +6,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { CodeWithLineNumbers } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
+import { CatNListing } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
 import { ReadImageView } from "./read-image-view";
 
 type ReadInput = { file_path: string; offset?: number; limit?: number };
@@ -82,10 +82,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
               filePath={file_path}
             />
           ) : (
-            <CodeWithLineNumbers
-              content={event.result.content}
-              filePath={file_path}
-            />
+            <CatNListing content={event.result.content} filePath={file_path} />
           )}
         </div>
       )}

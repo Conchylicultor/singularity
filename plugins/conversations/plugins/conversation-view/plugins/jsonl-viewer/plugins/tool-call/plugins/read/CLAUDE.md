@@ -16,7 +16,7 @@ Expanded: syntax-highlighted code block with line numbers derived from the `cat 
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`
+    - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
     - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`

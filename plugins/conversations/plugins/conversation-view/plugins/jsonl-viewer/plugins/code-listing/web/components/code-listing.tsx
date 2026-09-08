@@ -50,15 +50,19 @@ function makeLineNumberTransformer(startLine: number): ShikiTransformer {
   };
 }
 
-export function CodeWithLineNumbers({
-  content,
+/**
+ * Renders actual code (not `cat -n` output) with syntax highlighting and a
+ * line-number gutter. `startLine` is the line number of `code`'s first line.
+ */
+export function CodeListing({
+  code,
+  startLine = 1,
   filePath,
 }: {
-  content: string;
+  code: string;
+  startLine?: number;
   filePath: string;
 }) {
-  const { startLine, lines } = parseCatN(content);
-  const code = lines.join("\n");
   const dark = useDarkMode();
 
   const lang = languageForPath(filePath);
@@ -70,11 +74,18 @@ export function CodeWithLineNumbers({
     () => [makeLineNumberTransformer(startLine)],
     [startLine],
   );
-  const { html } = useHighlightedHtml(code, resolvedLang, { dark, transformers });
+  const { html } = useHighlightedHtml(code, resolvedLang, {
+    dark,
+    transformers,
+  });
 
   if (!code) {
     return (
-      <Text as="p" variant="caption" className="py-xs italic text-muted-foreground">
+      <Text
+        as="p"
+        variant="caption"
+        className="py-xs italic text-muted-foreground"
+      >
         (empty result)
       </Text>
     );
@@ -83,7 +94,11 @@ export function CodeWithLineNumbers({
   if (html === null) {
     return (
       <ContentScope>
-        <Scroll as="pre" axis="both" className="max-h-[280px] rounded-md bg-muted p-md font-mono text-caption">
+        <Scroll
+          as="pre"
+          axis="both"
+          className="max-h-[280px] rounded-md bg-muted p-md font-mono text-caption"
+        >
           <code>{code}</code>
         </Scroll>
       </ContentScope>
@@ -99,5 +114,27 @@ export function CodeWithLineNumbers({
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </ContentScope>
+  );
+}
+
+/**
+ * Renders `cat -n`-formatted tool output (`<number>\t<text>` per line) with
+ * syntax highlighting and a line-number gutter. The only place that parses the
+ * `cat -n` format — everything else is `CodeListing`.
+ */
+export function CatNListing({
+  content,
+  filePath,
+}: {
+  content: string;
+  filePath: string;
+}) {
+  const { startLine, lines } = parseCatN(content);
+  return (
+    <CodeListing
+      code={lines.join("\n")}
+      startLine={startLine}
+      filePath={filePath}
+    />
   );
 }

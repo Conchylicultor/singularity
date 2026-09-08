@@ -1406,6 +1406,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-agent-listing-delta",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/attached-file": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-attached-file",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/command-permissions": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions",
       "version": "0.0.1",
@@ -1414,12 +1418,24 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta",
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/directory-listing": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-directory-listing",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/edited-text-file": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/environment": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-environment",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/harness-nudge": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-harness-nudge",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-additional-context": {
@@ -1430,24 +1446,68 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-message": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-message",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/instructions": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-instructions",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/mcp-instructions-delta": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-mcp-instructions-delta",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/model": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-model",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/prompt-snapshot": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-prompt-snapshot",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/queued-command": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/remote-session": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-remote-session",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/session-context": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-context",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/session-mode": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-mode",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/structured-output": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-structured-output",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/team-context": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-team-context",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/tool-output-notice": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing": {
@@ -6490,27 +6550,57 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-agent-listing-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-agent-listing-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/agent-listing-delta"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-attached-file": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-attached-file@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/attached-file"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/command-permissions"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/date"],
 
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta"],
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-directory-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-directory-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/directory-listing"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/edited-text-file"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-environment": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-environment@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/environment"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-harness-nudge": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-harness-nudge@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/harness-nudge"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-additional-context"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-error"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-message": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-message@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-message"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-instructions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-instructions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/instructions"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-mcp-instructions-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-mcp-instructions-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/mcp-instructions-delta"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-model": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-model@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/model"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-prompt-snapshot": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-prompt-snapshot@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/prompt-snapshot"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/queued-command"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-remote-session": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-remote-session@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/remote-session"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/session-context"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-mode": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-session-mode@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/session-mode"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-structured-output": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-structured-output@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/structured-output"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-team-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-team-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/team-context"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-tool-output-notice@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/tool-output-notice"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing"],
 

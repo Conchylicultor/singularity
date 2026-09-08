@@ -4,12 +4,13 @@
 
 ## Plugin reference
 
-- Description: Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled) as a destructive, expanded-by-default error card surfacing the failing command, exit code, and stderr.
+- Description: Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled, hook_stopped_continuation) as a destructive, expanded-by-default error card surfacing the failing command, exit code, stderr, and the guard message that stopped the agent.
 - Web:
   - Contributes:
     - `JsonlViewerAttachment.Renderer` "hook_non_blocking_error" → `HookErrorView`
     - `JsonlViewerAttachment.Renderer` "hook_blocking_error" → `HookErrorView`
     - `JsonlViewerAttachment.Renderer` "hook_cancelled" → `HookErrorView`
+    - `JsonlViewerAttachment.Renderer` "hook_stopped_continuation" → `HookErrorView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`

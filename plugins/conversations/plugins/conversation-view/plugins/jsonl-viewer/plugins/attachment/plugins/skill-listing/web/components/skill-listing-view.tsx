@@ -24,7 +24,10 @@ function parseSkills(content: string): ParsedSkill[] {
       const body = line.slice(2);
       const colonIdx = body.indexOf(": ");
       if (colonIdx === -1) return { name: body, description: "" };
-      return { name: body.slice(0, colonIdx), description: body.slice(colonIdx + 2) };
+      return {
+        name: body.slice(0, colonIdx),
+        description: body.slice(colonIdx + 2),
+      };
     });
 }
 
@@ -34,16 +37,30 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
   const count = att.skillCount ?? skills.length;
 
   return (
-    <CollapsibleCard label="Skills Available" note={`(${count})`}>
+    <CollapsibleCard
+      label="Skills available"
+      note={`· ${count} skill${count === 1 ? "" : "s"}`}
+    >
       {skills.length === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No skills listed.
         </Text>
       ) : (
         <Stack as="ul" gap="2xs">
           {skills.map((skill) => (
-            <Text as="li" variant="caption" key={skill.name} className="text-muted-foreground">
-              <span className="font-semibold text-foreground">{skill.name}</span>
+            <Text
+              as="li"
+              variant="caption"
+              key={skill.name}
+              className="text-muted-foreground"
+            >
+              <span className="font-semibold text-foreground">
+                {skill.name}
+              </span>
               {skill.description && (
                 /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from skill name within a text line; not a flex-sibling gap */
                 <span className="ml-1.5 text-muted-foreground/60">

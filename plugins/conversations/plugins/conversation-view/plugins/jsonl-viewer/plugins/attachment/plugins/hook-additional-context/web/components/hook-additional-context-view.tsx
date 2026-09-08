@@ -17,11 +17,15 @@ export function HookAdditionalContextView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label="Hook Context"
+      label="Hook context"
       note={att.hookName ? `· ${att.hookName}` : undefined}
     >
       {items.length === 0 ? (
-        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground/60 italic"
+        >
           No context injected.
         </Text>
       ) : (

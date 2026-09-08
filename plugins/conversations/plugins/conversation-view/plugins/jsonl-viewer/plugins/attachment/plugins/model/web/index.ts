@@ -1,15 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
-import { DeferredToolsDeltaView } from "./components/deferred-tools-delta-view";
+import { ModelView } from "./components/model-view";
 
 export default {
   collapsed: true,
   description:
-    "Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.",
+    "Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      match: "deferred_tools_delta",
-      component: DeferredToolsDeltaView,
+      match: "model",
+      component: ModelView,
     }),
   ],
 } satisfies PluginDefinition;

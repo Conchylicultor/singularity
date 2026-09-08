@@ -9303,6 +9303,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
               - `conversations/conversation-view/jsonl-viewer/attachment`
               - `conversations/conversation-view/jsonl-viewer/attachment/date`
+              - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
+              - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
+              - `conversations/conversation-view/jsonl-viewer/attachment/model`
+              - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
+              - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
+              - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
+              - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/outline`
@@ -9352,7 +9359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
             - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
               - Web:
-                - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
+                - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.attached-file`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools`, `conversations.conversation-view.jsonl-viewer.attachment.directory-listing`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.environment`, `conversations.conversation-view.jsonl-viewer.attachment.harness-nudge`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-message`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.instructions`, `conversations.conversation-view.jsonl-viewer.attachment.mcp-instructions-delta`, `conversations.conversation-view.jsonl-viewer.attachment.model`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.prompt-snapshot`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.remote-session`, `conversations.conversation-view.jsonl-viewer.attachment.session-context`, `conversations.conversation-view.jsonl-viewer.attachment.session-mode`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.structured-output`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`, `conversations.conversation-view.jsonl-viewer.attachment.team-context`, `conversations.conversation-view.jsonl-viewer.attachment.tool-output-notice`
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -9363,17 +9370,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
                   - `conversations/conversation-view/jsonl-viewer/attachment/date`
-                  - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/environment`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/model`
                   - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
                   - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
                   - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
                   - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
               - Core:
                 - Exports (types):
                   - `AttachmentEvent`
@@ -9387,6 +9409,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "file" → `AttachedFileView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/code-listing.CodeListing`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                 - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
@@ -9403,12 +9433,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
-                - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
+                - **`deferred-tools`** — Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
+                      - `JsonlViewerAttachment.Renderer` "deferred_tools_record" → `DeferredToolsRecordView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                - **`directory-listing`** — Renders the directory listings the harness hands the agent: the directory and its entry count on the collapsed line, the entry names in the body.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "directory" → `DirectoryListingView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
@@ -9416,9 +9459,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes: `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
-                      - `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`
+                      - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                - **`environment`** — Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "environment" → `EnvironmentView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `primitives/css/rigid.rigidClass`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                      - `primitives/css/ui-kit.cn`
+                      - `primitives/css/yield.yieldClass`
+                - **`harness-nudge`** — Renders the one-line coaching notes the harness slips the agent mid-session — the batching reminder and the check-in reminder.
+                  - Web:
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "batching_reminder_sent" → `HarnessNudgeView`
+                      - `JsonlViewerAttachment.Renderer` "silent_turn_reminder" → `HarnessNudgeView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                 - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "hook_additional_context" → `HookAdditionalContextView`
@@ -9427,17 +9490,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
-                - **`hook-error`** — Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled) as a destructive, expanded-by-default error card surfacing the failing command, exit code, and stderr.
+                - **`hook-error`** — Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled, hook_stopped_continuation) as a destructive, expanded-by-default error card surfacing the failing command, exit code, stderr, and the guard message that stopped the agent.
                   - Web:
                     - Contributes:
                       - `JsonlViewerAttachment.Renderer` "hook_non_blocking_error" → `HookErrorView`
                       - `JsonlViewerAttachment.Renderer` "hook_blocking_error" → `HookErrorView`
                       - `JsonlViewerAttachment.Renderer` "hook_cancelled" → `HookErrorView`
+                      - `JsonlViewerAttachment.Renderer` "hook_stopped_continuation" → `HookErrorView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                - **`hook-message`** — Renders hook_system_message attachment events — a hook's informational line (a tip, a reminder) — as a calm one-line row, distinct from the loud hook-error card.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "hook_system_message" → `HookMessageView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                 - **`hook-success`** — Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "hook_success" → `HookSuccessView`
@@ -9446,6 +9516,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
+                - **`instructions`** — Renders the instructions attachment — the project instruction files (CLAUDE.md) the harness loaded at launch — as the opening-of-the-session plural twin of the nested-memory card.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "instructions" → `InstructionsView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                - **`mcp-instructions-delta`** — Renders mcp_instructions_delta attachment events — an MCP server's standing instructions entering or leaving the agent's context mid-session — in the same +/− grammar as the deferred-tools delta.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "mcp_instructions_delta" → `McpInstructionsDeltaView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                - **`model`** — Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "model" → `ModelView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
@@ -9455,6 +9550,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `primitives/css/scroll.Scroll`
                       - `primitives/css/text.Text`
+                - **`prompt-snapshot`** — Renders the snapshot of the exact system prompt an agent was given: its size and tool count on the collapsed line, the prompt sections and the tool names (never their descriptions) in the body.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "prompt_snapshot" → `PromptSnapshotView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/cluster.Cluster`
+                      - `primitives/css/fill.Fill`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
                 - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "queued_command" → `QueuedCommandAttachmentView`
@@ -9462,12 +9568,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/fields-card.FieldsCard`
                       - `conversations/conversation-view/jsonl-viewer/queued-prompt-card.QueuedPromptCard`
+                - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "remote_session_change" → `RemoteSessionView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                - **`session-context`** — Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "session_context" → `SessionContextView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/scroll.Scroll`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                - **`session-mode`** — Renders the attachments that announce the rules the session runs under from here on — auto mode and its switches, entering and leaving plan mode, and ultracode.
+                  - Web:
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "auto_mode" → `SessionModeView`
+                      - `JsonlViewerAttachment.Renderer` "plan_mode" → `SessionModeView`
+                      - `JsonlViewerAttachment.Renderer` "plan_mode_exit" → `SessionModeView`
+                      - `JsonlViewerAttachment.Renderer` "ultra_effort_enter" → `SessionModeView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                 - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/spacing.Stack`
+                      - `primitives/css/text.Text`
+                - **`structured-output`** — Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "structured_output" → `StructuredOutputView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                      - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                 - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
@@ -9481,7 +9622,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
                       - `primitives/css/ui-kit.cn`
-            - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
+                - **`team-context`** — Renders the team_context attachment — the harness telling the agent which teammate it is, and in which session team.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "team_context" → `TeamContextView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+                - **`tool-output-notice`** — Renders the harness's notes about a tool's output — a Read that came back partial, and a Bash command whose output only the agent saw.
+                  - Web:
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "read_truncation_notice" → `ToolOutputNoticeView`
+                      - `JsonlViewerAttachment.Renderer` "bash_output_audience_note" → `ToolOutputNoticeView`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
+                      - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
+            - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
               - Web:
                 - Uses:
                   - `primitives/css/scroll.Scroll`
@@ -9491,9 +9646,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/syntax-highlight.SHIKI_LANGS`
                   - `primitives/syntax-highlight.useDarkMode`
                   - `primitives/syntax-highlight.useHighlightedHtml`
-                - Exports (values): `CodeWithLineNumbers`
+                - Exports (values):
+                  - `CatNListing`
+                  - `CodeListing`
               - Cross-plugin:
                 - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
             - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
@@ -9521,14 +9679,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
                   - `conversations/conversation-view/jsonl-viewer/attachment`
                   - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-                  - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/environment`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
                   - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
                   - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
                   - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
                   - `conversations/conversation-view/jsonl-viewer/fields-card`
                   - `conversations/conversation-view/jsonl-viewer/meta-prompt`
@@ -9573,8 +9739,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `toRelativePath`
               - Cross-plugin:
                 - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/environment`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
                   - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
                   - `conversations/conversation-view/jsonl-viewer/task-notification`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/edit`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
@@ -9925,7 +10096,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses:
                       - `conversations.useConversationById`
                       - `conversations/conversation-view.conversationPane`
-                      - `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`
+                      - `conversations/conversation-view/jsonl-viewer/code-listing.CatNListing`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
@@ -22066,6 +22237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/explorer/membership`
               - `apps/studio/graph`
               - `config_v2/fields`
+              - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `conversations/conversation-view/prompt-templates`
@@ -22317,6 +22489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
@@ -22941,6 +23114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/docs-button`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
@@ -23102,7 +23276,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+              - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
+              - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+              - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+              - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+              - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
+              - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/tool-call`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
@@ -23324,11 +23505,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-              - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+              - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+              - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
+              - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+              - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+              - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
+              - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+              - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+              - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
@@ -23817,12 +24005,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment`
               - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-              - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+              - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+              - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
+              - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+              - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+              - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+              - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
+              - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+              - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/code-listing`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
@@ -24309,6 +24504,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/exit-menu`
               - `conversations/conversation-view/hold-and-exit`
               - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/fields-card`
@@ -24572,6 +24768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/pages/page-tree`
               - `apps/sonata/track-mixer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/profiling/runtime`

@@ -29,6 +29,20 @@ in the jsonl-viewer (and conversation-view) subtree. Note: `capitalize` for
 title-casing a model name (`sonnet` → `Sonnet`) is fine — only `uppercase` is
 banned.
 
+**Label copy is sentence case, not Title Case.** `Session context`, `Deferred
+tools`, `Skills available` — capitalise the first word and proper nouns, nothing
+else. Title Case (`Skills Available`, `Task Reminder`) reads as a heading in a
+document rather than as a line in a conversation, and a transcript scrolled past
+at speed is a column of such labels: mixed casing across neighbouring rows is the
+thing the reader notices instead of the content. The same applies to a card's
+`note` and to an `EventLine`'s label.
+
+**A card's `note` is a middot-led suffix naming what it counted** — `· 3 files`,
+`· 26 skills`, `· +34`, `· no changes` — never a bare parenthesised number. The
+collapsed rows stack into one column, and the reader is scanning that column for
+which row to open: `(6)` makes them open the row to find out six of what, while
+`· 6 agents` answers it in place.
+
 **Never render an event's timestamp inline in your row.** Every event is wrapped
 by `EventRow`, which already contributes the shared `TimestampAction`
 (`JsonlRowActions.Item` id `"timestamp"`) — a hover-only chip showing the
@@ -169,6 +183,13 @@ back.
     - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
     - `conversations/conversation-view/jsonl-viewer/attachment`
     - `conversations/conversation-view/jsonl-viewer/attachment/date`
+    - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
+    - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
+    - `conversations/conversation-view/jsonl-viewer/attachment/model`
+    - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
+    - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
+    - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
+    - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
     - `conversations/conversation-view/jsonl-viewer/outline`
@@ -191,7 +212,7 @@ back.
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
   - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
-  - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
+  - **`code-listing`** — Renders code with syntax highlighting and a line-number gutter. `CodeListing` takes actual code; `CatNListing` is the `cat -n` entry point, for callers whose content is literally `cat -n` tool output.
   - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional interactive sibling aside (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className. Pure chrome — it depends on no domain component.
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
   - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.

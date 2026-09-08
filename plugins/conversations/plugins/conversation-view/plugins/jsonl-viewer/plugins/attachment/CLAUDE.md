@@ -6,7 +6,7 @@
 
 - Description: Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
 - Web:
-  - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
+  - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.attached-file`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools`, `conversations.conversation-view.jsonl-viewer.attachment.directory-listing`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.environment`, `conversations.conversation-view.jsonl-viewer.attachment.harness-nudge`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-message`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.instructions`, `conversations.conversation-view.jsonl-viewer.attachment.mcp-instructions-delta`, `conversations.conversation-view.jsonl-viewer.attachment.model`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.prompt-snapshot`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.remote-session`, `conversations.conversation-view.jsonl-viewer.attachment.session-context`, `conversations.conversation-view.jsonl-viewer.attachment.session-mode`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.structured-output`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`, `conversations.conversation-view.jsonl-viewer.attachment.team-context`, `conversations.conversation-view.jsonl-viewer.attachment.tool-output-notice`
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -17,33 +17,63 @@
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
     - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
     - `conversations/conversation-view/jsonl-viewer/attachment/date`
-    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools`
+    - `conversations/conversation-view/jsonl-viewer/attachment/directory-listing`
     - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
+    - `conversations/conversation-view/jsonl-viewer/attachment/environment`
+    - `conversations/conversation-view/jsonl-viewer/attachment/harness-nudge`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
+    - `conversations/conversation-view/jsonl-viewer/attachment/hook-message`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-success`
+    - `conversations/conversation-view/jsonl-viewer/attachment/instructions`
+    - `conversations/conversation-view/jsonl-viewer/attachment/mcp-instructions-delta`
+    - `conversations/conversation-view/jsonl-viewer/attachment/model`
     - `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`
+    - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
     - `conversations/conversation-view/jsonl-viewer/attachment/queued-command`
+    - `conversations/conversation-view/jsonl-viewer/attachment/remote-session`
+    - `conversations/conversation-view/jsonl-viewer/attachment/session-context`
+    - `conversations/conversation-view/jsonl-viewer/attachment/session-mode`
     - `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`
+    - `conversations/conversation-view/jsonl-viewer/attachment/structured-output`
     - `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+    - `conversations/conversation-view/jsonl-viewer/attachment/team-context`
+    - `conversations/conversation-view/jsonl-viewer/attachment/tool-output-notice`
 - Core:
   - Exports (types):
     - `AttachmentEvent`
     - `AttachmentRendererProps`
 - Sub-plugins:
   - **`agent-listing-delta`** — Renders agent-listing-delta attachment events showing which agent types are available (or added/removed) for the Agent tool.
+  - **`attached-file`** — Renders a file the user attached to their message: a pasted image shown inline at its own aspect with a small/large toggle, or a text file as a syntax-highlighted listing behind its path.
   - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
   - **`date`** — Renders the harness calendar-date attachments — the routine date stamp and the mid-conversation date change — across both the current `date` spelling and the legacy `date_change` one.
-  - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
+  - **`deferred-tools`** — Renders both spellings of the deferred-tool roster: the full deferred_tools_record listing and the deferred_tools_delta showing tools becoming available or removed mid-session.
+  - **`directory-listing`** — Renders the directory listings the harness hands the agent: the directory and its entry count on the collapsed line, the entry names in the body.
   - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
+  - **`environment`** — Renders the environment attachment — where the agent is running — as either the opening snapshot or, when the harness reports changes, the fields that moved with their from → to values.
+  - **`harness-nudge`** — Renders the one-line coaching notes the harness slips the agent mid-session — the batching reminder and the check-in reminder.
   - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
-  - **`hook-error`** — Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled) as a destructive, expanded-by-default error card surfacing the failing command, exit code, and stderr.
+  - **`hook-error`** — Renders hook-failure attachment events (hook_non_blocking_error, hook_blocking_error, hook_cancelled, hook_stopped_continuation) as a destructive, expanded-by-default error card surfacing the failing command, exit code, stderr, and the guard message that stopped the agent.
+  - **`hook-message`** — Renders hook_system_message attachment events — a hook's informational line (a tip, a reminder) — as a calm one-line row, distinct from the loud hook-error card.
   - **`hook-success`** — Renders hook_success attachment events: the execution record of a hook command (which hook, exit code, duration), surfacing stderr/non-zero exits.
+  - **`instructions`** — Renders the instructions attachment — the project instruction files (CLAUDE.md) the harness loaded at launch — as the opening-of-the-session plural twin of the nested-memory card.
+  - **`mcp-instructions-delta`** — Renders mcp_instructions_delta attachment events — an MCP server's standing instructions entering or leaving the agent's context mid-session — in the same +/− grammar as the deferred-tools delta.
+  - **`model`** — Renders the model attachment — which model the harness put behind the session — as a one-line row naming the model, its exact id, and its knowledge cutoff.
   - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
+  - **`prompt-snapshot`** — Renders the snapshot of the exact system prompt an agent was given: its size and tool count on the collapsed line, the prompt sections and the tool names (never their descriptions) in the body.
   - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
+  - **`remote-session`** — Renders the remote_session_change attachment — the conversation became followed from claude.ai — as a one-line row linking out to the session.
+  - **`session-context`** — Renders the session-context attachment — the ambient briefing blocks (user identity, git status, …) the harness injected at launch — as one collapsed card with a section per block.
+  - **`session-mode`** — Renders the attachments that announce the rules the session runs under from here on — auto mode and its switches, entering and leaving plan mode, and ultracode.
   - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
+  - **`structured-output`** — Renders the schema-shaped result a subagent returned: its headline field on the collapsed line, and a readable one-level reading of the arbitrary result object in the body.
   - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
+  - **`team-context`** — Renders the team_context attachment — the harness telling the agent which teammate it is, and in which session team.
+  - **`tool-output-notice`** — Renders the harness's notes about a tool's output — a Read that came back partial, and a Bash command whose output only the agent saw.
 
 <!-- AUTOGENERATED:END -->
