@@ -15,6 +15,13 @@ export interface HookInput {
    * state between sessions or loses it within one.
    */
   session_id?: string;
+  /**
+   * The file Claude Code is writing this session's transcript to. Carries the
+   * harness's own messages to the agent — notably a background task's
+   * completion notification, which is the only authority on whether that task
+   * is still running. See `GuardContext.readTranscript`.
+   */
+  transcript_path?: string;
 }
 
 function matches(g: Guard["matcher"], tool: string): boolean {
@@ -63,6 +70,7 @@ export async function runHook(
     cwd,
     input.session_id || "unknown",
     options.writableDataDirs,
+    input.transcript_path,
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 

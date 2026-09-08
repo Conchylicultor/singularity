@@ -297,6 +297,16 @@ export interface WindowEntry {
   t: number;
   /** Subjects watched by that call. */
   s: WatchSubject[];
+  /**
+   * Newest mtime among the local files that call named, as of that call.
+   *
+   * What makes "is it still being written to" an exact question rather than a
+   * timing guess: if every look in the window saw the same mtime, nothing
+   * appended between the first look and this one. Absent when the command named
+   * no file, named one that did not exist, or named an empty one — none of
+   * which is evidence that a finished artefact is being read.
+   */
+  m?: number;
 }
 
 /** Calls remembered. Long enough to span a loop that interleaves other work. */

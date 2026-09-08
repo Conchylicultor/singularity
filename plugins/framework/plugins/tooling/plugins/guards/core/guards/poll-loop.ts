@@ -1,9 +1,12 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import { parseArgv } from "../argv";
 import { defineGuard } from "../define-guard";
 import type { Denial, Inform } from "../define-guard";
+import { parseShell } from "../parse-shell";
+import { readTaskReport } from "../task-reports";
 import {
   classify,
   detectPoll,
@@ -53,11 +56,21 @@ function loadState(path: string): State {
  * Is the thing being watched still running? Decides whether a repeated look is
  * a wait (deny — something else will wake you) or forensics on a finished op
  * (allow — reading a completed build's log four times is legitimate work).
+ *
+ * Every arm here is a LIVENESS state. There used to be a `harness-task` arm as
+ * well, which was a category rather than a state, and it sat first in the walk
+ * below — so a background task could never reach `finished` no matter how long
+ * ago it had ended. Twenty of the 36 denials in a 30-day corpus were that arm
+ * firing on a task the harness had already reported, most within a minute of
+ * the notification: an agent mining a finished run's output, told it would be
+ * "re-invoked when it exits" by something it had already been woken by. What
+ * makes a harness task special is that its liveness has an authority to consult
+ * (`readTaskReport`) and that its wake-up is automatic (`wakesYou`), not that
+ * it is exempt from the question.
  */
 type Liveness =
-  | { kind: "harness-task"; id: string }
-  | { kind: "running"; what: string }
-  | { kind: "finished"; what: string; verdict: string }
+  | { kind: "running"; what: string; wakesYou: boolean }
+  | { kind: "finished"; verdict: string }
   | { kind: "unknown" };
 
 interface RawReceipt {
@@ -104,34 +117,129 @@ function receiptLiveness(worktree: string): Liveness {
     if (err instanceof SyntaxError) return { kind: "unknown" };
     throw err;
   }
-  const what = `the build in ${worktree}`;
+  const what = `The build in ${worktree}`;
   // `running` with a dead pid means killed before it could rewrite the receipt —
   // still finished, just without a verdict of its own.
   if (raw.status === "running") {
     return raw.pid != null && pidAlive(raw.pid)
       ? {
           kind: "running",
-          what: `${what}${minutesSince(raw.startedAt)}, pid ${raw.pid}`,
+          what: `${what}${minutesSince(raw.startedAt)}, pid ${raw.pid},`,
+          wakesYou: false,
         }
       : {
           kind: "finished",
-          what,
-          verdict:
-            "interrupted — the build process died without writing a verdict",
+          verdict: `${what} was interrupted — the build process died without writing a verdict`,
         };
   }
   if (raw.status == null) return { kind: "unknown" };
   return {
     kind: "finished",
-    what,
-    verdict: `${raw.status}${raw.exitCode != null ? ` (exit ${raw.exitCode})` : ""}`,
+    verdict: `${what} finished: ${raw.status}${raw.exitCode != null ? ` (exit ${raw.exitCode})` : ""}`,
   };
 }
 
-function livenessOf(subjects: WatchSubject[]): Liveness {
+/**
+ * A background task's liveness, from the only thing that knows it: whether the
+ * harness has written its completion notification into the transcript.
+ */
+function taskLiveness(ctx: GuardContext, id: string): Liveness {
+  const what = `Background task ${id}`;
+  const report = readTaskReport(ctx.readTranscript(), id);
+  switch (report.kind) {
+    case "reported":
+      return {
+        kind: "finished",
+        verdict: `the harness reported ${id} ${report.status} — the notification you were told to wait for has already arrived`,
+      };
+    case "no-report":
+    // No notification is the definition of "has not finished".
+    case "unreadable":
+      // Not knowing is not the same as still running, but the honest fallback
+      // is the behaviour that predates the transcript read: its message ("you
+      // will be re-invoked when it exits") is true of a task yet to report.
+      return { kind: "running", what, wakesYou: true };
+  }
+}
+
+/**
+ * Newest mtime among the files a command actually reads, recorded at every look
+ * so `unchangedAcross` can compare them.
+ *
+ * `undefined` is not a timestamp that failed to be read — it is "this look is
+ * no evidence about a static file": the command read no file at all, or read
+ * one that does not exist yet (waiting for a file to APPEAR is the pathological
+ * loop, not forensics) or is still empty (an empty output is not a result).
+ *
+ * ## Why a non-existent operand is skipped, not disqualifying
+ *
+ * `argv.ts` models the commands that WRITE, so a reader nobody modelled falls
+ * through to the default grammar where every non-flag token is an operand —
+ * `grep -c "sub-ack" app.jsonl` names a file called `sub-ack`, `jq '.result' f`
+ * one called `.result`. That over-collection is the safe direction for a guard
+ * asking "what might this command clobber", and the wrong one here.
+ *
+ * Skipping what does not resolve is not the same guess in reverse. A write
+ * guard must never MISS a target, so it takes every candidate; this one must
+ * never INVENT a file, and a token naming nothing on disk is not a file the
+ * command read — a fact, not an inference. What the two share is that neither
+ * builds a path itself: both read the operands `parseArgv` resolved.
+ */
+function namedFilesMtime(cmd: string): number | undefined {
+  const paths = parseShell(cmd).calls.flatMap((call) =>
+    parseArgv(call).files.flatMap((f) => (f.kind === "local" ? [f.path] : [])),
+  );
+
+  let newest: number | undefined;
+  for (const path of paths) {
+    let stat;
+    try {
+      stat = statSync(path);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code == null) throw err;
+      continue; // a pattern, a jq filter, or a file not written yet
+    }
+    if (!stat.isFile() || stat.size === 0) continue;
+    newest = Math.max(newest ?? 0, stat.mtimeMs);
+  }
+  return newest;
+}
+
+/**
+ * Is anything still writing to what this command reads?
+ *
+ * The answer for a subject with no authority of its own to consult — a log
+ * channel, a build log. Every look in this loop saw the same mtime, so nothing
+ * appended between the first and this one: the looks are questions about a file
+ * that stopped changing, not waits for it to change.
+ *
+ * Comparing the RECORDED mtimes rather than one mtime against the window's
+ * start is what makes this exact. A file written moments before the first look
+ * is older than that look, yet a live log appended to between looks is too if
+ * the looks come fast enough — either way the timestamps only bracket the
+ * question. Equality across the looks answers it outright and needs no margin.
+ */
+function unchangedAcross(
+  looks: WindowEntry[],
+  now: number | undefined,
+): Liveness {
+  if (now === undefined || looks.length === 0) return { kind: "unknown" };
+  if (!looks.every((e) => e.m === now)) return { kind: "unknown" };
+  return {
+    kind: "finished",
+    verdict: "nothing has written to it since your first look",
+  };
+}
+
+function livenessOf(
+  subjects: WatchSubject[],
+  ctx: GuardContext,
+  looks: WindowEntry[],
+  mtime: number | undefined,
+): Liveness {
   for (const s of subjects) {
     if (s.startsWith("task:"))
-      return { kind: "harness-task", id: s.slice("task:".length) };
+      return taskLiveness(ctx, s.slice("task:".length));
   }
   for (const s of subjects) {
     if (s.startsWith("receipt:build:")) {
@@ -142,22 +250,25 @@ function livenessOf(subjects: WatchSubject[]): Liveness {
       const pid = Number(s.slice("pid:".length));
       if (Number.isFinite(pid)) {
         return pidAlive(pid)
-          ? { kind: "running", what: `pid ${pid}` }
-          : {
-              kind: "finished",
-              what: `pid ${pid}`,
-              verdict: "the process has exited",
-            };
+          ? { kind: "running", what: `Process ${pid}`, wakesYou: false }
+          : { kind: "finished", verdict: `pid ${pid} has exited` };
       }
     }
   }
-  return { kind: "unknown" };
+  return unchangedAcross(looks, mtime);
 }
 
 /* -------------------------------------------------------------------- message */
 
+/**
+ * `finished` is excluded rather than handled: a thing that has stopped changing
+ * is never a reason to block, and `check` turns it into an `inform` before it
+ * gets here. This used to be a fourth arm that nothing could reach — dead
+ * prose that read as though the guard blocked finished ops too. As a type it
+ * cannot rot: routing a `finished` liveness into a denial is a `tsc` error.
+ */
 function denialFor(
-  liveness: Liveness,
+  liveness: Exclude<Liveness, { kind: "finished" }>,
   subjects: WatchSubject[],
   fatal: boolean,
 ): Denial {
@@ -168,24 +279,18 @@ function denialFor(
   };
 
   switch (liveness.kind) {
-    case "harness-task":
-      return {
-        ...base,
-        why: `Background task ${liveness.id} is tracked by the harness. When it exits you are re-invoked automatically with its output — that is what "You will be notified when it completes" meant.`,
-        hint: "END YOUR TURN now. Do not check the task again; there is nothing to see until it finishes, and you will be woken when it does.",
-      };
     case "running":
-      return {
-        ...base,
-        why: `${liveness.what} is still running. Watching it costs a turn per look and changes nothing.`,
-        hint: "END YOUR TURN. If this op is one of your own background tasks you will be re-invoked when it finishes. If it is not, say so to the user rather than waiting on it.",
-      };
-    case "finished":
-      return {
-        ...base,
-        why: `${liveness.what} is already finished: ${liveness.verdict}. You are watching something that has stopped changing.`,
-        hint: "Read the result once and act on it. Do not look again.",
-      };
+      return liveness.wakesYou
+        ? {
+            ...base,
+            why: `${liveness.what} has not reported in yet, and it is tracked by the harness. When it exits you are re-invoked automatically with its output — that is what "You will be notified when it completes" meant.`,
+            hint: "END YOUR TURN now. Do not check the task again; there is nothing to see until it finishes, and you will be woken when it does.",
+          }
+        : {
+            ...base,
+            why: `${liveness.what} is still running. Watching it costs a turn per look and changes nothing.`,
+            hint: "END YOUR TURN. If this op is one of your own background tasks you will be re-invoked when it finishes. If it is not, say so to the user rather than waiting on it.",
+          };
     case "unknown":
       return {
         ...base,
@@ -234,29 +339,31 @@ export const pollLoopGuard = defineGuard<BashInput>({
     if (kind === "neutral") return null;
 
     const subjects = watchSubjects(cmd);
+    // Recorded on EVERY look, not only on a trip: the question `unchangedAcross`
+    // answers is what the file looked like at each earlier look, which cannot be
+    // reconstructed after the fact.
+    const mtime = namedFilesMtime(cmd);
+    const entry: WindowEntry = { t: now, s: subjects, m: mtime };
     const { repeated, tripped } = detectPoll(subjects, state.window, now);
 
     if (!tripped) {
-      state.window = pruneWindow(
-        [...state.window, { t: now, s: subjects }],
-        now,
-      );
+      state.window = pruneWindow([...state.window, entry], now);
       writeFileSync(path, JSON.stringify(state));
       return null;
     }
 
-    const liveness = livenessOf(subjects);
+    const looks = pruneWindow(state.window, now).filter((e) =>
+      e.s.some((s) => repeated.includes(s)),
+    );
+    const liveness = livenessOf(subjects, ctx, looks, mtime);
 
     // Forensics on something already finished is legitimate — answer the
     // question instead of blocking it, and let the window keep filling.
     if (liveness.kind === "finished") {
-      state.window = pruneWindow(
-        [...state.window, { t: now, s: subjects }],
-        now,
-      );
+      state.window = pruneWindow([...state.window, entry], now);
       writeFileSync(path, JSON.stringify(state));
       return {
-        inform: `You have now looked at ${repeated.join(", ")} ${THRESHOLD} times. It is finished: ${liveness.verdict}. Nothing further will change — read the result and move on.`,
+        inform: `You have now looked at ${repeated.join(", ")} ${THRESHOLD} times, and it is no longer changing — ${liveness.verdict}. Read what you have and move on.`,
       };
     }
 

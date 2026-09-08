@@ -8,7 +8,10 @@ export type {
   Verdict,
   ToolMatcher,
   FileHint,
+  TranscriptRead,
 } from "./types";
+export { readTaskReport } from "./task-reports";
+export type { TaskReport } from "./task-reports";
 export { defineGuard } from "./define-guard";
 export { MODULE_EXTENSION } from "./module-extension";
 export { parseShell } from "./parse-shell";

@@ -8,6 +8,18 @@ export type DenyVerdict = { kind: "deny"; reason: string; fatal?: boolean };
 export type InformVerdict = { kind: "inform"; context: string };
 export type Verdict = AllowVerdict | DenyVerdict | InformVerdict;
 
+/**
+ * The session transcript, or the reason there isn't one.
+ *
+ * A discriminated result rather than `string | undefined`, because the two
+ * outcomes lead to opposite verdicts: "the harness has not reported that task
+ * finished" is grounds to block a wait, "I could not look" is not. An absent
+ * transcript read as empty text is indistinguishable from a transcript that
+ * mentions nothing, which is exactly the confusion this type removes.
+ */
+export type TranscriptRead =
+  { kind: "read"; text: string } | { kind: "unavailable"; why: string };
+
 export type ToolMatcher =
   "Bash" | "Write" | "Edit" | "Read" | "NotebookEdit" | "Agent";
 
@@ -34,6 +46,19 @@ export interface GuardContext {
    * today, including under a `SINGULARITY_DIR` override.
    */
   writableDataDirs: readonly string[];
+  /**
+   * This session's transcript as the harness has written it so far — the only
+   * record of what the harness has TOLD the agent, which is where a background
+   * task's completion notification lives.
+   *
+   * A capability, not the `transcript_path` string off the payload. A guard
+   * holding the path would have to remember that the field can be missing, that
+   * the file can be huge, and that a failed read must not read as "the harness
+   * said nothing" — the mistake that made every look at a finished task's
+   * output count as a poll. Reading is lazy: callers ask only once a rule has
+   * already tripped, so the common path pays nothing.
+   */
+  readTranscript(): TranscriptRead;
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

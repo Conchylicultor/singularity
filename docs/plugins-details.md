@@ -15914,7 +15914,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `KnownCommand`
               - `ParsedArgv`
               - `PollDecision`
+              - `TaskReport`
               - `ToolMatcher`
+              - `TranscriptRead`
               - `Verdict`
               - `WatchSubject`
               - `WindowEntry`
@@ -15927,6 +15929,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `MODULE_EXTENSION`
               - `parseArgv`
               - `parseShell`
+              - `readTaskReport`
               - `redirectionTargets`
               - `THRESHOLD`
               - `watchSubjects`

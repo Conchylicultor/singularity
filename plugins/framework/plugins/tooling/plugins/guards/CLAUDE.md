@@ -39,6 +39,22 @@ lint plugin) keeps it fixed: inside `core/guards/`, importing a value from
 - **`ln` over-blocks.** `ln -s <main>/a b` is denied even though `ln` only writes
   the link name. Narrowing it is a semantic change, not a parsing fix.
 
+## A block is a claim about the world, so check it
+
+`poll-loop` blocks on the grounds that *something else will wake you* — true
+only while the watched thing is still running. So `Liveness` holds STATES only,
+and every subject kind answers the question: a receipt is read, a pid gets
+`kill -0`, a background task's completion notification is looked up in the
+session transcript, a plain file is compared against the mtime each earlier look
+recorded. Adding a subject kind means giving it an answer, not an arm exempting
+it — an exempt category here is what let a finished task be told for an hour
+that it would be "re-invoked when it exits".
+
+`readTranscript()` is a capability on the context, not the payload's
+`transcript_path`, and `readTaskReport` returns `unreadable` distinctly from
+`no-report`: "the harness has not said it finished" justifies a block, "I could
+not look" does not.
+
 ## Measuring, not asserting
 
 `e2e/replay-transcripts.ts` runs the guards over recorded transcripts and reports
@@ -69,7 +85,9 @@ can blind or deafen all of them at once.
     - `KnownCommand`
     - `ParsedArgv`
     - `PollDecision`
+    - `TaskReport`
     - `ToolMatcher`
+    - `TranscriptRead`
     - `Verdict`
     - `WatchSubject`
     - `WindowEntry`
@@ -82,6 +100,7 @@ can blind or deafen all of them at once.
     - `MODULE_EXTENSION`
     - `parseArgv`
     - `parseShell`
+    - `readTaskReport`
     - `redirectionTargets`
     - `THRESHOLD`
     - `watchSubjects`

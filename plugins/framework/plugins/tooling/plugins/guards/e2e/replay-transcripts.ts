@@ -33,6 +33,7 @@ import {
 } from "../core/poll-detect";
 import { createContext } from "../core/context";
 import { parseShell } from "../core/parse-shell";
+import { readTaskReport } from "../core/task-reports";
 import { backgroundOpsGuard } from "../core/guards/background-ops";
 import { findGuard } from "../core/guards/find";
 import { gitPushGuard } from "../core/guards/git-push";
@@ -106,6 +107,55 @@ interface SessionResult {
   /** Observational calls the agent still made after the guard would have stopped it. */
   prevented: number;
   observations: number;
+  /**
+   * For a trip on a background task: had the harness already announced that the
+   * task ended, at the moment of the trip? `reported` means the guard now
+   * answers with an inform instead of a block — the agent was reading a
+   * finished run's output, not waiting for it.
+   */
+  taskReport: "reported" | "no-report" | "not-a-task";
+}
+
+/** One transcript line with the instant it was written. */
+interface Record {
+  ts: number;
+  line: string;
+}
+
+function readRecords(file: string): Record[] {
+  const out: Record[] = [];
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    if (!line) continue;
+    const m = /"timestamp":"([^"]+)"/.exec(line);
+    out.push({ ts: m ? Date.parse(m[1]!) || 0 : 0, line });
+  }
+  return out;
+}
+
+/**
+ * What `readTaskReport` would have answered at the instant of the trip — the
+ * transcript as it stood then, not as it stands now.
+ *
+ * The liveness arms are otherwise out of scope here (see the file header): they
+ * read filesystem state a historical session no longer has. A harness task is
+ * the exception, because its liveness lives in the transcript this tool already
+ * replays, so this arm's effect is measurable rather than asserted.
+ */
+function taskReportAt(
+  records: Record[],
+  subjects: string[],
+  at: number,
+): SessionResult["taskReport"] {
+  const id = subjects
+    .find((s) => s.startsWith("task:") && s !== "task:harness")
+    ?.slice("task:".length);
+  if (!id) return "not-a-task";
+  const text = records
+    .filter((r) => r.ts !== 0 && r.ts <= at)
+    .map((r) => r.line)
+    .join("\n");
+  const report = readTaskReport({ kind: "read", text }, id);
+  return report.kind === "reported" ? "reported" : "no-report";
 }
 
 function parseArgs(argv: string[]): {
@@ -157,11 +207,15 @@ function readToolCalls(file: string): ToolCall[] {
   return calls;
 }
 
-function replay(calls: ToolCall[]): Omit<SessionResult, "session"> {
+function replay(
+  calls: ToolCall[],
+  records: Record[],
+): Omit<SessionResult, "session"> {
   let window: WindowEntry[] = [];
   const trippedAt: string[] = [];
   let prevented = 0;
   let observations = 0;
+  let taskReport: SessionResult["taskReport"] = "not-a-task";
 
   for (const call of calls) {
     // The harness's own background-output readers are observations of that task.
@@ -188,11 +242,12 @@ function replay(calls: ToolCall[]): Omit<SessionResult, "session"> {
     }
     if (detectPoll(subjects, window, call.ts).tripped) {
       trippedAt.push(subjects.join(","));
+      taskReport = taskReportAt(records, subjects, call.ts);
       continue;
     }
     window = pruneWindow([...window, { t: call.ts, s: subjects }], call.ts);
   }
-  return { trippedAt, prevented, observations };
+  return { trippedAt, prevented, observations, taskReport };
 }
 
 /** Every transcript touched within the window, as `[label, path]`. */
@@ -233,7 +288,7 @@ let scanned = 0;
 
 for (const [session, path] of corpus) {
   scanned++;
-  const outcome = replay(readToolCalls(path));
+  const outcome = replay(readToolCalls(path), readRecords(path));
   if (outcome.trippedAt.length > 0) {
     results.push({ session, ...outcome });
   }
@@ -241,10 +296,17 @@ for (const [session, path] of corpus) {
 
 results.sort((a, b) => b.prevented - a.prevented);
 const prevented = results.reduce((sum, r) => sum + r.prevented, 0);
+const alreadyReported = results.filter(
+  (r) => r.taskReport === "reported",
+).length;
 
 console.log(`\nReplayed ${scanned} sessions over the last ${days} days.\n`);
 console.log(`  sessions where the guard trips : ${results.length}`);
-console.log(`  polling calls prevented        : ${prevented}\n`);
+console.log(`  polling calls prevented        : ${prevented}`);
+console.log(
+  `  …of those, trips on a task the harness had ALREADY reported: ${alreadyReported}` +
+    ` (answered with an inform, not a block — see poll-loop's taskLiveness)\n`,
+);
 
 console.log("top 15 by calls prevented:");
 for (const r of results.slice(0, 15)) {
