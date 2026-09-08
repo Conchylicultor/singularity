@@ -70,9 +70,10 @@ afterwards, on the plan:
 - **The judgement runs on the PLAN, not on the incoming forest.** A plan sees a
   retyped survivor, a moved row and a deletion as themselves; a walk over the
   parsed markdown saw all three as "a node I cannot distinguish from a create".
-  So the two invariants that used to live over the forest — *nothing may mint a
-  human-audience card*, *notes do not nest* — moved onto the plan and got
-  stronger in the move (`assertNotesOnlyPlan`, rules 1 and 2).
+  So the invariant that used to live over the forest — *nothing may mint a
+  human-audience card* — moved onto the plan and got stronger in the move
+  (`assertNotesOnlyPlan`, judgement 1). Its old companion, *notes do not nest*,
+  was dropped rather than moved: see **A card inside a card** below.
 - **Both chains, not just the new one.** Re-indenting the page's prose under an
   existing card is a MOVE, and because the aligner preserves the id of
   byte-identical text it arrives as an `update` naming `parentId` — not a create.
@@ -96,6 +97,31 @@ verdict on the way out.
 inside a card may rewrite that card wholesale, including anything a HUMAN typed
 into it. That was already true of `write_agent_note`, and it is what an
 agent-note card is for.
+
+### A card inside a card
+
+An `<agent-note>` nested in another one used to be refused outright. That rule
+came from `append_agent_notes`, where a card id was the append TARGET and nesting
+was a caller mistake with no meaning; when that tool died it was carried across
+onto the plan rather than reconsidered.
+
+It is gone, because it refused a shape the rest of the system already handles.
+The markdown tag scanner counts nested opens of its own name
+(`editor/core/markdown.ts`), the editor imposes no child-type restriction — a
+human can nest two cards by hand today, and an agent may already nest a `todo` or
+`context` card in one — and `ContainerBackdrop` reserves a nesting pad so an inner
+card starts one pad below its parent's edge, its wash composing over the outer
+one, which is the cue that it IS a separate card. The boundary judgement reads a
+nested card as inside a card, because it is one.
+
+Two consequences, stated rather than discovered:
+
+- **`write_agent_note` no longer catches the wrapping mistake.** Its `content` is
+  the card's CONTENTS; an agent that wraps it in an `<agent-note>` tag anyway now
+  mints a card inside the card it was writing. The tool's description says that,
+  rather than promising an error it no longer raises.
+- **Authorship stamps the NEAREST card.** A write inside a nested card marks that
+  card as this conversation's work; the card holding it is not marked.
 
 ### Redaction is no longer a read-only concern either
 
@@ -187,8 +213,7 @@ What was bought:
   append under" as opposed to "the thing to write".
 - **Creation is judged, not privileged.** A creates-only patch could mint a card
   anywhere, including inside a `/private` one; the plan-level rules refuse that
-  (and a nested card, and a minted `private-note`) uniformly, wherever the create
-  came from.
+  (and a minted `private-note`) uniformly, wherever the create came from.
 
 What was paid: the promise is now a predicate, and a predicate can have a bug
 where a shape cannot. That is why the acceptance rules are stated once, tested

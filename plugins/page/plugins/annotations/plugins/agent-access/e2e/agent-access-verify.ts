@@ -13,9 +13,10 @@
 //      five-column row snapshot, not on the tool's own report — writes NOTHING.
 //  P3. A block INSIDE a private card cannot be read — the id itself is not a
 //      bypass.
-//  P4. Notes do not nest: an edit whose markdown puts an `<agent-note>` inside an
-//      existing card is refused. Judged on the PLAN, so a retyped survivor is
-//      caught as surely as a create.
+//  P4. A card MAY nest: an edit whose markdown puts an `<agent-note>` inside an
+//      existing card mints it there and attributes the write to the INNER card.
+//      This was a refusal until the rule that carried it over from the dead
+//      `append_agent_notes` tool was dropped — see the plugin's CLAUDE.md.
 //  P5. A card CREATED by `edit_page` is stamped with the calling conversation
 //      (the provenance a human opens from the card's glyph). Every newly minted
 //      card, not one known id.
@@ -526,16 +527,6 @@ await withBrowser(async (h) => {
       new RegExp(`outside every "${CARD_TAG}" card`),
     ],
     [
-      "P4: nesting a card inside the card",
-      "edit_page",
-      {
-        block_id: pageId,
-        old_string: NOTE_FIRST,
-        new_string: `${NOTE_FIRST}\n<${CARD_TAG}>\nnested\n</${CARD_TAG}>`,
-      },
-      /do not nest/,
-    ],
-    [
       "P2: minting a private card inside its own",
       "edit_page",
       {
@@ -705,6 +696,60 @@ await withBrowser(async (h) => {
       await page.locator(`[data-block-id="${noteChildId}"]`).first().innerText()
     ).includes(NOTE_EDITED),
     NOTE_EDITED,
+  );
+
+  // --- P4. a card inside a card is minted, and stamped as its own ----------
+  // Same edit shape that used to be refused. What it pins is the ATTRIBUTION,
+  // which is the only thing nesting changes: the write resolves to the INNER
+  // card, not to the one holding it.
+  // INDENTED to the card's own children. `read_page` writes a card's children one
+  // two-space indent in, so a tag spliced in at column 0 sits SHALLOWER than the
+  // lines below it and legitimately adopts them — the same thing any container
+  // does to more-indented lines under it. That is not nesting, it is a re-parent,
+  // and asserting `moved` alone would not tell the two apart: the counts below are
+  // paired with the sibling check, which is what actually distinguishes them.
+  const nested = await mustWrite("edit_page", {
+    block_id: pageId,
+    old_string: NOTE_EDITED,
+    new_string: `${NOTE_EDITED}\n  <${CARD_TAG}>\n    nested\n  </${CARD_TAG}>`,
+  });
+  r.eq(
+    "P4: nesting a card mints the card and its line, and moves nothing",
+    counts(nested),
+    {
+      created: 2,
+      deleted: 0,
+      moved: 0,
+      text_edited: 0,
+    },
+  );
+  const rowsAfterNest = await fetchBlocks(pageId);
+  const innerCard = rowsAfterNest.find(
+    (b) => b.type === CARD_TAG && b.parentId === noteId,
+  );
+  // The card's original children are still ITS children. Without this, a write
+  // that swallowed them into the new card passes every other assertion here.
+  r.ok(
+    "P4: the outer card kept its own children — the new card adopted none of them",
+    innerCard !== undefined &&
+      rowsAfterNest.filter((b) => b.parentId === innerCard.id).length === 1 &&
+      rowsAfterNest.filter((b) => b.parentId === noteId).length === 5,
+    JSON.stringify(
+      rowsAfterNest
+        .filter((b) => b.parentId === noteId || b.parentId === innerCard?.id)
+        .map((b) => [b.parentId === noteId ? "outer" : "inner", rowText(b)]),
+    ),
+  );
+  r.ok(
+    "P4: the new card sits INSIDE the existing one",
+    innerCard !== undefined,
+    JSON.stringify(rowsAfterNest.map((b) => [b.id, b.type, b.parentId])),
+  );
+  r.ok(
+    "P4: the write is attributed to the inner card alone",
+    innerCard !== undefined &&
+      JSON.stringify(nested.note_ids ?? []) === JSON.stringify([innerCard.id]),
+    JSON.stringify(nested.note_ids ?? null),
   );
 
   await snap(page, out, "after-notes");

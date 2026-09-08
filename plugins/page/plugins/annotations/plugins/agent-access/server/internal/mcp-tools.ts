@@ -193,7 +193,8 @@ append tool.
 
 \`content\` is the card's CONTENTS, not the card. Write ordinary markdown
 (paragraphs, lists, headings) and it becomes the card's children; do not wrap it
-in an \`<agent-note>\` tag yourself — nesting a card inside a card is refused.
+in an \`<agent-note>\` tag yourself, or you get a card inside this card rather
+than the contents of this one (nesting is legal, so nothing will stop you).
 
 A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line here, so a blank line you leave between two

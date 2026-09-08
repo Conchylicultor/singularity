@@ -70,8 +70,10 @@ beforeEach(() => {
  * │   └── open
  * ├── notes               (agent-note)
  * │   └── note-line
- * └── tainted             (agent-note, holding a withheld card — the drag case)
- *     └── smuggled        (audience: human)
+ * ├── tainted             (agent-note, holding a withheld card — the drag case)
+ * │   └── smuggled        (audience: human)
+ * └── outer-existing      (agent-note)
+ *     └── inner-existing  (agent-note — nesting, which is a legal shape)
  * ```
  */
 const PAGE = "page";
@@ -96,6 +98,8 @@ const scope: BlockScope = {
     row("note-line", "notes", "text"),
     row("tainted", PAGE, agentNotesBlock.type),
     row("smuggled", "tainted", privateish.type),
+    row("outer-existing", PAGE, agentNotesBlock.type),
+    row("inner-existing", "outer-existing", agentNotesBlock.type),
   ],
 };
 
@@ -168,7 +172,9 @@ describe("assertNoteCard (rule 3 — write_agent_note's door)", () => {
     for (const id of ["prose", "note-line", "shared", PAGE]) {
       expect(() => {
         assertNoteCard(scope, id);
-      }).toThrow(/is not an "agent-note" card|is the page itself, not an "agent-note"/);
+      }).toThrow(
+        /is not an "agent-note" card|is the page itself, not an "agent-note"/,
+      );
     }
     // The primary error is a page id sent to Write, so its message points at the
     // tool that does take one — not at the deleted append tool.
@@ -285,7 +291,11 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
 
   test("refuses a text edit of prose — the page's own body is read-only", () => {
     expect(() => {
-      judgePage(planOf({ textEdits: [{ blockId: "prose", runs: [{ text: "hijacked" }] }] }));
+      judgePage(
+        planOf({
+          textEdits: [{ blockId: "prose", runs: [{ text: "hijacked" }] }],
+        }),
+      );
     }).toThrow(/was edited outside every "agent-note" card/);
   });
 
@@ -305,7 +315,9 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
     // The attack the both-chains rule exists for: the whole page annexed into the
     // agent's own card, attributed to the agent, without deleting a character.
     expect(() => {
-      judgePage(planOf({ updates: [{ id: "prose", changes: { parentId: "notes" } }] }));
+      judgePage(
+        planOf({ updates: [{ id: "prose", changes: { parentId: "notes" } }] }),
+      );
     }).toThrow(/did not COME from inside an "agent-note" card/);
   });
 
@@ -338,13 +350,15 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
   });
 });
 
-describe("assertNotesOnlyPlan — the two minting invariants", () => {
+describe("assertNotesOnlyPlan — the minting invariant", () => {
   test("refuses minting a human-audience card, even INSIDE a card", () => {
     // Rules 1-3 all reason about rows that already exist and cannot see a card
     // the agent is about to create. Inside its own card is where it would
     // otherwise pass every other rule.
     expect(() => {
-      judgePage(planOf({ creates: [create("mine", "notes", privateish.type)] }));
+      judgePage(
+        planOf({ creates: [create("mine", "notes", privateish.type)] }),
+      );
     }).toThrow(/addressed to the page's author only/);
   });
 
@@ -353,37 +367,12 @@ describe("assertNotesOnlyPlan — the two minting invariants", () => {
     // incoming parsed forest sees a retyped survivor only as an ordinary node it
     // cannot tell from a create, so it could not judge this at all.
     expect(() => {
-      judgePage(planOf({ updates: [{ id: "note-line", changes: { type: privateish.type } }] }));
-    }).toThrow(/turns block note-line into a "zz-withheld" card/);
-  });
-
-  test("refuses a card created inside a card — notes do not nest", () => {
-    expect(() => {
-      judgePage(planOf({ creates: [create("nested", "notes", agentNotesBlock.type)] }));
-    }).toThrow(/notes cards do not nest/);
-  });
-
-  test("refuses a card created under a LINE that is inside a card", () => {
-    // Nesting is a question about the whole chain, not about the direct parent:
-    // a card under a paragraph that lives in a card is nested just as surely.
-    expect(() => {
-      judgePage(planOf({ creates: [create("nested", "note-line", agentNotesBlock.type)] }));
-    }).toThrow(/notes cards do not nest/);
-  });
-
-  test("refuses a card created inside a card this same plan created", () => {
-    // The after-forest is what makes this visible: the enclosing card does not
-    // exist in the stored rows at all.
-    expect(() => {
       judgePage(
         planOf({
-          creates: [
-            create("outer", PAGE, agentNotesBlock.type),
-            create("inner", "outer", agentNotesBlock.type),
-          ],
+          updates: [{ id: "note-line", changes: { type: privateish.type } }],
         }),
       );
-    }).toThrow(/notes cards do not nest/);
+    }).toThrow(/turns block note-line into a "zz-withheld" card/);
   });
 
   test("the minting verdict wins over the boundary one", () => {
@@ -391,6 +380,72 @@ describe("assertNotesOnlyPlan — the two minting invariants", () => {
     // is the actionable one — it holds wherever the block landed.
     expect(() => {
       judgePage(planOf({ creates: [create("mine", PAGE, privateish.type)] }));
+    }).toThrow(/addressed to the page's author only/);
+  });
+});
+
+describe("assertNotesOnlyPlan — a card inside a card", () => {
+  // The rule that used to refuse these ("notes do not nest") is gone: nesting is
+  // an ordinary shape, and the boundary judgement reads a nested card as inside a
+  // card because it is one. What each case pins is the ATTRIBUTION, which is the
+  // only thing nesting changes — `nearestCard` stamps the innermost card, never
+  // the parent it sits in.
+
+  test("accepts a card created inside an existing card, and stamps the inner one", () => {
+    expect(
+      judgePage(
+        planOf({ creates: [create("nested", "notes", agentNotesBlock.type)] }),
+      ),
+    ).toEqual(["nested"]);
+  });
+
+  test("accepts a card created under a LINE that is inside a card", () => {
+    // Nesting is a question about the whole chain, not about the direct parent —
+    // and the chain answer is now "inside a card", not "refused".
+    expect(
+      judgePage(
+        planOf({
+          creates: [create("nested", "note-line", agentNotesBlock.type)],
+        }),
+      ),
+    ).toEqual(["nested"]);
+  });
+
+  test("accepts a card created inside a card this same plan created", () => {
+    // The after-forest is what resolves this at all: the enclosing card does not
+    // exist in the stored rows, so only the plan's own creates put it on the chain.
+    expect(
+      new Set(
+        judgePage(
+          planOf({
+            creates: [
+              create("outer", PAGE, agentNotesBlock.type),
+              create("inner", "outer", agentNotesBlock.type),
+            ],
+          }),
+        ),
+      ),
+    ).toEqual(new Set(["outer", "inner"]));
+  });
+
+  test("a write inside a nested card stamps that card, not the one holding it", () => {
+    expect(
+      judgePage(
+        planOf({
+          creates: [create("line", "inner-existing", "text")],
+        }),
+      ),
+    ).toEqual(["inner-existing"]);
+  });
+
+  test("still refuses a human-audience card minted inside a nested card", () => {
+    // Nesting loosens the shape, not the audience rule.
+    expect(() => {
+      judgePage(
+        planOf({
+          creates: [create("mine", "inner-existing", privateish.type)],
+        }),
+      );
     }).toThrow(/addressed to the page's author only/);
   });
 });
@@ -414,8 +469,14 @@ describe("assertNotesOnlyPlan — the cards to stamp", () => {
   });
 
   test("a rank-only update to prose attributes authorship to nobody", () => {
-    expect(judgePage(planOf({ updates: [{ id: "prose", changes: { rank: Rank.between(null, null) } }] }))).toEqual(
-      [],
-    );
+    expect(
+      judgePage(
+        planOf({
+          updates: [
+            { id: "prose", changes: { rank: Rank.between(null, null) } },
+          ],
+        }),
+      ),
+    ).toEqual([]);
   });
 });

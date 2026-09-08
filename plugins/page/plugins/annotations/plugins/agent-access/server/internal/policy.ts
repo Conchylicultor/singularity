@@ -53,10 +53,11 @@ import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
  * a validation-based rule where the old one was structural, and it is still safe
  * for a reason the old one could not state: the judgement runs on the PLAN, which
  * sees a retyped survivor, a moved block and a deleted row as themselves —
- * where a walk over the incoming parsed forest saw only "a create". The two
- * invariants that used to live over the parsed forest (no minting a
- * human-audience card, no nesting notes) therefore moved onto the plan, where
- * they are strictly stronger.
+ * where a walk over the incoming parsed forest saw only "a create". The
+ * invariant that used to live over the parsed forest (no minting a
+ * human-audience card) therefore moved onto the plan, where it is strictly
+ * stronger. Its old companion — "notes do not nest" — is gone rather than
+ * moved: see {@link assertNotesOnlyPlan}.
  *
  * The residual bound is stated rather than hidden: an edit whose diff stays
  * inside a card may rewrite that card wholesale, including anything a HUMAN
@@ -99,7 +100,9 @@ function humanAudienceTypes(): Set<string> {
  * second, differently-typed copy is exactly the drift the shared option shape
  * exists to prevent.
  */
-export function redactHumanAudience<R extends { type: string }>(rows: R[]): R[] {
+export function redactHumanAudience<R extends { type: string }>(
+  rows: R[],
+): R[] {
   const human = humanAudienceTypes();
   return rows.filter((r) => !human.has(r.type));
 }
@@ -123,7 +126,10 @@ function chainToPageRoot(scope: BlockScope, blockId: string): StoredBlock[] {
   if (!current) {
     // `loadBlockScope` already asserted membership; reaching here means the rows
     // changed underneath us or the assert regressed.
-    throw new HttpError(404, `block ${blockId} is not part of page ${scope.pageId}`);
+    throw new HttpError(
+      404,
+      `block ${blockId} is not part of page ${scope.pageId}`,
+    );
   }
   for (;;) {
     chain.push(current);
@@ -159,7 +165,10 @@ function chainToPageRoot(scope: BlockScope, blockId: string): StoredBlock[] {
  * direct form of the bypass, and redaction would answer it with an empty
  * document rather than a refusal.
  */
-export function assertAgentAddressable(scope: BlockScope, blockId: string): void {
+export function assertAgentAddressable(
+  scope: BlockScope,
+  blockId: string,
+): void {
   const human = humanAudienceTypes();
   for (const row of chainToPageRoot(scope, blockId)) {
     if (!human.has(row.type)) continue;
@@ -236,7 +245,10 @@ interface AfterForest {
  * it means a surviving child of a deleted parent still resolves a chain rather
  * than ending at an absent id.
  */
-function forestAfter(rows: readonly StoredBlock[], plan: MarkdownApplyPlan): AfterForest {
+function forestAfter(
+  rows: readonly StoredBlock[],
+  plan: MarkdownApplyPlan,
+): AfterForest {
   const parentOf = new Map<string, string | null>();
   const typeOf = new Map<string, string>();
   for (const row of rows) {
@@ -251,7 +263,8 @@ function forestAfter(rows: readonly StoredBlock[], plan: MarkdownApplyPlan): Aft
     if (namesField(update.changes, "parentId")) {
       parentOf.set(update.id, update.changes.parentId ?? null);
     }
-    if (namesField(update.changes, "type")) typeOf.set(update.id, update.changes.type!);
+    if (namesField(update.changes, "type"))
+      typeOf.set(update.id, update.changes.type!);
   }
   return { parentOf, typeOf };
 }
@@ -265,7 +278,11 @@ function forestAfter(rows: readonly StoredBlock[], plan: MarkdownApplyPlan): Aft
  * reachable as a quiet `null`, which here would silently mean "attribute this
  * write to nobody".
  */
-function nearestCard(startId: string, forest: AfterForest, bound: number): string | null {
+function nearestCard(
+  startId: string,
+  forest: AfterForest,
+  bound: number,
+): string | null {
   let current: string | undefined = startId;
   for (let steps = 0; current !== undefined; steps++) {
     if (steps > bound) {
@@ -325,7 +342,7 @@ function violationMessage(
  * Rule 4 — the acceptance predicate, as `ApplyBlockOptions.assertAcceptable`
  * wants it: throw to refuse the whole apply, having written nothing.
  *
- * Three judgements, in this order:
+ * Two judgements, in this order:
  *
  *  1. **Nothing may MINT a human-audience card.** Rules 1-3 all reason about rows
  *     that already exist; none of them can see a card the agent is about to
@@ -333,18 +350,41 @@ function violationMessage(
  *     into its own card and thereby author, in the one container the human trusts
  *     as agent-written, content whose whole meaning is "the human is the sole
  *     author of this".
- *  2. **Notes do not nest.** A card inside a card is a shape nothing else in this
- *     system produces or renders meaningfully.
- *  3. **Every write resolves inside a card** — `boundaryViolations`, with the one
+ *  2. **Every write resolves inside a card** — `boundaryViolations`, with the one
  *     row predicate this plugin owns.
  *
- * 1 and 2 run FIRST, and over the PLAN rather than over the parsed forest they
- * used to walk. Both changes matter. Over the plan they also catch a RETYPED
- * SURVIVOR — a block turned INTO a private card by an update — which a walk over
- * the incoming forest sees only as an ordinary node it cannot distinguish from a
- * create. And first, because "you may not mint that type here" is the more
- * actionable answer than "that block landed outside a card": the type judgement
- * holds wherever the block landed.
+ * 1 runs FIRST, and over the PLAN rather than over the parsed forest it used to
+ * walk. Both matter. Over the plan it also catches a RETYPED SURVIVOR — a block
+ * turned INTO a private card by an update — which a walk over the incoming
+ * forest sees only as an ordinary node it cannot distinguish from a create. And
+ * first, because "you may not mint that type here" is the more actionable answer
+ * than "that block landed outside a card": the type judgement holds wherever the
+ * block landed.
+ *
+ * ---------------------------------------------------------------------------
+ * A card inside a card is allowed
+ * ---------------------------------------------------------------------------
+ *
+ * There used to be a third judgement between these two — "notes do not nest" —
+ * inherited from the `append_agent_notes` tool this design replaced, where a
+ * card id was the append TARGET and nesting was a caller mistake with no
+ * meaning. Under a plan-judged `edit_page` it refused a shape the rest of the
+ * system handles: the markdown tag scanner counts nested opens of its own name,
+ * the editor imposes no child-type restriction (a human can nest two cards by
+ * hand today, and an agent may already nest a `todo` or `context` card in one),
+ * and `ContainerBackdrop` reserves a nesting pad so an inner card starts below
+ * its parent's edge — its wash composing over the outer one is the cue that it
+ * IS a separate card. Judgement 2 reads a nested card as inside a boundary,
+ * because it is one.
+ *
+ * What the removal costs, stated rather than discovered: `write_agent_note`'s
+ * `content` is the card's CONTENTS, and an agent that wraps it in an
+ * `<agent-note>` tag anyway now mints a card inside the card it was writing
+ * instead of being refused. That tool's description says so, rather than
+ * promising an error it no longer raises. And authorship attributes a write to
+ * the NEAREST enclosing card ({@link nearestCard}), so an edit inside a nested
+ * card stamps that card only — its parent is not marked as touched by this
+ * conversation.
  *
  * Returns **the cards to stamp with authorship** — the same walk, one answer.
  * A single edit may create and revise several cards, and each of them is now
@@ -372,7 +412,11 @@ export function assertNotesOnlyPlan(args: {
 
   // --- 1. Minting or retyping into a human-audience type -------------------
   const minted: { id: string; type: string; retyped: boolean }[] = [
-    ...plan.patch.creates.map((b) => ({ id: b.id, type: b.type, retyped: false })),
+    ...plan.patch.creates.map((b) => ({
+      id: b.id,
+      type: b.type,
+      retyped: false,
+    })),
     ...plan.patch.updates
       .filter((u) => namesField(u.changes, "type"))
       .map((u) => ({ id: u.id, type: u.changes.type!, retyped: true })),
@@ -389,27 +433,7 @@ export function assertNotesOnlyPlan(args: {
     );
   }
 
-  // --- 2. Notes do not nest -------------------------------------------------
-  for (const node of minted) {
-    if (node.type !== tag) continue;
-    // From the PARENT, so the card does not find itself. An `agent-note` above it
-    // is a nesting, wherever in the chain it sits: putting a card under a
-    // paragraph that lives in a card nests it just as surely as putting it under
-    // the card directly.
-    const parent = forest.parentOf.get(node.id) ?? null;
-    const enclosing = parent === null ? null : nearestCard(parent, forest, bound);
-    if (enclosing === null) continue;
-    throw new HttpError(
-      409,
-      `the document ${node.retyped ? `turns block ${node.id} into` : "creates"} an ` +
-        `"${tag}" card inside "${tag}" card ${enclosing}, and notes cards do not ` +
-        `nest. Write the note's CONTENTS there (paragraphs, lists, headings) ` +
-        `rather than another card, or place the new card beside ${enclosing} ` +
-        `instead of inside it.`,
-    );
-  }
-
-  // --- 3. Every write inside a card ----------------------------------------
+  // --- 2. Every write inside a card ----------------------------------------
   const violations = boundaryViolations({
     plan,
     existing: rows,
@@ -424,7 +448,11 @@ export function assertNotesOnlyPlan(args: {
   // sentence is not more informative than one — the fix for the first is the fix
   // for all of them. The count rides along in the message.
   const first = violations[0];
-  if (first) throw new HttpError(403, violationMessage(first, rootId, violations.length));
+  if (first)
+    throw new HttpError(
+      403,
+      violationMessage(first, rootId, violations.length),
+    );
 
   // --- The cards this write is attributed to --------------------------------
   // Every channel, mapped to the card it resolved inside. A rank-only update to
