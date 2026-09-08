@@ -120,6 +120,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/control-panel`
     - `primitives/css/row`
     - `primitives/data-table`
+    - `primitives/data-view`
     - `primitives/data-view/gallery`
     - `primitives/tree`
 

@@ -974,10 +974,6 @@
       "name": "@singularity/plugin-apps-studio-explorer-excluded",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse": {
-      "name": "@singularity/plugin-apps-studio-explorer-expand-collapse",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing": {
       "name": "@singularity/plugin-apps-studio-explorer-load-bearing",
       "version": "0.0.1",
@@ -6331,8 +6327,6 @@
     "@singularity/plugin-apps-studio-explorer-collapsed": ["@singularity/plugin-apps-studio-explorer-collapsed@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed"],
 
     "@singularity/plugin-apps-studio-explorer-excluded": ["@singularity/plugin-apps-studio-explorer-excluded@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/excluded"],
-
-    "@singularity/plugin-apps-studio-explorer-expand-collapse": ["@singularity/plugin-apps-studio-explorer-expand-collapse@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse"],
 
     "@singularity/plugin-apps-studio-explorer-load-bearing": ["@singularity/plugin-apps-studio-explorer-load-bearing@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing"],
 

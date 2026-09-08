@@ -152,6 +152,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/css/space-ramp`
     - `primitives/css/ui-kit`
     - `primitives/data-view`
+    - `primitives/data-view/tree`
     - `primitives/date-picker`
     - `primitives/dom/copy-source-text`
     - `primitives/dom/overscroll-hint`
@@ -159,6 +160,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/pane`
     - `primitives/row-actions`
     - `primitives/text-editor/caret-trigger`
+    - `primitives/tree`
     - `release`
     - `reorder`
     - `reorder/node-types`

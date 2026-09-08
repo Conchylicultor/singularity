@@ -6,7 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, type ReactNode } from "react";
-import { MdAdd, MdMoreHoriz } from "react-icons/md";
+import { MdAdd, MdMoreHoriz, MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -75,6 +75,8 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     afterRef,
     isOverBefore,
     isOverAfter,
+    subtreeAllExpanded,
+    toggleSubtreeExpanded,
   } = controls;
   const {
     ref: dragRef,
@@ -141,10 +143,37 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     />
   ) : null;
 
+  // Fold/unfold everything under this row — tree chrome, not a domain action, so
+  // it is rendered unconditionally on every tree (gated only on `hasChildren`)
+  // rather than opted into per app. Three consumer plugins used to each write
+  // their own copy of this and contribute it as an app-level item action, which
+  // is exactly why the surfaces that never wrote one — Pages' sidebar, the
+  // config nav, the file trees — silently went without.
+  //
+  // A plain `IconButton`, not `collapsible`'s `ExpandAllButton`: the surrounding
+  // cluster declares the `xs` control density its children derive their box
+  // from, whereas `ExpandAllButton`'s compact variant is hand-sized for a
+  // toolbar and would stand a size apart from the `⋯` and `+` beside it. No
+  // `stopPropagation` either — `RowActions`' button `Stack` already stops both
+  // `onClick` and `onPointerDown`, so the row's select and drag never fire.
+  const subtreeToggle = hasChildren ? (
+    <IconButton
+      icon={subtreeAllExpanded ? MdUnfoldLess : MdUnfoldMore}
+      label={subtreeAllExpanded ? "Collapse subtree" : "Expand subtree"}
+      variant="ghost"
+      onClick={toggleSubtreeExpanded}
+    />
+  ) : null;
+
+  // Consumer `actions` first, then the tree's own chrome. Within that chrome the
+  // fold goes ahead of `⋯` and `+`, which keeps those two exactly where they sit
+  // on every tree today: a row that gains the fold grows a button to their left
+  // instead of shifting the two the user already aims at.
   const trailing =
-    actions || moreMenu || addChild ? (
+    actions || subtreeToggle || moreMenu || addChild ? (
       <>
         {actions}
+        {subtreeToggle}
         {moreMenu}
         {addChild}
       </>

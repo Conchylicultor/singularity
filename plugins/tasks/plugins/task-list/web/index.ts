@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Tasks as TasksSlots } from "./slots";
 import { ChildCountAction } from "./components/child-count-action";
 import { DeleteTaskAction } from "./components/delete-task-action";
-import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 import { LaunchAgentAction } from "./components/launch-agent-action";
 
 export { Tasks } from "./slots";
@@ -15,15 +14,11 @@ export {
 
 export default {
   description:
-    "Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).",
+    "Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).",
   contributions: [
     TasksSlots.TaskActions({
       id: "child-count",
       component: ChildCountAction,
-    }),
-    TasksSlots.TaskActions({
-      id: "expand-collapse-all",
-      component: ExpandCollapseAllAction,
     }),
     TasksSlots.TaskActions({ id: "delete", component: DeleteTaskAction }),
     TasksSlots.TaskActions({

@@ -526,6 +526,25 @@ There is **no per-view header-inset axis**: `GroupedSections` owns `rail-follow`
 on its `SectionHeaderRow`, so every group header sits on the one rail (see "The
 rail" below) — no view passes a `headerClassName`.
 
+### `headerActions` — one affordance, scoped to one section
+
+`headerActions?: (section) => ReactNode` renders beside the count (the tree's
+fold-this-group toggle today). Return `null` for a section with nothing to
+offer — the wrapper is then skipped too, so a view passing no `headerActions`
+(list, gallery) draws the node it always did.
+
+Count and action want opposite treatments, so they are **two** clusters: the
+count reads at rest on the header's own `actionsAlwaysVisible` cluster, the
+action sits in a nested `<RowActions pin={null}>` and reveals on hover
+(`RowActionsProps` separates `pin` from `alwaysVisible`; the nested cluster
+rides the `group/row-actions` `Row` publishes unconditionally). `gap="xs"`
+between them is load-bearing — nothing has ever sat beside the count.
+
+No click guard is needed even though the header is the collapse trigger:
+`RowActions`' button `Stack` already stops `onClick` and `onPointerDown`. And
+**not** the `hover-reveal` primitive — its own CLAUDE.md says a row-action
+cluster is `row-actions`' job, and the two together compete.
+
 **Why it is shared and not per-view.** Per-view JSX drifts (a view child silently
 forgetting to pin its headers), and a lint rule can't state "a grouped section must
 be wrapped in sticky chrome" — one shared branch makes the divergence
@@ -1492,6 +1511,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/latest-ref.useLatestRef`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/row-actions.RowActions`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
     - `primitives/slot-render.defineDispatchSlot`

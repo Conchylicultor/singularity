@@ -5080,7 +5080,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
           - Web:
             - Slots:
-              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
+              - `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.excluded`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`
               - `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`
               - `explorerPane.Actions` ← `primitives.pane`
             - Contributes:
@@ -5119,7 +5119,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/explorer/child-count`
               - `apps/studio/explorer/collapsed`
               - `apps/studio/explorer/excluded`
-              - `apps/studio/explorer/expand-collapse`
               - `apps/studio/explorer/load-bearing`
               - `apps/studio/explorer/membership`
           - Plugins:
@@ -5138,16 +5137,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/studio/explorer.Explorer`
                   - `plugin-meta/composition.useAppExclusions`
                   - `primitives/loading.Loading`
-            - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
-              - Web:
-                - Contributes: `Explorer.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
-                - Uses:
-                  - `apps/studio/explorer.Explorer`
-                  - `primitives/css/center.Center`
-                  - `primitives/tree.TreeItem`
-                  - `primitives/tree.TreeListContextValue`
-                  - `primitives/tree.useOptionalTreeListContext`
-                  - `primitives/tree.useSubtreeExpandAll`
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
@@ -8202,7 +8191,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Shell.Sidebar` "Agents" → `component`
           - `Item.Avatar` → `AgentAvatarRow`
           - `Conversation.Header` → `AgentAvatarTitlePrefix`
-          - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
         - Uses:
           - `conversations.useConversationById`
@@ -8222,7 +8210,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.CollapsibleContent`
           - `primitives/collapsible.CollapsibleTrigger`
-          - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/center.Center`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
@@ -8254,10 +8241,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/pane.useOpenPane`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
-          - `primitives/tree.TreeItem`
-          - `primitives/tree.TreeListContextValue`
-          - `primitives/tree.useOptionalTreeListContext`
-          - `primitives/tree.useSubtreeExpandAll`
           - `shell.Shell`
         - Exports (types): `SystemAgentDescriptor`
         - Exports (values):
@@ -15875,6 +15858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/space-ramp`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
+              - `primitives/data-view/tree`
               - `primitives/date-picker`
               - `primitives/dom/copy-source-text`
               - `primitives/dom/overscroll-hint`
@@ -15882,6 +15866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane`
               - `primitives/row-actions`
               - `primitives/text-editor/caret-trigger`
+              - `primitives/tree`
               - `release`
               - `reorder`
               - `reorder/node-types`
@@ -21762,7 +21747,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/code-review`
           - `review/plugin-changes`
           - `review/plugin-changes/file-changes`
-          - `tasks/task-list`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
@@ -22101,7 +22085,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/renderers/slides`
               - `apps/studio/contributions`
               - `apps/studio/explorer`
-              - `apps/studio/explorer/expand-collapse`
               - `apps/workflows/editor`
               - `code-explorer`
               - `config_v2/settings`
@@ -24945,6 +24928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/row-actions.RowActions`
           - `primitives/search.SearchInput`
           - `primitives/search.useTextFilter`
           - `primitives/slot-render.defineDispatchSlot`
@@ -25454,13 +25438,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.useResolveCell`
               - `primitives/data-view.useResolveCellEditor`
               - `primitives/data-view.useResolveOperatorSet`
+              - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/tree.flatExpandAll`
               - `primitives/tree.RowChrome`
               - `primitives/tree.RowChromeMenuHelpers`
               - `primitives/tree.RowMenuItem`
               - `primitives/tree.TreeItem`
               - `primitives/tree.TreeList`
+              - `primitives/tree.useFlatExpandAll`
               - `primitives/tree.useTreeListContext`
               - `primitives/tree.useTreeRow`
             - Exports (types): `TreeViewOptions`
@@ -26161,6 +26148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible-wrap`
           - `primitives/css/control-panel`
           - `primitives/data-view`
+          - `primitives/data-view/tree`
           - `primitives/data-view/view-core`
           - `primitives/date-picker`
           - `primitives/folder-picker`
@@ -27880,6 +27868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel`
           - `primitives/css/row`
           - `primitives/data-table`
+          - `primitives/data-view`
           - `primitives/data-view/gallery`
           - `primitives/tree`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
@@ -28521,7 +28510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.renderIsolated`
           - `primitives/virtual-rows.VirtualRows`
         - Exports (types):
-          - `ExpandableRow`
+          - `FlatExpandAll`
           - `RenameInputProps`
           - `RowChromeMenuHelpers`
           - `RowChromeProps`
@@ -28533,17 +28522,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TreeListContextValue`
           - `TreeListProps`
           - `TreeRowChromeProps`
-          - `UseSubtreeExpandAllReturn`
+          - `UseFlatExpandAllReturn`
         - Exports (values):
+          - `flatExpandAll`
           - `RenameInput`
           - `RowChrome`
           - `Tree`
           - `TreeDisclosureToggle`
           - `TreeList`
           - `TreeRowChrome`
+          - `useFlatExpandAll`
           - `useOptionalRowControls`
           - `useOptionalTreeListContext`
-          - `useSubtreeExpandAll`
           - `useTreeListContext`
           - `useTreeRow`
       - Core:
@@ -28566,11 +28556,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/page-tree`
           - `apps/story/story-core`
-          - `apps/studio/explorer/expand-collapse`
-          - `conversations/agents`
           - `page/editor`
           - `primitives/data-view/tree`
-          - `tasks/task-list`
           - `ui/tree-disclosure`
           - `ui/tree-disclosure/column`
           - `ui/tree-disclosure/dimmed-leaf`
@@ -30972,7 +30959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-detail.TaskDetailSlots`
           - `tasks/task-detail.useRegisterFlush`
           - `tasks/task-status.StatusSignal`
-    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
+    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
         - Slots:
           - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
@@ -30980,12 +30967,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Tasks.Fields` ← `tasks.task-category`
         - Contributes:
           - `Tasks.TaskActions` "child-count" → `ChildCountAction`
-          - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
           - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
           - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/collapsible.ExpandAllButton`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/data-view.DataView`
@@ -30999,10 +30984,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `primitives/slot-render.defineRenderSlot`
-          - `primitives/tree.TreeItem`
-          - `primitives/tree.TreeListContextValue`
-          - `primitives/tree.useOptionalTreeListContext`
-          - `primitives/tree.useSubtreeExpandAll`
           - `tasks.patchTask`
           - `tasks/task-status.STATUS_META`
           - `tasks/task-status.StatusBadge`

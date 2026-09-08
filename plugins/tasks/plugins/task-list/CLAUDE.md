@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
+- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, child-count, launch-agent).
 - Web:
   - Slots:
     - `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`
@@ -12,12 +12,10 @@
     - `Tasks.Fields` ← `tasks.task-category`
   - Contributes:
     - `Tasks.TaskActions` "child-count" → `ChildCountAction`
-    - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
     - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
     - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
   - Uses:
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/data-view.DataView`
@@ -31,10 +29,6 @@
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
-    - `primitives/tree.TreeItem`
-    - `primitives/tree.TreeListContextValue`
-    - `primitives/tree.useOptionalTreeListContext`
-    - `primitives/tree.useSubtreeExpandAll`
     - `tasks.patchTask`
     - `tasks/task-status.STATUS_META`
     - `tasks/task-status.StatusBadge`

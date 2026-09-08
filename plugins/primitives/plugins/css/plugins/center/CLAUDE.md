@@ -65,7 +65,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/story/renderers/slides`
     - `apps/studio/contributions`
     - `apps/studio/explorer`
-    - `apps/studio/explorer/expand-collapse`
     - `apps/workflows/editor`
     - `code-explorer`
     - `config_v2/settings`

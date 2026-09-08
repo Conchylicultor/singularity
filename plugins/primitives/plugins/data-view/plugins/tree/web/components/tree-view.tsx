@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
-import { MdAdd, MdLink } from "react-icons/md";
+import { MdAdd, MdLink, MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import {
   evaluateNode,
   FieldCell,
@@ -21,14 +21,20 @@ import {
   type ItemActionsDescriptor,
   type RowTone,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import type {
+  ExpandChange,
+  TreeNode,
+} from "@plugins/primitives/plugins/tree/core";
 import {
+  flatExpandAll,
   RowChrome,
   TreeList,
+  useFlatExpandAll,
   type RowChromeMenuHelpers,
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -205,6 +211,53 @@ function DefaultRow<TRow>(props: {
 }
 
 /**
+ * The fold/unfold-this-group toggle a grouped tree hangs off its section
+ * headers, handed to `GroupedSections.headerActions` — which wraps it in the
+ * header's hover-revealed cluster, so the button costs the header nothing at
+ * rest and cannot collapse the section it sits on.
+ *
+ * A section-scoped fold is well-defined because a section bucket holds whole
+ * subtrees: `bucketRowsByRootSection` files every descendant under its ROOT's
+ * section, so folding a group never leaves half a subtree in another one.
+ *
+ * The gate is `flatExpandAll`'s **pure** form, not the `useFlatExpandAll` hook,
+ * which is what lets a section with nothing to fold answer `null` — a hook
+ * would have to live in a child component, and a child component that renders
+ * nothing still hands `GroupedSections` a non-null element to wrap, leaving an
+ * empty cluster that spends the header's `gap` and pulls that section's count
+ * off the edge its neighbours line up on.
+ *
+ * A plain `IconButton`, not `collapsible`'s `ExpandAllButton` — the same call
+ * the tree's own per-row fold makes, for the same reason: the surrounding
+ * `RowActions` declares the `xs` control density its children derive their box
+ * from, whereas `ExpandAllButton`'s compact variant is hand-sized for a toolbar.
+ * The two folds are one gesture at two scopes, so they read as one glyph.
+ *
+ * Deliberately NOT gated on `options.expandAll`. That option names the
+ * whole-view TOOLBAR button, and a surface that keeps its chrome minimal by
+ * omitting it — the Pages sidebar, which is also the app's grouped tree — is
+ * exactly the surface this exists for. Gating on it would reproduce the defect
+ * the per-row fold was ungated to avoid: an affordance a new tree has to
+ * remember to ask for, which the trees that most need it never do.
+ */
+function renderSectionExpandAll(
+  rows: readonly Projected<unknown>[],
+  setExpanded: (changes: readonly ExpandChange[]) => void,
+): ReactNode {
+  const state = flatExpandAll(rows);
+  if (!state.hasExpandable) return null;
+  const collapse = state.allExpanded;
+  return (
+    <IconButton
+      icon={collapse ? MdUnfoldLess : MdUnfoldMore}
+      label={collapse ? "Collapse group" : "Expand group"}
+      variant="ghost"
+      onClick={() => setExpanded(state.changes(!collapse))}
+    />
+  );
+}
+
+/**
  * Tree view: a thin adapter that projects the data-view rows + `HierarchyConfig`
  * onto the `tree` primitive's `TreeList`. No reimplementation — `buildTree`,
  * `filterTree` search, DnD `resolveDropParent`, and `RowChrome` all come from
@@ -322,6 +375,25 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       rowComparator(a.__row, b.__row),
     );
   }, [visibleProjected, rowComparator]);
+
+  // Whole-view expand-all, for the GROUPED path's hoisted toolbar only: that
+  // path renders one `TreeList` per section with each list's own toolbar
+  // suppressed, so the button has to live here and write every section's rows
+  // in one batch. The ungrouped path leaves it to `TreeList`, which runs the
+  // same hook over its own rows — which is the point of the hook: the "which
+  // rows are expandable / are they all open / write only what changes"
+  // decision is made once, not once per surface.
+  //
+  // Called unconditionally with the other hooks (it is memoized on
+  // `sortedProjected`, so the ungrouped path pays one cheap pass): the grouped
+  // branch sits after the `!hierarchy` and empty-state returns, and a hook
+  // cannot be moved past a conditional return.
+  //
+  // The per-section fold below reaches for the PURE `flatExpandAll` instead, and
+  // that is not an inconsistency: this is ONE call in component scope, which is
+  // what a hook is for, while the per-section gate runs inside a render callback
+  // — once per section, and needing to answer `null`.
+  const viewExpandAll = useFlatExpandAll(sortedProjected, setExpanded);
 
   // Group-by (Notion-style flat sections over the tree): the ROOTS partition
   // into sections by the group-by field through the shared pure partition (the
@@ -584,27 +656,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     // markup: expand-all runs over the FULL projected set (every section), and
     // the root Add sits after the last section (a new root lands in whatever
     // section its own field value dictates).
-    const childParents = new Set(
-      sortedProjected.filter((p) => p.parentId).map((p) => p.parentId!),
-    );
-    const nodesWithChildren = sortedProjected.filter((p) =>
-      childParents.has(p.id),
-    );
-    const showExpandAll = !!options.expandAll && nodesWithChildren.length > 0;
-    const allExpanded =
-      nodesWithChildren.length > 0 &&
-      nodesWithChildren.every((p) => p.expanded);
-    // The grouped path renders one TreeList per section, so expand-all is hoisted
-    // here and bypasses TreeList entirely — it still writes the FULL projected
-    // set (every section) in a single batched call.
-    const toggleExpandAll = () => {
-      const next = !allExpanded;
-      setExpanded(
-        nodesWithChildren
-          .filter((p) => p.expanded !== next)
-          .map((p) => ({ id: p.id, expanded: next })),
-      );
-    };
+    const showExpandAll = !!options.expandAll && viewExpandAll.hasExpandable;
     const showToolbar = showExpandAll || !!options.toolbarStart;
     const showRootAdd = !options.rootId && addLabel != null && !!hierOnCreate;
     return (
@@ -620,8 +672,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
                 <Stack direction="row" gap="xs" align="center">
                   {showExpandAll && (
                     <ExpandAllButton
-                      allExpanded={allExpanded}
-                      onToggle={toggleExpandAll}
+                      allExpanded={viewExpandAll.allExpanded}
+                      onToggle={viewExpandAll.toggle}
                     />
                   )}
                 </Stack>
@@ -633,6 +685,12 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           sections={grouped.sections}
           collapsedSections={props.collapsedSections}
           setSectionCollapsed={props.setSectionCollapsed}
+          headerActions={(section) =>
+            renderSectionExpandAll(
+              grouped.rowsBySectionKey.get(section.key)!,
+              setExpanded,
+            )
+          }
         >
           {(section) => (
             <div className="rail-follow">

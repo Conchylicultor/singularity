@@ -1,4 +1,4 @@
-// @hash 2c76f578b3cd
+// @hash f0eaae136100
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,7 +8,6 @@
   "items": [
     "tasks.auto-start:queued-chip",
     "tasks.task-list:child-count",
-    "tasks.task-list:expand-collapse-all",
     "tasks.task-list:delete",
     "tasks.task-list:launch-agent"
   ]

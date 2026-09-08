@@ -135,6 +135,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/collapsible-wrap`
     - `primitives/css/control-panel`
     - `primitives/data-view`
+    - `primitives/data-view/tree`
     - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/folder-picker`

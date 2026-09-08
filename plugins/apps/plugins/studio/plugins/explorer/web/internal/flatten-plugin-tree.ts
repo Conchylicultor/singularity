@@ -9,9 +9,8 @@ import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
  *
  * The row spreads the original `PluginNode` — crucially keeping its `.children`
  * array intact. The tree's internal `buildTree` rebuilds the visible hierarchy
- * from `parentId`/`rank`, but the badge components (child-count, expand-collapse,
- * membership) read the original `node.children`, so they still see the full
- * subtree.
+ * from `parentId`/`rank`, but the badge components (child-count, membership)
+ * read the original `node.children`, so they still see the full subtree.
  */
 export type ExplorerRow = PluginNode & {
   parentId: string | null;
@@ -64,8 +63,7 @@ export function flattenPluginTree(plugins: PluginNode[]): ExplorerRow[] {
         ...node,
         parentId,
         rank: nextRank(parentId),
-        searchText:
-          `${nodeText} ${node.path} ${node.description ?? ""}`.trim(),
+        searchText: `${nodeText} ${node.path} ${node.description ?? ""}`.trim(),
       });
       walk(node.children, node.id, nodeText);
     }

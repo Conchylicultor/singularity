@@ -1,7 +1,6 @@
-// @hash db644f22ef74
+// @hash e77ef0b8ee42
 {
   "items": [
-    "conversations.agents:expand-collapse-all",
     "conversations.agents:delete"
   ]
 }

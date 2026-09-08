@@ -36,7 +36,6 @@ future home of the plugin marketplace.
       - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
       - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
       - **`excluded`** — Not-in-the-app badge in the explorer plugin tree row.
-      - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
       - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
       - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
   - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.

@@ -1,4 +1,4 @@
-// @hash 79b85dfa802b
+// @hash 6cbb5fa2dea0
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,7 +9,6 @@
     "apps.studio.explorer.child-count:child-count",
     "apps.studio.explorer.collapsed:collapsed",
     "apps.studio.explorer.excluded:excluded",
-    "apps.studio.explorer.expand-collapse:expand-collapse",
     "apps.studio.explorer.load-bearing:load-bearing",
     "apps.studio.explorer.membership:membership"
   ]

@@ -25,6 +25,14 @@ export type TreeListContextValue<T extends TreeItem> = {
   /** Batched expand write (see `TreeListProps.setExpanded`) — a single-row
    *  toggle wraps itself in a 1-element array. */
   setExpanded: (changes: readonly ExpandChange[]) => void | Promise<void>;
+  /**
+   * Is every expandable node in this row's subtree (the row itself included)
+   * open? Answered from an index `TreeList` builds once per render — a leaf is
+   * vacuously "all expanded", and an unknown id answers `true`.
+   */
+  subtreeAllExpanded: (id: string) => boolean;
+  /** Fold or unfold this row's whole subtree in ONE batched `setExpanded`. */
+  toggleSubtreeExpanded: (id: string) => void;
   /** Omitted for a read-only tree — `canCreate` is then false and Add disappears. */
   onCreate?: (args: {
     parentId: string | null;
@@ -124,6 +132,10 @@ export type RowControls = {
   consumeAutoFocus: () => void;
   select: () => void;
   toggleExpanded: () => void;
+  /** Is this row's whole subtree open? Drives the fold/unfold icon's direction. */
+  subtreeAllExpanded: boolean;
+  /** Fold or unfold everything under this row, in one batched write. */
+  toggleSubtreeExpanded: () => void;
   addChild: () => Promise<void>;
   addBelow: () => Promise<void>;
   /**
@@ -230,6 +242,15 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
   }, [ctx, node, toggleExpanded]);
   const consumeAutoFocus = useCallback(() => ctx.clearPendingFocus(), [ctx]);
 
+  // Resolved for THIS node, so a row's fold affordance needs nothing but its own
+  // controls. The read is a map lookup into the index `TreeList` built for the
+  // whole forest this render; the walk that produces the write happens on click.
+  const subtreeAllExpanded = ctx.subtreeAllExpanded(node.id);
+  const toggleSubtreeExpanded = useCallback(
+    () => ctx.toggleSubtreeExpanded(node.id),
+    [ctx, node.id],
+  );
+
   const addChild = useCallback(async () => {
     const create = ctx.onCreate;
     if (!create) return;
@@ -277,6 +298,8 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       consumeAutoFocus,
       select,
       toggleExpanded,
+      subtreeAllExpanded,
+      toggleSubtreeExpanded,
       addChild,
       addBelow,
       dragSource,
@@ -296,6 +319,8 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
       consumeAutoFocus,
       select,
       toggleExpanded,
+      subtreeAllExpanded,
+      toggleSubtreeExpanded,
       addChild,
       addBelow,
       dragSource,

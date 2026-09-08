@@ -1,4 +1,4 @@
-// @hash db644f22ef74
+// @hash e77ef0b8ee42
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,7 +6,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "conversations.agents:expand-collapse-all",
     "conversations.agents:delete"
   ]
 }

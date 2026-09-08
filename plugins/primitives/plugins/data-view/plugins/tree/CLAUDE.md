@@ -94,6 +94,26 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   ungrouped path. The pure pieces (orphan-rule roots, field adaptation onto the
   projected wrapper, children-follow-their-root bucketing) live in
   `web/internal/group-rows.ts`, bun-tested alongside `project-rows`.
+- **Expand-all, three scopes.** The hoisted whole-view button and `TreeList`'s
+  own toolbar button are the same `useFlatExpandAll(rows, setExpanded)`; the
+  grouped path only hoists it because each per-section list suppresses its own
+  toolbar. Each group header additionally carries a fold-this-group toggle via
+  `GroupedSections.headerActions` (that seam is documented in the data-view
+  CLAUDE.md) — well-defined because `bucketRowsByRootSection` files every
+  descendant under its ROOT's section, so a group never holds half a subtree.
+  Three choices to leave alone:
+  - **Not gated on `options.expandAll`.** That option names the whole-view
+    *toolbar* button, and the surfaces that omit it to stay minimal — the Pages
+    sidebar, the app's grouped tree — are exactly the ones this exists for. Same
+    reasoning that left the tree primitive's per-row fold ungated.
+  - Built from the **pure** `flatExpandAll`, not the hook, so a section with
+    nothing expandable answers `null`. A hook would need a child component, and
+    a child rendering nothing still hands `GroupedSections` an element to wrap —
+    an empty cluster that spends the header's gap and pulls that section's count
+    off the edge its neighbours line up on.
+  - An `IconButton`, not `ExpandAllButton`, matching the per-row fold:
+    `RowActions` declares the `xs` control density its children size from, while
+    `ExpandAllButton`'s compact variant is hand-sized for a toolbar.
 - **Expand state** — read **only** from the data-view primitive's own
   per-`(surface, view-instance, row)` expand map (localStorage, so it survives
   reload and differs per view instance), falling back to
@@ -214,13 +234,16 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.useResolveCell`
     - `primitives/data-view.useResolveCellEditor`
     - `primitives/data-view.useResolveOperatorSet`
+    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/tree.flatExpandAll`
     - `primitives/tree.RowChrome`
     - `primitives/tree.RowChromeMenuHelpers`
     - `primitives/tree.RowMenuItem`
     - `primitives/tree.TreeItem`
     - `primitives/tree.TreeList`
+    - `primitives/tree.useFlatExpandAll`
     - `primitives/tree.useTreeListContext`
     - `primitives/tree.useTreeRow`
   - Exports (types): `TreeViewOptions`

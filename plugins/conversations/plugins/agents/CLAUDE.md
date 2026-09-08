@@ -37,7 +37,6 @@ drag-reparent behavior. Do not reintroduce it; see
     - `Shell.Sidebar` "Agents" → `component`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.Header` → `AgentAvatarTitlePrefix`
-    - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Uses:
     - `conversations.useConversationById`
@@ -57,7 +56,6 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
-    - `primitives/collapsible.ExpandAllButton`
     - `primitives/css/center.Center`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
@@ -89,10 +87,6 @@ drag-reparent behavior. Do not reintroduce it; see
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor.TextEditor`
-    - `primitives/tree.TreeItem`
-    - `primitives/tree.TreeListContextValue`
-    - `primitives/tree.useOptionalTreeListContext`
-    - `primitives/tree.useSubtreeExpandAll`
     - `shell.Shell`
   - Exports (types): `SystemAgentDescriptor`
   - Exports (values):

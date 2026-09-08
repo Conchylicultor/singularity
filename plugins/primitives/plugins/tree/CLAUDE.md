@@ -3,11 +3,11 @@
 ## Expand state is written in batches
 
 `TreeListProps.setExpanded`, `TreeListContextValue.setExpanded` and
-`useSubtreeExpandAll`'s third argument all take a **batch** —
+`useFlatExpandAll`'s second argument all take a **batch** —
 `readonly ExpandChange[]` (`{ id, expanded }`, from this plugin's `core` barrel) —
 never a single `(id, next)` pair. Every gesture that changes N nodes issues
 **one** call: the toolbar expand-all, the grouped-path expand-all in
-`data-view/tree`, `useSubtreeExpandAll`, and the reveal-on-select ancestor walk.
+`data-view/tree`, a row's subtree fold, and the reveal-on-select ancestor walk.
 A single chevron click passes a 1-element array.
 
 This is load-bearing, not tidiness. The write lands in the data-view primitive's
@@ -19,6 +19,49 @@ The batch has exactly **one** sink: that synchronous, localStorage-backed
 `setState`, batched into the same commit as the click and unable to fail. So
 `TreeList` reads `rows[].expanded` straight through — there is no optimistic
 overlay, because there is no async write to cover for.
+
+## Expand-all: one index for the rows, one hook for the sets
+
+There are exactly two implementations of "unfold everything", and every surface
+uses one of them.
+
+**Per row — an index, built once.** Every row with children renders a
+fold/unfold button in its hover cluster (`RowChrome`'s `trailing`, beside the
+`⋯` and the `+`). It is tree chrome, like the chevron: gated only on
+`hasChildren`, never opted into per app. The row reads its answer from
+`RowControls.subtreeAllExpanded` / `.toggleSubtreeExpanded`, which `TreeList`
+publishes from `useSubtreeExpandIndex(tree)` — ONE post-order walk of the whole
+forest per render that answers for every node.
+
+The shape is the point. The predecessor took `(rows, rootId)` and rebuilt a
+parent map per call, so one call per row-with-children cost O(n) each — quadratic
+across a render, paid on every expand/collapse of the tasks list, the agents list
+and the Studio plugin tree. Three consumer plugins had each written their own
+copy of it and contributed it as an app-level item action, which is also why the
+surfaces that never wrote one — Pages' sidebar, the config nav, the file trees —
+silently went without the feature. Both defects are gone at once: the index is
+internal (not exported from the barrel), so a fourth copy has nothing to copy
+from and nowhere to live.
+
+Two rules the index keeps, and a reimplementation would not:
+
+- **A leaf is vacuously all-expanded.** It has nothing below it to open, so it
+  must not drag its parent's answer to false — a folder holding only files reads
+  as fully unfolded.
+- **The index is keyed on the full `tree`**, never on the searched or windowed
+  projection. A windowed tree paints only the rows on screen and the search path
+  hands out clones forced to `expanded: true`; either would make the button
+  answer about the slice rather than about the subtree it claims to fold.
+
+**Per set — `useFlatExpandAll(rows, setExpanded)`.** The whole-tree toolbar
+button, the grouped tree view's hoisted toolbar, and a group header's
+per-section toggle all hold a flat row array rather than a forest, so this one
+takes rows and derives the expandable set from the parent links.
+`hasExpandable` is what decides whether the button is rendered at all — a set
+with no parents is hidden, not shown inert.
+
+Both write only the rows whose value actually differs. The sink re-serializes
+its whole expand map per call, so a padded batch is not free.
 
 ## `expandOnActivate` is consulted in `select`, not `onSelect`
 
@@ -72,10 +115,10 @@ outside a tree — notably a `data-view` item-action, which every view renders
 `return null` when the context is absent.
 
 `useOptionalRowControls()` is the same rule one level down: the enclosing row's
-`RowControls` (`addBelow`, `addChild`, `select`, drag/drop state), or `null`
-outside a tree row. It lets an affordance that needs the node — "Add page below"
-— be an ordinary contributed item action instead of a second menu
-(`TreeViewOptions.rowMenu`) beside the action cluster.
+`RowControls` (`addBelow`, `addChild`, `select`, `toggleSubtreeExpanded`,
+drag/drop state), or `null` outside a tree row. It lets an affordance that needs
+the node — "Add page below" — be an ordinary contributed item action instead of
+a second menu (`TreeViewOptions.rowMenu`) beside the action cluster.
 
 `RowChrome` provides it around that row's own chrome only, **not** around the
 child recursion, so a descendant can't read its parent's controls. `useTreeRow`'s
@@ -116,7 +159,7 @@ return is `useMemo`'d because it is now a context value.
     - `primitives/slot-render.renderIsolated`
     - `primitives/virtual-rows.VirtualRows`
   - Exports (types):
-    - `ExpandableRow`
+    - `FlatExpandAll`
     - `RenameInputProps`
     - `RowChromeMenuHelpers`
     - `RowChromeProps`
@@ -128,17 +171,18 @@ return is `useMemo`'d because it is now a context value.
     - `TreeListContextValue`
     - `TreeListProps`
     - `TreeRowChromeProps`
-    - `UseSubtreeExpandAllReturn`
+    - `UseFlatExpandAllReturn`
   - Exports (values):
+    - `flatExpandAll`
     - `RenameInput`
     - `RowChrome`
     - `Tree`
     - `TreeDisclosureToggle`
     - `TreeList`
     - `TreeRowChrome`
+    - `useFlatExpandAll`
     - `useOptionalRowControls`
     - `useOptionalTreeListContext`
-    - `useSubtreeExpandAll`
     - `useTreeListContext`
     - `useTreeRow`
 - Core:
@@ -161,11 +205,8 @@ return is `useMemo`'d because it is now a context value.
   - Imported by:
     - `apps/pages/page-tree`
     - `apps/story/story-core`
-    - `apps/studio/explorer/expand-collapse`
-    - `conversations/agents`
     - `page/editor`
     - `primitives/data-view/tree`
-    - `tasks/task-list`
     - `ui/tree-disclosure`
     - `ui/tree-disclosure/column`
     - `ui/tree-disclosure/dimmed-leaf`

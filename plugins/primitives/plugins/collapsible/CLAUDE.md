@@ -98,7 +98,6 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
-    - `tasks/task-list`
     - `ui/tokens/color-palette`
     - `ui/tokens/density`
     - `ui/tokens/font-family`

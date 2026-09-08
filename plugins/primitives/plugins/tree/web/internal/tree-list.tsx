@@ -32,6 +32,8 @@ import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
+import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
+import { useFlatExpandAll } from "./use-flat-expand-all";
 import type { TreeItem } from "./types";
 
 /** Above this many *visible* (expanded) rows the tree windows its rows via
@@ -222,23 +224,31 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     return i >= 0 ? i : undefined;
   }, [windowed, selectedId, flatVisible]);
 
-  const nodesWithChildren = useMemo(() => {
-    const childSet = new Set(
-      scoped.filter((r) => r.parentId).map((r) => r.parentId!),
-    );
-    return scoped.filter((r) => childSet.has(r.id));
-  }, [scoped]);
-  const showExpandAll = !!toolbar?.expandAll && nodesWithChildren.length > 0;
-  const allExpanded =
-    nodesWithChildren.length > 0 && nodesWithChildren.every((r) => r.expanded);
-  const expandAll = useCallback(async () => {
-    const next = !allExpanded;
-    await setExpanded(
-      nodesWithChildren
-        .filter((r) => r.expanded !== next)
-        .map((r) => ({ id: r.id, expanded: next })),
-    );
-  }, [nodesWithChildren, allExpanded, setExpanded]);
+  // The toolbar's whole-tree expand-all. Shared with the grouped tree view's
+  // hoisted toolbar and its per-section header toggle, which hold row buckets
+  // rather than a forest — hence the flat-rows shape.
+  const {
+    hasExpandable,
+    allExpanded,
+    toggle: expandAll,
+  } = useFlatExpandAll(scoped, setExpanded);
+  const showExpandAll = !!toolbar?.expandAll && hasExpandable;
+
+  // The per-row subtree toggle every row with children renders (row-chrome).
+  // Built ONCE per render from the full forest and consulted by each row, rather
+  // than each row walking the rows itself — the latter is O(n) per row, i.e.
+  // quadratic across a render, which is what the three hand-rolled consumer
+  // copies used to pay. Keyed on `tree`, not on the searched/windowed
+  // projection: a windowed tree paints only the rows on screen, and the button
+  // must still answer about the whole subtree beneath it.
+  const subtreeIndex = useSubtreeExpandIndex(tree);
+  const toggleSubtreeExpanded = useCallback(
+    (id: string) =>
+      void setExpanded(
+        subtreeIndex.getSubtreeChanges(id, !subtreeIndex.getAllExpanded(id)),
+      ),
+    [subtreeIndex, setExpanded],
+  );
 
   // The DnD shell (DndContext, sensors, active-id lifecycle, DragOverlay chip,
   // and the windowed measuring strategy) is lifted into `RankReorderDndContext`.
@@ -334,6 +344,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       clearPendingFocus,
       onSelect,
       setExpanded,
+      subtreeAllExpanded: subtreeIndex.getAllExpanded,
+      toggleSubtreeExpanded,
       onCreate,
       Row,
       takeInitialReveal,
@@ -350,6 +362,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       clearPendingFocus,
       onSelect,
       setExpanded,
+      subtreeIndex,
+      toggleSubtreeExpanded,
       onCreate,
       Row,
       takeInitialReveal,
