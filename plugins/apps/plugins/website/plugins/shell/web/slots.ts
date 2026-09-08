@@ -3,9 +3,9 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { definePaneHeaderSlot } from "@plugins/primitives/plugins/pane/web";
 
 /**
- * The shared site header — ONE pane header slot worn by every INNER website
- * pane, so the nav persists across the two question pages and is authored in
- * one place: one contribution list, one reorder directive, one `⋯`.
+ * The shared site header — ONE pane header slot worn by every website pane, so
+ * the nav persists across the whole site and is authored in one place: one
+ * contribution list, one reorder directive, one `⋯`.
  *
  * A pane borrows it with `Pane.define({ actions: WebsiteHeader })`; its
  * `pane.Actions` then IS this slot. It is declared exactly ONCE, by this plugin
@@ -13,21 +13,23 @@ import { definePaneHeaderSlot } from "@plugins/primitives/plugins/pane/web";
  * absent from their own plugins' `slots:` records — declaring one slot under two
  * names is what the declaration pass rejects.
  *
- * The landing pane is the one page that does NOT borrow it (see `panes.tsx`):
- * the homepage carries no nav, so it keeps the private header slot
- * `Pane.define` minted for it, and this plugin declares that pane too.
- *
  * The shell contributes the wordmark; page plugins contribute their nav links
  * (use `<WebsiteNavLink/>` for the standard look). Which of them lead and which
- * trail is the slot's reorder config, not a field on the contribution.
+ * trail is the slot's reorder config — see
+ * `config/apps/website/shell/header.jsonc`, where the wordmark sits ahead of the
+ * spacer and the nav packs against the trailing edge.
  */
 export const WebsiteHeader = definePaneHeaderSlot();
 
 export const Website = {
   /**
-   * Landing-page sections, rendered top-to-bottom on the index pane at
-   * `/website` (the intro, then the fork). Order via the slot's reorder
-   * config; each section owns its full-width band.
+   * Landing-page bands, rendered top-to-bottom on the index pane at
+   * `/website` — the hero, the fork, the story link, the contact band. Each
+   * section owns its full-width band (compose `WebsiteBand`).
+   *
+   * Reading order is authored in `config/apps/website/shell/section.jsonc`, NOT
+   * inherited from the plugin load order: a page's bands are a sequence someone
+   * wrote, and plugin topology has no opinion about which paragraph comes first.
    */
   Section: defineRenderSlot<{ label: string; component: ComponentType }>({
     docLabel: (p) => p.label,

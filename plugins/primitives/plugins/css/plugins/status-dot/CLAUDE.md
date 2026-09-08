@@ -36,6 +36,7 @@ no-provider default is `md`.
     - `apps/mail/sync-status`
     - `apps/studio/compositions/release`
     - `apps/studio/compositions/release/release-info`
+    - `apps/website/landing/fork`
     - `apps/workflows/engine`
     - `apps/workflows/executions`
     - `build/build-status`

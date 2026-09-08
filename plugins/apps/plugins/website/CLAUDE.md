@@ -1,19 +1,49 @@
 # website
 
-The public equin site: a homepage that asks two questions, and a page for each
-answer.
+The public equin site: a homepage that makes one claim, forks into two questions,
+and offers a way to write.
 
 It is not a product page — there is nothing to download and nothing to install.
-One developer's proof of concept makes two claims to two audiences, so the
-homepage's whole job is to state that and fork:
+One developer's proof of concept, addressed to two readers, so the homepage's job
+is to state the claim, let each reader pick themselves, and then get out of the
+way:
 
-- [`landing`](plugins/landing/CLAUDE.md) — the homepage: the intro, then the
-  fork. It wears no header, so nothing competes with the two columns.
+- [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
+  fork, the story link, the contact block.
 - [`questions`](plugins/questions/CLAUDE.md) — one page per question
   (`/website/apps`, `/website/harness`), each with its own section slot the
   answer gets written into.
-- [`shell`](plugins/shell/CLAUDE.md) — the app entry, the shared site header the
-  two question pages wear, and the page/footer wrapper.
+- [`story`](plugins/story/CLAUDE.md) — `/website/story`: where equin came from.
+  Also unwritten, on purpose.
+- [`shell`](plugins/shell/CLAUDE.md) — the app entry, the shared site header
+  every page wears, and the band / page / footer chrome (`WebsiteBand`,
+  `WebsiteChrome`).
+
+## The rules that are easy to break
+
+**Reading order is authored, not inherited.** A page's band order lives in
+`config/apps/website/shell/section.jsonc` (and the nav's in `header.jsonc`) —
+committed, commented, and the thing to edit when a band moves. It is NOT the
+plugin load order, which is a function of who imports whom and has no opinion
+about which paragraph comes first.
+
+**The site's colour is its theme, not its components.** The website app is pinned
+to the Ocean palette per-app, and every component reads semantic tokens. The only
+bespoke paint on the whole site is the hero's wash and headline gradient, and even
+those are mixed from `--primary` / `--chart-1`. Never hardcode a colour in a
+website component.
+
+The pin lives in the **token group** configs — `config/ui/tokens/color-palette/
+@app/website/` and `.../shape/@app/website/` — because a group's `preset` is what
+the theme injector reads. `ui/theme-engine`'s `globalPreset` is the customizer's
+bookkeeping (it fans out to the groups when you pick a theme in the UI); pinning
+only that changes nothing, which is the trap this paragraph exists to close.
+Light/dark is still global — per-scope dark hasn't landed — so the site follows
+the desktop's mode, and the Ocean palette has both.
+
+**Every page goes through `WebsiteChrome` and every band through
+`WebsiteBand`.** That is what makes "one footer per page" and "one reading
+measure across the site" true by construction instead of by remembering.
 
 Copy register: understated, essay-voice, never marketing. The word is **equin**
 everywhere a reader can see it; `Singularity` is only the repository's name.
@@ -22,16 +52,19 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
 
 ## Plugin reference
 
-- Description: Website — the public-facing site of equin: the homepage's two questions, and a page for each answer.
+- Description: Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
 - Sub-plugins:
-  - **`landing`** — Landing-page sections of the public website: the intro, and the fork into the two questions.
+  - **`landing`** — Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
     - Plugins:
+      - **`contact`** — Getting in touch: the homepage's closing band (two reasons to write, plus the GitHub and email links) and the 'Get in touch' call to action in the shared site header. Owns the one address the site publishes.
       - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
-      - **`intro`** — Landing intro band: the two opening paragraphs of the equin site — what equin is, and why the page forks into two questions.
+      - **`hero`** — Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.
+      - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.
   - **`questions`** — The two question pages of the public website: what apps evolve into, and what engineering looks like when no human reviews the code.
     - Plugins:
       - **`apps`** — The applications page of the equin website: the /website/apps pane answering 'what will apps evolve into?', its Apps nav link, and the WebsiteApps.Section slot the answer is written into.
       - **`harness`** — The engineering page of the equin website: the /website/harness pane answering 'what does software engineering look like when no human reviews the code?', its Harness nav link, and the WebsiteHarness.Section slot the answer is written into.
-  - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the headerless landing pane, owns the shared site header (wordmark + nav) the inner pages wear, and defines the Website.Section landing slot.
+  - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, and defines the Website.Section landing slot.
+  - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
 
 <!-- AUTOGENERATED:END -->

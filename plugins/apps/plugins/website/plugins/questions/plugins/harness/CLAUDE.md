@@ -22,15 +22,14 @@ shell never names this page.
     - `Pane.Register` "website-harness"
     - `WebsiteHeader` "harness" → `HarnessNavItem`
   - Uses:
+    - `apps/website/shell.WebsiteBand`
+    - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
-    - `apps/website/shell.WebsitePage`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values):

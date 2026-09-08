@@ -9,12 +9,17 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   fontWeightMedium: { default: "500", label: "Font weight medium" },
   fontWeightSemibold: { default: "600", label: "Font weight semibold" },
   fontWeightBold: { default: "700", label: "Font weight bold" },
+  // The display rung: a landing/marketing headline, the one type size above
+  // `title`. It exists so a hero headline is a ROLE like every other size and
+  // not an arbitrary `text-[3rem]` beside the closed scale.
+  fontSizeDisplay: { default: "3rem", label: "Font size display" },
   fontSizeTitle: { default: "1.25rem", label: "Font size title" },
   fontSizeHeading: { default: "1.125rem", label: "Font size heading" },
   fontSizeSubheading: { default: "1rem", label: "Font size subheading" },
   fontSizeBody: { default: "0.875rem", label: "Font size body" },
   fontSizeLabel: { default: "0.8125rem", label: "Font size label" },
   fontSizeCaption: { default: "0.75rem", label: "Font size caption" },
+  lineHeightDisplay: { default: "3.25rem", label: "Line height display" },
   lineHeightTitle: { default: "1.75rem", label: "Line height title" },
   lineHeightHeading: { default: "1.625rem", label: "Line height heading" },
   lineHeightSubheading: { default: "1.5rem", label: "Line height subheading" },

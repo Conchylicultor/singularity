@@ -13,6 +13,7 @@ import {
  * this repo-wide.
  */
 export type TextVariant =
+  | "display"
   | "title"
   | "heading"
   | "subheading"
@@ -29,6 +30,9 @@ export type TextTone = "default" | "muted" | "primary" | "destructive";
 export type TruncateSide = "end" | "start";
 
 const VARIANT_CLASS: Record<TextVariant, string> = {
+  // The landing/marketing headline rung — the one role above `title`. Bold and
+  // tightly tracked; a page has at most one.
+  display: "text-display",
   title: "text-title",
   heading: "text-heading",
   subheading: "text-subheading",
@@ -52,6 +56,7 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
  * policy (`textStepFor`), shared with `Button` and `Badge`.
  */
 const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
+  display: "text-display-compact",
   title: "text-title-compact",
   heading: "text-heading-compact",
   subheading: "text-subheading-compact",

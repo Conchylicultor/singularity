@@ -1,0 +1,14 @@
+// @hash 9087e09470bf
+{
+  // Bookkeeping only — this records which theme the customizer shows as selected
+  // for the website app. Nothing reads it to produce a token: the values that
+  // actually paint the site are the per-group presets, pinned beside this file at
+  // `config/ui/tokens/color-palette/@app/website/` and `.../shape/@app/website/`.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts` is
+  // `undefined` until per-scope dark lands), so a value here would claim
+  // something that is not true. The site follows the desktop's light/dark, and
+  // the Ocean palette has both.
+  "globalPreset": "ocean"
+}

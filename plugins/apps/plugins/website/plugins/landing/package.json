@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-website-landing",
-  "description": "Landing-page sections of the public website: the intro, and the fork into the two questions.",
+  "description": "Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.",
   "private": true,
   "version": "0.0.1"
 }

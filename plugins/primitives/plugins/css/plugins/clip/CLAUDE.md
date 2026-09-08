@@ -46,6 +46,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/progress/scrubber`
     - `apps/studio/graph`
+    - `apps/website/landing/hero`
     - `build/build-logs`
     - `code-explorer`
     - `config_v2/settings`

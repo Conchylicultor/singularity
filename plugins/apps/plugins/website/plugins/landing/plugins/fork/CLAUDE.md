@@ -2,6 +2,11 @@
 
 The homepage's fork: two questions, two click targets, nothing else.
 
+Each column is addressed to a READER — "For users", "For developers" — and the
+question underneath is what that reader gets an answer to. The nav links to the
+same two pages use the same two labels; keep them in agreement, or the site says
+two different things about who a page is for.
+
 Each column opens one of the pages under
 [`questions/`](../../../questions/CLAUDE.md) — imported through their barrels,
 which is what keeps this plugin the only place that knows the homepage has
@@ -23,11 +28,13 @@ layout constraint, not a copy problem: read the component's own comment before
     - `apps/website/questions/apps.appsPane`
     - `apps/website/questions/harness.harnessPane`
     - `apps/website/shell.Website`
+    - `apps/website/shell.WebsiteBand`
     - `primitives/css/card.Card`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
-    - `primitives/css/spacing.Inset`
+    - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/pane.PaneObject`
     - `primitives/pane.useOpenPane`

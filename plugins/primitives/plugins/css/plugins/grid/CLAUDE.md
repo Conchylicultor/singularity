@@ -69,6 +69,7 @@ Shared (both paths):
     - `apps/agent-manager/welcome`
     - `apps/browser/start-page`
     - `apps/sonata/library`
+    - `apps/website/landing/contact`
     - `apps/website/landing/fork`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/health-monitor`

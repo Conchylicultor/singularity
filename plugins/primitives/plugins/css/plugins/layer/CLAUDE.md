@@ -91,6 +91,7 @@ has the vocabulary for it.
     - `apps/sonata/progress/keys`
     - `apps/sonata/progress/loop`
     - `apps/sonata/progress/scrubber`
+    - `apps/website/landing/hero`
     - `page/code-block`
     - `primitives/tree`
 

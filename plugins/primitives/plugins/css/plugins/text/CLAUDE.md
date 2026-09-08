@@ -15,6 +15,7 @@ runtime vars. Picking a typography preset re-themes every variant together.
 
 | Variant      | size      | line-height | weight | tracking | Replaces                  |
 | ------------ | --------- | ----------- | ------ | -------- | ------------------------- |
+| `display`    | 3rem      | 3.25rem     | 700    | -0.035em | `text-5xl font-bold`      |
 | `title`      | 1.25rem   | 1.75rem     | 600    | -0.01em  | `text-xl font-semibold`   |
 | `heading`    | 1.125rem  | 1.625rem    | 600    | -0.005em | `text-lg font-semibold`   |
 | `subheading` | 1rem      | 1.5rem      | 600    | 0        | `text-base font-semibold` |
@@ -27,6 +28,10 @@ runtime vars. Picking a typography preset re-themes every variant together.
 `tone` layers a foreground color (`default | muted | primary | destructive`);
 `as` swaps the host element (default `span`). `cn(variant, tone, className)` —
 caller `className` wins last, so layout margins/truncation compose on top.
+
+`display` is the landing/marketing headline rung — the one role above `title`,
+and the only one sized for a page whose whole job is a single sentence. App
+chrome never reaches for it; a page has at most one.
 
 `code` is monospaced running text (log viewers, code blocks, math source). It
 owns the mono **family** as well as the metrics, so "code" is one decision — do
@@ -235,11 +240,14 @@ fixed raw size escapes per-site via
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `apps/studio/graph`
+    - `apps/website/landing/contact`
     - `apps/website/landing/fork`
-    - `apps/website/landing/intro`
+    - `apps/website/landing/hero`
+    - `apps/website/landing/story-link`
     - `apps/website/questions/apps`
     - `apps/website/questions/harness`
     - `apps/website/shell`
+    - `apps/website/story`
     - `apps/workflows/definitions`
     - `apps/workflows/editor`
     - `apps/workflows/engine`

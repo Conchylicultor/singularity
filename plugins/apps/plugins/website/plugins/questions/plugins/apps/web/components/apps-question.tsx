@@ -1,8 +1,6 @@
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 
 const EYEBROW = "The applications";
 const QUESTION = "What will apps evolve into?";
@@ -17,17 +15,15 @@ const QUESTION = "What will apps evolve into?";
  */
 export function AppsQuestion() {
   return (
-    <section>
-      <Inset x="xl" y="2xl">
-        <Stack gap="sm" className="mx-auto w-full max-w-2xl">
-          <Text variant="eyebrow" tone="muted">
-            {EYEBROW}
-          </Text>
-          <Text as="h1" variant="title" className="tracking-tight">
-            {QUESTION}
-          </Text>
-        </Stack>
-      </Inset>
-    </section>
+    <WebsiteBand>
+      <Stack gap="sm">
+        <Text variant="eyebrow" tone="muted">
+          {EYEBROW}
+        </Text>
+        <Text as="h1" variant="title">
+          {QUESTION}
+        </Text>
+      </Stack>
+    </WebsiteBand>
   );
 }

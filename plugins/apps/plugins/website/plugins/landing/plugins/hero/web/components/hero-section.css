@@ -1,0 +1,28 @@
+/* The hero's ambient wash — the site's one bespoke paint.
+ *
+ * Both stops READ the active theme (`--primary` and the light end of the chart
+ * ramp) rather than pinning colours of their own, so the wash re-tints with a
+ * preset swap instead of becoming the one blue that survives a re-theme. It is
+ * decorative: `Layer decorative` makes it click-through, and the hero clips it so
+ * it never bleeds into the band below. */
+.website-hero-wash {
+  background: radial-gradient(
+    62% 78% at 50% 0%,
+    color-mix(in oklab, var(--primary) 32%, transparent),
+    color-mix(in oklab, var(--chart-1) 12%, transparent) 45%,
+    transparent 74%
+  );
+  filter: blur(28px);
+}
+
+/* The emphasised half of the headline: the accent gradient painted THROUGH the
+ * glyphs, so the sentence carries the brand colour without a second element.
+ * `color: transparent` is what lets the clipped background show; the fallback if
+ * `background-clip: text` is unsupported is invisible text, which is why the
+ * plain half of the sentence carries the meaning on its own. */
+.website-hero-accent {
+  background-image: linear-gradient(100deg, var(--primary), var(--chart-1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

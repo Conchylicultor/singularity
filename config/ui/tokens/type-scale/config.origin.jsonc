@@ -1,4 +1,4 @@
-// @hash e46d7a8350c5
+// @hash cb1268933cfa
 {
   "preset": "default",
   "overrides": {
@@ -11,12 +11,14 @@
       "fontWeightMedium": "",
       "fontWeightSemibold": "",
       "fontWeightBold": "",
+      "fontSizeDisplay": "",
       "fontSizeTitle": "",
       "fontSizeHeading": "",
       "fontSizeSubheading": "",
       "fontSizeBody": "",
       "fontSizeLabel": "",
       "fontSizeCaption": "",
+      "lineHeightDisplay": "",
       "lineHeightTitle": "",
       "lineHeightHeading": "",
       "lineHeightSubheading": "",
@@ -33,12 +35,14 @@
       "fontWeightMedium": "",
       "fontWeightSemibold": "",
       "fontWeightBold": "",
+      "fontSizeDisplay": "",
       "fontSizeTitle": "",
       "fontSizeHeading": "",
       "fontSizeSubheading": "",
       "fontSizeBody": "",
       "fontSizeLabel": "",
       "fontSizeCaption": "",
+      "lineHeightDisplay": "",
       "lineHeightTitle": "",
       "lineHeightHeading": "",
       "lineHeightSubheading": "",

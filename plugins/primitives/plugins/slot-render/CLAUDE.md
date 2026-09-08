@@ -276,6 +276,7 @@ the outcome too, with no separate code path.
     - `apps/website/questions/apps`
     - `apps/website/questions/harness`
     - `apps/website/shell`
+    - `apps/website/story`
     - `apps/workflows/shell`
     - `config_v2/fields`
     - `config_v2/settings`

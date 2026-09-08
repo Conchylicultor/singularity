@@ -571,6 +571,12 @@
       "parent": null
     },
     {
+      "paneId": "website-story",
+      "segment": "story",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "welcome",
       "segment": "",
       "appIndex": true,

@@ -1,0 +1,6 @@
+// @hash 7685ff6883a5
+{
+  // Softer corners than the app chrome: the site's cards are large blocks of
+  // prose, not dense controls, and the Ocean theme pairs with `rounded`.
+  "preset": "rounded"
+}

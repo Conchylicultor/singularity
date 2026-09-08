@@ -168,11 +168,13 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/studio/contributions/tables/foreign-keys`
     - `apps/studio/explorer`
     - `apps/studio/graph`
+    - `apps/website/landing/contact`
     - `apps/website/landing/fork`
-    - `apps/website/landing/intro`
+    - `apps/website/landing/hero`
     - `apps/website/questions/apps`
     - `apps/website/questions/harness`
     - `apps/website/shell`
+    - `apps/website/story`
     - `apps/workflows/definitions`
     - `apps/workflows/editor`
     - `apps/workflows/engine`

@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-website",
-  "description": "Website — the public-facing site of equin: the homepage's two questions, and a page for each answer.",
+  "description": "Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.",
   "private": true,
   "version": "0.0.1"
 }

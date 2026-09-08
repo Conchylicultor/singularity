@@ -7,14 +7,17 @@ import { harnessPane } from "@plugins/apps/plugins/website/plugins/questions/plu
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 
 interface Fork {
-  eyebrow: string;
+  /** Who this column is addressed to — the reader picks a column by picking themselves. */
+  audience: string;
+  /** Tailwind background for the audience dot. */
+  dotClass: string;
   heading: string;
   body: string;
   pane: PaneObject;
@@ -26,13 +29,15 @@ interface Fork {
  */
 const FORKS: Fork[] = [
   {
-    eyebrow: "The applications",
+    audience: "For users",
+    dotClass: "bg-primary",
     heading: "What will apps evolve into?",
     body: "Most people are using agents to rebuild the software we already had, faster. That's the smallest thing they're good for. An application can now change shape while you use it — one app that composes itself around one person, instead of a hundred apps built for the average of everyone.",
     pane: appsPane,
   },
   {
-    eyebrow: "The engineering",
+    audience: "For developers",
+    dotClass: "bg-chart-1",
     heading:
       "What does software engineering look like when no human reviews the code?",
     body: "500,000 lines, most of them written by agents and read by nobody. It holds together because the mistakes are unwritable, not because someone checked them. That's the harness.",
@@ -44,6 +49,10 @@ const FORKS: Fork[] = [
  * The fork — the homepage's only interactive element. Two columns, each one
  * click target opening its question's page, side by side on a wide viewport and
  * stacked on a narrow one (`Grid` wraps at `minCellWidth`).
+ *
+ * Each column is addressed to a reader rather than titled: the eyebrow names who
+ * it is for, so choosing a branch is choosing which of the two you are, and the
+ * question underneath is what that reader gets an answer to.
  *
  * The two headings are lopsided on purpose (five words against twelve), and the
  * layout treats that as a fact rather than something to pad the copy around.
@@ -57,19 +66,13 @@ const FORKS: Fork[] = [
  */
 export function ForkSection() {
   return (
-    <section>
-      <Inset x="xl" y="2xl">
-        <Grid
-          minCellWidth="22rem"
-          gap="lg"
-          className="mx-auto w-full max-w-5xl"
-        >
-          {FORKS.map((fork) => (
-            <ForkColumn key={fork.heading} fork={fork} />
-          ))}
-        </Grid>
-      </Inset>
-    </section>
+    <WebsiteBand y="xl">
+      <Grid minCellWidth="22rem" mode="fit" gap="lg">
+        {FORKS.map((fork) => (
+          <ForkColumn key={fork.heading} fork={fork} />
+        ))}
+      </Grid>
+    </WebsiteBand>
   );
 }
 
@@ -80,14 +83,17 @@ function ForkColumn({ fork }: { fork: Fork }) {
       as="button"
       interactive
       // A `<button>` centers its own text; the column is a paragraph of prose.
-      className="h-full text-left"
+      className="h-full rounded-xl text-left"
       onClick={() => openPane(fork.pane, {}, { mode: "root" })}
     >
       <Stack gap="md" className="h-full">
-        <Text variant="eyebrow" tone="muted">
-          {fork.eyebrow}
-        </Text>
-        <Text as="h2" variant="heading" className="tracking-tight">
+        <Inline gap="xs">
+          <StatusDot colorClass={fork.dotClass} />
+          <Text variant="eyebrow" tone="muted">
+            {fork.audience}
+          </Text>
+        </Inline>
+        <Text as="h2" variant="title">
           {fork.heading}
         </Text>
         {/* The slack between the two shared baselines. */}

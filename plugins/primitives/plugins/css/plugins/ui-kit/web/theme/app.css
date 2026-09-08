@@ -1387,6 +1387,9 @@
  * so every typographic decision routes through these roles via <Text role>.
  * NOTE: roles read the vars directly — never bridge them through @theme inline
  * (that would auto-generate a colliding `text-<role>` font-size utility). */
+/* The display rung — a landing/marketing headline, the one role above `title`.
+ * Bold and tightly tracked: at this size the default tracking reads loose. */
+@utility text-display    { font-size: var(--font-size-display);    line-height: var(--line-height-display);    font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
 @utility text-title      { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
 @utility text-heading    { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
 @utility text-subheading { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
@@ -1408,6 +1411,7 @@
  * keeps its semibold). `Text` swaps in the `-compact` map when the ambient
  * `ControlSize` is `xs` (textStepFor === 1); `Badge` reads `text-caption-compact`
  * the same way. One density→text-step policy, three consumers (Button/Badge/Text). */
+@utility text-display-compact    { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-bold);     letter-spacing: -0.035em; } /* twmerge: extend font-size */
 @utility text-title-compact      { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
 @utility text-heading-compact    { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
 @utility text-subheading-compact { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
