@@ -133,6 +133,16 @@ Metadata is therefore read out of the HTML, not a sidecar file:
   name — that is an opaque id)
 - `<meta name="description">` → `blurb` (default: `""`)
 - `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
+- `<meta name="mocks" content="<fixture id>">` → `mocks` (default: `""`)
+
+`mocks` is the layout-harness fixture this prototype is a mockup OF — the pairing
+a compare-against-the-real-component surface reads. Carried as an opaque string
+and resolved nowhere here: fixtures are per-worktree and versioned, prototypes
+are host-global and outside git, so the pairing can only ever be a runtime
+lookup, and a prototype naming a fixture this worktree does not have is a thing
+that surface renders, not a problem with the folder. Absent is the ordinary
+answer — most prototypes mock no component — so it defaults to `""` and never
+becomes a `problems[]` entry.
 
 Parsed with `HTMLRewriter`; every value it yields is decoded once via
 `@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.

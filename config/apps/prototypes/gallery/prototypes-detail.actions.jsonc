@@ -1,9 +1,13 @@
 // @hash 1e879662063a
 // A horizontal pane header, read left to right. The pane's own title comes
-// first, then `view-mode` — Focus or Compare is a choice about the prototype
-// itself, so it leads, beside the title. (It used to sit there because it was
-// contributed with `position: "left"`; there is no such field any more, and its
-// place in this list is now the whole of the decision.)
+// first, then `view-mode` — which stage you are looking at is a choice about
+// the prototype itself, so it leads, beside the title. (It used to sit there
+// because it was contributed with `position: "left"`; there is no such field
+// any more, and its place in this list is now the whole of the decision.)
+//
+// `view-mode` is one chip per contributed stage, not a fixed Focus/Compare
+// pair — the stage set is a slot. The id stays `view-mode` because this list is
+// what pins where the switcher sits.
 //
 // After the spacer, `present` and `improve` share the trailing cluster, and
 // their order there is the real decision. `present` goes first: it is what this

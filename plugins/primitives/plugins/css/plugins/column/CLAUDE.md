@@ -61,6 +61,7 @@ Only present slots render — an absent slot produces no region and no phantom g
   - Imported by:
     - `apps/home/shell`
     - `apps/mail/shell`
+    - `apps/prototypes/compare-component`
     - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/studio/contributions`

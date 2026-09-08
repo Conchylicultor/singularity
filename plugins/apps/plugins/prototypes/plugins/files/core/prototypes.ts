@@ -15,6 +15,13 @@ import { PrototypeProblemSchema } from "./validate";
  * - `blurb` — `<meta name="description">` (defaults to `""`)
  * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
  *   (defaults to 1280x800)
+ * - `mocks` — `<meta name="mocks" content="control-panel/setting-rail">`, the
+ *   layout-harness fixture this prototype is a mockup OF, so a surface can show
+ *   the two side by side. Optional, and `""` is its ordinary value: most
+ *   prototypes are not a mockup of an app component. Carried as an opaque
+ *   string — nothing here resolves it against the fixture catalog, which is
+ *   per-worktree while prototypes are host-global, so the pairing can only ever
+ *   be a runtime lookup.
  * - `problems` — every way the folder breaks the self-contained contract, empty
  *   when it holds. Prototypes are user content, not code, so this rides the
  *   wire to the gallery card instead of gating a push.
@@ -27,6 +34,7 @@ export const PrototypeMetaSchema = z.object({
   title: z.string(),
   blurb: z.string(),
   viewport: z.object({ w: z.number(), h: z.number() }),
+  mocks: z.string(),
   problems: z.array(PrototypeProblemSchema),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;

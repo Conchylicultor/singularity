@@ -6,7 +6,7 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { usePrototypeDetail, type PrototypeViewMode } from "../context";
+import { usePrototypeDetail } from "../context";
 
 /**
  * The detail pane's header controls, each a zero-prop contribution to
@@ -15,19 +15,19 @@ import { usePrototypeDetail, type PrototypeViewMode } from "../context";
  * Present menu is one such contribution, from a sibling plugin).
  */
 
-const MODE_OPTIONS = [
-  { id: "focus" as const, label: "Focus" },
-  { id: "compare" as const, label: "Compare" },
-];
-
-/** Focus | Compare — picks which stage the pane body paints. */
-export function ViewModeSwitcher() {
-  const { mode, setMode } = usePrototypeDetail();
+/**
+ * The stage picker — one chip per contributed stage, in the order the stages
+ * declare. It names no stage: the options ARE the contributions, so a plugin
+ * adding a stage adds a chip here without this file changing.
+ */
+export function StageSwitcher() {
+  const { stages, stage, setStage } = usePrototypeDetail();
+  if (stages.length < 2) return null;
   return (
-    <SegmentedControl<PrototypeViewMode>
-      options={MODE_OPTIONS}
-      value={mode}
-      onChange={setMode}
+    <SegmentedControl<string>
+      options={stages.map((s) => ({ id: s.id, label: s.label }))}
+      value={stage?.id ?? ""}
+      onChange={setStage}
     />
   );
 }

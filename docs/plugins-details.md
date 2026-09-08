@@ -2754,6 +2754,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.RelativeTime`
     - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
       - Plugins:
+        - **`compare-component`** — The Component stage of the prototype detail pane: the prototype mock and the real app component it declares it mocks (a layout-harness fixture, named in the prototype's own <meta name="mocks">), side by side, both live and both at one shared width the reader changes. Contributed into the gallery's open stage slot, so this is the only place prototypes are tied to app internals.
+          - Web:
+            - Contributes: `PrototypeStages.Stage` "Component" → `ComponentStage`
+            - Uses:
+              - `apps/prototypes/gallery.PrototypeStages`
+              - `primitives/bar.Bar`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/card.Card`
+              - `primitives/css/column.Column`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/error-boundary.PluginErrorBoundary`
+              - `primitives/loading.Loading`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
           - Server:
             - Contributes:
@@ -2806,16 +2822,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/prototype`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
+        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus and Compare are its own two contributions), with an Improve this prototype affordance.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
+              - `PrototypeStages.Stage` ← `apps.prototypes.compare-component`, `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
-              - `prototypeDetailPane.Actions` "view-mode" → `ViewModeSwitcher`
+              - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
               - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
+              - `PrototypeStages.Stage` "Focus" → `FocusStage`
+              - `PrototypeStages.Stage` "Compare" → `CompareStage`
             - Uses:
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
@@ -2843,18 +2862,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
               - `PrototypeDetailContextValue`
-              - `PrototypeViewMode`
+              - `PrototypeStage`
+              - `PrototypeStageContribution`
+              - `PrototypeStageProps`
             - Exports (values):
               - `prototypeDetailPane`
               - `prototypesGalleryPane`
+              - `PrototypeStages`
               - `ScaledIframe`
               - `usePrototypeDetail`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/present`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
@@ -21741,6 +21765,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
           - `apps/browser/tabs`
+          - `apps/prototypes/compare-component`
           - `primitives/app-shell`
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
@@ -21983,6 +22008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/search`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/midi/folders`
@@ -22134,6 +22160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/compare-component`
               - `apps/sonata/library`
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
@@ -22400,6 +22427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/home/shell`
               - `apps/mail/shell`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/studio/contributions`
@@ -23347,6 +23375,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
+              - `apps/prototypes/compare-component`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
@@ -23514,6 +23543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
@@ -24014,6 +24044,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
@@ -24334,6 +24365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
+              - `apps/prototypes/compare-component`
               - `apps/prototypes/gallery`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/pedal/indicator`
@@ -26010,6 +26042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `apps/prototypes/compare-component`
           - `apps/workflows/editor`
           - `apps/workflows/executions`
           - `framework/web-core`
@@ -26798,6 +26831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/compare-component`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/library`
@@ -28254,6 +28288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/shell`
           - `apps/pages/welcome`
+          - `apps/prototypes/gallery`
           - `apps/settings/shell`
           - `apps/sonata/piano-roll`
           - `apps/sonata/progress/scrubber`

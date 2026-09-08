@@ -41,10 +41,11 @@ interface HtmlMeta {
   title: string;
   blurb: string;
   viewport: { w: number; h: number };
+  mocks: string;
 }
 
 /**
- * Pull `<title>` and the two `<meta>` tags out of a prototype's `index.html`.
+ * Pull `<title>` and the three `<meta>` tags out of a prototype's `index.html`.
  *
  * Streaming-parsed with `HTMLRewriter`, which hands back RAW markup — every
  * value it yields is decoded exactly once through `html-decode` (attributes via
@@ -59,6 +60,7 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
   let titleDone = false;
   let blurbRaw: string | undefined;
   let viewportRaw: string | undefined;
+  let mocksRaw: string | undefined;
 
   const rewriter = new HTMLRewriter()
     .on("title", {
@@ -75,6 +77,8 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
           blurbRaw ??= readHtmlAttr(el, "content");
         } else if (name === "prototype-viewport") {
           viewportRaw ??= readHtmlAttr(el, "content");
+        } else if (name === "mocks") {
+          mocksRaw ??= readHtmlAttr(el, "content");
         }
       },
     });
@@ -89,6 +93,10 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
     title: decodeHtmlText(titleChunks.join("")).trim(),
     blurb: (blurbRaw ?? "").trim(),
     viewport: viewport ?? { ...DEFAULT_VIEWPORT },
+    // Declaring no counterpart is the ordinary case, so the absent tag reads as
+    // the empty string — there is nothing wrong with a prototype that mocks
+    // nothing, and it must not turn up as a `problems[]` entry.
+    mocks: (mocksRaw ?? "").trim(),
   };
 }
 
@@ -123,6 +131,7 @@ async function readMeta(
     title: UNTITLED_PROTOTYPE,
     blurb: "",
     viewport: { ...DEFAULT_VIEWPORT },
+    mocks: "",
   };
 
   let folder: PrototypeFolder;
@@ -147,6 +156,7 @@ async function readMeta(
     title: parsed.title === "" ? UNTITLED_PROTOTYPE : parsed.title,
     blurb: parsed.blurb,
     viewport: parsed.viewport,
+    mocks: parsed.mocks,
     problems,
   };
 }

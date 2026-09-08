@@ -22,6 +22,7 @@
     - `apps/browser/bookmarks`
     - `apps/browser/shell`
     - `apps/browser/tabs`
+    - `apps/prototypes/compare-component`
     - `primitives/app-shell`
     - `primitives/pane`
 

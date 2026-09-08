@@ -266,6 +266,7 @@ the outcome too, with no separate code path.
     - `apps/pages/page-tree`
     - `apps/pages/shell`
     - `apps/pages/welcome`
+    - `apps/prototypes/gallery`
     - `apps/settings/shell`
     - `apps/sonata/piano-roll`
     - `apps/sonata/progress/scrubber`

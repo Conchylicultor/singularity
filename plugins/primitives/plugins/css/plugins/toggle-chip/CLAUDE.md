@@ -35,6 +35,7 @@ anonymous index signature. See
     - `apps-core/surface/floating/wallpaper`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`
+    - `apps/prototypes/compare-component`
     - `apps/prototypes/gallery`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/pedal/indicator`

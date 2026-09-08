@@ -20,7 +20,8 @@ The Prototypes app's two panes:
   strictly after the list had painted — a guaranteed swatch-then-screenshot
   swap on every load. Side by side they prime in parallel, and the cover is
   right the first time it is painted.
-- **Detail pane** (`proto/:name`) — a Focus | Compare toggle over scaled live iframes.
+- **Detail pane** (`proto/:name`) — a switcher over **stages**, each a scaled live
+  iframe surface.
   - **Nothing in it shows `name`.** `name` is a minted id
     (`proto-1786877040-w2vi`), so the header title and the iframe's accessible
     name both read the prototype's `<title>`. The header has to look that up in
@@ -29,17 +30,37 @@ The Prototypes app's two panes:
     id and swapping it out. The id does appear, monospaced, in the one case
     where it is the only true thing left to say: there is no such folder (or the
     list failed), so the prototype has no title to show.
-  - **The pane header IS the action bar.** Every control in it (Focus/Compare,
-    Improve, and the sibling `present` plugin's Present menu) is a contribution
-    to `prototypeDetailPane.Actions` — the standard pane extension point — so a
-    new control is a contribution, never an edit to the pane body. The state
-    those controls share lives in `PrototypeDetailProvider` (`context.tsx`),
-    which wraps `PaneChrome` so the header renders inside it.
-  - **Focus** renders the prototype in a sandboxed iframe scaled to fit the pane
-    (`ScaledIframe`: a ResizeObserver-driven `transform: scale()`, never upscaling
-    past 1; the container owns the scaling box, the iframe is a rigid leaf).
-  - **Compare** renders a horizontally-scrolling row of scaled iframes, one per
-    prototype; clicking one swaps Focus to it.
+  - **The pane header IS the action bar.** Every control in it (the stage
+    switcher, Improve, and the sibling `present` plugin's Present menu) is a
+    contribution to `prototypeDetailPane.Actions` — the standard pane extension
+    point — so a new control is a contribution, never an edit to the pane body.
+    The state those controls share lives in `PrototypeDetailProvider`
+    (`context.tsx`), which wraps `PaneChrome` so the header renders inside it.
+  - **The stage set is a slot too** (`PrototypeStages.Stage`, `slots.ts`). A
+    stage is `{ id, label, order?, component }`; the component is handed
+    `PrototypeStageProps` — the open prototype, the whole gallery list, and the
+    cache-bust version. The gallery contributes **Focus** and **Compare** like
+    any sibling would, and names a stage nowhere else: the switcher's options
+    ARE the contributions, and the body renders whichever one is active
+    (`renderIsolated`). So a third stage — a prototype beside the real component
+    it mocks, say — is a new plugin folder and no edit here.
+
+    A plain `defineSlot`, not `defineRenderSlot`: one stage paints at a time, so
+    there is no list to render and nothing to reorder. It is the shape
+    `defineTabbedView` uses internally, but that factory owns where the switcher
+    sits (stacked directly above its body) and this one is a header action-bar
+    contribution, several components away from the body it drives.
+  - **Focus** (`focus-stage.tsx`) renders the prototype in a sandboxed iframe
+    scaled to fit the pane (`ScaledIframe`: a ResizeObserver-driven
+    `transform: scale()`, never upscaling past 1; the container owns the scaling
+    box, the iframe is a rigid leaf), under a banner listing what is wrong with
+    its folder.
+  - **Compare** (`compare-stage.tsx`) renders a horizontally-scrolling row of
+    scaled iframes, one per prototype; clicking one swaps the pane to it.
+  - The active stage is state on the provider, held as an **id** — so a picked
+    stage survives the contribution list changing under it, and an id that no
+    longer resolves falls back to whichever stage sorts first instead of
+    blanking the pane.
   - Every iframe `src` carries the live `prototypesVersionResource` value as a
     cache-bust, so an agent's edit (watcher → version bump → re-render) reloads
     the iframe automatically.
@@ -88,16 +109,19 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane and the Focus/Compare detail pane (scaled live iframes), with an Improve this prototype affordance.
+- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus and Compare are its own two contributions), with an Improve this prototype affordance.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
     - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
+    - `PrototypeStages.Stage` ← `apps.prototypes.compare-component`, `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
     - `Pane.Register` "prototypes-detail"
-    - `prototypeDetailPane.Actions` "view-mode" → `ViewModeSwitcher`
+    - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
     - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
+    - `PrototypeStages.Stage` "Focus" → `FocusStage`
+    - `PrototypeStages.Stage` "Compare" → `CompareStage`
   - Uses:
     - `apps/prototypes/thumbnails.PrototypeThumbnail`
     - `apps/prototypes/thumbnails.usePrototypeThumbnails`
@@ -125,18 +149,23 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
+    - `primitives/slot-render.renderIsolated`
     - `shell/notifications.toast`
   - Exports (types):
     - `PrototypeDetailContextValue`
-    - `PrototypeViewMode`
+    - `PrototypeStage`
+    - `PrototypeStageContribution`
+    - `PrototypeStageProps`
   - Exports (values):
     - `prototypeDetailPane`
     - `prototypesGalleryPane`
+    - `PrototypeStages`
     - `ScaledIframe`
     - `usePrototypeDetail`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/prototypes/compare-component`
     - `apps/prototypes/present`
 
 <!-- AUTOGENERATED:END -->

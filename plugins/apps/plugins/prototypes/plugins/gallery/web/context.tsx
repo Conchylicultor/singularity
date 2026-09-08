@@ -5,15 +5,23 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import { PrototypeStages, type PrototypeStageContribution } from "./slots";
 
-/** Which stage the detail pane paints: one prototype, or all of them side by side. */
-export type PrototypeViewMode = "focus" | "compare";
+/** A contributed stage as the pane reads it back: renderable only via `renderIsolated`. */
+export type PrototypeStage = SealContributions<PrototypeStageContribution>;
 
 export interface PrototypeDetailContextValue {
   /** The directory slug of the prototype this pane is showing. */
   name: string;
-  mode: PrototypeViewMode;
-  setMode: (next: PrototypeViewMode) => void;
+  /** Every contributed stage, in switcher order. */
+  stages: PrototypeStage[];
+  /**
+   * The stage the pane is painting — `null` only if nothing contributes one,
+   * which cannot happen while this plugin is loaded (it contributes two).
+   */
+  stage: PrototypeStage | null;
+  setStage: (id: string) => void;
 }
 
 const PrototypeDetailContext =
@@ -22,8 +30,8 @@ const PrototypeDetailContext =
 /**
  * Shared state for the detail pane's surface. Lifted out of the pane body so the
  * header controls can be zero-prop contributions to `prototypeDetailPane.Actions`
- * (the Focus/Compare switcher lives in the header, the stage it switches lives in
- * the body) — the same lift Story's `useStoryEditor()` does for its toolbar.
+ * (the stage switcher lives in the header, the stage it switches lives in the
+ * body) — the same lift Story's `useStoryEditor()` does for its toolbar.
  */
 export function usePrototypeDetail(): PrototypeDetailContextValue {
   const ctx = useContext(PrototypeDetailContext);
@@ -42,10 +50,22 @@ export function PrototypeDetailProvider({
   name: string;
   children: ReactNode;
 }) {
-  const [mode, setMode] = useState<PrototypeViewMode>("focus");
+  const contributed = PrototypeStages.Stage.useContributions();
+  const stages = useMemo(
+    () => [...contributed].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [contributed],
+  );
+
+  // The id, not the stage: a picked id survives the contribution list changing
+  // under it, and an id that no longer resolves falls back to the first stage
+  // rather than leaving the pane blank. Nothing here names a stage — which is
+  // what lets the default be "whichever stage sorts first".
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const stage = stages.find((s) => s.id === pickedId) ?? stages[0] ?? null;
+
   const value = useMemo<PrototypeDetailContextValue>(
-    () => ({ name, mode, setMode }),
-    [name, mode],
+    () => ({ name, stages, stage, setStage: setPickedId }),
+    [name, stages, stage],
   );
   return (
     <PrototypeDetailContext.Provider value={value}>

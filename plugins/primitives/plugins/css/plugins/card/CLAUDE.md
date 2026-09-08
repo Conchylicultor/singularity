@@ -53,6 +53,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `apps/browser/start-page`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/compare-component`
     - `apps/sonata/library`
     - `apps/story/renderers/blog`
     - `apps/story/renderers/slides`
