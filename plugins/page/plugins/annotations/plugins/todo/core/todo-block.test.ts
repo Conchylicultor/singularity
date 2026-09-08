@@ -41,6 +41,15 @@ describe("todoBlock (derived + forced facts)", () => {
     expect(todoBlock.audience).toBe("agent");
   });
 
+  it("declares the HUMAN author — the brief is the assigner's, not the agent's", () => {
+    // The pair is what this card needs and `audience` alone could not say: an
+    // agent receives the work AND may not edit it, including when the card sits
+    // inside the agent's own `<agent-note>` — an agent that could rewrite its
+    // brief could quietly narrow it. Completion is the linked task's state, not
+    // a document edit.
+    expect(todoBlock.author).toBe("human");
+  });
+
   it("is a container: the facts come from `defineContainerBlock`", () => {
     expect(todoBlock.anchor).toBe(true);
     expect(todoBlock.wrapOnConvert).toBe(true);

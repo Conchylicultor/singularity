@@ -1,23 +1,31 @@
-// What a plan WRITES, and whether every write stayed inside a boundary the
-// caller nominated.
+// What a plan WRITES, and whether every write resolved inside a boundary the
+// caller declared open.
 //
 // ---------------------------------------------------------------------------
 // The engine's second caller-supplied predicate
 // ---------------------------------------------------------------------------
 //
 // `MarkdownApplyArgs.redact` is a caller-supplied ROW FILTER deciding what a
-// write may SEE. `isBoundary` here is a caller-supplied ROW PREDICATE deciding
+// write may SEE. `boundaryOf` here is a caller-supplied ROW CLASSIFIER deciding
 // what a write may DO. Neither teaches this engine what an audience is: one
-// takes rows and returns rows, the other takes a row and returns a boolean, and
-// the policy that chose either lives entirely with the caller.
+// takes rows and returns rows, the other takes a row and returns one of three
+// answers, and the policy behind any of them lives entirely with the caller.
+//
+// **Three answers, not two, because a boundary has an inside AND an outside.** A
+// two-valued predicate can say only "writes are allowed at and under this row";
+// it has no way to say "and NOT under this one", so a region the caller wants to
+// shield INSIDE an allowed one has no spelling at all. The third answer is the
+// absent one: a row that declares nothing is transparent and the walk continues
+// past it, which is what lets the two declarations nest and the NEAREST one win
+// — see {@link nearestBoundary}.
 //
 // So **no block type is named in this module**, deliberately and permanently. The
-// type that today means "a card an agent owns" lives in the policy layer
-// (`annotations/agent-access`), which imports this plugin; naming it here would
-// invert that dependency into a cycle, and would silently stop working the day
-// the type is renamed. It is the same rule `plan.ts` follows for the identified
-// type set — this module knows what a row DECLARES to the predicate, never which
-// plugin declares it.
+// types that today mean "a card an agent owns" and "a card that holds the page
+// author's own words" live in the policy layer (`annotations/agent-access`),
+// which imports this plugin; naming either here would invert that dependency into
+// a cycle, and would silently stop working the day a type is renamed. It is the
+// same rule `plan.ts` follows for the identified type set — this module knows what
+// a row DECLARES to the classifier, never which plugin declares it.
 //
 // ---------------------------------------------------------------------------
 // It returns violations; it does not throw
@@ -27,14 +35,18 @@
 // wording, and whether a violation is fatal at all (a policy might report, or
 // judge only some of the four `how`s). User-facing prose in a pure core module
 // would also be prose the caller cannot phrase in its own vocabulary — this
-// module cannot say "agent-note card" without knowing what one is.
+// module cannot say "agent-note card" without knowing what one is, and cannot say
+// which of two refusals a reader is looking at without naming both.
 //
 // The one thing it DOES throw for is corruption: an ancestor chain that does not
 // terminate. Same discipline as `agent-access`'s own `chainToPageRoot` — a
 // corrupted forest must be loud rather than spin, and "I could not resolve the
 // chain" must never be reachable as a quiet pass.
 
-import { namesField, type BlockFieldChanges } from "@plugins/page/plugins/editor/core";
+import {
+  namesField,
+  type BlockFieldChanges,
+} from "@plugins/page/plugins/editor/core";
 import type { MarkdownApplyPlan } from "./plan";
 import type { StoredRow } from "./stored-row";
 
@@ -71,23 +83,49 @@ export function touchedBlocks(plan: MarkdownApplyPlan): TouchedBlocks {
 /** How a plan wrote the block a violation names. */
 export type TouchedHow = "created" | "updated" | "deleted" | "text-edited";
 
+/**
+ * What a row declares about writes inside it. `undefined` — it declares nothing,
+ * and a chain walk passes straight through it to whatever sits above.
+ *
+ * `"open"` admits writes at and under the row; `"closed"` refuses them. Absence
+ * is not a third policy but the ABSENCE of one, which is precisely what makes the
+ * two declarations compose rather than merely coexist: a row that says nothing
+ * cannot shadow the answer of a row that does. See {@link nearestBoundary}.
+ */
+export type WriteBoundary = "open" | "closed";
+
 export interface BoundaryViolation {
   blockId: string;
   how: TouchedHow;
   /**
-   * `"escaped"` — after this plan, no boundary is on the block's ancestor chain.
-   * The write lands (or landed) in open document body.
+   * WHICH of the write's two chains failed. `"new"` — where the write lands,
+   * resolved against the post-plan forest. `"old"` — where the block came FROM,
+   * resolved against the pre-plan one.
    *
-   * `"escaped-origin"` — the chain the block ends up on DOES reach a boundary,
-   * but the chain it came FROM does not: the plan is pulling a block into a
-   * boundary it was never inside. This is T3, and it is the reason an after-only
-   * test is not a test (see {@link boundaryViolations}).
+   * A create has only a new chain and a delete only an old one, so for those the
+   * side is implied by `how`; for an update or a text edit it is the whole of the
+   * answer, and it is what tells "you wrote somewhere you may not" apart from
+   * "you moved something out of somewhere you may not touch" (T3, below).
    */
-  reason: "escaped" | "escaped-origin";
+  side: "new" | "old";
+  /**
+   * WHY that chain failed, and the two are different enough that a caller words
+   * them differently.
+   *
+   * `"escaped"` — nothing on the chain declared anything at all: from the block up
+   * to the scope root, no row said whether writes are allowed inside it. The write
+   * lands (or landed) in open document body.
+   *
+   * `"enclosed"` — the chain DID declare something, and the nearest declaration
+   * was `"closed"`: the write is inside a region the caller shields. Note this
+   * includes the block's OWN row, which is what makes CREATING a closed row a
+   * violation rather than a special case somebody has to remember to write.
+   */
+  reason: "escaped" | "enclosed";
 }
 
 /**
- * The fields whose write must resolve inside a boundary.
+ * The fields whose write must resolve inside an open boundary.
  *
  * **T4 — the carve-out, and where the bug will live.** Minting a card at page
  * level legitimately RE-RANKS its prose siblings, so `updates` names ordinary
@@ -155,34 +193,47 @@ function mapsAfterPlan(before: ChainMaps, plan: MarkdownApplyPlan): ChainMaps {
     if (namesField(update.changes, "parentId")) {
       parentOf.set(update.id, update.changes.parentId ?? null);
     }
-    if (namesField(update.changes, "type")) typeOf.set(update.id, update.changes.type!);
+    if (namesField(update.changes, "type"))
+      typeOf.set(update.id, update.changes.type!);
   }
   return { parentOf, typeOf };
 }
 
 /**
- * Does `startId`'s ancestor chain, resolved against `maps`, reach a boundary?
+ * What does `startId`'s ancestor chain, resolved against `maps`, declare about
+ * writes — and `"none"` when nothing on it declares anything.
  *
- * **A boundary row is inside itself**, which is what makes a newly created card
- * satisfy its own check (and its children satisfy theirs through it). Without
+ * **The nearest declaring row wins.** The walk stops at the first row that
+ * declares ANYTHING, not at the first row that says yes, and that single choice is
+ * the whole of the composition rule: a closed card nested inside an open one
+ * shields its own contents, and an open card nested inside a closed one still
+ * admits writes. A walk stopping only at `"open"` could never express the first; a
+ * walk stopping only at `"closed"` could never express the second.
+ *
+ * **A declaring row is inside itself**, which is what makes a newly created open
+ * card satisfy its own check (and its children satisfy theirs through it). Without
  * that, minting a card would be the one thing a boundary rule could never allow.
+ * The same self-inclusion pointed the other way is what makes creating a CLOSED
+ * row a violation at its own row — so "nothing may mint a card whose words are not
+ * the writer's" needs no walk of its own, and stops being a second invariant that
+ * can drift out of step with this one.
  *
- * The walk ends at the first boundary, at `rootId` (the scope's own ceiling —
- * checked AFTER the boundary test, so a card-scoped apply whose root IS a card
- * still resolves), or at a parent that is null or names no row.
+ * The walk ends at that first declaration, at `rootId` (the scope's own ceiling —
+ * checked AFTER the declaration test, so a scoped apply whose root IS a declaring
+ * card still resolves against it), or at a parent that is null or names no row.
  *
  * **The bound is corruption-only and throws.** A forest cannot hold a cycle, so a
  * chain longer than every row plus every created row means the maps are corrupt,
- * and the fail-safe answer to "I cannot resolve this chain" is neither `true` nor
- * `false` — both would be a verdict this function has no evidence for.
+ * and the fail-safe answer to "I cannot resolve this chain" is none of the three
+ * — each would be a verdict this function has no evidence for.
  */
-function reachesBoundary(
+function nearestBoundary(
   startId: string,
   maps: ChainMaps,
   rootId: string,
-  isBoundary: (row: { id: string; type: string }) => boolean,
+  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined,
   bound: number,
-): boolean {
+): WriteBoundary | "none" {
   let current: string | undefined = startId;
   for (let steps = 0; current !== undefined; steps++) {
     if (steps > bound) {
@@ -192,15 +243,29 @@ function reachesBoundary(
       );
     }
     const type = maps.typeOf.get(current);
-    if (type !== undefined && isBoundary({ id: current, type })) return true;
-    if (current === rootId) return false;
+    if (type !== undefined) {
+      const declared = boundaryOf({ id: current, type });
+      if (declared !== undefined) return declared;
+    }
+    if (current === rootId) return "none";
     current = maps.parentOf.get(current) ?? undefined;
   }
-  return false;
+  return "none";
 }
 
 /**
- * Every write in `plan` that resolves OUTSIDE the caller's boundaries.
+ * A failed chain answer, said as a violation's reason. `"open"` is the pass and
+ * never reaches here, which is why it is unspellable in the parameter type —
+ * one statement of the mapping, rather than the same ternary at both call sites
+ * in {@link boundaryViolations}'s `judge`.
+ */
+function reasonOf(at: "closed" | "none"): BoundaryViolation["reason"] {
+  return at === "none" ? "escaped" : "enclosed";
+}
+
+/**
+ * Every write in `plan` that does not resolve inside an OPEN boundary the caller
+ * declared.
  *
  * ---------------------------------------------------------------------------
  * T3 — the both-chains rule, which is the whole point of this function
@@ -212,29 +277,34 @@ function reachesBoundary(
  * ```
  * BEFORE                                   AFTER
  *   root                                     root
- *    ├ p1  "The parser handles UTF-8."        └ card   (a boundary)
- *    ├ card (a boundary)                          ├ p1   ← MOVED IN
+ *    ├ p1  "The parser handles UTF-8."        └ card   (an open boundary)
+ *    ├ card (an open boundary)                    ├ p1   ← MOVED IN
  *    │   └ n1 "Checked the writer."               └ n1
  * ```
  *
- * `p1`'s NEW chain reaches a boundary, so an after-only test calls it legal — and
- * the whole document can be annexed into one card in a single edit without
+ * `p1`'s NEW chain reaches an open boundary, so an after-only test calls it legal
+ * — and the whole document can be annexed into one card in a single edit without
  * deleting a character. It is REACHABLE rather than theoretical precisely because
  * the text is byte-identical: the aligner matches `p1` and preserves its row id,
  * so it arrives as an `update` naming `parentId`, not as a delete plus a create.
  *
  * So the chain is checked on **whichever sides exist**:
  *
- * | how                   | before | after | chains that must reach a boundary |
- * |-----------------------|--------|-------|-----------------------------------|
- * | created               | no     | yes   | new only                          |
- * | deleted               | yes    | no    | old only                          |
- * | updated / text-edited | yes    | yes   | **both**                          |
+ * | how                   | before | after | chains that must resolve OPEN |
+ * |-----------------------|--------|-------|-------------------------------|
+ * | created               | no     | yes   | new only                      |
+ * | deleted               | yes    | no    | old only                      |
+ * | updated / text-edited | yes    | yes   | **both**                      |
  *
  * The old chain is resolved against the pre-plan maps, never the post-plan ones.
  * That matters beyond deletes: an edit that moves a block's PARENT into a
  * boundary while touching the block itself would otherwise launder the block
  * through its ancestor, which is T3 one level up.
+ *
+ * The closed answer rides the same two chains and needs no rule of its own. A
+ * write INSIDE a shielded region fails on the new side; a write that carries a
+ * block OUT of one — a move, a retype, a delete — fails on the old side, which is
+ * the same evidence T3 already collects, read for the other reason.
  *
  * ---------------------------------------------------------------------------
  * Order and multiplicity
@@ -252,13 +322,15 @@ export function boundaryViolations(args: {
   /** The plan's scope root — the ceiling every chain walk stops at. */
   rootId: string;
   /**
-   * Is this row a boundary? A caller-supplied ROW PREDICATE, exactly as `redact`
-   * is a caller-supplied row filter — this module never learns what the answer
-   * means, and never names a block type.
+   * What does this row declare about writes inside it? A caller-supplied ROW
+   * CLASSIFIER, exactly as `redact` is a caller-supplied row filter — this module
+   * never learns what any of the three answers means, and never names a block
+   * type. `undefined` is the ordinary case: the overwhelming majority of a page's
+   * rows are prose, which declares nothing.
    */
-  isBoundary: (row: { id: string; type: string }) => boolean;
+  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined;
 }): BoundaryViolation[] {
-  const { plan, existing, rootId, isBoundary } = args;
+  const { plan, existing, rootId, boundaryOf } = args;
   const before = mapsOfExisting(existing);
   const after = mapsAfterPlan(before, plan);
   // Every row that can be on a chain: the partition plus everything this plan
@@ -266,19 +338,28 @@ export function boundaryViolations(args: {
   const bound = existing.length + plan.patch.creates.length;
 
   const violations: BoundaryViolation[] = [];
-  const judge = (blockId: string, how: TouchedHow, sides: "new" | "old" | "both"): void => {
+  // The new side first, and RETURN on its failure: a write that does not land
+  // legally is ONE answer, not two, and reporting the old chain as well would
+  // turn a single refused write into a pair of messages about one block.
+  const judge = (
+    blockId: string,
+    how: TouchedHow,
+    sides: "new" | "old" | "both",
+  ): void => {
     const hasNew = sides !== "old";
     const hasOld = sides !== "new";
-    if (hasNew && !reachesBoundary(blockId, after, rootId, isBoundary, bound)) {
-      violations.push({ blockId, how, reason: "escaped" });
-      return;
+    if (hasNew) {
+      const lands = nearestBoundary(blockId, after, rootId, boundaryOf, bound);
+      if (lands !== "open") {
+        violations.push({ blockId, how, side: "new", reason: reasonOf(lands) });
+        return;
+      }
     }
-    if (hasOld && !reachesBoundary(blockId, before, rootId, isBoundary, bound)) {
-      // `escaped-origin` is only sayable when there IS a new chain and it passed
-      // — it means "this write is pulling the block into a boundary it was never
-      // inside". A delete has no new chain at all, so its failure is the plain
-      // one: nothing on its chain was ever a boundary.
-      violations.push({ blockId, how, reason: hasNew ? "escaped-origin" : "escaped" });
+    if (hasOld) {
+      const came = nearestBoundary(blockId, before, rootId, boundaryOf, bound);
+      if (came !== "open") {
+        violations.push({ blockId, how, side: "old", reason: reasonOf(came) });
+      }
     }
   };
 

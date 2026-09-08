@@ -11,7 +11,12 @@ export { documentOrderRows, markdownNodesOfRows } from "./flatten";
 export { planWriteCount, subtractNoise } from "./subtract-noise";
 
 export { boundaryViolations, touchedBlocks } from "./touched";
-export type { BoundaryViolation, TouchedBlocks, TouchedHow } from "./touched";
+export type {
+  BoundaryViolation,
+  TouchedBlocks,
+  TouchedHow,
+  WriteBoundary,
+} from "./touched";
 
 export { pageTitleBanner, stripPageTitleBanner } from "./page-title";
 

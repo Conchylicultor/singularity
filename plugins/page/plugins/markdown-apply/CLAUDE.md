@@ -213,20 +213,44 @@ learns what an audience is: one takes rows and returns rows, the other takes a
 plan and either returns or throws.
 
 - `touchedBlocks(plan)` flattens the plan to four ids-by-channel lists;
-  `boundaryViolations({plan, existing, rootId, isBoundary})` judges them against
-  a caller-supplied ROW PREDICATE. **No block type is named here** — naming one
+  `boundaryViolations({plan, existing, rootId, boundaryOf})` judges them against
+  a caller-supplied ROW CLASSIFIER. **No block type is named here** — naming one
   inverts `agent-access` → `markdown-apply` into a cycle. It returns violations
   rather than throwing (status and wording are the caller's), and throws for
   exactly one thing: a non-terminating ancestor chain, bounded by
   `existing.length + creates.length`, as `chainToPageRoot` does.
+- **`boundaryOf` is THREE-VALUED, and nearest wins.** A row answers `"open"`
+  (writes are allowed at and under it), `"closed"` (they are not), or `undefined`
+  — it declares nothing and the walk passes through it. `nearestBoundary` stops at
+  the first row that declares ANYTHING, not the first that says yes, which is the
+  whole of the composition rule: a closed card inside an open one shields its
+  contents, and an open card inside a closed one still admits writes. Two values
+  could only ever say "allowed at and under this row", so a region the caller
+  wants to shield INSIDE an allowed one would have no spelling at all.
+- **A declaring row is inside itself**, in both directions. That is what lets a
+  newly minted OPEN card satisfy its own check — otherwise minting a card is the
+  one thing a boundary rule could never allow — and it is also why creating a
+  CLOSED row is refused at its own row. So "nothing may mint a card whose words
+  are not the writer's" is not a second invariant that can drift: it is this walk,
+  with this evidence.
 - **Both chains, not just the new one.** created → new, deleted → old,
-  updated / text-edited → **BOTH**. A block whose new chain reaches a boundary is
-  not thereby legal: re-indenting the page's prose into a card is a MOVE, and
-  since the aligner preserves the id of byte-identical text it arrives as an
-  `update` naming `parentId` — so an after-only test lets an agent annex the whole
-  page into its own card without deleting a character (`escaped-origin`). The old
-  chain resolves against PRE-plan maps, so moving a block's ancestor in the same
-  plan cannot launder the block through it.
+  updated / text-edited → **BOTH**. A block whose new chain resolves open is not
+  thereby legal: re-indenting the page's prose into a card is a MOVE, and since
+  the aligner preserves the id of byte-identical text it arrives as an `update`
+  naming `parentId` — so an after-only test lets an agent annex the whole page
+  into its own card without deleting a character. The old chain resolves against
+  PRE-plan maps, so moving a block's ancestor in the same plan cannot launder the
+  block through it. The closed answer rides the same two chains and adds no rule:
+  writing INSIDE a shielded region fails on the new side, carrying a block OUT of
+  one fails on the old.
+- **A violation carries the two facts separately**: `{blockId, how, side, reason}`,
+  where `side` is `"new"` | `"old"` (which chain failed) and `reason` is
+  `"escaped"` (the chain declared nothing) | `"enclosed"` (its nearest declaration
+  was closed). One overloaded `reason` field used to carry both, which is why a
+  delete's old-chain failure had to be special-cased back to the un-suffixed
+  spelling; with `side` broken out, a delete simply has `side: "old"`. `judge`
+  reports the new side first and RETURNS on its failure — a write that does not
+  land legally is one answer, not two.
 - **Field-level, not row-level.** Minting a card re-ranks its prose siblings, so
   `updates` names prose rows in the ORDINARY case: a rank-only (or
   `expanded`-only) update is exempt; `type`, `data`, `parentId`, `deleteIds` and
@@ -464,6 +488,7 @@ annotation in the key would make every status change look like a new block.
     - `StoredRow`
     - `TouchedBlocks`
     - `TouchedHow`
+    - `WriteBoundary`
   - Exports (values):
     - `boundaryViolations`
     - `documentOrderRows`

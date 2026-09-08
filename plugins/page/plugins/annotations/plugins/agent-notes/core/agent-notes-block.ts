@@ -18,11 +18,11 @@ import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 export const agentNotesDataSchema = z.object({});
 
 /**
- * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`,
- * so this card cannot exist without saying who it is for. The container half
- * forces `anchor: true` and `wrapOnConvert: true` — see
- * `@plugins/page/plugins/container/core` for why the two are only correct
- * together. It declares no `collapsible`: a container folds to its BORROWED line
+ * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`
+ * and `author`, so this card cannot exist without saying who may receive it and
+ * whose words it holds. The container half forces `anchor: true` and
+ * `wrapOnConvert: true` — see `@plugins/page/plugins/container/core` for why the
+ * two are only correct together. It declares no `collapsible`: a container folds to its BORROWED line
  * (its first child's), so its stored `expanded` is live. This file declares nothing but identity.
  */
 /**
@@ -44,12 +44,33 @@ export const agentNotesBlock = defineAnnotationBlock({
   // to re-read what it wrote last time — and it is the one card an agent may
   // WRITE, which would be incoherent if it could not also see it.
   audience: "agent",
+  // THE row the whole agent-write rule reduces to. This is the only card in the
+  // system an agent authors, so `author: "agent"` is the only thing anywhere
+  // that opens a region to an agent's pen — every other block on every page,
+  // annotation or prose, is the human's by declaration or by the absent-value
+  // default. Nothing enumerates that fact: the write walk asks each ancestor
+  // what it declares and stops at the nearest answer, so this one field is what
+  // makes an `<agent-note>` writable and the page around it not.
+  //
+  // It does NOT reach inside: a `<human>` or `<todo>` card nested in this one
+  // declares CLOSED at its own row, and the nearest declaration wins — which is
+  // how a human answers an agent inside the agent's own note and has the answer
+  // survive the next `write_agent_note`.
+  author: "agent",
   // `"agent-notes"` is here because it WAS the type: the slash menu matched it
   // for as long as the card has existed, so dropping it would silently break a
   // habit (and every doc that spells the card plural). An alias is menu-search
   // only — it is not a markdown tag and not a stored value — so this costs the
   // rename nothing.
-  aliases: ["agent-notes", "agent", "agents", "ai", "notes", "findings", "report"],
+  aliases: [
+    "agent-notes",
+    "agent",
+    "agents",
+    "ai",
+    "notes",
+    "findings",
+    "report",
+  ],
   empty: () => ({}),
   // `<agent-note id="…">…</agent-note>` — a real round-tripping syntax,
   // replacing the one-way `**[Agent notes]**` marker. What the marker was for is

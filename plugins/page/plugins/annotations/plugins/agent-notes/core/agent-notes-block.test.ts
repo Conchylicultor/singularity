@@ -11,7 +11,9 @@ describe("agentNotesDataSchema (void)", () => {
   it("rejects a `text` key at the write boundary", () => {
     // `parse-block-data.ts` parses through `handle.schema.strict()`, so this is
     // literally what POST /api/blocks does with a text-bearing payload.
-    const strict = agentNotesDataSchema.strict().safeParse({ text: [{ text: "hello" }] });
+    const strict = agentNotesDataSchema
+      .strict()
+      .safeParse({ text: [{ text: "hello" }] });
     expect(strict.success).toBe(false);
   });
 
@@ -32,6 +34,16 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     // this card is addressed TO the human and is still `"agent"`, because it is
     // the one card an agent WRITES and must be able to see again.
     expect(agentNotesBlock.audience).toBe("agent");
+  });
+
+  it("declares the AGENT author — the only such card in the system", () => {
+    // The single row the whole agent-write rule reduces to. `author: "agent"` is
+    // the only thing anywhere that opens a region to an agent's pen; every other
+    // block on every page is the human's, by declaration or by the absent-value
+    // default. A second card growing this value is the change that would need
+    // arguing, which is why it is pinned by name here rather than left to the
+    // union.
+    expect(agentNotesBlock.author).toBe("agent");
   });
 
   it("is a container: the facts come from `defineContainerBlock`", () => {
@@ -57,7 +69,10 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     // generic TAG: the children go inside it and it comes back as a container.
     // The retired `**[…]**` marker could only ever go one way.
     expect(agentNotesBlock.markdown?.serialize).toBeUndefined();
-    expect(agentNotesBlock.markdown?.tag).toEqual({ body: "children", identified: true });
+    expect(agentNotesBlock.markdown?.tag).toEqual({
+      body: "children",
+      identified: true,
+    });
   });
 
   it("is ADDRESSABLE: the tag carries the row id, and `data` still carries none", () => {

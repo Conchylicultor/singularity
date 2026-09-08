@@ -24,24 +24,32 @@ import {
  *
  * The annotation handles are THROWAWAY, registered through the real
  * `defineAnnotationBlock` — the point being that nothing here names a concrete
- * plugin's type: the rules enumerate `audience === "human"` off the registry, so
- * a type invented in this file is treated exactly like `/private`. A test that
- * seeded the real four would prove the rules work for the four we have, which is
- * the weaker claim.
+ * plugin's type: the rules enumerate `audience === "human"` and `author` off the
+ * registry, so a type invented in this file is treated exactly like `/private`
+ * or `/human`. A test that seeded the real four would prove the rules work for
+ * the four we have, which is the weaker claim.
  *
- * `agent-note` is the one exception, on both sides: rules 3 and 4 are ABOUT that
- * type, so the fixture uses its real id.
+ * `agent-note` is the one exception, on both sides: rule 2 is ABOUT that type,
+ * and rule 3 names it as the one open boundary, so the fixture uses its real id.
+ *
+ * The two throwaways cover the two cells that matter to the write rule. Only
+ * `author` decides a boundary, so `zz-authored` — agent-audience, human-authored
+ * — is the interesting one: an agent READS it and may not write it, which is the
+ * `/human` and `/todo` cell and the reason `author` exists as a separate
+ * question from `audience`.
  */
 const privateish = defineAnnotationBlock({
   type: "zz-withheld",
   schema: z.object({}),
   audience: "human",
+  author: "human",
   markdown: { tag: { body: "children" } },
 });
-const contextish = defineAnnotationBlock({
-  type: "zz-shared",
+const humanish = defineAnnotationBlock({
+  type: "zz-authored",
   schema: z.object({}),
   audience: "agent",
+  author: "human",
   markdown: { tag: { body: "children" } },
 });
 
@@ -51,7 +59,7 @@ beforeEach(() => {
       id: "agent-access-policy-fixture",
       contributions: [
         Editor.BlockData(privateish),
-        Editor.BlockData(contextish),
+        Editor.BlockData(humanish),
         Editor.BlockData(textBlock),
         Editor.BlockData(agentNotesBlock),
       ],
@@ -63,13 +71,15 @@ beforeEach(() => {
  * ```
  * page
  * ├── prose
- * ├── withheld            (audience: human)
+ * ├── withheld            (audience: human, author: human)
  * │   └── secret
  * │       └── deeper
- * ├── shared              (audience: agent)
+ * ├── shared              (audience: agent, author: human)
  * │   └── open
  * ├── notes               (agent-note)
- * │   └── note-line
+ * │   ├── note-line
+ * │   └── answer          (audience: agent, author: human — the hole in the
+ * │       └── answer-line  agent's own card: it reads this and may not write it)
  * ├── tainted             (agent-note, holding a withheld card — the drag case)
  * │   └── smuggled        (audience: human)
  * └── outer-existing      (agent-note)
@@ -92,10 +102,12 @@ const scope: BlockScope = {
     row("withheld", PAGE, privateish.type),
     row("secret", "withheld", "text"),
     row("deeper", "secret", "text"),
-    row("shared", PAGE, contextish.type),
+    row("shared", PAGE, humanish.type),
     row("open", "shared", "text"),
     row("notes", PAGE, agentNotesBlock.type),
     row("note-line", "notes", "text"),
+    row("answer", "notes", humanish.type),
+    row("answer-line", "answer", "text"),
     row("tainted", PAGE, agentNotesBlock.type),
     row("smuggled", "tainted", privateish.type),
     row("outer-existing", PAGE, agentNotesBlock.type),
@@ -103,7 +115,7 @@ const scope: BlockScope = {
   ],
 };
 
-describe("redactHumanAudience (rule 1)", () => {
+describe("redactHumanAudience (rule 1, the read filter)", () => {
   test("drops human-audience rows and nothing else", () => {
     const kept = redactHumanAudience(scope.rows).map((r) => r.id);
     expect(kept).not.toContain("withheld");
@@ -117,8 +129,14 @@ describe("redactHumanAudience (rule 1)", () => {
     expect(kept).toContain("shared");
   });
 
-  test("an agent-audience annotation is ordinary content to it", () => {
-    expect(redactHumanAudience(scope.rows).map((r) => r.id)).toContain("open");
+  test("an agent-audience annotation is ordinary content to it — author is a SEPARATE axis", () => {
+    // `answer` is human-AUTHORED and agent-audience. Redaction keys on audience
+    // only, so the agent sees it in full; what it may not do is write it, which
+    // is rule 3's business and nothing to do with this filter.
+    const kept = redactHumanAudience(scope.rows).map((r) => r.id);
+    expect(kept).toContain("open");
+    expect(kept).toContain("answer");
+    expect(kept).toContain("answer-line");
   });
 
   test("is generic in the row type — ONE function serves the read and the apply", () => {
@@ -134,9 +152,17 @@ describe("redactHumanAudience (rule 1)", () => {
   });
 });
 
-describe("assertAgentAddressable (rule 2)", () => {
+describe("assertAgentAddressable (rule 1, the ancestor half)", () => {
   test("allows the page, ordinary prose, and an agent-audience card's contents", () => {
     for (const id of [PAGE, "prose", "shared", "open", "notes", "note-line"]) {
+      expect(() => {
+        assertAgentAddressable(scope, id);
+      }).not.toThrow();
+    }
+  });
+
+  test("allows a human-AUTHORED card and its contents — it is addressed TO an agent", () => {
+    for (const id of ["answer", "answer-line"]) {
       expect(() => {
         assertAgentAddressable(scope, id);
       }).not.toThrow();
@@ -161,7 +187,7 @@ describe("assertAgentAddressable (rule 2)", () => {
   });
 });
 
-describe("assertNoteCard (rule 3 — write_agent_note's door)", () => {
+describe("assertNoteCard (rule 2 — write_agent_note's door)", () => {
   test("accepts an agent-note card", () => {
     expect(() => {
       assertNoteCard(scope, "notes");
@@ -204,10 +230,20 @@ describe("assertNoteCard (rule 3 — write_agent_note's door)", () => {
       assertNoteCard(scope, "tainted");
     }).not.toThrow();
   });
+
+  test("ACCEPTS a card holding a human-AUTHORED card — the door cannot judge that", () => {
+    // `notes` holds `answer`. A door check could only refuse the whole card,
+    // which would make the nesting useless; what actually matters — whether the
+    // document echoed `answer` back or dropped it — is visible on the PLAN, and
+    // the case below asserts the drop is refused there.
+    expect(() => {
+      assertNoteCard(scope, "notes");
+    }).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
-// assertNotesOnlyPlan (rule 4)
+// assertNotesOnlyPlan (rule 3)
 // ---------------------------------------------------------------------------
 
 const NOW = new Date("2026-08-07T00:00:00.000Z");
@@ -299,7 +335,10 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
     }).toThrow(/was edited outside every "agent-note" card/);
   });
 
-  test("refuses deleting prose", () => {
+  test("refuses deleting prose — and words it as a delete, not as a drag", () => {
+    // A delete has only an OLD chain, so `side: "old"` says nothing `how` does
+    // not; the carried-out wording ("this edit pulls a block into your card")
+    // would be a claim about a move that never happened.
     expect(() => {
       judgePage(planOf({ deleteIds: ["prose"] }));
     }).toThrow(/was deleted outside every "agent-note" card/);
@@ -350,37 +389,151 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
   });
 });
 
-describe("assertNotesOnlyPlan — the minting invariant", () => {
-  test("refuses minting a human-audience card, even INSIDE a card", () => {
-    // Rules 1-3 all reason about rows that already exist and cannot see a card
-    // the agent is about to create. Inside its own card is where it would
-    // otherwise pass every other rule.
+describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's own", () => {
+  test("refuses a text edit inside it — the page author's words, inside the agent's card", () => {
+    expect(() => {
+      judgePage(
+        planOf({
+          textEdits: [{ blockId: "answer-line", runs: [{ text: "no" }] }],
+        }),
+      );
+    }).toThrow(
+      /block answer-line was edited, and it sits inside <zz-authored> card answer/,
+    );
+  });
+
+  test("refuses creating a block inside it", () => {
+    expect(() => {
+      judgePage(planOf({ creates: [create("intruder", "answer", "text")] }));
+    }).toThrow(/sits inside <zz-authored> card answer/);
+  });
+
+  test("refuses deleting anything in it", () => {
+    expect(() => {
+      judgePage(planOf({ deleteIds: ["answer-line"] }));
+    }).toThrow(
+      /block answer-line was deleted, and it sits inside <zz-authored> card answer/,
+    );
+  });
+
+  test("refuses deleting the card itself — which is what OMITTING it from a write plans", () => {
+    // `write_agent_note` on `notes` composes a whole document; a document that
+    // does not echo `<zz-authored id="answer">` back plans exactly this delete,
+    // and the whole write is refused with nothing written.
+    expect(() => {
+      assertNotesOnlyPlan({
+        plan: planOf({ deleteIds: ["answer", "answer-line"] }),
+        rows: scope.rows,
+        rootId: "notes",
+      });
+    }).toThrow(/the document deletes the <zz-authored> card answer/);
+  });
+
+  test("refuses MOVING a block out of it — the old chain is what catches this", () => {
+    // The new chain resolves to `notes`, which is open, so an after-only test
+    // would call this legal and let an agent launder a human's line into its own
+    // card by re-indenting it.
+    expect(() => {
+      judgePage(
+        planOf({
+          updates: [{ id: "answer-line", changes: { parentId: "notes" } }],
+        }),
+      );
+    }).toThrow(/came from INSIDE <zz-authored> card answer/);
+  });
+
+  test("refuses moving the card itself", () => {
+    expect(() => {
+      judgePage(
+        planOf({ updates: [{ id: "answer", changes: { parentId: PAGE } }] }),
+      );
+    }).toThrow(/the document rewrites or moves the <zz-authored> card answer/);
+  });
+
+  test("an agent-note nested INSIDE it still admits writes — nearest wins both ways", () => {
+    // The composition rule read in the other direction. A human may nest an
+    // `<agent-note>` in their own card; the walk stops at that card's `author:
+    // "agent"` before it ever reaches the human one above.
+    const rows = [
+      ...scope.rows,
+      row("reply", "answer", agentNotesBlock.type),
+      row("reply-line", "reply", "text"),
+    ];
+    expect(
+      assertNotesOnlyPlan({
+        plan: planOf({
+          textEdits: [{ blockId: "reply-line", runs: [{ text: "ok" }] }],
+        }),
+        rows,
+        rootId: PAGE,
+      }),
+    ).toEqual(["reply"]);
+  });
+
+  test("an agent-note MINTED inside it is allowed, for the same reason", () => {
+    // Self-inclusion, pointed the other way from the minting case below: the new
+    // card declares `author: "agent"` at its own row, so the walk stops there and
+    // never reaches the human card holding it. An agent may put its reply inside
+    // the author's card; what it may not do is touch what the author wrote.
+    expect(
+      judgePage(
+        planOf({ creates: [create("nested", "answer", agentNotesBlock.type)] }),
+      ),
+    ).toEqual(["nested"]);
+  });
+
+  test("ordinary writes elsewhere in the same card still pass, and stamp it", () => {
+    // The hole shields itself and nothing else: the agent's own card is still
+    // wholly its own everywhere the human did not claim.
+    expect(
+      judgePage(
+        planOf({
+          creates: [create("added", "notes", "text")],
+          textEdits: [{ blockId: "note-line", runs: [{ text: "revised" }] }],
+        }),
+      ),
+    ).toEqual(["notes"]);
+  });
+});
+
+describe("assertNotesOnlyPlan — minting a closed card is the SAME walk", () => {
+  test("refuses minting a human-authored card, even INSIDE the agent's own", () => {
+    // This is the case that used to be a rule of its own — a separate walk over
+    // the plan's creates. It is asserted here to still fail, now through the
+    // boundary walk: the created row declares `closed` at its OWN row, and the
+    // walk is self-inclusive, so it never reaches the open card above.
     expect(() => {
       judgePage(
         planOf({ creates: [create("mine", "notes", privateish.type)] }),
       );
-    }).toThrow(/addressed to the page's author only/);
+    }).toThrow(/the document creates a <zz-withheld> card/);
   });
 
-  test("refuses RETYPING a survivor into a human-audience card", () => {
-    // The strictly-stronger half of moving these onto the plan: a walk over the
-    // incoming parsed forest sees a retyped survivor only as an ordinary node it
-    // cannot tell from a create, so it could not judge this at all.
+  test("refuses minting one in open page body too — wherever it lands", () => {
+    expect(() => {
+      judgePage(planOf({ creates: [create("mine", PAGE, humanish.type)] }));
+    }).toThrow(/the document creates a <zz-authored> card/);
+  });
+
+  test("the refusal says an agent may not author one, and where it MAY write", () => {
+    expect(() => {
+      judgePage(planOf({ creates: [create("mine", PAGE, privateish.type)] }));
+    }).toThrow(
+      /page AUTHOR's own words[\s\S]*<agent-note>…<\/agent-note> card instead/,
+    );
+  });
+
+  test("refuses RETYPING a survivor into a human-authored card", () => {
+    // The strictly-stronger half of judging the plan: a walk over the incoming
+    // parsed forest sees a retyped survivor only as an ordinary node it cannot
+    // tell from a create, so it could not judge this at all.
     expect(() => {
       judgePage(
         planOf({
           updates: [{ id: "note-line", changes: { type: privateish.type } }],
         }),
       );
-    }).toThrow(/turns block note-line into a "zz-withheld" card/);
-  });
-
-  test("the minting verdict wins over the boundary one", () => {
-    // A private card minted in open page body breaks both rules. The type answer
-    // is the actionable one — it holds wherever the block landed.
-    expect(() => {
-      judgePage(planOf({ creates: [create("mine", PAGE, privateish.type)] }));
-    }).toThrow(/addressed to the page's author only/);
+    }).toThrow(/turns block note-line into a <zz-withheld> card/);
   });
 });
 
@@ -438,15 +591,16 @@ describe("assertNotesOnlyPlan — a card inside a card", () => {
     ).toEqual(["inner-existing"]);
   });
 
-  test("still refuses a human-audience card minted inside a nested card", () => {
-    // Nesting loosens the shape, not the audience rule.
+  test("still refuses a human-authored card minted inside a nested card", () => {
+    // Nesting loosens the shape, not the write rule: the minted row declares
+    // `closed` at itself, however many open cards are stacked above it.
     expect(() => {
       judgePage(
         planOf({
           creates: [create("mine", "inner-existing", privateish.type)],
         }),
       );
-    }).toThrow(/addressed to the page's author only/);
+    }).toThrow(/the document creates a <zz-withheld> card/);
   });
 });
 
@@ -459,6 +613,15 @@ describe("assertNotesOnlyPlan — the cards to stamp", () => {
       }),
     );
     expect(new Set(cards)).toEqual(new Set(["fresh", "notes"]));
+  });
+
+  test("a human-authored card inside the target changes nothing about authorship", () => {
+    // The hole is a write rule, not an attribution one: a legal write in `notes`
+    // is still attributed to `notes`, which is the card whose `author: "agent"`
+    // legalized it.
+    expect(
+      judgePage(planOf({ creates: [create("added", "notes", "text")] })),
+    ).toEqual(["notes"]);
   });
 
   test("never names a card the plan DELETED — the authorship FK needs the row", () => {

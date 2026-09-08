@@ -3367,8 +3367,8 @@
       "name": "@singularity/plugin-page-annotations-agent-notes-authorship",
       "version": "0.0.1",
     },
-    "plugins/page/plugins/annotations/plugins/context": {
-      "name": "@singularity/plugin-page-annotations-context",
+    "plugins/page/plugins/annotations/plugins/human-notes": {
+      "name": "@singularity/plugin-page-annotations-human-notes",
       "version": "0.0.1",
     },
     "plugins/page/plugins/annotations/plugins/private-notes": {
@@ -7480,7 +7480,7 @@
 
     "@singularity/plugin-page-annotations-agent-notes-authorship": ["@singularity/plugin-page-annotations-agent-notes-authorship@workspace:plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship"],
 
-    "@singularity/plugin-page-annotations-context": ["@singularity/plugin-page-annotations-context@workspace:plugins/page/plugins/annotations/plugins/context"],
+    "@singularity/plugin-page-annotations-human-notes": ["@singularity/plugin-page-annotations-human-notes@workspace:plugins/page/plugins/annotations/plugins/human-notes"],
 
     "@singularity/plugin-page-annotations-private-notes": ["@singularity/plugin-page-annotations-private-notes@workspace:plugins/page/plugins/annotations/plugins/private-notes"],
 

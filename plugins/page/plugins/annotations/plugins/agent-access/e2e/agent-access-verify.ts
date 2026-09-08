@@ -27,6 +27,11 @@
 //  P7. A private card survives a PAGE-scoped edit untouched, in all five columns.
 //      The tool's report is not proof: a deleted card is simply unmentioned, and
 //      a card re-ranked to the end of the page passes any row-existence check.
+//  P8. A `<human>` card nested INSIDE an `<agent-note>` is a hole the agent
+//      cannot write: an `edit_page` of a line in it is refused, and so is a
+//      `write_agent_note` on the enclosing card that simply leaves it out — which
+//      is what "the whole card's contents" makes of an omission. Both checked on
+//      the five-column snapshot, because a refusal must write nothing.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -77,6 +82,13 @@ const NOTE_MD =
 const NOTE_FIRST = "found two call sites";
 const NOTE_EDITED = "found three call sites";
 const CARD_TAG = "agent-note";
+// The page author answering the agent INSIDE the agent's own card (P8). The
+// stored type is `context` and the markdown tag is `human` — the card was
+// renamed everywhere except the column value, so both spellings are needed here:
+// one to POST the row, one to read the refusal.
+const HUMAN_TYPE = "context";
+const HUMAN_TAG = "human";
+const HUMAN_LINE = "no — the writer is in encode.ts";
 
 const r = report();
 
@@ -283,6 +295,44 @@ async function seedPrivateCard(
       return { card: card.id, child: child.id };
     },
     { parent: pageId, line: secret },
+  );
+}
+
+/**
+ * Seed a `<human>` card holding one line, through the write boundary, UNDER the
+ * agent's own card.
+ *
+ * Through the browser's POST rather than through a tool, because no agent tool
+ * can make one — which is itself half of what P8 asserts.
+ */
+async function seedHumanCard(
+  page: Page,
+  parentId: string,
+  line: string,
+): Promise<{ card: string; child: string }> {
+  return page.evaluate(
+    async ({ parent, type, text }) => {
+      const post = async (body: unknown): Promise<{ id: string }> => {
+        const res = await fetch("/api/blocks", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok)
+          throw new Error(
+            `POST /api/blocks ${res.status}: ${await res.text()}`,
+          );
+        return (await res.json()) as { id: string };
+      };
+      const card = await post({ parentId: parent, type, data: {} });
+      const child = await post({
+        parentId: card.id,
+        type: "text",
+        data: { text: [{ text }] },
+      });
+      return { card: card.id, child: child.id };
+    },
+    { parent: parentId, type: HUMAN_TYPE, text: line },
   );
 }
 
@@ -534,7 +584,7 @@ await withBrowser(async (h) => {
         old_string: NOTE_FIRST,
         new_string: `${NOTE_FIRST}\n<private-note>\nsneaky\n</private-note>`,
       },
-      /addressed to the page's author only/,
+      /creates a <private-note> card/,
     ],
     [
       "P2: claiming an id that names no card",
@@ -750,6 +800,100 @@ await withBrowser(async (h) => {
     innerCard !== undefined &&
       JSON.stringify(nested.note_ids ?? []) === JSON.stringify([innerCard.id]),
     JSON.stringify(nested.note_ids ?? null),
+  );
+
+  // --- P8. the author's answer, nested inside the agent's own card ----------
+  // The card the agent may READ and may not WRITE. It is the one shape the old
+  // "an edit whose diff stays inside a card may rewrite that card wholesale"
+  // bound could not survive, so both refusals below are the point of the
+  // feature rather than an edge case of it.
+  const answer = await seedHumanCard(page, noteId, HUMAN_LINE).catch(
+    (err: unknown): Promise<never> =>
+      bail(
+        `seed: a <${HUMAN_TAG}> card posts inside the agent's card`,
+        `${err instanceof Error ? err.message : String(err)} — P8 is not checkable`,
+      ),
+  );
+  await page.waitForTimeout(1000);
+
+  const nestedMarkdown = await mustCall("read_page", { block_id: pageId });
+  r.ok(
+    `P8: read_page shows the nested <${HUMAN_TAG}> card, with its id as an address`,
+    nestedMarkdown.includes(`<${HUMAN_TAG} id="${answer.card}">`) &&
+      nestedMarkdown.includes(HUMAN_LINE),
+    JSON.stringify(nestedMarkdown),
+  );
+
+  const beforeHuman = await snapshot(pageId);
+  const humanRefusals: [
+    name: string,
+    tool: string,
+    args: unknown,
+    expect: RegExp,
+  ][] = [
+    [
+      `P8: editing a line inside the nested <${HUMAN_TAG}> card`,
+      "edit_page",
+      {
+        block_id: pageId,
+        old_string: HUMAN_LINE,
+        new_string: "the writer is in decode.ts",
+      },
+      new RegExp(`sits inside <${HUMAN_TAG}> card ${answer.card}`),
+    ],
+    [
+      `P8: a write_agent_note that OMITS the nested <${HUMAN_TAG}> card`,
+      // `content` is the card's WHOLE new contents, so leaving the nested card
+      // out is not an omission the applier forgives — it plans its deletion, and
+      // the whole write is refused with nothing written.
+      "write_agent_note",
+      { block_id: noteId, content: NOTE_EDITED },
+      new RegExp(`<${HUMAN_TAG}> card`),
+    ],
+    [
+      `P8: minting a <${HUMAN_TAG}> card inside the agent's own`,
+      "edit_page",
+      {
+        block_id: pageId,
+        old_string: NOTE_EDITED,
+        new_string: `${NOTE_EDITED}\n<${HUMAN_TAG}>\nspeaking for you\n</${HUMAN_TAG}>`,
+      },
+      new RegExp(`creates a <${HUMAN_TAG}> card`),
+    ],
+  ];
+  for (const [name, tool, args, expect] of humanRefusals) {
+    const refused = await callTool(tool, args);
+    r.ok(
+      `refused: ${name}`,
+      !refused.ok && expect.test(refused.text),
+      refused.text,
+    );
+  }
+  const afterHuman = await snapshot(pageId);
+  r.ok(
+    "P8: none of those wrote anything — set-equality on all five columns",
+    snapshotDiff(beforeHuman, afterHuman).length === 0,
+    JSON.stringify(snapshotDiff(beforeHuman, afterHuman)),
+  );
+
+  // The other half of the same law: echoed back, the card is a fixed point, so
+  // the rule costs an honest write nothing.
+  const cardWithAnswer = await mustCall("read_page", { block_id: noteId });
+  const echoed = await mustWrite("write_agent_note", {
+    block_id: noteId,
+    content: cardWithAnswer,
+  });
+  r.eq(
+    `P8: write_agent_note that echoes the <${HUMAN_TAG}> card back writes nothing`,
+    counts(echoed),
+    { created: 0, deleted: 0, moved: 0, text_edited: 0 },
+  );
+  const afterEcho = await snapshot(pageId);
+  r.ok(
+    "P8: and the card kept its row id, parent and rank",
+    beforeHuman.get(answer.card) === afterEcho.get(answer.card) &&
+      beforeHuman.get(answer.child) === afterEcho.get(answer.child),
+    JSON.stringify([afterEcho.get(answer.card), afterEcho.get(answer.child)]),
   );
 
   await snap(page, out, "after-notes");

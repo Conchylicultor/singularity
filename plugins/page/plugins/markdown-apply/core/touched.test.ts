@@ -20,16 +20,31 @@ import {
   type MarkdownTextEdit,
 } from "./plan";
 import type { StoredRow } from "./stored-row";
-import { boundaryViolations, touchedBlocks } from "./touched";
+import {
+  boundaryViolations,
+  touchedBlocks,
+  type WriteBoundary,
+} from "./touched";
 
-// The boundary predicate here is SYNTHETIC — `type === "fence"`, a type nothing
-// in this repo declares. That is the point: these tests prove the MECHANISM, and
-// a test written against the real agent-note type would prove the policy while
-// quietly letting a hard-coded type name into a module whose whole contract is
+// Both boundary types here are SYNTHETIC — `fence` and `vault`, types nothing in
+// this repo declares. That is the point: these tests prove the MECHANISM, and
+// tests written against the real annotation types would prove the policy while
+// quietly letting hard-coded type names into a module whose whole contract is
 // that it names none.
-const BOUNDARY_TYPE = "fence";
-const isBoundary = (row: { id: string; type: string }): boolean =>
-  row.type === BOUNDARY_TYPE;
+//
+// `fence` declares `"open"` (writes are allowed at and under it) and `vault`
+// declares `"closed"` (they are not). Everything else declares nothing, which is
+// what an ordinary paragraph does.
+const OPEN_TYPE = "fence";
+const CLOSED_TYPE = "vault";
+const boundaryOf = (row: {
+  id: string;
+  type: string;
+}): WriteBoundary | undefined => {
+  if (row.type === OPEN_TYPE) return "open";
+  if (row.type === CLOSED_TYPE) return "closed";
+  return undefined;
+};
 
 // Handles are built LOCALLY with the real `defineBlock`, as `plan.test.ts` does
 // and for its reason: importing a block plugin back into a core test would form
@@ -56,20 +71,32 @@ const text = defineBlock({
 });
 
 /**
- * A void, IDENTIFIED container — the shape the boundary predicate is about. It
- * round-trips its row id as the reserved `id` attribute, which is what makes the
- * T3 attack below expressible in markdown at all: without a pin the card itself
- * would be a delete-plus-create and the "moved into it" question would not arise.
+ * A void, IDENTIFIED container. It round-trips its row id as the reserved `id`
+ * attribute, which is what makes the T3 attack below expressible in markdown at
+ * all: without a pin the card itself would be a delete-plus-create and the "moved
+ * into it" question would not arise.
+ *
+ * Both boundary types are built through it, differing only in their type name —
+ * so a case about `open` vs `closed` is a case about what the CLASSIFIER answers
+ * and never about how the two cards are shaped.
  */
-const fence = defineBlock({
-  type: BOUNDARY_TYPE,
-  schema: z.object({}),
-  empty: () => ({}),
-  anchor: true,
-  markdown: { tag: { body: "children", identified: true } },
-}) as BlockHandle<unknown>;
+const container = (type: string): BlockHandle<unknown> =>
+  defineBlock({
+    type,
+    schema: z.object({}),
+    empty: () => ({}),
+    anchor: true,
+    markdown: { tag: { body: "children", identified: true } },
+  }) as BlockHandle<unknown>;
 
-const handles: BlockHandle<unknown>[] = [text, fence] as BlockHandle<unknown>[];
+const fence = container(OPEN_TYPE);
+const vault = container(CLOSED_TYPE);
+
+const handles: BlockHandle<unknown>[] = [
+  text,
+  fence,
+  vault,
+] as BlockHandle<unknown>[];
 const ctx: MarkdownContext = {
   handles,
   protectedSpans: [],
@@ -134,17 +161,46 @@ function rowsOf(forest: RawNode[]): StoredRow[] {
  * ```
  * PAGE
  *  ├ b1  text   "prose"        ← the document's own body
- *  ├ b2  fence                 ← a boundary
+ *  ├ b2  fence                 ← an OPEN boundary
  *  │  └ b3 text  "noted"
- *  └ b4  fence                 ← a second boundary
+ *  └ b4  fence                 ← a second open boundary
  *     └ b5 text  "also noted"
  * ```
  */
 const fixture = (): StoredRow[] =>
   rowsOf([
     line("prose"),
-    raw(BOUNDARY_TYPE, {}, [line("noted")]),
-    raw(BOUNDARY_TYPE, {}, [line("also noted")]),
+    raw(OPEN_TYPE, {}, [line("noted")]),
+    raw(OPEN_TYPE, {}, [line("also noted")]),
+  ]);
+
+/**
+ * The fixture the CLOSED cases are judged against — the two nestings that a
+ * two-valued predicate cannot express, in one forest:
+ *
+ * ```
+ * PAGE
+ *  ├ b1  text   "prose"
+ *  ├ b2  fence                 ← open
+ *  │  ├ b3 text  "noted"
+ *  │  └ b4 vault               ← CLOSED, inside an open card
+ *  │     └ b5 text "my answer"
+ *  └ b6  vault                 ← closed at page level
+ *     └ b7 fence               ← OPEN, inside a closed card
+ *        └ b8 text "noted again"
+ * ```
+ *
+ * Ids stay parallel to `fixture()`'s where the two overlap (`b1` prose, `b2` the
+ * open card, `b3` its line), so a case reads the same way in either.
+ */
+const nested = (): StoredRow[] =>
+  rowsOf([
+    line("prose"),
+    raw(OPEN_TYPE, {}, [
+      line("noted"),
+      raw(CLOSED_TYPE, {}, [line("my answer")]),
+    ]),
+    raw(CLOSED_TYPE, {}, [raw(OPEN_TYPE, {}, [line("noted again")])]),
   ]);
 
 const NOW = new Date("2026-08-07T00:00:00.000Z");
@@ -188,7 +244,7 @@ const violationsOf = (
   plan: MarkdownApplyPlan,
   existing: readonly StoredRow[] = fixture(),
   rootId = PAGE_ID,
-) => boundaryViolations({ plan, existing, rootId, isBoundary });
+) => boundaryViolations({ plan, existing, rootId, boundaryOf });
 
 // ---------------------------------------------------------------------------
 // T3 — the both-chains rule, through the REAL planner
@@ -204,15 +260,15 @@ describe("T3: annexing the document's prose into a boundary", () => {
   const rows = (): StoredRow[] =>
     rowsOf([
       line("The parser handles UTF-8."),
-      raw(BOUNDARY_TYPE, {}, [line("Checked the writer.")]),
+      raw(OPEN_TYPE, {}, [line("Checked the writer.")]),
     ]);
 
   // b1 = the prose, b2 = the card, b3 = the card's own line.
   const attack = [
-    `<${BOUNDARY_TYPE} id="b2">`,
+    `<${OPEN_TYPE} id="b2">`,
     "  The parser handles UTF-8.",
     "  Checked the writer.",
-    `</${BOUNDARY_TYPE}>`,
+    `</${OPEN_TYPE}>`,
   ].join("\n");
 
   const planAttack = (existing: StoredRow[]): MarkdownApplyPlan => {
@@ -241,17 +297,20 @@ describe("T3: annexing the document's prose into a boundary", () => {
     expect(touchedBlocks(plan).updated).toContain("b1");
   });
 
-  test("and it is caught, as `escaped-origin`", () => {
+  test("and it is caught, on the OLD side", () => {
+    // The new chain resolves open — that is what makes an after-only test wrong
+    // — so the failure can only be the chain the block came FROM, which declared
+    // nothing at all.
     const existing = rows();
     expect(violationsOf(planAttack(existing), existing)).toEqual([
-      { blockId: "b1", how: "updated", reason: "escaped-origin" },
+      { blockId: "b1", how: "updated", side: "old", reason: "escaped" },
     ]);
   });
 
   test("the same document, applied to the forest it describes, is clean", () => {
     // Idempotence: re-applying what the attack produced touches nothing that is
     // not already inside the card, so the predicate must not re-flag it. This is
-    // what proves `escaped-origin` names the MOVE and not the destination.
+    // what proves the old-side violation names the MOVE and not the destination.
     const existing = rows();
     const moved = existing.map((row) =>
       row.id === "b1"
@@ -301,7 +360,7 @@ describe("an empty paragraph a blank line cannot place is pinned as a tag", () =
   const rows = (): StoredRow[] =>
     rowsOf([
       raw("text", { text: runs("prose") }, [line("")]),
-      raw(BOUNDARY_TYPE, {}, [line("noted")]),
+      raw(OPEN_TYPE, {}, [line("noted")]),
     ]);
 
   /** Read the forest out and apply it straight back — an edit that changes nothing. */
@@ -329,9 +388,9 @@ describe("an empty paragraph a blank line cannot place is pinned as a tag", () =
       [
         "prose",
         "  <text/>",
-        `<${BOUNDARY_TYPE} id="b3">`,
+        `<${OPEN_TYPE} id="b3">`,
         "  noted",
-        `</${BOUNDARY_TYPE}>`,
+        `</${OPEN_TYPE}>`,
       ].join("\n"),
     );
   });
@@ -355,18 +414,19 @@ describe("an empty paragraph a blank line cannot place is pinned as a tag", () =
 // ---------------------------------------------------------------------------
 
 describe("moves", () => {
-  test("out of a boundary onto the page body is `escaped`", () => {
+  test("out of a boundary onto the page body fails on the NEW side", () => {
     const plan = planOf({
       updates: [{ id: "b3", changes: { parentId: PAGE_ID } }],
     });
     expect(violationsOf(plan)).toEqual([
-      { blockId: "b3", how: "updated", reason: "escaped" },
+      { blockId: "b3", how: "updated", side: "new", reason: "escaped" },
     ]);
   });
 
   test("between two boundaries is legal", () => {
-    // Both chains reach A boundary — not the same one, deliberately. The rule is
-    // about being inside the caller's set, not about staying in one card.
+    // Both chains resolve to AN open boundary — not the same one, deliberately.
+    // The rule is about being inside the caller's open set, not about staying in
+    // one card.
     const plan = planOf({
       updates: [{ id: "b3", changes: { parentId: "b4" } }],
     });
@@ -394,7 +454,7 @@ describe("T4: field granularity", () => {
   // the feature.
   test("a rank-only update to page prose is NOT a violation", () => {
     const plan = planOf({
-      creates: [create("new", PAGE_ID, BOUNDARY_TYPE)],
+      creates: [create("new", PAGE_ID, OPEN_TYPE)],
       updates: [{ id: "b1", changes: { rank: Rank.between(null, null) } }],
     });
     expect(violationsOf(plan)).toEqual([]);
@@ -405,19 +465,21 @@ describe("T4: field granularity", () => {
       updates: [{ id: "b1", changes: { data: { text: runs("rewritten") } } }],
     });
     expect(violationsOf(plan)).toEqual([
-      { blockId: "b1", how: "updated", reason: "escaped" },
+      { blockId: "b1", how: "updated", side: "new", reason: "escaped" },
     ]);
   });
 
-  test("`type` and `parentId` are judged too — both as `escaped-origin`", () => {
+  test("`type` and `parentId` are judged too — both on the OLD side", () => {
     // Two shapes of the same annexation. `parentId` moves the prose INTO the
-    // card (T3 proper); `type` retypes the prose row into a boundary, so its NEW
-    // chain trivially passes (a boundary is inside itself) while the row it came
-    // from was open body. Both are only caught by the old chain.
-    for (const changes of [{ type: BOUNDARY_TYPE }, { parentId: "b2" }]) {
+    // card (T3 proper); `type` retypes the prose row into an open boundary, so
+    // its NEW chain trivially passes (a declaring row is inside itself) while the
+    // row it came from was open body. Both are only caught by the old chain.
+    for (const changes of [{ type: OPEN_TYPE }, { parentId: "b2" }]) {
       expect(
         violationsOf(planOf({ updates: [{ id: "b1", changes }] })),
-      ).toEqual([{ blockId: "b1", how: "updated", reason: "escaped-origin" }]);
+      ).toEqual([
+        { blockId: "b1", how: "updated", side: "old", reason: "escaped" },
+      ]);
     }
   });
 
@@ -454,7 +516,7 @@ describe("creates", () => {
   test("a created boundary satisfies its own check, and hosts its own children", () => {
     const plan = planOf({
       creates: [
-        create("card", PAGE_ID, BOUNDARY_TYPE),
+        create("card", PAGE_ID, OPEN_TYPE),
         create("n", "card", "text"),
       ],
     });
@@ -464,15 +526,17 @@ describe("creates", () => {
   test("outside every boundary is a violation", () => {
     expect(
       violationsOf(planOf({ creates: [create("n", PAGE_ID, "text")] })),
-    ).toEqual([{ blockId: "n", how: "created", reason: "escaped" }]);
+    ).toEqual([
+      { blockId: "n", how: "created", side: "new", reason: "escaped" },
+    ]);
   });
 
   test("a create is judged on its NEW chain only — it has no old one", () => {
     // A created id is in neither the before-maps nor `existing`, so an
     // implementation that walked the old chain for creates would report every
-    // legal one as `escaped-origin`.
+    // legal one as an old-side escape.
     const plan = planOf({ creates: [create("n", "b2", "text")] });
-    expect(violationsOf(plan).map((v) => v.reason)).toEqual([]);
+    expect(violationsOf(plan)).toEqual([]);
   });
 });
 
@@ -483,7 +547,7 @@ describe("deletes", () => {
 
   test("from the page body is a violation", () => {
     expect(violationsOf(planOf({ deleteIds: ["b1"] }))).toEqual([
-      { blockId: "b1", how: "deleted", reason: "escaped" },
+      { blockId: "b1", how: "deleted", side: "old", reason: "escaped" },
     ]);
   });
 
@@ -506,7 +570,151 @@ describe("text edits", () => {
       violationsOf(
         planOf({ textEdits: [{ blockId: "b1", runs: runs("re") }] }),
       ),
-    ).toEqual([{ blockId: "b1", how: "text-edited", reason: "escaped" }]);
+    ).toEqual([
+      { blockId: "b1", how: "text-edited", side: "new", reason: "escaped" },
+    ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The CLOSED answer — the half a two-valued predicate cannot express
+// ---------------------------------------------------------------------------
+//
+// Every case here runs against `nested()`, where a closed card sits inside an
+// open one and an open card sits inside a closed one. Both nestings are legal
+// documents a person can build, and the answer to each is decided by the SAME
+// rule: the nearest declaring ancestor wins.
+
+const nestedViolations = (plan: MarkdownApplyPlan, rootId = PAGE_ID) =>
+  violationsOf(plan, nested(), rootId);
+
+describe("writing inside a closed card", () => {
+  test("a text edit inside one nested in an OPEN card is `enclosed`", () => {
+    // b5 sits inside b4 (closed) inside b2 (open). Under a two-valued predicate
+    // b2 would answer for the whole subtree and this write would be legal — the
+    // hole this feature exists to close.
+    expect(
+      nestedViolations(
+        planOf({ textEdits: [{ blockId: "b5", runs: runs("rewritten") }] }),
+      ),
+    ).toEqual([
+      { blockId: "b5", how: "text-edited", side: "new", reason: "enclosed" },
+    ]);
+  });
+
+  test("a `data` update inside one is `enclosed` on the NEW side", () => {
+    expect(
+      nestedViolations(
+        planOf({
+          updates: [{ id: "b5", changes: { data: { text: runs("x") } } }],
+        }),
+      ),
+    ).toEqual([
+      { blockId: "b5", how: "updated", side: "new", reason: "enclosed" },
+    ]);
+  });
+
+  test("creating a row inside one is `enclosed`", () => {
+    expect(
+      nestedViolations(planOf({ creates: [create("n", "b4", "text")] })),
+    ).toEqual([
+      { blockId: "n", how: "created", side: "new", reason: "enclosed" },
+    ]);
+  });
+});
+
+describe("minting a closed card", () => {
+  // This describe is what SUBSUMES the old separate rule "nothing may mint a
+  // card whose words are not the writer's". It is not a rule any more: a created
+  // closed row declares `closed` at its own row, and the walk is self-inclusive,
+  // so the ordinary create check refuses it with the ordinary evidence.
+
+  test("at page level is `enclosed`, not `escaped`", () => {
+    expect(
+      nestedViolations(
+        planOf({ creates: [create("c", PAGE_ID, CLOSED_TYPE)] }),
+      ),
+    ).toEqual([
+      { blockId: "c", how: "created", side: "new", reason: "enclosed" },
+    ]);
+  });
+
+  test("INSIDE an open card is refused too — the card's own declaration wins", () => {
+    // The tempting exemption ("it is inside my own card, so it is mine to
+    // mint") is exactly what self-inclusion refuses: the created row declares
+    // `closed` before the walk ever reaches the open card above it.
+    expect(
+      nestedViolations(planOf({ creates: [create("c", "b2", CLOSED_TYPE)] })),
+    ).toEqual([
+      { blockId: "c", how: "created", side: "new", reason: "enclosed" },
+    ]);
+  });
+
+  test("retyping an existing row INTO a closed type is refused on both counts", () => {
+    // The new chain fails at the row's own new type; that is one answer, so the
+    // old chain is not also reported.
+    expect(
+      nestedViolations(
+        planOf({ updates: [{ id: "b3", changes: { type: CLOSED_TYPE } }] }),
+      ),
+    ).toEqual([
+      { blockId: "b3", how: "updated", side: "new", reason: "enclosed" },
+    ]);
+  });
+});
+
+describe("removing something from a closed card", () => {
+  test("deleting a row inside one is `enclosed` on the OLD side", () => {
+    expect(nestedViolations(planOf({ deleteIds: ["b5"] }))).toEqual([
+      { blockId: "b5", how: "deleted", side: "old", reason: "enclosed" },
+    ]);
+  });
+
+  test("deleting the closed card ITSELF is `enclosed` — it is inside itself", () => {
+    expect(nestedViolations(planOf({ deleteIds: ["b4"] }))).toEqual([
+      { blockId: "b4", how: "deleted", side: "old", reason: "enclosed" },
+    ]);
+  });
+
+  test("moving a block OUT of one into an open card is `enclosed` on the OLD side", () => {
+    // The destination is perfectly legal — b2 is open — so an after-only test
+    // would let an agent lift the page author's words out of the card that
+    // protects them and into its own. Only the old chain says otherwise.
+    expect(
+      nestedViolations(
+        planOf({ updates: [{ id: "b5", changes: { parentId: "b2" } }] }),
+      ),
+    ).toEqual([
+      { blockId: "b5", how: "updated", side: "old", reason: "enclosed" },
+    ]);
+  });
+});
+
+describe("nearest wins", () => {
+  test("an OPEN card nested inside a closed one still admits writes", () => {
+    // b8 sits inside b7 (open) inside b6 (closed). The nearest declaration is
+    // b7's, and the walk stops there — a rule that scanned the whole chain for
+    // any `closed` would refuse this, and an `<agent-note>` a person nested in
+    // their own card would be unwritable by the agent that owns it.
+    expect(
+      nestedViolations(
+        planOf({
+          textEdits: [{ blockId: "b8", runs: runs("re") }],
+          creates: [create("n", "b7", "text")],
+          deleteIds: ["b8"],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  test("the closed card WRAPPING that open one is still closed", () => {
+    // b7 itself: the walk starts at b7, which declares open, so it is inside
+    // itself — but its OLD chain is the same one, so deleting it is legal while
+    // deleting b6 around it is not.
+    expect(nestedViolations(planOf({ deleteIds: ["b7"] }))).toEqual([]);
+    expect(nestedViolations(planOf({ deleteIds: ["b6"] }))).toEqual([
+      { blockId: "b6", how: "deleted", side: "old", reason: "enclosed" },
+    ]);
   });
 });
 
@@ -515,7 +723,7 @@ describe("text edits", () => {
 // ---------------------------------------------------------------------------
 
 describe("the scope root", () => {
-  test("a root that IS a boundary makes everything under it legal", () => {
+  test("a root that IS an open boundary makes everything under it legal", () => {
     // A card-scoped apply: the walk stops at `rootId`, but only AFTER testing it,
     // so the card the apply is rooted at counts as the boundary it is.
     const plan = planOf({
@@ -524,6 +732,30 @@ describe("the scope root", () => {
       deleteIds: [],
     });
     expect(violationsOf(plan, fixture(), "b2")).toEqual([]);
+  });
+
+  test("a CLOSED root refuses everything under it", () => {
+    // Same ceiling rule, opposite answer: scoping an apply at a closed card does
+    // not turn it into permission to write there.
+    expect(
+      nestedViolations(planOf({ creates: [create("n", "b4", "text")] }), "b4"),
+    ).toEqual([
+      { blockId: "n", how: "created", side: "new", reason: "enclosed" },
+    ]);
+    expect(nestedViolations(planOf({ deleteIds: ["b5"] }), "b4")).toEqual([
+      { blockId: "b5", how: "deleted", side: "old", reason: "enclosed" },
+    ]);
+  });
+
+  test("an open card under a closed root still admits writes", () => {
+    // The ceiling never overrides a nearer declaration — the walk reaches b7
+    // first and stops.
+    expect(
+      nestedViolations(
+        planOf({ textEdits: [{ blockId: "b8", runs: runs("re") }] }),
+        "b6",
+      ),
+    ).toEqual([]);
   });
 
   test("a non-boundary root does not become one", () => {
@@ -585,9 +817,11 @@ describe("corruption", () => {
   });
 
   test("a chain leaving the partition is `escaped`, not a throw", () => {
-    // An unresolvable parent is an ANSWER — the block is not provably inside a
-    // boundary — where a chain that never ends is corruption. The two must not
-    // collapse into one arm.
+    // An unresolvable parent is an ANSWER — the block is not provably inside an
+    // open boundary — where a chain that never ends is corruption. The two must
+    // not collapse into one arm. And it is `escaped`, not `enclosed`: nothing on
+    // that chain declared anything, which is a different thing from a chain that
+    // declared "no".
     const orphan: StoredRow[] = [
       {
         id: "x",
@@ -599,7 +833,7 @@ describe("corruption", () => {
       },
     ];
     expect(violationsOf(planOf({ deleteIds: ["x"] }), orphan)).toEqual([
-      { blockId: "x", how: "deleted", reason: "escaped" },
+      { blockId: "x", how: "deleted", side: "old", reason: "escaped" },
     ]);
   });
 });

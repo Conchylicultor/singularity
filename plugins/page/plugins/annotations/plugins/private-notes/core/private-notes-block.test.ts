@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { privateNotesBlock, privateNotesDataSchema } from "./private-notes-block";
+import {
+  privateNotesBlock,
+  privateNotesDataSchema,
+} from "./private-notes-block";
 
 /**
  * The private-note card owns NOTHING but its type — including no visibility
@@ -11,14 +14,16 @@ describe("privateNotesDataSchema (void)", () => {
   it("rejects a `text` key at the write boundary", () => {
     // `parse-block-data.ts` parses through `handle.schema.strict()`, so this is
     // literally what POST /api/blocks does with a text-bearing payload.
-    const strict = privateNotesDataSchema.strict().safeParse({ text: [{ text: "hello" }] });
+    const strict = privateNotesDataSchema
+      .strict()
+      .safeParse({ text: [{ text: "hello" }] });
     expect(strict.success).toBe(false);
   });
 
   it("rejects a per-instance visibility toggle", () => {
-    expect(privateNotesDataSchema.strict().safeParse({ visibleTo: "agent" }).success).toBe(
-      false,
-    );
+    expect(
+      privateNotesDataSchema.strict().safeParse({ visibleTo: "agent" }).success,
+    ).toBe(false);
   });
 
   it("parses to exactly {}", () => {
@@ -43,6 +48,15 @@ describe("privateNotesBlock (derived + forced facts)", () => {
     // put a per-card override, so there is no state in which a card labelled
     // private is nonetheless shared.
     expect(privateNotesBlock.empty?.()).toEqual({});
+  });
+
+  it("declares the human author too — the axes are independent, not derived", () => {
+    // Near-tautological on this card (an agent that cannot receive it could not
+    // write it), and declared anyway: `author` is the load-bearing answer for
+    // the cards an agent DOES receive, and a family where one member could skip
+    // the question is one where the next member skips it too. The check's
+    // discriminator is presence of the fields, not their values.
+    expect(privateNotesBlock.author).toBe("human");
   });
 
   it("is a container: the facts come from `defineContainerBlock`", () => {

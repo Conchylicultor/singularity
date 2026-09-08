@@ -24,6 +24,16 @@ export type BlockTextVariant =
  */
 export type BlockAudience = "agent" | "human";
 
+/**
+ * Whose words a block holds, and therefore who may write it — see
+ * {@link BlockHandle.author}. The same two values as {@link BlockAudience}, and
+ * deliberately the same two spellings: a page has exactly two parties, and
+ * giving one of them a second word (`"user"` on one axis, `"human"` on the
+ * other) is how a policy ends up comparing strings drawn from two vocabularies
+ * and quietly matching neither.
+ */
+export type BlockAuthor = "agent" | "human";
+
 export interface BlockHandle<T> {
   type: string;
   schema: AnyZodObject;
@@ -292,11 +302,43 @@ export interface BlockHandle<T> {
    * `defineBlock` does NOT accept it, and that is the fail-safe half: only
    * `defineAnnotationBlock` sets it, so its presence on a handle *is* the proof
    * that the type went through the factory that makes it mandatory. The
-   * `annotations:audience-declared` check keys on exactly that, which is what
+   * `annotations:parties-declared` check keys on exactly that, which is what
    * stops a future annotation from quietly being an ordinary container and
    * defaulting into visibility.
    */
   audience?: BlockAudience;
+  /**
+   * Whose words this block holds, and therefore who may write it. Declared ONLY
+   * by annotation containers (`page/annotations`' `defineAnnotationBlock`, which
+   * requires it); **absent means the HUMAN's** — the page's own prose is not an
+   * agent's to rewrite.
+   *
+   * That absent-value default points the OPPOSITE way from {@link audience}'s,
+   * and both are the fail-safe one. Which is exactly why neither axis can be
+   * derived from the other, however similar the two unions look:
+   *
+   * | absent     | means                                 | why that is the safe answer                   |
+   * |------------|---------------------------------------|-----------------------------------------------|
+   * | `audience` | ordinary content, visible to everyone | a paragraph is withheld from nobody           |
+   * | `author`   | the human's                           | the page's prose is not an agent's to rewrite |
+   *
+   * So an unmarked block is readable by everyone and writable by nobody but the
+   * person at the keyboard, which is what an ordinary paragraph is. Erring the
+   * other way on either axis is the unrecoverable direction: a private card
+   * handed out, or an agent that overwrote what its author typed.
+   *
+   * It rides the HANDLE for {@link audience}'s reason — the handle is already
+   * what `Editor.BlockData.getContributions()` hands the server, so there is no
+   * second registry to drift from the first — and consumers read the write rule
+   * off `handle.author` GENERICALLY, never off a block type name.
+   *
+   * `defineBlock` does NOT accept it, which is the same fail-safe half
+   * {@link audience} relies on: presence on a handle *is* the proof that the
+   * type went through `defineAnnotationBlock`, the factory that makes the
+   * declaration mandatory. The `annotations:parties-declared` check keys on that
+   * presence, for both fields at once.
+   */
+  author?: BlockAuthor;
   /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST

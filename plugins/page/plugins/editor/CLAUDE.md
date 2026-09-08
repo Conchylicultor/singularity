@@ -3216,8 +3216,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots:
-    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
+    - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+    - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
   - Uses:
@@ -3471,6 +3471,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Exports (types):
     - `Block`
     - `BlockAudience`
+    - `BlockAuthor`
     - `BlockData`
     - `BlockDiff`
     - `BlockFieldChanges`
@@ -3633,7 +3634,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
     - `page/annotations/agent-notes/authorship`
-    - `page/annotations/context`
+    - `page/annotations/human-notes`
     - `page/annotations/private-notes`
     - `page/annotations/todo`
     - `page/annotations/todo/task-link`

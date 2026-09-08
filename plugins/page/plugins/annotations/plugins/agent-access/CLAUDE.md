@@ -6,16 +6,16 @@ the file triple an agent already knows.
 
 ```
 read_page(block_id)                              → subtree markdown; human-audience subtrees pruned,
-                                                   `# Title` and `<agent-note id="…">` emitted
+                                                   `# Title`, `<agent-note id="…">` and `<human id="…">` emitted
 write_agent_note(block_id, content)              → merge-apply ONE card's contents
 edit_page(block_id, old_string, new_string, …)   → ANY block; legality is what the diff TOUCHED
 ```
 
-It lives under `annotations` because it is the filter over THIS family: both
-"withhold `/private`" and "own `<agent-note>`" are statements about the
-audience-scoped family, not about markdown. The engine stays audience-agnostic —
-it takes a root, a row filter and a boundary predicate, and never learns what an
-audience is.
+It lives under `annotations` because it is the filter over THIS family: "withhold
+`/private`", "own `<agent-note>`" and "leave `<human>` alone" are all statements
+about the two-axis family, not about markdown. The engine stays agnostic — it
+takes a root, a row filter and a row classifier, and never learns what an
+audience or an author is.
 
 `read_page`'s ids are what make the triple compose. A file path exists before you
 read the file; a block id did not, so `read_page` + a write tool used to be two
@@ -62,26 +62,33 @@ page's own. The id is only the SCOPE the edit is applied at. Legality is decided
 afterwards, on the plan:
 
 > Every block an edit creates, rewrites, moves or deletes must sit inside an
-> `<agent-note>` card — checked on **BOTH** the block's old and its new ancestry
-> for anything that survived, so an edit cannot drag the page's prose into a card.
+> `<agent-note>` card, and not inside a `<human>` or `<todo>` card within it —
+> checked on **BOTH** the block's old and its new ancestry for anything that
+> survived, so an edit cannot drag the page's prose into a card, nor carry a line
+> out of one the author wrote.
 
 **Why that is still safe, and in three ways stronger than what it replaced.**
 
 - **The judgement runs on the PLAN, not on the incoming forest.** A plan sees a
   retyped survivor, a moved row and a deletion as themselves; a walk over the
   parsed markdown saw all three as "a node I cannot distinguish from a create".
-  So the invariant that used to live over the forest — *nothing may mint a
-  human-audience card* — moved onto the plan and got stronger in the move
-  (`assertNotesOnlyPlan`, judgement 1). Its old companion, *notes do not nest*,
-  was dropped rather than moved: see **A card inside a card** below.
+  So the two invariants that used to live over the forest — *nothing may mint a
+  human-audience card*, *notes do not nest* — moved onto the plan and got
+  stronger in the move. **Neither survives as a rule of its own, and each went
+  for its own reason.** Minting is a write at the new card's own row, so the
+  `author` walk refuses it with nothing to keep in step; nesting was refusing a
+  shape the rest of the system handles, so it was dropped outright (see **A card
+  inside a card** below). What is left is one walk.
 - **Both chains, not just the new one.** Re-indenting the page's prose under an
   existing card is a MOVE, and because the aligner preserves the id of
   byte-identical text it arrives as an `update` naming `parentId` — not a create.
   An after-only test would accept it, and the whole page could be annexed into
   the agent's own card, attributed to the agent, without a character being
   deleted. Updated/text-edited blocks are therefore judged on their OLD chain as
-  well (`escaped-origin`), resolved against pre-plan maps so moving an ancestor
-  in the same plan cannot launder a block through it.
+  well (`side: "old"`), resolved against pre-plan maps so moving an ancestor
+  in the same plan cannot launder a block through it. The same two chains carry
+  the closed answer for free: writing INSIDE a `<human>` card fails on the new
+  side, carrying a block OUT of one fails on the old.
 - **It runs strictly before the first write.** `assertAcceptable` is called
   synchronously after planning and before `applyPageBlockPatch`, so a refusal has
   provably written nothing — and the plan it judged is the one that would have
@@ -93,10 +100,38 @@ human-audience card, and `edit_page` goes through that same door on its way in �
 it reads the scope as markdown before it edits it. What changed is only the
 verdict on the way out.
 
-**The residual bound, stated rather than hidden:** an edit whose diff stays
-inside a card may rewrite that card wholesale, including anything a HUMAN typed
-into it. That was already true of `write_agent_note`, and it is what an
-agent-note card is for.
+### The residual bound is CLOSED: a card the human wrote is a hole in the agent's
+
+> **This section reverses a recorded bound.** It used to read: *an edit whose
+> diff stays inside a card may rewrite that card wholesale, including anything a
+> HUMAN typed into it.* So there was no way to answer an agent inside its own
+> note and have the answer survive the next `write_agent_note`.
+
+Every annotation declares `author` as well as `audience`, and the write rule is
+**the nearest declaring ancestor wins**: `writeBoundaryOf()` maps
+`author: "agent"` → `"open"`, `author: "human"` → `"closed"`, everything else →
+`undefined`, and the engine's walk stops at the first row that declares
+ANYTHING — not the first that says yes. So a `<human>` or `<todo>` card nested
+inside an `<agent-note>` shields its own contents, an `<agent-note>` a human
+nested inside a `<human>` card still admits writes, and prose is refused because
+nothing on its chain ever declared. **A declaring row is inside itself**, so
+minting a `<human>`, `<todo>` or `<private-note>` anywhere — including inside the
+agent's own card — is refused by that same walk, at the new row.
+
+That last point is why one invariant disappeared rather than moved: *nothing may
+mint a human-audience card* was a separate walk over the plan's creates and
+retypes, and it is now the same walk with the same evidence. Two invariants that
+could drift out of step became one that cannot.
+
+`writeBoundaryOf()` is read at CALL time like `humanAudienceTypes()`, and the
+**degradation direction inverts**: an empty registry means nothing is open, i.e.
+every write is refused — loud, where the same degradation for `audience` would
+have meant "redact nothing".
+
+What is left of the bound, narrower: **plain text a human typed LOOSE in a notes
+card is still the agent's to rewrite** — it declares nothing, so the nearest
+declaration above it is the card's own `author: "agent"`. The affordance, not a
+workaround, is to put the answer in a `<human>` card.
 
 ### A card inside a card
 
@@ -143,12 +178,14 @@ identity: pins* in the engine's doc; the invariant this plugin depends on is tha
 **one function serves both directions**, generic in its row type precisely so a
 second, differently-typed copy cannot drift.
 
-The four rules are stated once, in `server/internal/policy.ts`. All of them
-enumerate the family generically off `Editor.BlockData` (`audience === "human"`)
-and never name a type, so a fifth annotation costs this plugin zero edits. The
-set is read at CALL time: a snapshot taken before `collectContributions` degrades
-to "redact nothing" — and now also to "an agent may mint a private card" — and
-that failure is silent and unrecoverable.
+The three rules are stated once, in `server/internal/policy.ts`, one per declared
+fact plus the door between them: **`audience`** decides what an agent may SEE
+(redaction + `assertAgentAddressable`), `assertNoteCard` is `write_agent_note`'s
+door, and **`author`** decides what it may WRITE (`assertNotesOnlyPlan`). All of
+them enumerate the family generically off `Editor.BlockData` and never name a
+type — `agent-note` excepted, which the door is about — so a fifth annotation
+costs this plugin zero edits. Both sets are read at CALL time; see the inverted
+degradation above.
 
 ## `write_page` / `edit_page` came BACK — the other reversal
 
@@ -160,7 +197,7 @@ that failure is silent and unrecoverable.
 removed. The one that went away wrote a page's prose: hand it a document and the
 page became that document. The one that came back cannot touch prose at all —
 the acceptance predicate above refuses every block it creates, rewrites, moves or
-deletes that does not sit inside an `<agent-note>` card. The scope widened from
+deletes that does not resolve inside a region an agent authors. The scope widened from
 "one card's subtree" to "any root"; the WRITE surface did not widen at all. Same
 name, and the name is now about where the edit is anchored rather than what it
 may author.
@@ -246,9 +283,12 @@ nor the policy ever learns one.
 - **Absence is visible.** A read shows a gap where a private card was — no
   marker, by choice — so an agent may re-derive something the author already
   noted privately. `read_page`'s description says so, which is the mitigation.
-- **A human's edits inside a notes card can be overwritten** by the next
-  `write_agent_note`. Write semantics; `edit_page` is the mitigation, and its
-  description says to prefer it.
+- **Plain text a human typed loose in a notes card can be overwritten** by the
+  next `write_agent_note` — it declares no `author`, so the nearest declaration
+  is the card's own. A `<human>` card nested there cannot be: that is the
+  affordance to point them at, not `edit_page`. `write_agent_note` composes the
+  card's WHOLE contents, so omitting such a card plans its deletion and the whole
+  write is refused with nothing written; its description says to echo it back.
 - **A card is minted where the tagless tag sits, not where a hidden row does.**
   Blocks inserted where a redacted row sits land AFTER it, contiguously — the
   engine's rank rule (`planSiblingRanks`' `reserved`), inherited here because
@@ -273,7 +313,7 @@ Spec: `e2e/agent-access-verify.ts`.
 
 ## Plugin reference
 
-- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must land inside an <agent-note> card). The policy over page/markdown-apply's audience-agnostic engine.
+- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-note> card admits it and a <human> or <todo> card nested there refuses it). The policy over page/markdown-apply's audience-and-author-agnostic engine.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`

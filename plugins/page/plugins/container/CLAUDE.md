@@ -316,7 +316,7 @@ they describe.
   - Imported by:
     - `page/annotations`
     - `page/annotations/agent-notes`
-    - `page/annotations/context`
+    - `page/annotations/human-notes`
     - `page/annotations/private-notes`
     - `page/annotations/todo`
     - `page/callout`

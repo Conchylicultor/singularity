@@ -15836,7 +15836,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `page/annotations`
               - `page/annotations/agent-access`
-              - `page/annotations/context`
+              - `page/annotations/human-notes`
               - `page/annotations/todo/task-link`
               - `page/callout`
               - `page/code-block`
@@ -18627,7 +18627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`page`** — Block-based page editor.
   - Plugins:
-    - **`annotations`** — Umbrella for the page editor's annotation containers — the audience-scoped boxes that carry the human↔agent side-channel of a page: context, agent notes, private notes, TODO.
+    - **`annotations`** — Umbrella for the page editor's annotation containers — the party-scoped boxes that carry the human↔agent side-channel of a page: human notes, agent notes, private notes, TODO.
       - Core:
         - Uses:
           - `page/container.ContainerBlockOptions`
@@ -18640,11 +18640,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `page/annotations/agent-notes`
-          - `page/annotations/context`
+          - `page/annotations/human-notes`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must land inside an <agent-note> card). The policy over page/markdown-apply's audience-agnostic engine.
+        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-note> card admits it and a <human> or <todo> card nested there refuses it). The policy over page/markdown-apply's audience-and-author-agnostic engine.
           - Server:
             - Uses:
               - `infra/endpoints.HttpError`
@@ -18721,25 +18721,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values):
                   - `AgentNotesAuthorSchema`
                   - `agentNotesAuthorsResource`
-        - **`context`** — Context block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader. Context block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`human-notes`** — Human block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding the page author's own words addressed to agents rather than to the reader — and, being the author's, the one an agent may read but never write. Human block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "context" → `ContainerNoRow`
-              - `Editor.BlockFrame` "context" → `ContextFrame`
+              - `Editor.BlockFrame` "context" → `HumanNotesFrame`
             - Uses:
               - `page/container.ContainerBackdrop`
               - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
-            - Exports (values): `contextBlock`
+            - Exports (values): `humanNotesBlock`
           - Server:
             - Contributes: `page.block-data` "context"
             - Uses: `page/editor.Editor`
           - Core:
             - Uses: `page/annotations.defineAnnotationBlock`
             - Exports (values):
-              - `contextBlock`
-              - `contextDataSchema`
+              - `humanNotesBlock`
+              - `humanNotesDataSchema`
         - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -19069,7 +19069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `page/annotations`
           - `page/annotations/agent-notes`
-          - `page/annotations/context`
+          - `page/annotations/human-notes`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
           - `page/callout`
@@ -19101,8 +19101,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.context`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses:
@@ -19356,6 +19356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `Block`
           - `BlockAudience`
+          - `BlockAuthor`
           - `BlockData`
           - `BlockDiff`
           - `BlockFieldChanges`
@@ -19518,7 +19519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes`
           - `page/annotations/agent-notes/authorship`
-          - `page/annotations/context`
+          - `page/annotations/human-notes`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
           - `page/annotations/todo/task-link`
@@ -20010,6 +20011,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StoredRow`
           - `TouchedBlocks`
           - `TouchedHow`
+          - `WriteBoundary`
         - Exports (values):
           - `boundaryViolations`
           - `documentOrderRows`

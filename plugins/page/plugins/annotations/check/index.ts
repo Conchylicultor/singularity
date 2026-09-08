@@ -41,35 +41,50 @@ const WEB_BLOCK_SLOT = "page.editor.block";
 const ANNOTATIONS_ROOT = dirname(import.meta.dir);
 
 /**
- * Every block type defined under `page/annotations` declares an audience.
+ * Every block type defined under `page/annotations` declares BOTH of the page's
+ * parties: who may receive its content (`audience`), and whose words it holds
+ * (`author`).
  *
- * `defineAnnotationBlock` (`core/define-annotation-block.ts`) makes `audience`
+ * `defineAnnotationBlock` (`core/define-annotation-block.ts`) makes both
  * REQUIRED, so an annotation written through it cannot be unmarked. What the
  * type system cannot see is a new annotation reaching for `defineContainerBlock`
  * — or `defineBlock` — directly: both are perfectly valid calls that produce a
- * perfectly working dashed card, and the only thing missing is the one field a
- * redaction filter reads. That card would then be an ORDINARY container, and
- * "absent audience means ordinary page content, visible to everyone" would hand
- * it to an agent. A `/private`-shaped block that leaks is precisely the failure
- * this family exists to prevent, and it would leak silently, in the direction
- * that cannot be undone.
+ * perfectly working card, and the only thing missing is the pair of fields the
+ * agent-facing read and write paths are built on. That card would then be an
+ * ORDINARY container, falling through to the two absent-value defaults — and
+ * those defaults are right for a PARAGRAPH, which is exactly what an annotation
+ * is not.
  *
- * The discriminator is presence of `audience` on the handle, because nothing but
- * `defineAnnotationBlock` sets it: `defineBlock` does not accept the field and
- * `ContainerBlockOptions` does not declare it, so presence IS the proof that the
- * type went through the factory that makes the declaration mandatory. The VALUE
- * is left to tsc (`BlockAudience` is a closed union) — restating the two
- * literals here would be a second source of truth for a set the type already
- * closes.
+ * The two omissions fail in opposite directions, and both are worth naming
+ * because the second one reads as harmless until it happens:
+ *
+ * - **no `audience`** — "absent means ordinary page content, visible to
+ *   everyone", so an agent-facing read path SENDS the card. A `/private`-shaped
+ *   block that leaks is precisely the failure this family exists to prevent, and
+ *   it leaks silently, in the direction that cannot be undone.
+ * - **no `author`** — "absent means the human's", so an agent-facing write path
+ *   REFUSES the card, including one the agent itself is supposed to own. That is
+ *   the fail-safe direction, and it is still a defect: a `/agent`-shaped card
+ *   that forgot to say so becomes unwritable by the only party that ever writes
+ *   it, and the symptom is a refusal nobody can explain from the card's own
+ *   definition.
+ *
+ * The discriminator is presence of either field on the handle, because nothing
+ * but `defineAnnotationBlock` sets them: `defineBlock` accepts neither and
+ * `ContainerBlockOptions` declares neither, so presence IS the proof that the
+ * type went through the factory that makes both declarations mandatory. The
+ * VALUES are left to tsc (`BlockAudience` and `BlockAuthor` are closed unions) —
+ * restating their literals here would be a second source of truth for sets the
+ * types already close.
  *
  * Handles are read by IMPORTING the same web barrels the docgen tree imports —
  * the same technique as `page-editor:anchor-has-decoration`, whose module
  * comment explains why a static source scan cannot recover a handle's fields.
  */
-const audienceDeclared: Check = {
-  id: "annotations:audience-declared",
+const partiesDeclared: Check = {
+  id: "annotations:parties-declared",
   description:
-    "every block type defined under `page/annotations` goes through `defineAnnotationBlock`, so it declares who its content is for (`audience`) instead of defaulting into agent-visible",
+    "every block type defined under `page/annotations` goes through `defineAnnotationBlock`, so it declares both of the page's parties — who may receive its content (`audience`) and whose words it holds (`author`) — instead of falling through to the defaults that are right for ordinary prose",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
     const tree = await buildEnrichedTree(root);
@@ -94,7 +109,7 @@ const audienceDeclared: Check = {
         ok: false,
         message:
           `No slot is declared under "${WEB_BLOCK_SLOT}" in the registry-scoped ` +
-          `declaration pass, so no block type could be read and the audience ` +
+          `declaration pass, so no block type could be read and the parties ` +
           `invariant was NOT verified. An id derives from its declaring plugin's ` +
           `id plus its \`slots\` key, so moving the editor renames it. This is a ` +
           `check/tooling failure, not a clean pass.`,
@@ -129,12 +144,15 @@ const audienceDeclared: Check = {
         message:
           `No web \`Editor.Block\` contributions were found under ${relative(root, ANNOTATIONS_ROOT)} ` +
           "— either the barrel-imported contributions facet is empty or the annotations umbrella " +
-          "no longer lives where this check looks, so the audience invariant could not be " +
+          "no longer lives where this check looks, so the parties invariant could not be " +
           "verified. This is a check/tooling failure, not a clean pass.",
       };
     }
 
-    // "<plugin id> (<block type>)" for each annotation block with no audience.
+    // "<plugin id> (<block type>): no audience, no author" — each offender WITH
+    // the field(s) it left undeclared. The two are answered from different
+    // knowledge and fixed by different literals, so a message naming only "the
+    // declaration" would leave the reader to diff the handle by hand.
     const unmarked: string[] = [];
     for (const dir of candidateDirs) {
       const mod = await importBarrel(join(dir, "web", "index.ts"));
@@ -143,9 +161,13 @@ const audienceDeclared: Check = {
       for (const raw of def.contributions) {
         const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
         if (c._slot !== blockSlot || !c.block) continue;
-        if (c.block.audience === undefined) {
-          unmarked.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
-        }
+        const missing: string[] = [];
+        if (c.block.audience === undefined) missing.push("no `audience`");
+        if (c.block.author === undefined) missing.push("no `author`");
+        if (missing.length === 0) continue;
+        unmarked.push(
+          `${tree.byDir.get(dir)?.id ?? dir} (${c.block.type}): ${missing.join(", ")}`,
+        );
       }
     }
 
@@ -154,9 +176,12 @@ const audienceDeclared: Check = {
     return {
       ok: false,
       message:
-        `${unmarked.length} annotation block type(s) declare no \`audience\`, so an agent-facing ` +
-        'read path — which withholds by filtering the family for `audience === "human"` and ' +
-        "never by naming a type — would treat them as ordinary page content and send them:\n" +
+        `${unmarked.length} annotation block type(s) leave one of the page's two parties ` +
+        "undeclared, so they fall through to a default nobody chose. An undeclared `audience` " +
+        "reads as ordinary page content, so an agent-facing read path — which withholds by " +
+        'filtering the family for `audience === "human"` and never by naming a type — SENDS ' +
+        "the card. An undeclared `author` reads as the human's own words, so an agent-facing " +
+        "write path REFUSES the card, including one the agent itself owns:\n" +
         unmarked
           .sort()
           .map((entry) => `  ${entry}`)
@@ -164,14 +189,19 @@ const audienceDeclared: Check = {
       hint:
         "Define the block with `defineAnnotationBlock` instead of `defineContainerBlock`:\n" +
         '  import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";\n' +
-        '  export const fooBlock = defineAnnotationBlock({ …, audience: "agent" | "human" });\n' +
-        "It is `defineContainerBlock` plus one REQUIRED field, so nothing else about the block " +
-        "changes. Pick `human` if an agent must never receive the card's contents (the " +
-        "`/private` case), `agent` if the card is addressed to, or written by, an agent. " +
-        "There is deliberately no default: an annotation nobody classified is the one thing " +
-        "this family cannot represent.",
+        '  export const fooBlock = defineAnnotationBlock({ …, audience: "agent" | "human", author: "agent" | "human" });\n' +
+        "It is `defineContainerBlock` plus two REQUIRED fields, so nothing else about the block " +
+        "changes.\n" +
+        "`audience` is who may RECEIVE the card: `human` if an agent must never see its " +
+        "contents (the `/private` case), `agent` if the card is addressed to, or written by, " +
+        "an agent.\n" +
+        "`author` is whose words it holds, and therefore who may WRITE it: `agent` for the one " +
+        "card an agent authors (the `/agent` case), `human` for everything the page's author " +
+        "types — including a card addressed to an agent, which an agent still may not rewrite.\n" +
+        "There is deliberately no default for either: an annotation nobody classified is the " +
+        "one thing this family cannot represent.",
     };
   },
 };
 
-export default audienceDeclared;
+export default partiesDeclared;

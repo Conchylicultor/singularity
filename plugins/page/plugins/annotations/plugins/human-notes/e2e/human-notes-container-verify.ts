@@ -1,5 +1,7 @@
-// The `context` card is a VOID container — the callout's sibling, not its
-// opposite.
+// The `human` card is a VOID container — the callout's sibling, not its
+// opposite. (Its STORED type is still `context`, which is why every payload
+// below posts that string: only the directory, the symbol, the label, the corner
+// chip and the markdown tag were renamed — see `core/human-notes-block.ts`.)
 //
 // It shipped once as a TEXT-BEARING collapsible card with an editable title row,
 // and that model was rejected: one row played container identity, appearance AND
@@ -53,12 +55,12 @@
 //     the container WITH its subtree. The generic `isIndented` → outdent rung
 //     would pop the first child out and adopt its remaining siblings as ITS
 //     children, which is why this rung exists at all.
-//  7. `/context` ON AN EXISTING BLOCK WRAPS IT (`wrapOnConvert: true`): the origin
+//  7. `/human` ON AN EXISTING BLOCK WRAPS IT (`wrapOnConvert: true`): the origin
 //     keeps its id, type, `data` and children and becomes the card's first child;
 //     a brand-new row is minted for the anchor. Keeping the origin's id is the
 //     load-bearing part — its content `Y.Doc`, its `Y.UndoManager` and its
 //     registered focus handle are ALL keyed by block id.
-//  8. NESTING: a `context` card as the MIDDLE child of a `callout` paints BOTH
+//  8. NESTING: a `human` card as the MIDDLE child of a `callout` paints BOTH
 //     boxes, the callout's strictly containing the card's (above and below, one
 //     indent shallower) rather than partially overlapping it.
 //  9. CONVERGE in a SECOND browser context (fresh socket, cold load): the wrap and
@@ -68,7 +70,7 @@
 //
 // - A box is matched to the block that OWNS it by its top edge AND its left
 //   edge, both read off that block's own row. Paint says nothing about ownership
-//   any more: a context card used to be told from a callout by its DASHED
+//   any more: a human card used to be told from a callout by its DASHED
 //   border, and no box is dashed now — every container paints a soft tint and
 //   nothing else. The left edge replaces it and is true by construction, because
 //   a frame paints its own CONTENT box: its left edge is its row's content edge
@@ -84,7 +86,7 @@
 //   `GET /api/pages/:pageId/blocks` — a content edge one indent deeper is
 //   evidence of nesting, not proof of a `parentId`.
 //
-// Usage: bun plugins/page/plugins/context/e2e/context-container-verify.ts [--url <deploy>] [--out /tmp/context]
+// Usage: bun plugins/page/plugins/annotations/plugins/human-notes/e2e/human-notes-container-verify.ts [--url <deploy>] [--out /tmp/human-notes]
 import {
   arg,
   report,
@@ -98,7 +100,7 @@ import {
   openBlankPage,
 } from "@plugins/page/plugins/editor/e2e";
 
-const out = arg("out", "/tmp/context");
+const out = arg("out", "/tmp/human-notes");
 
 const r = report();
 
@@ -288,7 +290,7 @@ function boxOwnedBy(g: Geometry, blockId: string): FrameBox | undefined {
   return g.boxes.find((b) => ownsBox(g, row, b));
 }
 
-/** The context card's soft-tinted box for this block, if it paints one. */
+/** The human card's soft-tinted box for this block, if it paints one. */
 function cardBox(g: Geometry, blockId: string): FrameBox | undefined {
   return boxOwnedBy(g, blockId);
 }
@@ -435,10 +437,10 @@ interface SeedIds {
   unwrapCard: string;
   unwrapFirst: string;
   unwrapSecond: string;
-  /** A plain text block WITH A CHILD, wrapped by `/context`. */
+  /** A plain text block WITH A CHILD, wrapped by `/human`. */
   wrapMe: string;
   wrapKid: string;
-  /** callout > [text, context > text, text] — the nesting subject. */
+  /** callout > [text, human card > text, text] — the nesting subject. */
   callout: string;
   calloutHead: string;
   nested: string;
@@ -515,25 +517,25 @@ async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
           );
         return (await res.json()) as { id: string };
       };
-      const context = (parentId: string) =>
+      const humanCard = (parentId: string) =>
         post({ parentId, type: "context", data: {} });
       const text = (parentId: string, type: string, body: string) =>
         post({ parentId, type, data: { text: [{ text: body }] } });
 
-      const card = await context(parent);
+      const card = await humanCard(parent);
       const cardHead = await text(card.id, "heading-1", "Repo conventions");
       const cardMid = await text(card.id, "text", "always run build");
       const cardTail = await text(card.id, "bulleted-list", "never poll");
       const outsider = await text(parent, "text", "outside the card");
 
-      const empty = await context(parent);
+      const empty = await humanCard(parent);
 
-      const enterCard = await context(parent);
+      const enterCard = await humanCard(parent);
       // A plain `text` child: the Enter under test must be an ordinary sibling
       // split, not a marker-bearing block's own behaviour.
       const enterChild = await text(enterCard.id, "text", "solo line");
 
-      const unwrapCard = await context(parent);
+      const unwrapCard = await humanCard(parent);
       // `text` again, deliberately: Backspace's ladder strips a MARKER GLYPH first,
       // so a bulleted first child would convert before it ever reached `unwrap`.
       const unwrapFirst = await text(unwrapCard.id, "text", "first inside");
@@ -554,7 +556,7 @@ async function seedCards(page: Page, pageId: string): Promise<SeedIds> {
         data: { icon: null, iconSvgNodes: null, color: "info" },
       });
       const calloutHead = await text(callout.id, "text", "callout head");
-      const nested = await context(callout.id);
+      const nested = await humanCard(callout.id);
       const nestedChild = await text(nested.id, "text", "inner line");
       const calloutTail = await text(callout.id, "text", "callout tail");
 
@@ -907,7 +909,7 @@ await withBrowser(async (h) => {
   // THE reported regression: pressing Enter minted a second card, because under
   // the text-bearing model another line of content meant another container. Now
   // the child is an ordinary block and Enter is an ordinary sibling split — there
-  // is no context-specific keystroke handling to get this wrong.
+  // is no card-specific keystroke handling to get this wrong.
   const ownersBeforeEnter = boxOwners(g0);
   const orderBeforeEnter = g0.order;
   if (!(await caretToEnd(page, seeded.enterChild))) {
@@ -1064,7 +1066,7 @@ await withBrowser(async (h) => {
         );
       }
 
-      // --- 7. `/context` WRAPS an existing block ------------------------------
+      // --- 7. `/human` WRAPS an existing block --------------------------------
       // `wrapOnConvert: true`. A void container cannot retype the block: there is
       // nowhere for its text to go. So the origin keeps its id, type, `data` and
       // children and becomes the card's FIRST child, while a brand-new row is
@@ -1088,7 +1090,10 @@ await withBrowser(async (h) => {
           )
           .first();
         const caretBefore = await caretState(originEditable);
-        await page.keyboard.type("/context", { delay: 40 });
+        // `/human` is the card's own name now; `/context` and `/user` still
+        // reach it as aliases, which is what keeps the rename free for a user
+        // who never reads a changelog.
+        await page.keyboard.type("/human", { delay: 40 });
         await page.waitForTimeout(800);
         await snap(page, out, "4-slash-menu");
         await page.keyboard.press("Enter");
@@ -1148,7 +1153,7 @@ await withBrowser(async (h) => {
         const wrapById = new Map(rowsAfterWrap.map((row) => [row.id, row]));
         const originRow = wrapById.get(seeded.wrapMe);
         r.ok(
-          "wrap: the origin kept its TYPE — `/context` wrapped it, it did not convert it",
+          "wrap: the origin kept its TYPE — `/human` wrapped it, it did not convert it",
           originRow?.type === "text",
           `type=${String(originRow?.type)}`,
         );

@@ -130,7 +130,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `infra/events-test`
     - `page/annotations`
     - `page/annotations/agent-access`
-    - `page/annotations/context`
+    - `page/annotations/human-notes`
     - `page/annotations/todo/task-link`
     - `page/callout`
     - `page/code-block`

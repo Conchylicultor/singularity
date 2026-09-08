@@ -1,12 +1,16 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { Editor, type StoredBlock } from "@plugins/page/plugins/editor/server";
-import { namesField } from "@plugins/page/plugins/editor/core";
+import {
+  markdownParseTagName,
+  namesField,
+} from "@plugins/page/plugins/editor/core";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
 import {
   boundaryViolations,
   touchedBlocks,
   type BoundaryViolation,
   type MarkdownApplyPlan,
+  type WriteBoundary,
 } from "@plugins/page/plugins/markdown-apply/core";
 import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
 
@@ -16,27 +20,36 @@ import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
  * deciding WHICH root, WHICH filter and WHICH boundary is this module, and it is
  * the only place in the delivery path that knows what an audience is.
  *
- *  1. **Redaction, on BOTH halves.** Rows whose type declares `audience:
- *     "human"` are filtered out of the read's walk — and out of the WRITE's walk,
- *     through the same function ({@link redactHumanAudience}). Same filter, both
- *     directions, which is what makes "a private card is invisible but preserved"
- *     literally true: a write diffs against exactly the document the read
- *     produced, so a card the agent never saw can never be seen as a deletion.
- *  2. **Ancestor refusal (read AND write).** A block that IS, or sits INSIDE, a
- *     human-audience card is refused outright ({@link assertAgentAddressable}).
- *     Without this the id itself is the bypass: redaction prunes the card, so
- *     naming a block under it would walk a forest the filter already emptied — an
- *     empty document, which reads as "this block has no content".
- *  3. **The Write door** ({@link assertNoteCard}). `write_agent_note` replaces
+ * The annotation family declares TWO facts about every card — who may RECEIVE it
+ * (`audience`) and whose words it holds (`author`) — and each of them is one rule
+ * here, with the door between them:
+ *
+ *  1. **`audience` — what an agent may SEE.** One predicate
+ *     ({@link humanAudienceTypes}), enforced on two surfaces that must agree:
+ *     - **Redaction, on BOTH halves.** Rows whose type declares `audience:
+ *       "human"` are filtered out of the read's walk — and out of the WRITE's
+ *       walk, through the same function ({@link redactHumanAudience}). Same
+ *       filter, both directions, which is what makes "a private card is
+ *       invisible but preserved" literally true: a write diffs against exactly
+ *       the document the read produced, so a card the agent never saw can never
+ *       be seen as a deletion.
+ *     - **Ancestor refusal** ({@link assertAgentAddressable}). A block that IS,
+ *       or sits INSIDE, a human-audience card is refused outright. Without this
+ *       the id itself is the bypass: redaction prunes the card, so naming a block
+ *       under it would walk a forest the filter already emptied — an empty
+ *       document, which reads as "this block has no content".
+ *  2. **The write door** ({@link assertNoteCard}). `write_agent_note` replaces
  *     ONE card's contents, so it accepts one thing: a live `agent-note` card.
- *  4. **The acceptance predicate** ({@link assertNotesOnlyPlan}). Every block an
- *     apply creates, rewrites, moves or deletes must resolve inside an
- *     `agent-note` card — judged on the PLAN, before the first write.
+ *  3. **`author` — what an agent may WRITE** ({@link assertNotesOnlyPlan}). Every
+ *     block an apply creates, rewrites, moves or deletes must resolve inside a
+ *     region an agent AUTHORS — judged on the PLAN, before the first write, by
+ *     the walk described at {@link writeBoundaryOf}.
  *
  * Every rule enumerates the family GENERICALLY, off the same `Editor.BlockData`
  * registry the markdown conversion already reads. No type name is written down
- * here (except `agent-note`, which rules 3 and 4 are ABOUT), so a fifth
- * annotation costs this file zero edits.
+ * here (except `agent-note`, which rule 2 is ABOUT and which rule 3 names only to
+ * point an agent at where it MAY write), so a fifth annotation costs this file
+ * zero edits.
  *
  * ---------------------------------------------------------------------------
  * This REVERSES "addressing is the authorization" — deliberately
@@ -53,16 +66,32 @@ import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
  * a validation-based rule where the old one was structural, and it is still safe
  * for a reason the old one could not state: the judgement runs on the PLAN, which
  * sees a retyped survivor, a moved block and a deleted row as themselves —
- * where a walk over the incoming parsed forest saw only "a create". The
- * invariant that used to live over the parsed forest (no minting a
- * human-audience card) therefore moved onto the plan, where it is strictly
- * stronger. Its old companion — "notes do not nest" — is gone rather than
- * moved: see {@link assertNotesOnlyPlan}.
+ * where a walk over the incoming parsed forest saw only "a create". Two
+ * invariants used to live over that forest — *nothing may mint a human-audience
+ * card* and *notes do not nest* — and neither survives as a rule of its own. The
+ * first moved onto the plan, where it was strictly stronger, and has since been
+ * absorbed whole into rule 3's walk. The second is gone rather than moved: a
+ * card inside a card is an ordinary shape. Both stories are told at
+ * {@link assertNotesOnlyPlan}, and rule 3 is now the only judgement left there.
  *
- * The residual bound is stated rather than hidden: an edit whose diff stays
- * inside a card may rewrite that card wholesale, including anything a HUMAN
- * typed into it. That was already true of `write_agent_note` and is what an
- * agent-note card is for.
+ * ---------------------------------------------------------------------------
+ * The residual bound this file used to state is CLOSED
+ * ---------------------------------------------------------------------------
+ *
+ * It read: *an edit whose diff stays inside a card may rewrite that card
+ * wholesale, including anything a HUMAN typed into it.* So there was no way to
+ * answer an agent inside its own note — to correct a finding, to say "no, the
+ * writer is in `encode.ts`" — and have the answer survive the next
+ * `write_agent_note`.
+ *
+ * A `<human>` or `<todo>` card nested inside an `<agent-note>` now declares
+ * `author: "human"` at its OWN row, and the walk stops at the nearest
+ * declaration, so it is a hole in the agent's own card: the agent reads it and
+ * cannot touch it. What is left of the bound is narrower and worth stating in its
+ * own right — **plain text a human typed LOOSE in a notes card is still the
+ * agent's to rewrite.** It declares nothing, so the nearest declaration above it
+ * is the card's `author: "agent"`. The affordance, not the workaround, is to put
+ * the answer in a `<human>` card.
  */
 
 /**
@@ -73,10 +102,6 @@ import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
  * before `collectContributions` silently degrades to the EMPTY set, and here the
  * empty set means "redact nothing", i.e. leak. There is no cheap way to notice
  * that, and the leak is in the direction that cannot be undone.
- *
- * It now gates the WRITE path too (rule 1 above, and the minting invariant in
- * {@link assertNotesOnlyPlan}), so the same snapshot would silently degrade to
- * "an agent may mint a private card" as well.
  */
 function humanAudienceTypes(): Set<string> {
   return new Set(
@@ -84,6 +109,60 @@ function humanAudienceTypes(): Set<string> {
       .filter((h) => h.audience === "human")
       .map((h) => h.type),
   );
+}
+
+/**
+ * The row classifier `boundaryViolations` judges every write against: what does
+ * a block of this type declare about writes inside it?
+ *
+ * One row of the family table is the whole of it. `author: "agent"` — the single
+ * card an agent writes — is an OPEN boundary; `author: "human"` is a CLOSED one;
+ * a type that declares neither (every paragraph, heading, list and quote on the
+ * page) declares nothing, and the walk passes straight through it to whatever
+ * sits above. There is no list of writable types anywhere, and no type name in
+ * this function.
+ *
+ * The engine's walk stops at the nearest row that declares ANYTHING, so the three
+ * answers compose: a `<human>` card nested inside an `<agent-note>` shields its
+ * own contents, an `<agent-note>` a human nested inside a `<human>` card still
+ * admits writes, and prose — which declares nothing all the way up — is refused
+ * because nothing above it ever said yes.
+ *
+ * **Read at CALL time**, for {@link humanAudienceTypes}' reason, and it is worth
+ * saying that the degradation direction INVERTS here and is still the fail-safe
+ * one. A snapshot taken before `collectContributions` gives an empty registry:
+ * for `audience` that means "redact nothing", i.e. a leak that cannot be undone;
+ * here it means nothing is open, i.e. every write is refused. Both are read per
+ * call, and no shared cache could serve both — they fail in opposite directions,
+ * so a cache that is safe for one is unsafe for the other.
+ */
+function writeBoundaryOf(): (row: {
+  id: string;
+  type: string;
+}) => WriteBoundary | undefined {
+  const declared = new Map<string, WriteBoundary>();
+  for (const handle of Editor.BlockData.getContributions()) {
+    if (handle.author === "agent") declared.set(handle.type, "open");
+    else if (handle.author === "human") declared.set(handle.type, "closed");
+  }
+  return (row) => declared.get(row.type);
+}
+
+/**
+ * The markdown tag a type is SPELLED as, for a refusal that has to name a card.
+ *
+ * A type is not always its tag — `human-notes` stores `context` and tags
+ * `<human>` — and a message an agent reads has to name the thing that is in the
+ * document in front of it, not the column value behind it.
+ * `markdownParseTagName` is the serializer's own resolution, shared for
+ * `markdownTagIsIdentified`'s reason: a second copy would quietly name the wrong
+ * thing the day a tag is renamed. A type that claims no parse tag falls back to
+ * itself, which is the best name available.
+ */
+function tagNameOf(type: string): string {
+  for (const handle of Editor.BlockData.getContributions())
+    if (handle.type === type) return markdownParseTagName(handle) ?? type;
+  return type;
 }
 
 /**
@@ -158,8 +237,8 @@ function chainToPageRoot(scope: BlockScope, blockId: string): StoredBlock[] {
 }
 
 /**
- * Rule 2. Refuse a block that IS, or sits INSIDE, a human-audience card — for
- * reads and for writes alike.
+ * Rule 1, the ancestor half. Refuse a block that IS, or sits INSIDE, a
+ * human-audience card — for reads and for writes alike.
  *
  * The block itself counts: reading a `/private` card directly is the most
  * direct form of the bypass, and redaction would answer it with an empty
@@ -182,7 +261,7 @@ export function assertAgentAddressable(
 }
 
 /**
- * Rule 3 — `write_agent_note`'s door: the id must name a live `agent-note` card
+ * Rule 2 — `write_agent_note`'s door: the id must name a live `agent-note` card
  * the agent may address.
  *
  * Ordering is deliberate: the TYPE check first, because "this is not a card" is
@@ -196,6 +275,12 @@ export function assertAgentAddressable(
  * the read (rule 1), so such a card is invisible to the walk AND preserved by it
  * — the engine keeps its `(parent_id, rank)` key reserved. There is nothing left
  * to refuse.
+ *
+ * Nor does it scan for a human-AUTHORED card inside the target: a `<human>` card
+ * nested in this one is visible to the agent and must stay, but that is rule 3's
+ * job, on the plan, where "the document dropped it" and "the document echoed it
+ * back" are distinguishable. A door check could only refuse the card outright,
+ * which would make the nesting useless.
  */
 export function assertNoteCard(scope: BlockScope, blockId: string): void {
   const row = scope.rows.find((r) => r.id === blockId);
@@ -221,40 +306,45 @@ export function assertNoteCard(scope: BlockScope, blockId: string): void {
 /**
  * The parent/type view of the forest a chain walk resolves against.
  *
- * This mirrors `markdown-apply/core/touched.ts`'s own post-plan maps, and does so
- * on purpose rather than by importing them: that module exports a VERDICT
+ * This mirrors `markdown-apply/core/touched.ts`'s own maps, and does so on
+ * purpose rather than by importing them: that module exports a VERDICT
  * (`boundaryViolations`) and deliberately keeps its walk private, because the
  * questions asked here are POLICY ones — *which* card is a write attributed to,
- * and may a card be minted where it landed — not "did this plan stay inside a
- * boundary". Both questions need the same after-forest, and both are answered
- * against the same maps the verdict was computed from, so the card an edit is
- * stamped onto is always the card that legalized it.
+ * and *which* card refused it — not "did this plan stay inside a boundary". All
+ * of them need the same forests, and all of them are answered against the same
+ * maps the verdict was computed from, so the card an edit is stamped onto is
+ * always the card that legalized it, and the card a refusal names is always the
+ * card that refused it.
  */
-interface AfterForest {
+interface Forest {
   parentOf: Map<string, string | null>;
   typeOf: Map<string, string>;
 }
 
-/**
- * The forest as it stands AFTER the plan: the stored rows, overlaid by
- * everything the patch writes to a row's identity or position — the creates
- * (which carry both) and the `parentId` / `type` an update names.
- *
- * Deleted rows keep their pre-plan entries, for `touched.ts`'s reason: a deleted
- * row is only ever walked to find which card it was deleted OUT of, and leaving
- * it means a surviving child of a deleted parent still resolves a chain rather
- * than ending at an absent id.
- */
-function forestAfter(
-  rows: readonly StoredBlock[],
-  plan: MarkdownApplyPlan,
-): AfterForest {
+/** The forest as it stands BEFORE the plan: the stored rows, unmodified. */
+function forestOf(rows: readonly StoredBlock[]): Forest {
   const parentOf = new Map<string, string | null>();
   const typeOf = new Map<string, string>();
   for (const row of rows) {
     parentOf.set(row.id, row.parentId);
     typeOf.set(row.id, row.type);
   }
+  return { parentOf, typeOf };
+}
+
+/**
+ * The forest as it stands AFTER the plan: `before`, overlaid by everything the
+ * patch writes to a row's identity or position — the creates (which carry both)
+ * and the `parentId` / `type` an update names.
+ *
+ * Deleted rows keep their pre-plan entries, for `touched.ts`'s reason: a deleted
+ * row is only ever walked to find which card it was deleted OUT of, and leaving
+ * it means a surviving child of a deleted parent still resolves a chain rather
+ * than ending at an absent id.
+ */
+function forestAfter(before: Forest, plan: MarkdownApplyPlan): Forest {
+  const parentOf = new Map(before.parentOf);
+  const typeOf = new Map(before.typeOf);
   for (const created of plan.patch.creates) {
     parentOf.set(created.id, created.parentId);
     typeOf.set(created.id, created.type);
@@ -273,6 +363,10 @@ function forestAfter(
  * The nearest `agent-note` card at or above `startId`, or `null` if the chain
  * reaches the top without crossing one.
  *
+ * Authorship only — this is who a legal write is ATTRIBUTED to, which is a
+ * different question from whether it was legal, and it names the one type this
+ * plugin owns rather than asking the generic classifier.
+ *
  * The bound is corruption-only and throws, exactly as `chainToPageRoot` and
  * `boundaryViolations` do: "I could not resolve this chain" must never be
  * reachable as a quiet `null`, which here would silently mean "attribute this
@@ -280,7 +374,7 @@ function forestAfter(
  */
 function nearestCard(
   startId: string,
-  forest: AfterForest,
+  forest: Forest,
   bound: number,
 ): string | null {
   let current: string | undefined = startId;
@@ -298,7 +392,47 @@ function nearestCard(
   return null;
 }
 
-/** How the refusal names what a plan did to a block. */
+/**
+ * The CLOSED card that refused a write, so the refusal can name it — or `null`
+ * when the chain's nearest declaration was not a closed one.
+ *
+ * A faithful mirror of `nearestBoundary`'s walk (self-inclusive, stops at the
+ * first row that declares anything, ceiling at `rootId`), run over the same maps
+ * with the same classifier. That is what makes `null` unreachable for a violation
+ * the engine already reported as `enclosed` — and it is deliberately a `null`
+ * rather than a throw anyway, because this runs while a refusal is already being
+ * worded: a correct refusal that names no card is strictly better than a second
+ * error thrown over the first.
+ */
+function nearestClosed(
+  startId: string,
+  forest: Forest,
+  rootId: string,
+  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined,
+  bound: number,
+): { id: string; type: string } | null {
+  let current: string | undefined = startId;
+  for (let steps = 0; current !== undefined; steps++) {
+    if (steps > bound) {
+      throw new HttpError(
+        409,
+        `the ancestor chain of block ${startId} does not terminate (walked past ` +
+          `${bound} rows). The page's block forest is corrupt.`,
+      );
+    }
+    const type = forest.typeOf.get(current);
+    if (type !== undefined) {
+      const declared = boundaryOf({ id: current, type });
+      if (declared !== undefined)
+        return declared === "closed" ? { id: current, type } : null;
+    }
+    if (current === rootId) return null;
+    current = forest.parentOf.get(current) ?? undefined;
+  }
+  return null;
+}
+
+/** How the refusal names what a plan did to a block, in the passive. */
 const VERB: Record<BoundaryViolation["how"], string> = {
   created: "created",
   updated: "rewritten or moved",
@@ -306,76 +440,188 @@ const VERB: Record<BoundaryViolation["how"], string> = {
   "text-edited": "edited",
 };
 
-/** The refusal a boundary violation becomes — the agent's documentation here. */
+/** The same, in the active — for a sentence whose subject is the document. */
+const DID: Record<BoundaryViolation["how"], string> = {
+  created: "creates",
+  updated: "rewrites or moves",
+  deleted: "deletes",
+  "text-edited": "edits",
+};
+
+/** Everything a refusal needs beyond the violation itself. */
+interface RefusalContext {
+  rootId: string;
+  before: Forest;
+  after: Forest;
+  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined;
+  bound: number;
+  /** How many violations this plan produced; only the first is worded. */
+  total: number;
+}
+
+/**
+ * The refusal a boundary violation becomes — the agent's documentation here.
+ *
+ * Four answers, from the two facts the violation carries. `side` says WHICH
+ * chain failed (`"new"` — where the write lands; `"old"` — where the block came
+ * from) and `reason` says why (`"escaped"` — nothing on the chain declared
+ * anything, so the write is in open document body; `"enclosed"` — the nearest
+ * declaration was a CLOSED card).
+ *
+ * The enclosed arms can name the card, because the violation names a block and
+ * the forests know its type. That precision is most of their value: "you may not
+ * write in a `<human>` card" is a rule an agent can act on, where "that write was
+ * refused" is one it can only retry.
+ *
+ * **A DELETE is worded as a delete on either side.** A delete has only an old
+ * chain, so `side: "old"` says nothing about it that `how` does not already say —
+ * and the old-side wording is about a block being CARRIED somewhere ("this edit
+ * pulls prose into your card", "this edit carries it out"), which a delete does
+ * not do. `touched.ts` used to hold that special case itself, reporting a
+ * delete's old-chain failure under the un-suffixed reason; with `side` broken
+ * out it lives here instead, where the wording lives, and the engine reports one
+ * uniform fact.
+ */
 function violationMessage(
   violation: BoundaryViolation,
-  rootId: string,
-  total: number,
+  ctx: RefusalContext,
 ): string {
   const tag = agentNotesBlock.type;
   const also =
-    total > 1
-      ? ` (${total - 1} other write${total > 2 ? "s" : ""} in this edit landed ` +
-        `outside a card too.)`
+    ctx.total > 1
+      ? ` (${ctx.total - 1} other write${ctx.total > 2 ? "s" : ""} in this edit ` +
+        `${ctx.total > 2 ? "were" : "was"} refused too; the fix for this one is ` +
+        `the fix for them.)`
       : "";
-  if (violation.reason === "escaped-origin") {
+  // The block survives this plan AND its old chain is the one that failed: it was
+  // carried across a boundary rather than written where it stands.
+  const carriedOut = violation.side === "old" && violation.how !== "deleted";
+
+  if (violation.reason === "escaped") {
+    if (carriedOut) {
+      return (
+        `block ${violation.blockId} was ${VERB[violation.how]}, but it did not COME ` +
+        `from inside an "${tag}" card — this edit pulls a block of the page's own ` +
+        `prose into one. Moving or re-indenting the page's blocks into your card is ` +
+        `not an annotation: leave them exactly where they are, and write what you ` +
+        `have to say in a new tagless <${tag}>…</${tag}> card beside them.` +
+        also
+      );
+    }
     return (
-      `block ${violation.blockId} was ${VERB[violation.how]}, but it did not COME ` +
-      `from inside an "${tag}" card — this edit pulls a block of the page's own ` +
-      `prose into one. Moving or re-indenting the page's blocks into your card is ` +
-      `not an annotation: leave them exactly where they are, and write what you ` +
-      `have to say in a new tagless <${tag}>…</${tag}> card beside them.` +
+      `block ${violation.blockId} was ${VERB[violation.how]} outside every "${tag}" ` +
+      `card. An edit may only create, rewrite, move or delete blocks that sit inside ` +
+      `an <${tag}> card — the page's own prose is read-only to an agent. Re-read ` +
+      `${ctx.rootId}, change only text between an <${tag} id="…"> tag and its close, ` +
+      `and add anything new inside a tagless <${tag}>…</${tag}> card.` +
+      also
+    );
+  }
+
+  // `enclosed`: the nearest declaration on the failed chain was a closed card.
+  // Which forest holds that chain follows from which side failed.
+  const forest = violation.side === "new" ? ctx.after : ctx.before;
+  const closed = nearestClosed(
+    violation.blockId,
+    forest,
+    ctx.rootId,
+    ctx.boundaryOf,
+    ctx.bound,
+  );
+  if (closed === null) {
+    return (
+      `block ${violation.blockId} was ${VERB[violation.how]} inside a card holding ` +
+      `the page author's own words, which an agent may not write. Leave it exactly ` +
+      `as you found it.` +
+      also
+    );
+  }
+  const name = tagNameOf(closed.type);
+
+  if (closed.id === violation.blockId) {
+    // The block IS the closed card. Three ways a plan can reach that, and they
+    // are worth telling apart: an agent that MINTED one needs to hear that it may
+    // not author the card at all, where one that moved an existing card needs to
+    // hear that it may not touch the one that is already there.
+    const wasType = ctx.before.typeOf.get(violation.blockId);
+    const did =
+      wasType === undefined
+        ? `the document creates a <${name}> card`
+        : wasType !== closed.type
+          ? `the document turns block ${violation.blockId} into a <${name}> card`
+          : `the document ${DID[violation.how]} the <${name}> card ${violation.blockId}`;
+    return (
+      `${did}. A <${name}> card holds the page AUTHOR's own words — an agent reads ` +
+      `one and never writes one: it may not author a card on their behalf, and may ` +
+      `not move, retype or delete the ones they wrote. Write what you have to say ` +
+      `in your own <${tag}>…</${tag}> card instead; if you meant to file work ` +
+      `rather than describe it, use add_task.` +
+      also
+    );
+  }
+
+  if (carriedOut) {
+    return (
+      `block ${violation.blockId} was ${VERB[violation.how]}, and it came from ` +
+      `INSIDE <${name}> card ${closed.id} — this edit carries a block out of a card ` +
+      `an agent may not touch. Leave that card and everything in it exactly where ` +
+      `you found it, byte for byte.` +
       also
     );
   }
   return (
-    `block ${violation.blockId} was ${VERB[violation.how]} outside every "${tag}" ` +
-    `card. An edit may only create, rewrite, move or delete blocks that sit inside ` +
-    `an <${tag}> card — the page's own prose is read-only to an agent. Re-read ` +
-    `${rootId}, change only text between an <${tag} id="…"> tag and its close, and ` +
-    `add anything new inside a tagless <${tag}>…</${tag}> card.` +
+    `block ${violation.blockId} was ${VERB[violation.how]}, and it sits inside ` +
+    `<${name}> card ${closed.id}. Those are the page author's words even inside ` +
+    `your own <${tag}> card — that is what a nested <${name}> card is FOR — so read ` +
+    `them and hand them back byte-identical. Put your reply beside that card, in ` +
+    `the <${tag}> card that holds it.` +
     also
   );
 }
 
 /**
- * Rule 4 — the acceptance predicate, as `ApplyBlockOptions.assertAcceptable`
+ * Rule 3 — the acceptance predicate, as `ApplyBlockOptions.assertAcceptable`
  * wants it: throw to refuse the whole apply, having written nothing.
  *
- * Two judgements, in this order:
+ * **One judgement, and that is the shape worth arguing for.** Every write must
+ * resolve inside a region an agent authors — `boundaryViolations`, handed
+ * {@link writeBoundaryOf}. The walk stops at the nearest row that declares an
+ * `author` at all, so this ONE test says all three of: the page's prose is
+ * read-only (nothing declares, all the way up); an `<agent-note>` card is
+ * writable (the nearest declaration is the agent's); and a `<human>` or `<todo>`
+ * card nested inside one is not (its own row declares the human first).
  *
- *  1. **Nothing may MINT a human-audience card.** Rules 1-3 all reason about rows
- *     that already exist; none of them can see a card the agent is about to
- *     create. Without this an agent could write `<private-note>…</private-note>`
- *     into its own card and thereby author, in the one container the human trusts
- *     as agent-written, content whose whole meaning is "the human is the sole
- *     author of this".
- *  2. **Every write resolves inside a card** — `boundaryViolations`, with the one
- *     row predicate this plugin owns.
+ * Two other judgements used to stand in front of it, and each is gone for its
+ * own reason. Neither was weakened away: one was absorbed, the other was wrong.
  *
- * 1 runs FIRST, and over the PLAN rather than over the parsed forest it used to
- * walk. Both matter. Over the plan it also catches a RETYPED SURVIVOR — a block
- * turned INTO a private card by an update — which a walk over the incoming
- * forest sees only as an ordinary node it cannot distinguish from a create. And
- * first, because "you may not mint that type here" is the more actionable answer
- * than "that block landed outside a card": the type judgement holds wherever the
- * block landed.
+ * ---------------------------------------------------------------------------
+ * *Nothing may mint a human-audience card* — absorbed, not dropped
+ * ---------------------------------------------------------------------------
+ *
+ * It was a separate walk over the plan's creates and retypes, with its own
+ * message and its own way of being wrong. A created — or retyped-into —
+ * `<human>`, `<todo>` or `<private-note>` declares `"closed"` at its OWN row,
+ * and the boundary walk is self-inclusive, so the same test that refuses writing
+ * INSIDE such a card refuses MINTING one, on the same evidence. Two invariants
+ * became one walk, which is worth more than the bespoke message it cost: two
+ * invariants can drift out of step with each other, and one cannot.
  *
  * ---------------------------------------------------------------------------
  * A card inside a card is allowed
  * ---------------------------------------------------------------------------
  *
- * There used to be a third judgement between these two — "notes do not nest" —
- * inherited from the `append_agent_notes` tool this design replaced, where a
- * card id was the append TARGET and nesting was a caller mistake with no
- * meaning. Under a plan-judged `edit_page` it refused a shape the rest of the
- * system handles: the markdown tag scanner counts nested opens of its own name,
- * the editor imposes no child-type restriction (a human can nest two cards by
- * hand today, and an agent may already nest a `todo` or `context` card in one),
- * and `ContainerBackdrop` reserves a nesting pad so an inner card starts below
- * its parent's edge — its wash composing over the outer one is the cue that it
- * IS a separate card. Judgement 2 reads a nested card as inside a boundary,
- * because it is one.
+ * *Notes do not nest* was inherited from the `append_agent_notes` tool this
+ * design replaced, where a card id was the append TARGET and nesting was a
+ * caller mistake with no meaning. Under a plan-judged `edit_page` it refused a
+ * shape the rest of the system handles: the markdown tag scanner counts nested
+ * opens of its own name, the editor imposes no child-type restriction, a human
+ * can nest two cards by hand today, and `ContainerBackdrop` reserves a nesting
+ * pad so an inner card starts below its parent's edge — its wash composing over
+ * the outer one is the cue that it IS a separate card. Nesting is also the
+ * arrangement the write rule above is BUILT on: a `<human>` card inside an
+ * `<agent-note>` is how the page's author answers an agent inside the agent's
+ * own note. The judgement reads a nested card as inside a boundary, because it
+ * is one.
  *
  * What the removal costs, stated rather than discovered: `write_agent_note`'s
  * `content` is the card's CONTENTS, and an agent that wraps it in an
@@ -403,56 +649,44 @@ export function assertNotesOnlyPlan(args: {
   rootId: string;
 }): string[] {
   const { plan, rows, rootId } = args;
-  const tag = agentNotesBlock.type;
-  const human = humanAudienceTypes();
-  const forest = forestAfter(rows, plan);
+  const boundaryOf = writeBoundaryOf();
+  const before = forestOf(rows);
+  const after = forestAfter(before, plan);
   // Every row that can be on a chain: the partition plus everything this plan
   // mints. A legitimate chain is shorter than that by construction.
   const bound = rows.length + plan.patch.creates.length;
 
-  // --- 1. Minting or retyping into a human-audience type -------------------
-  const minted: { id: string; type: string; retyped: boolean }[] = [
-    ...plan.patch.creates.map((b) => ({
-      id: b.id,
-      type: b.type,
-      retyped: false,
-    })),
-    ...plan.patch.updates
-      .filter((u) => namesField(u.changes, "type"))
-      .map((u) => ({ id: u.id, type: u.changes.type!, retyped: true })),
-  ];
-  for (const node of minted) {
-    if (!human.has(node.type)) continue;
-    throw new HttpError(
-      403,
-      `the document ${node.retyped ? `turns block ${node.id} into` : "creates"} a ` +
-        `"${node.type}" card, which is addressed to the page's author only. An ` +
-        `agent may not mint content the human is meant to be the sole author of — ` +
-        `drop that tag and write what you have to say inside an <${tag}>…</${tag}> ` +
-        `card instead.`,
-    );
-  }
-
-  // --- 2. Every write inside a card ----------------------------------------
+  // --- Every write inside a region an agent authors -------------------------
+  // Over the PLAN, which is what lets a RETYPED SURVIVOR — a block turned INTO a
+  // card by an update — be judged at all; a walk over the incoming parsed forest
+  // sees it only as an ordinary node it cannot tell from a create.
   const violations = boundaryViolations({
     plan,
     existing: rows,
     rootId,
-    // The one row predicate this plugin owns. The engine never learns what the
-    // answer MEANS — it takes a boolean per row, exactly as `redact` takes rows
-    // and returns rows.
-    isBoundary: (row) => row.type === tag,
+    // The one row classifier this plugin owns. The engine never learns what any
+    // of the three answers MEANS — it takes one per row, exactly as `redact`
+    // takes rows and returns rows.
+    boundaryOf,
   });
   // The FIRST one only. A page-rooted edit against a garbled document produces
   // one violation per block on the page, and three hundred lines of the same
   // sentence is not more informative than one — the fix for the first is the fix
   // for all of them. The count rides along in the message.
   const first = violations[0];
-  if (first)
+  if (first) {
     throw new HttpError(
       403,
-      violationMessage(first, rootId, violations.length),
+      violationMessage(first, {
+        rootId,
+        before,
+        after,
+        boundaryOf,
+        bound,
+        total: violations.length,
+      }),
     );
+  }
 
   // --- The cards this write is attributed to --------------------------------
   // Every channel, mapped to the card it resolved inside. A rank-only update to
@@ -468,7 +702,7 @@ export function assertNotesOnlyPlan(args: {
     ...touched.deleted,
     ...touched.textEdited,
   ]) {
-    const card = nearestCard(id, forest, bound);
+    const card = nearestCard(id, after, bound);
     // A card this plan DELETED cannot be stamped: `page_blocks_agent_authors`
     // FKs onto the row, which is about to stop existing.
     if (card !== null && !deleted.has(card)) cards.add(card);

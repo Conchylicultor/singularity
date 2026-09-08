@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-page-annotations-context",
-  "description": "Context block type: a void container holding standing instructions for agents.",
-  "private": true,
-  "version": "0.0.1"
-}

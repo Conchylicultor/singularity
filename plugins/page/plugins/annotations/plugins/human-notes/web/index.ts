@@ -1,15 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { ContainerNoRow } from "@plugins/page/plugins/container/web";
-import { contextBlock } from "../core";
-import { ContextAnchor } from "./components/context-anchor";
-import { ContextFrame } from "./components/context-frame";
+import { humanNotesBlock } from "../core";
+import { HumanNotesAnchor } from "./components/human-notes-anchor";
+import { HumanNotesFrame } from "./components/human-notes-frame";
 
-export { contextBlock } from "../core";
+export { humanNotesBlock } from "../core";
 
 export default {
   description:
-    "Context block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding standing instructions addressed to agents rather than to the reader.",
+    "Human block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding the page author's own words addressed to agents rather than to the reader — and, being the author's, the one an agent may read but never write.",
   contributions: [
     // The card renders NO row of its own — `BlockRow`'s anchored branch never
     // dispatches `Editor.Block` for an `anchor` type, so the container
@@ -17,10 +17,15 @@ export default {
     // where the HANDLE lives, and the handle is what the insert palette, the
     // markdown pipeline, paste, the turn-into list and `useAnchorTypes()` (the
     // reducer's `anchorTypes`) all read.
+    //
+    // The id is the block's TYPE, which is why the type is still `context` after
+    // the rename: reorder's persisted per-slot directives are keyed by
+    // contribution id, so a new id would silently discard whatever ordering and
+    // visibility a user had configured for this card.
     Editor.Block({
-      id: contextBlock.type,
-      match: contextBlock.type,
-      block: contextBlock,
+      id: humanNotesBlock.type,
+      match: humanNotesBlock.type,
+      block: humanNotesBlock,
       component: ContainerNoRow,
     }),
     // Contributing a frame is what MAKES this a container: the framed-type set is
@@ -32,9 +37,9 @@ export default {
     // inside its box — where the callout asks for the gutter glyph.
     // (`./singularity check page-editor:anchor-has-decoration`).
     Editor.BlockFrame({
-      match: contextBlock.type,
-      component: ContextFrame,
-      cornerAnchor: ContextAnchor,
+      match: humanNotesBlock.type,
+      component: HumanNotesFrame,
+      cornerAnchor: HumanNotesAnchor,
       // A wash is a filled box: its content clears every edge.
       pad: "box",
     }),

@@ -1,13 +1,13 @@
 // Executable spec for the ANNOTATION FAMILY as a family — the four blocks that
-// carry a page's human↔agent side-channel (`context`, `todo`, `agent-note`,
-// `private-note`).
+// carry a page's human↔agent side-channel (`context` — the human card, whose
+// stored type kept its old spelling — `todo`, `agent-note`, `private-note`).
 //
 // Per-container behaviour (wrap, unwrap, Enter-in-a-child, nesting, the void
 // write boundary) is already pinned by
-// `plugins/context/e2e/context-container-verify.ts`, and every member is built by
-// the SAME `defineAnnotationBlock` call, so this file deliberately does NOT re-run
-// that suite four times. It checks only what is true of the family and of nothing
-// else:
+// `plugins/human-notes/e2e/human-notes-container-verify.ts`, and every member is
+// built by the SAME `defineAnnotationBlock` call, so this file deliberately does
+// NOT re-run that suite four times. It checks only what is true of the family
+// and of nothing else:
 //
 //  1. All four types are REGISTERED and VOID at the write boundary: `{}` is
 //     accepted, a `text` key is a 400 (`handle.schema.strict()`).
@@ -32,9 +32,9 @@
 //
 // Convention: a box's owner is the FIRST row whose top sits on the box's top edge
 // (a void anchor row is zero-height and precedes its first child in document
-// order, so the anchor wins) — the same rule the context spec uses, for the same
-// reason: frames are grid SIBLINGS of the rows they cover, so DOM ancestry says
-// nothing about ownership.
+// order, so the anchor wins) — the same rule the human-notes spec uses, for the
+// same reason: frames are grid SIBLINGS of the rows they cover, so DOM ancestry
+// says nothing about ownership.
 //
 // Usage: bun plugins/page/plugins/annotations/e2e/annotations-verify.ts [--url <deploy>] [--out /tmp/annotations]
 import {
@@ -64,12 +64,21 @@ async function bail(name: string, detail: string): Promise<never> {
  * members (`TODO` vs `Todo`, `Private note` vs `Private`). Spelling both out is
  * what keeps the corner assertion honest — a locator that reused `label` would
  * silently pass by matching the palette entry instead of the card.
+ *
+ * `type` is the STORED value and is not always the card's spelling: the human
+ * card still stores `context`. Every fixture below posts through the real write
+ * boundary, so this field has to be what the server knows, never what the UI
+ * shows.
  */
 const MEMBERS = [
   {
+    // The STORED type, which stayed `context` when the card was renamed to
+    // Human — only the directory, symbol, label, corner chip and markdown tag
+    // moved. Posting anything else here would 400 as an unknown block type,
+    // which is also what keeps this entry honest about the rename's boundary.
     type: "context",
-    label: "Context",
-    name: "Context",
+    label: "Human",
+    name: "Human",
     child: "conventions live here",
   },
   {
@@ -203,7 +212,7 @@ async function geometry(page: Page): Promise<Geometry> {
  *
  * The top edge alone is the discriminator here, and that is enough because this
  * fixture nests nothing: every card sits at page level with an ordinary
- * paragraph between it and the next, so no two boxes share a y. (The context
+ * paragraph between it and the next, so no two boxes share a y. (The human-notes
  * spec, which DOES nest a card inside a callout, has to match the left edge too
  * — a nested card's box starts one `BLOCK_INDENT` further right.)
  */
@@ -224,7 +233,7 @@ function boxOf(g: Geometry, blockId: string): Box | undefined {
  * name faded out by an ancestor still counts as hidden.
  *
  * Scoped to the card's own anchor row, which is where the surface mounts the
- * corner seat. That scoping is load-bearing: `Context` and `Agent notes` are
+ * corner seat. That scoping is load-bearing: `Human` and `Agent notes` are
  * also `/` palette entries, and a page-wide text query would happily find those
  * instead.
  */
@@ -565,7 +574,7 @@ await withBrowser(async (h) => {
   await snap(page, out, "3-palette");
   for (const { label } of MEMBERS) {
     // Counted OUTSIDE the block rows, deliberately. Two of the cards now carry
-    // their own name in the corner of their box — `Context`, `Agent notes` —
+    // their own name in the corner of their box — `Human`, `Agent notes` —
     // with the same words the palette uses, so `getByText` alone would find a
     // card and report the palette as present even if the entry had been
     // unregistered. The menu is portaled to the body, so "not inside any

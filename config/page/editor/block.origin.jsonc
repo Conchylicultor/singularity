@@ -1,4 +1,4 @@
-// @hash 1a357941d250
+// @hash 03bf40503ad8
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,7 +7,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "page.annotations.agent-notes:agent-note",
-    "page.annotations.context:context",
+    "page.annotations.human-notes:context",
     "page.annotations.private-notes:private-note",
     "page.annotations.todo:todo",
     "page.audio:audio",

@@ -121,12 +121,25 @@ collaboratively with the user, not something to test on.
 \`block_id\` is the SCOPE, not a line in the output: you get that block's
 sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
 
-Two things in the output are ADDRESSES, and both matter when you write back:
+Three things in the output are ADDRESSES, and all of them matter when you write
+back:
 
 - \`<agent-note id="…">\` — an agent-note card. Everything an agent writes to a
   page lives inside one of these, and that id is what \`write_agent_note\` takes.
+- \`<human id="…">\` — a card the page's author wrote. Same kind of address, the
+  opposite permission: see below.
 - \`<page id="…"/>\` — a sub-page pointer. Leave the id alone: it is how a later
   write reconciles the tag against the existing sub-page instead of destroying it.
+
+**\`<human>\` and \`<todo>\` cards are the page author's OWN words.** A \`<human>\`
+card is what they wrote for you — conventions, corrections, "the writer is in
+encode.ts"; a \`<todo>\` card is work they assigned. Read both, follow both, and
+never write one: you may not create a \`<human>\` or \`<todo>\` card, and you may
+not change, move or drop an existing one. That holds even when the card sits
+INSIDE your own \`<agent-note>\` card — nesting one there is exactly how the
+author answers you inside your own note, and it stays theirs. Hand every such
+card back byte-identical, id and all; reply beside it, in the \`<agent-note>\`
+card that holds it.
 
 The markdown is a faithful projection of the block forest: what this returns
 re-parses to exactly the same blocks. Hand a line back the way you found it and
@@ -154,7 +167,7 @@ ids in the output are for.
 
 To write: \`write_agent_note\` replaces one card's contents; \`edit_page\`
 changes anything, as long as every block it touches sits inside an
-\`<agent-note>\` card.`,
+\`<agent-note>\` card and not inside a \`<human>\` or \`<todo>\` card within it.`,
   inputSchema: {
     block_id: z
       .string()
@@ -204,6 +217,15 @@ This is a MERGE, not an overwrite: the incoming document is aligned against the
 card's existing blocks, so unchanged blocks keep their identity (and with it
 their edit history, stars, backlinks and any task launched from them). Only what
 really changed is written.
+
+**If the card contains a \`<human id="…">\` or \`<todo id="…">\` card, your
+\`content\` must echo it back verbatim, id and all.** Those are the page author's
+own words — typically their answer to you, written inside your own card — and
+they are not yours to rewrite or to drop. \`content\` is the card's WHOLE new
+contents, so a document that simply leaves such a card out is a document that
+plans its deletion: the whole write is refused and NOTHING is written, not even
+the parts that were fine. \`read_page\` the card first and edit that text; that
+is the only way to be sure you are echoing what is actually there.
 
 Always \`read_page\` the card first (\`read_page\` with the card's id returns
 exactly this document) and edit THAT text: a document written from memory loses
@@ -260,10 +282,19 @@ collaboratively with the user, not something to test on. Your edit is live for
 them at once and outlives your worktree.
 
 THE ONE RULE: **every block this edit creates, rewrites, moves or deletes must
-sit inside an \`<agent-note>\` card.** The page's own prose is read-only to an
-agent — you annotate it, you do not rewrite it. \`block_id\` is only the SCOPE
-the edit applies to (a page id for the whole page); what is allowed is judged by
-what the resulting diff TOUCHED, not by which id you passed.
+sit inside an \`<agent-note>\` card — and not inside a \`<human>\` or \`<todo>\`
+card within it.** The page's own prose is read-only to an agent — you annotate
+it, you do not rewrite it — and so is a card the author wrote, wherever it sits.
+The rule is one walk: from each block you touched, go up until you reach a card
+that says whose words it holds; \`<agent-note>\` says yours, \`<human>\` and
+\`<todo>\` say theirs, and reaching the page without meeting either means the
+page's own prose, which is theirs too. You may not create a \`<human>\`,
+\`<todo>\` or \`<private-note>\` card anywhere, including inside your own — to
+file work, use \`add_task\`.
+
+\`block_id\` is only the SCOPE the edit applies to (a page id for the whole
+page); what is allowed is judged by what the resulting diff TOUCHED, not by which
+id you passed.
 
 A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line in this document, so a blank line you add is a
@@ -280,6 +311,9 @@ A worked round trip:
 
        <agent-note id="block-77">
        Checked the writer.
+       <human id="block-90">
+       No — the writer is in encode.ts.
+       </human>
        </agent-note>
 
 2. Annotate that prose line — the line itself comes back byte-identical, and the
@@ -306,6 +340,18 @@ A worked round trip:
 
        403: block block-12 was edited outside every "agent-note" card. …
 
+5. REFUSED — this one is INSIDE your own card, and still refused, because the
+   line it rewrites is inside the \`<human>\` card the author nested there:
+
+       edit_page(block_id: "<page id>",
+                 old_string: "No — the writer is in encode.ts.",
+                 new_string: "No — the writer is in decode.ts.")
+
+       403: block block-91 was edited, and it sits inside <human> card block-90. …
+
+   Same for deleting it, moving it out, or leaving it out of a
+   \`write_agent_note\` on block-77. Answer it in block-77, below the card.
+
 Contract, matching the \`Edit\` file tool:
 - \`old_string\` must appear at least once; zero matches is an error.
 - It must be UNIQUE unless \`replace_all\` is true; a non-unique match is an
@@ -314,7 +360,8 @@ Contract, matching the \`Edit\` file tool:
 
 Match against what \`read_page\` returns for this \`block_id\`, not against what
 you imagine it says. Everything outside a card must come back byte-identical —
-including the \`# Title\` line and every \`<page id="…"/>\` pointer.`,
+including the \`# Title\` line, every \`<page id="…"/>\` pointer, and every
+\`<human>\` / \`<todo>\` card, which is the author's even when it sits in yours.`,
   inputSchema: {
     block_id: z
       .string()

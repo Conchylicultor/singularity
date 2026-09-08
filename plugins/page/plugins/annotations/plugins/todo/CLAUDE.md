@@ -1,7 +1,8 @@
 # todo
 
 `/todo` — the **actionable** lane of the page's annotation channel: a region of
-work agents still have to do (as opposed to `/context`'s standing instructions).
+work agents still have to do (as opposed to `/human`'s standing instructions).
+Human-authored like `/human`, so an agent reads its brief and never edits it.
 
 A void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its

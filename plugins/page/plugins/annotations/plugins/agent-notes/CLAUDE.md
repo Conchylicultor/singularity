@@ -23,8 +23,10 @@ addresses, which is what makes the card writable by id. See
 `page/editor/core/markdown.ts` and
 [`markdown-apply`](../../../markdown-apply/CLAUDE.md).
 
-[`todo`](../todo/CLAUDE.md) is identified too. `context` and `private-note` are
-not: nothing addresses them by id, and neither carries state keyed on the row.
+[`todo`](../todo/CLAUDE.md) and [`human-notes`](../human-notes/CLAUDE.md) are
+identified too — the human card because an agent rewriting a card that CONTAINS
+one must echo it back byte-identically, which needs a pin rather than a content
+match. `private-note` is not: an agent never sees it, so nothing addresses it.
 
 ## Who wrote it is a sub-plugin, not a field
 

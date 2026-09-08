@@ -138,6 +138,7 @@ export type { BlockSemantics, BlockSemanticsAttrs } from "./block-semantics";
 export { conversionPrefixesOf, defineBlock } from "./define-block";
 export type {
   BlockAudience,
+  BlockAuthor,
   BlockHandle,
   BlockTextVariant,
 } from "./define-block";

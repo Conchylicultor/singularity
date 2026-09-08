@@ -20,11 +20,11 @@ import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 export const privateNotesDataSchema = z.object({});
 
 /**
- * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`,
- * so this card cannot exist without saying who it is for. The container half
- * forces `anchor: true` and `wrapOnConvert: true` — see
- * `@plugins/page/plugins/container/core` for why the two are only correct
- * together. It declares no `collapsible`: a container folds to its BORROWED line
+ * `defineAnnotationBlock` is `defineContainerBlock` plus a REQUIRED `audience`
+ * and `author`, so this card cannot exist without saying who may receive it and
+ * whose words it holds. The container half forces `anchor: true` and
+ * `wrapOnConvert: true` — see `@plugins/page/plugins/container/core` for why the
+ * two are only correct together. It declares no `collapsible`: a container folds to its BORROWED line
  * (its first child's), so its stored `expanded` is live. This file declares nothing but identity.
  */
 /**
@@ -47,10 +47,27 @@ export const privateNotesBlock = defineAnnotationBlock({
   // forget to update. What it does NOT do yet is redact — that consumer lands
   // with the agent-facing markdown tools; see `page/annotations/CLAUDE.md`.
   audience: "human",
+  // The human's, like everything the page author types — and here the field is
+  // near-tautological, which is worth saying rather than leaving as an
+  // inference: a card an agent cannot even RECEIVE is not one it could write.
+  // Declaring it anyway is what keeps the two axes independent. `author` is
+  // asked of every annotation because it is the load-bearing answer for the
+  // cards an agent DOES receive (`/human`, `/todo`); a family where one member
+  // was allowed to skip the question would be one where a future member could
+  // skip it too, and the check's discriminator is presence.
+  author: "human",
   // `"private-notes"` is the former type, kept as a menu alias so the habit (and
   // the older docs) still find the card. Aliases are menu-search only — never a
   // markdown tag, never a stored value.
-  aliases: ["private-notes", "private", "hidden", "secret", "personal", "invisible", "draft"],
+  aliases: [
+    "private-notes",
+    "private",
+    "hidden",
+    "secret",
+    "personal",
+    "invisible",
+    "draft",
+  ],
   empty: () => ({}),
   // `<private-note>…</private-note>` — a real round-tripping syntax, replacing
   // the one-way `**[Private]**` marker.
