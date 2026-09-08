@@ -7601,6 +7601,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `OrphanReason`
       - `OrphanReport`
       - `OrphanRiskClass`
+      - `ResolvedConfig`
+      - `ResolvedLayer`
     - Exports (values):
       - `agentWriteEntrySchema`
       - `agentWriteLedger`
@@ -7642,6 +7644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `propagate`
       - `readonlyProxy`
       - `readTypedConfig`
+      - `readTypedConfigWithLayer`
       - `removeDescriptorScope`
       - `revertAgentWrites`
       - `REVIEW_MARKER`

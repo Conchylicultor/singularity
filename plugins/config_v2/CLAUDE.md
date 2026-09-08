@@ -207,7 +207,7 @@ Design:
 
 ### Internal architecture
 
-- **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and the settings modified-diff. It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
+- **`mapConfigLists` (`core/internal/collections.ts`) — THE walk over every `listField` instance in a document**, at any depth (through `itemFields` and `subFields`). A config document is recursive; every consumer that walked it one level deep drifted. Used by `normalizeCollectionItems` (id seeding), the `config-stable-list-ids` check, and `diffNormalForm` (the layer-comparison normal form behind the tiers/modified attribution). It visits a list **before** recursing into its rows, because a row's `auto-` id hashes that row's content — seeding nested ids first would re-mint every enclosing id.
 - **`jsoncConfigProxy`** — synchronous read/write with `// @hash` header tracking. Used for propagation, `setConfig`, and `reloadValues`.
 - **`ConfigWatcher`** (`config-watcher.ts`) — `@parcel/watcher` file-change detection on `~/.singularity/state/config/`. Debounce (100ms) + ceiling (1s); the blanket 30s reconcile is deliberately **disabled** (`reconcileMs: null`) — it re-fired every watched path (2 per descriptor) into a full conflicts recompute, an O(N²) idle re-read storm with nothing changed. Callbacks are `() => void`; the registry re-reads via `jsoncConfigProxy` on notification.
 
@@ -254,9 +254,23 @@ Three aggregate live resources summarize all ~180 descriptors at once. They are 
 
 The memo key comes from **the filesystem, not an event** — deliberately. `refreshConflictPaths` still runs from the watcher path, but only as a *push-latency* optimization (it diffs a "last published" snapshot and notifies on a flip); it is never the value the loader reads, so a missed watcher event can delay a push but can't produce a wrong answer.
 
-**`config-v2.scopes` (storePath→scopeIds) and `config-v2.modified-counts` — event-fed in-memory maps** in `resource.ts`, recomputed per changed descriptor by `refreshScopeMembers` / `refreshModifiedCount` (boot warm-up + `registry.ts`'s notify path). They read nothing from disk per load — and so **do** go stale on a missed watcher event. Applying the fingerprint-memo treatment above is the intended fix; it just hasn't been done.
+**`config-v2.modified-counts` — derived from disk, through the same memo.** Its loader sweeps every registered descriptor and counts the BASE fields whose tier is `"user"` (below), so the nav badge and the detail pane can never disagree about what "modified" means. `refreshModifiedCount` survives only as the push path — it diffs a "last published" count and notifies on a flip — and is never the value the loader reads.
 
-`config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map.
+**`config-v2.scopes` (storePath→scopeIds) — still an event-fed in-memory map** in `resource.ts`, recomputed per changed descriptor by `refreshScopeMembers` (boot warm-up + `registry.ts`'s notify path). It reads nothing from disk per load — and so **does** go stale on a missed watcher event. Applying the fingerprint-memo treatment above is the intended fix; conflict-paths and modified-counts have had it, this one hasn't.
+
+`config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map. `config-v2.tiers` is keyed the same way and rides the same memo record — as a **lazily computed slot**, because the conflict-paths sweep reads every descriptor's conflict entry and must not start paying to normalize and diff two documents it never looks at.
+
+### What "modified" means
+
+**A field is modified when the USER layer supplied its value — not when it differs from `descriptor.defaults`.** The git layer (the generated origin ⊕ any committed authored override, propagated down by build) is what the repo commits, and a value the repo commits is not something the user changed. The old basis marked all ~157 descriptors with a committed override as permanently modified, and every reorder slot always — a build-materialized descriptor's declared default is `[]` while its origin is the live contribution catalog.
+
+`config-v2.tiers` is the single answer, per field, and everything reads it: the `git`/`user` badge, the accent stripe, the per-field Reset, the nav count badge, the "Modified only" filter, and the "Reset all" gate.
+
+- **Which layer won is decided once**, by `readTypedConfigWithLayer` (`tier-logic.ts`) — the cascade `readTypedConfig` is now a wrapper over. Only a WINNING override can have modified anything: a stale, foreign or schema-invalid override is one the runtime resolves past, and it differs from the origin in every key. So **while a config is in conflict no field reads modified** — no stripes, no per-field Reset, no "Reset all"; the banner's Keep / Accept / Merge own that state, and "Reset all" was only "Accept new defaults" under another name.
+- **`computeFieldTiers` (`server/internal/field-tiers.ts`) refines that to a per-key answer**, because `setConfig` writes FULL documents — a winning override "contains" the git layer's value for every field the user never touched. A key the override document omits is not an edit; it falls through to the git-vs-default comparison.
+- **Both sides go through one normal form** (`diffNormalForm`, same file): drop `id` from rows of non-`stableIdentity` lists, at any depth, via `mapConfigLists`. `normalizeCollectionItems` seeds an `auto-<hash>` id on every id-less row on read and on write, so a user override carries them — while the BASE user origin is propagated byte-wise from a git origin codegen never normalizes and carries none. Without this, toggling one boolean marks every list field of that config modified forever. A `stableIdentity` list is left alone: its ids are durable external keys, so a differing id there is a real difference.
+- **Per-field Reset restores the git-layer value**, not the code default (`resetConfigByPath`) — and when the reset leaves the user document saying nothing the origin doesn't already say, it DELETES the override instead of writing a copy of the origin into it, so a phantom override can't become a stale-hash conflict banner on the next build. Never while a conflict is open: deleting the override there is a terminal resolution that takes the ancestor (the merge base) with it.
+- **`ConfigRegistration.descriptor` is typed `Omit<ConfigDescriptor, "defaults">`** so the settings pane cannot reach the code default at all. `defaults` stays on the descriptor itself (`useConfig` needs it for the pre-hydration window); withholding it from the registration is what stops a fourth surface from re-deriving "modified" the wrong way.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -358,6 +372,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `OrphanReason`
     - `OrphanReport`
     - `OrphanRiskClass`
+    - `ResolvedConfig`
+    - `ResolvedLayer`
   - Exports (values):
     - `agentWriteEntrySchema`
     - `agentWriteLedger`
@@ -399,6 +415,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `propagate`
     - `readonlyProxy`
     - `readTypedConfig`
+    - `readTypedConfigWithLayer`
     - `removeDescriptorScope`
     - `revertAgentWrites`
     - `REVIEW_MARKER`

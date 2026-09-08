@@ -4,6 +4,7 @@ import type { ConfigDescriptor, ConfigValues } from "../../core";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import {
   computeHash,
+  hasConflict,
   mapConfigLists,
   readTypedConfig,
   threeWayMerge,
@@ -34,6 +35,7 @@ import {
   setConfigGetter,
 } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
+import { configDocumentsAgree } from "./field-tiers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT, repoConfigDir } from "@plugins/infra/plugins/paths/server";
@@ -705,15 +707,81 @@ export async function resetConfigByPath(
     return;
   }
 
-  const defaultValue = (descriptor.defaults as Record<string, unknown>)[key];
-  if (defaultValue === undefined)
-    throw new Error(`No field "${key}" in "${descriptor.name}"`);
+  // RESET RESTORES WHAT THE REPO COMMITS, not what the code declares.
+  //
+  // The git layer (the generated origin ⊕ any committed authored override) is
+  // what `./singularity build` propagated into this entry's origin file, and it
+  // is the baseline the settings pane calls "unmodified". Writing
+  // `descriptor.defaults[key]` instead used to leave the field still marked as
+  // modified — and for a reorder slot it wiped the committed arrangement to an
+  // empty list, because a build-materialized descriptor's declared default is
+  // `[]` while its origin is the live contribution catalog.
+  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
+
+  const originProxy = jsoncConfigProxy(entry.userOriginPath);
+  const originData = originProxy.read();
+  if (!originData) {
+    // Symmetric with setConfig: every registered descriptor gets a propagated
+    // origin, so a missing one means the build never ran. There is no baseline
+    // to restore, and inventing one from the code defaults is what this fix
+    // removed.
+    throw new Error(
+      `[config-v2] resetConfigField: no origin file for "${storePath}" at ${entry.userOriginPath}. ` +
+        `Run ./singularity build to propagate the config origin before resetting fields.`,
+    );
+  }
+  const originDoc = asDocument(originData.content);
+
+  // A key the origin does not carry — the field was added since the last build,
+  // or the origin was hand-truncated. `setConfig` parses the value against the
+  // field schema, so passing `undefined` through would throw and leave Reset a
+  // dead button; the code default is the only baseline left in that case.
+  const resetValue =
+    key in originDoc
+      ? originDoc[key]
+      : (descriptor.defaults as Record<string, unknown>)[key];
+
+  // Would this reset leave the user layer saying nothing the git layer doesn't
+  // already say? Then remove the user layer rather than writing a copy of the
+  // origin into it — a phantom override becomes a stale-hash conflict banner the
+  // next time the git layer moves, for a user who changed nothing.
+  //
+  // NOT while a conflict is open: deleting the override there is "Accept new
+  // defaults", a terminal resolution the banner owns, and it takes the ancestor
+  // (the three-way merge base) with it. A per-field Reset must not do that
+  // behind the user's back.
+  const overwrites = jsoncConfigProxy(entry.userOverwritesPath);
+  if (overwrites.exists() && !hasConflict(originProxy, overwrites)) {
+    const current = asDocument(overwrites.read()?.content ?? null);
+    const next = normalizeCollectionItems(
+      { ...current, [key]: resetValue },
+      descriptor.fields,
+    );
+    if (configDocumentsAgree(next, originDoc, descriptor.fields)) {
+      recordWrite(opts, entry, `reset-field:${key}`);
+      unlinkSync(entry.userOverwritesPath);
+      if (existsSync(entry.userAncestorPath))
+        unlinkSync(entry.userAncestorPath);
+      refreshEntry(descriptor, entry);
+      noteWrite(opts, entry);
+      return;
+    }
+  }
+
   await setConfig(
     descriptor,
     key as keyof typeof descriptor.fields & string,
-    defaultValue as never,
+    resetValue as never,
     opts,
   );
+}
+
+function asDocument(content: JsonValue | null): Record<string, unknown> {
+  if (content && typeof content === "object" && !Array.isArray(content)) {
+    return content as Record<string, unknown>;
+  }
+  return {};
 }
 
 export function watchConfig<F extends FieldsRecord>(

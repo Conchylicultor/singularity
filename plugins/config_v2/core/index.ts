@@ -48,8 +48,10 @@ export {
   propagate,
   threeWayMerge,
   readTypedConfig,
+  readTypedConfigWithLayer,
   validationIssues,
 } from "./internal/tier-logic";
+export type { ResolvedLayer, ResolvedConfig } from "./internal/tier-logic";
 export {
   setConfigField,
   forkScope,

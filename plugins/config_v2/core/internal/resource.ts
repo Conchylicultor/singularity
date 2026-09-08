@@ -114,12 +114,16 @@ export const configV2ConflictPathsResource = resourceDescriptor<
   {}
 >("config-v2.conflict-paths", configV2ConflictPathsSchema, []);
 
-// storePaths whose effective BASE config differs from the schema defaults,
-// mapped to the count of modified fields (only paths with ≥1 modified field are
-// present). Keyed by `{}` (the whole map). Powers the config nav-row modified
-// count badge AND the "Modified only" filter without any per-row reactive read —
-// computed once server-side, structurally (JSON equality) so an object/list
-// field sitting at its default never falsely counts as modified.
+// storePaths whose BASE config the USER LAYER has changed, mapped to the count of
+// such fields (only paths with ≥1 are present). Keyed by `{}` (the whole map).
+// Powers the config nav-row modified count badge AND the "Modified only" filter
+// without any per-row reactive read.
+//
+// "Modified" is measured against the GIT LAYER — the generated origin ⊕ any
+// committed authored override, as propagated by `./singularity build` — not
+// against `descriptor.defaults`. A value the repo commits is not something the
+// user changed. Same basis as the per-field `config-v2.tiers` attribution the
+// detail pane's stripes and Reset buttons read, so badge and pane agree.
 export const configV2ModifiedCountsSchema = z.record(z.number());
 export type ConfigV2ModifiedCounts = z.infer<
   typeof configV2ModifiedCountsSchema

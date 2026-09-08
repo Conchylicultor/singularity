@@ -1,4 +1,4 @@
-import { mapConfigLists, setConfigField } from "@plugins/config_v2/core";
+import { setConfigField } from "@plugins/config_v2/core";
 import {
   ConfigFieldAdornmentsProvider,
   ConfigFieldContext,
@@ -17,36 +17,6 @@ import { useCallback, useMemo } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 
 import { resetConfigField } from "../../core";
-
-// List row ids are synthesized, not authored: the live value carries an `auto-`
-// id on every row while `descriptor.defaults` — the raw code default — carries
-// none, at any depth. Comparing them raw would report every list-bearing config
-// as modified, so both sides are stripped through the same walk first. The walk
-// is `mapConfigLists`, so a nested list is stripped exactly like a top-level one
-// and an objectField wrapping a list is no longer a blind spot.
-function stripListIds(field: FieldDef, value: unknown): unknown {
-  const { v } = mapConfigLists({ v: value }, { v: field }, (rows) =>
-    rows.map((row) => {
-      const { id: _id, ...rest } = row;
-      return rest;
-    }),
-  );
-  return v;
-}
-
-function isFieldModified(
-  field: FieldDef,
-  value: unknown,
-  defaultValue: unknown,
-): boolean {
-  if ("itemFields" in field || "subFields" in field) {
-    return (
-      JSON.stringify(stripListIds(field, value)) !==
-      JSON.stringify(stripListIds(field, defaultValue))
-    );
-  }
-  return value !== defaultValue;
-}
 
 function formatOriginValue(value: unknown): string {
   if (typeof value === "string") return value;
@@ -77,7 +47,6 @@ export function ConfigField({
   fieldKey,
   field,
   value,
-  defaultValue,
   storePath,
   scopeId,
   originValue,
@@ -87,14 +56,19 @@ export function ConfigField({
   fieldKey: string;
   field: FieldDef;
   value: unknown;
-  defaultValue: unknown;
   storePath: string;
   scopeId?: string;
   originValue?: unknown;
   trueConflictKeys?: string[];
-  tier?: "default" | "git" | "user";
+  tier: "default" | "git" | "user";
 }) {
-  const isModified = isFieldModified(field, value, defaultValue);
+  // MODIFIED MEANS THE USER LAYER SUPPLIED THIS VALUE — nothing is compared here.
+  // The server already decided which layer each field came from (config-v2.tiers),
+  // reading the propagated origin (the repo's generated origin ⊕ any committed
+  // authored override) against the per-worktree override document. Diffing the
+  // live value against `descriptor.defaults` instead marked every config with a
+  // committed override as permanently modified, and every reorder slot always.
+  const isModified = tier === "user";
   // When a three-way merge is available (trueConflictKeys present), only the
   // fields both sides changed differently are flagged — a field the user changed
   // but upstream didn't is a legitimate keep, not a conflict. Without an ancestor
@@ -135,7 +109,7 @@ export function ConfigField({
   );
 
   const label = field.meta.label ?? fieldKey;
-  const badge = tier && tier !== "default" ? TIER_BADGE[tier] : undefined;
+  const badge = tier !== "default" ? TIER_BADGE[tier] : undefined;
 
   // The OBJECT is always supplied, even when every entry is undefined: its
   // presence is what tells the vocabulary that this surface adorns its fields at

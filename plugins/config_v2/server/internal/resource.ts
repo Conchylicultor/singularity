@@ -1,15 +1,38 @@
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictEntrySchema, configV2TiersSchema, configV2ScopesMapSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2ScopesMap, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "../../core";
+import {
+  configV2ValuesSchema,
+  configV2ConflictEntrySchema,
+  configV2TiersSchema,
+  configV2ScopesMapSchema,
+  configV2ConflictPathsSchema,
+  configV2ModifiedCountsSchema,
+  hasConflict,
+  validationIssues,
+  effective,
+  threeWayMerge,
+  readTypedConfigWithLayer,
+} from "../../core";
+import type {
+  ConfigV2Values,
+  ConfigV2ConflictEntry,
+  ConfigV2Tiers,
+  ConfigV2ScopesMap,
+  ConfigV2ConflictPaths,
+  ConfigV2ModifiedCounts,
+} from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { userScopedDir, discoverScopeIds } from "./scope-paths";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { hasFieldStorageProvider } from "./field-storage-providers";
+import { computeFieldTiers } from "./field-tiers";
 
-type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>, scopeId?: string) => ConfigValues<F>;
+type ConfigGetter = <F extends FieldsRecord>(
+  d: ConfigDescriptor<F>,
+  scopeId?: string,
+) => ConfigValues<F>;
 
 const descriptorByPath = new Map<string, ConfigDescriptor>();
 // hierarchyPath per descriptor (storePath minus the trailing `/<name>.jsonc`),
@@ -17,22 +40,20 @@ const descriptorByPath = new Map<string, ConfigDescriptor>();
 const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
 
-// In-memory derived state, the single source these aggregate loaders read so a
-// subscribe / WS-reconnect-replay / boot-snapshot read is a pure memory read
-// (no per-load filesystem walk). The AUTHORITATIVE predicates are still on disk
-// (scopeHasOwnConfig / effective-vs-default); these caches are recomputed from
-// them via the refresh* fns ONLY when a config file actually changes (boot,
-// fork, scoped write/delete), so the loaders stop touching disk.
+// In-memory derived state the scopes loader reads so a subscribe /
+// WS-reconnect-replay / boot-snapshot read is a pure memory read (no per-load
+// filesystem walk). The AUTHORITATIVE predicate is still on disk
+// (scopeHasOwnConfig); this cache is recomputed from it via refreshScopeMembers
+// ONLY when a config file actually changes (boot, fork, scoped write/delete).
 //
-// Being event-fed, they are only as fresh as the events: a config file that
-// changes without producing a watcher callback leaves them stale until the next
-// restart. conflict-paths used to be maintained this way too and no longer is —
-// see the fingerprint-memoized derivation below.
+// Being event-fed, it is only as fresh as the events: a config file that changes
+// without producing a watcher callback leaves it stale until the next restart.
+// conflict-paths and modified-counts used to be maintained this way too and no
+// longer are — see the fingerprint-memoized derivation below, which is where this
+// one should end up as well.
 
 // storePath → scopeIds the descriptor has its own config for (empty paths omitted).
 const scopeMembers = new Map<string, string[]>();
-// storePath → count of BASE fields differing from defaults (zero-count omitted).
-const modifiedCounts = new Map<string, number>();
 
 // Registry readiness gate. The server serves WS/HTTP resource subscriptions before
 // onReady runs initRegistry, so a client can subscribe before descriptors are
@@ -52,7 +73,9 @@ export function markRegistryReady(): void {
 // registry (descriptorByPath / configGetter). Pre-readiness
 // the server already serves subscriptions, so without this gate a loader answers
 // from empty state — emitting an incomplete/wrong resource the client then caches.
-function whenRegistryReady<A, R>(fn: (arg: A) => R | Promise<R>): (arg: A) => Promise<R> {
+function whenRegistryReady<A, R>(
+  fn: (arg: A) => R | Promise<R>,
+): (arg: A) => Promise<R> {
   return async (arg: A) => {
     await registryReady;
     return fn(arg);
@@ -62,7 +85,10 @@ function whenRegistryReady<A, R>(fn: (arg: A) => R | Promise<R>): (arg: A) => Pr
 // Resolve a descriptor's effective values for a scope, with storage-provider
 // (secret) fields redacted to their defaults before leaving the server. Shared
 // by the per-key resource loader and the boot snapshot so redaction can't drift.
-function resolveRedactedConfig(descriptor: ConfigDescriptor, scopeId?: string): ConfigV2Values {
+function resolveRedactedConfig(
+  descriptor: ConfigDescriptor,
+  scopeId?: string,
+): ConfigV2Values {
   if (!configGetter) {
     throw new Error("[config-v2] config getter not initialized");
   }
@@ -76,7 +102,10 @@ function resolveRedactedConfig(descriptor: ConfigDescriptor, scopeId?: string): 
   return redacted;
 }
 
-export const configV2ServerResource = defineExternalResource<ConfigV2Values, { path: string; scopeId?: string }>({
+export const configV2ServerResource = defineExternalResource<
+  ConfigV2Values,
+  { path: string; scopeId?: string }
+>({
   key: "config-v2.values",
   mode: "push",
   schema: configV2ValuesSchema,
@@ -85,7 +114,9 @@ export const configV2ServerResource = defineExternalResource<ConfigV2Values, { p
     if (!descriptor || !configGetter) {
       // After readiness, an unregistered path is a genuine bug (unknown descriptor)
       // — fail loudly rather than emit an empty config that breaks consumers.
-      throw new Error(`[config-v2] no descriptor registered for resource path "${path}"`);
+      throw new Error(
+        `[config-v2] no descriptor registered for resource path "${path}"`,
+      );
     }
     return resolveRedactedConfig(descriptor, scopeId);
   }),
@@ -109,14 +140,19 @@ export interface ConfigSnapshotResult {
 export async function getConfigSnapshot(): Promise<ConfigSnapshotResult> {
   await registryReady;
   const global: Record<string, ConfigV2Values> = {};
-  const scopes: { scopeId: string; path: string; values: ConfigV2Values }[] = [];
+  const scopes: { scopeId: string; path: string; values: ConfigV2Values }[] =
+    [];
   for (const [path, descriptor] of descriptorByPath) {
     global[path] = resolveRedactedConfig(descriptor);
     const hierarchyPath = hierarchyByDescriptor.get(descriptor);
     if (!hierarchyPath) continue;
     for (const sid of discoverScopeIds(hierarchyPath)) {
       if (!scopeHasOwnConfig(descriptor, sid)) continue;
-      scopes.push({ scopeId: sid, path, values: resolveRedactedConfig(descriptor, sid) });
+      scopes.push({
+        scopeId: sid,
+        path,
+        values: resolveRedactedConfig(descriptor, sid),
+      });
     }
   }
   return { global, scopes };
@@ -148,10 +184,15 @@ function conflictFilePaths(
 // recomputes only the descriptor that actually changed. Reads and parses all
 // three files — go through derivedDescriptorConflict, which skips this when the
 // files are provably unchanged.
-function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV2ConflictEntry | null {
+function computeDescriptorConflict(
+  storePath: string,
+  scopeId?: string,
+): ConfigV2ConflictEntry | null {
   const descriptor = descriptorByPath.get(storePath);
   if (!descriptor) {
-    throw new Error(`[config-v2] no descriptor registered for conflicts path "${storePath}"`);
+    throw new Error(
+      `[config-v2] no descriptor registered for conflicts path "${storePath}"`,
+    );
   }
   const files = conflictFilePaths(storePath, scopeId);
 
@@ -233,11 +274,21 @@ function fileStamp(path: string): string {
   return `${st.ino}:${st.mtimeNs}:${st.size}`;
 }
 
-// Fingerprint-keyed memo of computeDescriptorConflict, keyed by (storePath,
-// scopeId). Unbounded only in the number of (descriptor × scope) pairs the
-// process ever observes; a vanished scope leaves one small stale entry that can
-// never be returned for another key.
-const conflictMemo = new Map<string, { fingerprint: string; entry: ConfigV2ConflictEntry | null }>();
+// Fingerprint-keyed memo of everything a descriptor's file trio determines,
+// keyed by (storePath, scopeId). Unbounded only in the number of (descriptor ×
+// scope) pairs the process ever observes; a vanished scope leaves one small
+// stale entry that can never be returned for another key.
+//
+// `tiers` is a LAZY slot, not a field computed beside `entry`:
+// descriptorHasAnyConflict sweeps every descriptor × scope on every
+// conflict-paths load and reads only `entry`, so it must not start paying to
+// normalize and diff two documents it never looks at.
+interface DerivedTrioState {
+  fingerprint: string;
+  entry: ConfigV2ConflictEntry | null;
+  tiers?: ConfigV2Tiers;
+}
+const conflictMemo = new Map<string, DerivedTrioState>();
 
 // THE conflict derivation. A descriptor's conflict state is a pure function of
 // its file trio plus the descriptor itself (code — constant for the process), so
@@ -263,32 +314,53 @@ const conflictMemo = new Map<string, { fingerprint: string; entry: ConfigV2Confl
 // heavy-read pool — this one indexes a fixed, already-known path trio per
 // descriptor, lives only in this process, and must be cheap enough to run inside
 // a resource loader.
-function derivedDescriptorConflict(storePath: string, scopeId?: string): ConfigV2ConflictEntry | null {
+function derivedTrioState(
+  storePath: string,
+  scopeId?: string,
+): DerivedTrioState {
   const files = conflictFilePaths(storePath, scopeId);
   const fingerprint = `${fileStamp(files.origin)}|${fileStamp(files.override)}|${fileStamp(files.ancestor)}`;
   const memoKey = `${storePath}|${scopeId ?? ""}`;
 
   const memo = conflictMemo.get(memoKey);
-  if (memo && memo.fingerprint === fingerprint) return memo.entry;
+  if (memo && memo.fingerprint === fingerprint) return memo;
 
-  const entry = computeDescriptorConflict(storePath, scopeId);
-  conflictMemo.set(memoKey, { fingerprint, entry });
-  return entry;
+  const state: DerivedTrioState = {
+    fingerprint,
+    entry: computeDescriptorConflict(storePath, scopeId),
+  };
+  conflictMemo.set(memoKey, state);
+  return state;
+}
+
+function derivedDescriptorConflict(
+  storePath: string,
+  scopeId?: string,
+): ConfigV2ConflictEntry | null {
+  return derivedTrioState(storePath, scopeId).entry;
 }
 
 // The detail-pane banner. Routed through the same memo as the aggregate below so
 // the two surfaces share one code path AND one cache — they read the identical
 // value for a descriptor, not two independently-derived ones.
-export const configV2ConflictServerResource = defineExternalResource<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>({
+export const configV2ConflictServerResource = defineExternalResource<
+  ConfigV2ConflictEntry | null,
+  { path: string; scopeId?: string }
+>({
   key: "config-v2.conflicts",
   mode: "push",
   schema: configV2ConflictEntrySchema.nullable(),
-  loader: whenRegistryReady(({ path, scopeId }) => derivedDescriptorConflict(path, scopeId)),
+  loader: whenRegistryReady(({ path, scopeId }) =>
+    derivedDescriptorConflict(path, scopeId),
+  ),
 });
 
 // The whole scope-membership map, read from the in-memory cache (no filesystem
 // walk per load). Refreshed via refreshScopeMembers whenever a scoped file moves.
-export const configV2ScopesServerResource = defineExternalResource<ConfigV2ScopesMap, {}>({
+export const configV2ScopesServerResource = defineExternalResource<
+  ConfigV2ScopesMap,
+  {}
+>({
   key: "config-v2.scopes",
   mode: "push",
   schema: configV2ScopesMapSchema,
@@ -304,10 +376,13 @@ export function refreshScopeMembers(storePath: string): void {
   if (!descriptor) return;
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
   const ids = hierarchyPath
-    ? discoverScopeIds(hierarchyPath).filter((sid) => scopeHasOwnConfig(descriptor, sid))
+    ? discoverScopeIds(hierarchyPath).filter((sid) =>
+        scopeHasOwnConfig(descriptor, sid),
+      )
     : [];
   const prev = scopeMembers.get(storePath) ?? [];
-  const changed = ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
+  const changed =
+    ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
   if (ids.length > 0) scopeMembers.set(storePath, ids);
   else scopeMembers.delete(storePath);
   if (changed) configV2ScopesServerResource.notify({});
@@ -343,11 +418,16 @@ function descriptorHasAnyConflict(storePath: string): boolean {
 // answers the detail-pane banner with, so the badge and the banner cannot
 // disagree by construction. It is a filesystem sweep, but a stat-only one for
 // every descriptor whose files haven't moved since the last derivation.
-export const configV2ConflictPathsServerResource = defineExternalResource<ConfigV2ConflictPaths, {}>({
+export const configV2ConflictPathsServerResource = defineExternalResource<
+  ConfigV2ConflictPaths,
+  {}
+>({
   key: "config-v2.conflict-paths",
   mode: "push",
   schema: configV2ConflictPathsSchema,
-  loader: whenRegistryReady(() => [...descriptorByPath.keys()].filter((p) => descriptorHasAnyConflict(p))),
+  loader: whenRegistryReady(() =>
+    [...descriptorByPath.keys()].filter((p) => descriptorHasAnyConflict(p)),
+  ),
 });
 
 // Set last PUBLISHED to subscribers — change detection for the push path ONLY,
@@ -372,55 +452,94 @@ export function refreshConflictPaths(storePath: string): void {
   configV2ConflictPathsServerResource.notify({});
 }
 
-// Per-descriptor count of BASE fields whose effective value differs from the
-// schema default (paths with zero modified fields are omitted). Compared
-// structurally (JSON) so an object/list field at its default never falsely
-// counts. Secret-backed fields are redacted to their defaults by
-// resolveRedactedConfig before this runs, so they never register as modified —
-// matching what the client resolves. Backs the nav-row modified-count badge and
-// the "Modified only" filter from one data-level read (no per-row config hook).
+// Per-descriptor count of BASE fields the USER LAYER supplied — the fields whose
+// value differs from what the repo commits (the generated origin ⊕ any committed
+// authored override, propagated down by ./singularity build). Paths with zero
+// modified fields are omitted.
+//
+// Reads the same per-field tier attribution the detail pane's stripes and Reset
+// buttons key off, so the badge and the pane cannot disagree about what
+// "modified" means. Secret-backed fields are forced to "default" by computeTiers,
+// so they never register.
+//
+// Returns 0 for an unregistered path rather than throwing the way computeTiers
+// does: this runs inside an aggregate sweep over every descriptor, where one
+// unknown path must not blank the whole nav.
 function computeModifiedCount(storePath: string): number {
-  const descriptor = descriptorByPath.get(storePath);
-  if (!descriptor) return 0;
-  const values = resolveRedactedConfig(descriptor);
-  const defaults = descriptor.defaults as Record<string, unknown>;
+  if (!descriptorByPath.has(storePath)) return 0;
   let count = 0;
-  for (const key of Object.keys(descriptor.fields)) {
-    if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) count++;
+  for (const tier of Object.values(computeTiers(storePath))) {
+    if (tier === "user") count++;
   }
   return count;
 }
 
-// Modified-count is computed off effective BASE values only (scope-independent),
-// so recompute just the changed descriptor and notify the whole-map resource iff
-// its count changed. Replaces a full ~180-descriptor rescan on every value change.
-export function refreshModifiedCount(storePath: string): void {
-  if (!descriptorByPath.has(storePath)) return;
-  const prev = modifiedCounts.get(storePath) ?? 0;
-  const count = computeModifiedCount(storePath);
-  if (count === prev) return;
-  if (count > 0) modifiedCounts.set(storePath, count);
-  else modifiedCounts.delete(storePath);
-  configV2ModifiedCountsServerResource.notify({});
-}
-
-export const configV2ModifiedCountsServerResource = defineExternalResource<ConfigV2ModifiedCounts, {}>({
+// The whole map, DERIVED ON EVERY LOAD from the fingerprint memo — the same
+// authority-on-disk treatment conflict-paths gets, and for the same reason: the
+// map used to be an event-fed in-memory cache, so a config file that changed
+// without producing a watcher callback left the badge wrong until the next
+// restart. With the memo key taken from the filesystem, a missed event can only
+// delay a push, never produce a wrong answer.
+//
+// Cost is the stat-only sweep conflict-paths already pays on this surface: a
+// descriptor whose files haven't moved is three statSyncs, and only the
+// descriptors that actually have a user override do the diff.
+export const configV2ModifiedCountsServerResource = defineExternalResource<
+  ConfigV2ModifiedCounts,
+  {}
+>({
   key: "config-v2.modified-counts",
   mode: "push",
   schema: configV2ModifiedCountsSchema,
-  loader: whenRegistryReady(() => Object.fromEntries(modifiedCounts)),
+  loader: whenRegistryReady(() => {
+    const out: ConfigV2ModifiedCounts = {};
+    for (const storePath of descriptorByPath.keys()) {
+      const count = computeModifiedCount(storePath);
+      if (count > 0) out[storePath] = count;
+    }
+    return out;
+  }),
 });
 
-export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {
+// Count last PUBLISHED per path — change detection for the push path ONLY, never
+// the value the loader reads. (Mirrors publishedConflictPaths; it is what stops a
+// write that leaves the count unchanged from pushing the whole map to every
+// subscriber.)
+const publishedModifiedCounts = new Map<string, number>();
+
+// Push path: on a watcher callback or an in-process write, re-derive THIS
+// descriptor and notify iff its count moved. Purely a latency mechanism — the
+// loader re-derives from disk regardless, so failing to call this can delay a
+// badge but can never leave a wrong count behind. Also called at boot to seed the
+// snapshot, so the first real change doesn't emit a spurious notify.
+export function refreshModifiedCount(storePath: string): void {
+  if (!descriptorByPath.has(storePath)) return;
+  const prev = publishedModifiedCounts.get(storePath) ?? 0;
+  const count = computeModifiedCount(storePath);
+  if (count === prev) return;
+  if (count > 0) publishedModifiedCounts.set(storePath, count);
+  else publishedModifiedCounts.delete(storePath);
+  configV2ModifiedCountsServerResource.notify({});
+}
+
+export function registerDescriptorPath(
+  path: string,
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+): void {
   descriptorByPath.set(path, descriptor);
   hierarchyByDescriptor.set(descriptor, hierarchyPath);
 }
 
-export function getDescriptorByStorePath(path: string): ConfigDescriptor | undefined {
+export function getDescriptorByStorePath(
+  path: string,
+): ConfigDescriptor | undefined {
   return descriptorByPath.get(path);
 }
 
-export function getHierarchyPath(descriptor: ConfigDescriptor): string | undefined {
+export function getHierarchyPath(
+  descriptor: ConfigDescriptor,
+): string | undefined {
   return hierarchyByDescriptor.get(descriptor);
 }
 
@@ -430,23 +549,34 @@ export function getHierarchyPath(descriptor: ConfigDescriptor): string | undefin
 // base; an untracked scope resolves base live. Covers both a committed git scope
 // (origin but no user override) and a runtime fork (override) — the single
 // authoritative membership predicate read/write/server-resolve all key off.
-export function scopeHasOwnConfig(descriptor: ConfigDescriptor, scopeId: string): boolean {
+export function scopeHasOwnConfig(
+  descriptor: ConfigDescriptor,
+  scopeId: string,
+): boolean {
   if (!scopeId) return false;
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
   if (!hierarchyPath) return false;
   const scopedDir = userScopedDir(hierarchyPath, scopeId);
   return (
     jsoncConfigProxy(join(scopedDir, `${descriptor.name}.jsonc`)).exists() ||
-    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.origin.jsonc`)).exists()
+    jsoncConfigProxy(
+      join(scopedDir, `${descriptor.name}.origin.jsonc`),
+    ).exists()
   );
 }
 
 // All registered descriptors tagged with the given scope kind, plus their
 // hierarchyPath and storePath. Used by fork/unfork to act on the whole scoped set.
-export function getScopedDescriptors(
-  scope: "app",
-): { descriptor: ConfigDescriptor; hierarchyPath: string; storePath: string }[] {
-  const out: { descriptor: ConfigDescriptor; hierarchyPath: string; storePath: string }[] = [];
+export function getScopedDescriptors(scope: "app"): {
+  descriptor: ConfigDescriptor;
+  hierarchyPath: string;
+  storePath: string;
+}[] {
+  const out: {
+    descriptor: ConfigDescriptor;
+    hierarchyPath: string;
+    storePath: string;
+  }[] = [];
   for (const [storePath, descriptor] of descriptorByPath) {
     if (descriptor.scope !== scope) continue;
     const hierarchyPath = hierarchyByDescriptor.get(descriptor);
@@ -460,65 +590,55 @@ export function setConfigGetter(getter: ConfigGetter): void {
   configGetter = getter;
 }
 
-function fieldValueJson(content: JsonValue | null, key: string): string {
-  if (content && typeof content === "object" && !Array.isArray(content)) {
-    return JSON.stringify(content[key]);
-  }
-  return "undefined";
-}
-
+// THE per-field layer attribution: which layer supplied each field's value.
+// Backs the `git`/`user` badges, the "modified" stripe, the per-field Reset and
+// the nav count — one answer, so those four cannot disagree.
+//
+// Memoized on the same file-trio fingerprint as the conflict entry, and computed
+// lazily inside it, so opening a detail pane costs one read of documents the
+// conflict derivation may already have paid for.
 function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
   const descriptor = descriptorByPath.get(path);
   if (!descriptor) {
     // After readiness, an unregistered path is a genuine bug (unknown descriptor)
     // — fail loudly rather than emit empty tiers that render every field as "default".
-    throw new Error(`[config-v2] no descriptor registered for tiers path "${path}"`);
+    throw new Error(
+      `[config-v2] no descriptor registered for tiers path "${path}"`,
+    );
   }
 
-  const parts = path.replace(/\.jsonc$/, "").split("/");
-  const dir = parts.slice(0, -1).join("/");
-  const name = parts[parts.length - 1]!;
+  const state = derivedTrioState(path, scopeId);
+  if (!state.tiers) {
+    const files = conflictFilePaths(path, scopeId);
+    const resolved = readTypedConfigWithLayer(
+      descriptor,
+      jsoncConfigProxy(files.origin),
+      jsoncConfigProxy(files.override),
+    );
+    state.tiers = computeFieldTiers({
+      fields: descriptor.fields,
+      defaults: descriptor.defaults as Record<string, unknown>,
+      layer: resolved.layer,
+      originContent: resolved.originContent,
+      overrideContent: resolved.overrideContent,
+    });
+  }
 
-  const scopedDir = userScopedDir(dir, scopeId);
-  const originPath = join(scopedDir, `${name}.origin.jsonc`);
-  const overridePath = join(scopedDir, `${name}.jsonc`);
-
-  const origin = jsoncConfigProxy(originPath);
-  const override = jsoncConfigProxy(overridePath);
-
-  const originContent = origin.read()?.content ?? null;
-  const overrideContent = override.exists() ? (override.read()?.content ?? null) : null;
-  const defaults = descriptor.defaults;
-
-  const tiers: ConfigV2Tiers = {};
+  // Provider-backed (secret) fields live outside the JSONC document entirely, so
+  // no document comparison can speak for them. Forced here rather than inside the
+  // memo because registerFieldStorageProvider is a module side effect — a
+  // memoized answer taken before it ran would stick until the file next moved.
+  const tiers: ConfigV2Tiers = { ...state.tiers };
   for (const [key, field] of Object.entries(descriptor.fields)) {
-    if (hasFieldStorageProvider(field.type.id)) {
-      tiers[key] = "default";
-      continue;
-    }
-    const originVal = originContent !== null
-      ? fieldValueJson(originContent, key)
-      : JSON.stringify(defaults[key]);
-    const overrideVal = overrideContent !== null
-      ? fieldValueJson(overrideContent, key)
-      : null;
-    const defaultVal = JSON.stringify(defaults[key]);
-
-    const hasUserOverride = overrideVal !== null && overrideVal !== originVal;
-    const isGitModified = originVal !== defaultVal;
-
-    if (hasUserOverride) {
-      tiers[key] = "user";
-    } else if (isGitModified) {
-      tiers[key] = "git";
-    } else {
-      tiers[key] = "default";
-    }
+    if (hasFieldStorageProvider(field.type.id)) tiers[key] = "default";
   }
   return tiers;
 }
 
-export const configV2TiersServerResource = defineExternalResource<ConfigV2Tiers, { path: string; scopeId?: string }>({
+export const configV2TiersServerResource = defineExternalResource<
+  ConfigV2Tiers,
+  { path: string; scopeId?: string }
+>({
   key: "config-v2.tiers",
   mode: "push",
   schema: configV2TiersSchema,

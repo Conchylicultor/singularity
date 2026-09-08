@@ -7,7 +7,20 @@ import { storePathOf, storePluginId } from "./store-path";
 import { ConfigV2 } from "./slots";
 
 export interface ConfigRegistration {
-  descriptor: ConfigDescriptor;
+  /**
+   * The descriptor MINUS its code defaults, deliberately.
+   *
+   * `defaults` has to stay on `ConfigDescriptor` — `useConfig` falls back to it
+   * for the pre-hydration window — but this registration is how descriptors reach
+   * the settings pane, and the settings pane must never diff against the code
+   * default. What the repo commits is the git layer (the generated origin ⊕ any
+   * committed authored override), and "modified" means the user layer supplied
+   * the value; the server answers that per field via `config-v2.tiers`. Three
+   * surfaces each re-derived it from `defaults` instead, so a config with a
+   * committed override read as permanently modified and every reorder slot always
+   * did. Withholding the ingredient is what stops a fourth from appearing.
+   */
+  descriptor: Omit<ConfigDescriptor, "defaults">;
   /**
    * Canonical DOT-form plugin id this config is *stored* under — the slot-owner
    * when a contribution overrides `pluginId` (e.g. reorder planting each slot's

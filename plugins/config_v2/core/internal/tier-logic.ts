@@ -19,7 +19,8 @@ export function isForeignOverride(
   content: JsonValue | undefined,
   fieldKeys: string[],
 ): boolean {
-  if (!content || typeof content !== "object" || Array.isArray(content)) return false;
+  if (!content || typeof content !== "object" || Array.isArray(content))
+    return false;
   const keys = Object.keys(content as Record<string, JsonValue>);
   if (keys.length === 0) return false;
   return !keys.some((k) => fieldKeys.includes(k));
@@ -90,7 +91,9 @@ export function propagate(
   // never clobber the true base with an intermediate origin.
   if (ancestor) {
     const oldOrigin = downstreamOrigin.read();
-    const ow = downstreamOverwrites.exists() ? downstreamOverwrites.read() : null;
+    const ow = downstreamOverwrites.exists()
+      ? downstreamOverwrites.read()
+      : null;
     if (
       ow &&
       ow.hash !== null &&
@@ -124,7 +127,8 @@ export function threeWayMerge(
   ours: Record<string, JsonValue>,
   theirs: Record<string, JsonValue>,
 ): { merged: Record<string, JsonValue>; conflicts: string[] } {
-  const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const eq = (a: unknown, b: unknown) =>
+    JSON.stringify(a) === JSON.stringify(b);
   const merged: Record<string, JsonValue> = {};
   const conflicts: string[] = [];
   const keys = new Set([
@@ -152,13 +156,46 @@ export function threeWayMerge(
   return { merged, conflicts };
 }
 
-export function readTypedConfig<F extends FieldsRecord>(
+// WHICH LAYER SUPPLIED THE VALUES THE RUNTIME IS SERVING.
+//
+// "user" = the per-worktree override document won; "git" = the propagated origin
+// (the repo's generated origin ⊕ any committed authored override) won; "default"
+// = neither was usable and the code defaults stand.
+//
+// This is the answer the settings pane's "modified" indicator is a function of —
+// modified means the USER layer supplied it — which is why the winner is named
+// once here rather than re-derived from a value comparison. A comparison can't
+// tell "the user changed this" from "an unusable document happens to differ":
+// a foreign or schema-invalid override differs from the origin in every key
+// while the runtime is ignoring it wholesale.
+export type ResolvedLayer = "user" | "git" | "default";
+
+export interface ResolvedConfig<F extends FieldsRecord> {
+  layer: ResolvedLayer;
+  values: ConfigValues<F>;
+  // The override document as read off disk, whether or not it won. `null` when
+  // there is no override file, or its hash is stale. Callers that diff the user
+  // layer against the git layer need the raw document, not the resolved values.
+  overrideContent: JsonValue | null;
+  // The origin document as read off disk, `null` when absent.
+  originContent: JsonValue | null;
+}
+
+// THE tier cascade — the one place the origin/override/defaults precedence is
+// spelled out. `readTypedConfig` is this minus the provenance; `computeFieldTiers`
+// (server) is this plus a per-key diff. Parses at most twice (never once per
+// caller), so the hot config-read path costs exactly what it did before.
+export function readTypedConfigWithLayer<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   origin: ConfigProxy,
   overwrites: ConfigProxy,
-): ConfigValues<F> {
+): ResolvedConfig<F> {
   const fieldKeys = Object.keys(descriptor.fields);
   const originData = origin.read();
+  const originContent = originData ? originData.content : null;
+  const rawOverride = overwrites.exists()
+    ? (overwrites.read()?.content ?? null)
+    : null;
 
   // Tier 1: a non-stale override wins — but only if it can actually be applied.
   const ow = nonStaleOverrideContent(originData, overwrites);
@@ -176,7 +213,14 @@ export function readTypedConfig<F extends FieldsRecord>(
       );
     } else {
       const result = descriptor.schema.safeParse(ow);
-      if (result.success) return result.data as ConfigValues<F>;
+      if (result.success) {
+        return {
+          layer: "user",
+          values: result.data as ConfigValues<F>,
+          overrideContent: rawOverride,
+          originContent,
+        };
+      }
       console.warn(
         `[config-v2] override for "${descriptor.name}" failed validation; resolving to origin. ` +
           `Issues: ${result.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ")}`,
@@ -187,7 +231,14 @@ export function readTypedConfig<F extends FieldsRecord>(
   // Tier 2: the propagated origin (git/code authored default).
   if (originData) {
     const result = descriptor.schema.safeParse(originData.content);
-    if (result.success) return result.data as ConfigValues<F>;
+    if (result.success) {
+      return {
+        layer: "git",
+        values: result.data as ConfigValues<F>,
+        overrideContent: rawOverride,
+        originContent,
+      };
+    }
     console.warn(
       `[config-v2] origin for "${descriptor.name}" failed validation; resolving to defaults. ` +
         `Issues: ${result.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ")}`,
@@ -196,13 +247,29 @@ export function readTypedConfig<F extends FieldsRecord>(
 
   // Tier 3: code defaults. An absent document is the legitimate "use defaults"
   // case (no warning above); a fall-through from an unusable tier warned already.
-  return { ...descriptor.defaults };
+  return {
+    layer: "default",
+    values: { ...descriptor.defaults },
+    overrideContent: rawOverride,
+    originContent,
+  };
+}
+
+export function readTypedConfig<F extends FieldsRecord>(
+  descriptor: ConfigDescriptor<F>,
+  origin: ConfigProxy,
+  overwrites: ConfigProxy,
+): ConfigValues<F> {
+  return readTypedConfigWithLayer(descriptor, origin, overwrites).values;
 }
 
 // Human-readable issues when the effective stored document cannot be applied as
 // the descriptor's current schema — null when it resolves cleanly. Mirrors
-// readTypedConfig's tiering so the surfaced conflict matches what the runtime
-// actually did: a non-stale override that is FOREIGN (shares no field — a
+// readTypedConfigWithLayer's tiering so the surfaced conflict matches what the
+// runtime actually did. It re-walks the cascade rather than calling it because
+// it needs the REASON each tier was rejected, not the winner; if a third reader
+// ever wants both, widen ResolvedConfig with the rejection instead of adding a
+// fourth copy of the precedence. A non-stale override that is FOREIGN (shares no field — a
 // prior-shape leftover) or fails the schema is surfaced as invalid (the runtime
 // degraded to the origin); with no usable override, an invalid ORIGIN is
 // surfaced. A pure predicate the server re-runs to populate the conflicts
@@ -233,7 +300,10 @@ export function validationIssues(
     if (result.success) return null; // override is usable
     // Keep the zod path as an array so the UI can drill the offending value out
     // of the stored document; readTypedConfig joins it inline only for its log.
-    return result.error.issues.map((i) => ({ path: [...i.path], message: i.message }));
+    return result.error.issues.map((i) => ({
+      path: [...i.path],
+      message: i.message,
+    }));
   }
   // No usable override → the effective value is the origin; surface only if the
   // origin itself fails the schema. An absent document is the legitimate
@@ -241,5 +311,8 @@ export function validationIssues(
   if (!originData) return null;
   const result = descriptor.schema.safeParse(originData.content);
   if (result.success) return null;
-  return result.error.issues.map((i) => ({ path: [...i.path], message: i.message }));
+  return result.error.issues.map((i) => ({
+    path: [...i.path],
+    message: i.message,
+  }));
 }

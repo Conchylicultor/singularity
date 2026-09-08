@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
+/**
+ * Restore ONE field to what the repo commits — the propagated git layer (the
+ * generated origin ⊕ any committed authored override), not `descriptor.defaults`.
+ * Deletes the whole override document when the reset leaves it saying nothing the
+ * origin doesn't already say. The whole-config twin is `deleteOverride`.
+ */
 export const resetConfigField = defineEndpoint({
   route: "POST /api/config-v2/reset-field",
   body: z.object({

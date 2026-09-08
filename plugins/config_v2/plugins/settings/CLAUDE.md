@@ -10,7 +10,7 @@ open the panel's tracks for every row in the pane.
 
 ## The stripe, the badge, the reset and the conflict line are PROPS, not a wrapper
 
-`ConfigField` draws no row. It computes the four things only this surface knows —
+`ConfigField` draws no row. It says the four things only this surface knows —
 is the value modified, which tier it came from, can it be reset, does upstream
 disagree — and hands them down as `ConfigFieldAdornments`
 (`mark` / `status` / `actions` / `note`), which `FieldShapeView` puts on the
@@ -18,6 +18,16 @@ disagree — and hands them down as `ConfigFieldAdornments`
 own chrome gutter, the tier badge and the reset sit in the row's reserved
 trailing tracks, and the "Upstream: …" line hangs on the panel's rail — instead
 of beside a row that had already bled out to the panel's edge.
+
+Three of those four are one fact: **modified means the `tier` prop is `"user"`**,
+the server's answer from `config-v2.tiers`, and the reset is offered exactly
+there. Nothing is compared in this component. It used to diff the live value
+against `descriptor.defaults`, which is the CODE default, not what the repo
+commits — so every config carrying a committed authored override read as
+permanently modified, and every reorder slot always did. `ConfigRegistration`
+now hands the pane an `Omit<ConfigDescriptor, "defaults">`, so the wrong basis is
+a `tsc` error rather than a habit. See "What 'modified' means" in
+[`config_v2/CLAUDE.md`](../../CLAUDE.md).
 
 They travel as a **context**, never as props on `FieldShape`: the same
 `boolField` renders in a sonata popover, an events source form and this pane, and

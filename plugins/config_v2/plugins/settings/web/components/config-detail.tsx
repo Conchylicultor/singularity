@@ -181,8 +181,25 @@ function ConfigDetailBody({
   const [showRaw, setShowRaw] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const defaults = registration.descriptor.defaults as Record<string, unknown>;
   const conflictEntry = conflict;
+
+  // WHICH LAYER SUPPLIED EACH FIELD — the server's answer, read here rather than
+  // re-derived. `tiers` is a record, so an indexed read is `| undefined`; the
+  // server emits an entry for every field of the descriptor, so a miss is a bug,
+  // not a "not modified". Answering `"default"` for it would be exactly the
+  // unknown-renders-as-a-value collapse this plugin's read hooks exist to prevent.
+  const tierFor = useCallback(
+    (key: string): "default" | "git" | "user" => {
+      const tier = tiers[key];
+      if (!tier) {
+        throw new Error(
+          `[config-v2] no tier for field "${key}" of "${registration.storePath}"`,
+        );
+      }
+      return tier;
+    },
+    [tiers, registration.storePath],
+  );
 
   // During a conflict the app resolves config to the origin (origin takes
   // precedence until reconciled), so `useConfig` returns the origin values.
@@ -216,13 +233,16 @@ function ConfigDetailBody({
     return true;
   }, [conflictEntry, valueFor, registration.descriptor.fields]);
 
-  const hasAnyModified = useMemo(() => {
-    for (const key of Object.keys(registration.descriptor.fields)) {
-      if (JSON.stringify(valueFor(key)) !== JSON.stringify(defaults[key]))
-        return true;
-    }
-    return false;
-  }, [valueFor, defaults, registration.descriptor.fields]);
+  // "Reset all" deletes the user override document, so it is offered exactly when
+  // that document still says something — i.e. when some field came from the user
+  // layer. A field the repo commits (tier "git") is not something to reset.
+  const hasAnyModified = useMemo(
+    () =>
+      Object.keys(registration.descriptor.fields).some(
+        (key) => tierFor(key) === "user",
+      ),
+    [tierFor, registration.descriptor.fields],
+  );
 
   // useEndpointMutation (not void fetchEndpoint) so a failed reset/dismiss
   // surfaces via the global error toast instead of escaping as an unhandled
@@ -580,12 +600,11 @@ function ConfigDetailBody({
                   fieldKey={key}
                   field={field}
                   value={valueFor(key)}
-                  defaultValue={defaults[key]}
                   storePath={registration.storePath}
                   scopeId={scopeId}
                   originValue={conflictEntry?.originValues[key]}
                   trueConflictKeys={trueConflictKeys}
-                  tier={tiers[key]}
+                  tier={tierFor(key)}
                 />
               ),
             )}
