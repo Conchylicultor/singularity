@@ -112,13 +112,12 @@ reaches an npm package or a `web`/`server` barrel.
 
 `cli/prototype-url.ts` builds
 `http://<namespace>.localhost:9000/prototypes/proto/<id>` from parts rather than
-by hand: the namespace is minted with `namespaceFor(MAIN_COMPOSITION_ID,
-checkoutRef(root))` off the CHECKOUT (a CLI process never sets
-`SINGULARITY_WORKTREE` for itself, so reading it would print main's URL from
-every worktree), `.localhost:9000` comes from `namespaceUrl`, and `/prototypes`
-from `prototypesApp.basePath`. The one literal is the detail pane's own
-`proto/:name` segment — it is declared in `gallery/web`, which a terminal verb
-must not import.
+by hand: the namespace is minted with `checkoutNamespace(root)` off the CHECKOUT
+(a CLI process never sets `SINGULARITY_WORKTREE` for itself, so reading it would
+print main's URL from every worktree), `.localhost:9000` comes from
+`namespaceUrl`, and `/prototypes` from `prototypesApp.basePath`. The one literal
+is the detail pane's own `proto/:name` segment — it is declared in
+`gallery/web`, which a terminal verb must not import.
 
 ## The contract this serves
 

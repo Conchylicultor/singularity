@@ -13,8 +13,9 @@
 //   CURRENT tree composes. Every dist is an artifact dist since the monolithic
 //   vite build was removed, so a MISSING `.web-artifacts.json` marker is now a
 //   real failure (nothing deployed, or a pre-artifacts dist), not the old
-//   "monolith ⇒ nothing to verify" pass. A stale map fails with the
-//   `./singularity build` fix. Skips (uncached) inside a `./singularity build`
+//   "monolith ⇒ nothing to verify" pass, and a checkout registered to no
+//   namespace at all fails before that, with no path to name. A stale map fails
+//   with the `./singularity build` fix. Skips (uncached) inside a `./singularity build`
 //   process, where the dist under inspection is the one that very build is about
 //   to replace — standalone runs verify for real.
 //
@@ -50,9 +51,10 @@ import type {
 import { isBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
-  checkoutWorktreeName,
+  type CheckoutDeploy,
+  resolveCheckoutDeploy,
   worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+} from "@plugins/infra/plugins/paths/core";
 import { INLINE_PACKAGES } from "../core/constants";
 import { diffImportMaps } from "../core/import-map";
 import {
@@ -71,7 +73,6 @@ import {
   offendingPackages,
   packagesInSourcemapSources,
 } from "./scan";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT =
@@ -86,20 +87,46 @@ function rootSync(): string {
 }
 
 /**
- * The dist THIS CHECKOUT deploys — `~/.singularity/worktrees/<name>/web`, where
- * `<name>` is the checkout's own basename.
+ * Which dist this checkout deploys, or the fact that it deploys none.
  *
- * `checkoutWorktreeName(root)`, never `currentWorktreeName()`: a check runs in a
- * CLI process, which never sets `SINGULARITY_WORKTREE` for itself, so the
- * env-derived name answers `singularity` from every worktree — an agent's
- * `map-in-sync` would silently inspect MAIN's dist and pass or fail on it.
+ * A checkout with no deploy has no dist, and there is no honest path to hand
+ * back for it — so the absence is an arm of the result rather than a directory
+ * name invented on its behalf. Every caller below has to say what it does about
+ * that, which is the point: the previous spelling had one, and it silently gave
+ * all three of them somebody else's.
  */
-function distDir(root: string): string {
-  // `asNamespace`, not `namespaceFor`: minting the namespace means asking git
-  // which root owns `.git`, and `cacheSignature` is synchronous. The served
-  // namespace of this checkout's main composition IS its directory name, so the
-  // cast is exact — and loud if a checkout is ever named something illegal.
-  return worktreeArtifacts.webDist(asNamespace(checkoutWorktreeName(root)));
+type DeployedDist =
+  | { kind: "dist"; dir: string }
+  /** What this checkout DOES serve, so a refusal can name it. */
+  | { kind: "none"; others: readonly CheckoutDeploy[] };
+
+/**
+ * The dist THIS CHECKOUT deploys, read out of the registry the deploy wrote.
+ *
+ * The namespace is not derivable from a name, and both names within reach get it
+ * wrong. `currentWorktreeName()` answers a question about a different process —
+ * which namespace is *this backend* the server for — and a check runs in a CLI
+ * process that merely inherited `SINGULARITY_WORKTREE` from the backend that
+ * spawned its agent pane, so it says `singularity` from inside every worktree:
+ * `map-in-sync` would inspect MAIN's dist and pass or fail on it. The checkout's
+ * own basename reads safer and is not, because a `--composition` build publishes
+ * `<composition>.<checkout>` and never the checkout's own app — so the basename
+ * names a directory nothing ever deployed to, and `asNamespace` on it launders
+ * away the very brand check that would have said so.
+ *
+ * `resolveCheckoutDeploy` asks the third question instead — which deploy did
+ * this checkout *publish* — by reading back the `spec.json` each deploy wrote
+ * naming the checkout behind it. It is synchronous and git-free, so
+ * `cacheSignature()` can still call it.
+ */
+function deployedDist(root: string): DeployedDist {
+  const resolved = resolveCheckoutDeploy(root);
+  return resolved.kind === "resolved"
+    ? {
+        kind: "dist",
+        dir: worktreeArtifacts.webDist(resolved.deploy.namespace),
+      }
+    : { kind: "none", others: resolved.others };
 }
 
 function readIfExists(file: string): string | null {
@@ -130,6 +157,25 @@ function storeMtime(): string {
   }
 }
 
+/**
+ * The tail of the no-deploy message: what this checkout serves *instead*.
+ *
+ * "Nothing at all" and "everything except your own app" have different fixes and
+ * read identically without this. A checkout built only with `--composition` is
+ * registered to `<composition>.<checkout>` and to nothing else, so the reader
+ * would otherwise be told to run a build they demonstrably already ran.
+ */
+function serves(others: readonly CheckoutDeploy[]): string {
+  if (others.length === 0) return "";
+  const list = others
+    .map((d) => `${d.namespace} (composition "${d.composition}")`)
+    .join(", ");
+  return (
+    ` It is registered to ${list} — a \`--composition\` build publishes only that ` +
+    `composition's namespace, never the checkout's own app.`
+  );
+}
+
 function truncatedList(items: readonly string[], max = 15): string {
   const shown = items.slice(0, max).map((i) => `  ${i}`);
   if (items.length > max) shown.push(`  … and ${items.length - max} more`);
@@ -145,12 +191,16 @@ const mapInSync: Check = {
     // Never cache the build-time skip: a cached "pass" recorded while the check
     // didn't actually look would mask a stale dist on the next run that does.
     if (isBuildInProgress()) return null;
-    const dist = distDir(rootSync());
-    const marker = readIfExists(join(dist, MARKER_NAME));
+    const dist = deployedDist(rootSync());
+    // No deploy ⇒ a real failure below, and for the same reason as a missing
+    // marker: the fix is a build, which registers a namespace without moving the
+    // tree hash the runner keys on, so a cached verdict would outlive it.
+    if (dist.kind === "none") return null;
+    const marker = readIfExists(join(dist.dir, MARKER_NAME));
     // No marker ⇒ a real failure below. Never cache that verdict: the fix is a
     // build, which changes the dist but not the tree hash the runner keys on.
     if (marker === null) return null;
-    const html = readIfExists(join(dist, "index.html")) ?? "";
+    const html = readIfExists(join(dist.dir, "index.html")) ?? "";
     // The verdict depends on the deployed dist AND on which artifacts the store
     // holds (the expected map is recomputed through store metas) — fold both in.
     return sha256(`${marker}\n${html}\n${storeMtime()}`);
@@ -163,8 +213,23 @@ const mapInSync: Check = {
     if (isBuildInProgress()) return { ok: true };
 
     const root = await getWorktreeRoot();
-    const dist = distDir(root);
-    const markerRaw = readIfExists(join(dist, MARKER_NAME));
+    const dist = deployedDist(root);
+    // Nothing is registered to this checkout's backend, so there is no dist —
+    // not an empty one at a known path, none at all. Naming a path here would
+    // be inventing the directory a build WOULD have written, which is the whole
+    // defect this resolution replaced.
+    if (dist.kind === "none") {
+      return {
+        ok: false,
+        message:
+          `no deploy is registered to this checkout, so there is no dist to compare against — ` +
+          `\`./singularity build\` has never published one from here.` +
+          serves(dist.others),
+        hint: BUILD_HINT,
+      };
+    }
+
+    const markerRaw = readIfExists(join(dist.dir, MARKER_NAME));
     // The marker is written by every compose. Its absence used to mean "a
     // monolith dist — nothing to verify"; with the monolith gone it can only
     // mean nothing is deployed at this path, or what is deployed predates the
@@ -174,18 +239,18 @@ const mapInSync: Check = {
       return {
         ok: false,
         message:
-          `no artifact dist deployed at ${dist} (missing ${MARKER_NAME}) — every dist is ` +
+          `no artifact dist deployed at ${dist.dir} (missing ${MARKER_NAME}) — every dist is ` +
           `composed by the web-artifacts pipeline, so this checkout has either never been ` +
           `built or carries a pre-artifacts dist.`,
         hint: BUILD_HINT,
       };
     }
 
-    const html = readIfExists(join(dist, "index.html"));
+    const html = readIfExists(join(dist.dir, "index.html"));
     if (html === null) {
       return {
         ok: false,
-        message: `artifact-mode dist marker present but ${join(dist, "index.html")} is missing`,
+        message: `artifact-mode dist marker present but ${join(dist.dir, "index.html")} is missing`,
         hint: BUILD_HINT,
       };
     }
@@ -329,7 +394,16 @@ const noVendoredStateInlined: Check = {
     if (!existsSync(WEB_ARTIFACTS_STORE_DIR)) return { ok: true }; // nothing composed yet
 
     const root = await getWorktreeRoot();
-    const markerRaw = readIfExists(join(distDir(root), MARKER_NAME));
+    // The marker is read for ONE field — how the deployed dist was minified — so
+    // that the fleet planned here matches the artifacts the store actually
+    // holds. No deploy means no marker to read, which lands on the same default
+    // as a Phase-1 marker that never carried the field: minified. It is not a
+    // failure here — this check's subject is the CONTENT of the artifacts in the
+    // store, which exist and are worth scanning whether or not a dist was ever
+    // composed from them. Staleness is map-in-sync's job, and it refuses above.
+    const dist = deployedDist(root);
+    const markerRaw =
+      dist.kind === "none" ? null : readIfExists(join(dist.dir, MARKER_NAME));
     const minify = markerRaw === null ? true : markerMinify(markerRaw);
 
     // The expected fleet for the current tree; artifacts not (yet) in the store

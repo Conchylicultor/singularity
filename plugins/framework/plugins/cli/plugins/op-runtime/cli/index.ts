@@ -17,6 +17,13 @@
  * not import `bootstrap` either — keeping the two apart is what lets the
  * bootstrap closure stay npm-free while this one is unconstrained.
  *
+ * THE DEPLOY RECEIPT LIVES IN `core/`, not here. It is a record on disk, and
+ * reading a record is not a CLI act: the e2e harness has to prove that the
+ * deploy answering its target is the build that checkout published, and the
+ * `e2e` runtime may reach a plugin's `core` barrel but never its `cli` one.
+ * `./build-receipt` below is a shim onto `../core/internal/build-receipt`, so
+ * the op commands that write the receipt are unaffected by the move.
+ *
  * NO PATH RE-EXPORTS. There used to be a `paths.ts` here whose entire content
  * was re-exporting `worktreeArtifacts` / `PG_LOG_FILE` / … from the plugins that
  * own them. That was only ever legal because `bin/` is outside the boundary

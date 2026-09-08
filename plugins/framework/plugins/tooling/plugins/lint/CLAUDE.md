@@ -117,6 +117,7 @@ see a class string parked in a `const` or a style map.
   - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
   - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
   - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
+  - **`namespace-identity`** — Lint rule banning the cast of a checkout directory name to a Namespace — a name is one input to a namespace, not a namespace, and the guess names the wrong deploy the moment a composition is served from a non-main checkout.
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer

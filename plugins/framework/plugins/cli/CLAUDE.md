@@ -185,7 +185,7 @@ Two rules that look wrong and are not:
   holder stuck in?" is answered instead from `~/.singularity/logs/build-progress/build-progress.jsonl`,
   which records the actual span.
 
-## The deploy receipt (`plugins/op-runtime/cli/build-receipt.ts`)
+## The deploy receipt (`plugins/op-runtime/core/internal/build-receipt.ts`)
 
 `~/.singularity/worktrees/<wt>/build-status.json` — `running` once the build lock
 is granted, rewritten `ok` / `failed` / `superseded` in `finalizeBuild`. **One

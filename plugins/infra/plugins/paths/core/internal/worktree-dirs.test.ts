@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -33,6 +39,8 @@ describe("listDirNames", () => {
   });
 
   test("missing root dir yields an empty list", () => {
-    expect(listDirNames(join(tmpdir(), "worktree-dirs-nonexistent-root"))).toEqual([]);
+    expect(
+      listDirNames(join(tmpdir(), "worktree-dirs-nonexistent-root")),
+    ).toEqual([]);
   });
 });

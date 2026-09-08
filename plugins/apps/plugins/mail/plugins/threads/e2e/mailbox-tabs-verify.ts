@@ -24,9 +24,7 @@
  *   ./singularity run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
 import { existsSync, rmSync } from "node:fs";
-import { basename } from "node:path";
 import type { Page } from "playwright";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   arg,
@@ -34,6 +32,7 @@ import {
   pathUrl,
   report,
   snap,
+  targetNamespace,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
@@ -64,17 +63,22 @@ const BOOT_TIMEOUT_MS = 120_000;
 /**
  * The user-layer override the UI writes when a view's filter is edited.
  *
- * The namespace is derived from the checkout's own directory name (the same
- * derivation the harness's `target.ts` uses for the URL) rather than from
- * `currentWorktreeName()`: this script runs as a plain `bun` process with none
- * of the backend's env, where that helper resolves to the main namespace.
+ * The namespace comes from `targetNamespace()` — the same resolution that
+ * produced the URL this script drives — so the file the two `rmSync` calls below
+ * delete belongs to the deploy under test, by construction.
+ *
+ * It used to read `process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`,
+ * with the correct rule stated in the prose immediately above the code that
+ * broke it. An agent pane inherits `SINGULARITY_WORKTREE` from the backend that
+ * spawned it, so from inside any worktree it answers `singularity`: this script
+ * deleted the user's live Mail config on MAIN, every run, while asserting
+ * against a worktree deploy. Nothing about the file made that visible, which is
+ * why the harness now owns the answer and `e2e-harness:target-not-env-derived`
+ * refuses the env read outright.
  */
 const STORE_PATH = "apps/mail/threads/mail-threads.jsonc";
 
-const USER_OVERRIDE = configDir.file(
-  process.env.SINGULARITY_WORKTREE ?? basename(REPO_ROOT),
-  STORE_PATH,
-);
+const USER_OVERRIDE = configDir.file(targetNamespace(), STORE_PATH);
 
 /**
  * Wait until the SERVER resolves the edit, not merely until the file exists.

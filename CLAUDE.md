@@ -174,21 +174,29 @@ This will:
 
 ## Driving the app (screenshots & E2E)
 
-Chromium is pre-installed. Scripts default to your own worktree's deploy, so
-`./singularity build` first. For a static snapshot:
+Chromium is pre-installed. `./singularity build` first: every script resolves
+its own target by reading which deploy THIS checkout published — from the
+registry the build writes — and refuses when there is none. So never hand-write
+a `http://<worktree>.localhost:9000` URL: the name you would substitute there is
+the one thing the harness deliberately stopped guessing, because in an agent
+session it comes out as `singularity` and the run then drives main.
+
+For a snapshot, or to **verify behavior** (click something, confirm state), run
+[`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts).
+It prints the deploy it resolved and the matched button's state, and writes
+`-before.png` / `-after.png`:
 
 ```bash
-bun run playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
-```
-
-To **verify behavior** (click something, confirm state), don't take blind
-snapshots — run [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts),
-which prints the matched button's state and writes `-before.png` / `-after.png`:
-
-```bash
+./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
 ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-  --url http://<worktree>.localhost:9000/agents/c/<id> --click "Design docs" --out /tmp/docs
+  --path /agents/c/<id> --click "Design docs" --out /tmp/docs
 ```
+
+`--path <route>` picks the screen; `--viewport 1280x900`, `--wait <ms>` and
+`--color-scheme dark|light` do the rest. `--composition <id>` targets a
+composition this checkout built. `--url http://<namespace>.localhost:9000` is
+the escape hatch for a deploy it did not build — and the one form that skips the
+check that the app answering is the build you just made.
 
 For a repeatable flow, write a standalone E2E script in the plugin it verifies,
 at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner

@@ -12,7 +12,12 @@ export { arg, numArg, flag, requireArg, usage } from "./args";
 // No origin is exported. `pathUrl` names a page this script chose; `pageUrl`
 // names the one the caller chose. There is deliberately no way to obtain the
 // bare origin — see target.ts for the collision that caused.
-export { pathUrl, pageUrl, requirePage } from "./target";
+//
+// `targetNamespace` is not a way back to one: a namespace is an IDENTITY, for
+// naming the per-namespace directory a script asserts on. Rebuilding a URL from
+// it with `namespaceUrl` would point back at the gateway and ignore `--url`
+// entirely — use `pathUrl` for anything the app answers.
+export { pathUrl, pageUrl, requirePage, targetNamespace } from "./target";
 export { agentFetch } from "./app-fetch";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
 export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";

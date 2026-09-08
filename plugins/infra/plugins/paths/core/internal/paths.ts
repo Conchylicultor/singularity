@@ -42,6 +42,20 @@ export function repoConfigDir(): string {
 export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
 
 /**
+ * The server-core plugin dir, relative to a checkout root — the `server` field
+ * of every `spec.json` a checkout publishes, and therefore the on-disk
+ * back-pointer from a live namespace to the checkout that deployed it.
+ *
+ * Spelled ONCE because it is read from both ends and by different processes:
+ * `deployNamespace` resolves it against the checkout it is building, and
+ * `deploysForCheckout` matches every registered spec against it to answer which
+ * deploys a checkout owns. A second copy that drifted would not fail anywhere —
+ * it would answer "this checkout has published nothing", which reads as "you
+ * never built" and sends the reader after the wrong fix.
+ */
+export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
+
+/**
  * The namespace the main app answers to.
  *
  * DERIVED, not a second literal: it is what the elision rule yields for the main
@@ -171,8 +185,21 @@ export function currentWorktreeName(): Namespace {
  * Returns a plain `string`, NOT a {@link Namespace}, and that is the point. A
  * checkout name is one INPUT to a namespace, not a namespace: they are equal for
  * every agent worktree today and stop being equal the moment a composition is
- * served from a non-main checkout. Mint the namespace with `namespaceFor` (or
- * `checkoutRef` from the server barrel) instead of passing this through.
+ * served from a non-main checkout. Casting across that gap —
+ * `asNamespace(checkoutWorktreeName(root))` — is how an e2e run came to drive
+ * MAIN's app from a worktree and report ALL CHECKS PASSED, so that expression
+ * is now rejected outright by
+ * `namespace-identity/no-laundered-checkout-namespace`.
+ *
+ * Ask whichever of the two questions you actually have instead:
+ *
+ * - which namespace does this checkout OWN? — `checkoutNamespace(root)`, which
+ *   mints it from git (`namespaceFor` over `checkoutRef`) rather than from a
+ *   basename, and answers whether or not anything was ever deployed;
+ * - which deploy did this checkout PUBLISH? — `resolveCheckoutDeploy(root)`,
+ *   read back out of the `spec.json` that build wrote. It is the only one that
+ *   can answer "nothing yet", and the only one that can name a composition
+ *   deploy (`sonata.att-x`), whose namespace shares no label with this string.
  */
 export function checkoutWorktreeName(root: string): string {
   return basename(root);
@@ -489,8 +516,19 @@ export const worktreeArtifacts = {
  *   report main's build id and build commit.
  *
  * Correct only in a backend, where the gateway sets `SINGULARITY_WORKTREE`. A
- * CLI process must use `worktreeArtifacts.webDist(checkoutWorktreeName(root))`
- * instead — see {@link checkoutWorktreeName}.
+ * CLI process has to name the namespace itself, and the way to do that is to
+ * ask which deploy this checkout published:
+ *
+ *     const r = resolveCheckoutDeploy(root);
+ *     if (r.kind === "resolved") worktreeArtifacts.webDist(r.deploy.namespace);
+ *
+ * This paragraph used to say `webDist(checkoutWorktreeName(root))`, which
+ * builds a namespace out of a directory basename. It does not type-check
+ * without an `asNamespace` cast, and that cast is now a lint error
+ * (`namespace-identity/no-laundered-checkout-namespace`) — because it is a
+ * guess either way: right for an agent worktree that has been built, and a
+ * plausible stranger's dist for one that never was, or that serves a
+ * composition instead.
  */
 export function webDistDir(): string {
   return (

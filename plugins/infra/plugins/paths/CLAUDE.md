@@ -9,6 +9,37 @@ the singularity data root (`~/.singularity/`).
 browser that needs to *name* a directory reads the string literals in the
 `display` sub-plugin instead.
 
+## Three questions that look alike
+
+`~/.singularity/worktrees/` is host-global, so "which namespace?" has three
+different right answers depending on who is asking:
+
+| question | answer | who may ask |
+|---|---|---|
+| which namespace is **this backend** the server for? | `currentWorktreeName()` | a gateway-spawned backend, only |
+| which namespace does **this checkout** own? | `checkoutNamespace(root)` | the CLI, checks |
+| which deploy did this checkout **publish**? | `resolveCheckoutDeploy(root)` | anything driving the deployed app |
+
+The first reads `SINGULARITY_WORKTREE`. Every process an agent pane spawns
+INHERITS that variable from main's backend, so inside a worktree it answers
+`singularity` — which is why a CLI or an e2e script that reads it acts on MAIN's
+deploy while reporting success.
+
+The third is a READ, not a derivation, and that is what makes it safe.
+`./singularity build` records the checkout that published a namespace in that
+namespace's own `spec.json` — the `server` field, an absolute path ending in
+`SERVER_CORE_RELATIVE` — and `deploysForCheckout(root)` matches every registered
+spec against it. So a checkout that has never been built resolves to `none`
+rather than to somebody else's app, and a `--composition` build's namespace
+(`sonata.att-x`, which shares no label with the checkout) is found by the same
+read that finds the plain one. A namespace dir with no `spec.json` is skipped —
+several always are; a spec that exists and cannot be USED — unparseable, or
+naming a `server` path that will not resolve — is collected and judged after the
+whole scan, warned about when something else matched and raised only when
+nothing did. That judgement covers the whole spec, both reads: one bad entry in
+a host-global registry of ~70 must not be able to break every checkout on the
+machine.
+
 ## The data root is a registry, not a string
 
 Everything under `~/.singularity/` is a **declared directory with an owner**.
@@ -136,11 +167,15 @@ run everywhere.
   - Uses:
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/namespace.asNamespace`
+    - `infra/namespace.CheckoutRef`
     - `infra/namespace.isNamespace`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.Namespace`
     - `infra/namespace.namespaceFor`
+    - `infra/spawn.getMainRepoRoot`
   - Exports (types):
+    - `CheckoutDeploy`
+    - `CheckoutDeployResolution`
     - `DataDir`
     - `DataDirKind`
     - `DataDirSpec`
@@ -151,6 +186,8 @@ run everywhere.
   - Exports (values):
     - `BACKUPS_DIR`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutNamespace`
+    - `checkoutRef`
     - `checkoutWorktreeName`
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
@@ -159,12 +196,14 @@ run everywhere.
     - `DATA_DIR_KINDS`
     - `dataRoot`
     - `defineDataDir`
+    - `deploysForCheckout`
     - `getDataDirs`
     - `HOME_DIR`
     - `isHostSingleton`
     - `isMain`
     - `isRelease`
     - `LEGACY_LAYOUT`
+    - `listWorktreeDirs`
     - `MAIN_WORKTREE_NAME`
     - `planMigration`
     - `PLUGINS_DIR`
@@ -173,8 +212,10 @@ run everywhere.
     - `releaseIdentity`
     - `REPO_ROOT`
     - `repoConfigDir`
+    - `resolveCheckoutDeploy`
     - `RUN_TERMINAL_SUFFIX`
     - `RUN_TRANSCRIPT_SUFFIX`
+    - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
     - `WORKTREE_SPEC_FILE`
     - `worktreeArtifacts`
@@ -220,6 +261,7 @@ run everywhere.
     - `debug/timeline`
     - `debug/trace/engine`
     - `debug/worktree-cleanup`
+    - `framework/cli/op-runtime`
     - `framework/tooling/checks`
     - `framework/tooling/guards`
     - `infra/claude-cli`
@@ -255,6 +297,7 @@ run everywhere.
     - `BACKUPS_DIR`
     - `BUILD_ARTIFACTS_RETENTION`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutNamespace`
     - `checkoutRef`
     - `checkoutWorktreeName`
     - `CLAUDE`
@@ -287,6 +330,7 @@ run everywhere.
     - `RUN_ARTIFACTS_RETENTION`
     - `RUN_TERMINAL_SUFFIX`
     - `RUN_TRANSCRIPT_SUFFIX`
+    - `SERVER_CORE_RELATIVE`
     - `setReleaseIdentity`
     - `TMUX`
     - `WEB_CORE_RELATIVE`

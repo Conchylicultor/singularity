@@ -21,6 +21,20 @@ one is unconstrained. The one place they nearly met is the build lock's
 `app-artifacts` — which already has the log loaded — supplies it. There is no
 edge between the two plugins in either direction.
 
+## The receipt has a `core` barrel
+
+Everything else here is CLI machinery, but the deploy receipt
+(`build-status.json`) is a **record**, and reading a record is not a CLI act.
+The e2e harness has to prove that the deploy answering its target is the build
+the checkout it runs from actually published, and the `e2e` runtime may reach a
+plugin's `core` barrel but never its `cli` one. So `build-receipt.ts` sits in
+`core/internal/` and `cli/build-receipt.ts` is a one-line shim onto it. Writing
+the receipt is still the op commands' job; only the reading grew a second door.
+
+`core/` here means runtime-neutral **Node**, not web-safe: the module reaches
+`node:fs` and `paths/core`, whose module scope calls `homedir()`. Nothing in
+`web/` may import it.
+
 ## No path re-exports
 
 There used to be a `paths.ts` here whose entire content was re-exporting
@@ -52,6 +66,20 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
 ## Plugin reference
 
 - Description: Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+- Core:
+  - Uses:
+    - `infra/paths.worktreeArtifacts`
+    - `infra/paths.worktreeDataDir`
+  - Exports (types):
+    - `BuildReceipt`
+    - `BuildReceiptStatus`
+    - `ResolvedReceipt`
+  - Exports (values):
+    - `interruptedPredecessorWarning`
+    - `readBuildReceipt`
+    - `reportInterruptedPredecessor`
+    - `resolveBuildReceipt`
+    - `writeBuildReceipt`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`

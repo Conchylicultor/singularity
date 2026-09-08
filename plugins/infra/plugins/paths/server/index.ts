@@ -3,6 +3,7 @@ export {
   repoConfigDir,
   PLUGINS_DIR,
   WEB_CORE_RELATIVE,
+  SERVER_CORE_RELATIVE,
   webDistDir,
   HOME_DIR,
   BACKUPS_DIR,
@@ -51,11 +52,16 @@ export type {
 
 export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 
-export { listWorktreeDirs } from "./internal/worktree-dirs";
+export { listWorktreeDirs } from "../core/internal/worktree-dirs";
 
-// The checkout half of a namespace. Server-only because answering it means
-// asking git which root owns `.git`, not comparing a basename to a literal.
-export { checkoutRef } from "./internal/checkout-ref";
+// The checkout half of a namespace, and the namespace that mints from it.
+// Answering the first means asking git which root owns `.git`, not comparing a
+// basename to a literal — which is why it is a function and not an expression.
+// It lives in `core` now, where the CLI and an e2e script can reach it (neither
+// may import a `server` barrel from every runtime they run in), and is
+// re-exported here so the server-side callers that take every other path from
+// this barrel keep one import.
+export { checkoutRef, checkoutNamespace } from "../core/internal/checkout-ref";
 
 export {
   pruneWorktreeBuildArtifacts,

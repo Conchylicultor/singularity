@@ -31,11 +31,7 @@ import {
   spawnCaptured,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { checkoutRef } from "@plugins/infra/plugins/paths/server";
-import {
-  MAIN_COMPOSITION_ID,
-  namespaceFor,
-} from "@plugins/infra/plugins/namespace/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 
 // One bound for both capture helpers below, because every command they run is
 // LOCAL git: `rev-parse`, `worktree list`, `status`, and the rebase. Nothing
@@ -278,7 +274,7 @@ const pushAction: CliAction<
   // The op-marker slug (see markWorktreeOpStart below) is this checkout's own
   // namespace — `push` names the main composition, as `build` does. The
   // profiler carries it so the orphan reconciler can check push liveness.
-  const opSlug = namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root0));
+  const opSlug = await checkoutNamespace(root0);
 
   // An interrupted build prints no verdict and sets no exit code its caller
   // can see, so the next op is where it surfaces — and pushing work that was

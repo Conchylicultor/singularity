@@ -1,9 +1,5 @@
-import {
-  MAIN_COMPOSITION_ID,
-  namespaceFor,
-  namespaceUrl,
-} from "@plugins/infra/plugins/namespace/core";
-import { checkoutRef } from "@plugins/infra/plugins/paths/server";
+import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { fillSegment } from "@plugins/primitives/plugins/pane/core";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
@@ -31,15 +27,12 @@ const DETAIL_SEGMENT = "proto/:name";
  *
  * The namespace is minted from the CHECKOUT the command runs in, never from
  * `SINGULARITY_WORKTREE`: the CLI does not set that variable for itself, so
- * reading it would print main's URL from every worktree. `checkoutRef` is the
- * one place the "is this the main checkout?" comparison is made, and
- * `namespaceFor` the one place the elision rule lives.
+ * reading it would print main's URL from every worktree. `checkoutNamespace` is
+ * that mint: it asks git which checkout this root is and applies the elision
+ * rule, so neither half is spelled again here.
  */
 export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
-  const ns = namespaceFor(
-    MAIN_COMPOSITION_ID,
-    await checkoutRef(await getWorktreeRoot()),
-  );
+  const ns = await checkoutNamespace(await getWorktreeRoot());
   return (id) =>
     namespaceUrl(
       ns,

@@ -16,15 +16,11 @@ import {
   type Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
+  checkoutNamespace,
   MAIN_WORKTREE_NAME,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
-import { checkoutRef } from "@plugins/infra/plugins/paths/server";
-import {
-  MAIN_COMPOSITION_ID,
-  namespaceFor,
-  type Namespace,
-} from "@plugins/infra/plugins/namespace/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
   listAllChecks,
   readCheckProgress,
@@ -73,11 +69,9 @@ async function getWorktreeIdentity(): Promise<{
     process.exit(1);
   }
   // `check` runs against the main composition only — same reading as `build`,
-  // where the checkout is the variable half of the pair.
-  return {
-    slug: namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root)),
-    branch,
-  };
+  // where the checkout is the variable half of the pair, which is what
+  // `checkoutNamespace` names.
+  return { slug: await checkoutNamespace(root), branch };
 }
 
 /**

@@ -38,7 +38,8 @@ composition is this?" is answered from provenance, which cannot be ambiguous.
   (`checkoutWorktreeName(root)`), which looks identical today and stops being
   identical the moment a composition is served from a non-main checkout.
 - `CheckoutRef` — `{kind:"main"} | {kind:"worktree",name}`, minted by
-  `checkoutRef(root)` in `@plugins/infra/plugins/paths/server`. A discriminated
+  `checkoutRef(root)`, which lives in `@plugins/infra/plugins/paths/core` and is
+  re-exported by `@plugins/infra/plugins/paths/server`. A discriminated
   union rather than a nullable string because the main checkout's directory
   basename IS `"singularity"`, so a plain string lets a caller mint
   `sonata.singularity`.

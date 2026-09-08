@@ -1,6 +1,10 @@
 import { resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { dataRoot, REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import {
+  dataRoot,
+  REPO_ROOT,
+  SERVER_CORE_RELATIVE,
+} from "@plugins/infra/plugins/paths/server";
 import {
   bootSelfContainedApp,
   gatewayPidFile,
@@ -57,8 +61,7 @@ const run: CliAction<
   // server barrel. The option's help text states the default so it stays
   // discoverable from `serve-app --help`.
   const repoRoot = opts.repoRoot ?? REPO_ROOT;
-  const server =
-    opts.server ?? resolve(repoRoot, "plugins/framework/plugins/server-core");
+  const server = opts.server ?? resolve(repoRoot, SERVER_CORE_RELATIVE);
 
   await bootSelfContainedApp({
     name,

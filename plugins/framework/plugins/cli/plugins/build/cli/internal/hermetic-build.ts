@@ -2,14 +2,10 @@ import { resolve } from "node:path";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   WEB_CORE_RELATIVE,
-  checkoutRef,
+  checkoutNamespace,
   checkoutWorktreeName,
 } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import {
-  MAIN_COMPOSITION_ID,
-  namespaceFor,
-} from "@plugins/infra/plugins/namespace/core";
 import {
   createValveDeps,
   printStepBlocks,
@@ -171,7 +167,7 @@ export async function runHermeticBuild(opts: {
   // gate asks the gateway about and what the check transcript is keyed by. Equal
   // to `name` for every agent worktree today; not equal once a composition is
   // served from a non-main checkout, which is exactly what the brand catches.
-  const namespace = namespaceFor(MAIN_COMPOSITION_ID, await checkoutRef(root));
+  const namespace = await checkoutNamespace(root);
 
   // A release is NOT a build run, so `SINGULARITY_BUILD_ID` is deliberately
   // neither read nor written here: reading it would make a release adopt the

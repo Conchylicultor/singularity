@@ -21,7 +21,10 @@ import type {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { type ValveDeps } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { adaptiveTimeoutMs } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
-import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import {
+  SERVER_CORE_RELATIVE,
+  worktreeDataDir,
+} from "@plugins/infra/plugins/paths/server";
 import {
   buildAndPublishWebDist,
   type ArtifactHooks,
@@ -517,7 +520,10 @@ export async function deployNamespace(
   stampMarker();
   writeWorktreeSpec({
     name: ns,
-    server: resolve(root, "plugins/framework/plugins/server-core"),
+    // The back-pointer a reader follows the other way: `deploysForCheckout`
+    // matches specs against this same constant to answer which deploys a
+    // checkout published, so writer and reader share one spelling.
+    server: resolve(root, SERVER_CORE_RELATIVE),
     web: artifact.livePath,
     // The `server` tree is this checkout's, shared with every namespace it
     // serves, so this is the only thing that tells the spawned backend WHICH

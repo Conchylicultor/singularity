@@ -4,13 +4,46 @@
  * Replaces the byte-identical `arg(name, fallback)` copy that lived in 22 of the
  * 29 scripts, plus the three divergent missing-argument endings (`exit(1)`,
  * `exit(2)`, and one that silently defaulted).
+ *
+ * # Both spellings, because a flag we cannot see is a flag we drop
+ *
+ * `--name value` and `--name=value` are the same flag. Reading only the first
+ * is not a missing convenience: `indexOf("--composition")` answers "absent" to
+ * `--composition=sonata`, so the run does not refuse, does not warn, and does
+ * not target what it was told to — it targets this checkout's own app and
+ * prints ALL CHECKS PASSED. For a *deploy selector* that is precisely the
+ * silently-drove-somebody-else's-app class the target machinery exists to end,
+ * reintroduced one layer below it. So the two spellings are resolved here, once,
+ * for every flag rather than for the ones somebody remembered.
+ *
+ * `--name=` (an empty value) is a value, not an absence — it comes back as `""`,
+ * which is what lets a caller be told they named a flag and gave it nothing
+ * instead of silently getting the default.
  */
+
+/**
+ * The value the caller gave `--name`, in either spelling, or `undefined`.
+ *
+ * A trailing `--name` with nothing after it yields `undefined` (there is no
+ * value), while `--name=` yields `""` (there is one, and it is empty).
+ */
+function argValue(name: string): string | undefined {
+  const bare = `--${name}`;
+  const inline = `${bare}=`;
+  const argv = process.argv;
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (token === undefined) continue;
+    if (token === bare) return argv[i + 1];
+    if (token.startsWith(inline)) return token.slice(inline.length);
+  }
+  return undefined;
+}
 
 export function arg(name: string): string | undefined;
 export function arg(name: string, fallback: string): string;
 export function arg(name: string, fallback?: string): string | undefined {
-  const i = process.argv.indexOf(`--${name}`);
-  return i >= 0 ? (process.argv[i + 1] ?? fallback) : fallback;
+  return argValue(name) ?? fallback;
 }
 
 /** Numeric flag. A non-numeric value is a caller error, not a silent 0. */
@@ -22,9 +55,17 @@ export function numArg(name: string, fallback: number): number {
   return n;
 }
 
-/** Presence-only flag (`--headed`, `--verbose`). */
+/**
+ * Presence-only flag (`--headed`, `--verbose`).
+ *
+ * True for `--name=anything` too, so that a value-taking flag spelled inline is
+ * still PRESENT to the callers that ask presence and value separately to tell
+ * "named it and gave nothing" from "did not name it".
+ */
 export function flag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
+  const bare = `--${name}`;
+  const inline = `${bare}=`;
+  return process.argv.some((t) => t === bare || t.startsWith(inline));
 }
 
 /** Print a usage line and exit non-zero. Never returns. */

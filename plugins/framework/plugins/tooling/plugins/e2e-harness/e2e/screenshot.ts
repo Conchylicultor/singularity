@@ -1,23 +1,32 @@
-// Reusable Playwright capture for UI verification.
-//
-// Use this when you need to *interact* with the app (click a button, inspect
-// state, capture before/after). For a single static snapshot, the simpler
-// `bun run playwright screenshot ...` CLI is fine.
+// Reusable Playwright capture for UI verification — a plain snapshot of a
+// screen, or a before/after around an interaction (click a button, inspect the
+// state it leaves).
 //
 // Usage:
 //   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-//     [--url <url>] [--click <aria-label>] [--out <path>] [--color-scheme dark|light]
+//     [--path <route>] [--click <aria-label>] [--out <path>] [--color-scheme dark|light]
 //
-// --url takes a full page URL: its origin says which deploy, its path says which
-// screen. Omit the path (or the flag) and you get this worktree's own deploy at
-// the root, so the bare command screenshots the app you just built. --base and
-// --origin are aliases. By default the screenshot inherits the host OS
-// appearance (macOS dark/light) so a `colorMode: "system"` app renders exactly as
-// the user sees it. Pass `--color-scheme dark|light` to force one.
+// --path names the screen: `--path /agents`. The deploy is not named at all in
+// the ordinary case — with no target flag this opens the one THIS CHECKOUT
+// published, at the root, so the bare command screenshots the app you just
+// built. There is no hostname to substitute by hand and no way to land on
+// somebody else's app by guessing one: a checkout that has published nothing
+// gets a refusal naming the fix, never a plausible-looking URL.
+//
+// To reach a deploy that is not this checkout's own app:
+//   --composition sonata                  a composition this checkout published
+//   --url http://<ns>.localhost:9000/…    any deploy, path included (its origin
+//                                         says which deploy, its path which
+//                                         screen; --base / --origin are aliases)
+//
+// By default the screenshot inherits the host OS appearance (macOS dark/light)
+// so a `colorMode: "system"` app renders exactly as the user sees it. Pass
+// `--color-scheme dark|light` to force one. Other flags: --wait <ms>,
+// --viewport <WxH>, --headed.
 //
 // Example:
 //   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
-//     --url http://<worktree>.localhost:9000/agents/c/<id> \
+//     --path /agents/c/<id> \
 //     --click "Design docs" \
 //     --out /tmp/docs
 //

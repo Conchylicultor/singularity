@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-namespace-identity",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Lint rule banning the cast of a checkout directory name to a Namespace — a name is one input to a namespace, not a namespace, and the guess names the wrong deploy the moment a composition is served from a non-main checkout."
+}

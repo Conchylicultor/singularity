@@ -1,0 +1,100 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
+
+/**
+ * An e2e script never learns which deploy it drives from the environment.
+ *
+ * `SINGULARITY_WORKTREE` answers a question about a different process:
+ * `gateway/worktree.go` sets it on every backend it spawns, so it means "which
+ * namespace is this BACKEND the server for". An agent's pane is spawned by
+ * main's backend and inherits the var through the tmux server's environment, so
+ * inside a worktree checkout it is always present and always says
+ * `singularity`. A script that reads it therefore drives MAIN's app from a
+ * worktree and prints `ALL CHECKS PASSED` — it did exercise an app, just not
+ * the one under test, and the transcript records a green run against code the
+ * change was not in.
+ *
+ * The reads are not passive either. `withBrowser` opens by restoring the config
+ * documents a previous run left changed, at the resolved origin; and the one
+ * script that carried this expression, `mailbox-tabs-verify.ts`, `rmSync`s a
+ * config file at the namespace it computed. Resolved to main, both of those
+ * land on the user's live documents.
+ *
+ * The pattern is the PREFIX, deliberately, not the one variable name.
+ * `SINGULARITY_E2E_BASE` had the same shape — an inherited channel that
+ * silently outranks the derivation — and was deleted for the same reason, so a
+ * SECOND env-shaped target must be unspellable rather than merely absent today.
+ * A rule keyed on `SINGULARITY_WORKTREE` would watch the one spelling we
+ * already know about.
+ *
+ * Scoped to `e2e/`, which is where the target comes from the deploy registry on
+ * disk instead (`target.ts` → `resolveCheckoutDeploy`). The harness's own
+ * `target.ts` is excluded by path: it is the file that resolves the target at
+ * all, so the check is about the scripts rather than about the resolver. It
+ * reads no environment variable today either — the exclusion names that single
+ * file, not the harness directory, so a second file in the harness reaching for
+ * one is caught like any other.
+ */
+
+/** A read of any `SINGULARITY_*` var — the prefix, not one variable. */
+const OFFENDING = /\bprocess\s*\.\s*env\s*\.\s*SINGULARITY_/;
+
+/** Same shape in POSIX ERE, for the `git grep -l` candidate pre-filter. */
+const GREP_ARG =
+  "process[[:space:]]*\\.[[:space:]]*env[[:space:]]*\\.[[:space:]]*SINGULARITY_";
+
+/**
+ * Only `e2e/` files, and never the harness's own target resolver.
+ *
+ * A pathspec exclusion rather than an allowlist entry, for the same reason as
+ * the sibling check: the one file that may legitimately be *about* target
+ * resolution is identified by WHERE it is, and a second harness file reading the
+ * environment would be exactly as wrong as a script doing it.
+ */
+const PATHSPECS = [
+  "*/e2e/*.ts",
+  ":(exclude)plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/target.ts",
+];
+
+const check: Check = {
+  id: "e2e-harness:target-not-env-derived",
+  description:
+    "e2e scripts derive their target from the deploy this checkout published, never from a `SINGULARITY_*` environment variable — one inherited from main's backend names main from every worktree",
+  async run(): Promise<CheckResult> {
+    const root = await getWorktreeRoot();
+    // Comments are masked unconditionally, so a docblock naming the variable —
+    // including the corrected ones that explain why it must not be read — does
+    // not trip the check. Strings are deliberately left readable: a script that
+    // hands the read to another process as a command string has done the same
+    // thing at one remove.
+    const matches = await grepCode({
+      root,
+      pattern: OFFENDING,
+      grepArg: GREP_ARG,
+      maskStrings: false,
+      pathspecs: PATHSPECS,
+    });
+
+    if (matches.length === 0) return { ok: true };
+
+    const listed = matches
+      .map((m) => `${m.path}:${m.line}  ${m.text.trim()}`)
+      .join("\n    ");
+    return {
+      ok: false,
+      message: `${matches.length} environment-derived target read(s) in e2e scripts:\n    ${listed}`,
+      hint:
+        "An e2e script's process inherits `SINGULARITY_WORKTREE` from the backend that spawned " +
+        "its agent session — in a worktree it answers `singularity`, so reading it silently " +
+        "drives and writes to MAIN's deploy. Use `pathUrl(path)` for a URL, `targetNamespace()` " +
+        "for the namespace whose files you assert on, `--composition <id>` for a composition, " +
+        "`--url` for a deploy this checkout did not build.",
+    };
+  },
+};
+
+export default check;

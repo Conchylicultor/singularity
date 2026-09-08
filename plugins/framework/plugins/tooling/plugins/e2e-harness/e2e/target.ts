@@ -33,7 +33,7 @@
  * there is no origin string for a script to hold, navigate to, or concatenate
  * onto.
  *
- * # The default is derived, never literal
+ * # The default is READ from the registry, never guessed from a name
  *
  * This exists to kill a whole class of rot by construction. Before the
  * per-plugin move, four scripts carried a *literal* ephemeral worktree host as
@@ -42,48 +42,202 @@
  * because a default that is a dead string fails at the browser, not at the type
  * checker.
  *
- * `checkoutWorktreeName(REPO_ROOT)` is the worktree directory name, which is
- * exactly the namespace the gateway serves this worktree's backend under — the
- * same derivation `test/bun-preload.ts` uses for `SINGULARITY_WORKTREE`. So a
- * script run with no arguments at all hits the deploy that `./singularity
- * build` just produced, in every worktree, forever.
+ * The first fix replaced the literal with a *derivation* — the checkout's
+ * directory name, preferring `$SINGULARITY_WORKTREE` — and that failed the same
+ * way, one level up. A name is a guess about what somebody else registered:
+ * `SINGULARITY_WORKTREE` answers "which namespace is this BACKEND the server
+ * for" (`gateway/worktree.go` sets it on the backends it spawns), an agent pane
+ * inherits it through the tmux server, and so from inside any worktree it said
+ * `singularity`. Runs drove MAIN's app and printed ALL CHECKS PASSED — worse,
+ * `withBrowser` opens by POSTing the config repair to the resolved origin, so
+ * every run reverted the user's live documents before doing anything.
+ *
+ * So the target is no longer computed at all. Every deploy RECORDS itself: the
+ * build writes `~/.singularity/worktrees/<ns>/spec.json` naming the absolute
+ * path of the checkout whose backend answers that namespace, and
+ * `resolveCheckoutDeploy(REPO_ROOT)` reads that registry back. A checkout that
+ * has published nothing resolves to nothing and the run REFUSES — which is the
+ * true answer, and the one a name can never give, since a directory basename
+ * always names *some* plausible host. `--composition` reaches the deploys whose
+ * namespace shares no label with the checkout at all (`sonata.att-x`) — the
+ * ones a basename could not name even in principle.
+ *
+ * No environment variable has any spelling in this runtime — not
+ * `SINGULARITY_WORKTREE`, and not the `$SINGULARITY_E2E_BASE` that used to
+ * outrank the derivation here (nothing in the repo ever set it, and an
+ * inherited channel that silently wins is the shape of the bug above). There is
+ * nothing left to prefer or contradict; `--url` covers every operator case and
+ * is per-invocation. `e2e-harness:target-not-env-derived` keeps it that way.
+ *
+ * Naming the deploy is only half of it: `deploy-identity.ts` then PROVES that
+ * the app answering it is the build this checkout published.
  */
+import { resolveBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
+import type { ResolvedReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import {
   REPO_ROOT,
-  checkoutWorktreeName,
+  resolveCheckoutDeploy,
+  worktreesDir,
+} from "@plugins/infra/plugins/paths/core";
+import type {
+  CheckoutDeploy,
+  CheckoutDeployResolution,
 } from "@plugins/infra/plugins/paths/core";
 import {
-  asNamespace,
+  MAIN_COMPOSITION_ID,
+  namespaceFromHost,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
-import { arg, usage } from "./args";
-
-interface Target {
-  /** Scheme + host + port. Never carries a path. */
-  origin: string;
-  /** The page path the caller named, if any — from the URL, or from `--path`. */
-  page: string | undefined;
-}
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { arg, flag, usage } from "./args";
 
 /**
- * The target URL, as the caller spelled it, plus which flag carried it.
+ * The resolved target, carrying HOW it was resolved.
+ *
+ * The two arms are not decoration. Only a target this checkout published has a
+ * build to be checked against — a `--url` may legitimately name a staged
+ * release bundle on its own port, somebody else's worktree, or a remote host.
+ * Putting the deploy on the derived arm alone makes "assert the identity of a
+ * caller-supplied URL" unwritable rather than merely discouraged, which is what
+ * `deploy-identity.ts` leans on.
+ */
+type Target =
+  | { kind: "derived"; origin: string; deploy: CheckoutDeploy; page?: string }
+  | { kind: "stated"; origin: string; flag: string; page?: string };
+
+/** `Target` without the URL halves — what the identity assert is allowed to see. */
+export type TargetDeploy =
+  | { kind: "derived"; origin: string; deploy: CheckoutDeploy }
+  | { kind: "stated" };
+
+/**
+ * The flags that STATE a target, in precedence order.
  *
  * `--base` and `--origin` are ALIASES, not separate flags with their own
  * meaning: every pre-existing invocation keeps working, and there is still only
  * one way for a caller to say "the target".
  */
-function rawTarget(): { raw: string; flag: string } {
-  for (const flag of ["url", "base", "origin"] as const) {
-    const value = arg(flag);
-    if (value !== undefined) return { raw: value, flag: `--${flag}` };
-  }
-  const env = process.env.SINGULARITY_E2E_BASE;
-  if (env !== undefined) return { raw: env, flag: "$SINGULARITY_E2E_BASE" };
+const STATED_FLAGS = ["url", "base", "origin"] as const;
 
-  const name = asNamespace(
-    process.env.SINGULARITY_WORKTREE ?? checkoutWorktreeName(REPO_ROOT),
-  );
-  return { raw: namespaceUrl(name), flag: "<this worktree's deploy>" };
+function statedTarget(): { raw: string; flag: string } | undefined {
+  for (const name of STATED_FLAGS) {
+    const value = arg(name);
+    if (value !== undefined) return { raw: value, flag: `--${name}` };
+  }
+  return undefined;
+}
+
+/** The target as the caller spelled it, before it is parsed as a URL. */
+type RawTarget =
+  | { kind: "derived"; raw: string; flag: string; deploy: CheckoutDeploy }
+  | { kind: "stated"; raw: string; flag: string };
+
+/**
+ * The target URL, from the caller or from the deploy registry.
+ *
+ * `--composition` alongside a stated target is a usage error, not a silent
+ * drop: both flags answer "which deploy", so honouring one and discarding the
+ * other would run against a deploy the caller explicitly did not name. Same
+ * discipline this file already applies to a page named twice.
+ */
+function rawTarget(): RawTarget {
+  const stated = statedTarget();
+  const composition = arg("composition");
+
+  // `arg` answers undefined both for an absent flag and for a `--composition`
+  // with nothing after it, and those are opposite intentions: one means "this
+  // checkout's own app", the other is a deploy selector the run would drop on
+  // the floor and then go green against a different deploy.
+  if (
+    flag("composition") &&
+    (composition === undefined || composition === "")
+  ) {
+    usage(
+      `--composition needs a composition id, e.g. --composition sonata.\n` +
+        `  Drop the flag entirely to target this checkout's own app.`,
+    );
+  }
+
+  if (stated !== undefined) {
+    if (composition !== undefined) {
+      usage(
+        `${stated.flag} names a deploy (${stated.raw}) and so does --composition (${composition}).\n` +
+          `  Pass the deploy once: a URL for any deploy, or --composition for one this\n` +
+          `  checkout published.`,
+      );
+    }
+    return { kind: "stated", raw: stated.raw, flag: stated.flag };
+  }
+
+  const resolution = resolveCheckoutDeploy(REPO_ROOT, composition);
+  if (resolution.kind === "none") noDeploy(composition, resolution);
+  const { deploy } = resolution;
+  return {
+    kind: "derived",
+    raw: namespaceUrl(deploy.namespace),
+    flag: "<this checkout's deploy>",
+    deploy,
+  };
+}
+
+/**
+ * Refuse, saying which of the two very different situations this is.
+ *
+ * "Nothing is registered to this checkout" and "this checkout published a
+ * composition but not its own app" both arrive here as *no deploy*, and they
+ * have opposite fixes — build, versus name the composition that already exists.
+ * The old code could not tell them apart because it never asked the registry:
+ * it built a URL out of a directory name, which is always *a* plausible host,
+ * so both situations silently became a run against somebody else's app.
+ */
+function noDeploy(
+  composition: string | undefined,
+  resolution: Extract<CheckoutDeployResolution, { kind: "none" }>,
+): never {
+  const { others, scanned } = resolution;
+  const checkout = `  checkout   : ${REPO_ROOT}`;
+  // Destructured rather than length-tested: the first deploy is both the
+  // emptiness question and the one this message suggests targeting, so there is
+  // no index read left to have to justify a fallback for.
+  const [first] = others;
+  if (first === undefined) {
+    // The count is the difference between "this machine has no registry" and
+    // "the registry is full and none of it is ours" — a bare `(none)` reads as
+    // the first even when it is the second, and they are not repaired the same
+    // way.
+    const none =
+      scanned === 0
+        ? `(none — nothing at all is registered on this machine)`
+        : `(none of the ${scanned} registered namespace${scanned === 1 ? "" : "s"} is served from this checkout)`;
+    usage(
+      `No deploy for this checkout — there is nothing to run against.\n\n` +
+        `${checkout}\n` +
+        `  registered : ${none}\n\n` +
+        `Nothing under ${worktreesDir()} is registered to this\n` +
+        `checkout's backend, so \`./singularity build\` has never published a deploy from\n` +
+        `here. Run it, then re-run this script.\n` +
+        `To drive a deploy this checkout did not build, name it:\n` +
+        `  --url http://<namespace>.localhost:9000`,
+    );
+  }
+
+  const registered = others
+    .map((d) => `${d.namespace} (composition "${d.composition}")`)
+    .join(`\n${" ".repeat("  registered : ".length)}`);
+  const suggest = first.composition;
+  const head =
+    composition === undefined
+      ? `No deploy for this checkout's own app (composition "${MAIN_COMPOSITION_ID}").`
+      : `No deploy for composition "${composition}" from this checkout.`;
+  const tail =
+    composition === undefined
+      ? `A \`--composition\` build publishes only that composition's namespace, never the\n` +
+        `checkout's own app. Run \`./singularity build\` here to deploy it, or target one\n` +
+        `of the deploys above with --composition ${suggest}.`
+      : `This checkout has published the compositions above, but not "${composition}". Run\n` +
+        `\`./singularity build --composition ${composition}\` here to deploy it, or target one\n` +
+        `of the deploys above with --composition ${suggest}.`;
+  usage(`${head}\n\n${checkout}\n  registered : ${registered}\n\n${tail}`);
 }
 
 /**
@@ -130,17 +284,94 @@ function httpUrl(raw: string, flag: string): URL {
   usage(`${flag} is not an http(s) URL: ${raw}\n${hint}`);
 }
 
+/** How long ago, in the coarsest unit that still says something. */
+function humanDuration(ms: number): string {
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return `${s}s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h}h`;
+  return `${Math.round(h / 24)}d`;
+}
+
+/**
+ * When, relative to now — or the raw stamp when it is not a date.
+ *
+ * The receipt is a file we wrote ourselves, so an unparseable timestamp is a
+ * real fault; but this is a banner line, and refusing the run over a cosmetic
+ * string would be the wrong rung entirely. Showing the value instead of an
+ * invented age says exactly as much as we know.
+ */
+function describeAge(stamp: string): string {
+  const ms = Date.now() - Date.parse(stamp);
+  return Number.isFinite(ms) ? `${humanDuration(ms)} ago` : `at ${stamp}`;
+}
+
+/**
+ * What the receipt's own verdict is called in one word. A `Record` keyed on the
+ * resolved kind rather than a `switch`, so a new receipt state is a type error
+ * here instead of a banner that quietly stops describing it.
+ */
+const BUILD_STATE: Record<Exclude<ResolvedReceipt["kind"], "none">, string> = {
+  ok: "built",
+  running: "started",
+  interrupted: "interrupted",
+  failed: "failed",
+  superseded: "superseded",
+};
+
+/**
+ * The build the receipt describes — which is NOT a claim about what is being
+ * served. `deploy-identity.ts` proves that separately, and warns or refuses
+ * when the two disagree; this line's job is to put the record on screen.
+ *
+ * It does the READ as well, inside a try, because this read must not be able to
+ * end the run. `readBuildReceipt` throws on a receipt that is not valid JSON —
+ * correctly, at the authoritative read in `deploy-identity.ts`, where a receipt
+ * we cannot read is a build we cannot vouch for. Here it would abort every e2e
+ * script in the checkout over a banner line, and for the scripts that bind
+ * `pathUrl` at module top level it would do so at module load, before anything
+ * had a chance to say why. That is the wrong rung, for the reason `describeAge`
+ * above gives about the same file: refusing a run over a cosmetic string is not
+ * a trade this line is entitled to make. So it degrades the way `describeAge`
+ * does — saying exactly what it knows — and the real message still arrives,
+ * with the path and the fix, from the authoritative read moments later.
+ */
+function describeBuild(namespace: Namespace): string {
+  let resolved: ResolvedReceipt;
+  try {
+    resolved = resolveBuildReceipt(namespace);
+  } catch (err) {
+    const why = err instanceof Error ? err.message : String(err);
+    return `build record unreadable: ${why}`;
+  }
+  if (resolved.kind === "none") return "no build recorded";
+  const { buildId, startedAt, finishedAt } = resolved.receipt;
+  // `finishedAt` is null exactly while a build is still running, in which case
+  // the start is the only time it has.
+  const at = finishedAt ?? startedAt;
+  return `${buildId}, ${BUILD_STATE[resolved.kind]} ${describeAge(at)}`;
+}
+
+function describeTarget(t: Target): string {
+  if (t.kind === "stated") return `target: ${t.origin}  (named by ${t.flag})`;
+  const build = describeBuild(t.deploy.namespace);
+  return `target: ${t.origin}  (this checkout's ${t.deploy.composition} deploy, ${build})`;
+}
+
 let parsed: Target | undefined;
 
 /**
- * Split the target once. Memoized so a malformed URL reports once, and so the
- * `--path` conflict cannot be reported twice by two different callers.
+ * Split the target once. Memoized so a malformed URL reports once, so the
+ * `--path` conflict cannot be reported twice by two different callers, and so
+ * the banner below is printed exactly once per run.
  */
 function target(): Target {
   if (parsed) return parsed;
 
-  const { raw, flag } = rawTarget();
-  const url = httpUrl(raw, flag);
+  const raw = rawTarget();
+  const url = httpUrl(raw.raw, raw.flag);
 
   // `/` is what a bare origin parses to, so it is the ABSENCE of a page path,
   // not a request for the root. A script that wants the root asks for it
@@ -151,13 +382,79 @@ function target(): Target {
 
   if (fromUrl !== undefined && fromFlag !== undefined) {
     usage(
-      `${flag} names a page (${fromUrl}) and so does --path (${fromFlag}).\n` +
+      `${raw.flag} names a page (${fromUrl}) and so does --path (${fromFlag}).\n` +
         `  Pass the page once: either in the URL, or as --path against the deploy.`,
     );
   }
 
-  parsed = { origin: url.origin, page: fromUrl ?? fromFlag };
+  const page = fromUrl ?? fromFlag;
+  const resolved: Target =
+    raw.kind === "derived"
+      ? { kind: "derived", origin: url.origin, deploy: raw.deploy, page }
+      : { kind: "stated", origin: url.origin, flag: raw.flag, page };
+
+  // Named HERE, in the one resolution every path goes through, rather than at a
+  // call site: 134 of the 165 scripts never bind `pathUrl` at module top level,
+  // and printed nothing identifying the deploy they drove. That silence is why
+  // a fleet of green runs against MAIN's app left no trace in any transcript.
+  //
+  // stderr, because `target()` resolves lazily — at module load for the scripts
+  // that bind `pathUrl` up top, mid-run for the rest — so on stdout this line
+  // would land inside `perf.ts`'s summary table or `screenshot.ts`'s block for
+  // some callers and not others.
+  //
+  // Described BEFORE the memo is filled, so that describing the target can never
+  // cost the run its banner: a throw from here with `parsed` already assigned
+  // would leave the next `target()` returning a resolved target silently, having
+  // announced nothing — the memo turning a loud failure into the exact silence
+  // this line exists to end.
+  const banner = describeTarget(resolved);
+  parsed = resolved;
+  console.error(banner);
   return parsed;
+}
+
+/**
+ * Which deploy this run resolved, and whether it is one we may make claims
+ * about — for `deploy-identity.ts`, the only caller.
+ *
+ * Deliberately NOT the whole `Target`: re-wrapping drops the page and, on the
+ * stated arm, the origin, so the identity check has nothing to compare and no
+ * URL to compare it at. The rule "a caller-supplied `--url` is never asserted
+ * against this checkout's build" is therefore a shape, not a convention.
+ *
+ * Calling this also FORCES resolution, which is what makes it safe as
+ * `withBrowser`'s first statement — see `assertDeployIdentity`.
+ */
+export function targetDeploy(): TargetDeploy {
+  const t = target();
+  return t.kind === "derived"
+    ? { kind: "derived", origin: t.origin, deploy: t.deploy }
+    : { kind: "stated" };
+}
+
+/**
+ * The namespace of the deploy under test, for a script that must read or assert
+ * on a per-namespace file on disk (a config document, a log, an artifact).
+ *
+ * This is an IDENTITY, not an origin: rebuilding a URL from it with
+ * `namespaceUrl` would ignore `--url` and point the script back at the gateway.
+ * Use `pathUrl` for anything the app answers.
+ */
+export function targetNamespace(): Namespace {
+  const t = target();
+  if (t.kind === "derived") return t.deploy.namespace;
+
+  const name = namespaceFromHost(new URL(t.origin).host);
+  if (name === null) {
+    usage(
+      `${t.flag} names ${t.origin}, whose host is not a gateway namespace, so there is\n` +
+        `  no per-namespace directory under ${worktreesDir()} for this script to read.\n` +
+        `  Point it at a deploy (http://<namespace>.localhost:9000), or drop the flag to\n` +
+        `  use the deploy this checkout published.`,
+    );
+  }
+  return name;
 }
 
 /**

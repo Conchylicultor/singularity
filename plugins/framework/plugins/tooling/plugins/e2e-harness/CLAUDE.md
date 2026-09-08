@@ -18,9 +18,68 @@ naming the path you gave — it would otherwise pass, having tested a screen you
 did not ask for. And a helper never takes a `base` parameter: `openBlankPage`
 and `support/runs.ts` resolve their own target.
 
+## The default target is READ from the registry, never guessed from a name
+
+Pass no target flag and the script drives the deploy **this checkout
+published** — `resolveCheckoutDeploy(REPO_ROOT)` reads every
+`~/.singularity/worktrees/<ns>/spec.json` and keeps the namespaces whose
+`server` path is this checkout's backend. Nothing is derived from a directory
+name, and no environment variable has any spelling in this runtime.
+
+That is not fastidiousness. The default used to be
+`$SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`, and `SINGULARITY_WORKTREE`
+answers a question about a different process: the gateway sets it on the
+backends it spawns, an agent pane inherits it through the tmux server, so from
+inside any worktree it said `singularity`. Argument-less runs drove MAIN's app
+and printed `ALL CHECKS PASSED` — and, since `withBrowser` opens by POSTing the
+config repair to the resolved origin, reverted the user's live config documents
+there before doing anything else. A name is only ever a guess about what
+somebody else registered; the registry is the record the build itself wrote.
+
+So the answers a name could not give are the ones you now get, each as a
+`usage()` refusal (exit 2, before chromium launches and before the first
+request):
+
+- **This checkout has never been built** → `registered : (none)`, and run
+  `./singularity build`. A basename would have handed back a live, plausible,
+  entirely unrelated host.
+- **This checkout published only a composition** → the refusal LISTS what is
+  registered and points at `--composition sonata`. A composition build
+  publishes `sonata.att-x`, whose namespace shares no label with the checkout,
+  so no basename could have named it even in principle.
+- **`--composition x` names one this checkout did not publish** → same shape,
+  listing the ones it did.
+
+`--composition <id>` is the only way to name a composition deploy. Passing it
+alongside `--url` / `--base` / `--origin` is a usage error rather than a silent
+drop: both flags answer "which deploy", so honouring one would run against the
+deploy you explicitly did not name.
+
+Every run prints the deploy it resolved, from inside `target()`'s one memoized
+resolution rather than from a call site — 134 of the 165 scripts never bind
+`pathUrl` at module top level and so printed nothing identifying their target,
+which is why a fleet of green runs against main left no trace in any transcript:
+
+```
+target: http://att-….localhost:9000  (this checkout's singularity deploy, build-…-kb3y1y, built 4m ago)
+```
+
+`targetNamespace()` is for a script that must read or assert on a per-namespace
+file on disk — a config document, a log, an artifact. It hands back an
+IDENTITY, not a way back to an origin: rebuilding a URL from it with
+`namespaceUrl` would ignore `--url` and point the script at the gateway
+instead. Use `pathUrl` for anything the app answers.
+
+`e2e-harness:target-not-env-derived` keeps the class out — any
+`process.env.SINGULARITY_*` under `*/e2e/*.ts` fails the check. The prefix, not
+the one variable: `$SINGULARITY_E2E_BASE` had the same shape (an inherited
+channel that silently outranks the derivation, which nothing in the repo ever
+set) and was deleted with it, so a second env-shaped target has to be
+unspellable rather than merely absent today.
+
 ## A script that goes green without exercising the app is worse than no script
 
-It gets cited as evidence. Two mechanisms here exist only to make that outcome
+It gets cited as evidence. Three mechanisms here exist only to make that outcome
 hard to reach.
 
 **`report()` fails the run on unhandled rejections.** `finish()` ends with an
@@ -42,6 +101,33 @@ last one continues the paused request immediately — the stall ends early, and 
 sleeping handler's `route.continue()` throws `Route is already handled!`. The
 primitive ends its stall on a signal instead of a teardown; the `no-unroute` lint
 rule keeps the broken shape from coming back.
+
+**`assertDeployIdentity()` proves the app answering the target is the build this
+checkout made.** Resolving the right namespace is not the same as reaching the
+right build: point at a deploy nobody rebuilt and every assertion below is made
+against code this checkout did not produce. Two independently written records
+settle it — `build-status.json`, written at the namespace directory's root by
+the build that took the lock, and `.build-id`, written INSIDE the dist that
+build published and served over HTTP by the gateway. Reading the local dist
+instead would be a tautology, since `spec.web` is that same directory. The
+compare is exact and the token must be whitespace-free, because the gateway
+answers an unknown path with the SPA at HTTP 200, so `res.ok` is not evidence of
+a hit.
+
+`withBrowser` awaits it as its FIRST statement, above the config repair, so a
+refusal lands before the first request rather than before the first assertion;
+`agentFetch` awaits it too, which covers the scripts that never open a browser.
+A `--url` skips it entirely — that arm carries no build of ours to compare
+against, by construction — and only an `ok` receipt can refuse. `running`,
+`interrupted`, `failed`, `superseded` and "no receipt" warn on stderr and
+proceed: main auto-builds on every `refs/heads/main` advance and an interrupted
+build is routine, so refusing on those would block every script in a checkout
+over a dist that is almost certainly still the previous, complete, correct one.
+
+Limit: it proves the served DIST, not the backend. A `--no-restart` build
+writes an `ok` receipt with a new dist and leaves the previous backend running,
+so a run can still be green against a new frontend talking to old server code.
+Nothing here can see that — the receipt records one build id for both halves.
 
 ## A run puts the user's config back
 

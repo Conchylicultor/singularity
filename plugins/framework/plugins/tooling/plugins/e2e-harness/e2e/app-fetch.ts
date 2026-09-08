@@ -15,6 +15,7 @@
  */
 import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
 import { basename } from "node:path";
+import { assertDeployIdentity } from "./deploy-identity";
 import { pathUrl } from "./target";
 
 /**
@@ -36,10 +37,15 @@ function originSource(): string {
  * win over nothing — the provenance headers are applied last, deliberately, so
  * a script cannot accidentally unmark itself by spreading a header object.
  */
-export function agentFetch(
+export async function agentFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  // The other half of the wiring in `browser.ts`, and the only one that reaches
+  // a script which never opens a browser (`reports/e2e/fan-out-ceiling.ts`).
+  // Memoized, so this is one probe per run rather than one per request; the
+  // signature already returned a promise, so no caller moves.
+  await assertDeployIdentity();
   return fetch(pathUrl(path), {
     ...init,
     headers: { ...init.headers, ...agentOriginHeaders(originSource()) },

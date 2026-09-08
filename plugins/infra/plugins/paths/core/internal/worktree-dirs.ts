@@ -1,6 +1,6 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { worktreesDir } from "../../core/internal/paths";
+import { worktreesDir } from "./paths";
 
 // Enumerate the real worktree directory names under `worktreesDir()`. The dir
 // also holds non-directory entries (att-*.json sidecars, Finder .DS_Store) —

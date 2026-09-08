@@ -23,13 +23,12 @@ import {
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import {
   WEB_CORE_RELATIVE,
+  checkoutNamespace,
   checkoutRef,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import {
-  MAIN_COMPOSITION_ID,
   NAMESPACE_RE,
-  namespaceFor,
   namespaceUrl,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
@@ -545,7 +544,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // the transcript and the `build_runs` row. Those must live where the
   // backend that serves this checkout can read them — see the artifact
   // locality note in the phase plan.
-  const name = namespaceFor(MAIN_COMPOSITION_ID, checkout);
+  const name = await checkoutNamespace(root);
 
   // WHAT this invocation deploys, decided before anything is spent: an
   // unknown composition, an illegal id or an occupied namespace costs

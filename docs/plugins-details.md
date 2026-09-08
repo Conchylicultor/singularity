@@ -15272,6 +15272,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cli:
             - Uses: `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
         - **`op-runtime`** — Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+          - Core:
+            - Uses:
+              - `infra/paths.worktreeArtifacts`
+              - `infra/paths.worktreeDataDir`
+            - Exports (types):
+              - `BuildReceipt`
+              - `BuildReceiptStatus`
+              - `ResolvedReceipt`
+            - Exports (values):
+              - `interruptedPredecessorWarning`
+              - `readBuildReceipt`
+              - `reportInterruptedPredecessor`
+              - `resolveBuildReceipt`
+              - `writeBuildReceipt`
           - Cross-plugin:
             - Imported by:
               - `framework/cli/build`
@@ -16036,6 +16050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
             - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
+            - **`namespace-identity`** — Lint rule banning the cast of a checkout directory name to a Namespace — a name is one input to a namespace, not a namespace, and the guess names the wrong deploy the moment a composition is served from a non-main checkout.
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
@@ -17737,11 +17752,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/namespace.asNamespace`
+          - `infra/namespace.CheckoutRef`
           - `infra/namespace.isNamespace`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.Namespace`
           - `infra/namespace.namespaceFor`
+          - `infra/spawn.getMainRepoRoot`
         - Exports (types):
+          - `CheckoutDeploy`
+          - `CheckoutDeployResolution`
           - `DataDir`
           - `DataDirKind`
           - `DataDirSpec`
@@ -17752,6 +17771,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `BACKUPS_DIR`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutNamespace`
+          - `checkoutRef`
           - `checkoutWorktreeName`
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
@@ -17760,12 +17781,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DATA_DIR_KINDS`
           - `dataRoot`
           - `defineDataDir`
+          - `deploysForCheckout`
           - `getDataDirs`
           - `HOME_DIR`
           - `isHostSingleton`
           - `isMain`
           - `isRelease`
           - `LEGACY_LAYOUT`
+          - `listWorktreeDirs`
           - `MAIN_WORKTREE_NAME`
           - `planMigration`
           - `PLUGINS_DIR`
@@ -17774,8 +17797,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `releaseIdentity`
           - `REPO_ROOT`
           - `repoConfigDir`
+          - `resolveCheckoutDeploy`
           - `RUN_TERMINAL_SUFFIX`
           - `RUN_TRANSCRIPT_SUFFIX`
+          - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
           - `WORKTREE_SPEC_FILE`
           - `worktreeArtifacts`
@@ -17821,6 +17846,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/trace/engine`
           - `debug/worktree-cleanup`
+          - `framework/cli/op-runtime`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
           - `infra/claude-cli`
@@ -17856,6 +17882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BACKUPS_DIR`
           - `BUILD_ARTIFACTS_RETENTION`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutNamespace`
           - `checkoutRef`
           - `checkoutWorktreeName`
           - `CLAUDE`
@@ -17888,6 +17915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RUN_ARTIFACTS_RETENTION`
           - `RUN_TERMINAL_SUFFIX`
           - `RUN_TRANSCRIPT_SUFFIX`
+          - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
           - `TMUX`
           - `WEB_CORE_RELATIVE`
@@ -18191,6 +18219,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/format`
+          - `infra/paths`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally.
       - Cross-plugin:
         - Imported by: `apps/deploy/health`

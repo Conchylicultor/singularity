@@ -2,6 +2,7 @@ export {
   REPO_ROOT,
   repoConfigDir,
   PLUGINS_DIR,
+  SERVER_CORE_RELATIVE,
   HOME_DIR,
   BACKUPS_DIR,
   worktreesDir,
@@ -23,6 +24,23 @@ export {
   checkoutWorktreeName,
 } from "./internal/paths";
 export type { ReleaseIdentity } from "./internal/paths";
+
+// The registry's own directory listing, and the two questions a CHECKOUT asks
+// of it. All three sit in `core` rather than `server` because their readers are
+// not backends: the CLI mints a checkout's namespace, and an e2e script — which
+// may import no `server` barrel at all — resolves the deploy it is about to
+// drive. The `server` barrel re-exports `listWorktreeDirs` and `checkoutRef`, so
+// their existing server-side callers are unchanged.
+export { listWorktreeDirs } from "./internal/worktree-dirs";
+export { checkoutRef, checkoutNamespace } from "./internal/checkout-ref";
+export {
+  deploysForCheckout,
+  resolveCheckoutDeploy,
+} from "./internal/checkout-deploys";
+export type {
+  CheckoutDeploy,
+  CheckoutDeployResolution,
+} from "./internal/checkout-deploys";
 
 // The declared-directory registry for the data root. `dataRoot()` is the ONLY
 // way to name the root and `defineDataDir` the only way to name anything under

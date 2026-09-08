@@ -24,6 +24,7 @@ import {
   repairAgentConfigWrites,
   settleAgentConfigWrites,
 } from "./agent-writes";
+import { assertDeployIdentity } from "./deploy-identity";
 import { unconsumedPage } from "./target";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
@@ -190,6 +191,14 @@ function assertPageWasConsumed(): void {
 export async function withBrowser<T>(
   fn: (h: Harness) => Promise<T>,
 ): Promise<T> {
+  // PROVE THE DEPLOY FIRST — before the repair below, not after it, and that
+  // order is the highest-value half of this whole check. `repairAgentConfigWrites`
+  // POSTs to the RESOLVED ORIGIN, so while the target was derived from a
+  // directory name every browser script run from a worktree agent session began
+  // by reverting the user's live config documents on MAIN. A refusal has to land
+  // before the first request, not before the first assertion.
+  await assertDeployIdentity();
+
   // START REPAIR, before the browser exists. A previous run killed by Ctrl-C, a
   // SIGKILL or a Playwright timeout never reached its own revert, and its ledger
   // is still on disk — so this is the half no teardown can provide, and the
