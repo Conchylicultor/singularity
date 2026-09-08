@@ -46,11 +46,16 @@ export {
 // the `events/no-raw-events-write` lint rule fails any db.insert/update/delete
 // on this handle outside `events-repo.ts`.
 export { _events as eventsTable } from "./internal/tables";
-export { upsertEvents, markEventsDisappeared } from "./internal/events-repo";
+export {
+  upsertEvents,
+  markEventsDisappeared,
+  reanchorRecurringEvents,
+} from "./internal/events-repo";
 export type {
   EventWriteInput,
   TouchedEvent,
   UpsertEventsResult,
+  ReanchorResult,
 } from "./internal/events-repo";
 export {
   defineEventSourceType,

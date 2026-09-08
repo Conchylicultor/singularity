@@ -45,14 +45,16 @@ export const dateOperatorSet: FilterOperatorSet = {
       ValueInput: DateValueInput,
       predicate: isAfter,
     },
-    // Kept for backward compatibility with already-saved filters, but hidden
-    // from the picker — "Is before/after" plus "Is between" cover the same
-    // intent. A saved rule still evaluates and shows its label in the trigger.
+    // NOT `hidden`, and do not make them so again. The inclusive pair is the
+    // ONLY way to state an open-ended bound that includes the boundary day —
+    // "today and everything after", the single most common date filter there is
+    // (every "Upcoming" view is one). "Is after Today" starts TOMORROW, and
+    // "Is between" demands a second bound the intent does not have, so neither
+    // covers this: hiding them removed the capability rather than tidying it.
     {
       id: "is-on-or-before",
       label: "Is on or before",
       group: "Comparison",
-      hidden: true,
       hasValue: true,
       ValueInput: DateValueInput,
       predicate: isOnOrBefore,
@@ -61,7 +63,6 @@ export const dateOperatorSet: FilterOperatorSet = {
       id: "is-on-or-after",
       label: "Is on or after",
       group: "Comparison",
-      hidden: true,
       hasValue: true,
       ValueInput: DateValueInput,
       predicate: isOnOrAfter,

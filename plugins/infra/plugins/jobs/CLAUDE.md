@@ -448,6 +448,7 @@ Design, measurements, prior art and the risks to watch:
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/events/reanchor`
     - `apps/events/refresh`
     - `apps/events/sources/coworkmeet`
     - `apps/events/sources/dmda`

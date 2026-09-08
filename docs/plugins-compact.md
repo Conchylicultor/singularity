@@ -12,7 +12,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [12 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
-    - **`events`** [21 sub-plugins] — Events — track events from pluggable sources in one database.
+    - **`events`** [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.

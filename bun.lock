@@ -310,6 +310,10 @@
       "name": "@singularity/plugin-apps-events-events-core",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/events/plugins/reanchor": {
+      "name": "@singularity/plugin-apps-events-reanchor",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/events/plugins/refresh": {
       "name": "@singularity/plugin-apps-events-refresh",
       "version": "0.0.1",
@@ -5953,6 +5957,8 @@
     "@singularity/plugin-apps-events-event-list": ["@singularity/plugin-apps-events-event-list@workspace:plugins/apps/plugins/events/plugins/event-list"],
 
     "@singularity/plugin-apps-events-events-core": ["@singularity/plugin-apps-events-events-core@workspace:plugins/apps/plugins/events/plugins/events-core"],
+
+    "@singularity/plugin-apps-events-reanchor": ["@singularity/plugin-apps-events-reanchor@workspace:plugins/apps/plugins/events/plugins/reanchor"],
 
     "@singularity/plugin-apps-events-refresh": ["@singularity/plugin-apps-events-refresh@workspace:plugins/apps/plugins/events/plugins/refresh"],
 

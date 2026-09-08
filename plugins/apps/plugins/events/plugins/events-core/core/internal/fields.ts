@@ -153,6 +153,11 @@ export const eventFields = {
    * fact. They exist so the event list, its keyset query and its date filters
    * keep working on plain indexed columns instead of digging into jsonb.
    *
+   * The three OCCURRENCE ones (`startsAt`, `endsAt`, `allDay`) answer "when is
+   * the next one" and so are true only of the instant they were written at;
+   * `apps/events/reanchor` keeps them current. The two SERIES ones
+   * (`recurring`, `recurrenceLabel`) restate the rule and never decay.
+   *
    * NOT NULL with no DB default (`server/internal/tables.ts` gives it none):
    * there is no honest constant for "when", so a row without a date must be
    * unrepresentable rather than silently epoch-dated.
@@ -161,7 +166,17 @@ export const eventFields = {
     schema: EventDateSchema,
     default: UNREACHABLE_DATE_DEFAULT,
   }),
-  /** Projection of `date`: for a series, the NEXT occurrence's anchor. */
+  /**
+   * Projection of `date`: for a series, the NEXT occurrence's anchor.
+   *
+   * That is a claim about NOW, so unlike the other four projections this one
+   * expires — the moment the occurrence it names passes, the column is a lie
+   * and every "upcoming" filter (`startsAt >= today`) drops a series that is
+   * still running. It is therefore maintained derived state, and the
+   * `apps/events/reanchor` plugin is its maintainer: it rolls this column (with
+   * `endsAt` / `allDay`) forward from `date` on a schedule and at boot, so
+   * correctness does not depend on the source being re-extracted.
+   */
   startsAt: dateField(),
   endsAt: nullable(dateField()),
   allDay: boolField(),

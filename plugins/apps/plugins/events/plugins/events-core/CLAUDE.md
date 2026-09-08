@@ -61,6 +61,10 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
 - `events` — one row per event *or series*: `date` (jsonb, `event-date`) states
   recurrence once, and `starts_at`/`ends_at`/`all_day`/`recurring`/
   `recurrence_label` are its projections, written only via `eventDateProjection`.
+  The three OCCURRENCE ones answer "when is the next one", so they expire when
+  that occurrence passes: `apps/events/reanchor` re-derives them hourly and at
+  boot. Don't drop it — without a maintainer a still-running series falls out of
+  every `starts_at >= today` view as soon as its source stops being re-extracted.
   There is no `series_key`: the row IS the series and its `external_id` is the
   key. `date` is NOT NULL with **no** DB default — there is no honest constant
   for "when", so a write that omits it must fail loudly.
@@ -89,7 +93,8 @@ Four `defineEntity` tables, field records in `core/internal/fields.ts`:
   `GET /api/events/runs/:runId/events` (the event row + its action, flat).
 
 **All `events` writes go through the repo funnel**, `upsertEvents()` /
-`markEventsDisappeared()` in `server/internal/events-repo.ts`. The
+`markEventsDisappeared()` / `reanchorRecurringEvents()` in
+`server/internal/events-repo.ts`. The
 `events.revision` tick is `count(*) + max(updated_at)`, so a write that omits
 the stamp lands in the DB but never reaches an open DataView. The funnel owns
 the stamp, the barrel exports `events` only as the read handle `eventsTable`,
@@ -165,6 +170,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventWriteInput`
     - `ProbeContext`
     - `ProbeResult`
+    - `ReanchorResult`
     - `RefreshRunner`
     - `TouchedEvent`
     - `UpsertEventsResult`
@@ -185,6 +191,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `listRuns`
     - `listSources`
     - `markEventsDisappeared`
+    - `reanchorRecurringEvents`
     - `registerRefreshRunner`
     - `requireRun`
     - `requireSource`
@@ -283,6 +290,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
 - Cross-plugin:
   - Imported by:
     - `apps/events/event-list`
+    - `apps/events/reanchor`
     - `apps/events/refresh`
     - `apps/events/sources`
     - `apps/events/sources/coworkmeet`

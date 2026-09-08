@@ -1335,6 +1335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventWriteInput`
               - `ProbeContext`
               - `ProbeResult`
+              - `ReanchorResult`
               - `RefreshRunner`
               - `TouchedEvent`
               - `UpsertEventsResult`
@@ -1355,6 +1356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `listRuns`
               - `listSources`
               - `markEventsDisappeared`
+              - `reanchorRecurringEvents`
               - `registerRefreshRunner`
               - `requireRun`
               - `requireSource`
@@ -1453,6 +1455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/events/event-list`
+              - `apps/events/reanchor`
               - `apps/events/refresh`
               - `apps/events/sources`
               - `apps/events/sources/coworkmeet`
@@ -1468,6 +1471,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/settings`
               - `apps/events/sources/source-field`
               - `apps/events/sources/url-extract`
+        - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
+          - Server:
+            - Uses:
+              - `apps/events/events-core.reanchorRecurringEvents`
+              - `infra/jobs.defineJob`
+            - Register: `defineJob('events.reanchor')`
         - **`refresh`** — Events refresh engine: the main-only cadence tick and the per-source refresh job, the probe/extract runSource pipeline (fingerprint cache → upsert diff → soft disappearance), the run ledger, terminal/transient error classification onto the source row, and the retention sweeps for events + runs.
           - Server:
             - Uses:
@@ -17218,6 +17227,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/events/reanchor`
           - `apps/events/refresh`
           - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`

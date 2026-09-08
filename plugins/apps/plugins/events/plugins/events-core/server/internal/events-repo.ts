@@ -1,6 +1,7 @@
 import { and, eq, isNull, notInArray, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { RunEventAction } from "../../core";
+import { planReanchor } from "./plan-reanchor";
 import { _events } from "./tables";
 
 // THE ONLY sanctioned write path to `events`.
@@ -11,13 +12,15 @@ import { _events } from "./tables";
 // invisible in tests, that any future writer re-introduces for free. Here the
 // stamp is applied by the only code that can write, so forgetting it is not
 // expressible. The barrel therefore exports the events table as a READ handle
-// (`eventsTable`) plus these two writers, and the `events/no-raw-events-write`
+// (`eventsTable`) plus the writers below, and the `events/no-raw-events-write`
 // lint rule fails any `db.insert/update/delete(eventsTable)` outside this file.
 //
-// The two functions below are the only two write SHAPES the engine performs
-// ("upsert diff → stamp disappearedAt"). Everything else about refreshing —
-// externalId derivation, the run ledger, error classification, scheduling — is
-// the `refresh` plugin's, and is deliberately not here.
+// The three functions below are the only write SHAPES performed on `events`:
+// the extraction diff ("upsert → stamp disappearedAt") plus the re-anchor that
+// keeps a recurring row's occurrence projection current as time passes.
+// Everything else about refreshing — externalId derivation, the run ledger,
+// error classification, scheduling — is the `refresh` plugin's, and is
+// deliberately not here.
 
 /**
  * One event as the engine hands it over: every column except the row-lifecycle
@@ -162,4 +165,111 @@ export async function markEventsDisappeared(
     )
     .returning({ id: _events.id });
   return rows.map((row) => ({ eventId: row.id, action: "disappeared" }));
+}
+
+/** What one re-anchor pass did. Counts, not ids: nothing consumes the rows. */
+export interface ReanchorResult {
+  /** Recurring rows examined — every one of them, see below. */
+  checked: number;
+  /** …of those, the ones whose stored anchor was not the right occurrence. */
+  moved: number;
+  /** …of those, the series that are simply over (no occurrence left). */
+  exhausted: number;
+}
+
+/** Start of `t`'s LOCAL day — the granularity every date filter compares at. */
+function startOfLocalDay(t: Date): Date {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Move every recurring row's occurrence projection forward to its next
+ * occurrence as of `now`.
+ *
+ * `events.date` is the authority and does not decay: it carries the rule plus
+ * the anchor the extractor stated, so the next occurrence is derivable from it
+ * at any instant. The `startsAt` / `endsAt` / `allDay` COLUMNS are the
+ * denormalized answer for one instant — the one the extraction ran at — because
+ * the list filters, sorts and keyset-paginates on plain indexed columns rather
+ * than digging into jsonb. That answer expires the moment the occurrence it
+ * names passes.
+ *
+ * So the columns are maintained derived state, and this is the maintainer.
+ * Without it a weekly event keeps claiming to start on the last day it was
+ * scraped, and every "upcoming" view — a `startsAt >= today` filter — silently
+ * drops a series that is still running. That is not hypothetical: it is what
+ * made six live weekly events invisible on the Events list, and it gets worse
+ * the longer a source goes without a re-extraction (a manual-refresh source
+ * goes without one indefinitely).
+ *
+ * EVERY recurring row is examined, not just the ones whose anchor has visibly
+ * passed. The invariant being restored is "`startsAt` is the occurrence at or
+ * after the start of today", and a row can violate it in both directions — an
+ * anchor too far FORWARD (a bad extraction, or a sweep that once resolved at
+ * the wall clock and skipped an all-day occurrence) is invisible to a
+ * `startsAt < today` candidate query, so such a query can only ratchet and
+ * never converge. Checking all of them costs one indexed read of a set bounded
+ * by the recurring events, and `planReanchor` answers `keep` for the ones
+ * already right, so a correct pass still writes nothing.
+ *
+ * Deliberately NOT limited: a cap would leave the remainder stale, which is the
+ * exact bug this closes.
+ *
+ * A series with no occurrence left is left ALONE rather than stamped or
+ * deleted. Its last anchor is the honest answer to "when does this happen" —
+ * it happened, and it is over — and falling out of an "upcoming" filter is
+ * then correct rather than a symptom.
+ *
+ * Disappeared rows are re-anchored too: the column means the same thing on
+ * every row, and a row the source stops listing is hidden by the query's own
+ * default rather than by a lie in its date.
+ */
+export async function reanchorRecurringEvents(
+  now: Date,
+): Promise<ReanchorResult> {
+  // ONE notion of "current" for the whole pass, and it is the DAY — the unit the
+  // filters this column feeds compare at. An occurrence that started earlier
+  // today is still today's, so resolving at the wall clock instead would skip it
+  // and hide a series from the day it is running on.
+  const today = startOfLocalDay(now);
+
+  const rows = await db
+    .select({
+      id: _events.id,
+      date: _events.date,
+      startsAt: _events.startsAt,
+    })
+    .from(_events)
+    .where(eq(_events.recurring, true));
+
+  if (rows.length === 0) return { checked: 0, moved: 0, exhausted: 0 };
+
+  let moved = 0;
+  let exhausted = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      const plan = planReanchor(row.date, row.startsAt, today);
+      if (plan.kind === "over") {
+        exhausted += 1;
+        continue;
+      }
+      if (plan.kind === "keep") continue;
+
+      await tx
+        .update(_events)
+        .set({
+          startsAt: plan.occurrence.startsAt,
+          endsAt: plan.occurrence.endsAt,
+          allDay: plan.occurrence.allDay,
+          updatedAt: new Date(),
+        })
+        .where(eq(_events.id, row.id));
+      moved += 1;
+    }
+  });
+
+  return { checked: rows.length, moved, exhausted };
 }
