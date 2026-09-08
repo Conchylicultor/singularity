@@ -29,6 +29,7 @@ import {
   listAllChecks,
   readCheckProgress,
   runChecks,
+  requestedJobs,
   scopeOf,
   type RunChecksOptions,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -121,8 +122,20 @@ function printProgress(): void {
       );
       continue;
     }
+    // Three numbers, not two, because the runner gates its fan-out: a check
+    // that has not started is now a normal state (waiting for a slot) rather
+    // than an impossible one. Reporting only "settled / outstanding" under a
+    // bound would make a healthy run look like it had lost most of its work —
+    // 18 running out of 100 selected, with nothing said about the other 82.
+    // The queued set is derived from the same records (`selected` minus
+    // everything that ever started), so it cannot disagree with them. It is
+    // non-null exactly when `selected` is — both come off the one `selected`
+    // record — and the branch above has already returned for that case; they
+    // are separate fields, so the `??` is the pairing TS cannot state.
+    const queued = run.queued ?? [];
     console.log(
-      `  ${run.endedCount}/${run.selected.length} settled, ${run.outstanding.length} outstanding`,
+      `  ${run.outstanding.length} running, ${queued.length} queued, ` +
+        `${run.endedCount}/${run.selected.length} settled`,
     );
     // Longest-running first: under a hang that is the suspect, by construction.
     for (const o of [...run.outstanding].sort(
@@ -154,6 +167,7 @@ const run: CliAction<
     scope?: string;
     alwaysRun?: boolean;
     runId?: string;
+    jobs?: string;
   }
 > = async (checks, opts) => {
   // Validate before anything else: an unrecognized scope must NOT fall
@@ -220,6 +234,21 @@ const run: CliAction<
     printProgress();
     return;
   }
+
+  // Validated once the two PURE READS above have returned, and not before.
+  // Refusing early is right for a run — `runChecks` validates this too, but it
+  // does so inside `withHostGrant`, so a typo'd `--jobs` would queue for a host
+  // CPU slot (minutes, under load) just to be told it was a typo. But `--list`
+  // and `--status` acquire no grant and run no check, and `--status` is the tool
+  // you reach for from a second shell WHILE a run is wedged. A stale
+  // `SINGULARITY_CHECK_JOBS=auto` in a shell profile must not be what stops you
+  // reading the progress log during an incident.
+  //
+  // Deliberately the runner's own `requestedJobs`, not a second check that
+  // happens to agree today: one rule about one number, called from both ends.
+  // The return value is discarded — this call is for its throw. It covers the
+  // env var too, which the runner reads itself.
+  requestedJobs(opts.jobs !== undefined ? Number(opts.jobs) : undefined);
   // Gated on `!nested`: the parent op printed the same banner before it
   // spawned us, and a nested check re-printing it is pure noise.
   if (!nested) await checkBroadcasts("check");
@@ -354,6 +383,16 @@ const run: CliAction<
               profiler.recordStep(id, durationMs, wallStartMs)
           : undefined,
         noCache: opts.cache === false,
+        // Commander hands every `<n>` option through as a string, so the
+        // conversion happens here and the VALIDATION does not: `runChecks`
+        // rejects anything that is not a positive integer, with one message
+        // covering both this flag and SINGULARITY_CHECK_JOBS (which it reads
+        // itself — that is the knob `build` and `push` reach, since they spawn
+        // this command and inherit the environment). Splitting the check across
+        // both sites would be two rules that could disagree about the same
+        // number, so `Number("x")` is passed on as `NaN` for the runner to
+        // reject by name.
+        jobs: opts.jobs !== undefined ? Number(opts.jobs) : undefined,
         scope,
         alwaysRun: opts.alwaysRun === true,
         logRun: { worktree: slug, runId: opId },

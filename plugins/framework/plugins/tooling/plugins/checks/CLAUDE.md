@@ -92,6 +92,53 @@ from a `git merge-base` read the recording view cannot observe, and
 [`test-layout:runner-split`](../test-layout/check/index.ts) discovers files via
 `git ls-files` and reads `bunfig.toml` / `vitest.config.ts` directly.
 
+## The check fan-out is gated, and the gate is an instrument
+
+`runChecks()` gates its per-check fan-out with a `createSemaphore` (the repo's
+canonical in-process bound). **The default width is unbounded** — one slot per
+selected check, i.e. the behaviour that predates the gate — and `--jobs <n>` /
+`SINGULARITY_CHECK_JOBS` narrow it. The env var is the one `build` and `push`
+reach: neither calls `runChecks` in-process, they spawn the `check` command, and
+the child inherits `...process.env`.
+
+The width exists to make the timings mean something, not to tune throughput.
+Unbounded, ~100 checks start within ~3s of each other, so every recorded
+`durationMs` is mostly the wave's own length — twelve unrelated checks each
+"cost" ~260s. So **`wallStart` is captured INSIDE the gate**, after it grants,
+with the slot-wait recorded separately as `queuedMs` on the `end` record. Move
+that `performance.now()` back outside and the queue reappears inside every
+duration: intact-looking, measuring nothing.
+
+`--jobs 1` is the point of it — a serial run is the only trustworthy per-check
+cost table, and the way to corner a wedged check. **Only width 1**: read at width
+4 the suite ranks `table-defs-in-schema-glob` second at 131s; serially it is
+5.8s. A merely narrower run still reorders the table.
+
+Why the default stays unbounded: wall clock improves monotonically with width
+(~337s at one-per-core vs ~196s unbounded), while a run's self-reported durations
+degrade 23×. Narrowing by default would tax every run for a fleet benefit nobody
+has measured. Measure that first — see
+[`research/2026-09-02-global-bounded-check-fan-out.md`](../../../../../research/2026-09-02-global-bounded-check-fan-out.md).
+
+**The gate is NOT `options.grant`. Do not merge them.** One `Grant` is shared by
+the whole run and wraps one `createSemaphore(units)` with no reentrancy, while
+checks call it from *inside* their own bodies (`type-check` per tsc worker;
+`layout-geometry` as `ctx.grant.run(() => browserPool.run(fn))`). Wrapping each
+check in `grant.run()` therefore deadlocks at `units === 1` — which `acquireShare`
+may legitimately return under load: the outer wrap holds the only slot while the
+check's body waits for a slot only its own completion can free. Same bug class
+`host-read-pool` hit (`research/perfs/2026-07-10-read-admit-wedge-stuck-git-loaders.md`);
+here the answer is not to nest at all. It would also over-serialise: `grant.units`
+sizes CPU-bound workers (~6 background), but most checks are spawn/IO-bound and
+can correctly run wider. The grant bounds a check's heavy *children*; the gate
+bounds how many *checks* run.
+
+`checkStarted` is inside the gate too, so "started" keeps meaning "running" and a
+hang is still `started − ended`. Queued checks are derived
+(`selected − ever-started`), never recorded — a second source for that fact could
+disagree with the start/end records. The bound's one real cost: a wedged check
+eventually stalls the run behind it, where before its peers drained.
+
 ## Bumping the cache-key format version
 
 Slot names carry `CACHE_KEY_VERSION` ([`core/cache.ts`](core/cache.ts)). Bump it
@@ -120,6 +167,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/paths.worktreeArtifacts`
     - `infra/spawn.getWorktreeRoot`
     - `infra/spawn.spawnCaptured`
+    - `packages/semaphore.createSemaphore`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.lineAt`
     - `plugin-meta/parse-utils.maskSource`
@@ -164,6 +212,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `openCheckCache`
     - `publishWarmBase`
     - `readCheckProgress`
+    - `requestedJobs`
     - `runChecks`
     - `scopeOf`
     - `tsBuildInfoPath`

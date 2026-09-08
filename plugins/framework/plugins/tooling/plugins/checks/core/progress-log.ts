@@ -78,6 +78,23 @@ export type ProgressRecord =
       durationMs: number;
       ok: boolean;
       cached: boolean;
+      /**
+       * Milliseconds this check spent waiting for a slot in the runner's
+       * concurrency gate, before its body started. Recorded BESIDE `durationMs`
+       * rather than inside it, which is the whole reason the gate is worth
+       * having: with an unbounded fan-out every recorded duration was mostly
+       * the wave's own length, so twelve unrelated checks all "cost" 260s. A
+       * reader that wants the check's share of the wall clock adds the two; a
+       * reader that wants its COST reads `durationMs` alone and now gets an
+       * answer that means something.
+       *
+       * OPTIONAL on the wire, required on `checkEnded` — this is a durable log
+       * that predates the gate, so the rotations still on disk hold `end` lines
+       * without the field. Every line THIS code writes has it. The reader
+       * normalizes a missing one to 0, which is not a stand-in for an unknown:
+       * a pre-gate run had no queue, so 0 is that run's true wait.
+       */
+      queuedMs?: number;
     })
   | (RecordBase & {
       phase: "pending";
@@ -138,12 +155,19 @@ export interface ProgressRun {
   resolved(treeHash: string | null, selected: string[]): void;
   /** Record a check entering its body. Written BEFORE the body runs. */
   checkStarted(checkId: string): void;
-  /** Record a check settling. Written from a `finally`, so a throw still lands. */
+  /**
+   * Record a check settling. Written from a `finally`, so a throw still lands.
+   *
+   * `queuedMs` is the time spent waiting for a slot in the runner's concurrency
+   * gate — separate from `durationMs` on purpose, so a bounded run's per-check
+   * cost is never inflated by the queue in front of it.
+   */
   checkEnded(
     checkId: string,
     durationMs: number,
     ok: boolean,
     cached: boolean,
+    queuedMs: number,
   ): void;
   /** Write the terminal `done` record and stop the heartbeat. Idempotent-safe. */
   finish(allOk: boolean): void;
@@ -248,7 +272,7 @@ export function openProgressRun(args: {
       inFlight.add(checkId);
       writeRecord({ ...stamp(), phase: "start", checkId });
     },
-    checkEnded(checkId, durationMs, ok, cached) {
+    checkEnded(checkId, durationMs, ok, cached, queuedMs) {
       inFlight.delete(checkId);
       writeRecord({
         ...stamp(),
@@ -257,6 +281,7 @@ export function openProgressRun(args: {
         durationMs,
         ok,
         cached,
+        queuedMs,
       });
     },
     finish(allOk) {
@@ -314,7 +339,23 @@ export interface CheckRunProgress {
     durationMs: number;
     ok: boolean;
     cached: boolean;
+    /** Slot-wait ahead of the body; see the `end` record's own doc. */
+    queuedMs: number;
   }>;
+  /**
+   * `selected − everything that has ever started`: the checks the runner's
+   * concurrency gate is still holding back. DERIVED, not recorded — a queued
+   * check writes no line of its own, and a second record saying "queued" could
+   * disagree with the start/end records about the same check.
+   *
+   * Null while `selected` is null, for the same reason `selected` is: until
+   * bootstrap resolves the selection there is no set to subtract from, and an
+   * empty array here would read as "nothing waiting" rather than "not known
+   * yet". Without this, a bounded run looks emptier than it is — `--status`
+   * would report `width` running out of a hundred selected and say nothing
+   * about the ninety-odd that have not been let in.
+   */
+  queued: string[] | null;
   /**
    * Bootstrap phases started and never ended. Non-empty means the run never
    * reached its checks at all — read this BEFORE `outstanding`, which is
@@ -352,6 +393,10 @@ export function readCheckProgress(): CheckRunProgress[] {
   const runs = new Map<string, CheckRunProgress>();
   const startsByRun = new Map<string, Map<string, string>>();
   const bootstrapByRun = new Map<string, Map<string, string>>();
+  // Every check that has EVER started, unlike `startsByRun`, from which an `end`
+  // removes its entry. The queued set is `selected − this` — subtracting the
+  // still-outstanding set alone would report every settled check as queued.
+  const everStartedByRun = new Map<string, Set<string>>();
 
   for (const record of result.records) {
     if (record.phase === "run") {
@@ -370,10 +415,12 @@ export function readCheckProgress(): CheckRunProgress[] {
         completed: [],
         outstandingBootstrap: [],
         outstanding: [],
+        queued: null,
         done: null,
       });
       startsByRun.set(record.runId, new Map());
       bootstrapByRun.set(record.runId, new Map());
+      everStartedByRun.set(record.runId, new Set());
       continue;
     }
     const run = runs.get(record.runId);
@@ -395,6 +442,7 @@ export function readCheckProgress(): CheckRunProgress[] {
     } else if (record.phase === "start") {
       run.startedCount += 1;
       starts.set(record.checkId, record.t);
+      everStartedByRun.get(record.runId)?.add(record.checkId);
     } else if (record.phase === "end") {
       run.endedCount += 1;
       starts.delete(record.checkId);
@@ -404,6 +452,10 @@ export function readCheckProgress(): CheckRunProgress[] {
         durationMs: record.durationMs,
         ok: record.ok,
         cached: record.cached,
+        // Records written before the gate landed carry no `queuedMs`. They were
+        // written by an UNBOUNDED run, where every check started immediately —
+        // so 0 is that run's true wait, not a stand-in for an unknown.
+        queuedMs: record.queuedMs ?? 0,
       });
     } else if (record.phase === "done") {
       run.done = {
@@ -426,6 +478,14 @@ export function readCheckProgress(): CheckRunProgress[] {
       }));
     run.outstanding = outstandingFrom(startsByRun.get(run.runId));
     run.outstandingBootstrap = outstandingFrom(bootstrapByRun.get(run.runId));
+    // Derived here rather than recorded: `selected` already says what the run
+    // will run, and start/end already say what it has let in. Anything a queued
+    // check could write would be a second spelling of that difference.
+    const everStarted = everStartedByRun.get(run.runId);
+    run.queued =
+      run.selected === null || !everStarted
+        ? null
+        : run.selected.filter((id) => !everStarted.has(id));
   }
 
   return [...runs.values()].sort(

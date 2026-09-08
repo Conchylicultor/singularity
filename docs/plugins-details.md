@@ -15519,6 +15519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreeArtifacts`
               - `infra/spawn.getWorktreeRoot`
               - `infra/spawn.spawnCaptured`
+              - `packages/semaphore.createSemaphore`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.lineAt`
               - `plugin-meta/parse-utils.maskSource`
@@ -15563,6 +15564,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `openCheckCache`
               - `publishWarmBase`
               - `readCheckProgress`
+              - `requestedJobs`
               - `runChecks`
               - `scopeOf`
               - `tsBuildInfoPath`
@@ -18569,6 +18571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
+          - `framework/tooling/checks`
           - `framework/tooling/web-artifacts`
           - `infra/endpoints`
           - `plugin-meta/barrel-import`

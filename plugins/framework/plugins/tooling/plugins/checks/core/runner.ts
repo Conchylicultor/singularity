@@ -7,6 +7,7 @@ import type {
   CheckScope,
 } from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
@@ -124,6 +125,24 @@ export interface RunChecksOptions {
    */
   grant: Grant;
   onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
+  /**
+   * How many checks may run at once. Omitted, the run is UNBOUNDED — every
+   * selected check starts at once, exactly as it did before this gate existed,
+   * so nothing a caller did not ask for gets slower. The width is an
+   * instrument a caller reaches for deliberately (`--jobs 1` to read true
+   * per-check costs, a small width to debug a hang), not a policy the runner
+   * imposes; the measured reason is on the `width` expression below.
+   *
+   * This is deliberately NOT `grant.units`. The grant is a CPU budget the
+   * caller already holds and hands to every check, and a check spends it on its
+   * own heavy children — `type-check` calls `ctx.grant.run()` per tsc worker
+   * from inside its `run()` body, `layout-geometry` wraps a browser launch in
+   * it. Reusing it as the outer gate would deadlock at `units === 1`: the outer
+   * wrap holds the only slot while the check's own body waits for a slot that
+   * only that check's completion can free. Two resources, two gates, no
+   * nesting. See `checks/CLAUDE.md`.
+   */
+  jobs?: number;
   log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
@@ -171,6 +190,49 @@ export interface RunChecksOptions {
   logRun?: { worktree: Namespace; runId: string };
 }
 
+/**
+ * The requested fan-out width, or null for "the runner decides". Resolved from
+ * the option first and the environment second.
+ *
+ * The env read lives HERE, beside `SINGULARITY_CHECK_NO_CACHE` and for the same
+ * structural reason: `build` and `push` do not call `runChecks` in-process, they
+ * spawn the `check` command, and `runCheckSubprocess` hands the child
+ * `...process.env` (op-runtime/cli/check-subprocess.ts). So an env knob reaches
+ * every check pass on the box with nothing to thread through two CLI actions and
+ * a subprocess argv. Read in the runner rather than in the one CLI action so
+ * that stays true for any future caller.
+ *
+ * A malformed value THROWS rather than falling back to the default: a typo'd
+ * `--jobs` or a stale `SINGULARITY_CHECK_JOBS=auto` in a shell profile would
+ * otherwise silently run at a width nobody asked for, and the whole point of the
+ * knob is that the width is known.
+ *
+ * EXPORTED so a caller can reject a bad value BEFORE paying for a host CPU
+ * grant. `runChecks` runs under one, so validating only here made a typo wait
+ * out the grant queue — minutes, under load — to be told it was a typo. The CLI
+ * action calls this first and the runner still calls it again: one rule, two
+ * call sites, rather than a second copy in the CLI that could disagree with this
+ * one about the same number.
+ */
+export function requestedJobs(jobs: number | undefined): number | null {
+  const fromEnv = process.env.SINGULARITY_CHECK_JOBS;
+  const source =
+    jobs !== undefined
+      ? { value: jobs, from: "jobs option / --jobs" }
+      : fromEnv !== undefined && fromEnv !== ""
+        ? { value: Number(fromEnv), from: `SINGULARITY_CHECK_JOBS=${fromEnv}` }
+        : null;
+  if (source === null) return null;
+  if (!Number.isInteger(source.value) || source.value < 1) {
+    throw new Error(
+      `Invalid check concurrency (${source.from}): expected a positive integer, got ${source.value}. ` +
+        `1 runs the suite serially, which is the only way to read a true per-check cost; ` +
+        `omit it entirely to let the runner size the fan-out to this host.`,
+    );
+  }
+  return source.value;
+}
+
 export async function runChecks(
   ids: string[] | undefined,
   options: RunChecksOptions,
@@ -204,6 +266,13 @@ export async function runChecks(
         "pass instead: `runCheckSubprocess(...)` from cli/plugins/op-runtime/cli/check-subprocess.ts.",
     );
   }
+
+  // Validated up here with the process guard, and for that guard's reason: a
+  // refused call must not leave a phantom open run behind for `--status` to
+  // report as a hang. The number this returns is not the width — that also
+  // depends on how many checks the filters below select — but whether the
+  // REQUEST is well-formed is knowable now, with no work done.
+  const jobs = requestedJobs(options.jobs);
 
   // Durable, per-run progress records (~/.singularity/logs/check-progress/check-progress.jsonl).
   // These exist because a single hung check makes the whole run report NOTHING:
@@ -527,38 +596,99 @@ export async function runChecks(
     };
   };
 
+  // How many checks run at once. Resolved HERE, after the filters, because the
+  // selection is half the answer: a semaphore wider than the work it gates is
+  // the same semaphore, so `--jobs 32` on a two-check run is a two-wide gate.
+  //
+  // The default is UNBOUNDED — one slot per selected check, so an un-asked-for
+  // run behaves exactly as it did before the gate existed. That is a measured
+  // decision, not a timid one. The width matrix (2026-09-02, same tree,
+  // --no-cache, sequential) reads:
+  //
+  //   width │ wall  │ Σ reported durations │ inflation
+  //       1 │ 602s  │                 601s │  1.0×
+  //       4 │ 284s  │                 931s │  1.5×
+  //      18 │ 337s  │               4 969s │  8.3×
+  //      32 │ 300s  │               9 097s │ 15×
+  //     100 │ 196s  │              13 817s │ 23×
+  //
+  // Wall clock IMPROVES with width — bounding costs roughly 1.7× at one-per-core
+  // — while the cost a run reports about itself degrades 23×. So the gate earns
+  // its keep as an instrument, not as a policy: `--jobs 1` is the only way to
+  // read a check's true cost (the suite is 601s, and `type-check` is 68% of it),
+  // and narrowing it by default would tax every run for a fleet-level benefit
+  // nothing has yet measured. If someone later shows that an unbounded pass is
+  // what makes OTHER agents' builds queue — the original motivation, still open,
+  // and not answerable from a single-run matrix — this default is the line to
+  // change, and the numbers above are what the change has to beat.
+  //
+  // `Math.max(1, …)` covers the degenerate empty selection only: `createSemaphore`
+  // requires a positive width, and a gate over zero checks bounds nothing either
+  // way.
+  const width = Math.max(
+    1,
+    jobs === null ? selected.length : Math.min(selected.length, jobs),
+  );
+  const gate = createSemaphore(width);
+
   let results: CheckOutcome[];
   try {
     results = await Promise.all(
-      selected.map(async (check) => {
-        const wallStart = performance.now();
-        progress.checkStarted(check.id);
-        let outcome: CheckOutcome | undefined;
-        try {
-          outcome = await runOne(check, wallStart);
-          return outcome;
-        } finally {
-          // In a `finally` so a THROWING check still records its end — otherwise
-          // a crash would masquerade as the hang we are hunting.
-          progress.checkEnded(
-            check.id,
-            Math.round(performance.now() - wallStart),
-            outcome?.result.ok ?? false,
-            outcome?.cached ?? false,
-          );
-          // The transcript is written as each check SETTLES, not from the print
-          // loop below — the loop runs after `Promise.all`, which a hung or
-          // killed run reaches never. A check that threw has no outcome to
-          // render; its `end` record above is what says so.
-          if (outcome) {
-            transcript?.record({
-              checkId: check.id,
-              result: outcome.result,
-              cached: outcome.cached,
-              observations: outcome.observations,
-            });
-          }
-        }
+      selected.map((check) => {
+        // Written by the gate's `onWait` hook at the moment this check is
+        // admitted, i.e. strictly before the body below runs. 0 when a slot was
+        // already free.
+        let queuedMs = 0;
+        return gate.run(
+          async () => {
+            // INSIDE the gate, both of them, and that placement is the entire
+            // point of the change rather than an incidental detail.
+            //
+            // `wallStart` used to be taken at `.map` time — before this callback
+            // could possibly run — so under an unbounded wave every recorded
+            // `durationMs` was the wave's own length rather than the check's
+            // cost. That is how twelve unrelated checks came to "cost" 260s each,
+            // and it would come back verbatim if this line drifted back outside:
+            // the queue would simply move from the wave into every duration.
+            //
+            // `checkStarted` follows it for the reader's sake: `--status` names a
+            // hang as `started − ended`, so "started" has to keep meaning
+            // "running". A queued check is neither, and is derived instead
+            // (`CheckRunProgress.queued`).
+            const wallStart = performance.now();
+            progress.checkStarted(check.id);
+            let outcome: CheckOutcome | undefined;
+            try {
+              outcome = await runOne(check, wallStart);
+              return outcome;
+            } finally {
+              // In a `finally` so a THROWING check still records its end — otherwise
+              // a crash would masquerade as the hang we are hunting.
+              progress.checkEnded(
+                check.id,
+                Math.round(performance.now() - wallStart),
+                outcome?.result.ok ?? false,
+                outcome?.cached ?? false,
+                Math.round(queuedMs),
+              );
+              // The transcript is written as each check SETTLES, not from the print
+              // loop below — the loop runs after `Promise.all`, which a hung or
+              // killed run reaches never. A check that threw has no outcome to
+              // render; its `end` record above is what says so.
+              if (outcome) {
+                transcript?.record({
+                  checkId: check.id,
+                  result: outcome.result,
+                  cached: outcome.cached,
+                  observations: outcome.observations,
+                });
+              }
+            }
+          },
+          (waitMs) => {
+            queuedMs = waitMs;
+          },
+        );
       }),
     );
   } catch (err) {
