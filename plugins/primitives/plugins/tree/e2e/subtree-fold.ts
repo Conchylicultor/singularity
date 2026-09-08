@@ -83,7 +83,8 @@ const snapshot = (page: Page): Promise<RowInfo[]> =>
 function descendants(rows: RowInfo[], i: number): RowInfo[] {
   const own = rows[i]!.pad;
   const out: RowInfo[] = [];
-  for (let j = i + 1; j < rows.length && rows[j]!.pad > own; j++) out.push(rows[j]!);
+  for (let j = i + 1; j < rows.length && rows[j]!.pad > own; j++)
+    out.push(rows[j]!);
   return out;
 }
 
@@ -91,7 +92,9 @@ function descendants(rows: RowInfo[], i: number): RowInfo[] {
 const depthBelow = (rows: RowInfo[], i: number): number => {
   const kids = descendants(rows, i);
   if (kids.length === 0) return 0;
-  return Math.round((Math.max(...kids.map((k) => k.pad)) - rows[i]!.pad) / INDENT);
+  return Math.round(
+    (Math.max(...kids.map((k) => k.pad)) - rows[i]!.pad) / INDENT,
+  );
 };
 
 interface Reveal {
@@ -110,7 +113,11 @@ const reveal = (button: Locator): Promise<Reveal> =>
   button.evaluate((el) => {
     let opacity = 1;
     let pointerEvents = "auto";
-    for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement) {
+    for (
+      let n: HTMLElement | null = el as HTMLElement;
+      n;
+      n = n.parentElement
+    ) {
       const style = getComputedStyle(n);
       opacity = Math.min(opacity, Number(style.opacity));
       if (style.pointerEvents === "none") pointerEvents = "none";
@@ -165,7 +172,9 @@ await withBrowser(async (h) => {
 
   const rows = page.locator(".group\\/tree-row");
   const roots = await snapshot(page);
-  r.note(`root rows: ${JSON.stringify(roots.map((x) => `${x.label}:${x.fold ?? "-"}`))}`);
+  r.note(
+    `root rows: ${JSON.stringify(roots.map((x) => `${x.label}:${x.fold ?? "-"}`))}`,
+  );
   r.ok("the sidebar tree painted rows", roots.length > 0);
   r.ok(
     "every row starts collapsed (the survey below assumes it)",
@@ -207,7 +216,10 @@ await withBrowser(async (h) => {
     );
     // Leave it as we found it.
     await leafRow.hover();
-    const collapse = leafRow.getByRole("button", { name: "Collapse", exact: true });
+    const collapse = leafRow.getByRole("button", {
+      name: "Collapse",
+      exact: true,
+    });
     if ((await collapse.count()) > 0) await collapse.click();
     await page.waitForTimeout(200);
   }
@@ -321,7 +333,11 @@ await withBrowser(async (h) => {
   await row.getByRole("button", { name: COLLAPSE, exact: true }).click();
   await page.waitForTimeout(400);
   const closed = await snapshot(page);
-  r.eq("clicking again folds the subtree away", descendants(closed, target.index).length, 0);
+  r.eq(
+    "clicking again folds the subtree away",
+    descendants(closed, target.index).length,
+    0,
+  );
   r.eq(
     "and the label flips back to the expand spelling",
     closed[target.index]!.fold,

@@ -59,7 +59,11 @@ const reveal = (button: Locator): Promise<Reveal> =>
   button.evaluate((el) => {
     let opacity = 1;
     let pointerEvents = "auto";
-    for (let n: HTMLElement | null = el as HTMLElement; n; n = n.parentElement) {
+    for (
+      let n: HTMLElement | null = el as HTMLElement;
+      n;
+      n = n.parentElement
+    ) {
       const style = getComputedStyle(n);
       opacity = Math.min(opacity, Number(style.opacity));
       if (style.pointerEvents === "none") pointerEvents = "none";
@@ -133,7 +137,11 @@ await withBrowser(async (h) => {
   // --- Hidden at rest, revealed on hover ------------------------------------
   await page.mouse.move(1200, 760);
   const atRest = await settledReveal(fold(EXPAND), 0);
-  r.eq("the group fold is invisible until the header is hovered", atRest.opacity, 0);
+  r.eq(
+    "the group fold is invisible until the header is hovered",
+    atRest.opacity,
+    0,
+  );
   r.eq("and is not a click target while hidden", atRest.pointerEvents, "none");
 
   await header.hover();
@@ -156,7 +164,11 @@ await withBrowser(async (h) => {
   // The header is the section's own collapse trigger, so this is the assertion
   // that the nested cluster's stopPropagation genuinely works.
   r.eq("the section itself is still open", await sectionOpen(), "true");
-  r.eq("the fold flips to the collapse spelling", await fold(COLLAPSE).count(), 1);
+  r.eq(
+    "the fold flips to the collapse spelling",
+    await fold(COLLAPSE).count(),
+    1,
+  );
 
   // --- Fold it back ----------------------------------------------------------
   await header.hover();
@@ -171,8 +183,16 @@ await withBrowser(async (h) => {
     closed > 0,
     "a collapsed SECTION would paint no rows at all",
   );
-  r.eq("the section is still open after folding too", await sectionOpen(), "true");
-  r.eq("and the fold reads 'Expand group' again", await fold(EXPAND).count(), 1);
+  r.eq(
+    "the section is still open after folding too",
+    await sectionOpen(),
+    "true",
+  );
+  r.eq(
+    "and the fold reads 'Expand group' again",
+    await fold(EXPAND).count(),
+    1,
+  );
 
   r.ok(
     "no failing requests (the duress-shed log beacon excluded)",
