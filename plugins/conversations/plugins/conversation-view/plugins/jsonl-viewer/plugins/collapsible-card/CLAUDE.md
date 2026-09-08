@@ -30,7 +30,6 @@
     - `conversations/conversation-view/jsonl-viewer/attachment`
     - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
     - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-    - `conversations/conversation-view/jsonl-viewer/attachment/date-change`
     - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
     - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
     - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`

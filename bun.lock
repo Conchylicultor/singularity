@@ -1406,8 +1406,8 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/date-change": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date-change",
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/date": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta": {
@@ -6486,7 +6486,7 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-command-permissions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/command-permissions"],
 
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date-change": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date-change@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/date-change"],
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-date@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/date"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta"],
 

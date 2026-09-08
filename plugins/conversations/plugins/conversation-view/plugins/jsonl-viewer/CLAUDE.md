@@ -168,6 +168,7 @@ back.
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
     - `conversations/conversation-view/jsonl-viewer/attachment`
+    - `conversations/conversation-view/jsonl-viewer/attachment/date`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/jsonl-viewer/meta-prompt`
     - `conversations/conversation-view/jsonl-viewer/outline`

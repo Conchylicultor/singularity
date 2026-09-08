@@ -9293,6 +9293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
               - `conversations/conversation-view/jsonl-viewer/attachment`
+              - `conversations/conversation-view/jsonl-viewer/attachment/date`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/meta-prompt`
               - `conversations/conversation-view/jsonl-viewer/outline`
@@ -9342,7 +9343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
             - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
               - Web:
-                - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date-change`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
+                - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-error`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
@@ -9354,7 +9355,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
                   - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-                  - `conversations/conversation-view/jsonl-viewer/attachment/date-change`
+                  - `conversations/conversation-view/jsonl-viewer/attachment/date`
                   - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
@@ -9385,13 +9386,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
-                - **`date-change`** — Renders date_change attachment events (harness notice that the calendar date advanced mid-conversation).
+                - **`date`** — Renders the harness calendar-date attachments — the routine date stamp and the mid-conversation date change — across both the current `date` spelling and the legacy `date_change` one.
                   - Web:
-                    - Contributes: `JsonlViewerAttachment.Renderer` "date_change" → `DateChangeAttachmentView`
+                    - Contributes:
+                      - `JsonlViewerAttachment.Renderer` "date" → `DateAttachmentView`
+                      - `JsonlViewerAttachment.Renderer` "date_change" → `DateAttachmentView`
                     - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.EventLine`
                       - `conversations/conversation-view/jsonl-viewer/attachment.JsonlViewerAttachment`
-                      - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-                      - `primitives/css/text.Text`
                 - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
@@ -9511,7 +9513,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-view/jsonl-viewer/attachment`
                   - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
                   - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-                  - `conversations/conversation-view/jsonl-viewer/attachment/date-change`
                   - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
                   - `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`
                   - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
@@ -23806,7 +23807,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/attachment`
               - `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`
-              - `conversations/conversation-view/jsonl-viewer/attachment/date-change`
               - `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`
               - `conversations/conversation-view/jsonl-viewer/attachment/hook-error`
