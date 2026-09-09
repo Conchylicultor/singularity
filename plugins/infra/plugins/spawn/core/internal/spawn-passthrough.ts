@@ -1,4 +1,5 @@
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
+import { readResourceUsage } from "./resource-usage";
 import type { SpawnPassthroughOptions, SpawnPassthroughResult } from "./types";
 
 /**
@@ -27,6 +28,6 @@ export async function spawnPassthrough(
   return {
     exitCode,
     signalCode: proc.signalCode,
-    resourceUsage: { maxRssBytes: proc.resourceUsage()?.maxRSS },
+    resourceUsage: readResourceUsage(proc),
   };
 }

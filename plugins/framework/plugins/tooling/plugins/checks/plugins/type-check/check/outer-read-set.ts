@@ -15,7 +15,7 @@
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import type { ImportGraphs } from "./import-graph";
-import { findGlobalTriggerFiles } from "./fingerprint";
+import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
 
 /**
  * Record type-check's outer read-set into `view` (a no-op caller-side when the
@@ -45,7 +45,11 @@ import { findGlobalTriggerFiles } from "./fingerprint";
  * projection, so recording spawns nothing and never touches tsc. This must stay
  * cheap: it runs on the MISS path, before the workers, on the same grant.
  */
-export function recordOuterReadSet(view: FileSystemView, root: string, graphs: ImportGraphs): void {
+export function recordOuterReadSet(
+  view: FileSystemView,
+  listing: TreeListing,
+  graphs: ImportGraphs,
+): void {
   // (a) Membership of the namespaces whose ADDITIONS can flip the verdict.
   //     `*.ts` (superset regex) spans all depths and also covers `*.d.ts`,
   //     lint-rule `.ts`, and `*.lint.generated.ts`; `*.tsx` the JSX sources;
@@ -57,5 +61,5 @@ export function recordOuterReadSet(view: FileSystemView, root: string, graphs: I
   // (b) Contents of the exact lintable set the check considers.
   for (const rel of graphs.files) view.recordFile(rel);
   // (c) Contents of the global-trigger set.
-  for (const rel of findGlobalTriggerFiles(root)) view.recordFile(rel);
+  for (const rel of findGlobalTriggerFiles(listing)) view.recordFile(rel);
 }

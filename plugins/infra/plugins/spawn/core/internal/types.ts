@@ -134,6 +134,27 @@ export type SpawnOptions = SpawnBaseOptions &
       }
   );
 
+/**
+ * What the kernel reports about a child once it has been reaped (`getrusage`).
+ *
+ * Both fields are the TRUE totals of the run — no sampling loop, no estimate —
+ * and both are `undefined` when the runtime reported no rusage at all: an
+ * unavailable measurement, not a failure. A caller omits the number it cannot
+ * print and changes nothing else.
+ *
+ * CPU time is here beside peak RSS because wall clock on a shared host is not a
+ * cost: the same type-check worker measured 2.5x apart at load 5.8 and load 14.
+ * CPU seconds are load-independent, so they are the only honest unit for "what
+ * did this child cost", which is what every before/after measurement of the
+ * check fleet needs. See research/2026-09-08-global-type-check-per-target-program-skip.md.
+ */
+export interface ChildResourceUsage {
+  /** Peak resident set of the child process, in bytes. */
+  maxRssBytes: number | undefined;
+  /** User + system CPU consumed by the child, in MICROseconds. */
+  cpuTimeMicros: number | undefined;
+}
+
 /** What a completed capture-shaped spawn returns. */
 export interface SpawnResult {
   /** ≠ 0 is a legitimate result — the caller branches. `spawnExpectOk` throws instead. */
@@ -153,7 +174,7 @@ export interface SpawnResult {
   /** Raw output bytes, for byte-offset parsers (`git cat-file --batch` framing). */
   stdoutBytes: Uint8Array;
   stderrBytes: Uint8Array;
-  resourceUsage: { maxRssBytes: number | undefined };
+  resourceUsage: ChildResourceUsage;
 }
 
 /** The live child handle `spawnPassthrough` exposes for signal forwarding. */
@@ -186,5 +207,5 @@ export interface SpawnPassthroughOptions {
 export interface SpawnPassthroughResult {
   exitCode: number;
   signalCode: string | null;
-  resourceUsage: { maxRssBytes: number | undefined };
+  resourceUsage: ChildResourceUsage;
 }

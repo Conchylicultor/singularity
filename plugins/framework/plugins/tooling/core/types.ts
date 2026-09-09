@@ -33,6 +33,20 @@ export interface CheckContext {
    * check outside the runner may not supply one. Call it as `ctx.log?.(…)`.
    */
   log?: (line: string, stream: "stdout" | "stderr") => void;
+  /**
+   * False when the run was asked to bypass caches (`--no-cache` /
+   * `SINGULARITY_CHECK_NO_CACHE=1`).
+   *
+   * The runner honours it for its own result cache, but a check with caches of
+   * its OWN has to be told — otherwise `--no-cache` stops meaning "actually do
+   * the work", which is the entire reason someone types it. `type-check` reads
+   * it to disarm its per-target program skip, so a debugging run really does
+   * rebuild every tsc program.
+   *
+   * OPTIONAL, defaulting to cached, so a caller outside the runner need not
+   * think about it: read it as `ctx.cacheEnabled !== false`.
+   */
+  cacheEnabled?: boolean;
 }
 
 /**

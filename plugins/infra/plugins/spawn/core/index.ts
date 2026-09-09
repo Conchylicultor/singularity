@@ -6,6 +6,7 @@
 // imported from `web/`.
 
 export type {
+  ChildResourceUsage,
   SpawnBaseOptions,
   SpawnBound,
   SpawnOptions,

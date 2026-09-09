@@ -43,7 +43,10 @@ tmpdir sweep (repo convention).
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
-  `resourceUsage.maxRssBytes` is the child's true peak RSS, read after exit.
+  `resourceUsage` is the child's `getrusage`, read after exit: `maxRssBytes`
+  (true peak RSS) and `cpuTimeMicros` (user+system CPU, microseconds). Both are
+  `undefined` when the runtime reported no rusage. CPU time is the load-independent
+  cost of a run — wall clock on a shared host varies 2.5x for the identical work.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
 - **`spawnExpectOk(argv, opts)`** — the same, but THROWS `SpawnFailedError`
@@ -184,6 +187,7 @@ presence only — **no re-exports**; import from `core/`.
 - Core:
   - Uses: `packages/spawn-priority.backgroundArgv`
   - Exports (types):
+    - `ChildResourceUsage`
     - `SpawnBaseOptions`
     - `SpawnBound`
     - `SpawnedChild`

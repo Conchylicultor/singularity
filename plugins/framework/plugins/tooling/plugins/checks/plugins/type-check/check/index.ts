@@ -36,9 +36,14 @@ import type {
   CheckContext,
 } from "@plugins/framework/plugins/tooling/core";
 import { buildImportGraphs } from "./import-graph";
-import { computeClosureFingerprints } from "./fingerprint";
+import { computeClosureFingerprints, readTreeListing } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
 import { recordOuterReadSet } from "./outer-read-set";
+import {
+  openProgramKeyContext,
+  openProgramPasses,
+  programKey,
+} from "./program-key";
 
 /** The worker's JSON stdout contract (see `../shared/worker.ts`). */
 interface WorkerOutput {
@@ -55,6 +60,13 @@ interface WorkerResult extends WorkerOutput {
    * measurement, not a failure: the footprint line is simply omitted.
    */
   maxRssBytes: number | undefined;
+  /**
+   * User + system CPU the worker burned, in microseconds. THE cost unit for
+   * this fleet: wall clock on this host varies 2.5x with load for the identical
+   * program build, so a before/after comparison taken in wall clock measures
+   * whoever else was running. Same availability caveat as `maxRssBytes`.
+   */
+  cpuTimeMicros: number | undefined;
 }
 
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
@@ -89,6 +101,37 @@ function tsconfigPathOf(t: TscTarget): string {
 }
 
 /**
+ * Each target's tsconfig include-expansion — the ROOTS of its program — parsed
+ * once and shared, because two things need it: the lint-ownership walk below
+ * starts from them, and a target's program key is partly "which roots is this".
+ *
+ * A target whose tsconfig will not parse is simply ABSENT from the map, never
+ * present with an empty list: the broken tsconfig surfaces as a tsc error in
+ * that target's own worker, and absent is what stops a program key being minted
+ * for a program we could not describe.
+ */
+function parseTargetRoots(targets: TscTarget[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const t of targets) {
+    const cfgPath = tsconfigPathOf(t);
+    const cfg = ts.readConfigFile(cfgPath, ts.sys.readFile);
+    if (cfg.error) continue;
+    const parsed = ts.parseJsonConfigFileContent(
+      cfg.config,
+      ts.sys,
+      t.dir,
+      undefined,
+      cfgPath,
+    );
+    out.set(
+      t.name,
+      parsed.fileNames.map((f) => ts.sys.resolvePath(f)),
+    );
+  }
+  return out;
+}
+
+/**
  * Assign every lintable file to exactly one target's program for linting.
  * Program membership = include-root files + their forward-import closure, so a
  * reachable-but-not-included file (e.g. a plugin-root config) is owned by the
@@ -100,6 +143,7 @@ function tsconfigPathOf(t: TscTarget): string {
 function computeOwnership(
   root: string,
   targets: TscTarget[],
+  targetRoots: Map<string, string[]>,
   forward: Map<string, Set<string>>,
   lintable: Set<string>,
 ): Map<string, string> {
@@ -108,17 +152,8 @@ function computeOwnership(
   );
   const owner = new Map<string, string>();
   for (const t of order) {
-    const cfg = ts.readConfigFile(tsconfigPathOf(t), ts.sys.readFile);
-    if (cfg.error) continue; // a broken tsconfig surfaces as a tsc error in its worker
-    const parsed = ts.parseJsonConfigFileContent(
-      cfg.config,
-      ts.sys,
-      t.dir,
-      undefined,
-      tsconfigPathOf(t),
-    );
-    const stack = parsed.fileNames
-      .map((f) => toRel(root, ts.sys.resolvePath(f)))
+    const stack = (targetRoots.get(t.name) ?? [])
+      .map((f) => toRel(root, f))
       .filter((r) => lintable.has(r));
     while (stack.length) {
       const cur = stack.pop()!;
@@ -195,10 +230,12 @@ async function runWorker(
   return {
     ...(JSON.parse(result.stdout) as WorkerOutput),
     maxRssBytes: result.resourceUsage.maxRssBytes,
+    cpuTimeMicros: result.resourceUsage.cpuTimeMicros,
   };
 }
 
-// One greppable line per worker, e.g. "type-check worker web-core: maxRSS 2.4 GB".
+// One greppable line per worker, e.g.
+// "type-check worker web-core: cpu 86.6s, maxRSS 2.4 GB".
 // THIS fleet is the process class host-admission's `PER_UNIT_BYTES` (3.6e9)
 // claims to size — "one type-check-class worker's resident set" — and it had
 // never actually been observed; the budget's RAM quantum was calibrated on vite
@@ -212,17 +249,31 @@ async function runWorker(
 // CLI's copy: `bin/` is not an importable barrel, and one duplicated formatter
 // beats inventing a shared plugin for it.
 //
-// `null` when the runtime reported no rusage — an unavailable measurement, not
-// a swallowed failure: the line is omitted and nothing else changes.
-function maxRssLine(
+// CPU seconds sit beside the peak because they are the only load-independent
+// cost this fleet has: the identical web-core program build measured 105s at
+// load 12.8 and 266s at load 14.0, so a wall-clock before/after on a shared box
+// measures the neighbours. Every claim about what a target costs — and the
+// per-target skip's whole payoff — is read off these numbers.
+//
+// `null` when the runtime reported NEITHER measurement — an unavailable
+// reading, not a swallowed failure: the line is omitted and nothing else
+// changes. Either half alone still prints, so one missing number never hides
+// the other.
+function workerCostLine(
   label: string,
   maxRssBytes: number | undefined,
+  cpuTimeMicros: number | undefined,
 ): string | null {
-  if (maxRssBytes == null) return null;
-  const gb = maxRssBytes / 1e9;
-  const amount =
-    gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
-  return `${label}: maxRSS ${amount}`;
+  const parts: string[] = [];
+  if (cpuTimeMicros != null)
+    parts.push(`cpu ${(cpuTimeMicros / 1e6).toFixed(1)}s`);
+  if (maxRssBytes != null) {
+    const gb = maxRssBytes / 1e9;
+    parts.push(
+      `maxRSS ${gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`}`,
+    );
+  }
+  return parts.length === 0 ? null : `${label}: ${parts.join(", ")}`;
 }
 
 const check: Check = {
@@ -243,6 +294,12 @@ const check: Check = {
     // Lint universe + per-file closure fingerprints (the warm-path file filter).
     const graphs = buildImportGraphs(root);
 
+    // ONE reading of the tree's file set, shared by everything below that asks
+    // what files exist: the outer read-set, the closure fingerprints, and the
+    // program keys. Four separate walks used to cost seconds and gave the
+    // traversal rules four places to disagree.
+    const listing = readTreeListing(root);
+
     // OUTER input-keyed read-set (Stage 2). Only runs on a cache MISS: the runner
     // reaches run() only when validate-by-replay missed (or nothing was recorded
     // yet). On a HIT it short-circuits before run(), so recording — and every
@@ -251,15 +308,26 @@ const check: Check = {
     // the runner falls back to that path), in which case nothing is recorded and
     // behaviour is unchanged. See ./outer-read-set for what each fact guards.
     const view = currentScanView();
-    if (view) recordOuterReadSet(view, root, graphs);
+    if (view) recordOuterReadSet(view, listing, graphs);
 
     const lintable = new Set(graphs.files);
-    const { perFile } = computeClosureFingerprints(root, graphs, graphs.files);
+    const { perFile } = computeClosureFingerprints(
+      listing,
+      graphs,
+      graphs.files,
+    );
 
     // Assign every lintable file to one program; assert full coverage (the
     // load-bearing gate that replaces projectService's "every file resolves to
     // a project"). An unowned file would never be linted — fail loudly.
-    const owner = computeOwnership(root, targets, graphs.forward, lintable);
+    const targetRoots = parseTargetRoots(targets);
+    const owner = computeOwnership(
+      root,
+      targets,
+      targetRoots,
+      graphs.forward,
+      lintable,
+    );
     const uncovered = graphs.files.filter((f) => !owner.has(f));
     if (uncovered.length > 0) {
       return {
@@ -300,20 +368,95 @@ const check: Check = {
     // and never rewrites it. A target that already has a local base keeps it.
     for (const t of targets) materializeWarmBase(root, t.name);
 
+    // PER-TARGET SKIP. An outer-cache MISS used to rebuild all seven programs
+    // even when the edit could not possibly reach five of them; the same file
+    // was checked 3.7 times per miss. A target's program key says "this exact
+    // program — these roots, this content, these options — passed before", and a
+    // target whose key is already recorded green has nothing left to compute.
+    //
+    // Computed AFTER `materializeWarmBase`, because the enumeration of the
+    // program comes out of the `.tsbuildinfo` on disk: a fresh worktree that
+    // just pulled a sibling's base can skip on its very first run.
+    //
+    // The `lintByTarget` clause is load-bearing, and so is its ORDERING. If the
+    // per-file closure cache has evicted a file's lint PASS, that file must be
+    // re-linted, and only its target's worker can do it — so a non-empty lint
+    // bucket defeats the skip. Reading it before `lintByTarget` was built would
+    // silently make that clause always true.
+    //
+    // `--no-cache` disarms the SKIP but not the RECORD: someone forcing a real
+    // run wants every program rebuilt, and the pass it produces is still a
+    // perfectly good fact to keep.
+    const skipEnabled = ctx.cacheEnabled !== false;
+    const keyStart = performance.now();
+    const keyCtx = openProgramKeyContext(listing);
+    const passes = openProgramPasses();
+    const keyByTarget = new Map<string, string>();
+    const skipped = new Set<string>();
+    const unkeyed: string[] = [];
+    for (const t of targets) {
+      const roots = targetRoots.get(t.name);
+      if (roots === undefined) {
+        unkeyed.push(`${t.name}: tsconfig did not parse`);
+        continue; // its own worker reports the broken tsconfig
+      }
+      const result = programKey(
+        keyCtx,
+        {
+          name: t.name,
+          tsconfigPath: tsconfigPathOf(t),
+          buildInfoPath: tsBuildInfoPath(root, t.name),
+        },
+        roots,
+      );
+      if (result.kind !== "key") {
+        unkeyed.push(`${t.name}: ${result.why}`);
+        continue; // no enumeration → cold run, then recorded below
+      }
+      keyByTarget.set(t.name, result.key);
+      if (
+        skipEnabled &&
+        passes.has(t.name, result.key) &&
+        (lintByTarget.get(t.name) ?? []).length === 0
+      ) {
+        skipped.add(t.name);
+      }
+    }
+    const toRun = targets.filter((t) => !skipped.has(t.name));
+    // Emitted on EVERY run, including "skipped 0" — the zero is the datum that
+    // says the key was computed and matched nothing, which is what separates a
+    // cold tree from a broken key. The cost of computing the keys is on the
+    // same line because it is paid whether or not anything is skipped.
+    ctx.log?.(
+      `type-check: skipped ${skipped.size} of ${targets.length} targets, program unchanged since last pass` +
+        (skipped.size > 0 ? `: ${[...skipped].sort().join(", ")}` : "") +
+        ` (program keys ${Math.round(performance.now() - keyStart)}ms)`,
+      "stderr",
+    );
+    // Named, not just counted: "5 of 7 skipped" with no explanation of the
+    // other two is the shape of a report that hides a broken key. A cold
+    // worktree legitimately lists every target here on its first run.
+    if (unkeyed.length > 0) {
+      ctx.log?.(
+        `type-check: no program key for ${unkeyed.length} target(s) — ${unkeyed.join("; ")}`,
+        "stderr",
+      );
+    }
+
     // Fan out at exactly `grant.units` concurrency, spending one unit per worker
-    // via `grant.run`. A reduced grant (`units < targets.length`) simply runs the
+    // via `grant.run`. A reduced grant (`units < toRun.length`) simply runs the
     // fleet at lower concurrency — surfaced as ONE observation line through the
     // runner's `ctx.log` seam, so it lands in check-<id>.log/build.log and not only in
     // a terminal (never a blocking log or a progress bar: checks run under
     // Promise.all in the runner, which buffers and attributes these lines).
     const units = ctx.grant.units;
-    if (units < targets.length) {
+    if (units < toRun.length) {
       ctx.log?.(
-        `type-check: ${units} of ${targets.length} targets run concurrently (host CPU grant)`,
+        `type-check: ${units} of ${toRun.length} targets run concurrently (host CPU grant)`,
         "stderr",
       );
     }
-    await mapConcurrent(targets, units, (t) =>
+    await mapConcurrent(toRun, units, (t) =>
       ctx.grant.run(async () => {
         try {
           results.push(
@@ -340,9 +483,11 @@ const check: Check = {
     // changes nothing about the verdict below.
     const byName = new Map(results.map((r) => [r.name, r]));
     for (const t of targets) {
-      const line = maxRssLine(
+      const r = byName.get(t.name);
+      const line = workerCostLine(
         `type-check worker ${t.name}`,
-        byName.get(t.name)?.maxRssBytes,
+        r?.maxRssBytes,
+        r?.cpuTimeMicros,
       );
       if (line !== null) ctx.log?.(line, "stderr");
     }
@@ -364,6 +509,46 @@ const check: Check = {
         const fp = perFile.get(toRel(root, abs));
         if (fp) cache.record(toRel(root, abs), fp);
       }
+    }
+
+    // Record a program PASS for every target whose worker came back completely
+    // clean. The key is RECOMPUTED from the buildinfo the worker just WROTE, so
+    // what is recorded describes the program that actually passed rather than
+    // the one predicted before it ran — on a cold target the two differ, since
+    // there was no enumeration to predict from at all.
+    //
+    // Only fully-clean targets record. A tsc error obviously must not be
+    // recorded green; a lint failure need not block a TSC key, but keeping the
+    // rule "clean means clean" costs one re-run of a target that was failing
+    // anyway and leaves nothing to reason about later.
+    for (const r of results) {
+      if (r.tscErrors || r.lintViolations || r.failedLintFiles.length > 0) {
+        continue;
+      }
+      const target = targets.find((t) => t.name === r.name);
+      const roots = target && targetRoots.get(r.name);
+      if (!target || roots === undefined) continue;
+      const result = programKey(
+        keyCtx,
+        {
+          name: r.name,
+          tsconfigPath: tsconfigPathOf(target),
+          buildInfoPath: tsBuildInfoPath(root, r.name),
+        },
+        roots,
+      );
+      if (result.kind === "key") passes.record(r.name, result.key);
+    }
+
+    // Re-record the key of every SKIPPED target. Not a new claim — it is the
+    // identical key that was already green — but the store ages entries out by
+    // when they were last WRITTEN, so without this a target that skips
+    // successfully every day for a fortnight would be evicted for being unused
+    // and pay a cold run. One tiny write per skipped target turns the age bound
+    // into "unused for 14 days", which is what it was always meant to say.
+    for (const name of skipped) {
+      const key = keyByTarget.get(name);
+      if (key !== undefined) passes.record(name, key);
     }
 
     // Aggregate the two failure categories.

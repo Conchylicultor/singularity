@@ -2,9 +2,10 @@
 
 **Date:** 2026-09-08
 **Category:** global (checks infra; affects build, push and the host queue)
-**Status:** proposed
-**Sidequest:** A on the "Build, check, …" page (`block-f0d24b10-d743-409d-bbc1-844ed27db026`), claimed by
-`att-1788884187-ak4l`.
+**Status:** Part 1 BUILT 2026-09-09 (`att-1788944218-aj1a`) — see "As built" at the foot. Part 2
+(last-N outer read-set slots, sidequest A.6) not built.
+**Sidequest:** A on the "Build, check, …" page (`block-f0d24b10-d743-409d-bbc1-844ed27db026`); A.0
+by `att-1788884187-ak4l`, A.1 + Part 1 by `att-1788944218-aj1a`.
 
 ## Context
 
@@ -315,7 +316,9 @@ mix or not. The key used for the skip drops the lint-only globals (`eslint.confi
 `plugins/**/lint/**`) so a lint-rule commit no longer flips every program's tsc key; lint still
 re-runs through `lintByTarget`.
 
-**Rollout in two steps, so before and after are read off the same instrument.**
+**Rollout in two steps, so before and after are read off the same instrument.** *(NOT how it was
+built — the two steps were collapsed into one at the user's direction, and there is no shadow mode
+and no `SINGULARITY_TYPECHECK_SKIP` switch in the shipped code. See "As built" at the foot.)*
 
 1. *Instrument + shadow (no behaviour change).* Each worker's transcript line gains its CPU seconds
    (`spawnCaptured` already returns `resourceUsage`), and one line names the targets the key WOULD
@@ -398,3 +401,144 @@ nothing more — so Part 2 is a nicety, and can ship second or not at all.
 7. After the flip: the same grep gives `skipped N of 7` and CPU per run; compare against the
    baseline with the thresholds above. That before/after pair is what the page's sidequest A box
    gets updated with.
+
+---
+
+## As built (2026-09-09, `att-1788944218-aj1a`)
+
+Part 1 shipped, plus A.1's instrumentation. What differs from the plan above, and why:
+
+- **No shadow phase, no `SINGULARITY_TYPECHECK_SKIP` switch.** The plan staged the skip behind an
+  env flag for a few days of observation; the user asked for the flip in one pass instead. The
+  instrumentation still shipped alongside it, so before and after are read off the same lines — the
+  reason the two-step existed. What is lost is the "would skip but the worker then failed" alarm,
+  which only a shadow run can produce; its replacement is the `skipped N of M` line plus the fact
+  that any missed invalidation shows up as a check that passes on a tree it should have failed.
+- **`spawnCaptured` did NOT already return CPU time.** The plan assumed it did. `resourceUsage`
+  carried only `maxRssBytes` — every call site had hand-picked that one field off Bun's rusage
+  object, and `cpuTime` (BigInt microseconds) was simply dropped. Fixed at the primitive:
+  `ChildResourceUsage { maxRssBytes, cpuTimeMicros }`, produced by ONE `readResourceUsage()` that
+  both spawn shapes call, so the two can no longer report different subsets of the same syscall.
+- **The key hashes every `package.json` in the repo**, not only the root one the plan's
+  `globalConfigFingerprint` reuse would have covered — a nested manifest's `exports` / `imports` /
+  `type` can move a resolution. `findFiles(root, predicate)` was extracted in `fingerprint.ts` so
+  the lint trigger set and the tsc trigger set are two predicates over ONE walk, and cannot
+  disagree about what the repo's files are.
+- **Dropping the lint-only globals from the tsc key needs no second mechanism.** A lint-rule edit
+  flips `globalConfigFingerprint`, which flips every closure fingerprint, which leaves every
+  target's `lintByTarget` bucket non-empty — and a non-empty bucket already refuses the skip. The
+  narrowing removes a redundancy, not a guard.
+- **A skipped target re-records its key.** Not in the plan. The store ages entries by when they were
+  last written, so without this a target that skipped successfully every day would be evicted at 14
+  days for being *used*. One tiny write per skipped target makes the age bound mean "unused".
+- **`computeOwnership` no longer parses tsconfigs.** `parseTargetRoots` does it once and both
+  consumers read the result; a target whose tsconfig will not parse is ABSENT from the map rather
+  than present-and-empty, which is what stops a key being minted for a program we could not
+  describe.
+- **`pass-set.ts` extracted as planned**, and `closure-cache.ts` is now a thin instantiation over
+  it. Entry addressing is byte-identical to before (`sha256("<rel>:<fingerprint>")`), so no existing
+  closure-cache entry was invalidated by the refactor.
+
+### The envelope, stated exactly
+
+In the key: `L_t` (every file the program loaded, per the buildinfo tsc wrote — repo and
+`node_modules` alike, hashed by content), `R_t` (the tsconfig's include-expansion), the tsconfig
+path, every `tsconfig*.json` / `package.json` / `bun.lock` / repo `*.d.ts` by content, a name-only
+census of every `.ts`/`.tsx` in the repo, and this check's own source (`check/**`, `shared/**`,
+`checks/core/discover.ts`, named RELATIVELY — an absolute path would carry the worktree name and
+make the host-global store useless while still looking like it worked).
+
+The one edge outside it: a file **added** inside `node_modules` with no lockfile change. Modified
+dependency files are caught by their content hash, removed ones become `"-"`, and any real
+`bun install` rewrites `bun.lock`. Only a hand-copied file can shadow a resolution invisibly, and
+enumerating ~100k dependency paths every run to close that is not a trade worth making.
+
+- **The repo walk is memoised, and that was a fix worth making on its own.** The first
+  instrumented run reported `program keys 3837ms` on a COLD tree — where no file content is hashed
+  at all, because no target has an enumeration yet. All of it was traversal: a single check pass was
+  walking the whole repo FOUR times (the closure fingerprint's trigger set, the outer read-set's
+  copy of the same set, the program key's tsc triggers, the program key's name census). The run now
+  takes ONE `readTreeListing(root)` and passes it to all four, so they share a traversal and — more
+  to the point — one set of traversal RULES, three fewer places for "skip nested worktrees" to drift
+  from. It is a VALUE, not a memo behind the function: a snapshot of a changing filesystem needs a
+  visible lifetime, and the first attempt (a module-level cache keyed on root) was caught by its own
+  unit test, where two readings within one process legitimately had to differ.
+- **`readProgramFileList` and `programKey` return discriminated results, not nullables.** The first
+  version returned `null` from a bare `catch`, which the repo's own `no-absorbed-failure` and
+  `no-bare-catch` rules caught on the first real run — correctly: "no buildinfo yet" (ordinary, cold)
+  and "the buildinfo is torn" (worth naming) are different facts, and a nullable flattens them. The
+  check now names every target it could not key, and why.
+
+### The cold baseline, measured 2026-09-09
+
+The first run with the instrumentation, on a fresh worktree with no `.tsbuildinfo` at all
+(7 targets, 6 concurrent under the host grant, 900s wall):
+
+| target | CPU | maxRSS |
+| --- | --- | --- |
+| test | 307.6s | 7.3 GB |
+| server-core | 228.2s | 3.9 GB |
+| cli | 215.8s | 1.6 GB |
+| central-core | 203.5s | 795 MB |
+| tooling | 174.2s | 745 MB |
+| web-core | 167.4s | 2.7 GB |
+| tools | 45.8s | 267 MB |
+
+**1,342 CPU-seconds per cold miss**, and `test` is both the most expensive worker and the wall-clock
+floor. That is the number every later claim is measured against — and it is the first time this
+fleet's cost has been recorded in a load-independent unit at all.
+
+### Verified end to end, 2026-09-09
+
+Four consecutive runs on this worktree. Worker CPU is the sum of the per-worker `cpu` lines; the
+orchestrator column is the CLI process's own user time.
+
+| run | tree | line | workers | worker CPU |
+| --- | --- | --- | --- | --- |
+| 1 | fresh worktree, no `.tsbuildinfo` at all | `skipped 0 of 7` | 7 | 1,342s |
+| 2 | same tree, warm bases, keys invalidated by editing the check itself | `skipped 0 of 7` | 7 | 344s |
+| 3 | one comment appended to a `web/` component | `skipped 5 of 7: central-core, cli, server-core, tooling, tools` | 2 | 251s |
+| 4 | that comment reverted | `skipped 7 of 7` | **0** | **0s** |
+
+Run 3 is the mechanism working exactly as designed: an edit that cannot reach the server-side
+programs does not rebuild them. Run 4 is content-addressing working: the revert produced the same
+keys run 2 recorded, so nothing ran — and note the outer read-set MISSED on that run (its recorded
+content was run 3's), which is the point. **The per-program store rescues precisely the case the
+outer cache cannot**: one host-global read-set slot that siblings keep overwriting (Finding 1's 64
+of 97 misses) still misses, while the per-program keys hit and no worker starts. That largely
+subsumes Part 2 / sidequest A.6 rather than waiting on it.
+
+What run 4 also exposes: with every worker skipped, the run still costs about **85 CPU-seconds in
+the orchestrator itself** — the import graph, the closure fingerprints over 7,700 files, the tree
+snapshot and the program keys (1.8s of that). That is now the floor of a type-check pass and the
+next thing worth attacking; before this change it was invisible under the workers.
+
+### A build skips less than a bare check, and that is not a defect
+
+The `./singularity build` immediately after run 4 reported `skipped 1 of 7` (only `tools`), and a
+bare `./singularity check type-check` on the very next command reported `skipped 7 of 7` again. The
+difference is real and worth knowing: **a build regenerates codegen artifacts BEFORE it runs
+checks**, so its checks see a tree that just changed. In this build the changed file was a barrel
+stub, regenerated because this very change added a type to spawn's barrel — a file six of the seven
+programs load, and `tools` does not.
+
+That is Finding 4 restated from the other side: the generated registries and barrel stubs are the
+single biggest key-buster, present in six or seven programs, and a build touches them by
+construction. So the skip pays off most on `push` and on repeat checks, and least on the first build
+after a change that moves a registry. It is a reason to want zone-level projects (A.3), where a
+registry edit re-checks the zones downstream of it rather than every program — not a reason to
+distrust the key.
+
+### What to read off the transcript now
+
+`~/.singularity/worktrees/<wt>/check-<runId>.log`:
+
+```
+type-check: skipped 5 of 8 targets, program unchanged since last pass: central-core, cli, tooling, tools, web-core-node (program keys 900ms)
+type-check worker web-core: cpu 86.6s, maxRSS 2.4 GB
+```
+
+Success, over the following week, on the thresholds the plan set: median CPU per worktree miss down
+≥ 30%; an identical tree skips every target; and zero cases of a target skipped on a tree where it
+would have failed. `cpu`, never wall clock — the identical `web-core` build measured 105s at load
+12.8 and 266s at load 14.0.

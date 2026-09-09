@@ -9,7 +9,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/core";
-import type { SpawnOptions, SpawnResult } from "./types";
+import { readResourceUsage } from "./resource-usage";
+import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
 /**
  * A `spawnExpectOk` child that exited non-zero (or on a signal). Carries the
@@ -47,7 +48,7 @@ function makeResult(
   timedOut: boolean,
   stdoutBytes: Uint8Array,
   stderrBytes: Uint8Array,
-  maxRssBytes: number | undefined,
+  resourceUsage: ChildResourceUsage,
 ): SpawnResult {
   let stdoutText: string | undefined;
   let stderrText: string | undefined;
@@ -57,7 +58,7 @@ function makeResult(
     timedOut,
     stdoutBytes,
     stderrBytes,
-    resourceUsage: { maxRssBytes },
+    resourceUsage,
     get stdout() {
       return (stdoutText ??= decoder.decode(stdoutBytes));
     },
@@ -222,7 +223,7 @@ export async function spawnCaptured(
       timedOut,
       stdoutBytes,
       stderrBytes,
-      proc.resourceUsage()?.maxRSS,
+      readResourceUsage(proc),
     );
   } finally {
     rmSync(dir, { recursive: true, force: true });

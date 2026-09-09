@@ -479,6 +479,7 @@ export async function runChecks(
     const ctx: CheckContext = {
       grant: options.grant,
       log: (line, stream) => observations.push({ line, stream }),
+      cacheEnabled: !noCache,
     };
 
     // INPUT-KEYED path (validate-by-replay). Selected GENERICALLY on the

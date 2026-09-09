@@ -45,12 +45,57 @@ function isGlobalTrigger(rel: string): boolean {
   return false;
 }
 
-function walkGlobalTriggers(root: string, dir: string, out: string[]): void {
+/**
+ * One reading of "what files does this tree contain", taken once and passed to
+ * everything that asks.
+ *
+ * ONE traversal, several predicates. A single check pass asks four different
+ * questions of the repo's files: the lint closure fingerprint's trigger set,
+ * the outer read-set's copy of the same set, the program key's tsc-relevant
+ * subset, and the program key's name census. Walked separately those were four
+ * full traversals costing seconds — and, worse, four copies of the traversal
+ * RULES, so "skip nested worktrees" had four places to drift from.
+ *
+ * A VALUE rather than a memo behind the function, because a snapshot of a
+ * changing filesystem needs a visible lifetime. As a module-level cache its
+ * staleness window was "the rest of the process", invisible at every call site;
+ * as a value, whoever wants a fresh reading takes one.
+ */
+export interface TreeListing {
+  root: string;
+  /** Every file under `root`, repo-relative, deduped and sorted. */
+  files: string[];
+}
+
+/**
+ * Walk `root` (skipping `node_modules`, build output, `.check-*` scratch and
+ * nested worktrees) and record every file it holds.
+ */
+export function readTreeListing(root: string): TreeListing {
+  const out: string[] = [];
+  walkFiles(root, root, out);
+  return { root, files: [...new Set(out)].sort() };
+}
+
+/** The files of a listing whose repo-relative path `matches`. */
+export function findFiles(
+  listing: TreeListing,
+  matches: (rel: string) => boolean,
+): string[] {
+  return listing.files.filter(matches);
+}
+
+function walkFiles(root: string, dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return;
   }
   for (const e of entries) {
@@ -59,9 +104,10 @@ function walkGlobalTriggers(root: string, dir: string, out: string[]): void {
     if (e.isDirectory()) {
       if (IGNORED_DIR_NAMES.has(e.name)) continue;
       if (e.name.startsWith(".check-")) continue;
-      if (rel === ".claude/worktrees" || rel.startsWith(".claude/worktrees/")) continue;
-      walkGlobalTriggers(root, full, out);
-    } else if (e.isFile() && isGlobalTrigger(rel)) {
+      if (rel === ".claude/worktrees" || rel.startsWith(".claude/worktrees/"))
+        continue;
+      walkFiles(root, full, out);
+    } else if (e.isFile()) {
       out.push(rel);
     }
   }
@@ -74,12 +120,10 @@ function walkGlobalTriggers(root: string, dir: string, out: string[]): void {
  * these flips this component → every closure fingerprint changes → whole cache
  * invalidated.
  */
-export function globalConfigFingerprint(root: string): string {
-  const triggers: string[] = [];
-  walkGlobalTriggers(root, root, triggers);
-  const parts = [...new Set(triggers)]
-    .sort()
-    .map((rel) => `${rel}\0${sha256(safeRead(join(root, rel)) ?? "")}`);
+export function globalConfigFingerprint(listing: TreeListing): string {
+  const parts = findFiles(listing, isGlobalTrigger).map(
+    (rel) => `${rel}\0${sha256(safeRead(join(listing.root, rel)) ?? "")}`,
+  );
   return sha256(parts.join("\n"));
 }
 
@@ -90,14 +134,12 @@ export function globalConfigFingerprint(root: string): string {
  * callers that must record each trigger as an INDIVIDUAL input fact rather than
  * one opaque hash — type-check's outer input-keyed read-set records a per-file
  * `(path, blobSha)` fact for each, so a compiler-version bump (package.json /
- * bun.lock) or a tsconfig/eslint edit invalidates. Reuses `walkGlobalTriggers` /
+ * bun.lock) or a tsconfig/eslint edit invalidates. Reuses `findFiles` /
  * `isGlobalTrigger`, so the recorded set can never drift from what the
  * fingerprint covers. Deduped + sorted for determinism.
  */
-export function findGlobalTriggerFiles(root: string): string[] {
-  const out: string[] = [];
-  walkGlobalTriggers(root, root, out);
-  return [...new Set(out)].sort();
+export function findGlobalTriggerFiles(listing: TreeListing): string[] {
+  return findFiles(listing, isGlobalTrigger);
 }
 
 /**
@@ -113,11 +155,12 @@ export function findGlobalTriggerFiles(root: string): string[] {
  * content hashes ch(rel) are memoized — both shared across all candidates.
  */
 export function computeClosureFingerprints(
-  root: string,
+  listing: TreeListing,
   graphs: ImportGraphs,
   candidates: string[],
 ): FingerprintResult {
-  const global = globalConfigFingerprint(root);
+  const { root } = listing;
+  const global = globalConfigFingerprint(listing);
 
   // Memoized per-file content hash: ch(rel) = sha256(content ?? "").
   const contentHash = new Map<string, string>();

@@ -157,6 +157,20 @@ test("resourceUsage reports the child's peak RSS", async () => {
   expect(result.resourceUsage.maxRssBytes).toBeGreaterThan(0);
 });
 
+test("resourceUsage reports the child's CPU time in microseconds", async () => {
+  // A child that burns a measurable slice of CPU, so the assertion is about the
+  // unit rather than about rounding: ~0.2s of shell loop is >10_000 µs and, on
+  // any machine, far under the 1e9 µs (~17 min) an accidental nanosecond or
+  // millisecond scaling would have to produce.
+  const result = await spawnCaptured(
+    ["bash", "-c", "for i in $(seq 1 200000); do :; done"],
+    BOUND,
+  );
+  expect(result.exitCode).toBe(0);
+  expect(result.resourceUsage.cpuTimeMicros).toBeGreaterThan(10_000);
+  expect(result.resourceUsage.cpuTimeMicros).toBeLessThan(1e9);
+});
+
 test("no timeoutMs: timedOut is false and nothing is killed", async () => {
   // The one place `unbounded` is the RIGHT arm rather than a fallback: this test
   // exists to assert what the unbounded arm does, so writing it any other way

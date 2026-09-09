@@ -18225,6 +18225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `packages/spawn-priority.backgroundArgv`
         - Exports (types):
+          - `ChildResourceUsage`
           - `SpawnBaseOptions`
           - `SpawnBound`
           - `SpawnedChild`

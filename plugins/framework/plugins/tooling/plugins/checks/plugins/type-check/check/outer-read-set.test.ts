@@ -18,14 +18,23 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join, dirname } from "path";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { loadTreeSnapshot, validate, type ReadSet } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  loadTreeSnapshot,
+  validate,
+  type ReadSet,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { readTreeListing } from "./fingerprint";
 import { buildImportGraphs } from "./import-graph";
 import { recordOuterReadSet } from "./outer-read-set";
 
 let root = "";
 
 async function git(...args: string[]): Promise<void> {
-  const proc = Bun.spawn(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawn(["git", ...args], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
   await proc.exited;
 }
 
@@ -42,8 +51,15 @@ beforeAll(async () => {
   write("a.ts", "export const a = 1;\n");
   write("b.ts", "export const b = 2;\n");
   write("README.md", "# hello\n");
-  write("tsconfig.json", JSON.stringify({ compilerOptions: { strict: true } }) + "\n");
-  write("package.json", JSON.stringify({ name: "fixture", dependencies: { typescript: "5.0.0" } }) + "\n");
+  write(
+    "tsconfig.json",
+    JSON.stringify({ compilerOptions: { strict: true } }) + "\n",
+  );
+  write(
+    "package.json",
+    JSON.stringify({ name: "fixture", dependencies: { typescript: "5.0.0" } }) +
+      "\n",
+  );
   await git("init", "-q");
   await git("config", "user.email", "t@t.t");
   await git("config", "user.name", "t");
@@ -63,7 +79,7 @@ async function record(): Promise<ReadSet> {
   expect(snap).not.toBeNull();
   const view = snap!.createRecordingView();
   const graphs = buildImportGraphs(root);
-  recordOuterReadSet(view, root, graphs);
+  recordOuterReadSet(view, readTreeListing(root), graphs);
   return view.readSet();
 }
 
@@ -79,7 +95,11 @@ async function revalidate(readSet: ReadSet) {
 test("records membership globs + a content fact per lintable & global-trigger file", async () => {
   const rs = await record();
   // (a) membership: the three namespace globs.
-  expect(rs.globs.map((g) => g.glob).sort()).toEqual(["*.ts", "*.tsx", "*tsconfig*.json"]);
+  expect(rs.globs.map((g) => g.glob).sort()).toEqual([
+    "*.ts",
+    "*.tsx",
+    "*tsconfig*.json",
+  ]);
   const tsGlob = rs.globs.find((g) => g.glob === "*.ts")!;
   expect(tsGlob.matches).toEqual(["a.ts", "b.ts"]);
   // (b)+(c) contents: both lintable sources and both global triggers.
@@ -130,24 +150,40 @@ test("case 3 (H3 coverage gate): a brand-new .ts file is a MISS via the membersh
 
 test("case 4: a global-trigger (tsconfig) change is a MISS", async () => {
   const rs = await record();
-  write("tsconfig.json", JSON.stringify({ compilerOptions: { strict: false } }) + "\n");
+  write(
+    "tsconfig.json",
+    JSON.stringify({ compilerOptions: { strict: false } }) + "\n",
+  );
   try {
     const v = await revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("tsconfig.json");
   } finally {
-    write("tsconfig.json", JSON.stringify({ compilerOptions: { strict: true } }) + "\n");
+    write(
+      "tsconfig.json",
+      JSON.stringify({ compilerOptions: { strict: true } }) + "\n",
+    );
   }
 });
 
 test("case 4b: a package.json (compiler-version) change is a MISS", async () => {
   const rs = await record();
-  write("package.json", JSON.stringify({ name: "fixture", dependencies: { typescript: "5.9.9" } }) + "\n");
+  write(
+    "package.json",
+    JSON.stringify({ name: "fixture", dependencies: { typescript: "5.9.9" } }) +
+      "\n",
+  );
   try {
     const v = await revalidate(rs);
     expect(v.hit).toBe(false);
     if (!v.hit) expect(v.reason).toContain("package.json");
   } finally {
-    write("package.json", JSON.stringify({ name: "fixture", dependencies: { typescript: "5.0.0" } }) + "\n");
+    write(
+      "package.json",
+      JSON.stringify({
+        name: "fixture",
+        dependencies: { typescript: "5.0.0" },
+      }) + "\n",
+    );
   }
 });
