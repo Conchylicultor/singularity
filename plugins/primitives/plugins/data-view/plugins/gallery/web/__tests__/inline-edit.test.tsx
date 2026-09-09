@@ -84,7 +84,10 @@ describe("data-view gallery inline cell editing", () => {
       </PluginProvider>,
     );
 
-    fireEvent.click(getByText("alpha"));
+    // The value belongs to the card's own click; the hover-revealed pencil is
+    // what opens the editor.
+    expect(getByText("alpha")).toBeTruthy();
+    fireEvent.click(getByLabelText("Edit Name"));
     const input = getByLabelText("cell-editor");
     fireEvent.change(input, { target: { value: "beta" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -106,5 +109,6 @@ describe("data-view gallery inline cell editing", () => {
 
     fireEvent.click(getByText("alpha"));
     expect(queryByLabelText("cell-editor")).toBeNull();
+    expect(queryByLabelText("Edit Name")).toBeNull();
   });
 });

@@ -15918,6 +15918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/starred`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
+              - `apps/sonata/library`
               - `apps/sonata/look`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/view-options`
@@ -23269,6 +23270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/data-view`
               - `primitives/data-view/list`
               - `primitives/graph-canvas`
               - `primitives/loading`
@@ -24913,6 +24915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/adaptive-bar`
               - `primitives/app-shell`
               - `primitives/css/fill`
+              - `primitives/data-view`
               - `primitives/prompt-editor`
               - `primitives/text-editor`
               - `search/quick-find`
@@ -25038,6 +25041,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.usePanelStack`
           - `primitives/css/inline.Inline`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
           - `primitives/css/row.SectionHeaderRow`
           - `primitives/css/scroll.Scroll`
@@ -25058,6 +25062,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.DropdownMenuSeparator`
           - `primitives/css/ui-kit.DropdownMenuTrigger`
           - `primitives/css/ui-kit.Input`
+          - `primitives/css/yield.yieldClass`
           - `primitives/cursor-pagination.InfiniteScrollFooter`
           - `primitives/cursor-pagination.InfiniteScrollHandle`
           - `primitives/cursor-pagination.useInfiniteScroll`

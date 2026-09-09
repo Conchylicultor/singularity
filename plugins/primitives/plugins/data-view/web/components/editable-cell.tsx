@@ -1,7 +1,19 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { MdEdit } from "react-icons/md";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { FieldDef, FieldValue } from "../index";
 import type { useResolveCellEditor } from "../index";
 
@@ -14,23 +26,43 @@ function isEmptyScalar(value: FieldValue): boolean {
 }
 
 /**
- * Shared read affordance. In `"block"` mode it fills the cell (`w-full`) so the
- * WHOLE column width is a click target — not just the rendered glyphs; in
- * `"inline"` mode it flows inline inside text. Shows a muted "Empty" hint when
- * the value is empty, so nullable/blank cells stay discoverable and clickable
- * instead of collapsing to a zero-size, unclickable region.
+ * Shared read affordance: the value, plus a hover-revealed pencil that is the
+ * ONE way into edit mode.
+ *
+ * The value itself is deliberately **transparent to the click** — it neither
+ * enters edit mode nor stops propagation, so a click anywhere on the row (the
+ * text included) does the row's own thing: open the record. A cell that ate the
+ * click made the row's primary action unreachable over most of its width, and
+ * the user had to hunt for a gap between columns to open a record at all.
+ *
+ * Editing therefore needs a target of its own, and that target is the pencil:
+ * one small button per editable field, revealed when the pointer is over that
+ * field (or when it takes keyboard focus, which is also the only way a keyboard
+ * user ever reached the editor). It is always mounted and only faded, so
+ * revealing it never reflows the row — and `hoverRevealTarget` couples opacity
+ * with pointer-events, so the hidden pencil is never an invisible click-target
+ * sitting over the row.
+ *
+ * `display` picks the box: `"block"` is the row/table cell (a block-level flex
+ * line, the value yielding so the pencil stays visible when the value is
+ * longer than its track); `"inline"` flows inside a text run.
  */
 function ReadAffordance(props: {
   empty: boolean;
   read: ReactNode;
+  label: string;
   display: "block" | "inline";
-  onClick: (e: MouseEvent) => void;
+  onEdit: (e: MouseEvent) => void;
 }): ReactNode {
-  return (
+  const inline = props.display === "inline";
+  const value = (
     <Text
-      as={props.display === "inline" ? "span" : "div"}
-      className={cn("cursor-text", props.display === "inline" ? undefined : "w-full")}
-      onClick={props.onClick}
+      as={inline ? "span" : "div"}
+      // The value yields (falls below its own content width) but never grows:
+      // it truncates rather than pushing the pencil out of the cell, and a
+      // short value keeps the pencil right next to it instead of parking it at
+      // the far edge of the column.
+      className={yieldClass("x")}
     >
       {props.empty ? (
         <span className="italic text-muted-foreground/50">Empty</span>
@@ -39,15 +71,51 @@ function ReadAffordance(props: {
       )}
     </Text>
   );
+  const pencil = (
+    // `xs` is the row-affordance density (the same one `RowActions` applies):
+    // this is chrome sitting inside a line of data, not a control of its own.
+    <ControlSizeProvider size="xs">
+      <IconButton
+        icon={MdEdit}
+        label={`Edit ${props.label}`}
+        className={cn(hoverRevealTarget, rigidClass())}
+        // Both halves are load-bearing: the click must not reach the row (it
+        // would activate the row we are editing IN), and the pointerdown must
+        // not reach it either (a table/list row is its own drag source, so the
+        // press would arm a reorder drag from the pencil).
+        onClick={props.onEdit}
+        onPointerDown={(e) => e.stopPropagation()}
+      />
+    </ControlSizeProvider>
+  );
+  return inline ? (
+    <Inline gap="2xs" className={hoverRevealGroup}>
+      {value}
+      {pencil}
+    </Inline>
+  ) : (
+    <Stack
+      direction="row"
+      gap="2xs"
+      align="center"
+      className={hoverRevealGroup}
+    >
+      {value}
+      {pencil}
+    </Stack>
+  );
 }
 
 /**
- * Presentational click-to-edit wrapper for one field cell. Holds ONLY an
- * `editing` boolean — the parent owns `resolveEditor` (hooks must run
- * unconditionally at the view top level) and the write-back. A field is
- * scalar (`value` + `onEdit`) or multi-value (`values` + `onEditValues`); the
- * empty-check and the commit channel follow whichever the field declares.
- * `stopPropagation` keeps a cell edit from triggering row activation.
+ * Presentational edit wrapper for one field cell. Holds ONLY an `editing`
+ * boolean — the parent owns `resolveEditor` (hooks must run unconditionally at
+ * the view top level) and the write-back. A field is scalar (`value` +
+ * `onEdit`) or multi-value (`values` + `onEditValues`); the empty-check and the
+ * commit channel follow whichever the field declares.
+ *
+ * Edit mode is entered from the read affordance's pencil, never from the value:
+ * the row owns clicks on its own content. Once open, the editor `stopPropagation`s
+ * so typing/clicking inside it never activates the row underneath.
  *
  * `autoEdit` starts the cell in edit mode on mount (the contributed slot editors
  * `autoFocus`, so mounting the editor focuses it) — used by the tree's
@@ -73,6 +141,18 @@ export function EditableCell(props: {
   const empty = isMulti
     ? !(props.values && props.values.length > 0)
     : isEmptyScalar(props.value);
+  const read = (
+    <ReadAffordance
+      empty={empty}
+      read={props.read}
+      label={props.field.label}
+      display={display}
+      onEdit={(e) => {
+        e.stopPropagation();
+        setEditing(true);
+      }}
+    />
+  );
 
   if (editing) {
     const editor = props.resolveEditor({
@@ -105,24 +185,7 @@ export function EditableCell(props: {
       );
     }
     // No contributed editor for this type → never trap the user.
-    return (
-      <ReadAffordance
-        empty={empty}
-        read={props.read}
-        display={display}
-        onClick={(e) => e.stopPropagation()}
-      />
-    );
+    return read;
   }
-  return (
-    <ReadAffordance
-      empty={empty}
-      read={props.read}
-      display={display}
-      onClick={(e) => {
-        e.stopPropagation();
-        setEditing(true);
-      }}
-    />
-  );
+  return read;
 }

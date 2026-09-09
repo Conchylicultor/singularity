@@ -106,7 +106,10 @@ describe("data-view table inline cell editing", () => {
       </PluginProvider>,
     );
 
-    fireEvent.click(getByText("alpha"));
+    // The value itself is transparent to the click (it belongs to the row);
+    // the hover-revealed pencil is the way in.
+    expect(getByText("alpha")).toBeTruthy();
+    fireEvent.click(getByLabelText("Edit Name"));
     const input = getByLabelText("cell-editor");
     fireEvent.change(input, { target: { value: "beta" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -136,8 +139,10 @@ describe("data-view table inline cell editing", () => {
       </PluginProvider>,
     );
 
-    // An empty cell still presents a clickable hint instead of a zero-size void.
-    fireEvent.click(getByText("Empty"));
+    // An empty cell still presents its hint AND its pencil, instead of
+    // collapsing to a zero-size void with nothing to aim at.
+    expect(getByText("Empty")).toBeTruthy();
+    fireEvent.click(getByLabelText("Edit Name"));
     const input = getByLabelText("cell-editor");
     fireEvent.change(input, { target: { value: "filled" } });
     fireEvent.keyDown(input, { key: "Enter" });
@@ -159,6 +164,8 @@ describe("data-view table inline cell editing", () => {
 
     fireEvent.click(getByText("alpha"));
     expect(queryByLabelText("cell-editor")).toBeNull();
+    // …and there is no pencil to click either.
+    expect(queryByLabelText("Edit Name")).toBeNull();
   });
 
   it("edits a multi-value cell via the onCommitValues → onEditValues channel", () => {
@@ -183,7 +190,8 @@ describe("data-view table inline cell editing", () => {
     );
 
     // The read cell renders the threaded `TableCellProps.values`.
-    fireEvent.click(getByText("a"));
+    expect(getByText("a")).toBeTruthy();
+    fireEvent.click(getByLabelText("Edit Tags"));
     fireEvent.click(getByLabelText("multi-cell-editor"));
 
     expect(onEditValues).toHaveBeenCalledTimes(1);
@@ -214,12 +222,48 @@ describe("data-view table inline cell editing", () => {
       </PluginProvider>,
     );
 
-    // An empty multi-value cell shows the clickable hint (not a zero-size void).
-    fireEvent.click(getByText("Empty"));
+    // An empty multi-value cell shows the hint (not a zero-size void) beside
+    // its pencil.
+    expect(getByText("Empty")).toBeTruthy();
+    fireEvent.click(getByLabelText("Edit Tags"));
     fireEvent.click(getByLabelText("multi-cell-editor"));
 
     expect(onEditValues).toHaveBeenCalledTimes(1);
     expect(onEditValues).toHaveBeenCalledWith({ id: "1", tags: [] }, ["added"]);
+  });
+
+  it("lets a click on the VALUE reach the row, and keeps the pencil off it", () => {
+    const onEdit = vi.fn();
+    const activate = vi.fn();
+    const { getByText, getByLabelText, queryByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...({
+            ...renderProps([
+              {
+                id: "name",
+                label: "Name",
+                type: "text",
+                value: (r: Row) => r.name,
+                onEdit,
+              },
+            ]),
+            rowActivation: () => activate,
+          } as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+
+    // The row owns clicks on its own content: the text opens the record.
+    fireEvent.click(getByText("alpha"));
+    expect(activate).toHaveBeenCalledTimes(1);
+    expect(queryByLabelText("cell-editor")).toBeNull();
+
+    // The pencil is the ONLY way into the editor, and it never activates the
+    // row it is editing in.
+    fireEvent.click(getByLabelText("Edit Name"));
+    expect(activate).toHaveBeenCalledTimes(1);
+    expect(getByLabelText("cell-editor")).toBeTruthy();
   });
 
   it("never enters edit mode for a multi-value field without onEditValues", () => {
@@ -243,5 +287,6 @@ describe("data-view table inline cell editing", () => {
 
     fireEvent.click(getByText("a"));
     expect(queryByLabelText("multi-cell-editor")).toBeNull();
+    expect(queryByLabelText("Edit Tags")).toBeNull();
   });
 });

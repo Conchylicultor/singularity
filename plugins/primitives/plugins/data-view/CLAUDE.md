@@ -830,6 +830,31 @@ is a table-wide prop with consumers outside data-view, so a non-activating row
 there is a live-looking row that does nothing rather than a plain container.
 Lifting that means changing `DataTable`.
 
+### The click belongs to the row; the pencil belongs to the field
+
+An editable cell does **not** open its editor when you click its value. The
+value is transparent to the click, so a click anywhere on a row — over a column
+as much as in the gap between two — does the row's own thing. Editing has its
+own target: a small pencil beside each editable field, revealed while the
+pointer is over that field (`primitives/hover-reveal`'s class pair, so no
+render-per-hover), and reachable by keyboard because it is a real button that
+can take focus.
+
+The two used to compete for one gesture, and the row lost: with click-to-edit on
+every cell, the row's primary action survived only in the slivers between
+columns, and a table of editable fields could not be used to open anything.
+Splitting the gesture also gave keyboard users an editor they never had — a
+`div` with an `onClick` was not reachable at all.
+
+`EditableCell` owns this for **every** view (table, list, gallery, and the tree's
+secondary chips), so the answer is the same wherever a field is rendered. The
+pencil is always mounted and only faded, so revealing it reflows nothing.
+
+The **tree's primary label** is the one exception and keeps *select-then-edit*
+(first click selects/navigates, a second click on the selected row edits) — it is
+the navigation target itself, so it has no room beside it for a second affordance
+(`EditableTreeLabel`).
+
 ## Row tone: a row can read as inactive
 
 `DataViewProps.rowTone` is `(row) => "default" | "muted"`. `"muted"` dims the
@@ -1475,6 +1500,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/control-panel.usePanelStack`
     - `primitives/css/inline.Inline`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/row.SectionHeaderRow`
     - `primitives/css/scroll.Scroll`
@@ -1495,6 +1521,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/css/ui-kit.DropdownMenuSeparator`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
+    - `primitives/css/yield.yieldClass`
     - `primitives/cursor-pagination.InfiniteScrollFooter`
     - `primitives/cursor-pagination.InfiniteScrollHandle`
     - `primitives/cursor-pagination.useInfiniteScroll`
