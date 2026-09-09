@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   generateCompositionRegistry,
+  listNamedCompositionRegistries,
   regenerateManifestCodegen,
   regenerateRegistryCodegen,
   seedAuthoredOverrides,
@@ -54,6 +55,7 @@ import {
   generateMigration,
   type MigrationAnswer,
 } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
+import { planCompositionSet } from "./composition-set";
 import { distStagingPath, publishDistAtomic } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
 import {
@@ -448,11 +450,18 @@ export async function prepareCompositionSources(opts: {
   // select the filtered file by that name. The committed `<dir>.generated.ts`
   // files are never touched either way, so the build stays byte-identical.
   //
-  // The MAIN composition is filtered out first, and that is not a carve-out: its
+  // The set built is the composition ids NAMED by this build, plus every one
+  // already RESIDENT in this checkout (see below) — a registry on disk is this
+  // tree's registry, always, so no build leaves another composition's behind at
+  // an older commit.
+  //
+  // The MAIN composition is filtered out of it, and that is not a carve-out: its
   // registry IS the committed one (`compositionRegistryFileName`), so
   // `generateCompositionRegistry` would return without writing anything anyway —
-  // dropping it here is what keeps a plain `./singularity build` from paying for
-  // the faceted plugin-tree walk below to produce nothing.
+  // dropping it is what keeps a plain `./singularity build` in a checkout that
+  // composes NOTHING from paying for the faceted plugin-tree walk below to
+  // produce nothing. A checkout that does compose something pays the walk on
+  // every build, which is the price of the registries it hosts being true.
   //
   // The span opens UNCONDITIONALLY, with the `if` inside it: `build`'s profile
   // is compared span-for-span across releases, so a plain build must keep
@@ -471,7 +480,20 @@ export async function prepareCompositionSources(opts: {
         `Known: ${opts.manifest.map((i) => i.id).join(", ")}`,
     );
   }
-  const filtered = compositions.filter((id) => id !== MAIN_COMPOSITION_ID);
+  // Every composition already RESIDENT in this checkout is regenerated too,
+  // whether or not this build named it — `planCompositionSet` states why.
+  const plan = planCompositionSet(
+    compositions.filter((id) => id !== MAIN_COMPOSITION_ID),
+    [...new Set(listNamedCompositionRegistries(root).map((r) => r.name))],
+    (id) => byId.has(id),
+  );
+  for (const id of plan.unverifiable) {
+    hooks.log(
+      `Composition "${id}": registry resident in this checkout but absent ` +
+        `from this build's manifest — left unregenerated (it may be stale).`,
+    );
+  }
+  const filtered = plan.build;
   if (filtered.length > 0) {
     const allManifests = opts.manifest.map(manifestItemToManifest);
     // ONE tree walk for N compositions — the whole reason the list is variadic.
@@ -482,7 +504,7 @@ export async function prepareCompositionSources(opts: {
       facets: true,
     });
     for (const composition of filtered) {
-      // Non-null by the `unknown` check above.
+      // Non-null: `plan.build` holds only ids `byId.has` accepted.
       const item = byId.get(composition)!;
       const flat = flattenManifest(manifestItemToManifest(item), allManifests);
       const bundle = resolveComposition(tree, flat).bundle;
