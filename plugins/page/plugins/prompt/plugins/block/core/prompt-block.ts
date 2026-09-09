@@ -1,5 +1,8 @@
 import { MdAutoAwesome } from "react-icons/md";
-import { defineBlock, textBlockSchema } from "@plugins/page/plugins/editor/core";
+import {
+  defineBlock,
+  textBlockSchema,
+} from "@plugins/page/plugins/editor/core";
 
 // The block IS the prompt: its payload is plain text-bearing block data, with no
 // extra fields. In particular it stores NO task ids — the tasks a block launched
@@ -21,8 +24,8 @@ export const promptBlock = defineBlock({
   // the prompt's own text between the tags; the tasks it launched are link rows,
   // not payload, so there is nothing else to carry.
   markdown: { tag: { body: "text" } },
-  // v1's prompt is this block's own text only, so Enter at the end starts an
-  // ordinary paragraph rather than a second prompt; Backspace at the very start
+  // v1's prompt is this block's own text only, so Enter starts an ordinary
+  // paragraph rather than a second prompt; Backspace at the very start
   // resets to a paragraph and Enter on an empty prompt breaks out of it. Same
   // knob set as the toggle block — the editor core never names a type, the
   // target is supplied here.

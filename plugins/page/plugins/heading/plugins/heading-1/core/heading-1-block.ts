@@ -17,6 +17,7 @@ export const heading1Block = defineBlock({
   // tracks the markdown prefix above (`# ` ⇔ 1), never `textVariant` — that one
   // is a font size, and a big paragraph is not a heading.
   semantics: { role: "heading", level: 1 },
-  // Enter at the end of a heading yields a body paragraph (Notion behavior).
+  // Splitting a heading yields a body paragraph, wherever in the line the caret
+  // sits — the tail of a title is prose, not another title.
   splitInto: "text",
 });

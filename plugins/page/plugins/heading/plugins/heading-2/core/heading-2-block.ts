@@ -15,6 +15,7 @@ export const heading2Block = defineBlock({
   textVariant: "heading",
   // See heading-1: the level tracks the markdown prefix (`## ` ⇔ 2).
   semantics: { role: "heading", level: 2 },
-  // Enter at the end of a heading yields a body paragraph (Notion behavior).
+  // Splitting a heading yields a body paragraph, wherever in the line the caret
+  // sits — the tail of a title is prose, not another title.
   splitInto: "text",
 });

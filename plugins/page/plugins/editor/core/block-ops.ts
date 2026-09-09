@@ -1057,7 +1057,10 @@ function applySplit(
       id: op.newId,
       pageId: block.pageId,
       parentId: block.parentId,
-      type: op.siblingType ?? block.type, // siblingType is never set here; belt-and-braces
+      // The intent layer withholds `splitInto` for this split precisely because
+      // the row it mints is the HEAD, not the tail (see `resolveKeystroke`), so
+      // `siblingType` is never set here — read for belt-and-braces only.
+      type: op.siblingType ?? block.type,
       data: {
         ...asObject(op.tailData !== undefined ? op.tailData : block.data),
         text: [],

@@ -5,9 +5,10 @@ plugin's reusable `BlockTextRenderer` primitive — it stores `{ text }` and
 declares three generic handle fields: `markdownPrefixes: ["### "]` (typing `### `
 at the start of a block converts it, prefix stripped and trailing text
 preserved), `textVariant: "subheading"` (the shared editor renders the editable
-text at the `subheading` typography variant), and `splitInto: "text"` (Enter at
-the END of the heading produces a body `text` paragraph, Notion-style;
-mid-heading splits keep the heading type).
+text at the `subheading` typography variant), and `splitInto: "text"`
+(splitting the heading with Enter puts the tail in a body `text` paragraph —
+anywhere in the line, not only at its end; only Enter at the very START, which
+inserts an empty line above rather than a tail, keeps the heading type).
 
 Because it shares the same `BlockTextRenderer` as every other text-like block,
 converting text↔heading reconciles in place — the live Lexical editor and its

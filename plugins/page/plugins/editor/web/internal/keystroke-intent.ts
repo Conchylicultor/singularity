@@ -177,8 +177,8 @@ export interface IntentContext {
   /**
    * The current block's declarative edit policy, resolved once at the consumer
    * from the block's handle (no prop drilling). `asChild`/`childType`/`splitInto`
-   * cover the Enter-split shape (nest as a child, or split into a different
-   * sibling type — e.g. a heading yields a body paragraph), while
+   * cover the Enter-split shape (nest as a child, or mint the split's tail as a
+   * different type — e.g. a heading yields a body paragraph), while
    * `resetToOnBackspaceAtStart`/`breakOutOnEmptyEnter` drive the type-reset
    * branches below — all generic, the resolver never names a block type.
    */
@@ -427,18 +427,29 @@ export function resolveKeystroke(
       // has visible children (Notion's Enter-at-end behavior).
       const asChild =
         p?.asChild ?? (hasVisibleChildren(ctx, node) && caret.atEnd);
-      // Enter at the END of a block can produce a sibling of a different type
-      // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
-      const siblingType = !asChild && caret.atEnd ? p?.splitInto : undefined;
+      // Enter mints a TAIL: the block that carries the text after the caret, or
+      // — when the caret is at the end of the line — the empty block the user
+      // types the next thing into. `splitInto` is that tail's type (a heading
+      // yields a body paragraph), and it holds wherever the tail lands: as the
+      // next sibling, or nested as the first child. Where the caret sits inside
+      // the line does not change what the tail IS, so a mid-heading Enter yields
+      // a paragraph too.
+      //
+      // The one split that mints a HEAD instead of a tail is Enter at the START
+      // of a non-empty block: the reducer inserts an empty sibling ABOVE and
+      // leaves the origin (text, id, type) untouched. That new line is the part
+      // BEFORE the caret, so it keeps the origin's own type — an empty heading
+      // above the heading, not a paragraph.
+      const tailInto = caret.atStart && !caret.atEnd ? undefined : p?.splitInto;
+      const siblingType = asChild ? undefined : tailInto;
+      const childType = p?.childType ?? (asChild ? tailInto : undefined);
       // Resolve the tail's `data` transform (e.g. a checked to-do → unchecked
       // tail) HERE, where block handles are visible. Guarded to the same-type case:
-      // the tail's type is `childType` when nesting, `siblingType` when the end-
-      // split swaps type, else the origin type. Running the origin's transform on a
-      // tail validated against a DIFFERENT schema would corrupt it — so apply only
-      // when the tail type equals the origin type.
-      const tailType = asChild
-        ? (p?.childType ?? node.type)
-        : (siblingType ?? node.type);
+      // the tail's type is `childType` when nesting, `siblingType` otherwise, and
+      // either may be the swapped-in `splitInto` target. Running the origin's
+      // transform on a tail validated against a DIFFERENT schema would corrupt it
+      // — so apply only when the tail type equals the origin type.
+      const tailType = (asChild ? childType : siblingType) ?? node.type;
       const tailData =
         p?.dataOnSplit && tailType === node.type
           ? p.dataOnSplit(node.data)
@@ -447,7 +458,7 @@ export function resolveKeystroke(
         type: "split",
         position,
         asChild,
-        childType: p?.childType,
+        childType,
         siblingType,
         tailData,
       };

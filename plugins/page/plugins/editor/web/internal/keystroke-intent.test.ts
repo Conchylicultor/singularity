@@ -237,19 +237,60 @@ describe("Enter", () => {
     });
   });
 
-  test("splitInto: Enter MID-text keeps the type (siblingType undefined)", () => {
-    // Caret not at the end → no type swap, the after-text stays the same type.
+  test("splitInto: Enter MID-text also yields a sibling of that type", () => {
+    // The tail of a heading is prose wherever the caret sat when it was made:
+    // `splitInto` describes the tail, not the caret position that minted it.
     const intent = resolveKeystroke(
       "Enter",
       NO_SHIFT,
       caret({ offset: 2, atEnd: false }),
-      ctx("A", {
+      ctx("B", {
         editPolicy: { splitInto: "text" },
       }),
     );
     expect(intent).toMatchObject({
       type: "split",
       asChild: false,
+      siblingType: "text",
+    });
+  });
+
+  test("splitInto: Enter at the START keeps the type (the new row is the HEAD)", () => {
+    // Position 0 with text after it inserts an EMPTY sibling above and leaves
+    // the origin untouched — that row is the part before the caret, so it stays
+    // a heading rather than becoming the paragraph the tail would be.
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ offset: 0, atStart: true, atEnd: false }),
+      ctx("B", {
+        editPolicy: { splitInto: "text" },
+      }),
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      position: 0,
+      asChild: false,
+      siblingType: undefined,
+    });
+  });
+
+  test("splitInto: a nested tail (asChild) takes the split type too", () => {
+    // A heading with visible children nests the split-off content as its first
+    // child (Enter-at-end). That child is still the tail, so it is a paragraph —
+    // an explicit `childType` (the toggle's) still wins.
+    const intent = resolveKeystroke(
+      "Enter",
+      NO_SHIFT,
+      caret({ atEnd: true }),
+      ctx("A", {
+        editPolicy: { splitInto: "text" },
+      }),
+    );
+    expect(intent).toMatchObject({
+      type: "split",
+      asChild: true,
+      childType: "text",
       siblingType: undefined,
     });
   });

@@ -215,7 +215,17 @@ export interface BlockHandle<T> {
    * density preset and can't drift from the padding it mirrors.
    */
   gutterFirstLineCenter?: string;
-  /** Sibling block type produced when Enter splits this block at the END of its text (defaults to same type). */
+  /**
+   * The type of the TAIL an Enter-split mints — the block carrying the text
+   * after the caret, or (at the end of the line) the empty block the user types
+   * the next thing into. A heading declares `"text"`, so splitting it anywhere
+   * in its line yields a body paragraph. Defaults to this same type, which is
+   * what a list item wants: splitting a bullet yields another bullet.
+   *
+   * Applies wherever the tail lands — next sibling, or nested first child. The
+   * one Enter it does NOT govern is at the START of a non-empty block, which
+   * mints an empty HEAD above instead of a tail and so keeps this type.
+   */
   splitInto?: string;
   /**
    * Transform the data payload the TAIL inherits when a split produces a tail of
