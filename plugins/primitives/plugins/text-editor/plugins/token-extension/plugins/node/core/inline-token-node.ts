@@ -1,5 +1,8 @@
 import {
   DecoratorNode,
+  type DOMConversionMap,
+  type DOMConversionOutput,
+  type DOMExportOutput,
   type EditorConfig,
   type Klass,
   type LexicalEditor,
@@ -16,6 +19,7 @@ import {
   type TokenFields,
   type TokenFieldValue,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import { tokenDomElement, tokenDomFields } from "./token-dom";
 
 /**
  * The Lexical class factory behind an inline token family.
@@ -122,6 +126,50 @@ export function defineInlineTokenNode<F extends TokenFields>(
       const values: Record<string, TokenFieldValue> = readFields(this);
       for (const field of fields) out[field] = values[field];
       return json;
+    }
+
+    /**
+     * The token's HTML flavour — see `./token-dom.ts` for the encoding and for
+     * why an inline token needs one at all.
+     *
+     * Derived from the same declaration `getTextContent` and the serializer are
+     * (`type`, `fields`, `token`), so there is no way to declare a family whose
+     * HTML export is empty: the default — `createDOM()`, the decorator's empty
+     * React host — is exactly the shape that made a cross-block chip paste as a
+     * blank, and it is no longer reachable.
+     */
+    exportDOM(_editor: LexicalEditor): DOMExportOutput {
+      const values = readFields(this);
+      return { element: tokenDomElement(type, values, spec.token(values)) };
+    }
+
+    /**
+     * Rebuild one of this family's nodes from {@link exportDOM}'s element.
+     *
+     * `this` is the REGISTERED class — the decorated twin in a browser editor,
+     * the headless base in a server one — so a rebuilt node is the same class
+     * every other node in that editor is, without this factory having to know
+     * which twin it minted.
+     */
+    static importDOM(): DOMConversionMap | null {
+      const Ctor = this as unknown as new () => LexicalNode;
+      return {
+        span: (element: HTMLElement) => {
+          const values = tokenDomFields(element, type, fields);
+          if (values === null) return null;
+          return {
+            conversion: (): DOMConversionOutput => {
+              const node = new Ctor();
+              writeFields(node, values);
+              return { node };
+            },
+            // Above `TextNode`'s own `span` conversion, which is priority 0 and
+            // would otherwise claim the host element as a Google-Docs wrapper
+            // and reduce it to its text.
+            priority: 4,
+          };
+        },
+      };
     }
 
     isInline(): true {

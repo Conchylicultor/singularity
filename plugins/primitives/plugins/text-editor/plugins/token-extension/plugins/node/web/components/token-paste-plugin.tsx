@@ -24,10 +24,19 @@ const LEXICAL_MIME = "application/x-lexical-editor";
  * ## It declines an intra-app copy
  *
  * A clipboard carrying `application/x-lexical-editor` already holds the
- * MATERIALIZED nodes, and Lexical's own paste path reconstructs them perfectly —
- * marks, links and all. Re-parsing that paste from `text/plain` would rebuild
- * the tokens correctly and lose everything around them: copying `**bold** att-…`
+ * MATERIALIZED nodes, and Lexical's own paste path reconstructs them — marks,
+ * links and all. Re-parsing that paste from `text/plain` would rebuild the
+ * tokens correctly and lose everything around them: copying `**bold** att-…`
  * and pasting it back stripped the bold.
+ *
+ * That payload is namespace-gated (`$insertDataTransferForRichText` accepts it
+ * only when `payload.namespace === editor._config.namespace`), so a copy between
+ * two editors — two page blocks, say, which never share a namespace — reaches
+ * the `text/html` arm instead. Declining is still right there: the token's HTML
+ * flavour round-trips on its own, because `defineInlineTokenNode` derives
+ * `exportDOM`/`importDOM` from the same declaration as everything else
+ * (`../../core/token-dom.ts`). Before it did, that arm was an empty `<span>` and
+ * a cross-block chip pasted as a blank.
  *
  * ## Priority
  *

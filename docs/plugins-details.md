@@ -28629,7 +28629,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/text-editor/token-extension.matchTokens`
                   - `primitives/text-editor/token-extension.TokenFields`
                   - `primitives/text-editor/token-extension.TokenFieldValue`
-                - Exports (values): `defineInlineTokenNode`
+                - Exports (values):
+                  - `defineInlineTokenNode`
+                  - `TOKEN_FIELDS_ATTR`
+                  - `TOKEN_TYPE_ATTR`
+                  - `tokenDomElement`
+                  - `tokenDomFields`
               - Cross-plugin:
                 - Imported by:
                   - `active-data`

@@ -56,12 +56,24 @@ and gets back a descriptor carrying the Lexical class, `create` / `is` /
 the browser half. `tokenExtension({ id, pattern, node })` then derives
 `createNodeFromMatch` and `serializeNode` from that same descriptor.
 
+`getTextContent`, `exportJSON`/`importJSON` and `exportDOM`/`importDOM` are
+derived from it too — every way a token leaves an editor, from the one place
+that knows what it is made of.
+
 **The stub hazard is unspellable.** There is no way to obtain a node class for
 this system except through `defineInlineTokenNode`, which REQUIRES `token`;
 every extension's serializer derives from that same `token`. A class that
 hydrates successfully and serializes to `""` — silently deleting the token, the
 failure `page/markdown-apply/server/internal/block-doc-text.ts` warns about —
 cannot be written.
+
+**`exportDOM`/`importDOM` are not optional decoration** — see
+`plugins/node/core/token-dom.ts` before touching them. A decorator's content
+comes from `decorate()`, which HTML serialization never calls, so the inherited
+default exports an empty `<span>`. And the HTML arm is the ORDINARY paste path
+between two page blocks, not an edge case: Lexical takes its own
+`application/x-lexical-editor` payload only when the namespaces match, and every
+block is its own editor (`block-text-<blockId>`).
 
 The descriptor also carries a brand whose symbol is never exported, so an
 `InlineTokenNode` cannot be written as an object literal. `brandInlineTokenNode`

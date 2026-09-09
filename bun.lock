@@ -4575,6 +4575,9 @@
         "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },
+      "devDependencies": {
+        "@lexical/html": "^0.44.0",
+      },
     },
     "plugins/primitives/plugins/tree": {
       "name": "@singularity/plugin-primitives-tree",
