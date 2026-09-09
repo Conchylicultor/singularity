@@ -1,4 +1,4 @@
-// @hash 76d44d2d6f8f
+// @hash 7e8ab76d342d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,8 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.deploy.deployments:converge",
-    "apps.deploy.deployments:ship",
+    "apps.deploy.deployments:deploy",
     "apps.deploy.deployments:delete",
     "apps.deploy.local-serve:serve"
   ]

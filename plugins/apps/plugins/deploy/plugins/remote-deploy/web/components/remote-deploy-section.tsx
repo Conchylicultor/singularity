@@ -9,7 +9,12 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Step, StepNote, Steps, type StepState } from "@plugins/primitives/plugins/setup-steps/web";
+import {
+  Step,
+  StepNote,
+  Steps,
+  type StepState,
+} from "@plugins/primitives/plugins/setup-steps/web";
 import {
   matchResource,
   useCombinedResources,
@@ -57,7 +62,11 @@ const PHASES: ReadonlyArray<{ id: DeployPhase; title: string }> = [
  * The two resources are gated together, so this can never paint from a
  * half-loaded snapshot.
  */
-export function RemoteDeploySection({ deploymentId }: { deploymentId: string }): ReactNode {
+export function RemoteDeploySection({
+  deploymentId,
+}: {
+  deploymentId: string;
+}): ReactNode {
   const loaded = useCombinedResources({
     deployments: useResource(deploymentsResource),
     runs: useResource(deployRunsResource),
@@ -69,7 +78,11 @@ export function RemoteDeploySection({ deploymentId }: { deploymentId: string }):
     ready: ({ deployments, runs }) => {
       const deployment = deployments.find((d) => d.id === deploymentId);
       if (!deployment) {
-        return <Placeholder tone="error">This deployment no longer exists.</Placeholder>;
+        return (
+          <Placeholder tone="error">
+            This deployment no longer exists.
+          </Placeholder>
+        );
       }
       return <RemoteDeploy deployment={deployment} run={runs[deployment.id]} />;
     },
@@ -83,8 +96,9 @@ function RemoteDeploy({
   deployment: Deployment;
   run: DeployRun | undefined;
 }): ReactNode {
-  // The same hook the row's Converge / Ship buttons gate on, so a tooltip and
-  // this button can never disagree about why something is blocked.
+  // The same hook the row's Deploy button gates on — the row launches the same
+  // `update` verb — so a tooltip and this button can never disagree about why
+  // something is blocked.
   const blocked = useBlockedReason(deployment);
   const health = useServerHealth(deployment.serverId);
   // Never a picker: the platform a deploy needs is DISCOVERED by the probe, and
@@ -105,16 +119,19 @@ function RemoteDeploy({
           title={blocked ?? undefined}
           loading={deploy.isPending}
           onClick={() =>
-            deploy.mutate({ params: { id: deployment.id }, body: { verb: "update" } })
+            deploy.mutate({
+              params: { id: deployment.id },
+              body: { verb: "update" },
+            })
           }
         >
           <MdRocketLaunch />
           {platform ? `Deploy ${platform}` : "Deploy"}
         </Button>
         <Text as="p" variant="caption" tone="muted">
-          Converges the host, builds a {platform ?? "matching"} candidate unless one is
-          already current, then ships that exact run behind the CLI&apos;s remote health
-          gate.
+          Converges the host, builds a {platform ?? "matching"} candidate unless
+          one is already current, then ships that exact run behind the
+          CLI&apos;s remote health gate.
         </Text>
         {blocked && (
           <Text as="p" variant="caption" tone="destructive">
@@ -176,9 +193,18 @@ function PhaseReport({ run }: { run: DeployRun }): ReactNode {
     <Stack gap="xs">
       <Steps>
         {PHASES.map((phase, i) => (
-          <Step key={phase.id} title={phase.title} state={stateOf(i, currentIndex, run.status)}>
+          <Step
+            key={phase.id}
+            title={phase.title}
+            state={stateOf(i, currentIndex, run.status)}
+          >
             {i === currentIndex && failed && run.message && (
-              <Text as="p" variant="caption" tone="destructive" className="whitespace-pre-wrap">
+              <Text
+                as="p"
+                variant="caption"
+                tone="destructive"
+                className="whitespace-pre-wrap"
+              >
                 {run.message}
               </Text>
             )}
@@ -206,7 +232,11 @@ function PhaseReport({ run }: { run: DeployRun }): ReactNode {
  * `phase` at the leg it ended on, so a success marks every phase done while a
  * failure leaves the failing leg `active` — which is where its message is.
  */
-function stateOf(index: number, currentIndex: number, status: DeployRun["status"]): StepState {
+function stateOf(
+  index: number,
+  currentIndex: number,
+  status: DeployRun["status"],
+): StepState {
   if (status === "succeeded") return "done";
   if (index < currentIndex) return "done";
   if (index === currentIndex) return "active";
@@ -242,7 +272,12 @@ function Provenance({ info }: { info: ReleaseInfo }): ReactNode {
         <Text as="p" variant="label">
           Nothing built yet — Deploy will build it
         </Text>
-        <Text as="p" variant="caption" tone="muted" className="whitespace-pre-wrap">
+        <Text
+          as="p"
+          variant="caption"
+          tone="muted"
+          className="whitespace-pre-wrap"
+        >
           {bundleRefusalMessage(resolution.refusal)}
         </Text>
       </Stack>

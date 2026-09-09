@@ -5,8 +5,7 @@ import { DeploymentsSection } from "./components/deployments-section";
 import { DeploymentOverview } from "./components/deployment-overview";
 import {
   DeploymentItemActions,
-  ConvergeAction,
-  ShipAction,
+  DeployAction,
   DeleteDeploymentAction,
 } from "./components/deployment-item-actions";
 import { deploymentDetailPane } from "./panes";
@@ -21,7 +20,7 @@ export { deploymentDetailPane } from "./panes";
 
 export default {
   description:
-    "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, Converge / Ship row actions that launch the CLI, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface.",
+    "Deployments section of a server's page: this server's deployments as a DataView (composition, last run, plus contributed columns), an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run, and the per-deployment pane whose sections (overview, plus contributed ones) carry the record, its derived install and the remote-deploy surface.",
   contributions: [
     ServerDetail.Section({
       id: "deployments",
@@ -37,12 +36,11 @@ export default {
       label: "Overview",
       component: DeploymentOverview,
     }),
-    // The two verbs and Delete are contributed into this plugin's own row-action
-    // slot rather than hard-rendered, so the row's affordances stay a set the
-    // reorder config orders and a later plugin can extend (a rollback action,
-    // say) without touching the list.
-    DeploymentItemActions({ id: "converge", component: ConvergeAction }),
-    DeploymentItemActions({ id: "ship", component: ShipAction }),
+    // Deploy and Delete are contributed into this plugin's own row-action slot
+    // rather than hard-rendered, so the row's affordances stay a set the reorder
+    // config orders and a later plugin can extend (a rollback action, say)
+    // without touching the list.
+    DeploymentItemActions({ id: "deploy", component: DeployAction }),
     DeploymentItemActions({ id: "delete", component: DeleteDeploymentAction }),
   ],
   slots: {

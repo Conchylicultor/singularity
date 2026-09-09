@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { MdDelete, MdRocketLaunch, MdTune } from "react-icons/md";
+import { MdDelete, MdRocketLaunch } from "react-icons/md";
 import {
   defineItemActions,
   type ItemActionProps,
@@ -73,48 +73,42 @@ export function useBlockedReason(deployment: Deployment): string | null {
 }
 
 /**
- * Launch `converge` — make the host serve this composition (run user, dir
- * layout, `env`, Caddy, systemd unit, firewall). Idempotent: re-running repairs
- * drift, which is why it needs no confirmation.
+ * Launch `update` — the whole deploy, as one press: converge the host, build a
+ * candidate unless the bundle is already cut from this HEAD, then ship that
+ * exact run behind the CLI's remote health gate.
+ *
+ * ONE action rather than the `converge` and `ship` pair this replaces. Those two
+ * were the constraint chain rendered as buttons — ship refuses on an unconverged
+ * host, and refuses without a platform-matched bundle — and the chain is now the
+ * phases of a single run, sequenced server-side. Neither could do anything
+ * `update` does not: converge is its first leg and genuinely a no-op the second
+ * time, and ship is its last, differing only by skipping the build (which
+ * `compareToHead` already skips when nothing moved). The pane's Deploy button
+ * gave up the same two buttons for the same reason; a row that kept them made
+ * the same deployment answer to two different vocabularies.
+ *
+ * `converge`/`ship` alone remain CLI verbs — `./singularity deploy converge`
+ * repairs host drift without restarting what is serving — but a bare icon on a
+ * list row is the wrong place to offer a partial deploy, because the row has
+ * nowhere to say which part it left out.
  */
-export function ConvergeAction({
+export function DeployAction({
   row,
 }: ItemActionProps<Deployment>): ReactElement {
   const blocked = useBlockedReason(row);
   const run = useEndpointMutation(runDeployment);
   return (
     <IconButton
-      icon={MdTune}
-      label="Converge"
-      tooltip={blocked ?? `Converge ${row.compositionId} on this server`}
-      disabled={blocked !== null || run.isPending}
-      onClick={(e) => {
-        e.stopPropagation();
-        run.mutate({ params: { id: row.id }, body: { verb: "converge" } });
-      }}
-    />
-  );
-}
-
-/**
- * Launch `ship` — upload the `latest` bundle and activate it behind the CLI's
- * health gate. No release picker: the gate, the platform assertion and the
- * bundle discovery all live in the CLI, and `latest` is what it defaults to.
- */
-export function ShipAction({ row }: ItemActionProps<Deployment>): ReactElement {
-  const blocked = useBlockedReason(row);
-  const run = useEndpointMutation(runDeployment);
-  return (
-    <IconButton
       icon={MdRocketLaunch}
-      label="Ship"
+      label="Deploy"
       tooltip={
-        blocked ?? `Ship the latest ${row.compositionId} bundle to this server`
+        blocked ??
+        `Converge, build if needed, and ship ${row.compositionId} to this server`
       }
       disabled={blocked !== null || run.isPending}
       onClick={(e) => {
         e.stopPropagation();
-        run.mutate({ params: { id: row.id }, body: { verb: "ship" } });
+        run.mutate({ params: { id: row.id }, body: { verb: "update" } });
       }}
     />
   );
