@@ -291,14 +291,18 @@ const check: Check = {
     const root = await getWorktreeRoot();
     const targets = discoverTscTargets(root);
 
-    // Lint universe + per-file closure fingerprints (the warm-path file filter).
-    const graphs = buildImportGraphs(root);
-
     // ONE reading of the tree's file set, shared by everything below that asks
-    // what files exist: the outer read-set, the closure fingerprints, and the
-    // program keys. Four separate walks used to cost seconds and gave the
-    // traversal rules four places to disagree.
-    const listing = readTreeListing(root);
+    // what files exist: the lint universe, the outer read-set, the closure
+    // fingerprints, and the program keys. Four separate walks used to cost
+    // seconds and gave the enumeration rules four places to disagree — and, as
+    // walks, they answered with files git never puts in this check's cache key.
+    const listing = await readTreeListing(root);
+
+    // Lint universe + per-file closure fingerprints (the warm-path file filter).
+    // A FILTER over the listing, never its own walk: that second enumeration is
+    // what let a stray `.ts` under gitignored `.cache/` reach the coverage gate
+    // and fail a build over content the key never covered.
+    const graphs = buildImportGraphs(root, listing.files);
 
     // OUTER input-keyed read-set (Stage 2). Only runs on a cache MISS: the runner
     // reaches run() only when validate-by-replay missed (or nothing was recorded
@@ -333,7 +337,7 @@ const check: Check = {
       return {
         ok: false,
         message: `type-check: ${uncovered.length} lintable file(s) belong to no tsconfig program:\n  ${uncovered.slice(0, 40).join("\n  ")}`,
-        hint: "Add the file's directory to a tsconfig `include` (or its plugin's tsconfig) so it is type-checked and linted. This is the same gap projectService would report as \"not found by the project service\".",
+        hint: 'The lintable set is git-derived, so an uncovered file is genuinely repo source: add its directory to a tsconfig `include` (or its plugin\'s tsconfig) so it is type-checked and linted — the same gap projectService would report as "not found by the project service". If it is NOT source, it does not belong in the git tree: delete it, or add it to .gitignore.',
       };
     }
 

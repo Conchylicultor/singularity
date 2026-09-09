@@ -5,6 +5,7 @@ export { discoverTscTargets, tsBuildInfoPath } from "./discover";
 export type { TscTarget } from "./discover";
 export { materializeWarmBase, publishWarmBase } from "./warm-base";
 export { computeTreeHash } from "./tree-hash";
+export { listRepoFiles } from "./repo-files";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
 export { readCheckProgress } from "./progress-log";

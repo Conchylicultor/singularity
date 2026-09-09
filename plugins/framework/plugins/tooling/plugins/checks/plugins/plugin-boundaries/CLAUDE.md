@@ -28,6 +28,33 @@ import the foreign symbol from its source barrel at each consumer — never prox
 it. `REEXPORT_EXCEPTIONS` (in `check/index.ts`) is a scoped, temporary allowlist
 for in-flight migrations only.
 
+## The file set comes from git, never from a filesystem walk
+
+Every question this check asks about what exists — which sources to parse
+(`check/source-files.ts`), which subdirectories a plugin has and whether one
+holds TypeScript (`check/repo-tree.ts`, feeding R11 and R3's `barrel-required`)
+— is answered from **one** `listRepoFiles` call per run, made at the top of
+`run()` and threaded down.
+
+That is a correctness requirement, not a tidiness one. The check is
+`inputKeyed`, and its read-set records membership as `view.glob("plugins/**")`
+over the git **tree snapshot** (`check/read-set.ts`). A `readdirSync` walk
+answers a different question: it also sees gitignored files. So a stray `.ts`
+under a gitignored directory inside `plugins/` used to be scanned for violations
+— and could raise a real `unknown-dir` or `barrel-required` failure — from
+content no commit contains and the cache key does not cover. Both walks and
+their partial `node_modules` / `dist` deny-lists are gone; `.gitignore` is the
+one place that decides, and it is the same place the cache key reads.
+
+A directory therefore means "holds at least one git-listed file". An empty
+directory, or one holding only gitignored files, is invisible — which is the
+answer R11 already wanted, since it only ever flagged directories containing
+TypeScript. The one exclusion that is about **meaning** rather than about
+ignoring build output stays explicit in the rule: a dot-directory is not a claim
+to be a zone, and `.claude/` is tracked, so gitignore would not hide it.
+
+See [`research/2026-09-09-tooling-check-file-enumeration-from-git.md`](../../../../../../../../research/2026-09-09-tooling-check-file-enumeration-from-git.md).
+
 ## Asset imports (R4 exemption)
 
 A cross-plugin **side-effect import of a non-JS asset** (a `.css` stylesheet,

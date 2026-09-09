@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "fs";
+import { existsSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -10,11 +10,17 @@ import {
   findImports,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  currentScanView,
+  listRepoFiles,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
 import { recordBoundaryReadSet } from "./read-set";
+import { selectSourceFiles } from "./source-files";
+import { repoTree } from "./repo-tree";
+import { collectUnknownDirViolations } from "./unknown-dirs";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -98,6 +104,12 @@ const check: Check = {
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 
+    // ONE git-backed enumeration per run, shared by every rule that asks what
+    // files or directories exist. See ./source-files and ./repo-tree for why it
+    // is git-derived and not a filesystem walk.
+    const allFiles = await listRepoFiles(root);
+    const repo = repoTree(allFiles);
+
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
     const plugins: PluginDir[] = Array.from(tree.byDir.values()).map(
       (node) => ({
@@ -127,9 +139,17 @@ const check: Check = {
     }
 
     // R11: reject unrecognized top-level directories inside plugin folders
+    const allPluginRelPaths = plugins.map((p) => p.relPath);
     for (const p of plugins) {
       if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
-      checkUnknownDirs(p, plugins, known, violations);
+      violations.push(
+        ...collectUnknownDirViolations({
+          pluginRelPath: p.relPath,
+          allPluginRelPaths,
+          known,
+          repo,
+        }),
+      );
     }
 
     // R3: barrel purity + existence for every runtime folder
@@ -143,7 +163,10 @@ const check: Check = {
         if (!existsSync(runtimeDir)) continue;
         const barrel = join(runtimeDir, "index.ts");
         if (!existsSync(barrel)) {
-          if (runtime !== "central" && dirContainsTsFiles(runtimeDir)) {
+          if (
+            runtime !== "central" &&
+            repo.containsTsFiles(`plugins/${p.relPath}/${runtime}`)
+          ) {
             violations.push({
               rule: "barrel-required",
               file: `plugins/${p.relPath}/${runtime}/`,
@@ -172,12 +195,14 @@ const check: Check = {
       }
     }
 
-    // R4 + R5 + R6 + R7: walk source files, extract cross-plugin imports
-    const sourceFiles = findSourceFiles(root);
+    // R4 + R5 + R6 + R7: read every source file, extract cross-plugin imports.
+    // The file set comes from git (see ./source-files) — the check is
+    // inputKeyed, so the set it scans must be the set its cache key represents.
+    const sourceFiles = selectSourceFiles(allFiles);
     const edges = new Set<string>();
 
-    for (const absFile of sourceFiles) {
-      const relFile = relative(root, absFile);
+    for (const relFile of sourceFiles) {
+      const absFile = join(root, relFile);
       const sourcePlugin = pluginForPath(relFile, pluginSet);
       if (sourcePlugin && skippedSet.has(sourcePlugin)) continue;
 
@@ -434,48 +459,6 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
   return best;
 }
 
-// ============================================================================
-// Source-file discovery
-// ============================================================================
-
-const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
-const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
-
-function findSourceFiles(root: string): string[] {
-  const out: string[] = [];
-  for (const rootDir of SOURCE_ROOTS) {
-    const abs = join(root, rootDir);
-    if (!existsSync(abs)) continue;
-    walkSourceFiles(abs, out);
-  }
-  return out;
-}
-
-function walkSourceFiles(dir: string, out: string[]) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return;
-  }
-  for (const e of entries) {
-    if (e.isDirectory()) {
-      if (IGNORED_DIRS.has(e.name)) continue;
-      walkSourceFiles(join(dir, e.name), out);
-    } else if (e.isFile()) {
-      if (e.name.endsWith(".ts") || e.name.endsWith(".tsx")) {
-        out.push(join(dir, e.name));
-      }
-    }
-  }
-}
-
 function safeRead(path: string): string | null {
   try {
     if (!statSync(path).isFile()) return null;
@@ -543,87 +526,6 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
       fix: `set \`"name": "${expected}"\` in ${relPkg}`,
     });
   }
-}
-
-// ============================================================================
-// R11: unknown directories
-// ============================================================================
-
-function checkUnknownDirs(
-  p: PluginDir,
-  allPlugins: PluginDir[],
-  known: Set<string>,
-  violations: Violation[],
-) {
-  // Child plugins live at `<plugin>/plugins/<child>` — their names appear as
-  // direct subdirs of `<plugin>/plugins/`, not of `<plugin>/` itself, so they
-  // won't trigger false positives here.
-  const childPluginNames = new Set(
-    allPlugins
-      .filter((other) => {
-        const prefix = `${p.relPath}/plugins/`;
-        return (
-          other.relPath.startsWith(prefix) &&
-          !other.relPath.slice(prefix.length).includes("/")
-        );
-      })
-      .map((other) => other.name),
-  );
-
-  let entries;
-  try {
-    entries = readdirSync(p.absPath, { withFileTypes: true });
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return;
-  }
-  for (const e of entries) {
-    if (!e.isDirectory()) continue;
-    if (known.has(e.name)) continue;
-    if (e.name === "node_modules") continue;
-    if (e.name.startsWith(".")) continue;
-    if (childPluginNames.has(e.name)) continue;
-    // Only flag directories that contain TS source files — non-code asset
-    // directories (SQL migrations, shell scripts, etc.) are fine.
-    if (!dirContainsTsFiles(join(p.absPath, e.name))) continue;
-    violations.push({
-      rule: "unknown-dir",
-      file: `plugins/${p.relPath}/${e.name}/`,
-      message: `unrecognized directory \`${e.name}/\` contains TypeScript files but is not a recognized zone`,
-      fix: `plugin code must live in one of: ${[...known].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`shared/\`.`,
-    });
-  }
-}
-
-function dirContainsTsFiles(dir: string): boolean {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return false;
-  }
-  for (const e of entries) {
-    if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx")))
-      return true;
-    if (
-      e.isDirectory() &&
-      e.name !== "node_modules" &&
-      dirContainsTsFiles(join(dir, e.name))
-    )
-      return true;
-  }
-  return false;
 }
 
 // ============================================================================

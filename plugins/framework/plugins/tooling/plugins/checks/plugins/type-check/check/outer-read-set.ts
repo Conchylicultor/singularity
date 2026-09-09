@@ -30,8 +30,14 @@ import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
  *      A content-only read-set records only files that already exist, so it would
  *      NOT see a new file and would stale-PASS the gate; the membership fact is
  *      what closes that hole. A new `tsconfig*.json` is caught the same way.
+ *      This fact and `graphs.files` beside it now answer "which `.ts` files
+ *      exist" from the SAME git-honoring set — the glob filters the tree
+ *      snapshot, `graphs.files` filters the listing, which `readTreeListing`
+ *      reads out of git. Before, the listing came from a filesystem walk, so
+ *      the recorded fact and the scanned set disagreed on exactly the
+ *      gitignored files.
  *  (b) CONTENT of every lintable file (`graphs.files` — the SAME enumeration
- *      `buildImportGraphs`/`findLintFiles` produce and the check actually lints)
+ *      `buildImportGraphs` produces and the check actually lints)
  *      as `(path, blobSha)` facts, so ANY `.ts`/`.tsx` edit is a MISS (the type
  *      graph changed) while a non-source change stays a HIT.
  *  (c) CONTENT of the global-trigger set (`findGlobalTriggerFiles` — the SAME

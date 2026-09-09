@@ -11,17 +11,47 @@ type-aware lint off it, via typescript-eslint's `parserOptions.programs`.
 ## Shape
 
 - `check/index.ts` — orchestrator. Discovers targets (`discoverTscTargets`),
-  builds the import graph + per-file closure fingerprints, assigns every
-  lintable file to exactly one target's program (include-roots + forward-import
-  closure; `web-core` first so shared `core`/`shared` files match what
-  projectService picks), asserts full coverage (the gate that replaces
-  projectService's "every file resolves to a project"), fans out one worker per
-  target with bounded concurrency, then splits results into the two failure
-  categories and records per-file lint PASSes.
+  enumerates the repo ONCE via `listRepoFiles`, builds the import graph +
+  per-file closure fingerprints, assigns every lintable file to exactly one
+  target's program (include-roots + forward-import closure; `web-core` first so
+  shared `core`/`shared` files match what projectService picks), asserts full
+  coverage (the gate that replaces projectService's "every file resolves to a
+  project"), fans out one worker per target with bounded concurrency, then
+  splits results into the two failure categories and records per-file lint
+  PASSes.
 - `shared/worker.ts` — per-target worker. `createIncrementalProgram` →
   `getPreEmitDiagnostics` (+ persists the shared `.tsbuildinfo`) → ESLint
   `Linter.verify` with the program injected. One process per target so each
   single-threaded program build runs on its own core.
+
+## The file universe comes from git, and is enumerated once
+
+`run()` takes ONE `readTreeListing(root)` — a `TreeListing` whose files come
+from `listRepoFiles` (`checks/core`) — and hands that value to every consumer:
+`buildImportGraphs` filters it with `isLintable`, `findGlobalTriggerFiles` with
+`isGlobalTrigger`, the program key with `isTscTrigger` and `isTsName`, and
+`recordOuterReadSet` records facts over them. Nothing below the listing
+enumerates: `import-graph.ts`, `fingerprint.ts` and `program-key.ts` only read
+the bytes of files handed to them, which is why they stay synchronous.
+
+This matters because the check is `inputKeyed`: its verdict must be a function
+of the tree its cache key hashes, and that key is git-derived
+(`computeTreeHash` = scratch index + `git add -A`). Both of the walks this
+replaced saw _more_ than the key — every gitignored file — so on 2026-09-09 a
+stray `.ts` an agent had left under `.cache/scratch/` counted as lintable,
+matched no tsconfig program, and failed a push over content no commit contains.
+The second walk had a matching bug of its own: it skipped a literal `dist`
+segment but not `dist.staging.*` / `dist.live.*` / `dist.old.*`, so a build
+artifact under one moved the global fingerprint and invalidated the whole
+closure cache.
+
+The two predicates now spell only what `.gitignore` does not: `*.generated.ts`
+and `prototypes/**`, the remainder of eslint's ignore list
+(`lint/core/build-lint-config.ts`) once git has done its part. Do not restate
+`node_modules` / `dist` / `.check-*` / `.claude/worktrees` there — a
+git-enumerated set never contains them, and a second copy of that list is
+exactly what drifted. See
+`research/2026-09-09-tooling-check-file-enumeration-from-git.md`.
 
 ## Host-wide worker budget — the grant
 
@@ -43,7 +73,7 @@ the whole host runs at most `B` type-check-class workers total (the single laned
   push (a human is blocked); `background` = agent build + direct agent check. The
   CLI classifies the origin and passes the lane to `withHostGrant`; the resulting
   `units` are drawn from the interactive lane's reserved floor or the background
-  window accordingly. A push runs its checks on the rebased *agent* branch yet
+  window accordingly. A push runs its checks on the rebased _agent_ branch yet
   stays interactive because it INHERITS the grant (its env), not because of any
   branch gate.
 - **`B` is the residual of the summed host budget**, declared once in
@@ -111,15 +141,16 @@ facts. The per-file lint closure cache is unaffected either way.
 
 ## One reading of the tree, passed around
 
-`readTreeListing(root)` walks the repo once per run, and everything that asks what files exist takes
-that value: the outer read-set's trigger facts, the closure fingerprints' global component, and both
-halves of the program key. It used to be four independent walks — seconds of traversal, measured,
-and four copies of the rules for what to skip (`node_modules`, `dist`, `.check-*`,
-`.claude/worktrees`).
+`readTreeListing(root)` takes one git-backed reading of the repo per run, and everything that asks
+what files exist takes that value: the lint universe, the outer read-set's trigger facts, the closure
+fingerprints' global component, and both halves of the program key. It used to be four independent
+filesystem walks — seconds of traversal, measured, and four copies of the rules for what to skip
+(`node_modules`, `dist`, `.check-*`, `.claude/worktrees`), which is also how they came to disagree
+with the cache key. Now there are no rules to copy: `.gitignore` is the rule.
 
-It is a value rather than a cache behind the function on purpose. A listing is a snapshot of a
-filesystem that keeps changing, so its staleness window belongs at the call site; as a module-level
-memo the window was silently "the rest of the process".
+It is a value rather than a cache behind the function on purpose. A listing is a snapshot of a tree
+that keeps changing, so its staleness window belongs at the call site; as a module-level memo the
+window was silently "the rest of the process".
 
 A BUILD will skip less than a bare check of the same tree, by construction: `./singularity build`
 regenerates barrel stubs and plugin registries before it runs checks, and those generated files sit
@@ -132,7 +163,7 @@ during the build, `skipped 7 of 7` on the very next standalone check.
 per run, and they are the instrument every claim about this check is made on:
 
 - `type-check: skipped N of M targets, program unchanged since last pass: …
-  (program keys <ms>ms)` — the per-target hit rate, and what the keys cost.
+(program keys <ms>ms)` — the per-target hit rate, and what the keys cost.
 - `type-check: no program key for N target(s) — <target>: <why>; …` — only when
   some target could not be keyed at all.
 - `type-check: <units> of <n> targets run concurrently (host CPU grant)` — only
@@ -159,7 +190,9 @@ parallel check pass measures the queue, so any per-check cost claim needs
   a target whose whole PROGRAM is unchanged runs no worker at all (below). A
   worker that crashes records no PASSes (re-lints next run).
 - A new lintable file in **no** tsconfig `include` and reachable from **no**
-  program fails the coverage gate — add its dir to a tsconfig `include`.
+  program fails the coverage gate. Since the universe is git-derived, such a
+  file is genuinely repo source: add its dir to a tsconfig `include`. If it is
+  not source, it does not belong in the git tree — delete it or gitignore it.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

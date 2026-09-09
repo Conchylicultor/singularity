@@ -206,6 +206,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `isBuildProcess`
     - `listAllChecks`
     - `listCandidateSources`
+    - `listRepoFiles`
     - `loadTreeSnapshot`
     - `markBuildInProgress`
     - `materializeWarmBase`

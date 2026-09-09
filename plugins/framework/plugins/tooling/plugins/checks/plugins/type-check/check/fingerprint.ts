@@ -8,8 +8,8 @@
 // runs and worktrees with an identical closure.
 
 import { createHash } from "crypto";
-import { readdirSync } from "fs";
-import { join, relative, sep } from "path";
+import { join } from "path";
+import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import type { ImportGraphs } from "./import-graph";
 import { safeRead } from "./import-graph";
 
@@ -26,7 +26,14 @@ export interface FingerprintResult {
 // of *any* file. These form the global config component, so a
 // config/rule/tsconfig/deps/ambient change flips every per-file fingerprint at
 // once (replacing the old mtime-based bustCacheIfStale).
-const IGNORED_DIR_NAMES = new Set(["node_modules", "dist", ".git"]);
+//
+// The trigger set is a FILTER over the run's one git-derived listing, never its
+// own walk. That also fixes a live bug: the walk this replaced skipped a literal
+// `dist` segment but not `dist.staging.*` / `dist.live.*` / `dist.old.*` — all
+// gitignored, all capable of holding a `package.json` or a `.d.ts`. One of those
+// perturbed the global fingerprint and invalidated the entire closure cache for
+// a change that never lands on main. Git's own ignore rules cover every
+// spelling, so there is nothing left here to keep in sync.
 
 function isGlobalTrigger(rel: string): boolean {
   if (rel === "eslint.config.ts") return true;
@@ -52,29 +59,35 @@ function isGlobalTrigger(rel: string): boolean {
  * ONE traversal, several predicates. A single check pass asks four different
  * questions of the repo's files: the lint closure fingerprint's trigger set,
  * the outer read-set's copy of the same set, the program key's tsc-relevant
- * subset, and the program key's name census. Walked separately those were four
- * full traversals costing seconds — and, worse, four copies of the traversal
- * RULES, so "skip nested worktrees" had four places to drift from.
+ * subset, and the program key's name census. Enumerated separately those were
+ * four full traversals costing seconds — and, worse, four copies of the
+ * enumeration RULES, so "skip nested worktrees" had four places to drift from.
  *
  * A VALUE rather than a memo behind the function, because a snapshot of a
- * changing filesystem needs a visible lifetime. As a module-level cache its
+ * changing tree needs a visible lifetime. As a module-level cache its
  * staleness window was "the rest of the process", invisible at every call site;
  * as a value, whoever wants a fresh reading takes one.
  */
 export interface TreeListing {
   root: string;
-  /** Every file under `root`, repo-relative, deduped and sorted. */
+  /** Every repo-relevant file under `root`, repo-relative, deduped and sorted. */
   files: string[];
 }
 
 /**
- * Walk `root` (skipping `node_modules`, build output, `.check-*` scratch and
- * nested worktrees) and record every file it holds.
+ * Take one git-backed reading of `root`'s files.
+ *
+ * The source is GIT, not a filesystem walk, because this check is `inputKeyed`:
+ * its verdict must be a function of the tree its cache key hashes, and that key
+ * is git-derived (`computeTreeHash` = a scratch index + `git add -A`). A walk
+ * saw gitignored files the key does not cover — a stray `.ts` under `.cache/`
+ * reached the coverage gate and failed a build over content no key represents.
+ * `listRepoFiles` returns exactly the membership the key folds in, already
+ * deduped and sorted. See
+ * research/2026-09-09-tooling-check-file-enumeration-from-git.md.
  */
-export function readTreeListing(root: string): TreeListing {
-  const out: string[] = [];
-  walkFiles(root, root, out);
-  return { root, files: [...new Set(out)].sort() };
+export async function readTreeListing(root: string): Promise<TreeListing> {
+  return { root, files: await listRepoFiles(root) };
 }
 
 /** The files of a listing whose repo-relative path `matches`. */
@@ -83,34 +96,6 @@ export function findFiles(
   matches: (rel: string) => boolean,
 ): string[] {
   return listing.files.filter(matches);
-}
-
-function walkFiles(root: string, dir: string, out: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return;
-  }
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    const rel = relative(root, full).split(sep).join("/");
-    if (e.isDirectory()) {
-      if (IGNORED_DIR_NAMES.has(e.name)) continue;
-      if (e.name.startsWith(".check-")) continue;
-      if (rel === ".claude/worktrees" || rel.startsWith(".claude/worktrees/"))
-        continue;
-      walkFiles(root, full, out);
-    } else if (e.isFile()) {
-      out.push(rel);
-    }
-  }
 }
 
 /**

@@ -1,10 +1,10 @@
 // plugin-boundaries' input-keyed read-set (Stage 3 of the input-keyed check
 // cache — see research/2026-07-17-global-input-keyed-check-cache.md).
 //
-// plugin-boundaries is one of the most expensive checks: it walks the ENTIRE
-// plugins/ source tree (buildPluginTree + a raw recursive walk), reads every
-// .ts/.tsx file, parses its imports, and evaluates them against the boundary
-// rules — plus reads every package.json (R1 naming + the compositionRoot marker)
+// plugin-boundaries is one of the most expensive checks: it covers the ENTIRE
+// plugins/ source tree (buildPluginTree + the git-derived enumeration in
+// ./source-files and ./repo-tree), reads every .ts/.tsx file, parses its
+// imports, and evaluates them against the boundary rules — plus reads every package.json (R1 naming + the compositionRoot marker)
 // and every runtime barrel, and derives the standard-dir set from every
 // core/*.ts. Its OUTER cache was whole-tree keyed, so ANY byte change anywhere
 // re-ran the whole walk, and every push-rebase was a guaranteed miss.
@@ -62,7 +62,11 @@ import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/
 export function recordBoundaryReadSet(view: FileSystemView): void {
   const all = view.glob("plugins/**");
   for (const path of all) {
-    if (path.endsWith(".ts") || path.endsWith(".tsx") || path.endsWith("/package.json")) {
+    if (
+      path.endsWith(".ts") ||
+      path.endsWith(".tsx") ||
+      path.endsWith("/package.json")
+    ) {
       view.recordFile(path);
     }
   }

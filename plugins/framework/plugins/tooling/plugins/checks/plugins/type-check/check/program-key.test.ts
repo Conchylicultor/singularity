@@ -56,17 +56,37 @@ const TARGET = {
 /**
  * A key computed the way a fresh run computes one: a brand-new context.
  * `null` stands for "no key" so the assertions below read as comparisons.
+ *
+ * Async because the listing it reads comes out of git, which is also why the
+ * fixture below is a real repository.
  */
-function keyNow(roots: string[] = [join(root, "a.ts")]): string | null {
+async function keyNow(
+  roots: string[] = [join(root, "a.ts")],
+): Promise<string | null> {
   const result = programKey(
-    openProgramKeyContext(readTreeListing(root)),
+    openProgramKeyContext(await readTreeListing(root)),
     TARGET,
     roots,
   );
   return result.kind === "key" ? result.key : null;
 }
 
-beforeEach(() => {
+/** Run one git command in the fixture, failing loudly if it does not. */
+async function git(...args: string[]): Promise<void> {
+  const proc = Bun.spawn(["git", ...args], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const code = await proc.exited;
+  if (code !== 0) {
+    throw new Error(
+      `git ${args.join(" ")} failed (exit ${code}): ${await new Response(proc.stderr).text()}`,
+    );
+  }
+}
+
+beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), "type-check-program-key-"));
   write("a.ts", "export const a = 1;\n");
   write("b.ts", "export const b = 2;\n");
@@ -74,83 +94,93 @@ beforeEach(() => {
   write("tsconfig.json", JSON.stringify({ compilerOptions: { strict: true } }));
   write("package.json", JSON.stringify({ name: "fixture" }));
   writeBuildInfo(["a.ts", "b.ts", "node_modules/dep/index.d.ts"]);
+  // A real repository, because the key's file listing is read out of git — the
+  // one enumeration the check cache key also hashes. `core.excludesFile` is
+  // pointed at nothing so the host user's own global ignores cannot decide what
+  // this fixture contains.
+  await git("init", "-q");
+  await git("config", "core.excludesFile", "/dev/null");
+  await git("config", "user.email", "t@t.t");
+  await git("config", "user.name", "t");
 });
 
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-test("an unchanged tree yields the same key", () => {
-  expect(keyNow()).toBe(keyNow());
+test("an unchanged tree yields the same key", async () => {
+  expect(await keyNow()).toBe(await keyNow());
 });
 
-test("a listed repo file's content changes the key", () => {
-  const before = keyNow();
+test("a listed repo file's content changes the key", async () => {
+  const before = await keyNow();
   write("b.ts", "export const b = 3;\n");
-  expect(keyNow()).not.toBe(before);
+  expect(await keyNow()).not.toBe(before);
 });
 
-test("a listed node_modules file's content changes the key", () => {
+test("a listed node_modules file's content changes the key", async () => {
   // Hashed DIRECTLY rather than trusted through the lockfile, so a
   // hand-patched dependency cannot pass as unchanged.
-  const before = keyNow();
+  const before = await keyNow();
   write("node_modules/dep/index.d.ts", "export declare const d: string;\n");
-  expect(keyNow()).not.toBe(before);
+  expect(await keyNow()).not.toBe(before);
 });
 
-test("a different root set changes the key", () => {
-  const before = keyNow();
-  expect(keyNow([join(root, "a.ts"), join(root, "b.ts")])).not.toBe(before);
+test("a different root set changes the key", async () => {
+  const before = await keyNow();
+  expect(await keyNow([join(root, "a.ts"), join(root, "b.ts")])).not.toBe(
+    before,
+  );
 });
 
-test("root order does not change the key", () => {
-  const forward = keyNow([join(root, "a.ts"), join(root, "b.ts")]);
-  expect(keyNow([join(root, "b.ts"), join(root, "a.ts")])).toBe(forward);
+test("root order does not change the key", async () => {
+  const forward = await keyNow([join(root, "a.ts"), join(root, "b.ts")]);
+  expect(await keyNow([join(root, "b.ts"), join(root, "a.ts")])).toBe(forward);
 });
 
-test("a tsconfig edit changes the key", () => {
-  const before = keyNow();
+test("a tsconfig edit changes the key", async () => {
+  const before = await keyNow();
   write(
     "tsconfig.json",
     JSON.stringify({ compilerOptions: { strict: false } }),
   );
-  expect(keyNow()).not.toBe(before);
+  expect(await keyNow()).not.toBe(before);
 });
 
-test("a package.json edit changes the key", () => {
-  const before = keyNow();
+test("a package.json edit changes the key", async () => {
+  const before = await keyNow();
   write("package.json", JSON.stringify({ name: "fixture", type: "module" }));
-  expect(keyNow()).not.toBe(before);
+  expect(await keyNow()).not.toBe(before);
 });
 
-test("a NEW .ts file that nothing lists changes the key", () => {
+test("a NEW .ts file that nothing lists changes the key", async () => {
   // The shadowing hazard: `c.ts` appearing beside a `c/index.ts` re-resolves an
   // import whose own bytes never moved. Nothing in the file list can show that,
   // so the key over-invalidates on any add or remove instead.
-  const before = keyNow();
+  const before = await keyNow();
   write("c.ts", "export const c = 3;\n");
-  expect(keyNow()).not.toBe(before);
+  expect(await keyNow()).not.toBe(before);
 });
 
-test("an unrelated non-TypeScript file does NOT change the key", () => {
-  const before = keyNow();
+test("an unrelated non-TypeScript file does NOT change the key", async () => {
+  const before = await keyNow();
   write("README.md", "# docs\n");
-  expect(keyNow()).toBe(before);
+  expect(await keyNow()).toBe(before);
 });
 
-test("no buildinfo means no key — a cold run, never a skip", () => {
+test("no buildinfo means no key — a cold run, never a skip", async () => {
   rmSync(join(root, ".cache"), { recursive: true, force: true });
-  expect(keyNow()).toBeNull();
+  expect(await keyNow()).toBeNull();
 });
 
-test("a buildinfo with no fileNames array means no key", () => {
+test("a buildinfo with no fileNames array means no key", async () => {
   write(".cache/tsbuildinfo/web.tsbuildinfo", JSON.stringify({ version: "5" }));
-  expect(keyNow()).toBeNull();
+  expect(await keyNow()).toBeNull();
 });
 
-test("a torn buildinfo means no key", () => {
+test("a torn buildinfo means no key", async () => {
   write(".cache/tsbuildinfo/web.tsbuildinfo", '{"fileNames": ["../../a.ts"');
-  expect(keyNow()).toBeNull();
+  expect(await keyNow()).toBeNull();
 });
 
 test("readProgramFileList resolves against the buildinfo's own directory", () => {

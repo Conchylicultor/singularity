@@ -7,25 +7,29 @@
 // We must NOT import from that check (it's a private check file), so the logic
 // is duplicated here and resolves specifiers to concrete repo-relative files.
 //
-// This is the single source of truth for the import graph: both the eslint
-// check's closure cache and the cli's git affected-set scoping consume it.
+// This module does NOT enumerate. Its candidate file set arrives pre-enumerated
+// from `listRepoFiles` (checks/core) — the ONE git-backed lister the whole check
+// run shares — so the graph covers exactly the tree the check cache key hashes,
+// and a gitignored file can no longer reach type-check's coverage gate. That is
+// what a filesystem walk with a private deny-list could not promise; see
+// research/2026-09-09-tooling-check-file-enumeration-from-git.md.
 
-import { existsSync, readdirSync, readFileSync, statSync } from "fs";
+import { existsSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
-import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  findImports,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 
-// Mirror eslint.config.ts ignore globs so the graph covers exactly the linted
-// set. The flat-config ignores are:
-//   node_modules, dist, .git, .check-*, .claude/worktrees,
-//   web-core/dist, **/*.generated.ts
-const IGNORED_DIR_NAMES = new Set(["node_modules", "dist", ".git"]);
-
+// What remains of eslint's ignore list (`lint/core/build-lint-config.ts`) once
+// git has done its part. `.gitignore` already withholds node_modules, dist (and
+// dist.staging/live/old.*), .check-*, .claude/worktrees and web-core/dist, so a
+// git-enumerated set never contains them and this predicate must not restate
+// them. These two are tracked, so git DOES list them: generated sources, and
+// `prototypes/` — standalone CDN-React mocks belonging to no tsconfig.
 function isIgnoredRelPath(rel: string): boolean {
-  const segs = rel.split("/");
-  if (segs.some((s) => s === "node_modules" || s === "dist" || s === ".git")) return true;
-  if (segs.some((s) => s.startsWith(".check-"))) return true;
-  if (rel.startsWith(".claude/worktrees/")) return true;
   if (rel.endsWith(".generated.ts")) return true;
+  if (rel.startsWith("prototypes/")) return true;
   return false;
 }
 
@@ -34,42 +38,17 @@ export function isLintable(rel: string): boolean {
   return !isIgnoredRelPath(rel);
 }
 
-function walkLintFiles(root: string, dir: string, out: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
-    return;
-  }
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    if (e.isDirectory()) {
-      if (IGNORED_DIR_NAMES.has(e.name)) continue;
-      if (e.name.startsWith(".check-")) continue;
-      const rel = relative(root, full).split(sep).join("/");
-      // Skip .claude/worktrees (nested worktrees) but not other .claude content.
-      if (rel === ".claude/worktrees" || rel.startsWith(".claude/worktrees/")) continue;
-      walkLintFiles(root, full, out);
-    } else if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))) {
-      const rel = relative(root, full).split(sep).join("/");
-      if (isLintable(rel)) out.push(rel);
-    }
-  }
-}
-
-export function findLintFiles(root: string): string[] {
-  const out: string[] = [];
-  walkLintFiles(root, root, out);
-  return out;
-}
-
 export function safeRead(absPath: string): string | null {
   try {
     if (!statSync(absPath).isFile()) return null;
     return readFileSync(absPath, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      (err as NodeJS.ErrnoException).code !== "EACCES" &&
+      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
+    )
+      throw err;
     return null;
   }
 }
@@ -128,7 +107,11 @@ const WEB_CORE_WEB = "plugins/framework/plugins/web-core/web";
  * Relative ./ ../ resolve against the importing file's dir.
  * Each candidate base is tried with .ts, .tsx, /index.ts, /index.tsx.
  */
-export function resolveSpecifier(root: string, fromRel: string, spec: string): string | null {
+export function resolveSpecifier(
+  root: string,
+  fromRel: string,
+  spec: string,
+): string | null {
   let baseRel: string | null = null;
   if (spec.startsWith("./") || spec.startsWith("../")) {
     const abs = resolve(dirname(join(root, fromRel)), spec);
@@ -166,13 +149,21 @@ export interface ImportGraphs {
 
 /**
  * Build the forward AND reverse import adjacency maps over every linted
- * .ts/.tsx file in a single walk. For each resolved importer→importee edge,
+ * .ts/.tsx file in a single pass. For each resolved importer→importee edge,
  * insert into both maps:
  *   - forward: Map<importer, Set<importee>> — what each file imports.
  *   - reverse: Map<importee, Set<importer>> — who imports each file.
+ *
+ * `allFiles` is the run's one git-derived enumeration (`listRepoFiles`); the
+ * lintable set is a filter over it, never a second walk. Reading each file's
+ * bytes to extract its edges is unrelated to enumeration, so this stays
+ * synchronous.
  */
-export function buildImportGraphs(root: string): ImportGraphs {
-  const files = findLintFiles(root);
+export function buildImportGraphs(
+  root: string,
+  allFiles: string[],
+): ImportGraphs {
+  const files = allFiles.filter(isLintable);
   const forward = new Map<string, Set<string>>();
   const reverse = new Map<string, Set<string>>();
   for (const importer of files) {

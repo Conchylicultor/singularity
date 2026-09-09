@@ -11,6 +11,10 @@
  *      coverage gate: a content-only read-set would stale-PASS this);
  *   4. a global-trigger change (tsconfig / package.json) is a MISS via its content
  *      fact — the compiler/config-version invalidation path.
+ *
+ * Plus the enumeration regression (2026-09-09): the listing behind the lintable
+ * set comes out of git, so a `.ts` under a gitignored directory is invisible to
+ * it.
  */
 
 import { test, expect, beforeAll, afterAll } from "bun:test";
@@ -78,8 +82,9 @@ async function record(): Promise<ReadSet> {
   const snap = await loadTreeSnapshot(root, treeHash!);
   expect(snap).not.toBeNull();
   const view = snap!.createRecordingView();
-  const graphs = buildImportGraphs(root);
-  recordOuterReadSet(view, readTreeListing(root), graphs);
+  const listing = await readTreeListing(root);
+  const graphs = buildImportGraphs(root, listing.files);
+  recordOuterReadSet(view, listing, graphs);
   return view.readSet();
 }
 
@@ -185,5 +190,26 @@ test("case 4b: a package.json (compiler-version) change is a MISS", async () => 
         dependencies: { typescript: "5.0.0" },
       }) + "\n",
     );
+  }
+});
+
+test("a .ts under a gitignored directory is not in the lintable set", async () => {
+  // The 2026-09-09 failure: type-check walked the filesystem, so a stray `.ts`
+  // an agent had left under gitignored `.cache/scratch/` counted as lintable,
+  // matched no tsconfig program, and failed the coverage gate — over content
+  // the check cache key never covers. Reading the listing out of git removes
+  // the spelling entirely; the only way to regress is to walk again.
+  write(".gitignore", "ignored/\n");
+  write("ignored/stray.ts", "export const stray = 1;\n");
+  try {
+    const { files } = buildImportGraphs(
+      root,
+      (await readTreeListing(root)).files,
+    );
+    expect(files).toContain("a.ts");
+    expect(files).not.toContain("ignored/stray.ts");
+  } finally {
+    rmSync(join(root, "ignored"), { recursive: true, force: true });
+    rmSync(join(root, ".gitignore"), { force: true });
   }
 });
