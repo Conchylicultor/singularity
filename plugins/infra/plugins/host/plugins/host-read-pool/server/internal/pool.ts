@@ -1,5 +1,5 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,
@@ -7,13 +7,13 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { AsyncLocalStorage } from "node:async_hooks";
 
-// Host-wide slot count + CPU cost are declared ONCE in host-admission/core's
-// reserved-pool table, so this pool and the `host-budget` check read the SAME
-// numbers. `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it MUST
-// be identical in every backend — a process sized to 4 only sweeps `slot-0..3`
-// and is blind to one holding `slot-7`, silently exceeding the bound. Keeping it
-// a pure function of stable host facts in one place is what prevents that.
-const { size: heavyReadSize, cost } = RESERVED_POOLS["heavy-read"];
+// The host-wide slot count is declared ONCE in host-admission/core's pool table,
+// so this pool and the `host-budget` check read the SAME number. `size` names the
+// flock SLOT FILES (`slot-0 … slot-(N-1)`), so it MUST be identical in every
+// backend — a process sized to 4 only sweeps `slot-0..3` and is blind to one
+// holding `slot-7`, silently exceeding the bound. Keeping it a pure function of
+// stable host facts in one place is what prevents that.
+const { size: heavyReadSize } = HOST_POOLS["heavy-read"];
 
 // Per-process (= per-worktree) local cap on heavy reads. Sits in front of the
 // host-wide flock gate so this one backend can only ever present a bounded slice
@@ -34,7 +34,7 @@ function localSize(): number {
 }
 
 const perWorktreeGate = createSemaphore(localSize());
-const pool = defineHostPool({ id: "heavy-read", size: heavyReadSize, cost });
+const pool = defineHostPool({ id: "heavy-read", size: heavyReadSize });
 
 // The host-gate occupancy gauge (`heavy-read-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree

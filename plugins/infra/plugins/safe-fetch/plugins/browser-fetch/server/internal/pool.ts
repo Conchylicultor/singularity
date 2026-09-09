@@ -1,19 +1,19 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   chargeWait,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 
-// Host-wide slot count + CPU cost are declared ONCE in host-admission/core's
-// reserved-pool table, so this pool and the `host-budget` check read the SAME
-// numbers. `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it MUST
-// be identical in every backend — a process sized to 1 only sweeps `slot-0` and
-// is blind to one holding `slot-1`, silently exceeding the bound. That is why
-// this pool's size is a CONSTANT rather than a function of `cpus()` (precedent:
-// `db-fork`): a browser launch costs about the same on every box.
-const { size: hostSize, cost } = RESERVED_POOLS["browser-fetch"];
+// The host-wide slot count is declared ONCE in host-admission/core's pool table,
+// so this pool and the `host-budget` check read the SAME number. `size` names the
+// flock SLOT FILES (`slot-0 … slot-(N-1)`), so it MUST be identical in every
+// backend — a process sized to 1 only sweeps `slot-0` and is blind to one holding
+// `slot-1`, silently exceeding the bound. That is why this pool's size is a
+// CONSTANT rather than a function of `cpus()` (precedent: `db-fork`): a browser
+// launch costs about the same on every box.
+const { size: hostSize } = HOST_POOLS["browser-fetch"];
 
 // Per-worktree local gate of exactly ONE. A refresh cadence can enqueue N source
 // jobs at once, and without this gate one backend would present N waiters to the
@@ -22,7 +22,7 @@ const { size: hostSize, cost } = RESERVED_POOLS["browser-fetch"];
 // a render costs: launch + render + close saturates roughly a core.
 const perWorktreeGate = createSemaphore(1);
 
-const pool = defineHostPool({ id: "browser-fetch", size: hostSize, cost });
+const pool = defineHostPool({ id: "browser-fetch", size: hostSize });
 
 // The host-gate occupancy gauge (`browser-fetch-acquire`) is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy. Only the LOCAL per-worktree

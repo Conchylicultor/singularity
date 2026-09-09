@@ -1,5 +1,5 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
@@ -22,17 +22,16 @@ import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 // deeper lever (sparse-checkout). See
 // research/perfs/2026-07-02-worktree-mutation-host-gate-DESIGN.md.
 //
-// Size + CPU cost are declared ONCE in host-admission/core's reserved-pool table
-// (`max(2, floor(cpus/6))` = 3 on an 18-CPU box), so this pool and the
-// `host-budget` check read the same numbers. NO env override: `size` names the
-// flock SLOT FILES, so it MUST be identical in every process — a pure function of
-// stable host facts is what prevents a mis-sized backend from silently exceeding
-// the bound.
-const { size: mutateSize, cost } = RESERVED_POOLS["worktree-mutate"];
+// Size is declared ONCE in host-admission/core's pool table (`max(2,
+// floor(cpus/6))` = 3 on an 18-CPU box), so this pool and the `host-budget` check
+// read the same number. NO env override: `size` names the flock SLOT FILES, so it
+// MUST be identical in every process — a pure function of stable host facts is
+// what prevents a mis-sized backend from silently exceeding the bound.
+const { size: mutateSize } = HOST_POOLS["worktree-mutate"];
 
 // The `worktree-mutate-acquire` occupancy gauge is auto-registered by
 // `defineHostPool` with TRUE host-wide occupancy.
-const gate = defineHostPool({ id: "worktree-mutate", size: mutateSize, cost });
+const gate = defineHostPool({ id: "worktree-mutate", size: mutateSize });
 
 // Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is charged
 // to the enclosing profiler entry (job/http) so a saturated gate stays attributable

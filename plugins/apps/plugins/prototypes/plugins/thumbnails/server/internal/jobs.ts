@@ -36,7 +36,7 @@ const THUMBNAIL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
  * Known limit, unchanged: this bounds THIS backend, not the host —
  * `browser-fetch` reserves a host-wide pool for its own launches and this does
  * not share it. Fine while prototype renders are rare and short; if galleries
- * get opened across many worktrees at once the fix is a `RESERVED_POOLS` entry
+ * get opened across many worktrees at once the fix is a `HOST_POOLS` entry
  * in `host-admission/core`, not anything here.
  *
  * `maxAttempts` is left at the default because it only ever governs the

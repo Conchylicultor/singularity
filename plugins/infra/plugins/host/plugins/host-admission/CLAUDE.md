@@ -5,9 +5,10 @@ that bounds work across the ~16 worktree backends sharing one box is declared
 through `defineHostPool` here, so `createHostSemaphore`
 (`packages/host-semaphore`) is imported by **this plugin only** — the
 `host-pools-declared` check makes that the structural bar. A 7th pool cannot
-appear one incident at a time without taking budget from the others.
+appear one incident at a time, out of sight of the table every other pool and
+the `host-budget` check read.
 
-## One ceiling, two dimensions (`core`)
+## What a pool is, and what `B` is (`core`)
 
 `core/` is runtime-agnostic (pure `node:os`, no `bun:ffi`) so the pools, the
 budget check, and — later — the CLI share ONE definition:
@@ -15,68 +16,113 @@ budget check, and — later — the CLI share ONE definition:
 ```
 hostCpuCeiling() = os.cpus().length            // 18 on this box
 hostRamCeiling() = os.totalmem() * 0.5         // 34.4 GB
-PER_UNIT_BYTES   = 2.7e9                        // one type-check-class worker
+PER_UNIT_BYTES   = 3.6e9                        // one type-check-class worker
 ```
 
-Every pool declares what **one admitted holder costs the host, including
-everything it fans out into** (`PoolCost { cpu, ramBytes? }`). The reserved
-(non-CPU) pools live in `RESERVED_POOLS` — the single source both the check and
-the CPU pool read, so their numbers can never drift:
+**A host pool is a cardinality cap on a kind of work, and nothing else.** It
+declares how many holders of its kind may run at once — one Chromium page
+render, two DB forks, one push — and claims no CPU and reserves no memory. So an
+entry in `HOST_POOLS` is `{ size }`; there is no cost to declare, and nothing a
+pool says can move any other pool's capacity:
 
-| pool | size | cpu | Σ cpu |
-| --- | --- | --- | --- |
-| `heavy-read` | `max(1, cpus/4)` = 4 | 0.5 | 2.0 |
-| `worktree-mutate` | `max(2, cpus/6)` = 3 | 0.5 | 1.5 |
-| `db-fork` | 2 | 1.0 | 2.0 |
-| `browser-fetch` | 2 | 1.0 | 2.0 |
-| `layout-geometry` | 1 | 1.0 | 1.0 |
-| `push` | 1 | 0 | 0.0 |
-| | | **reserved** | **8.5** |
+| pool | size | what the cap bounds |
+| --- | --- | --- |
+| `heavy-read` | `max(1, cpus/4)` = 4 | concurrent heavy git/fs reads across all backends |
+| `worktree-mutate` | `max(2, cpus/6)` = 3 | concurrent worktree checkout mutations |
+| `db-fork` | 2 | concurrent Postgres template forks |
+| `browser-fetch` | 2 | concurrent headless-Chromium page fetches |
+| `layout-geometry` | 1 | the geometry suite's Vite build + Chromium launch |
+| `push` | 1 | the global push mutex |
 
-The CPU pool's size `B` is the **residual**, not an independent formula:
+`HOST_POOLS` is the single source both the pools and the `host-budget` check
+read, so their numbers can never drift. **All six keys stay listed** even for a
+pool whose only other reader is elsewhere:
+[`data-dirs/index.ts`](./data-dirs/index.ts) derives the `locks/<id>`
+declarations from its keys, so dropping one would un-declare that lock dir and
+make `paths:no-undeclared-data-dirs` report the on-disk directory as an orphan.
+
+Sizes are pure functions of stable host facts and are never env-overridable: a
+size names the flock slot-file set (`slot-0 … slot-(N-1)`), so it must be
+identical in every backend — a process sized to 4 sweeps only `slot-0..3` and is
+blind to one holding `slot-7`, silently exceeding the bound.
+
+### `B` — the elastic fleet
+
+The only thing actually *budgeted* is the type-check/vite fleet, because it is
+the only holder that both fills the box and can shrink. Its size `B` is a pure
+function of host facts and one measured constant. **Nothing from the pool table
+enters it**, so adding, removing or resizing a pool cannot move it:
 
 ```
-B = max(1, min(floor(hostCpuCeiling − reservedCpuCost),
-               floor(hostRamCeiling / PER_UNIT_BYTES)))
-  = min(floor(18 − 8.5), floor(34.4 / 2.7)) = min(9, 12) = 9
+B = max(1, min(hostCpuCeiling(), floor(hostRamCeiling() / PER_UNIT_BYTES)))
+  = max(1, min(18, floor(34.4e9 / 3.6e9))) = min(18, 9) = 9
 reservedInteractive = max(1, floor(B / 3)) = 3
-backgroundLimit     = B − reservedInteractive = 6
+backgroundLimit     = max(1, B − reservedInteractive) = 6
 ```
 
-`rawCpuResidual()` is the pre-floor value: `< 1` means the reserved pools have
-eaten the whole ceiling — the overcommit signal the `host-budget` check trips on.
+`rawFleetCeiling()` is the pre-floor value. It drops below 1 only when the host
+has less than one quantum of usable RAM — a 2-core / 4 GiB VPS gives `0` — and
+that reads "this box is smaller than one worker", not "the pools overcommitted
+the ceiling". The `max(1, …)` floor and the lane collapse below it handle that
+host; nothing a pool declares can produce it.
 
-Editing this table **resizes the live `cpu` pool**, which every checkout on the box
-shares. That is safe: an out-of-date checkout adopts the live identity and the new
-one lands once the pool is idle (see `packages/host-semaphore`). Expect a transition
-window where `liveSize()` ≠ `B`.
-`layout-geometry` and `push` are in `RESERVED_POOLS` for the budget even though
-their `defineHostPool` wiring lands in later steps.
+### Why a pool no longer costs CPU, and why the quantum moved
 
-### The RAM dimension is a forward hook, NOT a budget
+Until 2026-09-09 each pool declared a `PoolCost { cpu, ramBytes? }`, and
+`reservedCpuCost()` subtracted `Σ size × cost.cpu` = 8.5 cores from the ceiling
+before `B` was taken. Two things were wrong with that.
 
-Only **one** of the two dimensions is actually summed. `host-budget` sums `cpu`;
-`PoolCost.ramBytes` is declared, set by exactly one pool (`cpu`), and **read by
-nothing**. The only RAM that is accounted enters through `PER_UNIT_BYTES`, as a
-ceiling on `B`'s *size* — not as a per-pool budget.
+**The same core could be reserved twice, and no declaration could say so.** The
+`layout-geometry` check runs `ctx.grant.run(() => browserPool.run(…))` — it
+spends a unit of `B` *and* its pool's `cpu: 1` had already been subtracted from
+the ceiling that produced `B`. The push mutex avoided this with `cost: { cpu: 0 }`,
+so the correct pattern existed in the table, but a bare number cannot say which
+of the two regimes it is in. With `PoolCost` deleted the double count has no
+spelling at all: a pool bounds concurrency, `grant.run` is the one and only CPU
+charge. Rung 1 — inexpressible, not checked.
 
-**Do not "finish" this by asserting `Σ(size × ramBytes) ≤ hostRamCeiling()`.** That
-assertion is unsound: `B` is *constructed* by the `min()` in `rawCpuResidual()` to
-satisfy `B × PER_UNIT_BYTES ≤ hostRamCeiling()`, so it is tautological on its dominant
-term and can never fail on its own. The apparent headroom is floor-rounding slack from
-whichever term won the `min()`, and spending it on a new pool double-spends the ceiling.
+**And the reservation was buying almost nothing.** Across every recorded
+`slow_op`, `worktree-mutate` has waited twice ever, `db-fork` once,
+`browser-fetch` and `layout-geometry` never. A representative `heavy-read` hold
+is 75 ms, while a build holds its grant across its whole heavy section (p50
+137 s, max 20 min). The box was permanently withholding 8.5 cores for the
+millisecond work and rationing the minute work.
 
-The sound form is **reserved-subtraction** — a `reservedRamCost()` mirroring
-`reservedCpuCost()`, carved out *inside* the `min()` term, so a pool that reserves RAM
-legitimately pushes `B` down (more concurrent whole-builds ⇒ fewer concurrent heavy
-workers). That, plus a whole-build `build` pool, is designed and **gated on measurement**
-in [`research/2026-07-12-global-host-admission-memory-dimension.md`](../../../../../../research/2026-07-12-global-host-admission-memory-dimension.md)
-(Stage 2). `PER_UNIT_BYTES` itself is inherited rather than observed — see the warning on
-the constant.
+**But that reservation was, accidentally, doing memory admission's job.** `B`
+was 9 because `floor(18 − 8.5)` won the `min()`; the RAM term alone said 12.
+Deleting the reservation without re-basing the quantum would have raised the
+concurrent-worker ceiling by 33 % on the axis that is actually binding — this
+box sampled at 58.6 GB used of 65.5 (p50), with live compressor thrash. So
+`PER_UNIT_BYTES` moved `2.7e9 → 3.6e9`, chosen to hold `B` at exactly 9. The
+structural change therefore lands throughput- and memory-neutral: its effect is
+attributable, and the open sizing question (a mean quantum vs the 5.3 GB cold
+tail, which would give `B = 6`) stays a separate, measured decision rather than
+a re-tuning smuggled in here.
+
+`3.6e9` is **not a fresh measurement.** It is the value that lands the
+memory-only formula on the `B` the old formula produced. `B = 9` requires
+`Q ∈ (3.436e9, 3.818e9]`, and `3.6e9` sits near that interval's centre (0.54
+above the `B = 9` boundary, 0.46 below `B = 10`), so a small change in host
+memory or in the ceiling fraction cannot flip it. `3.8e9` also yields 9 but sits
+**0.04** from flipping to 8 — do not use it. Whoever re-tunes this next must
+recompute that interval rather than assume the margin is still there, and should
+know that nothing subtracts from the ceiling any more: a change to the constant
+moves the fleet ceiling directly and visibly. See the constant's own comment in
+[`core/internal/budget.ts`](./core/internal/budget.ts) and
+[`research/2026-09-09-global-host-pools-stop-reserving-cpu.md`](../../../../../../research/2026-09-09-global-host-pools-stop-reserving-cpu.md).
+
+**Resizing is a live operation.** A pool's `size` names its flock slot *files*,
+so editing a size in this table — or moving `PER_UNIT_BYTES`, which resizes the
+`cpu` pool through `B` — changes a slot set every checkout on the box shares.
+That is safe: an out-of-date checkout adopts the live identity and the new one
+lands once the pool is idle (see `packages/host-semaphore`). Expect a transition
+window where `liveSize()` ≠ the declared size. The 2026-09-09 change moved no
+size and did not move `B`, so no slot set moved and it needed no drain window —
+that warning is for the next change, not for this one.
 
 ## `defineHostPool` (`server`)
 
-`defineHostPool({ id, size, cost, laned? })` wraps `createHostSemaphore` and
+`defineHostPool({ id, size, laned? })` wraps `createHostSemaphore` and
 returns a `HostPool` (`run` / `acquireShare` / `depth` / `slots`). It is a **registry**:
 one handle per id per process, so a repeat call for the same id — an occupant
 contending for the same physical slots — returns the one handle rather than
@@ -94,10 +140,10 @@ readable" comment along with it.
 
 `createHostSemaphore` no longer derives its own directory — it is handed one, and
 this plugin supplies it. The seven `locks/<id>` directories are declared in
-[`data-dirs/index.ts`](./data-dirs/index.ts), **derived from `RESERVED_POOLS`**
-(plus `cpu`, which is the residual and so is absent from the reserved table by
+[`data-dirs/index.ts`](./data-dirs/index.ts), **derived from `HOST_POOLS`**
+(plus `cpu`, which is the elastic fleet and so is absent from the table by
 construction). There is no second list of pool ids to keep in sync: a pool that is
-in the budget gets a lock directory, and a pool that is not gets a loud throw from
+in the table gets a lock directory, and a pool that is not gets a loud throw from
 `defineHostPool` instead of an unowned directory nobody can enumerate.
 
 `pool.slots` exposes that directory, which is how a consumer that must name one
@@ -141,10 +187,12 @@ spend it per child instead of acquiring again.
 
 ## The push mutex (`server`)
 
-`pushPool = defineHostPool({ id: "push", size: 1, cost: { cpu: 0 } })` is the
-global push serialization, folded onto the primitive: at most one push runs
-host-wide, `cost.cpu 0` because a push waits on git/network (it takes an
-interactive CPU grant separately for its nested checks).
+`pushPool = defineHostPool({ id: "push", size: 1 })` is the global push
+serialization, folded onto the primitive: `size: 1` says at most one push runs
+host-wide, and that is all it says. The push itself mostly waits on git and the
+network, and it takes an interactive CPU grant separately for its nested
+checks — the pool bounds how many pushes there are, the grant pays for their
+work.
 
 Its single slot file IS the push mutex, and `worktree/server`'s op-status probe
 must read that exact file. It now does so by asking the pool —
@@ -202,18 +250,16 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `CpuBudget`
     - `Grant`
     - `GrantHooks`
+    - `HostPoolEntry`
     - `Lane`
-    - `PoolCost`
-    - `ReservedPoolSpec`
   - Exports (values):
     - `cpuBudget`
     - `HOST_GRANT_ENV`
     - `HOST_LANE_ENV`
+    - `HOST_POOLS`
     - `hostCpuCeiling`
     - `hostRamCeiling`
     - `PER_UNIT_BYTES`
-    - `rawCpuResidual`
-    - `RESERVED_POOLS`
-    - `reservedCpuCost`
+    - `rawFleetCeiling`
 
 <!-- AUTOGENERATED:END -->

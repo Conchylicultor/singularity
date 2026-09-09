@@ -146,9 +146,9 @@ export const LEGACY_LAYOUT: readonly LegacyMove[] = [
   // ── locks/ ───────────────────────────────────────────────────────────────
   //
   // The seven LIVE host pools. Written out rather than derived from
-  // `RESERVED_POOLS`: `host-admission` imports `paths`, so reading its pool
-  // table from here would close a cycle — and these are historical facts about
-  // one machine's disk, not a live view of the budget. The three `*-slots` dirs
+  // `HOST_POOLS`: `host-admission` imports `paths`, so reading its pool table
+  // from here would close a cycle — and these are historical facts about one
+  // machine's disk, not a live view of the pool set. The three `*-slots` dirs
   // with no live pool are quarantined below.
   { from: "cpu-slots", move: "dir", to: "locks/cpu" },
   { from: "heavy-read-slots", move: "dir", to: "locks/heavy-read" },

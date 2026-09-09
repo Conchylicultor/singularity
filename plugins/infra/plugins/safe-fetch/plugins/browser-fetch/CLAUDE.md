@@ -132,8 +132,9 @@ it would be a lie.
 ## Concurrency
 
 `withBrowserSlot` mirrors `host-read-pool`'s two-tier shape — a host-wide
-`browser-fetch` pool (size 2, `cpu: 1`, declared in `host-admission/core`'s
-`RESERVED_POOLS`) behind a **per-worktree local gate of 1**, so one backend's
+`browser-fetch` pool (size 2, declared in `host-admission/core`'s `HOST_POOLS`;
+a cardinality cap on concurrent launches, claiming no CPU) behind a
+**per-worktree local gate of 1**, so one backend's
 batch of jobs cannot present N waiters and starve another worktree's single
 interactive render. There is **no `AsyncLocalStorage` reentrancy guard** (a
 browser fetch never nests in a browser fetch) — do not copy that block across

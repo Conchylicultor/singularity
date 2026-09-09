@@ -199,7 +199,7 @@ async function runWorker(
 }
 
 // One greppable line per worker, e.g. "type-check worker web-core: maxRSS 2.4 GB".
-// THIS fleet is the process class host-admission's `PER_UNIT_BYTES` (2.7e9)
+// THIS fleet is the process class host-admission's `PER_UNIT_BYTES` (3.6e9)
 // claims to size — "one type-check-class worker's resident set" — and it had
 // never actually been observed; the budget's RAM quantum was calibrated on vite
 // samples alone. See research/2026-07-12-global-host-admission-memory-dimension.md.

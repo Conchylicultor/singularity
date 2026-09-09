@@ -3,6 +3,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   getWorktreeRoot,
   spawnCaptured,
@@ -79,15 +80,20 @@ const SUITE_REL =
 // most one suite runs across ALL worktrees; combined with the post-acquire
 // marker re-check it also collapses the same-sig thundering herd (the first
 // build runs + writes the marker, the rest skip the launch). flock-backed, so it
-// auto-releases on crash. Declared through `defineHostPool` (cost cpu 1 — a Vite
-// build + Chromium) so it takes budget from the same host ceiling as every other
-// pool; the caller ALSO spends a `ctx.grant` unit around the launch (below), so
-// the run is both mutually-exclusive AND accounted against the invoking build's
-// CPU grant — two different guarantees.
+// auto-releases on crash.
+//
+// The pool is a CARDINALITY cap on concurrent Chromium launches and nothing
+// more — it claims no CPU. The CPU this run costs is spent separately, and once,
+// as a `ctx.grant` unit around the launch (below). The two are orthogonal
+// guarantees: the pool makes the run mutually exclusive host-wide, the grant
+// makes it accounted against the invoking build's budget.
+//
+// `size` is read from the pool table rather than re-spelled here, so the table
+// and this call site cannot drift — the same pattern as `fork-gate`,
+// `mutate-gate`, `host-read-pool` and `browser-fetch`.
 const browserPool = defineHostPool({
   id: "layout-geometry",
-  size: 1,
-  cost: { cpu: 1 },
+  size: HOST_POOLS["layout-geometry"].size,
 });
 
 function sha256(s: string): string {

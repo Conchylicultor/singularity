@@ -1,15 +1,10 @@
 import { defineHostPool } from "./pool";
 
 // The global push mutex, folded onto the host-pool primitive. `size 1` ⇒ at most
-// one push runs host-wide; `cost.cpu 0` because a push waits on git/network, not
-// CPU (it takes a CPU grant separately, for its nested checks). Its single slot
-// file is the SAME file `worktree-op.ts`'s push probe reads, so the op-status
-// derivation reads the authoritative kernel flock the CLI holds.
-export const pushPool = defineHostPool({
-  id: "push",
-  size: 1,
-  cost: { cpu: 0 },
-});
+// one push runs host-wide. Its single slot file is the SAME file
+// `worktree-op.ts`'s push probe reads, so the op-status derivation reads the
+// authoritative kernel flock the CLI holds.
+export const pushPool = defineHostPool({ id: "push", size: 1 });
 
 /**
  * The push pool's single slot file.

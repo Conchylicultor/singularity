@@ -1,5 +1,5 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 
 // A DEDICATED host-wide gate for the DB fork's `pg_dump | pg_restore` pipeline —
@@ -20,16 +20,16 @@ import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 // recorder, never as anonymous slowness.
 // See research/2026-07-07-global-background-work-priority-isolation.md.
 //
-// Size + CPU cost are declared ONCE in host-admission/core's reserved-pool table
-// (size 2), so this pool and the `host-budget` check read the same numbers. NO
-// env override: `size` names the flock SLOT FILES, so it MUST be identical in
-// every process — a constant (or a pure function of stable host facts) is what
-// prevents a mis-sized process from silently exceeding the bound.
-const { size: forkSize, cost } = RESERVED_POOLS["db-fork"];
+// Size is declared ONCE in host-admission/core's pool table (size 2), so this
+// pool and the `host-budget` check read the same numbers. NO env override: `size`
+// names the flock SLOT FILES, so it MUST be identical in every process — a
+// constant (or a pure function of stable host facts) is what prevents a mis-sized
+// process from silently exceeding the bound.
+const { size: forkSize } = HOST_POOLS["db-fork"];
 
 // The `db-fork-acquire` occupancy gauge is auto-registered by `defineHostPool`
 // with TRUE host-wide occupancy.
-const gate = defineHostPool({ id: "db-fork", size: forkSize, cost });
+const gate = defineHostPool({ id: "db-fork", size: forkSize });
 
 // `signal` is optional and ambient — the `database.fork` job passes its
 // `ctx.signal`. It cancels a pending acquire and, once held, releases the slot as

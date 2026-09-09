@@ -17319,19 +17319,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `CpuBudget`
               - `Grant`
               - `GrantHooks`
+              - `HostPoolEntry`
               - `Lane`
-              - `PoolCost`
-              - `ReservedPoolSpec`
             - Exports (values):
               - `cpuBudget`
               - `HOST_GRANT_ENV`
               - `HOST_LANE_ENV`
+              - `HOST_POOLS`
               - `hostCpuCeiling`
               - `hostRamCeiling`
               - `PER_UNIT_BYTES`
-              - `rawCpuResidual`
-              - `RESERVED_POOLS`
-              - `reservedCpuCost`
+              - `rawFleetCeiling`
         - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
           - Server:
             - Uses: `infra/host/host-admission.defineHostPool`

@@ -8,9 +8,9 @@ const BARREL = "@plugins/packages/plugins/host-semaphore/server";
 
 // The structural bar: `createHostSemaphore` may be imported by `host-admission`
 // only, so a new host pool cannot appear without going through the registry and
-// taking budget from the others (host-admission/core's RESERVED_POOLS + the
-// host-budget check). Anyone else importing the primitive directly is declaring
-// an unbudgeted pool.
+// being declared in the pool table (host-admission/core's HOST_POOLS) and
+// sized under the host-budget check. Anyone else importing the primitive
+// directly is declaring a pool nothing bounds.
 //
 // The primitive's own files (barrel, internal, tests) reach it by RELATIVE path,
 // never the `@plugins/...` specifier this filter matches, so they are excluded by

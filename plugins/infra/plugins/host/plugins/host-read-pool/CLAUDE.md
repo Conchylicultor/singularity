@@ -28,14 +28,15 @@ the bare primitive because its name/size and the wait charging are policy, not
 mechanism.
 
 **Size:** `floor(cpus/4)`, with **no env override**, declared in
-`host-admission/core`'s `RESERVED_POOLS` table (the single source the pool and the
-`host-budget` check both read). The size names the flock slot *files*
-(`slot-0 … slot-(N-1)`), so it must be identical in every backend — a process sized
-to 4 sweeps only `slot-0..3` and is blind to one holding `slot-7`, silently
-exceeding the bound. Keeping it a pure function of `os.cpus()` is what prevents
-that. Conservative start; can rise toward `floor(cpus/2)` if profiling shows the
-gate is the bottleneck while CPU is unsaturated — by editing the constant, in one
-place.
+`host-admission/core`'s `HOST_POOLS` table (the single source the pool and the
+`host-budget` check both read). It is a cardinality cap — how many heavy reads
+may run at once — and claims no share of the host's CPU budget. The size names
+the flock slot *files* (`slot-0 … slot-(N-1)`), so it must be identical in every
+backend — a process sized to 4 sweeps only `slot-0..3` and is blind to one
+holding `slot-7`, silently exceeding the bound. Keeping it a pure function of
+`os.cpus()` is what prevents that. Conservative start; can rise toward
+`floor(cpus/2)` if profiling shows the gate is the bottleneck while CPU is
+unsaturated — by editing the constant, in one place.
 
 **Two-tier gate (per-worktree fairness).** In front of the host-wide flock gate
 sits a small **in-process per-worktree `createSemaphore`** (size

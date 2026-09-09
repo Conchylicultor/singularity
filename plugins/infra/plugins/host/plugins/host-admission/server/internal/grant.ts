@@ -1,7 +1,6 @@
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
-  PER_UNIT_BYTES,
   HOST_GRANT_ENV,
   HOST_LANE_ENV,
   type Grant,
@@ -10,14 +9,15 @@ import {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { defineHostPool } from "./pool";
 
-// The laned host CPU pool + the grant that subdivides it. This is where the CPU
-// ceiling `B` (the residual of the summed budget) becomes a real flock pool, and
-// where a build/check/push turns one host admission into a bundle of tokens it
-// spends across its own fan-out (type-check workers, vite, nested check
-// subprocess) without any of them re-acquiring host-wide.
+// The laned host CPU pool + the grant that subdivides it. This is where the fleet
+// ceiling `B` — host cores vs. how many worker-sized resident sets fit under the
+// RAM ceiling, see `PER_UNIT_BYTES` — becomes a real flock pool, and where a
+// build/check/push turns one host admission into a bundle of tokens it spends
+// across its own fan-out (type-check workers, vite, nested check subprocess)
+// without any of them re-acquiring host-wide.
 
 /**
- * The single host CPU pool. `size = B` (the summed-budget residual), laned so the
+ * The single host CPU pool. `size = B` (the whole elastic fleet), laned so the
  * high `B - backgroundLimit` slots are reserved for the interactive lane and a
  * saturated background (agent) lane can never starve a main build / push.
  */
@@ -26,7 +26,6 @@ export const cpuPool = defineHostPool({
   size: cpuBudget().B,
   laned: true,
   backgroundLimit: cpuBudget().backgroundLimit,
-  cost: { cpu: 1, ramBytes: PER_UNIT_BYTES },
 });
 
 // Build a grant over a fixed unit count, backed by an in-process semaphore. Used

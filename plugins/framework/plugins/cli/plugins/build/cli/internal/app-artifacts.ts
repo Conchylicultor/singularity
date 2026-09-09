@@ -274,7 +274,7 @@ async function execBuffered(
 // and any future per-build memory budget.
 //
 // Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B) — deliberately, because
-// PER_UNIT_BYTES is decimal (2.7e9). Dividing by 2**30 and labelling the result
+// PER_UNIT_BYTES is decimal (3.6e9). Dividing by 2**30 and labelling the result
 // "GB" (as this did) understates the true byte count by ~7 %, which silently
 // corrupts anyone calibrating the constant by reading these lines.
 export function maxRssLine(

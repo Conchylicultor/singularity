@@ -1,16 +1,10 @@
-export type {
-  Lane,
-  PoolCost,
-  ReservedPoolSpec,
-  CpuBudget,
-} from "./internal/budget";
+export type { Lane, HostPoolEntry, CpuBudget } from "./internal/budget";
 export {
   PER_UNIT_BYTES,
   hostCpuCeiling,
   hostRamCeiling,
-  RESERVED_POOLS,
-  reservedCpuCost,
-  rawCpuResidual,
+  HOST_POOLS,
+  rawFleetCeiling,
   cpuBudget,
 } from "./internal/budget";
 export type { Grant, GrantHooks } from "./internal/grant";

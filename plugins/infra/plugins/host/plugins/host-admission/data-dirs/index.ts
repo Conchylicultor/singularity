@@ -1,5 +1,5 @@
 import { defineDataDir, type DataDir } from "@plugins/infra/plugins/paths/core";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 
 // Every host pool's flock slot files, declared HERE rather than derived inside
 // the primitive that uses them.
@@ -10,24 +10,21 @@ import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admissi
 // on disk, of which only seven had a live `defineHostPool`. Nothing could see
 // that, because the paths existed only as a template literal inside a function.
 //
-// The pool set is NOT a second list: it is `RESERVED_POOLS` (the budget table,
-// the one place a reserved pool is declared) plus `cpu`, which is the residual
-// and therefore never appears in the reserved table. A new pool added to the
-// budget gets its lock dir here with no edit; a pool that is NOT in the budget
-// has no lock dir and `defineHostPool` refuses to build it, which is the same
-// structural bar `host-budget` already enforces from the other side.
+// The pool set is NOT a second list: it is `HOST_POOLS` (the pool table, the one
+// place a non-CPU pool is declared) plus `cpu`, which is the elastic fleet and
+// therefore never appears in that table. A new pool added to the table gets its
+// lock dir here with no edit; a pool that is NOT in the table has no lock dir and
+// `defineHostPool` refuses to build it, which is the same structural bar
+// `host-budget` already enforces from the other side.
 
 /**
- * The CPU pool's id. It is the budget's RESIDUAL, so by construction it is the
- * one pool absent from `RESERVED_POOLS` — named explicitly here for that reason,
- * not as an exception.
+ * The CPU pool's id. It is the elastic fleet, sized from host facts rather than
+ * declared, so by construction it is the one pool absent from `HOST_POOLS` —
+ * named explicitly here for that reason, not as an exception.
  */
 const CPU_POOL_ID = "cpu";
 
-const POOL_IDS: readonly string[] = [
-  CPU_POOL_ID,
-  ...Object.keys(RESERVED_POOLS),
-];
+const POOL_IDS: readonly string[] = [CPU_POOL_ID, ...Object.keys(HOST_POOLS)];
 
 function lockDir(id: string): DataDir {
   return defineDataDir({

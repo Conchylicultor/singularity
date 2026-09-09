@@ -6,14 +6,13 @@ import {
   type HostShare,
 } from "@plugins/packages/plugins/host-semaphore/server";
 import { registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
-import type { PoolCost } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
 import { poolLockDir } from "../../data-dirs";
 
 // The one place a host pool comes into existence. `createHostSemaphore` is
 // imported HERE ONLY — the `host-pools-declared` check makes that the structural
-// bar, so a 7th pool cannot appear without taking budget from the others via the
-// reserved table in `../../core`.
+// bar, so a 7th pool cannot appear without being declared in the pool table in
+// `../../core`.
 
 const { symbols: ffi } = dlopen(
   process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
@@ -60,7 +59,7 @@ function probeOccupancy(slots: DataDir, size: number): number {
 /** A host-wide concurrency pool handle. */
 export interface HostPool {
   readonly id: string;
-  /** The size this process was BUILT for — the budget's number, and the pool's registry identity. */
+  /** The size this process was BUILT for — the pool table's number, and the pool's registry identity. */
   readonly size: number;
   /**
    * The slot set actually being swept right now. Equals `size` except while another
@@ -75,7 +74,6 @@ export interface HostPool {
    * than rebuilding the path and hoping the two stay equal.
    */
   readonly slots: DataDir;
-  readonly cost: PoolCost;
   /**
    * Run `fn` holding exactly one slot; release in a `finally`.
    *
@@ -96,17 +94,21 @@ export interface HostPool {
   depth(): number;
 }
 
-/** Declares a host pool: what one holder costs the host, and how many slots exist. */
+/** Declares a host pool: how many holders of its kind may run at once, host-wide. */
 export interface HostPoolSpec {
   /**
    * The pool's identity. It must have a lock directory declared for it in this
    * plugin's `data-dirs/index.ts` — which, since those are derived from
-   * `RESERVED_POOLS`, means the pool must already be in the budget table.
+   * `HOST_POOLS`, means the pool must already be in the pool table.
    */
   id: string;
+  /**
+   * How many holders of this kind may run at once, host-wide. A CARDINALITY cap
+   * and nothing more: it withholds no capacity from the elastic fleet (`B` is a
+   * pure function of host facts), so a holder that ALSO spends a `Grant` unit —
+   * the `layout-geometry` check does exactly that — is not paying twice.
+   */
   size: number;
-  /** What ONE holder costs the host, including its fan-out. */
-  cost: PoolCost;
   /**
    * Reserved-floor partition (only the CPU pool, and only `cpu`, today). When
    * set, `backgroundLimit` MUST be supplied — the pool reserves its high
@@ -131,10 +133,10 @@ const registry = new Map<string, HostPool>();
 export function defineHostPool(spec: HostPoolSpec): HostPool {
   const existing = registry.get(spec.id);
   if (existing) {
-    if (existing.size !== spec.size || existing.cost.cpu !== spec.cost.cpu) {
+    if (existing.size !== spec.size) {
       throw new Error(
-        `defineHostPool(${spec.id}): already defined as size ${existing.size} / cpu ${existing.cost.cpu}, ` +
-          `re-defined as size ${spec.size} / cpu ${spec.cost.cpu}`,
+        `defineHostPool(${spec.id}): already defined as size ${existing.size}, ` +
+          `re-defined as size ${spec.size}`,
       );
     }
     return existing;
@@ -157,7 +159,7 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
   if (!slots) {
     throw new Error(
       `defineHostPool(${spec.id}): no lock directory is declared for this pool. ` +
-        `Add it to the host-admission budget table (RESERVED_POOLS in core/internal/budget.ts), ` +
+        `Add it to the host-admission pool table (HOST_POOLS in core/internal/budget.ts), ` +
         `which is what data-dirs/index.ts derives the locks/<id> declarations from.`,
     );
   }
@@ -191,7 +193,6 @@ export function defineHostPool(spec: HostPoolSpec): HostPool {
     size: spec.size,
     liveSize: () => sem.liveSize(),
     slots,
-    cost: spec.cost,
     run: (fn, hooks) => sem.run(fn, hooks),
     acquireShare: (max, hooks) => sem.acquireShare(max, hooks),
     depth: () => sem.depth(),

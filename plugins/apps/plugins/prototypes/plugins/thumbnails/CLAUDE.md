@@ -101,9 +101,9 @@ wedged, and `closeBrowser` in `render.ts` says why a timed-out close is logged
 and abandoned rather than failing a picture already captured.
 
 **Known limit:** all of this bounds the backend, not the host — `browser-fetch`
-reserves a host-wide pool this does not share. Fine while renders are rare and
+has a host-wide pool this does not share. Fine while renders are rare and
 short; if galleries get opened across many worktrees at once the fix is a
-`RESERVED_POOLS` entry in `host-admission/core`.
+`HOST_POOLS` entry in `host-admission/core`.
 
 ## The card
 

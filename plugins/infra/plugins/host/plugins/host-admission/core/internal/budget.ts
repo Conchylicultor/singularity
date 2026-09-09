@@ -2,7 +2,7 @@ import { cpus, totalmem } from "node:os";
 
 // Runtime-agnostic host-admission arithmetic — pure `node:os` reads, NO `bun:ffi`
 // — so the server pools, the budget check, and (later) the CLI all share ONE
-// definition of the ceiling and the residual CPU budget.
+// definition of the host ceilings and the fleet budget.
 
 /**
  * Which half of the host a holder belongs to. Interactive work has a human
@@ -12,38 +12,30 @@ import { cpus, totalmem } from "node:os";
  */
 export type Lane = "interactive" | "background";
 
-/** What ONE admitted holder costs the host, including everything it fans out into. */
-export interface PoolCost {
-  /** CPU units (1 unit ≈ one saturated core / one type-check-class worker). */
-  cpu: number;
-  /**
-   * Per-holder RAM cost — a declared **forward hook, not an enforced budget**.
-   * Today exactly one pool sets it (the `cpu` pool, `server/internal/grant.ts`) and
-   * NOTHING reads it back: `host-budget` sums only `cpu`. The RAM that is actually
-   * accounted enters through `PER_UNIT_BYTES` below, as a ceiling on `B`'s size.
-   *
-   * If you are here to "finish the wiring", do NOT add the obvious
-   * `Σ(size × ramBytes) ≤ hostRamCeiling()` assertion to `host-budget`: it is
-   * **unsound**. `B` is *constructed* by the `min()` in `rawCpuResidual()` to satisfy
-   * `B × PER_UNIT_BYTES ≤ hostRamCeiling()`, so that assertion is tautological on its
-   * dominant term and can never fail on its own. The apparent headroom
-   * (`ramCeiling − B × PER_UNIT_BYTES`) is floor-rounding slack from whichever term won
-   * the `min()`, not a budget — spending it double-spends the ceiling.
-   *
-   * The sound form is **reserved-subtraction**: mirror `reservedCpuCost()` with a
-   * `reservedRamCost()` carved out INSIDE the `min()` term, so a pool that reserves RAM
-   * legitimately pushes `B` down. Designed, and gated on measurement, in
-   * `research/2026-07-12-global-host-admission-memory-dimension.md` (Stage 2).
-   */
-  ramBytes?: number;
-}
-
 /**
- * One type-check-class worker's resident set — the RAM quantum for `B`.
+ * One type-check-class worker's resident set — the RAM quantum, and since
+ * 2026-09-09 the ONLY term that sizes the elastic fleet.
  *
- * **First measured 2026-07-12** (Stage-1 instrumentation; before that the constant was
- * inherited, never observed). The headline finding is that this class has NO single
- * value — a worker's peak swings up to **3×** on whether tsc's `.tsbuildinfo` is warm:
+ * **This constant alone determines `B`**, hence how many heavy workers (tsc,
+ * vite, a nested check's children) may run at once across every backend on the
+ * box. Nothing subtracts from the ceiling any more — host pools declare a
+ * cardinality cap and make no claim on a budget — so a change here moves the
+ * fleet ceiling directly and visibly, with nothing else to hide behind.
+ *
+ * **`3.6e9` is not a fresh measurement.** It is chosen so the memory-only
+ * formula lands on the `B` the old reserved-subtraction formula produced
+ * (`floor(34.36e9 / 3.6e9) = 9`), which is what keeps the removal of the CPU
+ * reservation structural rather than a re-tuning in disguise. `B = 9` holds for
+ * any quantum in `(3.436e9, 3.818e9]`, and `3.6e9` sits near the centre of that
+ * interval — 0.54 above the `B = 9` boundary, 0.46 below `B = 10` — so a small
+ * change in host memory or in the ceiling fraction cannot flip it. (`3.8e9` also
+ * gives 9 but sits 0.04 from flipping to 8; do not use it.)
+ *
+ * It is nonetheless better justified than the `2.7e9` it replaces. **First
+ * measured 2026-07-12** (Stage-1 instrumentation; before that the constant was
+ * inherited, never observed). The headline finding is that this class has NO
+ * single value — a worker's peak swings up to **3×** on whether tsc's
+ * `.tsbuildinfo` is warm:
  *
  * | worker      | warm   | cold   |
  * |-------------|--------|--------|
@@ -53,28 +45,40 @@ export interface PoolCost {
  * | central-core| 1.3 GB | 3.8 GB |
  * | **8-worker fleet total** | **9.4 GB** | **22.6 GB** |
  *
- * **Size on COLD.** A fresh agent worktree has no `.cache/tsbuildinfo`, so its first
- * build is cold — and a fleet burst (many agents building at once) is therefore
- * dominated by cold builds. That is exactly the regime that thrashed the host on
- * 2026-07-11. Sizing on warm numbers would be sizing for the case that never hurts.
+ * **Size on COLD.** A fresh agent worktree has no `.cache/tsbuildinfo`, so its
+ * first build is cold — and a fleet burst (many agents building at once) is
+ * therefore dominated by cold builds. That is exactly the regime that thrashed
+ * the host on 2026-07-11. Sizing on warm numbers would be sizing for the case
+ * that never hurts.
  *
- * Against cold: this quantum tracks the fleet **mean** (~2.8 GB) well, but the **tail**
- * (5.3 GB) is ~2× it — so `B × PER_UNIT_BYTES` models the mean and carries **no tail
- * headroom**, and ONE cold build's 8-worker fan-out (~22.6 GB) is already 66 % of
- * `hostRamCeiling()`. Whether to (a) raise the quantum to the tail (`B` 11 → 6, a large
- * throughput cost), (b) keep a mean quantum and reserve headroom, or (c) replace the
- * uniform quantum with per-class weights, is the open Stage-2 question in
- * `research/2026-07-12-global-host-admission-memory-dimension.md` — do NOT re-tune this
- * ad hoc.
+ * Against cold, across the 7 real tsc targets (web-core 5.3, test 5.1,
+ * server-core 3.9, central-core 3.8, tooling 1.8, cli 1.2, tools 1.0 GB): the
+ * **mean** is 3.16 GB and `2.7e9` sat *below* it, while `3.6e9` sits above it
+ * with ~14 % headroom. But the **tail** (5.3 GB) is still ~1.5× the quantum — so
+ * `B × PER_UNIT_BYTES` models the MEAN and carries no tail headroom, and ONE
+ * cold build's 8-worker fan-out (~22.6 GB) is already 66 % of
+ * `hostRamCeiling()`. Whether to (a) raise the quantum to the tail (`5.3e9` ⇒
+ * `B = 6`, a large throughput cost), (b) keep a mean quantum and reserve
+ * headroom, or (c) replace the uniform quantum with per-class weights, is the
+ * open Stage-2 question in
+ * `research/2026-07-12-global-host-admission-memory-dimension.md` — do NOT
+ * re-tune this ad hoc.
  *
- * Note `vite` (3.0e9–3.5e9) also exceeds this quantum, but a build runs exactly ONE vite
- * and MANY workers — so the count asymmetry means the worker distribution, not vite,
- * governs the fleet's memory.
+ * One caveat for whoever picks that up: Stage 2 §2.1 proposed a
+ * `reservedRamCost()` **mirroring** `reservedCpuCost()`, and the latter no longer
+ * exists — pools reserve nothing, so there is no reserved term to carve a RAM
+ * twin out of. The question survives intact; its proposed mechanism does not, and
+ * needs re-deriving against this memory-only formula. See
+ * `research/2026-09-09-global-host-pools-stop-reserving-cpu.md`.
  *
- * Units are DECIMAL bytes — the `maxRSS` log lines that calibrate it are decimal too (a
- * GiB/GB mismatch here silently understates the true peak by ~7 %).
+ * Note `vite` (3.0e9–3.5e9) also fits inside this quantum, but a build runs
+ * exactly ONE vite and MANY workers — so the count asymmetry means the worker
+ * distribution, not vite, governs the fleet's memory.
+ *
+ * Units are DECIMAL bytes — the `maxRSS` log lines that calibrate it are decimal
+ * too (a GiB/GB mismatch here silently understates the true peak by ~7 %).
  */
-export const PER_UNIT_BYTES = 2.7e9;
+export const PER_UNIT_BYTES = 3.6e9;
 
 /** Host CPU ceiling: one admission unit per logical core. */
 export function hostCpuCeiling(): number {
@@ -86,71 +90,63 @@ export function hostRamCeiling(): number {
   return totalmem() * 0.5;
 }
 
-/** One reserved (non-CPU) pool's admission footprint. */
-export interface ReservedPoolSpec {
+/** One host pool's declared admission footprint. */
+export interface HostPoolEntry {
   /** Number of host-wide slots (flock files) — a pure function of host facts. */
   size: number;
-  cost: PoolCost;
 }
 
 /**
- * The reserved (non-CPU) host pools, declared ONCE here so the budget check and
- * the CPU pool read the *same* numbers. Each pool's CPU contribution is
- * `size × cost.cpu`; their sum (`reservedCpuCost`) is the CPU the residual `B`
- * must leave for them. Sizes are pure functions of stable host facts (never
- * env-overridable — the size names the flock slot-file set, so it must be
- * identical in every backend), matching the formulas the pools themselves size
- * to.
+ * The non-CPU host pools, declared ONCE here so the pools themselves and the
+ * `host-budget` check read the *same* numbers, and so `data-dirs/index.ts` can
+ * derive one `locks/<id>` declaration per entry.
  *
- * `layout-geometry` and `push` are declared here for the budget even though
- * their `defineHostPool` wiring lands in later steps — their CPU cost is part of
- * the reserved sum today (`layout-geometry`'s 1.0 is why `B` is 11 and not 12).
+ * **A size is a cardinality cap, not a claim on a budget.** It answers only "how
+ * many holders of this kind may exist at once" — a mutual-exclusion /
+ * anti-stampede bound (one Chromium, two forks). It withholds nothing from the
+ * fleet: `B` is computed from host facts alone and cannot move when a pool is
+ * added, removed or resized. That is what makes double-counting inexpressible —
+ * a caller may hold a pool slot AND spend a CPU grant unit, and neither has been
+ * paid for twice. See
+ * `research/2026-09-09-global-host-pools-stop-reserving-cpu.md`.
+ *
+ * Sizes are pure functions of stable host facts (never env-overridable — the size
+ * names the flock slot-file set, so it must be identical in every backend),
+ * matching the formulas the pools themselves size to.
  */
-export const RESERVED_POOLS = {
-  "heavy-read": {
-    size: Math.max(1, Math.floor(hostCpuCeiling() / 4)),
-    cost: { cpu: 0.5 },
-  },
-  "worktree-mutate": {
-    size: Math.max(2, Math.floor(hostCpuCeiling() / 6)),
-    cost: { cpu: 0.5 },
-  },
-  "db-fork": { size: 2, cost: { cpu: 1 } },
-  // A headless-Chromium page render. `cpu: 1` because launch + render genuinely
-  // saturates about a core across the browser, renderer and GPU processes, and
-  // `ramBytes` records the ~400 MB that fan-out costs. `size` is a CONSTANT
-  // (like `db-fork`, unlike the `cpus()`-derived pools): a browser launch costs
-  // roughly the same on every box, and the size names the flock slot files, so
-  // it must be identical in every backend.
-  "browser-fetch": { size: 2, cost: { cpu: 1, ramBytes: 400e6 } },
-  "layout-geometry": { size: 1, cost: { cpu: 1 } },
-  push: { size: 1, cost: { cpu: 0 } },
-} as const satisfies Record<string, ReservedPoolSpec>;
-
-/** Total CPU the reserved pools claim: `Σ size × cost.cpu`. */
-export function reservedCpuCost(): number {
-  return Object.values(RESERVED_POOLS).reduce(
-    (sum, p) => sum + p.size * p.cost.cpu,
-    0,
-  );
-}
+export const HOST_POOLS = {
+  "heavy-read": { size: Math.max(1, Math.floor(hostCpuCeiling() / 4)) },
+  "worktree-mutate": { size: Math.max(2, Math.floor(hostCpuCeiling() / 6)) },
+  "db-fork": { size: 2 },
+  // A headless-Chromium page render. `size` is a CONSTANT (like `db-fork`, unlike
+  // the `cpus()`-derived pools): a browser launch costs roughly the same on every
+  // box, and the size names the flock slot files, so it must be identical in
+  // every backend.
+  "browser-fetch": { size: 2 },
+  "layout-geometry": { size: 1 },
+  push: { size: 1 },
+} as const satisfies Record<string, HostPoolEntry>;
 
 /**
- * The CPU pool's residual budget BEFORE the `≥ 1` floor. This is the budget
- * check's overcommit signal: a value `< 1` means the reserved pools have eaten
- * the whole ceiling and the CPU pool has no room. Bounded by both the CPU
- * residual (`ceiling − reserved`) and the RAM quantum (`ramCeiling / unit`).
+ * The fleet's ceiling BEFORE the `≥ 1` floor: the smaller of the host's cores and
+ * how many worker-sized resident sets fit in `hostRamCeiling()`. Memory is what
+ * actually binds on this box, so the RAM term is normally the winner.
+ *
+ * Nothing from the pool table enters here. A value `< 1` therefore means only
+ * that the host has less than one quantum of usable RAM — "this box is smaller
+ * than one worker", not "the pools overcommitted the ceiling" — which the `max(1,
+ * …)` floor in `cpuBudget()` handles.
  */
-export function rawCpuResidual(): number {
+export function rawFleetCeiling(): number {
   return Math.min(
-    Math.floor(hostCpuCeiling() - reservedCpuCost()),
+    hostCpuCeiling(),
     Math.floor(hostRamCeiling() / PER_UNIT_BYTES),
   );
 }
 
 /** The CPU pool's derived size and its interactive/background lane split. */
 export interface CpuBudget {
-  /** CPU pool size — the residual, floored to `≥ 1` so a holder always gets a slot. */
+  /** CPU pool size — the fleet ceiling, floored to `≥ 1` so a holder always gets a slot. */
   B: number;
   /** Reserved interactive floor — high slots background work can never take. */
   reservedInteractive: number;
@@ -159,14 +155,13 @@ export interface CpuBudget {
 }
 
 /**
- * The CPU pool size `B` is the *residual* of the summed budget, not an
- * independent formula: `B = max(1, min(floor(ceiling − reserved), floor(ram /
- * unit)))`. The reserved interactive floor is `max(1, floor(B / 3))`; the
- * background lane gets the rest.
+ * The CPU pool size `B` is the whole elastic fleet: `B = max(1,
+ * min(hostCpuCeiling, floor(hostRamCeiling / PER_UNIT_BYTES)))`. The reserved
+ * interactive floor is `max(1, floor(B / 3))`; the background lane gets the rest.
  *
- * **Small hosts (`B === 1`) collapse the lane split.** On a host whose ceiling
- * the reserved pools already exceed — a 4-core/8 GB VPS, i.e. any target the
- * release artifact ships to — `rawCpuResidual()` goes negative, `B` floors to 1,
+ * **Small hosts (`B === 1`) collapse the lane split.** On a host with less than
+ * two workers' worth of usable RAM — a 4-core/8 GB VPS, i.e. any target the
+ * release artifact ships to — `rawFleetCeiling()` is 1 (or 0), `B` floors to 1,
  * and the reserved interactive floor claims that one slot, leaving the background
  * lane a window of 0. That is not a budget, it is a deadlocked pool, and
  * `defineHostPool` (rightly) refuses to build it — which made the whole app
@@ -176,7 +171,7 @@ export interface CpuBudget {
  * interactive floor only becomes meaningful again at `B >= 2`.
  */
 export function cpuBudget(): CpuBudget {
-  const B = Math.max(1, rawCpuResidual());
+  const B = Math.max(1, rawFleetCeiling());
   const reservedInteractive = Math.max(1, Math.floor(B / 3));
   const backgroundLimit = Math.max(1, B - reservedInteractive);
   return { B, reservedInteractive, backgroundLimit };

@@ -1,5 +1,4 @@
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
-import { RESERVED_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { heavyReadSlotCount } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 
@@ -57,11 +56,7 @@ export async function startHostGateLoad(
   // Per-id registry ⇒ this returns the live `heavy-read` handle (defined by
   // host-read-pool at load): the same physical slots, no second semaphore, no
   // duplicate gauge.
-  const sem = defineHostPool({
-    id: "heavy-read",
-    size: slots,
-    cost: RESERVED_POOLS["heavy-read"].cost,
-  });
+  const sem = defineHostPool({ id: "heavy-read", size: slots });
 
   // Barrier: resolve once the gate is first fully held (saturated). Capped at the
   // slot count because no more than that many occupants can hold a slot at once.

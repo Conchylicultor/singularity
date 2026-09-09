@@ -46,7 +46,7 @@ const MANIFEST_VERSION = 1;
  * evaluated registry, never from parsing `data-dirs/index.ts` sources.
  *
  * That distinction is load-bearing: `infra/host/host-admission` builds one
- * `locks/<id>` declaration per entry of `RESERVED_POOLS`, so a declared name is
+ * `locks/<id>` declaration per entry of `HOST_POOLS`, so a declared name is
  * not always a literal that appears anywhere in the file. A source-scanning
  * reader would miss exactly those and report them as orphans.
  */
