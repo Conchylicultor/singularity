@@ -4,9 +4,14 @@
 
 ## Plugin reference
 
-- Description: Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
+- Description: Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent, cursor-pointer) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
 - Web:
-  - Uses: `primitives/css/badge.Badge`
+  - Uses:
+    - `primitives/css/badge.Badge`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.DensityControlled`
+    - `primitives/css/ui-kit.textStepFor`
+    - `primitives/css/ui-kit.useControlSize`
   - Exports (types): `LinkChipProps`
   - Exports (values): `LinkChip`
 - Cross-plugin:
@@ -33,6 +38,7 @@
     - `debug/slow-ops`
     - `debug/slow-ops/pane`
     - `debug/stall-monitor`
+    - `improve/element-picker`
     - `page/inline-date`
     - `page/inline-page-link`
     - `plugin-meta/contributions-table`

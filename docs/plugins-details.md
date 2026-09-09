@@ -139,7 +139,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data.declined`
           - `code-explorer/commit-detail.commitDetailPane`
           - `code-explorer/commit-detail.useCommitInfo`
-          - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -16363,16 +16362,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/coords.placedStyle`
           - `primitives/css/fill.Fill`
           - `primitives/css/fill.fillClasses`
-          - `primitives/css/inline.Inline`
+          - `primitives/css/link-chip.LinkChip`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Inset`
-          - `primitives/css/spacing.insetClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalForwardProvider`
-          - `primitives/css/ui-kit.SingleLineProvider`
           - `primitives/css/ui-kit.usePortalForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/icon-button.IconButton`
@@ -22738,7 +22735,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data`
-              - `active-data/commit-link`
               - `apps/deploy/ssh-setup`
               - `apps/events/shell`
               - `apps/mail/reading-pane`
@@ -22780,7 +22776,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/stall-monitor`
               - `debug/trace/spans`
-              - `improve/element-picker`
               - `page/editor`
               - `page/embed`
               - `page/formatting/link`
@@ -22973,9 +22968,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
-        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
+        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent, cursor-pointer) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
-            - Uses: `primitives/css/badge.Badge`
+            - Uses:
+              - `primitives/css/badge.Badge`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.DensityControlled`
+              - `primitives/css/ui-kit.textStepFor`
+              - `primitives/css/ui-kit.useControlSize`
             - Exports (types): `LinkChipProps`
             - Exports (values): `LinkChip`
           - Cross-plugin:
@@ -23002,6 +23002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/slow-ops/pane`
               - `debug/stall-monitor`
+              - `improve/element-picker`
               - `page/inline-date`
               - `page/inline-page-link`
               - `plugin-meta/contributions-table`
@@ -24761,6 +24762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/layer`
               - `primitives/css/layout-harness`
               - `primitives/css/line`
+              - `primitives/css/link-chip`
               - `primitives/css/overlay`
               - `primitives/css/pin`
               - `primitives/css/placeholder`

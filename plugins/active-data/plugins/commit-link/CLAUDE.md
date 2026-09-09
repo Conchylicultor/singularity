@@ -42,7 +42,6 @@ plugin name). What an unresolvable sha renders as is the host's call.
     - `active-data.declined`
     - `code-explorer/commit-detail.commitDetailPane`
     - `code-explorer/commit-detail.useCommitInfo`
-    - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -1,10 +1,35 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import type { DensityControlled } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  textStepFor,
+  useControlSize,
+  type DensityControlled,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 
-export interface LinkChipProps extends DensityControlled {
-  /** Click handler. Callers own `e.stopPropagation()` — the primitive does not add it. */
-  onClick: (e: React.MouseEvent) => void;
+/**
+ * A LinkChip IS a `Badge`, so its passthrough lands where Badge's does — the
+ * chip shell, never the truncating label span inside it. See {@link Passthrough}.
+ *
+ * The openness is load-bearing, not a convenience. A chip whose click reveals
+ * something IN PLACE (a popover, a tooltip) is handed to the overlay as its
+ * trigger, and base-ui clones that element with its own handler, ARIA and ref.
+ * A closed prop surface drops all three silently, so the chip simply stops
+ * opening — which is why the two chips that needed it each worked around this
+ * primitive instead of composing it: `commit-link` wrapped it in a spare
+ * `Inline` to give the tooltip something clonable, and `ui-context` hand-rolled
+ * the whole chip, which is where the look below comes from.
+ */
+export interface LinkChipProps extends DensityControlled, Passthrough {
+  /**
+   * Click handler. Callers own `e.stopPropagation()` — the primitive does not add it.
+   *
+   * Omitted ONLY when the chip is an overlay TRIGGER: the popover/tooltip
+   * wrapper clones it with the handler that opens the panel, and a second one
+   * here would fight it. Every chip that navigates somewhere passes one.
+   */
+  onClick?: (e: React.MouseEvent) => void;
   /** StatusDot or icon, rendered before children. */
   leading?: React.ReactNode;
   /** Monospace label (for ids). Applies font-mono to the children wrapper. */
@@ -15,6 +40,25 @@ export interface LinkChipProps extends DensityControlled {
   children: React.ReactNode;
 }
 
+/**
+ * The chip's own chrome, on top of the Badge shell.
+ *
+ * It reads as an OBJECT sitting in the sentence — an outlined tile you can
+ * point at — rather than as a run of link text. That is deliberate, and it is a
+ * reversal: the chip used to paint its label `text-primary` and underline it on
+ * hover, borrowing the web's convention for a link inside prose. In a paragraph
+ * that names half a dozen tasks, attempts and pages, the result was a wall of
+ * accent-colored words, and the accent stopped meaning anything.
+ *
+ * So the affordance moved off the letters and onto the box: normal foreground
+ * text, a hairline border, and a background that lifts to `accent` under the
+ * pointer. `cursor-pointer` carries the weight the underline used to — Tailwind
+ * v4's preflight puts `cursor: default` on every `<button>`, so without it the
+ * chip showed an arrow and read as inert.
+ */
+const CHIP_CHROME =
+  "border border-border text-foreground hover:bg-accent cursor-pointer transition-colors";
+
 export function LinkChip({
   onClick,
   leading,
@@ -22,7 +66,16 @@ export function LinkChip({
   title,
   className,
   children,
+  ...rest
 }: LinkChipProps) {
+  // One rung ABOVE the plain Badge label. A chip in running text sits among
+  // body copy, not among the toolbar labels a status Badge lives with, so the
+  // caption size reads as shrunken beside the sentence holding it. Stepping the
+  // rung rather than naming a size keeps Badge's density contract: the compact
+  // `xs` density still drops one, exactly as it does for the caption.
+  const density = useControlSize();
+  const textClass = textStepFor(density) ? "text-label-compact" : "text-label";
+
   return (
     <Badge
       as="button"
@@ -31,8 +84,9 @@ export function LinkChip({
       title={title}
       icon={leading}
       mono={mono}
-      colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
-      className={className}
+      colorClass="bg-muted"
+      className={cn(CHIP_CHROME, textClass, className)}
+      {...rest}
     >
       {children}
     </Badge>

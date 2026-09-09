@@ -618,6 +618,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/layer`
     - `primitives/css/layout-harness`
     - `primitives/css/line`
+    - `primitives/css/link-chip`
     - `primitives/css/overlay`
     - `primitives/css/pin`
     - `primitives/css/placeholder`

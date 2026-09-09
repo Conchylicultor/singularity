@@ -9,18 +9,14 @@ import {
   Fill,
   fillClasses,
 } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   Inset,
-  insetClass,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  cn,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { LineagePath } from "./lineage-path";
 
@@ -69,33 +65,25 @@ function DetailRow({
 /** The compact inline chip representing a captured UI element. Clicking it opens
  * a popover with the full captured metadata. */
 export function UiContextChip({ meta }: { meta: UiContextMeta }) {
-  // The chip is a single-line inline-level strip: `Inline` supplies the
-  // inline-flex row, and the ambient single-line context makes the label `<Text>`
-  // ellipsize against the chip's own max width.
+  // The SAME chip every other inline token renders as. This one used to build
+  // its own shell, and it was the better-looking of the two — so rather than
+  // restyle it into the family, the family moved to it: the outlined tile that
+  // was local to this file is now what `LinkChip` paints for every inline chip.
   //
-  // The single-line context sits INSIDE the button, never around it: this element
-  // is handed to `InlinePopover` as its trigger, and base-ui clones it with the
-  // open/close handlers and ref. A context provider accepts neither, so wrapping
-  // the button would silently drop them and the chip would stop opening.
+  // No `onClick`: the popover clones this element with the handler that opens
+  // the panel (see `LinkChipProps.onClick`). `max-w-40` is the one thing it does
+  // not share — an element label is an arbitrary selector-ish string, so it is
+  // capped and ellipsized by Badge's own truncating label span.
   const trigger = (
-    <Inline
-      as="button"
-      gap="2xs"
+    <LinkChip
       contentEditable={false}
-      className={cn(
-        insetClass({ x: "xs", y: "2xs" }),
-        "bg-muted border-border text-foreground hover:bg-accent max-w-40 cursor-pointer rounded-md border align-middle transition-colors",
-      )}
+      className="max-w-40"
+      leading={
+        <MdAdsClick className={cn("text-muted-foreground", rigidClass())} />
+      }
     >
-      <SingleLineProvider value={true}>
-        <MdAdsClick
-          className={cn("text-muted-foreground size-3.5", rigidClass())}
-        />
-        <Text as="span" variant="label">
-          {meta.element}
-        </Text>
-      </SingleLineProvider>
-    </Inline>
+      {meta.element}
+    </LinkChip>
   );
 
   return (
