@@ -7,6 +7,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { armNumber, armText, runArmFields } from "@plugins/runs/web";
 import type { UnionRun } from "@plugins/runs/core";
 import { BACKUP_RUN_STATUSES, backupRunFields } from "../../core";
+import { backupArchiveSize } from "../internal/payload";
 import { formatBytes } from "../internal/format-bytes";
 
 /** A number column reads as nothing on another kind's row, never as zero. */
@@ -29,10 +30,23 @@ function numberCell(
  * fail at runtime; it silently degrades into client-side-only filtering over the
  * loaded window, so both halves are made not to compile instead.
  *
- * All four default to hidden. They are dimensions first: "backups whose archive
- * is over a gigabyte" is a filter that compiles to SQL across the whole ledger,
- * and a column blank on three kinds out of four does not earn a permanent place
- * in a mixed table.
+ * Three of the four default to hidden. They are dimensions first: "backups whose
+ * archive is over a gigabyte" is a filter that compiles to SQL across the whole
+ * ledger, and a column blank on three kinds out of four does not earn a
+ * permanent place in a mixed table.
+ *
+ * `backup.archiveSize` is the one that does earn it, and the reason is not that
+ * it is more interesting — it is that it is the only fact a backup row otherwise
+ * carries nowhere. "Succeeded" says the archive was written; it does not say
+ * whether it holds a gigabyte or forty bytes, and a nightly backup that
+ * quietly halves is a source that stopped contributing. `outcome` cannot report
+ * that and the label does not carry it. The three it sits beside are each
+ * answered better elsewhere: the native status is `outcome` at a finer grain,
+ * and the two counts are the headline of the Sources and Targets sections in the
+ * detail pane, which name them rather than counting them.
+ *
+ * On another kind's row it reads as nothing, never as zero — so what it costs a
+ * mixed table is one blank column, and that is the trade being made.
  *
  * `backup.status` is the native status kept beside the shared `outcome`. The two
  * are not redundant: `outcome` is the axis a person filters by across every
@@ -43,7 +57,6 @@ export function BackupRunFields({
 }: FieldExtensionProps<UnionRun>): ReactNode {
   const fields = useMemo<FieldDef<UnionRun>[]>(() => {
     const status = armText(backupRunFields, "backup.status");
-    const archiveSize = armNumber(backupRunFields, "backup.archiveSize");
     const sourceCount = armNumber(backupRunFields, "backup.sourceCount");
     const targetCount = armNumber(backupRunFields, "backup.targetCount");
     return runArmFields(backupRunFields, [
@@ -67,11 +80,12 @@ export function BackupRunFields({
         id: "backup.archiveSize",
         label: "Archive size",
         type: "number",
-        value: archiveSize,
-        cell: (r) => numberCell(archiveSize(r), formatBytes),
+        // The same accessor the detail pane's Archive line reads, so the
+        // column and the line cannot disagree about the run's size.
+        value: backupArchiveSize,
+        cell: (r) => numberCell(backupArchiveSize(r), formatBytes),
         sortable: true,
         filterable: true,
-        visible: false,
         width: "7rem",
       },
       {

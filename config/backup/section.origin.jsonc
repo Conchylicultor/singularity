@@ -1,4 +1,4 @@
-// @hash 1f08ff27ac74
+// @hash 20c51d6bc82e
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "backup.runs-arm:archive",
     "backup.runs-arm:sources",
     "backup.runs-arm:targets"
   ]

@@ -78,13 +78,28 @@ the controls sit in ordinary pane content, the row goes back to being a
 single-line field row that obeys the Properties panel, and the row activates like
 every other kind's.
 
-The two sections are contributed to `BackupRunDetail.Section`, and both are keyed
+The three sections are contributed to `BackupRunDetail.Section`, and all are keyed
 by the **run** rather than by its id — the pane resolves the row once through
 `useRun`, so no section can render an empty-looking body while the read is still
 in flight. `useAvailable` is how a section with nothing to show disappears: the
 host paints the card before the body, so a `return null` would leave a titled bar
 over emptiness. Targets additionally declares `useDefaultOpen` on a failed
 target.
+
+**Archive is a one-line section**: it declares no `component`, only a `summary`,
+so the host paints one static row with no chevron and nothing to persist. It
+reads `backup.archiveSize` through the same `backupArchiveSize` accessor the
+DataView's "Archive size" column reads, which is why the line and the column
+cannot disagree.
+
+That column is also the ONE arm field of the four that is visible by default. Not
+because it is more interesting: it is the only fact a backup row otherwise
+carries nowhere. `outcome` says the archive was written and never says whether it
+holds a gigabyte or forty bytes, and a nightly backup that quietly halves is a
+source that stopped contributing. The other three are each answered better
+elsewhere — the native status is `outcome` at a finer grain, and the two counts
+are what the Sources and Targets sections *name* rather than count. The cost is
+one blank column on every non-backup row, which is the trade.
 
 **Grant access is the only in-app repair path** for a storage target whose OAuth
 token expired: without it, a Google Drive backup that lost access reports the
@@ -132,11 +147,12 @@ exist today — a real follow-up, and a bigger change than it looks.
 
 ## Plugin reference
 
-- Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the two detail sections carrying what no scalar column can — the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
+- Description: The backup arm's presence on the merged run surface: the kind's label, its rows' activation into the backup run-detail pane, its four scalar columns (native status, archive size, source and target counts) as real filterable and sortable SQL dimensions, and the three detail sections — the archive's size on one line, the manifest's source reports, and the per-target outcome with its Grant access remediation. The backup arm of the unified run space: binds backup_runs into the runs union — its native status folded into the shared outcome vocabulary (partial included, since backup is the only kind that can half-succeed), a label naming what the run covered, and the source / target counts plus the raw per-target results as its own columns. Reads null for namespace (a backup covers the machine, not a checkout — the table's own namespace column is the in-flight index's scope discriminator, not a fact about the run) and for message (a backup's failure words are per-target).
 - Web:
   - Contributes:
     - `Runs.Kind`
     - `Runs.Fields` "backup" → `BackupRunFields`
+    - `BackupRunDetail.Section` "Archive"
     - `BackupRunDetail.Section` "Sources" → `BackupSourcesSection`
     - `BackupRunDetail.Section` "Targets" → `BackupTargetsSection`
   - Uses:

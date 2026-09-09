@@ -4,7 +4,7 @@ import type {
   BackupSourceReport,
   BackupTargetResult,
 } from "@plugins/backup/core";
-import { armJson } from "@plugins/runs/web";
+import { armJson, armNumber } from "@plugins/runs/web";
 import type { UnionRun } from "@plugins/runs/core";
 import { backupRunFields } from "../../core";
 
@@ -64,6 +64,22 @@ const sourcesOf = armJson(
   backupRunFields,
   "backup.sources",
   z.array(BackupSourceReportSchema),
+);
+
+/**
+ * How many bytes the archive came out to, read off the merged row.
+ *
+ * Bound to the same `defineRunArmFields` declaration as everything else here, so
+ * a rename of the column stops compiling in both its readers — the detail pane's
+ * Archive line and the DataView's Archive size column — rather than in neither.
+ *
+ * Null is an answer, not a gap: the column is null on every row of every other
+ * kind, and on a backup that failed before it produced an archive at all. Both
+ * readers render that as nothing, never as `0 B`.
+ */
+export const backupArchiveSize = armNumber(
+  backupRunFields,
+  "backup.archiveSize",
 );
 
 /** The run's per-target outcomes, read off the merged row. */

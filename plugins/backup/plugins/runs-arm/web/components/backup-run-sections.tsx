@@ -16,7 +16,12 @@ import type {
   BackupTargetResult,
 } from "@plugins/backup/core";
 import type { UnionRun } from "@plugins/runs/core";
-import { backupSources, backupTargetResults } from "../internal/payload";
+import {
+  backupArchiveSize,
+  backupSources,
+  backupTargetResults,
+} from "../internal/payload";
+import { formatBytes } from "../internal/format-bytes";
 
 /**
  * One storage target's outcome: the target's icon, its name, a tick or a cross,
@@ -124,5 +129,31 @@ export function BackupTargetsSection({ run }: { run: UnionRun }): ReactNode {
         <TargetResultLine key={result.targetId} result={result} />
       ))}
     </Stack>
+  );
+}
+
+/**
+ * How big the archive came out.
+ *
+ * A one-line section — the whole content is a number, so it declares no
+ * `component` and the host paints one static row with no chevron. It is the
+ * first thing on the pane because it is the first question asked of a finished
+ * backup: a nightly archive that suddenly halved is the signal that a source
+ * stopped contributing, and until now the pane listed what went in without ever
+ * saying how much came out.
+ *
+ * The same column the DataView's "Archive size" field reads, through the same
+ * accessor, so the line and the column cannot disagree.
+ */
+export function BackupArchiveSize({ run }: { run: UnionRun }): ReactNode {
+  const bytes = backupArchiveSize(run);
+  // Unreachable through the section's `useAvailable` gate, which is what keeps
+  // a run with no archive from painting a titled row over nothing. Stated
+  // anyway: the null arm is the type's, not the gate's, to answer.
+  if (bytes === null) return null;
+  return (
+    <Text as="span" variant="body" tone="muted">
+      {formatBytes(bytes)}
+    </Text>
   );
 }

@@ -16,9 +16,11 @@ import {
 import { authStateResource } from "@plugins/auth/core";
 import type { UnionRun } from "@plugins/runs/core";
 import {
+  BackupArchiveSize,
   BackupSourcesSection,
   BackupTargetsSection,
 } from "../components/backup-run-sections";
+import { backupArchiveSize } from "../internal/payload";
 
 /**
  * The two sections of the backup run-detail pane. This proves the two things a
@@ -155,5 +157,26 @@ describe("backup run detail sections", () => {
     expect(screen.queryByText("Databases")).toBeNull();
     expect(screen.getByText(/config\/ — 12 files/)).not.toBeNull();
     expect(screen.getByText("secrets.json.enc")).not.toBeNull();
+  });
+
+  it("states how big the archive came out", () => {
+    renderSection(<BackupArchiveSize run={backupRun()} />);
+
+    expect(screen.getByText("5.0 MB")).not.toBeNull();
+  });
+
+  // The gate the Archive section declares, checked on the value the section
+  // itself reads: a run that failed before writing an archive paints no row at
+  // all rather than a titled "Archive" over nothing.
+  it("has no size to state before an archive exists", () => {
+    const run = backupRun({
+      outcome: "failed",
+      "backup.status": "failed",
+      "backup.archiveSize": null,
+    });
+    expect(backupArchiveSize(run)).toBeNull();
+
+    renderSection(<BackupArchiveSize run={run} />);
+    expect(screen.queryByText(/B$|KB|MB|GB/)).toBeNull();
   });
 });
