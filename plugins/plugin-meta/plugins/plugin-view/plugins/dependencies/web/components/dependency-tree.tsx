@@ -150,7 +150,7 @@ function DepRow({ node, depth }: { node: DepTreeNode; depth: number }) {
         onClick={() =>
           openPane(pluginViewPane, { pluginId: node.id }, { mode: "swap" })
         }
-        className="min-h-7 cursor-pointer"
+        className="min-h-7"
         title={String(node.id)}
       >
         <Text>{label}</Text>

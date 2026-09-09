@@ -260,7 +260,6 @@ export function BroadcastsPanel() {
                   direction="row"
                   gap="xs"
                   align="center"
-                  className="cursor-pointer"
                 >
                   <input
                     type="checkbox"

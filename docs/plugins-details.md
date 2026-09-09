@@ -16061,7 +16061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`agent-origin-safety`** — Lint rule keeping an e2e script's own Node-side calls to the app under test marked with the agent-origin headers, so the writes they cause stay attributable and revertible.
             - **`aria-safety`** — aria-safety lint rule: no-orphan-composite-role
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
-            - **`button-safety`** — button-safety lint rule: no-async-raw-button
+            - **`button-safety`** — button-safety lint rules: no-async-raw-button, no-redundant-cursor-pointer
             - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
             - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
@@ -22968,7 +22968,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
-        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent, cursor-pointer) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
+        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
               - `primitives/css/badge.Badge`

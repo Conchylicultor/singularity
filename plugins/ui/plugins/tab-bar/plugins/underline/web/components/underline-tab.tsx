@@ -44,7 +44,7 @@ export function UnderlineTab({
         // <button> (which this `role="button"` div otherwise loses), so a
         // press-and-drag — e.g. dragging a floating-window tab — never starts a
         // text selection of the label.
-        "max-w-40 cursor-pointer select-none gap-xs py-2xs pl-xs pr-2xs transition-colors",
+        "max-w-40 select-none gap-xs py-2xs pl-xs pr-2xs transition-colors",
         active
           ? "border-b-2 border-primary text-foreground"
           : "text-muted-foreground hover:text-foreground",

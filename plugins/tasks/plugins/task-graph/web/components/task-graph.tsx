@@ -75,7 +75,7 @@ function DeleteTaskButton({ taskId }: { taskId: string }) {
   return (
     <button
       type="button"
-      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-5 cursor-pointer rounded-full border shadow-sm disabled:opacity-50"
+      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-5 rounded-full border shadow-sm disabled:opacity-50"
       disabled={deleting}
       onClick={handleDelete}
       aria-label="Delete task"

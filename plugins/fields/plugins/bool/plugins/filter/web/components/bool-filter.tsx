@@ -14,13 +14,18 @@ import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-vie
 export function BoolValueInput(props: FilterValueInputProps): ReactNode {
   const checked = props.value === true;
   return (
-    <Stack direction="row" gap="none" align="center" className="h-(--control-height-sm)">
+    <Stack
+      direction="row"
+      gap="none"
+      align="center"
+      className="h-(--control-height-sm)"
+    >
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => props.onChange(e.target.checked)}
         aria-label={checked ? "Checked" : "Unchecked"}
-        className="size-4 cursor-pointer accent-primary"
+        className="size-4 accent-primary"
       />
     </Stack>
   );

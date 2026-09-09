@@ -15,7 +15,11 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 
 /** A leaf plugin has no sub-tree to show — the host then paints no card at all. */
-export function useSubPluginsAvailable({ node }: { node: PluginNode }): boolean {
+export function useSubPluginsAvailable({
+  node,
+}: {
+  node: PluginNode;
+}): boolean {
   return node.children.length > 0;
 }
 
@@ -40,13 +44,7 @@ export function SubPluginsSection({ node }: { node: PluginNode }) {
   );
 }
 
-function PluginTreeNode({
-  node,
-  depth,
-}: {
-  node: PluginNode;
-  depth: number;
-}) {
+function PluginTreeNode({ node, depth }: { node: PluginNode; depth: number }) {
   const { open: expanded, toggle } = useCollapsible();
   const openPane = useOpenPane();
   const hasChildren = node.children.length > 0;
@@ -78,12 +76,10 @@ function PluginTreeNode({
         onClick={() =>
           openPane(pluginViewPane, { pluginId: node.id }, { mode: "swap" })
         }
-        className="min-h-7 cursor-pointer"
+        className="min-h-7"
       >
         <Text>{node.name}</Text>
-        {node.loadBearing && (
-          <MdBolt className="size-3 text-warning" />
-        )}
+        {node.loadBearing && <MdBolt className="size-3 text-warning" />}
       </Row>
       {expanded &&
         node.children.map((c) => (

@@ -220,7 +220,7 @@ function ReorderItemBox({
             // chrome, kept as raw positioning.
             <button
               // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the draggable item corner (off-ramp pixel overhang)
-              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover/reorder-item:opacity-80 group-hover/reorder-item:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
+              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs opacity-0 pointer-events-none group-hover/reorder-item:opacity-80 group-hover/reorder-item:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleHide}
               aria-label="Hide item"
@@ -322,7 +322,7 @@ export function SpacerReorderItem({
           </span>
           <button
             // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the spacer corner (off-ramp pixel overhang)
-            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
+            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
             aria-label="Remove spacer"

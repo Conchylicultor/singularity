@@ -63,10 +63,7 @@ export function BlockTextRenderer({
         // field flushes on blur anyway, but this keeps the caret put.
         onMouseDown={(e) => e.preventDefault()}
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line (horizontal placement owned by the shared marker gutter)
-        className={cn(
-          "accent-primary mt-2 size-3.5 cursor-pointer",
-          selfClass("start"),
-        )}
+        className={cn("accent-primary mt-2 size-3.5", selfClass("start"))}
       />
     );
   } else if (handle?.ordinalMarker) {

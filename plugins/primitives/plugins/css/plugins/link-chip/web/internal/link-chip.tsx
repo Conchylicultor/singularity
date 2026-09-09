@@ -52,12 +52,12 @@ export interface LinkChipProps extends DensityControlled, Passthrough {
  *
  * So the affordance moved off the letters and onto the box: normal foreground
  * text, a hairline border, and a background that lifts to `accent` under the
- * pointer. `cursor-pointer` carries the weight the underline used to — Tailwind
- * v4's preflight puts `cursor: default` on every `<button>`, so without it the
- * chip showed an arrow and read as inert.
+ * pointer. The pointer cursor carries the weight the underline used to, and it
+ * is not written here — the base layer gives it to every `<button>`, which is
+ * what the chip is.
  */
 const CHIP_CHROME =
-  "border border-border text-foreground hover:bg-accent cursor-pointer transition-colors";
+  "border border-border text-foreground hover:bg-accent transition-colors";
 
 export function LinkChip({
   onClick,

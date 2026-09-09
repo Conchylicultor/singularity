@@ -29,7 +29,7 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
                     e.stopPropagation();
                     onFileOpen(href);
                   }}
-                  className="text-primary underline cursor-pointer"
+                  className="text-primary underline"
                 >
                   {kids}
                 </button>
@@ -41,9 +41,7 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
               className="text-primary underline"
               href={href}
               target={href?.startsWith("http") ? "_blank" : undefined}
-              rel={
-                href?.startsWith("http") ? "noopener noreferrer" : undefined
-              }
+              rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
               {...p}
             >
               {kids}

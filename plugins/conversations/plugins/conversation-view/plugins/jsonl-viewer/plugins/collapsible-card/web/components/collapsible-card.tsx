@@ -136,7 +136,7 @@ export function CollapsibleCard({
           <button
             {...triggerProps}
             aria-label={open ? "Collapse" : "Expand"}
-            className="size-full cursor-pointer transition-colors"
+            className="size-full transition-colors"
           />
         }
       >

@@ -57,7 +57,7 @@ function RailButton({ left, className, ref, ...rest }: RailButtonProps) {
       // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
       className={cn(
         "absolute block-gutter-control z-raised flex size-5 items-center justify-center rounded-md",
-        "text-muted-foreground hover:bg-accent cursor-pointer",
+        "text-muted-foreground hover:bg-accent",
         className,
       )}
       style={{ left }}
@@ -96,7 +96,11 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
   const chevron = seat.chevron;
   const api = useMemo(() => makeBlockAPI(owner.id), [makeBlockAPI, owner.id]);
 
-  const { attributes, listeners, setNodeRef: setDragRef } = useDraggable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+  } = useDraggable({
     id: `drag:${owner.id}`,
     data: { id: owner.id },
   });
@@ -115,11 +119,16 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
           aria-label={chevron.collapsed ? "Expand" : "Collapse"}
           aria-expanded={!chevron.collapsed}
           data-chevron-for={chevron.blockId}
-          onClick={() => makeBlockAPI(chevron.blockId).setExpanded(chevron.collapsed)}
+          onClick={() =>
+            makeBlockAPI(chevron.blockId).setExpanded(chevron.collapsed)
+          }
           className={chevron.collapsed ? "opacity-60" : REVEAL_ON_ROW_HOVER}
         >
           <MdChevronRight
-            className={cn("size-4 transition-transform", !chevron.collapsed && "rotate-90")}
+            className={cn(
+              "size-4 transition-transform",
+              !chevron.collapsed && "rotate-90",
+            )}
           />
         </RailButton>
       )}
@@ -160,7 +169,10 @@ export function BlockRail({ seat }: { seat: RailSeat }) {
             aria-label="Reorder or open block actions"
             {...attributes}
             {...listeners}
-            className={cn("cursor-grab active:cursor-grabbing", REVEAL_ON_ROW_HOVER)}
+            className={cn(
+              "cursor-grab active:cursor-grabbing",
+              REVEAL_ON_ROW_HOVER,
+            )}
           >
             <MdDragIndicator className="size-4" />
           </RailButton>

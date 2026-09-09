@@ -19,10 +19,32 @@ type ChordAnn = Annotation<"chord", ChordData>;
  * below the major tonic).
  */
 const MAJOR_LABELS = [
-  "C", "G", "D", "A", "E", "B", "F♯", "D♭", "A♭", "E♭", "B♭", "F",
+  "C",
+  "G",
+  "D",
+  "A",
+  "E",
+  "B",
+  "F♯",
+  "D♭",
+  "A♭",
+  "E♭",
+  "B♭",
+  "F",
 ];
 const MINOR_LABELS = [
-  "Am", "Em", "Bm", "F♯m", "C♯m", "G♯m", "D♯m", "B♭m", "Fm", "Cm", "Gm", "Dm",
+  "Am",
+  "Em",
+  "Bm",
+  "F♯m",
+  "C♯m",
+  "G♯m",
+  "D♯m",
+  "B♭m",
+  "Fm",
+  "Cm",
+  "Gm",
+  "Dm",
 ];
 
 /** Pitch class (0–11) of the major key at each circle position. */
@@ -36,7 +58,13 @@ const MINOR_PC = MAJOR_PC.map((pc) => (pc + 9) % 12);
  * the outer major ring.
  */
 const MINOR_QUALITIES = new Set([
-  "min", "min7", "min6", "min9", "halfdim7", "dim", "dim7",
+  "min",
+  "min7",
+  "min6",
+  "min9",
+  "halfdim7",
+  "dim",
+  "dim7",
 ]);
 
 /** MIDI pitch of each pitch class in octave 4 (MIDI 60 = C4); the register the
@@ -129,10 +157,7 @@ export function CircleOfFifths() {
   );
 
   const chords = useMemo(
-    () =>
-      score.annotations.filter(
-        (a): a is ChordAnn => a.type === "chord",
-      ),
+    () => score.annotations.filter((a): a is ChordAnn => a.type === "chord"),
     [score.annotations],
   );
 
@@ -256,7 +281,7 @@ function Wedge({
       onClick={onPlay}
       role="button"
       aria-label={`Play ${label}`}
-      className="cursor-pointer transition-opacity hover:opacity-80"
+      className="transition-opacity hover:opacity-80"
     >
       <path
         d={sector(rIn, rOut, a0, a1)}

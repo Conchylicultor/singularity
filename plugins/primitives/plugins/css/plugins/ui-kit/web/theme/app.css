@@ -1461,6 +1461,36 @@
   button, input, select, optgroup, textarea, ::file-selector-button {
     text-transform: inherit;
     }
+
+  /* The pointer cursor on controls — the second thing preflight leaves undone.
+     Tailwind v3 shipped `button, [role="button"] { cursor: pointer }`; v4 dropped
+     that line to match the platform, and nothing replaced it, so the browser's
+     own arrow comes back through on every control we draw. That reasoning holds
+     for a control that LOOKS like one. Most of ours do not: an icon-only ghost
+     button, a link chip mid-sentence, a clickable row — no fill, no border, no
+     shadow, so before the click the cursor is the only thing that says the thing
+     under it is pressable.
+     Stated here for the same reason the casing above is: whether something ends
+     up as a `<button>` is decided BELOW the styling (`Row` picks its own element
+     from its props), so a call site cannot be the one to remember. It was not
+     remembering — the class was hand-written on ~30 controls and absent from the
+     shared `Button`, so which controls showed a hand was down to who wrote them.
+     `:disabled` is excluded on purpose: a control you cannot press should not
+     invite the press. Base loses to utilities, so a surface that genuinely wants
+     the arrow (a `<button>` used as a static readout) still writes
+     `cursor-default` and wins. `button-safety/no-redundant-cursor-pointer` keeps
+     the hand-written copies from growing back. */
+  button:not(:disabled):not([aria-disabled="true"]),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  select:not(:disabled),
+  input:is([type="button"], [type="checkbox"], [type="color"], [type="file"],
+            [type="radio"], [type="range"], [type="reset"],
+            [type="submit"]):not(:disabled),
+  ::file-selector-button,
+  label:has(input:is([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+    }
   html, body, #root {
     @apply h-full overflow-hidden;
     }

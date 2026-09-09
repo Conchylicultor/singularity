@@ -5,7 +5,11 @@ import { Color } from "./color";
 
 type ColorFormat = "hex" | "oklch" | "hsl";
 const FORMATS: ColorFormat[] = ["hex", "oklch", "hsl"];
-const FORMAT_LABELS: Record<ColorFormat, string> = { hex: "HEX", oklch: "OKLCH", hsl: "HSL" };
+const FORMAT_LABELS: Record<ColorFormat, string> = {
+  hex: "HEX",
+  oklch: "OKLCH",
+  hsl: "HSL",
+};
 
 function colorToString(color: Color, fmt: ColorFormat): string {
   if (fmt === "oklch") return color.toOklch();
@@ -20,7 +24,11 @@ export interface ColorInputProps {
 }
 
 export function ColorInput({ color, onChange, className }: ColorInputProps) {
-  const [format, setFormat] = useDraft<ColorFormat>("color-picker-format", "hex", { ttl: 365 * 24 * 60 * 60 * 1000 });
+  const [format, setFormat] = useDraft<ColorFormat>(
+    "color-picker-format",
+    "hex",
+    { ttl: 365 * 24 * 60 * 60 * 1000 },
+  );
   // The text-input `draft` state is re-initialized from the canonical color by
   // remounting the editable field whenever the color or format changes (the key
   // below), instead of mirroring `color`/`format` into state via an effect.
@@ -85,7 +93,7 @@ function ColorInputField({
       <button
         type="button"
         onClick={onCycleFormat}
-        className="w-9 shrink-0 text-center text-3xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground cursor-pointer select-none"
+        className="w-9 shrink-0 text-center text-3xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground select-none"
       >
         {FORMAT_LABELS[format]}
       </button>

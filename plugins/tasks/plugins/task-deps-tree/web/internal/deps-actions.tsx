@@ -75,7 +75,7 @@ function AlsoAfterChip({ taskId, dep }: { taskId: string; dep: TaskListItem }) {
       icon={<MdClose />}
       title={`also after: ${title} — click to remove`}
       onClick={remove}
-      className="cursor-pointer hover:text-destructive"
+      className="hover:text-destructive"
     >
       also after: {title}
     </Badge>

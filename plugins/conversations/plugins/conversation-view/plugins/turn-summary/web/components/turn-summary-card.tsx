@@ -70,7 +70,9 @@ export function TurnSummaryCard({
         onClick={hasDetail ? toggle : undefined}
         className={cn(
           "w-full text-left",
-          hasDetail ? "cursor-pointer" : "cursor-default",
+          // No detail to open: this turn's card is a readout, so it keeps the
+          // arrow the base rule hands every other button the hand for.
+          !hasDetail && "cursor-default",
         )}
         aria-expanded={hasDetail ? open : undefined}
       >

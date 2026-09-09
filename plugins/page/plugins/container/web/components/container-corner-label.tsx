@@ -182,4 +182,4 @@ const CHIP_CLASS =
 
 /** The trigger inside the chip. The swap is state, not a CSS group — see above. */
 const TRIGGER_CLASS =
-  "hover:text-foreground cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm";
+  "hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm";

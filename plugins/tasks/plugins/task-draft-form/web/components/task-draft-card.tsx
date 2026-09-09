@@ -73,16 +73,11 @@ function UrlToggle({
 }) {
   return (
     <Inset t="xs">
-      <Text
-        as="label"
-        variant="caption"
-        tone="muted"
-        className="cursor-pointer"
-      >
+      <Text as="label" variant="caption" tone="muted">
         <Stack direction="row" align="center" gap="xs">
           <input
             type="checkbox"
-            className="h-3 w-3 cursor-pointer"
+            className="h-3 w-3"
             checked={includeUrl}
             disabled={disabled}
             onChange={(e) => onToggleUrl(e.target.checked)}
@@ -216,7 +211,7 @@ export function TaskDraftCard({
             disabled={disabled}
             aria-label="Remove task"
             title="Remove task"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted size-5 rounded-md cursor-pointer"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted size-5 rounded-md"
           >
             <Center className="size-full">
               <MdClose className="size-3.5" />
@@ -242,16 +237,11 @@ export function TaskDraftCard({
         )}
       {showStandalone && onStandaloneChange && (
         <Inset x="sm" y="xs">
-          <Text
-            as="label"
-            variant="caption"
-            tone="muted"
-            className="cursor-pointer"
-          >
+          <Text as="label" variant="caption" tone="muted">
             <Stack direction="row" align="center" gap="xs">
               <input
                 type="checkbox"
-                className="h-3 w-3 cursor-pointer"
+                className="h-3 w-3"
                 checked={!!standalone}
                 disabled={disabled}
                 onChange={(e) => onStandaloneChange(e.target.checked)}

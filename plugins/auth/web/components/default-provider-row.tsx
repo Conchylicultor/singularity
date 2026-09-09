@@ -135,7 +135,7 @@ export function DefaultProviderRow({ providerId }: Props) {
         {status?.scopes && status.scopes.length > 0 ? (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
           <details className="mt-1 text-caption text-muted-foreground">
-            <summary className="cursor-pointer">
+            <summary>
               {status.scopes.length} scope
               {status.scopes.length === 1 ? "" : "s"}
             </summary>

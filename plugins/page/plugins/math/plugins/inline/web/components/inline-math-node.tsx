@@ -68,7 +68,7 @@ function InlineMathView({
           tabIndex={0}
           onClick={(e) => e.stopPropagation()}
           className={cn(
-            "cursor-pointer rounded-sm px-xs",
+            "rounded-sm px-xs",
             "hover:bg-muted",
             open && "bg-muted",
           )}

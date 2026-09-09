@@ -89,7 +89,7 @@ export function MidiLoader({ onRaw }: Props) {
         align="center"
         gap="md"
         className={cn(
-          "w-full max-w-sm cursor-pointer rounded-xl border-2 border-dashed px-xl py-2xl transition-colors",
+          "w-full max-w-sm rounded-xl border-2 border-dashed px-xl py-2xl transition-colors",
           dragging
             ? "border-primary bg-primary/5"
             : "border-border hover:border-muted-foreground/50 hover:bg-muted/30",

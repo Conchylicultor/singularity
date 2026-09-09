@@ -54,7 +54,6 @@ export function RadioGroup({
           align="center"
           gap="sm"
           key={opt.value}
-          className="cursor-pointer"
         >
           <input
             type="radio"

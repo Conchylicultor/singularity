@@ -69,7 +69,7 @@ export function TransposeControl() {
         }
         title={semitones === 0 ? undefined : "Reset to original key"}
         onClick={() => setTranspose(0)}
-        className="min-w-[3rem] border-x border-border px-xs text-center enabled:cursor-pointer disabled:cursor-default"
+        className="min-w-[3rem] border-x border-border px-xs text-center"
       >
         <Text
           as="span"
