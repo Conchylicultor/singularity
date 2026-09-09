@@ -150,9 +150,7 @@ await withBrowser(async (h) => {
   );
 
   // The source block is untouched — a copy, not a move.
-  const sourceStill = await decoratorsIn(
-    editableBlocks(page).nth(0),
-  ).count();
+  const sourceStill = await decoratorsIn(editableBlocks(page).nth(0)).count();
   r.ok(
     "block 1 still holds its own chip",
     sourceStill === 1,
