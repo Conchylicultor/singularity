@@ -266,6 +266,15 @@ Good: Normally a row's buttons appear when your mouse is over it, and vanish
       as well as hover.)
 ```
 
+Agents should prefer explain/report using plain english sentence, rather than
+refering to hardcoded names.
+
+```
+Bad:  spawnCaptured/spawnPassthrough only ever surfaced maxRssBytes; Bun's
+      rusage always carried cpuTime and every call site had hand-picked the
+      one field.
+```
+
 ### Testing
 
 Optional and manual — nothing runs them automatically.
