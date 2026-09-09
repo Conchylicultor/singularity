@@ -13,10 +13,12 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEventsRevision } from "@plugins/apps/plugins/events/plugins/events-core/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
-import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  externalUrl,
+  type EventRecord,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { queryEvents } from "../core";
 import { eventFieldDefs } from "./internal/fields";
-import { externalUrl } from "./internal/format";
 import { useOpenEvent } from "./internal/use-open-event";
 import { EventRow } from "./components/event-row";
 import { EventList } from "./slots";

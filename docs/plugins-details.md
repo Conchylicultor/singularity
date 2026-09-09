@@ -1308,6 +1308,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSources`
               - `useCreateEventSource`
               - `useDeleteEventSource`
+              - `useEventSourceOrigin`
               - `useEventSourceRun`
               - `useEventSourceRuns`
               - `useEventSources`
@@ -1428,6 +1429,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EventSourceSchema`
               - `eventSourcesResource`
               - `eventsRevisionResource`
+              - `externalUrl`
               - `ExtractedEventSchema`
               - `EXTRACTION_STATUSES`
               - `ExtractionResultSchema`
@@ -1546,12 +1548,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "event-sources"
               - `Pane.Register` "event-source-detail"
               - `Events.Sidebar` "Sources" → `component`
+              - `EventSourceActions` "open" → `SourceOpenAction`
               - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
             - Uses:
               - `apps/events/events-core.EventSources`
               - `apps/events/events-core.useCreateEventSource`
               - `apps/events/events-core.useDeleteEventSource`
+              - `apps/events/events-core.useEventSourceOrigin`
               - `apps/events/events-core.useEventSources`
               - `apps/events/events-core.useUpdateEventSource`
               - `apps/events/shell.Events`

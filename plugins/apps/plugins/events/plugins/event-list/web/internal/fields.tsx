@@ -7,9 +7,12 @@ import type {
   FieldDef,
   FieldValue,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
+import {
+  externalUrl,
+  type EventRecord,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 import { EVENT_LIST_FIELDS } from "../../core";
-import { externalUrl, formatEventWhen, urlHost } from "./format";
+import { formatEventWhen, urlHost } from "./format";
 
 // Comparable projection for one field id. Drives the toolbar sort/filter pills
 // and the default table/gallery cell. (Search/filter/sort actually run

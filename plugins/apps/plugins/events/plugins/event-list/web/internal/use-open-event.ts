@@ -1,7 +1,9 @@
 import { useCallback } from "react";
 import { useSourceOriginUrl } from "@plugins/apps/plugins/events/plugins/events-core/web";
-import type { EventRecord } from "@plugins/apps/plugins/events/plugins/events-core/core";
-import { externalUrl } from "./format";
+import {
+  externalUrl,
+  type EventRecord,
+} from "@plugins/apps/plugins/events/plugins/events-core/core";
 
 /**
  * Where one event opens, in the order a person means it: the event's OWN page
@@ -12,6 +14,11 @@ import { externalUrl } from "./format";
  * source page is still the answer to "show me this". It is resolved generically
  * through `useSourceOriginUrl`, so this surface names no source type.
  *
+ * Only the event's own URL is gated here: it is a model-written value off a
+ * scraped page, so it passes `externalUrl` before it can be a destination. The
+ * fallback needs no gate — `useSourceOriginUrl` already applies the same one at
+ * the mint.
+ *
  * `null` = this event has no destination (a hand-entered event on a manual
  * source, typically). Kept as a separate resolver from the opener so the row's
  * link chip and the row click agree on the target by construction.
@@ -20,7 +27,7 @@ export function useEventUrl(): (event: EventRecord) => string | null {
   const originUrl = useSourceOriginUrl();
   return useCallback(
     (event: EventRecord): string | null =>
-      externalUrl(event.url) ?? externalUrl(originUrl(event.sourceId)),
+      externalUrl(event.url) ?? originUrl(event.sourceId),
     [originUrl],
   );
 }

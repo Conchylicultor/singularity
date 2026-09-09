@@ -6,6 +6,7 @@ import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
 import { EventSourceActions, EventSourceDetail } from "./slots";
 import { SourceDeleteAction } from "./components/source-delete-action";
+import { SourceOpenAction } from "./components/source-open-action";
 import { SourceToggleAction } from "./components/source-toggle-action";
 
 export {
@@ -63,8 +64,12 @@ export default {
         onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
       }),
     }),
-    // Ahead of delete on purpose: a reversible action must not sit where the
-    // user's muscle memory has put the destructive one (the rightmost button).
+    // Ordered by how much each one changes: `open` only looks (and renders
+    // nothing at all for a source that stands for no page), `enabled` is
+    // reversible by the same control, `delete` is not. A reversible action must
+    // not sit where the user's muscle memory has put the destructive one (the
+    // rightmost button).
+    EventSourceActions({ id: "open", component: SourceOpenAction }),
     EventSourceActions({ id: "enabled", component: SourceToggleAction }),
     EventSourceActions({ id: "delete", component: SourceDeleteAction }),
   ],

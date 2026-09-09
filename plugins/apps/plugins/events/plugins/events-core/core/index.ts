@@ -69,3 +69,4 @@ export {
   eventsRevisionResource,
   eventRunsRevisionResource,
 } from "./internal/resources";
+export { externalUrl } from "./internal/external-url";

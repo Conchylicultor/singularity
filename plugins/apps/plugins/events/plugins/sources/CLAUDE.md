@@ -88,7 +88,17 @@ attention` view (authored in
 `config/apps/events/sources/events.sources.jsonc`) ANDs `enabled is true` onto
 its unhealthy-extraction filter: you switched it off, so it is not a complaint.
 
-Row actions are a slot, ordered non-destructive-first: `enabled` then `delete`.
+Row actions are a slot, ordered by how much each one changes: `open`, `enabled`,
+then `delete`.
+
+`open` is the only one that answers "what IS this source?" — every other thing
+on the row describes the app's relationship to it. It is an ordinary `<a>` to
+the page, so the browser previews the destination on hover and its own link
+gestures (copy address, modifier-click) work without this app reimplementing
+them. It names no source type: the destination comes from
+`useEventSourceOrigin`, so a type that stands for a page gets the action for
+free and one that does not (`manual`) renders nothing rather than a dead button.
+
 The `enabled` action is a real `role="switch"` — the control shows its own state
 (knob and filled track), where the pause/play glyph it replaced left the reader
 guessing whether the icon described the source or the click. That matters here
@@ -147,12 +157,14 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"
     - `Events.Sidebar` "Sources" → `component`
+    - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
   - Uses:
     - `apps/events/events-core.EventSources`
     - `apps/events/events-core.useCreateEventSource`
     - `apps/events/events-core.useDeleteEventSource`
+    - `apps/events/events-core.useEventSourceOrigin`
     - `apps/events/events-core.useEventSources`
     - `apps/events/events-core.useUpdateEventSource`
     - `apps/events/shell.Events`

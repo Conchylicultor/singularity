@@ -38,10 +38,20 @@ the web renders the add/configure form generically from the same record via the
 `EventSources.Type` slot. **A new source type therefore ships zero form code.**
 
 A type also answers "which page does a configured source of mine stand for?" via
-the optional web-slot `originUrl(config)`. `useSourceOriginUrl()` joins it with
-the live source rows here — the only plugin holding both halves — so a surface
-links an event back to its origin without naming a source type. Omit it for a
-type that stands for no page (`manual`).
+the optional web-slot `originUrl(config)`, read back through two hooks that
+differ only in what the caller is holding: `useEventSourceOrigin()` takes the
+source ROW and needs nothing but the registry (the Sources list's `open` action),
+while `useSourceOriginUrl()` adds the id→row join against the live sources window
+for a caller holding only a `sourceId` (an event linking back to its origin).
+Either way a surface names no source type. Omit `originUrl` for a type that
+stands for no page (`manual`).
+
+Both gate the answer through `externalUrl` at the mint: a type reads its URL out
+of a free-text config field, so what it returns is untrusted, and gating it once
+here means no consumer has to remember to. `externalUrl` lives in `core/` for the
+same reason — it is the app's one "may this string be a destination or a `src`"
+rule, and a second copy in a second plugin is a security guard with two spellings
+to keep in step.
 
 ## Data model
 
@@ -143,6 +153,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSources`
     - `useCreateEventSource`
     - `useDeleteEventSource`
+    - `useEventSourceOrigin`
     - `useEventSourceRun`
     - `useEventSourceRuns`
     - `useEventSources`
@@ -263,6 +274,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceSchema`
     - `eventSourcesResource`
     - `eventsRevisionResource`
+    - `externalUrl`
     - `ExtractedEventSchema`
     - `EXTRACTION_STATUSES`
     - `ExtractionResultSchema`
