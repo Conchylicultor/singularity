@@ -16,13 +16,16 @@ export {
   awaitPgReady,
   bootSelfContainedApp,
   seedReleaseAssetMirror,
-  seedReleaseConfig,
+  propagateReleaseConfig,
   teardownSelfContainedApp,
   gatewayPidFile,
   zeroCacheSpec,
 } from "./internal/boot";
-export { LISTEN_ENV, resolveListenAddress, listenFlag } from "./internal/listen";
+export {
+  LISTEN_ENV,
+  resolveListenAddress,
+  listenFlag,
+} from "./internal/listen";
 export type { ListenAddress } from "./internal/listen";
 
-export default {
-} satisfies ServerPluginDefinition;
+export default {} satisfies ServerPluginDefinition;

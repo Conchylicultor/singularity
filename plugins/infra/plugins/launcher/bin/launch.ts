@@ -130,7 +130,7 @@ async function main(): Promise<void> {
     teardownSelfContainedApp,
     writeReleaseDatabaseConfig,
     seedReleaseAssetMirror,
-    seedReleaseConfig,
+    propagateReleaseConfig,
     resolveListenAddress,
   } = await import("@plugins/infra/plugins/launcher/server");
 
@@ -182,12 +182,14 @@ async function main(): Promise<void> {
     log: console.log,
   });
 
-  // Seed the resolved config defaults into the writable data dir (copy-if-absent),
-  // so a released app's config-backed defaults resolve on first boot. worktreeName
+  // Propagate this bundle's resolved config origins into the writable data dir,
+  // on EVERY boot — the data dir outlives a deploy, so a once-only seed would
+  // serve the FIRST bundle's config forever. Only the build-owned origin layer
+  // is written; the user's own `.jsonc` overrides are left alone. worktreeName
   // = composition = the runtime SINGULARITY_WORKTREE, so this lands exactly where
   // config-dir.ts reads (SINGULARITY_DIR/config/<worktree>). Runs before the
-  // gateway spawns the backend, so CONFIG_DIR is populated on first read.
-  seedReleaseConfig({
+  // gateway spawns the backend, so CONFIG_DIR is current on first read.
+  propagateReleaseConfig({
     bundleRoot,
     dataDir: process.env.SINGULARITY_DIR!,
     worktreeName: name,
@@ -200,7 +202,7 @@ async function main(): Promise<void> {
     // `runId` is absent on a bundle built outside a tracked release run.
     releaseIdentity: { runId: manifest.runId ?? null, composition: name },
     // For a release the app's namespace IS its composition id (`name`), which is
-    // also what `releaseIdentity` and `seedReleaseConfig` above are keyed by.
+    // also what `releaseIdentity` and `propagateReleaseConfig` above are keyed by.
     composition: name,
     // The compiled backend's cwd. The binary is self-contained (closure bundled
     // by `bun --compile`), so cwd is not load-bearing — bundleRoot is a stable

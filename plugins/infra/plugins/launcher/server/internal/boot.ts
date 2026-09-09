@@ -1,6 +1,5 @@
 import {
   closeSync,
-  cpSync,
   existsSync,
   openSync,
   readFileSync,
@@ -27,6 +26,7 @@ import {
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/server";
+import { propagateOriginLayer } from "./config-propagate";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 // Canonical embedded-cluster constants — the single source of truth for where
 // PG/PgBouncer listen. Importing them (rather than re-deriving the paths here)
@@ -947,13 +947,19 @@ export function seedReleaseAssetMirror(opts: {
 }
 
 /**
- * Seed the release bundle's resolved config defaults into the app-data dir on
- * first run (copy-if-absent), so a released app's config_v2 "default-for-everyone"
- * values resolve on first boot instead of falling back to hardcoded schema
- * defaults. `release.ts` vendored the propagated seed under
- * `<bundleRoot>/config-seed/config/<worktree>/…`; this copies it to the user
+ * Propagate the release bundle's resolved config origins into the app-data dir
+ * on EVERY boot, so a released app's config-backed defaults are the ones THIS
+ * bundle was built from — not the ones some earlier bundle happened to install
+ * first. A host's data dir outlives every deploy (that is what makes the DB and
+ * the user's settings survive a ship), so anything installed "on first run" is
+ * installed once, ever.
+ *
+ * `release.ts` vendored the propagated seed under
+ * `<bundleRoot>/config-seed/config/<worktree>/…`; this syncs it onto the user
  * config layer under `<dataDir>`, the exact path config_v2's config-dir.ts
- * reads.
+ * reads. What is and is not written — the build-owned origin layer only, and why
+ * a directory-level copy silently served a stale app — is
+ * {@link propagateOriginLayer}'s to state.
  *
  * The destination comes from config_v2's OWN declaration, via
  * `userConfigRelativeToRoot()` — the dir has to be named under a foreign root
@@ -971,7 +977,7 @@ export function seedReleaseAssetMirror(opts: {
  * The bundle's own `config-seed/config/` layout is the release CLI's staging
  * convention, unrelated to the data root, so it stays spelled out.
  */
-export function seedReleaseConfig(opts: {
+export function propagateReleaseConfig(opts: {
   bundleRoot: string;
   dataDir: string;
   worktreeName: string;
@@ -984,7 +990,11 @@ export function seedReleaseConfig(opts: {
     opts.worktreeName,
   );
   if (!existsSync(src)) return; // dev / no seed baked → no-op
-  if (existsSync(dest)) return; // already seeded (or user has a config dir) → don't clobber
-  cpSync(src, dest, { recursive: true });
-  opts.log?.(`Seeded config defaults → ${dest}`);
+
+  const { written, removed } = propagateOriginLayer(src, dest);
+  if (written > 0 || removed > 0) {
+    opts.log?.(
+      `Propagated config origins → ${dest} (${written} written, ${removed} removed)`,
+    );
+  }
 }

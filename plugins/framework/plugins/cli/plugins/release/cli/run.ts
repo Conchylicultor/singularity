@@ -1064,8 +1064,9 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   //     origins), no personal overrides/ancestors. This is the one caller
   //     that does not write into `state/config`, which is why
   //     propagateConfigToUser takes the resolved directory. `launcher`'s
-  //     `seedReleaseConfig` reads this same `config-seed/config/<name>`
-  //     layout back at first run. discoverConfigs walks the full config/
+  //     `propagateReleaseConfig` reads this same `config-seed/config/<name>`
+  //     layout back on every boot, syncing the origin layer (and only the
+  //     origin layer) onto the host's data dir. discoverConfigs walks the full config/
   //     tree — shipping origins for plugins absent from the composition is
   //     harmless (the backend only reads registered descriptors).
   console.log("  • resolved config defaults");

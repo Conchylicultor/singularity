@@ -17700,10 +17700,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listenFlag`
           - `pgbouncerConnection`
           - `pgbouncerService`
+          - `propagateReleaseConfig`
           - `readPid`
           - `resolveListenAddress`
           - `seedReleaseAssetMirror`
-          - `seedReleaseConfig`
           - `spawnGatewayDaemon`
           - `teardownSelfContainedApp`
           - `writeReleaseDatabaseConfig`
