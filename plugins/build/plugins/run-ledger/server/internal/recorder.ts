@@ -95,8 +95,8 @@ export function createBuildRunRecorder(namespace: Namespace): BuildRunRecorder {
         //
         //        insert into "build_runs"
         //          ("id","trigger","commit_hash","namespace","targets",
-        //           "parent_id","started_at","finished_at","exit_code","pid")
-        //        values ($1,$2,$3,$4,$5,default,default,default,default,$6)
+        //           "started_at","finished_at","exit_code","pid")
+        //        values ($1,$2,$3,$4,$5,default,default,default,$6)
         //
         //      Omitting a field does NOT keep its column out of the statement.
         //

@@ -27,13 +27,12 @@ export interface BuildProfile {
 }
 
 /**
- * A single build's span accumulator + writer. One collector owns one `spans[]`
- * and its own `t0` baseline, so a collector created later re-bases `startMs` to
- * its own creation instant — a composition's spans start at 0 relative to the
- * composition, not the parent build. Callers in main use the module-default
- * instance via the wrapper exports below.
+ * One build's span accumulator + writer: the collector owns its own `spans[]`
+ * and its own `t0` baseline, so every span's `startMs` is relative to the
+ * collector's creation instant. Callers reach the module-default instance
+ * through the wrapper exports below.
  */
-export interface SpanCollector {
+interface SpanCollector {
   start(
     id: string,
     phase: string,
@@ -46,27 +45,21 @@ export interface SpanCollector {
     durationMs: number,
     wallStartMs?: number,
   ): void;
-  /** Writes `build-profile-<runId>.json` under worktree `name`. */
-  write(name: Namespace, runId: string): void;
-}
-
-// Per-span unique token feeding the durable build-progress log. The human `id`
-// can repeat across concurrent spans (web artifacts / checks run in parallel), so
-// the progress log is keyed on this monotonic counter, never on `id`. Module-global
-// on purpose: every collector's `start()` emits progress markers under the parent
-// pid, so a composition span stays visible in the one durable build-progress log.
-let spanSeq = 0;
-
-interface SpanCollectorInternal extends SpanCollector {
   /**
-   * Broader write accepting the id-less (`undefined`) case, so the module-default
-   * collector can still produce the unsuffixed `build-profile.json` for a manual
-   * CLI build with no SINGULARITY_BUILD_ID.
+   * Writes `build-profile-<buildId>.json` under worktree `name`, accepting the
+   * id-less (`undefined`) case so the module-default collector can still produce
+   * the unsuffixed `build-profile.json` for a manual CLI build with no
+   * SINGULARITY_BUILD_ID.
    */
   writeProfile(name: Namespace, buildId: string | undefined): void;
 }
 
-function makeSpanCollector(): SpanCollectorInternal {
+// Per-span unique token feeding the durable build-progress log. The human `id`
+// can repeat across concurrent spans (web artifacts / checks run in parallel), so
+// the progress log is keyed on this monotonic counter, never on `id`.
+let spanSeq = 0;
+
+function makeSpanCollector(): SpanCollector {
   const t0 = performance.now();
   const spans: BuildSpan[] = [];
 
@@ -120,15 +113,8 @@ function makeSpanCollector(): SpanCollectorInternal {
           : Math.round(performance.now() - t0) - durationMs;
       spans.push({ id, phase, label, startMs, durationMs });
     },
-    write(name, runId) {
-      writeProfile(name, runId);
-    },
     writeProfile,
   };
-}
-
-export function createSpanCollector(): SpanCollector {
-  return makeSpanCollector();
 }
 
 // The module-default collector backing the legacy wrappers below, so every current

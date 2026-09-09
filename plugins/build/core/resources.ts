@@ -10,9 +10,6 @@ export const BuildRunSchema = z.object({
   // invocation is one shared build (one install, codegen, checks pass,
   // transcript, profile and verdict), so it is one row with N target chips.
   targets: z.array(z.string()),
-  // Always null. Composition builds used to be child rows of a main run; nothing
-  // writes a parent any more, and the column goes in the Phase 8 cleanup.
-  parentId: z.string().nullable(),
   startedAt: z.coerce.date(),
   finishedAt: z.coerce.date().nullable(),
   exitCode: z.number().int().nullable(),

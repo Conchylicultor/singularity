@@ -43,8 +43,8 @@ for the ones you omitted — measured with `.toSQL()`:
 
 ```
 insert into "build_runs" ("id","trigger","commit_hash","namespace","targets",
-                          "parent_id","started_at","finished_at","exit_code","pid")
-values ($1,$2,$3,$4,default,default,default,default,default,$5)
+                          "started_at","finished_at","exit_code","pid")
+values ($1,$2,$3,$4,default,default,default,default,$5)
 ```
 
 So the hazard is the TABLE, not the field: **the CLI cannot use the ORM insert
@@ -68,10 +68,6 @@ per element wrapped in parens (`($5, $6)`), a row expression, which Postgres
 rejects with `42804 … is of type text[] but expression is of type record`.
 `sql.param()` binds it as ONE parameter; the type is then inferred from the
 column, so no `::text[]` cast is needed.
-
-`parentId` is a column nothing writes. Composition builds were child rows of a
-main run until the serve fan-out made one invocation one row; the column goes in
-the Phase 8 cleanup.
 
 `insertRun` has THREE outcomes, not two. `"unavailable"` (Postgres 3D000) means
 the checkout has no database yet — a fresh checkout running a composition-only

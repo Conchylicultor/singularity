@@ -36,12 +36,6 @@ export const _buildRuns = pgTable(
     // history resource is a LIMIT 50 window over a 50-row retention, so it rolls
     // over within a day or two of normal building.
     targets: text("targets").array().notNull().default([MAIN_COMPOSITION_ID]),
-    // Soft reference to a parent run. Nothing writes it any more — composition
-    // builds were child rows of a main build until the serve fan-out made one
-    // invocation one row. Kept as a column (and off the write path) until the
-    // Phase 8 cleanup drops it; see
-    // research/2026-08-19-global-composition-build-serve-half.md.
-    parentId: text("parent_id"),
     startedAt: timestamp("started_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

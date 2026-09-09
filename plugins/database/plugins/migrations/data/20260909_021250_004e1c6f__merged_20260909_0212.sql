@@ -1,0 +1,1 @@
+ALTER TABLE "build_runs" DROP COLUMN IF EXISTS "parent_id";

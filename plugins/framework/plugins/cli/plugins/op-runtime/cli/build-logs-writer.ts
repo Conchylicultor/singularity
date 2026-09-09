@@ -44,12 +44,12 @@ export interface BuildLogs {
 }
 
 /**
- * A single build's step-log accumulator + writer. One collector owns one
+ * One build's step-log accumulator + writer: the collector owns its own
  * `steps[]`, built either by pushing a fully-formed step (`pushStep`, the legacy
- * seam) or incrementally via `beginStep` + `line`. Callers in main use the
- * module-default instance via the wrapper exports below.
+ * seam) or incrementally via `beginStep` + `line`. Callers reach the
+ * module-default instance through the wrapper exports below.
  */
-export interface StepLogCollector {
+interface StepLogCollector {
   /**
    * Opens a step and makes it the current one for `line()`. The returned
    * end-closure records the step's `durationMs` + `success` and closes it.
@@ -62,17 +62,22 @@ export interface StepLogCollector {
    * synthetic step can never itself fail the orphan-exit verdict.
    */
   line(text: string, stream: "stdout" | "stderr"): void;
+  /** Legacy seam: push a fully-formed step (build.ts builds the whole step, then pushes it). */
+  pushStep(step: BuildStepLog): void;
   /**
-   * Writes `build-logs-<runId>.json` + `build-<runId>.log` under worktree `name`.
-   * `exitCode` is the code the run ends on — the caller stamps it here and on the
-   * run's ledger row from the same value, so artifact and row cannot disagree.
+   * Writes `build-logs-<buildId>.json` + `build-<buildId>.log` under worktree
+   * `name`, accepting the id-less (`undefined`) case so the module-default
+   * collector can still produce the unsuffixed `build-logs.json` / `build.log`,
+   * and returning the text-log path for the failure-line pointer. `exitCode` is
+   * the code the run ends on — the caller stamps it here and on the run's ledger
+   * row from the same value, so artifact and row cannot disagree.
    */
-  write(
+  writeLogs(
     name: Namespace,
-    runId: string,
+    buildId: string | undefined,
     exitCode: number,
     trailer?: string,
-  ): void;
+  ): string;
 }
 
 /** Plain-text render of every step, mirroring the console layout. */
@@ -90,23 +95,7 @@ function writeAtomic(path: string, contents: string): void {
   renameSync(tmp, path);
 }
 
-interface StepLogCollectorInternal extends StepLogCollector {
-  /** Legacy seam: push a fully-formed step (build.ts builds the whole step, then pushes it). */
-  pushStep(step: BuildStepLog): void;
-  /**
-   * Broader write accepting the id-less (`undefined`) case (so the module-default
-   * collector can still produce the unsuffixed `build-logs.json` / `build.log`) and
-   * returning the text-log path for the failure-line pointer.
-   */
-  writeLogs(
-    name: Namespace,
-    buildId: string | undefined,
-    exitCode: number,
-    trailer?: string,
-  ): string;
-}
-
-function makeStepLogCollector(): StepLogCollectorInternal {
+function makeStepLogCollector(): StepLogCollector {
   const steps: BuildStepLog[] = [];
   // The step `line()` appends to; null between steps until beginStep or an
   // implicit `output` step is opened.
@@ -171,15 +160,8 @@ function makeStepLogCollector(): StepLogCollectorInternal {
     pushStep(step) {
       steps.push(step);
     },
-    write(name, runId, exitCode, trailer) {
-      writeLogs(name, runId, exitCode, trailer);
-    },
     writeLogs,
   };
-}
-
-export function createStepLogCollector(): StepLogCollector {
-  return makeStepLogCollector();
 }
 
 // The module-default collector backing the legacy wrappers below, so every current

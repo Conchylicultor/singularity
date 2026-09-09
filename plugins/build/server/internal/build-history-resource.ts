@@ -25,7 +25,6 @@ export const buildHistoryResource = queryResource(buildHistoryDescriptor, {
     trigger: _buildRuns.trigger,
     commitHash: _buildRuns.commitHash,
     targets: _buildRuns.targets,
-    parentId: _buildRuns.parentId,
     startedAt: _buildRuns.startedAt,
     finishedAt: _buildRuns.finishedAt,
     exitCode: _buildRuns.exitCode,

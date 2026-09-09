@@ -318,20 +318,29 @@ composition-scoped makes the committed registries composition-dependent.
 **Files.** `tooling/plugins/codegen/core/disabled-ids.ts`,
 `plugin-meta/plugins/closure/core/resolve-composition.ts`.
 
-### Phase 8 — Remove the vestigial parent/child concept
+### Phase 8 — Remove the vestigial parent/child concept — **LANDED**
 
-Once compositions are first-class builds, the parent/child shape is dead
-residue. `build_runs.parentId` exists only to tie a composition build to the main
-run that spawned it (the compose-serve stage); the per-composition artifacts are
-named after the parent's id (`build-<parentId>-c-sonata.log`); and the build UI
-still special-cases `target === "main"` in several places.
+`build_runs.parent_id` is dropped, and target-model point 6 is now true of the
+schema rather than only of the write path. Plan:
+[`2026-09-09-global-build-runs-drop-parent-child.md`](./2026-09-09-global-build-runs-drop-parent-child.md).
 
-Mechanical, and last on purpose — it can only be done once nothing mints a child
-run.
+Two of this phase's three bullets had already been absorbed by Phase 4, which is
+worth recording because the phase was written expecting to do them:
 
-**Files.** `plugins/build/plugins/run-ledger/server/internal/tables.ts` (+
-migration), `cli/bin/` artifact naming, `plugins/build/web/`,
-`plugins/build/plugins/build-info/web/`.
+- **Artifact naming was already clean.** Answering Phase 4's open question with
+  *one invocation is one row* removed the child id, so nothing was left to
+  rename — no `-c-<name>` suffix survives in live code, and a build id is just
+  `<shortCommit>-<timestamp>`.
+- **The `target === "main"` special-cases were already gone**, replaced by the
+  single answer `isMainCompositionBuild(targets)` when `target` became `targets`.
+
+So what actually remained was the column, its wire field on `BuildRunSchema`, and
+two orphaned CLI factories — `createSpanCollector` / `createStepLogCollector`,
+which existed so a child could write artifacts under its own id and lost their
+only caller when Phase 4 deleted the compose-serve stage.
+
+The build UI was left alone, per this doc's own revision note: with no parent
+relation to render, the detail pane has nothing to link to.
 
 ---
 
