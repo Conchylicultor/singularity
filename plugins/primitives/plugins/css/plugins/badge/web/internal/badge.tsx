@@ -75,8 +75,9 @@ export function Badge({
         // The chip shell, shared by every chip role (LinkChip/ToggleChip compose this).
         // region-line = items-center + whitespace-nowrap (the single-line invariant).
         // max-w-full + the inner truncate span make a chip a well-behaved content leaf:
-        // a long label ellipsizes instead of overflowing. align-baseline is free on flex
-        // children and correct when a chip sits inline in running text.
+        // a long label ellipsizes instead of overflowing. align-baseline puts the chip
+        // on the baseline of a sentence holding it — and the label's own `self-baseline`
+        // below decides WHICH baseline the chip offers the sentence.
         "inline-flex region-line max-w-full gap-xs p-chip align-baseline font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
         shape === "rect" && "rounded-md",
         shape === "pill" && "rounded-full",
@@ -96,7 +97,28 @@ export function Badge({
       {...rest}
     >
       {icon}
-      <span className={cn("truncate", mono && "font-mono")}>{children}</span>
+      {/*
+       * `self-baseline` on the LABEL is what makes the shell's `align-baseline`
+       * mean anything, and it is the only line here that decides where a chip
+       * sits in a sentence.
+       *
+       * An inline-flex box does not have a baseline of its own — it hands the
+       * line the baseline of its FIRST flex item. The first item here is the
+       * leading icon, and an SVG's baseline is its bottom edge. So a chip in
+       * running text used to hang its icon's bottom edge off the sentence's
+       * baseline, which carried the label about 3.5px higher than the words
+       * beside it and pushed the whole line taller to make room. Every chip in
+       * a paragraph read as floating.
+       *
+       * Marking the label as the one baseline-aligned item makes the chip offer
+       * up its label's own text baseline instead, so the label sits on the
+       * sentence's baseline like a word. The icon still takes region-line's
+       * `items-center`, so it stays centred on the label, and the chip's box is
+       * exactly the size it was.
+       */}
+      <span className={cn("truncate self-baseline", mono && "font-mono")}>
+        {children}
+      </span>
     </As>
   );
 }

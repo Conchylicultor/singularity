@@ -22005,7 +22005,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/plugin-changes/file-changes`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
       - Plugins:
-        - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. LinkChip and ToggleChip compose it.
+        - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. The label is the chip's baseline, so a chip dropped in a sentence sits on the same line as the words beside it instead of on its icon's bottom edge. LinkChip and ToggleChip compose it.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -22996,7 +22996,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
-        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
+        - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
               - `primitives/css/badge.Badge`

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, foreground label one text rung above a plain Badge, hover:bg-accent) rather than as underlined link text, baseline-aligned for inline-in-text use, with optional leading icon and monospace label. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
+- Description: Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
 - Web:
   - Uses:
     - `primitives/css/badge.Badge`

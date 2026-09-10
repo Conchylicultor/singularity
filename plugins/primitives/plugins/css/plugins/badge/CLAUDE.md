@@ -10,6 +10,14 @@ every other density (incl. the no-provider default `md`) reads `text-caption`.
 This replaced the bespoke `xs → text-3xs` ladder so all three leaves step at the
 same threshold and can't desync in a row.
 
+## `self-baseline` on the label is load-bearing
+
+An inline-flex box hands the line its **first flex item's** baseline — the
+leading `<svg>`, whose baseline is its bottom edge. `self-baseline` makes the
+label the one baseline-aligned item, so a chip in a sentence sits on that
+sentence's baseline. Don't drop it, and don't move it up to `items-baseline` on
+the shell — that drags the icon onto the baseline too and grows the box.
+
 ## Passthrough: `ref` is the OUTER element
 
 A badge renders two elements — the chip shell, and a `truncate` span holding the
@@ -23,7 +31,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
 
 ## Plugin reference
 
-- Description: The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. LinkChip and ToggleChip compose it.
+- Description: The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. The label is the chip's baseline, so a chip dropped in a sentence sits on the same line as the words beside it instead of on its icon's bottom edge. LinkChip and ToggleChip compose it.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`

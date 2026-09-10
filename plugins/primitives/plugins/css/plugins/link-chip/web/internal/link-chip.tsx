@@ -73,8 +73,21 @@ export function LinkChip({
   // caption size reads as shrunken beside the sentence holding it. Stepping the
   // rung rather than naming a size keeps Badge's density contract: the compact
   // `xs` density still drops one, exactly as it does for the caption.
+  //
+  // The step up is a correction for the PROPORTIONAL face, and only that face.
+  // A size rung is a number of pixels, not an amount of ink: swap the family and
+  // the same number lands somewhere else. The monospace face sets far wider —
+  // the word "files" runs 39px in the mono label where the 14px sentence around
+  // it runs 25px — so a mono chip that also took the step read as the biggest
+  // thing in the paragraph, which is the opposite of what the step is for. A
+  // mono label therefore keeps Badge's own rung, which is exactly the size
+  // markdown gives inline `code` in the same prose: the two now match.
   const density = useControlSize();
-  const textClass = textStepFor(density) ? "text-label-compact" : "text-label";
+  const textClass = mono
+    ? undefined
+    : textStepFor(density)
+      ? "text-label-compact"
+      : "text-label";
 
   return (
     <Badge
