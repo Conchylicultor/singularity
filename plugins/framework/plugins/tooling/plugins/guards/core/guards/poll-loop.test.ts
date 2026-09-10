@@ -101,6 +101,32 @@ describe("poll-loop guard", () => {
     });
   });
 
+  describe("the loop from conv-1787490197-3p4n", () => {
+    const idles = ["echo w1", "echo w2", "echo w3", "echo w4"];
+
+    test("the fourth no-op is denied", () => {
+      expect(runAll(idles).kind).toBe("deny");
+    });
+
+    test("the denial names the wait and tells the agent to end its turn", () => {
+      const v = runAll(idles);
+      expect(v.kind === "deny" && v.reason).toContain("only passes time");
+      expect(v.kind === "deny" && v.reason).toContain("END YOUR TURN");
+    });
+
+    test("a bare sleep loop gets the same answer", () => {
+      const v = runAll(["sleep 1", "sleep 2", "sleep 3", "sleep 4"]);
+      expect(v.kind === "deny" && v.reason).toContain("only passes time");
+    });
+
+    test("ignoring the denial ends the turn", () => {
+      const session = newSession();
+      for (let i = 1; i <= 7; i++) run(session, `echo w${i}`);
+      const v = run(session, "echo w8");
+      expect(v.kind === "deny" && v.fatal).toBe(true);
+    });
+  });
+
   describe("what resets and what does not", () => {
     test("doing real work in between clears the window", () => {
       const session = newSession();

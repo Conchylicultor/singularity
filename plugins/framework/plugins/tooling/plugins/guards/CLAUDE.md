@@ -50,6 +50,11 @@ recorded. Adding a subject kind means giving it an answer, not an arm exempting
 it — an exempt category here is what let a finished task be told for an hour
 that it would be "re-invoked when it exits".
 
+A command that watches nothing (bare `sleep`, `echo` of fixed text) is still a
+poll: it gets a `time:*` subject and the `nothing-watched` answer. Don't
+exempt it as harmless — agents told not to `sleep` wait on `echo w1`, `echo w2`,
+… instead, one session for six hours.
+
 `readTranscript()` is a capability on the context, not the payload's
 `transcript_path`, and `readTaskReport` returns `unreadable` distinctly from
 `no-report`: "the harness has not said it finished" justifies a block, "I could

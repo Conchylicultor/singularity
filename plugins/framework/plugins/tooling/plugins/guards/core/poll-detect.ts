@@ -79,7 +79,14 @@ const READ_ONLY = new Set([
   "tree",
   "yes",
   "read",
+  ":",
 ]);
+
+/**
+ * Commands that do nothing but print the words they were given. A command made
+ * of only these, with no expansion to read, cannot observe anything.
+ */
+const NO_OPS = new Set(["echo", "printf", "true", ":"]);
 
 /** Read-only `git` subcommands. */
 const GIT_READ_ONLY = new Set([
@@ -285,7 +292,32 @@ export function watchSubjectsFrom(parsed: ShellParseResult): WatchSubject[] {
     out.add("time:sleep");
   }
 
+  // A command that does nothing at all is passing time too. Once `sleep` was
+  // refused, the wait moved to `echo w1`, `echo w2`, … — 3,125 calls over six
+  // hours in conv-1787490197-3p4n, each a full turn, none of them seen, because
+  // naming no subject made them `neutral`. The counter in the text is why the
+  // subject cannot be the words: every call differs.
+  if (out.size === 0 && isNoOp(parsed)) out.add("time:no-op");
+
   return [...out];
+}
+
+function isNoOp(parsed: ShellParseResult): boolean {
+  return (
+    parsed.calls.length > 0 &&
+    parsed.calls.every(
+      (c) => NO_OPS.has(c.name) && !c.args.some((a) => a.includes("$")),
+    )
+  );
+}
+
+/**
+ * True when every subject names no thing: the command waits on the clock or does
+ * nothing. There is no file, process or task to ask "still running?", so no
+ * further look can differ from the last one.
+ */
+export function watchesNothing(subjects: WatchSubject[]): boolean {
+  return subjects.length > 0 && subjects.every((s) => s.startsWith("time:"));
 }
 
 function normalise(s: string): string {

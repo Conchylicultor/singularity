@@ -12,6 +12,7 @@ import {
   detectPoll,
   pruneWindow,
   THRESHOLD,
+  watchesNothing,
   watchSubjects,
   type WatchSubject,
   type WindowEntry,
@@ -67,10 +68,15 @@ function loadState(path: string): State {
  * makes a harness task special is that its liveness has an authority to consult
  * (`readTaskReport`) and that its wake-up is automatic (`wakesYou`), not that
  * it is exempt from the question.
+ *
+ * `nothing-watched` is the answer for a command that names no thing at all (a
+ * bare `sleep`, an `echo` of fixed text). There is nothing whose state could
+ * change, so it is not `unknown`: the looks are known to be empty.
  */
 type Liveness =
   | { kind: "running"; what: string; wakesYou: boolean }
   | { kind: "finished"; verdict: string }
+  | { kind: "nothing-watched" }
   | { kind: "unknown" };
 
 interface RawReceipt {
@@ -237,6 +243,7 @@ function livenessOf(
   looks: WindowEntry[],
   mtime: number | undefined,
 ): Liveness {
+  if (watchesNothing(subjects)) return { kind: "nothing-watched" };
   for (const s of subjects) {
     if (s.startsWith("task:"))
       return taskLiveness(ctx, s.slice("task:".length));
@@ -291,6 +298,14 @@ function denialFor(
             why: `${liveness.what} is still running. Watching it costs a turn per look and changes nothing.`,
             hint: "END YOUR TURN. If this op is one of your own background tasks you will be re-invoked when it finishes. If it is not, say so to the user rather than waiting on it.",
           };
+    case "nothing-watched":
+      return {
+        ...base,
+        blocked:
+          "This is the 4th command with no work in between that only passes time (a bare `sleep`, or an `echo` of fixed text) — a wait loop.",
+        why: "It watches no file, process or task, so repeating it cannot show you anything new, and every call still costs a full turn. The agents and background tasks you started notify you when they finish; ending your turn is how you wait for them.",
+        hint: "END YOUR TURN now. If nothing you started is going to wake you, tell the user what you are waiting for instead.",
+      };
     case "unknown":
       return {
         ...base,

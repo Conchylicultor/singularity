@@ -86,6 +86,32 @@ describe("watchSubjects", () => {
       ).toEqual(["url:http://x.localhost:#/"]);
     });
   });
+
+  describe("a command that does nothing passes time", () => {
+    // Regression: conv-1787490197-3p4n waited six hours on `echo w1`,
+    // `echo w2`, … — no subject, so every call was `neutral` and never counted.
+    test("an echo of fixed text", () => {
+      expect(watchSubjects("echo w65")).toEqual(["time:no-op"]);
+    });
+
+    test("any chain of no-ops", () => {
+      expect(watchSubjects(`echo "waiting"; printf idle; true; :`)).toEqual([
+        "time:no-op",
+      ]);
+    });
+
+    test("a sleep keeps its own subject", () => {
+      expect(watchSubjects("sleep 1; echo waited")).toEqual(["time:sleep"]);
+    });
+
+    test("printing a variable reads state, so it is not a no-op", () => {
+      expect(watchSubjects("echo $HOME")).toEqual([]);
+    });
+
+    test("an echo beside real work is not a no-op", () => {
+      expect(watchSubjects(`echo "=== a ==="; cat src/a.ts`)).toEqual([]);
+    });
+  });
 });
 
 describe("a document that mentions a file is not watching it", () => {
@@ -221,6 +247,15 @@ describe("detectPoll", () => {
   test("looks spread beyond the window do not accumulate", () => {
     const cmds = Array.from({ length: 6 }, () => `cat ${TASK}`);
     expect(firstTrip(cmds, 11 * 60 * 1000)).toBeNull();
+  });
+
+  test("a counter in the text does not help a no-op loop", () => {
+    const cmds = Array.from({ length: 6 }, (_, i) => `echo w${i + 1}`);
+    expect(firstTrip(cmds)).toBe(THRESHOLD - 1);
+  });
+
+  test("an echo written to a file is work, not a wait", () => {
+    expect(classify("echo done > notes.txt")).toBe("mutate");
   });
 
   test("three looks are fine — the threshold is four", () => {
