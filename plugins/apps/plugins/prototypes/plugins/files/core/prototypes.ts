@@ -2,6 +2,22 @@ import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PrototypeProblemSchema } from "./validate";
+import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { MocksDeclaration } from "./mocks";
+
+/**
+ * The wire shape of a parsed `mocks` declaration. Mirrors `MocksDeclaration`
+ * exactly — the `satisfies` below is what keeps the two from drifting.
+ */
+export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("none") }),
+  z.object({
+    kind: z.literal("malformed"),
+    raw: z.string(),
+    reason: z.string(),
+  }),
+  z.object({ kind: z.literal("declared"), tag: z.string(), ref: z.string() }),
+]) satisfies ZodParser<MocksDeclaration>;
 
 /**
  * Metadata for a single prototype, parsed out of `<slug>/index.html` under the
@@ -15,13 +31,15 @@ import { PrototypeProblemSchema } from "./validate";
  * - `blurb` — `<meta name="description">` (defaults to `""`)
  * - `viewport` — `<meta name="prototype-viewport" content="1320x868">`
  *   (defaults to 1280x800)
- * - `mocks` — `<meta name="mocks" content="control-panel/setting-rail">`, the
- *   layout-harness fixture this prototype is a mockup OF, so a surface can show
- *   the two side by side. Optional, and `""` is its ordinary value: most
- *   prototypes are not a mockup of an app component. Carried as an opaque
- *   string — nothing here resolves it against the fixture catalog, which is
- *   per-worktree while prototypes are host-global, so the pairing can only ever
- *   be a runtime lookup.
+ * - `mocks` — `<meta name="mocks" content="<kind>:<ref>">`, the real app thing
+ *   this prototype is a mockup OF (`fixture:control-panel/setting-rail`,
+ *   `route:/agents/c/123`), so the Compare stage can show the two side by
+ *   side. Parsed by `parseMocks` into a three-way value: `none` (the ordinary
+ *   case — most prototypes mock nothing), `malformed` (also a `problems[]`
+ *   entry), or `declared` with the kind tag and the ref. The tag is carried
+ *   unjudged: kinds are an open set contributed on the web, and the ref is
+ *   resolved only there — a fixture catalog is per-worktree while prototypes
+ *   are host-global, so the pairing can only ever be a runtime lookup.
  * - `problems` — every way the folder breaks the self-contained contract, empty
  *   when it holds. Prototypes are user content, not code, so this rides the
  *   wire to the gallery card instead of gating a push.
@@ -34,7 +52,7 @@ export const PrototypeMetaSchema = z.object({
   title: z.string(),
   blurb: z.string(),
   viewport: z.object({ w: z.number(), h: z.number() }),
-  mocks: z.string(),
+  mocks: MocksDeclarationSchema,
   problems: z.array(PrototypeProblemSchema),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;

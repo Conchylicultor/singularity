@@ -76,6 +76,7 @@ contribution id from `app.id`. Consumers read `entry.app.name` /
     - `apps/home/shell`
     - `apps/mail/shell`
     - `apps/pages/shell`
+    - `apps/prototypes/compare/route`
     - `apps/prototypes/shell`
     - `apps/settings/shell`
     - `apps/sonata/shell`

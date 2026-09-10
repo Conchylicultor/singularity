@@ -2755,9 +2755,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.RelativeTime`
     - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
       - Plugins:
-        - **`compare-component`** — The Component stage of the prototype detail pane: the prototype mock and the real app component it declares it mocks (a layout-harness fixture, named in the prototype's own <meta name="mocks">), side by side, both live and both at one shared width the reader changes. Contributed into the gallery's open stage slot, so this is the only place prototypes are tied to app internals.
+        - **`compare`** — The Compare stage of the prototype detail pane: the prototype mock beside the real app thing it declares it mocks (<meta name="mocks" content="<kind>:<ref>">), both live and both at one shared width the reader changes. Owns the declaration dispatch and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route) is a child plugin contributed into the open Counterpart.Kind registry.
           - Web:
-            - Contributes: `PrototypeStages.Stage` "Component" → `ComponentStage`
+            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
+            - Contributes: `PrototypeStages.Stage` "Compare" → `CompareStage`
             - Uses:
               - `apps/prototypes/gallery.PrototypeStages`
               - `primitives/bar.Bar`
@@ -2771,6 +2772,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
+              - `primitives/slot-render.defineDispatchSlot`
+            - Exports (types):
+              - `CounterpartKindMeta`
+              - `CounterpartKindProps`
+              - `CounterpartResolution`
+              - `WidthChoices`
+            - Exports (values):
+              - `Counterpart`
+              - `useCounterpartKinds`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/compare/fixture`
+              - `apps/prototypes/compare/route`
+          - Plugins:
+            - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
+              - Web:
+                - Contributes: `Counterpart.Kind` "App component" → `FixtureCounterpart`
+                - Uses:
+                  - `apps/prototypes/compare.Counterpart`
+                  - `primitives/css/badge.Badge`
+            - **`route`** — The route: counterpart kind for the prototype Compare stage: the running app itself, framed chromeless (no rail, no tab bar) at an in-app path (route:/agents/c/123) on this deploy's own origin, so a whole-screen mock is compared against the real screen as this branch renders it — never a second implementation that could drift.
+              - Web:
+                - Contributes: `Counterpart.Kind` "App screen" → `RouteCounterpart`
+                - Uses:
+                  - `apps-core.Apps`
+                  - `apps-core.resolveAppForPath`
+                  - `apps/prototypes/compare.Counterpart`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/embed.embedUrl`
+                  - `primitives/pane.parseUrl`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
           - Server:
             - Contributes:
@@ -2798,6 +2829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/html-decode.readHtmlAttr`
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
+              - `MocksDeclaration`
               - `PrototypeFolder`
               - `PrototypeMeta`
               - `PrototypeProblem`
@@ -2806,7 +2838,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isPrototypeId`
               - `isScannableFile`
               - `listPrototypes`
+              - `MocksDeclarationSchema`
+              - `mocksProblemDetail`
               - `newPrototypeId`
+              - `parseMocks`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
@@ -2823,19 +2858,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/prototype`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus and Compare are its own two contributions), with an Improve this prototype affordance.
+        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
-              - `PrototypeStages.Stage` ← `apps.prototypes.compare-component`, `apps.prototypes.gallery`
+              - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
               - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
               - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
               - `PrototypeStages.Stage` "Focus" → `FocusStage`
-              - `PrototypeStages.Stage` "Compare" → `CompareStage`
             - Uses:
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
@@ -2879,7 +2913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/prototypes/present`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
@@ -2906,7 +2940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
-        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
+        - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
             - Uses:
@@ -5839,6 +5873,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/home/shell`
       - `apps/mail/shell`
       - `apps/pages/shell`
+      - `apps/prototypes/compare/route`
       - `apps/prototypes/shell`
       - `apps/settings/shell`
       - `apps/sonata/shell`
@@ -5970,6 +6005,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.TooltipProvider`
+          - `primitives/embed.isEmbeddedDocument`
           - `primitives/loading.Loading`
           - `primitives/pane.setBasePath`
           - `primitives/pane.useRenderSync`
@@ -6274,6 +6310,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.resolveAppForPath`
           - `apps-core.setFocusedApp`
           - `apps-core.useActiveApp`
+          - `primitives/embed.embedUrl`
+          - `primitives/embed.isEmbeddedDocument`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`
           - `primitives/link-gesture.LinkGestureProps`
@@ -21855,7 +21893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/shell`
           - `apps/browser/tabs`
-          - `apps/prototypes/compare-component`
+          - `apps/prototypes/compare`
           - `primitives/app-shell`
           - `primitives/pane`
     - **`breadcrumb`** — Generic breadcrumb: muted ancestor crumbs, a themed separator between them, and the current page as the one leaf that never gives up its letters — the ancestors fold whole into an overflow menu instead.
@@ -22098,7 +22136,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/status`
               - `apps/mail/attachments`
               - `apps/mail/search`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
+              - `apps/prototypes/compare/fixture`
+              - `apps/prototypes/compare/route`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/midi/folders`
@@ -22250,7 +22290,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/sonata/library`
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
@@ -22518,7 +22558,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/home/shell`
               - `apps/mail/shell`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/studio/contributions`
@@ -23470,7 +23510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/sonata/library`
               - `apps/sonata/notation`
               - `apps/sonata/songsheet`
@@ -23638,7 +23678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/audio/engine`
@@ -24139,7 +24179,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/sonata/library`
@@ -24461,7 +24501,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
-              - `apps/prototypes/compare-component`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/pedal/indicator`
@@ -26122,6 +26162,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `tasks/task-description`
           - `tasks/task-header`
+    - **`embed`** — The declared chromeless-document signal: isEmbeddedDocument() reads the `?embed=1` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read), and embedUrl(path) builds an in-app URL that opens that way. Read by the apps layout (no tab bar, no rail), the floating action bar (hidden), and the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame never evicts the host tab's own state.
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/layout`
+          - `apps-core/tabs`
+          - `apps/prototypes/compare/route`
+          - `primitives/scope/app-instance`
+          - `shell/global-action-bar`
+      - Web:
+        - Exports (values):
+          - `embedUrl`
+          - `isEmbeddedDocument`
+          - `resetEmbedForTests`
+      - Core:
+        - Exports (values):
+          - `EMBED_PARAM`
+          - `EMBED_VALUE`
+          - `hasEmbedFlag`
+          - `withEmbedFlag`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
@@ -26140,7 +26199,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
-          - `apps/prototypes/compare-component`
+          - `apps/prototypes/compare`
           - `apps/workflows/editor`
           - `apps/workflows/executions`
           - `framework/web-core`
@@ -26928,7 +26987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
-          - `apps/prototypes/compare-component`
+          - `apps/prototypes/compare`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/library`
@@ -27749,6 +27808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/welcome`
           - `apps/pages/welcome/quick-create`
           - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/compare/route`
           - `apps/prototypes/gallery`
           - `apps/prototypes/shell`
           - `apps/settings/accounts`
@@ -28115,7 +28175,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
           - Web:
-            - Uses: `primitives/scope/tab-id.getTabId`
+            - Uses:
+              - `primitives/embed.isEmbeddedDocument`
+              - `primitives/scope/tab-id.getTabId`
             - Exports (types): `NavigationType`
             - Exports (values):
               - `appInstanceKey`
@@ -28381,6 +28443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/shell`
           - `apps/pages/welcome`
+          - `apps/prototypes/compare`
           - `apps/prototypes/gallery`
           - `apps/settings/shell`
           - `apps/sonata/piano-roll`
@@ -30104,6 +30167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/embed.isEmbeddedDocument`
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/live-state.useWindowResource`

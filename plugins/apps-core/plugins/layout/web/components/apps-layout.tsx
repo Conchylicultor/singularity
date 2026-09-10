@@ -33,6 +33,7 @@ import {
   navigate,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
+import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import { resolveUnmatchedUrl } from "../internal/unmatched-url";
 
 /**
@@ -257,9 +258,12 @@ function NoSuchRouteSurface({
 }
 
 /** Renders the tab strip via the `Apps.TabBar` slot; nothing when no
- * contributor is present (chrome-less surface — the tab bar is opt-in). */
+ * contributor is present (chrome-less surface — the tab bar is opt-in), and
+ * nothing in an embedded document (`?embed=1`, see `primitives/embed`): the
+ * frame around it is someone else's chrome. */
 function TabBarHost() {
   const tabBar = Apps.TabBar.useContributions()[0];
+  if (isEmbeddedDocument()) return null;
   return tabBar
     ? renderIsolated(Apps.TabBar, tabBar as unknown as Contribution, {})
     : null;
@@ -277,7 +281,9 @@ function FramedSurface() {
     <AppTabsBody />
   );
   const props: RailFramingProps = { body };
-  return framing ? (
+  // An embedded document takes the railless path whatever variant is
+  // configured: the rail is app chrome, and an embed has none.
+  return framing && !isEmbeddedDocument() ? (
     renderIsolated(Apps.RailFraming, framing as unknown as Contribution, props)
   ) : (
     <RaillessFraming {...props} />

@@ -12,7 +12,9 @@ export interface PrototypeStageProps {
   meta: PrototypeMeta;
   /**
    * Every prototype in the gallery, already loaded — a stage that puts
-   * prototypes side by side needs no second subscription of its own.
+   * prototypes side by side needs no second subscription of its own. Offered,
+   * not required: the pane resolves the list anyway (to say "not found"), so
+   * handing it over costs nothing, and no shipped stage happens to read it.
    */
   gallery: PrototypeMeta[];
   /**
@@ -37,10 +39,10 @@ export interface PrototypeStageContribution {
 }
 
 /**
- * The stage set is OPEN. The gallery contributes Focus and Compare like anyone
- * else would, and names no stage anywhere outside its own two contributions —
- * so a sibling plugin adds a third (e.g. a prototype beside the real component
- * it mocks) without this plugin changing.
+ * The stage set is OPEN. The gallery contributes Focus like anyone else would,
+ * and names no stage anywhere outside its own contribution — so a sibling
+ * plugin adds another (the `compare` plugin's Compare stage: a prototype beside
+ * the real thing it mocks) without this plugin changing.
  *
  * A plain slot rather than `defineRenderSlot`: exactly one stage paints at a
  * time, picked by id, so there is no list to render. It is the shape

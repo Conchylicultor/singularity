@@ -3,6 +3,7 @@ import {
   legacyInstanceKey,
   mayAdoptLegacyPayload,
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
+import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import {
   currentRoutePath,
   stripBasePath,
@@ -172,6 +173,10 @@ function rawPathForTab(
  */
 export function loadPersistedTabs(): PersistedTabs | null {
   if (typeof window === "undefined") return null;
+  // An embedded document (`?embed=1`, see `primitives/embed`) boots one tab
+  // from its URL and restores nothing: it shares this browser tab's
+  // sessionStorage with the host page, and its instance is never registered.
+  if (isEmbeddedDocument()) return null;
   const raw =
     window.sessionStorage.getItem(storageKey()) ?? adoptLegacyPayload();
   if (raw === null) return null;
@@ -191,6 +196,9 @@ export function savePersistedTabs(
   mode: Placement,
 ): void {
   if (typeof window === "undefined") return;
+  // An embedded document persists nothing (see loadPersistedTabs): its tab set
+  // is not restorable, and a write would land in the host tab's storage.
+  if (isEmbeddedDocument()) return;
   // Read the prior payload so a resolved BACKGROUND tab can carry forward its
   // rawPath (see rawPathForTab). Safe: bootTabs already read this key once and
   // fails loud on genuine corruption, so a present key is well-formed here.

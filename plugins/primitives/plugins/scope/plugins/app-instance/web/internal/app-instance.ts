@@ -1,4 +1,5 @@
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 
 /**
  * The `PerformanceNavigationTiming.type` values, named locally so the union is
@@ -176,6 +177,16 @@ export function resetAppInstanceForTests(): void {
 }
 
 function resolveInstanceId(): string {
+  // An embedded document (a same-origin frame opened with `?embed=1`) shares
+  // this browser tab's sessionStorage — and so this registry — with the host
+  // page. It is not a restorable instance, so it mints a fresh generation and
+  // never reads, writes or re-promotes the registry: a commit from here would
+  // count against RETAINED_INSTANCES and could evict, then sweep, the host's
+  // own generations just by the frame being remounted a few times.
+  if (isEmbeddedDocument()) {
+    mintedInstance = true;
+    return crypto.randomUUID();
+  }
   const navigationType = getNavigationType();
   // `null` (unavailable) falls through to the preserving branch on purpose.
   const isFreshLoad =

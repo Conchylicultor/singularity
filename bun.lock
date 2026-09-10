@@ -520,8 +520,16 @@
       "name": "@singularity/plugin-apps-prototypes",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/prototypes/plugins/compare-component": {
-      "name": "@singularity/plugin-apps-prototypes-compare-component",
+    "plugins/apps/plugins/prototypes/plugins/compare": {
+      "name": "@singularity/plugin-apps-prototypes-compare",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/compare/plugins/fixture": {
+      "name": "@singularity/plugin-apps-prototypes-compare-fixture",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/compare/plugins/route": {
+      "name": "@singularity/plugin-apps-prototypes-compare-route",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/prototypes/plugins/files": {
@@ -4249,6 +4257,10 @@
       "name": "@singularity/plugin-primitives-editable-field",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/embed": {
+      "name": "@singularity/plugin-primitives-embed",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/error-boundary": {
       "name": "@singularity/plugin-primitives-error-boundary",
       "version": "0.0.1",
@@ -6151,7 +6163,11 @@
 
     "@singularity/plugin-apps-prototypes": ["@singularity/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
 
-    "@singularity/plugin-apps-prototypes-compare-component": ["@singularity/plugin-apps-prototypes-compare-component@workspace:plugins/apps/plugins/prototypes/plugins/compare-component"],
+    "@singularity/plugin-apps-prototypes-compare": ["@singularity/plugin-apps-prototypes-compare@workspace:plugins/apps/plugins/prototypes/plugins/compare"],
+
+    "@singularity/plugin-apps-prototypes-compare-fixture": ["@singularity/plugin-apps-prototypes-compare-fixture@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/fixture"],
+
+    "@singularity/plugin-apps-prototypes-compare-route": ["@singularity/plugin-apps-prototypes-compare-route@workspace:plugins/apps/plugins/prototypes/plugins/compare/plugins/route"],
 
     "@singularity/plugin-apps-prototypes-files": ["@singularity/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
 
@@ -7918,6 +7934,8 @@
     "@singularity/plugin-primitives-edit-mode-signal": ["@singularity/plugin-primitives-edit-mode-signal@workspace:plugins/primitives/plugins/edit-mode-signal"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
+
+    "@singularity/plugin-primitives-embed": ["@singularity/plugin-primitives-embed@workspace:plugins/primitives/plugins/embed"],
 
     "@singularity/plugin-primitives-error-boundary": ["@singularity/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
 

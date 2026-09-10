@@ -83,7 +83,7 @@ The gallery reads these out of your HTML — there is no metadata file.
 <title>Your prototype</title>
 <meta name="description" content="A sentence about what this explores." />
 <meta name="prototype-viewport" content="1320x868" />
-<meta name="mocks" content="control-panel/setting-rail" />
+<meta name="mocks" content="fixture:control-panel/setting-rail" />
 ```
 
 - `<title>` is the card's name — the prototype's ONLY human name, since the
@@ -91,10 +91,17 @@ The gallery reads these out of your HTML — there is no metadata file.
 - `<meta name="description">` is the card's blurb.
 - `<meta name="prototype-viewport">` is the canvas size in Focus and Compare.
   Optional — it defaults to `1280x800`.
-- `<meta name="mocks">` names the app component this prototype is a mockup of,
-  by its Layout Lab fixture id, so the app can put the two side by side. Most
-  prototypes are not a mockup of anything in the app — leave it out and nothing
-  is missing.
+- `<meta name="mocks">` names the real app thing this prototype is a mockup
+  of, as `<kind>:<ref>`, so the Compare stage can put the two side by side:
+  - `fixture:control-panel/setting-rail` — an app **component**, by its Layout
+    Lab fixture id.
+  - `route:/agents/c/123` — a whole app **screen**: the running app itself,
+    framed at that in-app path (no rail, no tab bar).
+
+  The kinds are open — the Compare stage lists the ones this worktree knows,
+  with an example of each. A value with no `<kind>:` prefix is reported as a
+  problem on the card. Most prototypes are not a mockup of anything in the app —
+  leave the tag out and nothing is missing.
 
 ## A prototype can be anything
 

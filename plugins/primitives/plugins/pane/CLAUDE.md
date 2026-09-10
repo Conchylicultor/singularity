@@ -921,6 +921,7 @@ See "Open questions" in the design doc.
     - `apps/pages/welcome`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/compare/route`
     - `apps/prototypes/gallery`
     - `apps/prototypes/shell`
     - `apps/settings/accounts`

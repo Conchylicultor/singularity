@@ -125,6 +125,12 @@ Consequences worth remembering:
 - Nothing here is a device preference. Surface mode and window geometry are
   **instance state** and reset with the instance. (`persistent-draft` is
   deliberately the other way — it is localStorage, shared by design.)
+- An **embedded document** (`?embed=1`, see `primitives/embed`) neither loads
+  nor saves the persisted tab set — it shares the host tab's `sessionStorage`
+  and its instance is never registered — so it always boots one tab from its
+  URL at the default placement. The shell history adapter also re-stamps the
+  flag onto every URL it writes there, since the pane store builds URLs from
+  the route alone.
 
 ### The pre-instance key migration (temporary)
 
@@ -151,6 +157,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps-core.resolveAppForPath`
     - `apps-core.setFocusedApp`
     - `apps-core.useActiveApp`
+    - `primitives/embed.embedUrl`
+    - `primitives/embed.isEmbeddedDocument`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`
     - `primitives/link-gesture.LinkGestureProps`

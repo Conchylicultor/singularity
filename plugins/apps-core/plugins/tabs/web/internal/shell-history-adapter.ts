@@ -12,6 +12,10 @@ import {
   stampAppInstance,
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resolveAppForPath, type ActiveApp } from "@plugins/apps-core/web";
+import {
+  embedUrl,
+  isEmbeddedDocument,
+} from "@plugins/primitives/plugins/embed/web";
 import type { Tab } from "./tabs-store";
 
 // ---------------------------------------------------------------------------
@@ -121,7 +125,16 @@ export function makeShellHistoryAdapter(
         })
       : state;
     const method = mode === "replace" ? "replaceState" : "pushState";
-    window.history[method](composite, "", url);
+    // The pane store builds `url` from the route alone, so the `?embed=1` an
+    // embedded document was opened with would be gone after its first
+    // navigation. Re-stamping it keeps the address honest: a reload of the
+    // frame after in-frame clicks comes back chromeless. (The chrome itself
+    // keys on the boot-time read, not on this — see `primitives/embed`.)
+    window.history[method](
+      composite,
+      "",
+      isEmbeddedDocument() ? embedUrl(url) : url,
+    );
     // Programmatic navigation announces `shell:navigate` ONLY — never a
     // synthetic popstate (that is reserved for real browser back/forward).
     window.dispatchEvent(new CustomEvent("shell:navigate"));

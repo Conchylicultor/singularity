@@ -71,7 +71,7 @@ barrel.
 - Cross-plugin:
   - Imported by:
     - `active-data`
-    - `apps/prototypes/compare-component`
+    - `apps/prototypes/compare`
     - `apps/workflows/editor`
     - `apps/workflows/executions`
     - `framework/web-core`

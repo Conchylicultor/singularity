@@ -4,6 +4,7 @@ import {
   readHtmlAttr,
 } from "@plugins/infra/plugins/html-decode/core";
 import { isPrototypeId } from "./id";
+import { mocksProblemDetail, parseMocks } from "./mocks";
 
 // The rules that make a folder a prototype, as one pure function.
 //
@@ -121,6 +122,24 @@ async function loadsExternalBabelScript(html: string): Promise<boolean> {
   return found;
 }
 
+/**
+ * The raw `content` of the first `<meta name="mocks">`, or `undefined` when the
+ * tag is absent. Same parser and first-occurrence rule as `list-metas.ts`; the
+ * syntax judgement itself is `parseMocks`, so the validator and the reader can
+ * never disagree about what a declaration is.
+ */
+async function readMocksContent(html: string): Promise<string | undefined> {
+  let raw: string | undefined;
+  const rewriter = new HTMLRewriter().on("meta", {
+    element(el) {
+      if (readHtmlAttr(el, "name") !== "mocks") return;
+      raw ??= readHtmlAttr(el, "content");
+    },
+  });
+  await rewriter.transform(new Response(html)).text();
+  return raw;
+}
+
 /** Every way `folder` fails the contract. Empty ⇒ it is a well-formed prototype. */
 export async function validatePrototypeFolder(
   folder: PrototypeFolder,
@@ -184,6 +203,15 @@ export async function validatePrototypeFolder(
           detail:
             'loads a Babel script from a separate file (<script type="text/babel" src="…">) — Babel fetches src with XHR, which Chrome blocks over file://, so the page renders nothing when opened from Finder. Inline the JSX instead',
         });
+      }
+      // A `mocks` line that is not a `<kind>:<ref>` declaration. Absent is the
+      // ordinary case and never a problem; a mistyped line is, because the
+      // Compare stage would otherwise have to explain it on its own, one stage
+      // away from where the author is looking.
+      const mocksRaw = await readMocksContent(text);
+      const mocks = parseMocks(mocksRaw ?? "");
+      if (mocks.kind === "malformed") {
+        problems.push({ path: fileName, detail: mocksProblemDetail(mocks) });
       }
     }
 

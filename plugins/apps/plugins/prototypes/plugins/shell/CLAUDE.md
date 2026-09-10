@@ -11,7 +11,7 @@ Panes themselves are defined and registered in the sibling `gallery` plugin.
 
 ## Plugin reference
 
-- Description: App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
+- Description: App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
 - Web:
   - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
   - Uses:

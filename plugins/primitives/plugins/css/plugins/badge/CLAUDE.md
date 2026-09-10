@@ -62,7 +62,9 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/events/sources/source-detail/status`
     - `apps/mail/attachments`
     - `apps/mail/search`
-    - `apps/prototypes/compare-component`
+    - `apps/prototypes/compare`
+    - `apps/prototypes/compare/fixture`
+    - `apps/prototypes/compare/route`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`

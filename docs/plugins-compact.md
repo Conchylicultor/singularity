@@ -17,7 +17,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [12 sub-plugins] — Notion-like pages app.
-    - **`prototypes`** [6 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+    - **`prototypes`** [8 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [61 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [11 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
@@ -275,6 +275,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
     - **`edit-mode-signal`** — The page-global edit-mode signal — setEditMode / getEditMode / useEditMode — as a leaf primitive whose only import is react. Everything that reorder's edit mode restyles (a bar, a wrapping chip row) reads the signal without importing the reorder feature plugin.
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
+    - **`embed`** — The declared chromeless-document signal: isEmbeddedDocument() reads the `?embed=1` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read), and embedUrl(path) builds an in-app URL that opens that way. Read by the apps layout (no tab bar, no rail), the floating action bar (hidden), and the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame never evicts the host tab's own state.
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.

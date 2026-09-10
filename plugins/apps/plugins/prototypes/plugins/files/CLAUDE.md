@@ -133,16 +133,28 @@ Metadata is therefore read out of the HTML, not a sidecar file:
   name — that is an opaque id)
 - `<meta name="description">` → `blurb` (default: `""`)
 - `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
-- `<meta name="mocks" content="<fixture id>">` → `mocks` (default: `""`)
+- `<meta name="mocks" content="<kind>:<ref>">` → `mocks` (default: `{ kind: "none" }`)
 
-`mocks` is the layout-harness fixture this prototype is a mockup OF — the pairing
-a compare-against-the-real-component surface reads. Carried as an opaque string
-and resolved nowhere here: fixtures are per-worktree and versioned, prototypes
-are host-global and outside git, so the pairing can only ever be a runtime
-lookup, and a prototype naming a fixture this worktree does not have is a thing
-that surface renders, not a problem with the folder. Absent is the ordinary
-answer — most prototypes mock no component — so it defaults to `""` and never
-becomes a `problems[]` entry.
+`mocks` is the real app thing this prototype is a mockup OF — the pairing the
+Compare stage reads: `fixture:control-panel/setting-rail` (a layout-harness
+fixture), `route:/agents/c/123` (the running app at a path). `core/mocks.ts`
+parses it (`parseMocks`, pinned by `mocks.test.ts`) into a three-way value on
+the wire: `none`, `malformed { raw, reason }`, or `declared { tag, ref }` — split
+at the FIRST colon, so a ref may carry its own.
+
+Syntax is all that is judged here. The kind set is open (each kind is a web
+plugin contributed into the compare plugin's registry) and the ref is resolved
+only there — fixtures and panes are per-worktree code while prototypes are
+host-global and outside git, so the pairing can only ever be a runtime lookup,
+and a prototype naming a kind or a ref this worktree does not have is a thing
+that surface renders, not a problem with the folder.
+
+Absent is the ordinary answer — most prototypes mock nothing — and is never a
+`problems[]` entry. A **malformed** line IS one (`validatePrototypeFolder`,
+wording from `mocksProblemDetail`): the bare legacy form `control-panel/…` with
+no `<kind>:` prefix, an empty half, a kind that is not lowercase letters, digits
+and dashes. It surfaces on the card and the Focus banner, where the author is
+looking, and the Compare stage repeats it beside the syntax.
 
 Parsed with `HTMLRewriter`; every value it yields is decoded once via
 `@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.
@@ -255,6 +267,7 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `infra/html-decode.readHtmlAttr`
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
+    - `MocksDeclaration`
     - `PrototypeFolder`
     - `PrototypeMeta`
     - `PrototypeProblem`
@@ -263,7 +276,10 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `isPrototypeId`
     - `isScannableFile`
     - `listPrototypes`
+    - `MocksDeclarationSchema`
+    - `mocksProblemDetail`
     - `newPrototypeId`
+    - `parseMocks`
     - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_FILE_ROUTE`

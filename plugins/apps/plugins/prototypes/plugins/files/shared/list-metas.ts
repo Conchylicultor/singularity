@@ -15,7 +15,9 @@ import {
 import {
   PROTOTYPE_ENTRY_FILE,
   UNTITLED_PROTOTYPE,
+  parseMocks,
   validatePrototypeFolder,
+  type MocksDeclaration,
   type PrototypeFolder,
   type PrototypeMeta,
   type PrototypeProblem,
@@ -41,7 +43,7 @@ interface HtmlMeta {
   title: string;
   blurb: string;
   viewport: { w: number; h: number };
-  mocks: string;
+  mocks: MocksDeclaration;
 }
 
 /**
@@ -93,10 +95,11 @@ async function parseHtmlMeta(html: string): Promise<HtmlMeta> {
     title: decodeHtmlText(titleChunks.join("")).trim(),
     blurb: (blurbRaw ?? "").trim(),
     viewport: viewport ?? { ...DEFAULT_VIEWPORT },
-    // Declaring no counterpart is the ordinary case, so the absent tag reads as
-    // the empty string — there is nothing wrong with a prototype that mocks
-    // nothing, and it must not turn up as a `problems[]` entry.
-    mocks: (mocksRaw ?? "").trim(),
+    // Declaring no counterpart is the ordinary case, so the absent tag parses
+    // to `none` — there is nothing wrong with a prototype that mocks nothing.
+    // A malformed line parses to `malformed` here AND is reported by
+    // `validatePrototypeFolder` as a problem; both come from `parseMocks`.
+    mocks: parseMocks(mocksRaw ?? ""),
   };
 }
 
@@ -131,7 +134,7 @@ async function readMeta(
     title: UNTITLED_PROTOTYPE,
     blurb: "",
     viewport: { ...DEFAULT_VIEWPORT },
-    mocks: "",
+    mocks: { kind: "none" } as const,
   };
 
   let folder: PrototypeFolder;

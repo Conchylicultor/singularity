@@ -1,5 +1,6 @@
 export {
   PrototypeMetaSchema,
+  MocksDeclarationSchema,
   prototypesResource,
   prototypesVersionResource,
   PROTOTYPES_API_BASE,
@@ -23,3 +24,5 @@ export {
   PROTOTYPE_ID_RE,
   UNTITLED_PROTOTYPE,
 } from "./id";
+export { parseMocks, mocksProblemDetail } from "./mocks";
+export type { MocksDeclaration } from "./mocks";

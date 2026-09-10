@@ -7,7 +7,7 @@ import { PrototypesLayout } from "./components/prototypes-layout";
 
 export default {
   description:
-    "App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.",
+    "App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.",
   contributions: [
     Apps.App({
       app: prototypesApp,

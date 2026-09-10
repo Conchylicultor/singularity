@@ -13,6 +13,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
 import {
   getSurfaceMode,
   setSurfaceMode,
@@ -116,7 +117,10 @@ export function FloatingActionBarHost() {
   const { pinned, togglePin } = useActionBarPin();
   const status = useActionBarStatus();
 
-  if (!enabled || pinned) return null;
+  // An embedded document (`?embed=1`, see `primitives/embed`) has no chrome
+  // at all, so the floating overlay stays out too. (The docked host needs no
+  // branch: it lives in the tab bar, which an embed does not render.)
+  if (!enabled || pinned || isEmbeddedDocument()) return null;
 
   return (
     <FloatingAction

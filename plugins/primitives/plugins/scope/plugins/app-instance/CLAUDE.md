@@ -19,6 +19,12 @@ browser tab meant one forever-accumulating pile: clicking a bookmark to a
 different app restored the whole previous tab set *and* appended a new tab for
 the URL. Keying by instance is the fix, and the fix falls out of the key alone.
 
+One document is outside the table: an **embedded** one (`?embed=1`, see
+`primitives/embed`). A same-origin frame shares the host tab's `sessionStorage`
+— and so this registry — so it mints a fresh generation and never reads, writes
+or re-promotes the registry, or a few remounts of the frame would evict and
+sweep the host's own generations.
+
 ## The decision table
 
 `getAppInstanceId()` is memoized at module level and resolves on first call:
@@ -172,7 +178,9 @@ the decision table.
 
 - Description: Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
 - Web:
-  - Uses: `primitives/scope/tab-id.getTabId`
+  - Uses:
+    - `primitives/embed.isEmbeddedDocument`
+    - `primitives/scope/tab-id.getTabId`
   - Exports (types): `NavigationType`
   - Exports (values):
     - `appInstanceKey`

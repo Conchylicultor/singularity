@@ -48,7 +48,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `apps/mail/reading-pane`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
-    - `apps/prototypes/compare-component`
+    - `apps/prototypes/compare`
     - `apps/sonata/library`
     - `apps/sonata/notation`
     - `apps/sonata/songsheet`
