@@ -148,6 +148,11 @@ the document costs you nothing and you never have to repair the projection by
 hand. What that asks of you is the other half: change only the text you mean to
 change, and leave everything else byte-identical.
 
+A \`\\n\` inside a line is part of that projection: it is a soft line break
+WITHIN that block, the same as pressing Shift+Enter in the editor, and not a
+block boundary. Hand it back unchanged, like everything else, and it is not a
+write.
+
 Some tags also carry READ-ONLY attributes describing state that lives outside
 the page — facts about the block held elsewhere in the system, not text anyone
 typed into the document. Write them back exactly as you found them. Editing one
@@ -300,6 +305,12 @@ A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line in this document, so a blank line you add is a
 new block — and a new block that lands outside a card is refused like any other.
 Put tags and paragraphs on consecutive lines unless you mean the spacer.
+
+A \`\\n\` INSIDE a line is the opposite: a soft line break within that block, the
+same as pressing Shift+Enter in the editor rather than Enter. It is part of that
+line's text, not a block boundary, so handing one back unchanged is not a write —
+and adding one gives you a break inside a block where a new line would have given
+you a new block.
 
 A worked round trip:
 

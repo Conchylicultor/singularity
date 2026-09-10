@@ -81,6 +81,7 @@ export function BlockForestPastePlugin({ block }: BlockTextPluginProps) {
             // Parse-side, so nothing here reads it — stated because the record
             // is ONE dialect, as every serialize site states `blankLines`.
             emptyBlocks: "blank-line",
+            softBreaks: "newline",
           });
         }
         // Empty/unparseable forest (e.g. whitespace-only multi-line) → let the

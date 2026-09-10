@@ -6,6 +6,8 @@ import {
 } from "@plugins/page/plugins/editor/server";
 import {
   parseMarkdownToForest,
+  plainOf,
+  runsOfNode,
   type Block,
   type BlockUpdate,
 } from "@plugins/page/plugins/editor/core";
@@ -210,6 +212,100 @@ function projectedData(row: Block, text: unknown): unknown {
     : { text };
 }
 
+/** How much of a row's stored text a refusal quotes. */
+const PREVIEW_CHARS = 60;
+
+/**
+ * How many rows a refusal names before it stops listing them.
+ *
+ * The list is a superset of the one row that is actually lossy (see
+ * {@link roundTripCreatesRefusal}), and on a long page it can be most of the
+ * document. A message an agent has to relay whole is worth keeping readable, and
+ * a handful of ids with their text is already enough to find the block in the
+ * page, which is all the list is for.
+ */
+const PREVIEW_ROWS = 5;
+
+/**
+ * One row's stored text, shortened to something a human can search the page for.
+ *
+ * A newline comes out as the two characters `\n` rather than as a break. That is
+ * not prettifying: a stored soft line break is the loss this refusal was written
+ * for, so showing it where it sits is most of the message's value — and a
+ * refusal that spilled onto lines of its own would be harder to read, not
+ * easier.
+ */
+function textPreview(row: StoredBlock): string {
+  const text = plainOf(runsOfNode(row)).replace(/\n/g, "\\n");
+  return text.length > PREVIEW_CHARS
+    ? `${text.slice(0, PREVIEW_CHARS)}…`
+    : text;
+}
+
+/**
+ * The refusal for a baseline document that plans CREATES — the read having
+ * invented blocks the page does not hold.
+ *
+ * Worded for the party that reads it. The engine is audience-agnostic and names
+ * no tool, but the only caller that passes a baseline is an agent-facing one, so
+ * this follows `agent-access`'s refusal idiom: name the ids, state the rule in
+ * one clause, say what to do next. It gives the scope and its page, how many
+ * blocks the untouched document would create, and the rows whose stored text the
+ * round trip would rewrite, each with a short preview so a human can find it in
+ * the page.
+ *
+ * **That list is deliberately a SUPERSET containing the lossy row**, not the
+ * lossy row itself. A block that fans out into several document lines is
+ * rewritten down to one of them, so it is always in here — but so is every row
+ * the round trip merely re-canonicalizes, and telling those apart would mean
+ * guessing which text edit "looks like" a truncation. Naming a few rows too many
+ * costs a reader one glance; naming the wrong one sends them to the wrong block.
+ */
+function roundTripCreatesRefusal(args: {
+  rootId: string;
+  pageId: string;
+  rows: readonly StoredBlock[];
+  identity: MarkdownApplyPlan;
+}): string {
+  const { rootId, pageId, rows, identity } = args;
+  const created = identity.patch.creates.length;
+  const rowById = new Map(rows.map((r) => [r.id, r] as const));
+  const edits = identity.textEdits;
+  const named = edits
+    .slice(0, PREVIEW_ROWS)
+    .map((edit) => {
+      const row = rowById.get(edit.blockId);
+      // A text edit always names a row of this very partition, so the bare-id
+      // arm is unreachable — but a message being built to explain a refusal is
+      // the wrong place to crash over it.
+      return row === undefined
+        ? edit.blockId
+        : `${edit.blockId} ("${textPreview(row)}")`;
+    })
+    .join(", ");
+  const more =
+    edits.length > PREVIEW_ROWS
+      ? `, and ${edits.length - PREVIEW_ROWS} more`
+      : "";
+  const candidates =
+    edits.length === 0
+      ? `No stored row's text would be rewritten, so the loss is in the shape the ` +
+        `read emitted rather than in one block's text.`
+      : edits.length === 1
+        ? `The row whose stored text the round trip would rewrite is ${named}.`
+        : `The rows whose stored text the round trip would rewrite are ` +
+          `${named}${more}; the block that fans out into several lines is one of ` +
+          `them.`;
+  return (
+    `markdown apply: block ${rootId} on page ${pageId} cannot be edited right ` +
+    `now. Reading it out and applying it back completely unchanged would itself ` +
+    `create ${created} block${created === 1 ? "" : "s"}, so there is no way to ` +
+    `tell this edit apart from the round trip's own damage. ${candidates} This ` +
+    `is a bug in the page's markdown projection, not in the edit — report it ` +
+    `rather than working around it.`
+  );
+}
+
 /** One scoped apply: the two channels, over rows a caller has already read. */
 async function applyToScope(scope: {
   rootId: string;
@@ -292,6 +388,61 @@ async function applyToScope(scope: {
           `does not plan against its own rows (${identity.reason}): ${identity.detail}`,
       );
     }
+    // The second condition of the same guard, and the reachable one. A baseline
+    // that plans CREATES means the READ invented blocks: the markdown projection
+    // fanned one stored block out into several document lines, and handing that
+    // document straight back mints the extra ones. (Found through a soft line
+    // break, which had no markdown spelling of its own — see
+    // `research/2026-09-10-page-soft-break-markdown-round-trip.md`.)
+    //
+    // **This is `subtractNoise`'s precondition, enforced instead of assumed.**
+    // That module's header states it as a fact — a create in the noise plan
+    // would be a projection bug rather than something to absorb — and it cannot
+    // check it for itself: it is a pure function over two plans and has no rows,
+    // no root and no page to name. So the check lives here, at the one caller
+    // that holds all three.
+    //
+    // **Creates, and only creates.** `updates`, `deleteIds` and `textEdits` all
+    // key off EXISTING row ids, so the subtraction cancels them and the row
+    // survives untouched — that is the designed, working behaviour (a paragraph
+    // whose text is a single space is absorbed exactly this way), and making them
+    // fatal would refuse edits that work today. A create has no id to key on:
+    // every planning pass mints a fresh `crypto.randomUUID()`, so two passes'
+    // creates are not comparable and there is nothing to subtract. It is the one
+    // channel where round-trip damage cannot be told apart from the caller's own
+    // work, which is exactly why it has to stop the apply rather than be judged:
+    // the alternative is what this already cost once — a caller refused over
+    // blocks the read invented, inside a card it had never gone near.
+    //
+    // **Not "drop the phantom creates".** With no id to match on, the only
+    // handles are content and position, and an edit near the lossy block changes
+    // both — so the match is guesswork, and a wrong one either deletes the
+    // author's text or lets a phantom block through. It would also hide the
+    // projection bug for good: every edit would appear to succeed while the
+    // page's markdown stayed a lie.
+    //
+    // `HttpError(409)`, deliberately unlike the plain `Error` immediately above:
+    // that guard is unreachable from any input, so a 500 is right for it, where
+    // this one is reachable from ordinary stored text and the agent that hits it
+    // is the only party who can relay the message — it has to be able to read
+    // what it is relaying. 409 is also what the planner's own refusal a few lines
+    // up and `agent-access`'s corrupt-forest refusal say: *this cannot be
+    // applied*, not *you did something wrong*.
+    if (identity.plan.patch.creates.length > 0) {
+      throw new HttpError(
+        409,
+        roundTripCreatesRefusal({
+          rootId,
+          pageId,
+          rows,
+          identity: identity.plan,
+        }),
+      );
+    }
+    // Safe to subtract now, and only now: the guard above is what makes the
+    // "creates are never subtracted, and cannot be" clause of
+    // `core/subtract-noise.ts` true of this plan rather than merely assumed of
+    // it.
     const subtracted = subtractNoise(plan, identity.plan);
     absorbedWrites = planWriteCount(plan) - planWriteCount(subtracted);
     plan = subtracted;

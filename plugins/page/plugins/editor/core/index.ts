@@ -107,6 +107,7 @@ export type {
   InlineFormatMatch,
   InlineFormatContext,
   MarkdownSpan,
+  SoftBreaks,
 } from "./inline-markdown";
 
 export {

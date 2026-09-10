@@ -32,5 +32,10 @@ export function serverMarkdownContext(): MarkdownContext {
     // not cosmetic — it reaches the boundary check as a write to a block the
     // agent never touched, and refuses the whole edit.
     emptyBlocks: "pinned",
+    // Same reason, on the other axis: a soft break inside a block's text is the
+    // two characters `\n`, so the block stays ONE line. A real newline there
+    // reads back as several sibling blocks at that block's indent — creates the
+    // planner cannot subtract, refusing the edit for the engine's fault.
+    softBreaks: "escaped",
   };
 }

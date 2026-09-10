@@ -19537,6 +19537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RowData`
           - `RunsXmlTextOptions`
           - `SerializedBlock`
+          - `SoftBreaks`
           - `TextBearingSchema`
           - `TextData`
           - `TextRun`

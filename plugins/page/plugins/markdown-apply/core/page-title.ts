@@ -41,6 +41,11 @@ const BANNER_PREFIX = "# ";
  *    construction. A title carrying a `\n` would otherwise emit a second line
  *    the document never accounted for — which the parser would read as a
  *    paragraph and the planner as a created block, from a page's title alone.
+ *    Belt and braces since the soft-break spelling landed: the `\n` would now
+ *    be escaped rather than emitted raw, so the one-line guarantee has two
+ *    independent guards. This one stays because it is what
+ *    {@link stripPageTitleBanner} compares BYTE-FOR-BYTE against, and a title's
+ *    line break is noise in a banner rather than content to preserve.
  *  - **The rest goes through the SAME inline serializer every other line of the
  *    document uses.** A title reading `<agent-note id="…">` or `**bold**` is
  *    literal text, so it is escaped to literal text; unescaped it would forge
@@ -51,7 +56,8 @@ const BANNER_PREFIX = "# ";
 function bannerLine(title: string, ctx: MarkdownContext): string {
   const oneLine = title.replace(/\r\n?|\n/g, " ");
   return (
-    BANNER_PREFIX + serializeInlineMarkdown(runsOf(oneLine), ctx.protectedSpans)
+    BANNER_PREFIX +
+    serializeInlineMarkdown(runsOf(oneLine), ctx.protectedSpans, ctx.softBreaks)
   );
 }
 

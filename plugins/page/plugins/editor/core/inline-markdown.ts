@@ -249,13 +249,35 @@ export function matchInlineFormat(
 //
 //        \  *  _  ~  `  [  ]  <
 //
-//   is prefixed with a backslash. That is precisely the set of characters that
-//   can BEGIN a construct this parser recognizes — a delimiter row's tag
+//   is prefixed with a backslash, and a literal SOFT LINE BREAK is written as
+//   the two characters `\n`. Those eight are precisely the characters that can
+//   BEGIN a construct this parser recognizes — a delimiter row's tag
 //   (`*`, `_`, `~`, `` ` ``), a link (`[`, with `]` closing its text), a tag
-//   (`<`) — plus the escape character itself. On parse, a backslash followed by
-//   one of those characters yields the character alone; a backslash followed by
-//   anything else is a literal backslash (CommonMark's rule, restricted to the
-//   set we own).
+//   (`<`) — plus the escape character itself; the break joins them as the one
+//   character the scan may never SEE. So an escape is a SPELLING, not a
+//   character repeated: on parse, a backslash followed by one of those
+//   spellings yields what it spells, and a backslash followed by anything else
+//   is a literal backslash (CommonMark's rule, restricted to the set we own).
+//   The eight spell themselves; the break is the one that does not, and
+//   `ESCAPES` below is the single table both directions read.
+//
+//   THE BREAK NEEDS A SPELLING because three guards further down abandon a
+//   construct at a real newline — `matchLink` (`:750`, `:768`) and
+//   `matchDelimiter` (`:815`) — so a link or a mark straddling a break would be
+//   silently dropped, and because one block's text has to stay ONE markdown
+//   line or `markdown.ts` fans it out into lines indistinguishable from sibling
+//   blocks. Those guards stay exactly as they are: the escape is what makes
+//   them unreachable from our own output rather than something to relax.
+//
+//   EMITTING a break as a real newline is a dialect the caller chooses
+//   (`MarkdownContext.softBreaks`), for a document a person will read in
+//   another app. DECODING is not a dialect — `\n` yields a break in both — since
+//   the document we emit has to read back. The cost of that asymmetry, stated
+//   rather than hidden: a lone `\n` in FOREIGN pasted markdown now means a
+//   break where it used to mean two literal characters, so `C:\new` gains one,
+//   and so does `` `printf "a\n"` `` (escapes resolve inside a code span too,
+//   see `scanSpan`). That is the same leniency cost this module already accepts
+//   and pins for `\*` inside a code span, and it is the price of the escape.
 //
 //   Nothing else is escaped: `(`, `)`, `>`, `#` and `-` carry no INLINE meaning
 //   here, and block-level syntax is `markdown.ts`'s concern. Inside a URL the
@@ -309,6 +331,12 @@ export function matchInlineFormat(
  *    as syntax (`_ * ~ \` [ ] < \\`), so leaving the scan to run over it
  *    CORRUPTS the token. `\(a_1 * b\)` and `[[page:…]]` are the shape: inline
  *    LaTeX is full of `_` and `*`, and a page link is made of brackets.
+ *    A `"protect"` pattern MUST NOT match across a line break. Its bytes are
+ *    emitted verbatim — the escaping rule above cannot reach inside a masked
+ *    span — so a token straddling a break has no one-line spelling, and the
+ *    escaped dialect's assert in {@link serializeInlineMarkdown} is what turns
+ *    that from silent corruption into a named crash. The three registered
+ *    families all exclude `\n` today; this is the statement that they must.
  *  - `"transparent"` — the token text is markdown-inert (a bare id is digits,
  *    lowercase letters and hyphens), so the scan running over it changes
  *    nothing, and masking it would only cost the span its marks.
@@ -328,8 +356,48 @@ export type MarkdownSpan = "protect" | "transparent";
  */
 const MASK = "\u0000";
 
-/** The escape set — see THE ESCAPING RULE above. */
-const ESCAPABLE = new Set(["\\", "*", "_", "~", "`", "[", "]", "<"]);
+/**
+ * How a soft line break inside a run is EMITTED — see THE ESCAPING RULE above.
+ * Serialize-only in every sense: the parse side decodes `\n` unconditionally.
+ */
+export type SoftBreaks = "escaped" | "newline";
+
+/**
+ * THE ESCAPE TABLE — see THE ESCAPING RULE above. One row per escapable
+ * character: the LITERAL a run holds, and the SPELLING written after the
+ * backslash. Both directions are derived from it, so an escape this module
+ * emits and an escape it reads back cannot come from two lists.
+ *
+ * Eight rows spell themselves; the soft break is the first whose spelling is a
+ * transform, because the character it stands for is the one the scan may never
+ * see.
+ */
+const ESCAPES: readonly (readonly [literal: string, spelling: string])[] = [
+  ["\\", "\\"],
+  ["*", "*"],
+  ["_", "_"],
+  ["~", "~"],
+  ["`", "`"],
+  ["[", "["],
+  ["]", "]"],
+  ["<", "<"],
+  ["\n", "n"],
+];
+
+/**
+ * Literal character → its spelling, per dialect. `"newline"` simply drops the
+ * break's row: a character with no spelling is emitted as itself, which for the
+ * break is the real newline that dialect exists to produce.
+ */
+const SPELLING_OF: Record<SoftBreaks, ReadonlyMap<string, string>> = {
+  escaped: new Map(ESCAPES),
+  newline: new Map(ESCAPES.filter(([literal]) => literal !== "\n")),
+};
+
+/** Spelling → the literal it yields. ONE table, read in both dialects. */
+const LITERAL_OF: ReadonlyMap<string, string> = new Map(
+  ESCAPES.map(([literal, spelling]) => [spelling, literal] as const),
+);
 
 /**
  * Marks that have a delimiter row, i.e. the ones whose group boundaries are
@@ -409,7 +477,12 @@ function escapeUrl(url: string): string {
 }
 
 /** Apply THE ESCAPING RULE to literal text, leaving protected spans verbatim. */
-function escapeText(text: string, protectedSpans: RegExp[]): string {
+function escapeText(
+  text: string,
+  protectedSpans: RegExp[],
+  softBreaks: SoftBreaks,
+): string {
+  const spellingOf = SPELLING_OF[softBreaks];
   const masked = maskProtected(text, protectedSpans);
   let out = "";
   for (let i = 0; i < text.length; i++) {
@@ -418,8 +491,8 @@ function escapeText(text: string, protectedSpans: RegExp[]): string {
       out += c;
       continue;
     }
-    if (ESCAPABLE.has(c)) out += "\\";
-    out += c;
+    const spelling = spellingOf.get(c);
+    out += spelling === undefined ? c : `\\${spelling}`;
   }
   return out;
 }
@@ -553,6 +626,7 @@ function emitRuns(
   runs: RichText,
   applied: Set<string>,
   protectedSpans: RegExp[],
+  softBreaks: SoftBreaks,
 ): string {
   const pendingOf = (run: TextRun): Wrapper[] =>
     wrappersOf(run).filter((w) => !applied.has(w.key));
@@ -561,7 +635,7 @@ function emitRuns(
   while (i < runs.length) {
     const pending = pendingOf(runs[i]!);
     if (pending.length === 0) {
-      out += escapeText(runs[i]!.text, protectedSpans);
+      out += escapeText(runs[i]!.text, protectedSpans, softBreaks);
       i += 1;
       continue;
     }
@@ -581,7 +655,7 @@ function emitRuns(
     applied.add(wrapper.key);
     out +=
       wrapper.open +
-      emitRuns(runs.slice(i, j), applied, protectedSpans) +
+      emitRuns(runs.slice(i, j), applied, protectedSpans, softBreaks) +
       wrapper.close;
     applied.delete(wrapper.key);
     i = j;
@@ -592,18 +666,40 @@ function emitRuns(
 /**
  * Render runs as canonical inline markdown: marks as delimiters, `link` as
  * `[text](url)`, `color` as `<color value="…">`, `underline` as `<u>`, every
- * literal delimiter character backslash-escaped, and every `protectedSpans`
- * match emitted verbatim. Round-trips through {@link parseInlineMarkdown} — see
- * the section header for the exact statement.
+ * literal delimiter character backslash-escaped, a soft break spelled per
+ * `softBreaks`, and every `protectedSpans` match emitted verbatim. Round-trips
+ * through {@link parseInlineMarkdown} — see the section header for the exact
+ * statement.
+ *
+ * In the `"escaped"` dialect the result is ONE LINE, and this asserts it. The
+ * escaping rule cannot reach the two places a newline is emitted VERBATIM — a
+ * `link` href (`escapeUrl` escapes only `\` and `)`, and `matchLink` would then
+ * fail to read the link back) and a `"protect"` span whose pattern matched
+ * across a break. Both are silent corruption otherwise: fix-ladder rung 4, for
+ * the leak no type can see.
  */
 export function serializeInlineMarkdown(
   runs: RichText,
   protectedSpans: RegExp[],
+  softBreaks: SoftBreaks,
 ): string {
   const canonical = hoistBoundaryWhitespace(
     splitProtectedSpans(coalesce(runs), protectedSpans),
   );
-  return emitRuns(canonical, new Set(), protectedSpans);
+  const out = emitRuns(canonical, new Set(), protectedSpans, softBreaks);
+  if (softBreaks === "escaped" && out.includes("\n")) {
+    const culprit = canonical.find(
+      (run) => run.text.includes("\n") || (run.link?.includes("\n") ?? false),
+    );
+    throw new Error(
+      "serializeInlineMarkdown: the escaped dialect emits one line, but a raw " +
+        "newline survived. Run text is spelled `\\n`, so this came from bytes " +
+        "emitted verbatim — a `link` href holding a newline, or a `protect` " +
+        "span whose pattern matched across one (see `MarkdownSpan`). Offending " +
+        `run: ${JSON.stringify(culprit?.text ?? out)}`,
+    );
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -635,8 +731,20 @@ function runWith(text: string, attrs: ScanAttrs): TextRun {
 function isEscapeAt(s: Scan, i: number, to: number): boolean {
   if (s.text[i] !== "\\" || s.masked[i] === MASK) return false;
   return (
-    i + 1 < to && s.masked[i + 1] !== MASK && ESCAPABLE.has(s.text[i + 1]!)
+    i + 1 < to && s.masked[i + 1] !== MASK && LITERAL_OF.has(s.text[i + 1]!)
   );
+}
+
+/**
+ * The character the escape at `i` YIELDS — `\n` is a soft break, everything
+ * else spells itself. Beside {@link isEscapeAt} on purpose: "does an escape
+ * start here" and "what does it produce" read the same table, so the lookup is
+ * total exactly where that predicate just said yes, which is what the two
+ * assertions here rest on. Three of `isEscapeAt`'s four callers only SKIP the
+ * pair; this is for the one that emits.
+ */
+function escapedCharAt(s: Scan, i: number): string {
+  return LITERAL_OF.get(s.text[i + 1]!)!;
 }
 
 /** A tag construct: `<u>…</u>` or `<color value="…">…</color>`. */
@@ -885,7 +993,7 @@ function scanSpan(
       continue;
     }
     if (isEscapeAt(s, i, to)) {
-      buf += s.text[i + 1]!;
+      buf += escapedCharAt(s, i);
       i += 2;
       continue;
     }

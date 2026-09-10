@@ -186,3 +186,42 @@ recording that its accepted loss is closed and why.
 3. Confirm the read now shows `<text/>` at the four positions a blank line cannot
    state, and bare blank lines everywhere else.
 4. Confirm a copy out of the editor still pastes with blank lines, no tags.
+
+## Addendum, 2026-09-10: the assumption about noise creates was false
+
+> A create in the noise plan would mean the read invented a block; **with the pin,
+> none is observed**. If one ever appears it lands outside a card and is refused
+> loudly — which is the right failure.
+
+Both halves of that were wrong, and the second is what cost a conversation its
+whole run.
+
+**A create is observed.** One block holding a **soft line break** — a `\n` inside
+a run, which is what Shift+Enter stores and what pasting multi-paragraph HTML
+leaves behind — has no markdown spelling. The serializer emits the newline
+verbatim and the block walker fans that one block out into several document lines
+at the block's own indent, indistinguishable from several sibling blocks. Reading
+such a page out and applying it back completely unchanged plans creates. Six pages
+on main were un-editable by any agent this way.
+
+**"Refused loudly" meant refused loudly AT THE AGENT, for the engine's fault.** A
+phantom create lands wherever the lossy block sits, so on `conv-1788965027-vvze`
+(2026-09-09) it landed inside a `<todo>` card at the top of the page. Every
+attempt to append one `<agent-note>` card elsewhere was refused naming that card —
+a card the agent had never gone near, in a message that told it to leave the
+author's words alone. It tried four times with three different anchors, stopped,
+and reported that it did not understand the failure. The user pasted its report
+into the page by hand.
+
+The projection loss is fixed at its source (the soft break gains an inline `\n`
+escape, so the block stays on one line), and — the part that matters here — **the
+assumption is now enforced rather than assumed.** `applyToScope` refuses with a
+409 when the baseline's identity plan contains creates at all, naming the scope,
+the page, the count, and the rows whose stored text the round trip would rewrite.
+So the next unspellable thing surfaces as *this page's markdown projection is
+lossy* rather than as an accusation against whichever agent touches the page next.
+Creates only: the other three channels key off existing row ids and are absorbed
+by design, and making them fatal would refuse edits that work today.
+
+Design and measurements:
+[`research/2026-09-10-page-soft-break-markdown-round-trip.md`](2026-09-10-page-soft-break-markdown-round-trip.md).

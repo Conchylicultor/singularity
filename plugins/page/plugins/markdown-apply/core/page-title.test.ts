@@ -53,9 +53,11 @@ const ctx: MarkdownContext = {
   // The server dialect: this module's documents are ones this codebase emitted.
   blankLines: "empty-block",
   // The server dialect on the way out too: an empty paragraph whose position a
-  // blank line cannot state is pinned as `<text/>`, so a faithful read applied
+  // blank line cannot state is pinned as `<text/>`, and a soft break is spelled
+  // `\n` so the block stays one line — together, a faithful read applied
   // straight back plans nothing.
   emptyBlocks: "pinned",
+  softBreaks: "escaped",
 };
 
 describe("pageTitleBanner", () => {

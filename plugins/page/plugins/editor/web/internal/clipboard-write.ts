@@ -47,6 +47,10 @@ export function writeForestToClipboard(
       // above, so nothing that matters is lost by spelling every empty paragraph
       // as a blank line here.
       emptyBlocks: "blank-line",
+      // A human pasting into a plain-text field must see a real line break, not
+      // the two characters `\n`. Same trade as the line above, and the internal
+      // round trip goes through `BLOCKS_MIME`, so nothing that matters is lost.
+      softBreaks: "newline",
     }),
   );
 }

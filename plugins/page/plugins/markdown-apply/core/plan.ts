@@ -249,6 +249,9 @@ export function planMarkdownApply<R extends StoredRow>(
     // Must match what the READ emits, or alignment diffs two dialects and every
     // pinned empty paragraph reads as a change nobody made.
     emptyBlocks: "pinned",
+    // Must match what the READ emits, for the same reason: a soft break spelled
+    // one way here and another there is alignment diffing two dialects.
+    softBreaks: "escaped",
   };
 
   // Everything a plan may WRITE reads `oldRows`, never `existing`: the walk is

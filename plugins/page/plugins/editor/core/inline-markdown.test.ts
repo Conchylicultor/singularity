@@ -11,6 +11,7 @@ import {
   parseInlineMarkdown,
   serializeInlineMarkdown,
   type InlineFormatMatch,
+  type SoftBreaks,
 } from "./inline-markdown";
 import { MARK_ORDER, sortMarks, type RichText } from "./rich-text";
 
@@ -306,8 +307,14 @@ const PAGE_TOKEN = /\[\[page:([^[\]\n]+)\]\]/;
 const DATE_TOKEN = /\[\[date:([0-9T:.Z-]+)\]\]/;
 const TOKENS = [LATEX, PAGE_TOKEN, DATE_TOKEN];
 
-const ser = (runs: RichText, tokens: RegExp[] = []): string =>
-  serializeInlineMarkdown(runs, tokens);
+// The suite's default dialect is OUR OWN (`"escaped"`), because that is the
+// document the round-trip identity below is about. The `"newline"` half is
+// stated where it matters, in the soft-break cases.
+const ser = (
+  runs: RichText,
+  tokens: RegExp[] = [],
+  softBreaks: SoftBreaks = "escaped",
+): string => serializeInlineMarkdown(runs, tokens, softBreaks);
 const par = (text: string, tokens: RegExp[] = []): RichText =>
   parseInlineMarkdown(text, tokens);
 
@@ -452,12 +459,22 @@ describe("parseInlineMarkdown — marks are a per-run SET, never a tree", () => 
   test("a delimiter can never span a line break", () => {
     expect(par("**a\nb**")).toEqual([{ text: "**a\nb**" }]);
   });
+
+  test("…but it can span the ESCAPE, which is why the escape exists", () => {
+    // The twin of the case above. A REAL newline is still not a construct
+    // boundary — that guard is untouched — and the spelled break is not a
+    // newline at all by the time the scan runs, so the closing `**` is found and
+    // the break lands INSIDE the bold run.
+    expect(par("**a\\nb**")).toEqual([{ text: "a\nb", marks: ["bold"] }]);
+  });
 });
 
 describe("escaping — the rule that makes serialize → parse an identity", () => {
   test("every character that could open a construct is backslash-escaped", () => {
-    const raw = "a*b_c~d`e[f]g<h>i\\j";
-    expect(ser([{ text: raw }])).toBe("a\\*b\\_c\\~d\\`e\\[f\\]g\\<h>i\\\\j");
+    const raw = "a*b_c~d`e[f]g<h>i\\j\nk";
+    expect(ser([{ text: raw }])).toBe(
+      "a\\*b\\_c\\~d\\`e\\[f\\]g\\<h>i\\\\j\\nk",
+    );
     expect(par(ser([{ text: raw }]))).toEqual([{ text: raw }]);
   });
 
@@ -476,6 +493,87 @@ describe("escaping — the rule that makes serialize → parse an identity", () 
   test("escaping survives inside a code span", () => {
     expect(ser([{ text: "a`b", marks: ["code"] }])).toBe("`a\\`b`");
     expect(par("`a\\`b`")).toEqual([{ text: "a`b", marks: ["code"] }]);
+  });
+
+  test("the two literal characters backslash + `n` are NOT a soft break", () => {
+    // The backwards-compatibility argument, in one pair: the encoder escapes the
+    // backslash FIRST, so a run genuinely holding `\` then `n` emits `\\n` and
+    // cannot be confused with the break's `\n`.
+    expect(ser([{ text: "a\\nb" }])).toBe("a\\\\nb");
+    expect(par("a\\\\nb")).toEqual([{ text: "a\\nb" }]);
+  });
+
+  test("a lone `\\n` in FOREIGN markdown now decodes to a break — the accepted cost", () => {
+    // Stated as the honest example rather than left to be discovered. Decoding
+    // is unconditional, in every dialect, because our own emitted document has
+    // to round-trip. It reaches inside a code span too, for the same reason
+    // `\*` does there (pinned above).
+    expect(par("C:\\new")).toEqual([{ text: "C:\new" }]);
+    expect(par('`printf "a\\n"`')).toEqual([
+      { text: 'printf "a\n"', marks: ["code"] },
+    ]);
+  });
+});
+
+describe("the soft break: one spelling, in and out of a mark", () => {
+  test("a break in an unmarked run is the two characters `\\n`", () => {
+    expect(ser([{ text: "a\nb" }])).toBe("a\\nb");
+    expect(par(ser([{ text: "a\nb" }]))).toEqual([{ text: "a\nb" }]);
+  });
+
+  test("an INTERIOR break inside a marked run round-trips exactly", () => {
+    // The hoist below only touches a break at a run's EDGE, so this one is
+    // untouched — and the escaped form carries no real newline, so
+    // `matchDelimiter`'s newline guard never fires and the closer is found.
+    const runs: RichText = [{ text: "a\nb", marks: ["bold"] }];
+    expect(ser(runs)).toBe("**a\\nb**");
+    expect(par(ser(runs))).toEqual(runs);
+  });
+
+  test("a link containing a break round-trips exactly", () => {
+    const runs: RichText = [{ text: "a\nb", link: "https://e.com" }];
+    expect(ser(runs)).toBe("[a\\nb](https://e.com)");
+    expect(par(ser(runs))).toEqual(runs);
+  });
+
+  test("a marked run ENDING in a break canonicalizes to the hoisted pair", () => {
+    // The edge case, pinned as the canonical-form rule it is rather than left to
+    // surprise the fuzzer: `hoistBoundaryWhitespace` trims with `trimEnd`, which
+    // treats `\n` as whitespace, so the break leaves the mark. It lands as a
+    // TEXT edit, which `subtractNoise` absorbs — never a create — so it can
+    // never refuse an agent's edit.
+    expect(ser([{ text: "a\n", marks: ["bold"] }])).toBe("**a**\\n");
+    expect(par("**a**\\n")).toEqual([
+      { text: "a", marks: ["bold"] },
+      { text: "\n" },
+    ]);
+  });
+
+  test("the `newline` dialect emits the real break, and decodes the escape anyway", () => {
+    // What the clipboard declares. The asymmetry is deliberate: only serialize
+    // reads the dialect, because a document we emit has to read back whichever
+    // dialect wrote it.
+    expect(ser([{ text: "a\nb" }], [], "newline")).toBe("a\nb");
+    expect(par("a\\nb")).toEqual([{ text: "a\nb" }]);
+  });
+
+  test("the escaped dialect ASSERTS its one line: a newline in an href throws", () => {
+    // `escapeUrl` escapes only `\` and `)`, so an href holding a newline is
+    // emitted verbatim and `matchLink` would then fail to read it back — silent
+    // corruption before, a named crash now.
+    expect(() => ser([{ text: "x", link: "https://e.com/a\nb" }])).toThrow(
+      /escaped dialect emits one line/,
+    );
+  });
+
+  test("…and so does a `protect` span that matched across a break", () => {
+    // The other verbatim path. A `"protect"` pattern must not match across a
+    // line break (see `MarkdownSpan`); nothing but this assert can see one that
+    // does.
+    const GREEDY = /\\\(([\s\S]*?)\\\)/;
+    expect(() => ser([{ text: "\\(a\nb\\)" }], [GREEDY])).toThrow(
+      /escaped dialect emits one line/,
+    );
   });
 });
 

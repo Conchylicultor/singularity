@@ -18,6 +18,7 @@ import { plainOf, runsOf, type RichText } from "./rich-text";
 import {
   parseInlineMarkdown,
   serializeInlineMarkdown,
+  type SoftBreaks,
 } from "./inline-markdown";
 import type { BlockHandle } from "./define-block";
 import type { SerializedBlock } from "./serialized-block";
@@ -78,6 +79,23 @@ export interface MarkdownContext {
    * contract) or by a person in another app (where a tag is noise).
    */
   emptyBlocks: "pinned" | "blank-line";
+  /**
+   * How a SOFT LINE BREAK inside a block's text is emitted.
+   *
+   * `"escaped"` — the two characters `\n`, so the block stays on ONE markdown
+   * line and the round trip is exact. `"newline"` — a real newline, which a
+   * person pasting into another app has to see, and which this codebase then
+   * cannot read back as one block: the document splits on `\n`, so one block
+   * comes back as several siblings at its own indent.
+   *
+   * Required, and for the third time the same reason `blankLines` and
+   * `emptyBlocks` are: only the caller knows which of those two readers its
+   * document is for, so there is no safe default and a call site that does not
+   * say is a tsc error. Read on SERIALIZE only — the parse side decodes `\n`
+   * in both dialects, since what we emit has to read back (see THE ESCAPING
+   * RULE in `inline-markdown.ts`).
+   */
+  softBreaks: SoftBreaks;
 }
 
 /**
@@ -113,9 +131,10 @@ export interface MarkdownNode {
 export interface MdSerializeCtx {
   /**
    * Render runs (or a legacy string) as inline markdown: marks as delimiters,
-   * links, colors, underline, with literal delimiter characters escaped. THE
-   * default renderer for a block's text — `serializeInlineMarkdown` under the
-   * hood, bound to the context's `protectedSpans`.
+   * links, colors, underline, with literal delimiter characters escaped and a
+   * soft break spelled per the context's dialect. THE default renderer for a
+   * block's text — `serializeInlineMarkdown` under the hood, bound to the
+   * context's `protectedSpans` and `softBreaks`.
    */
   md(text: RichText | string): string;
   /**
@@ -1230,7 +1249,7 @@ export function serializeForestToMarkdown(
 ): string {
   const byType = new Map(ctx.handles.map((h) => [h.type, h] as const));
   const md = (text: RichText | string): string =>
-    serializeInlineMarkdown(runsOf(text), ctx.protectedSpans);
+    serializeInlineMarkdown(runsOf(text), ctx.protectedSpans, ctx.softBreaks);
 
   // Returns the lines for ONE sibling list, at depth 0; the caller indents. The
   // recursion carries the nesting rather than a `depth` counter so a tag can
@@ -1288,6 +1307,16 @@ export function serializeForestToMarkdown(
             `${openTagPrefix(pinned.name, tagAttrs(pinned, n.data, serializeCtx))}/>`,
           );
         } else {
+          // The split STAYS, and `code-block` is its one reason: it declares an
+          // explicit `markdown.serialize` returning a genuinely multi-line
+          // fenced string, and a declared serializer takes this branch. Every
+          // other explicit serializer here is single-line, and a soft break
+          // inside run text is spelled `\n` by the escaped dialect — so after
+          // that spelling a fan-out on this line can only come from a handle
+          // that deliberately produced one. Do NOT move the soft-break escape
+          // here: at this point the string is opaque (prefix, fence and inline
+          // text already concatenated), so escaping would collapse every fenced
+          // block onto one line and turn the code's own newlines into `\n`.
           out.push(...line.split("\n"));
         }
         out.push(...indentLines(renderList(n.children)));

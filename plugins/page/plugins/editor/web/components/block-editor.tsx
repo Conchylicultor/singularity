@@ -894,6 +894,7 @@ function SelectionLayer({
           // Parse-side, so nothing here reads it — stated because the record is
           // ONE dialect, exactly as every serialize site states `blankLines`.
           emptyBlocks: "blank-line",
+          softBreaks: "newline",
         });
       }
       // Empty/unparseable forest (an empty or whitespace-only payload) → let the
@@ -1539,6 +1540,7 @@ function SelectionLayer({
           // Parse-side, so nothing here reads it — stated because the record is
           // ONE dialect, exactly as every serialize site states `blankLines`.
           emptyBlocks: "blank-line",
+          softBreaks: "newline",
         });
       }
       // Empty/unparseable forest (a whitespace-only payload) → never swallow the

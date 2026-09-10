@@ -369,11 +369,16 @@ const mdCtx: MarkdownContext = {
   // place is PINNED as `<text/>`, which is what makes the round-trip property
   // below exact rather than exact-modulo-a-filter.
   emptyBlocks: "pinned",
+  // And a soft break is the two characters `\n`, so a block that holds one
+  // still occupies exactly ONE document line — the other half of what makes the
+  // round-trip property below exact.
+  softBreaks: "escaped",
 };
 const pasteCtx: MarkdownContext = {
   ...mdCtx,
   blankLines: "separator",
   emptyBlocks: "blank-line",
+  softBreaks: "newline",
 };
 const parse = (md: string): SerializedBlock[] =>
   parseMarkdownToForest(md, mdCtx);
@@ -425,6 +430,87 @@ describe("plain paragraphs", () => {
     const forest = parsePasted("a\n\n\nb");
     expect(forest.map((b) => b.type)).toEqual(["text", "text"]);
     expect(forest.map(dataText)).toEqual(["a", "b"]);
+  });
+});
+
+describe("soft line breaks (a block's text is ONE document line)", () => {
+  // A `\n` inside a run is first-class content — Shift+Enter, or a paste of
+  // multi-paragraph HTML with a single-line `text/plain` beside it. Markdown was
+  // the one layer with no spelling for it: the newline went out verbatim, the
+  // walk fanned that one block into several document lines at its own indent,
+  // and the parser read them back as exactly that. The escape keeps the block on
+  // one line, so nothing about the document's line, indent or blank-line rules
+  // has to know a break happened.
+  //
+  // `"\\n"` in these expectations is the TWO characters backslash + `n`.
+
+  test("an interior break keeps the block on one line, both ways", () => {
+    const forest = [node("text", { text: runs("Goal: x\nRisk: y") })];
+    expect(serialize(forest)).toBe("Goal: x\\nRisk: y");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a TRAILING break round-trips too — the `<p>a</p><p></p>` paste shape", () => {
+    const forest = [node("text", { text: runs("a\n") })];
+    expect(serialize(forest)).toBe("a\\n");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a block whose text is ONLY a break survives, where it used to be deleted", () => {
+    // The empty-block pin tests `line.trim() === ""`, which a lone newline
+    // satisfied — so the block was emitted as `<text/>` and came back with
+    // `text: []`. The escape makes the line two non-blank characters, so the pin
+    // correctly declines and the block keeps its content.
+    const forest = [node("text", { text: runs("\n") })];
+    expect(serialize(forest)).toBe("\\n");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a marked run's interior break round-trips, delimiters and all", () => {
+    // `matchDelimiter` abandons a span at a REAL newline, which is why the
+    // escape exists: with no newline in the line, the closing `**` is found.
+    const forest = [
+      node("text", { text: [{ text: "a\nb", marks: ["bold" as const] }] }),
+    ];
+    expect(serialize(forest)).toBe("**a\\nb**");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("a prefixed line keeps its prefix — the break never mints a sibling", () => {
+    expect(
+      serialize([node("to-do", { text: runs("a\nb"), checked: true })]),
+    ).toBe("- [x] a\\nb");
+    expect(serialize([node("numbered-list", { text: runs("a\nb") })])).toBe(
+      "1. a\\nb",
+    );
+    expect(parse("- [x] a\\nb")).toEqual([
+      node("to-do", { text: runs("a\nb"), checked: true }),
+    ]);
+  });
+
+  test("a code block STILL emits three lines — the encode site's regression guard", () => {
+    // `code-block` declares an explicit `markdown.serialize` returning a
+    // genuinely multi-line fenced string, and `renderList`'s `line.split("\n")`
+    // is what turns it into real lines. Escaping there instead of in run text
+    // would collapse every fence onto one line and turn the code's own newlines
+    // into literal `\n`.
+    const forest = [node("code-block", { code: "a\nb", language: "ts" })];
+    expect(serialize(forest)).toBe("```ts\na\nb\n```");
+    expect(parse(serialize(forest))).toEqual(forest);
+  });
+
+  test("the `newline` dialect emits the real break, and states the loss", () => {
+    // What the clipboard declares: a person pasting into another app must see a
+    // line break, not two characters. The cost is that this document cannot be
+    // read back as one block — which is exactly the bug the escape closes, kept
+    // knowingly on the human-facing side.
+    const humanCtx: MarkdownContext = { ...mdCtx, softBreaks: "newline" };
+    const md = serializeForestToMarkdown(
+      [node("text", { text: runs("a\nb") })],
+      humanCtx,
+    );
+    expect(md).toBe("a\nb");
+    expect(parse(md)).toHaveLength(2);
   });
 });
 
@@ -668,10 +754,38 @@ describe("prompt (text-bearing, no prefix of its own)", () => {
     expect(parse(serialize(forest))).toEqual(forest);
   });
 
-  test("a soft line break inside the text uses the multi-line tag form", () => {
+  test("a soft line break inside the text is the escape, on ONE line", () => {
+    // The tag body used to be the ONE place a real newline survived — a
+    // multi-line body between the tags, rejoined on parse. That is a second
+    // spelling for a soft break, chosen by a condition an agent editing the body
+    // cannot see, so the escape applies here like everywhere else.
     const forest = [node("prompt", { text: runs("a\nb") })];
     const md = serialize(forest);
+    expect(md).toBe("<prompt>a\\nb</prompt>");
+    expect(parse(md)).toEqual(forest);
+  });
+
+  test("the multi-line body is still what the `newline` dialect emits", () => {
+    // Both dialects pinned, rather than one replaced by the other: the branch
+    // stays live for the clipboard, where a person reads the text.
+    const humanCtx: MarkdownContext = { ...mdCtx, softBreaks: "newline" };
+    const md = serializeForestToMarkdown(
+      [node("prompt", { text: runs("a\nb") })],
+      humanCtx,
+    );
     expect(md).toBe(["<prompt>", "  a", "  b", "</prompt>"].join("\n"));
+  });
+
+  test("a mark spanning a soft break survives, which it did not before", () => {
+    // The multi-line body put a REAL newline between the tags, and
+    // `matchDelimiter` abandons a span at one — so a bold prompt line across a
+    // break came back as one unmarked literal run. With the escape there is no
+    // newline for the guard to see, so the closing `**` is still found.
+    const forest = [
+      node("prompt", { text: [{ text: "a\nb", marks: ["bold" as const] }] }),
+    ];
+    const md = serialize(forest);
+    expect(md).toBe("<prompt>**a\\nb**</prompt>");
     expect(parse(md)).toEqual(forest);
   });
 });
@@ -1041,6 +1155,7 @@ describe("annotated tags (facts the block does not own)", () => {
       protectedSpans: [],
       blankLines: "empty-block",
       emptyBlocks: "pinned",
+      softBreaks: "escaped",
     };
     const md = serializeForestToMarkdown(
       [
@@ -1138,6 +1253,7 @@ describe("annotated tags (facts the block does not own)", () => {
       protectedSpans: [],
       blankLines: "empty-block",
       emptyBlocks: "pinned",
+      softBreaks: "escaped",
     };
     expect(() => serializeForestToMarkdown([node("doubled", {})], ctx)).toThrow(
       /own `attrs` emitted one too/,
@@ -1537,6 +1653,16 @@ describe("round-trip property (fuzzed forest)", () => {
   // starts with `- `, `# `, `1. `, `> `, `$$`, `---`, `[ ] ` or a space. That is
   // a genuine (pre-existing) lossiness of markdown itself — a paragraph reading
   // "- x" is a bullet — not of this mechanism.
+  //
+  // One more constraint since soft breaks joined the alphabet: a break may not
+  // sit at a word's START or END. `hoistBoundaryWhitespace` trims with
+  // `trimStart`/`trimEnd`, which treat `\n` as whitespace, so a MARKED run
+  // ending in a break canonicalizes to a bold run plus a bare one — a
+  // legitimate canonical-form rewrite (pinned in `inline-markdown.test.ts`), not
+  // a defect, and this property asserts the exact round trip. Hence one word
+  // with an INTERIOR break and no bare `"\n"` entry: `pick` could make a bare
+  // one the only word and then mark it, failing an assertion that is not about
+  // this feature.
   const words = [
     "alpha",
     "bravo",
@@ -1544,6 +1670,7 @@ describe("round-trip property (fuzzed forest)", () => {
     "delta*star",
     "echo_under",
     "foxtrot<lt",
+    "golf\nhotel",
   ];
 
   const gens: {
@@ -1558,6 +1685,36 @@ describe("round-trip property (fuzzed forest)", () => {
     // children here, and the property below asserts the EXACT round trip over
     // every position the generator can produce, with no narrowing.
     { type: "text", data: () => ({ text: [] }), children: true },
+    // Three soft-break shapes the word list cannot reach, each canonical and
+    // each a real row on main. `pick` joins words with spaces and marks them
+    // 40% of the time, so the interior break above already covers a break inside
+    // a marked run, inside an unmarked one, in every text-bearing type and in
+    // the `prompt` tag body — these are the ones it cannot produce.
+    //
+    // A run that is ONLY a break: the shape the empty-block pin used to claim
+    // (`line.trim() === ""`) and delete outright.
+    { type: "text", data: () => ({ text: [{ text: "\n" }] }), children: true },
+    // A TRAILING break, unmarked so the hoist has nothing to rewrite — what a
+    // `<p>a</p><p></p>` paste leaves behind.
+    {
+      type: "text",
+      data: () => ({ text: [{ text: "india\n" }] }),
+      children: true,
+    },
+    // The three-run `[bold "a"][break][bold "b"]` shape `walkNode` actually
+    // produces for a marked line split by Shift+Enter: the break is its own
+    // unmarked run, so `coalesce` cannot merge it into either neighbour.
+    {
+      type: "text",
+      data: () => ({
+        text: [
+          { text: "juliett", marks: ["bold" as const] },
+          { text: "\n" },
+          { text: "kilo", marks: ["bold" as const] },
+        ],
+      }),
+      children: true,
+    },
     { type: "bulleted-list", data: (r) => ({ text: pick(r) }), children: true },
     { type: "heading-1", data: (r) => ({ text: pick(r) }), children: true },
     { type: "numbered-list", data: (r) => ({ text: pick(r) }), children: true },

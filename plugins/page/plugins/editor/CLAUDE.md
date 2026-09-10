@@ -3154,6 +3154,56 @@ covered. Design:
   [`research/2026-09-01-page-blank-line-empty-paragraph.md`](../../../../research/2026-09-01-page-blank-line-empty-paragraph.md)
   and
   [`research/2026-09-03-page-edit-judged-on-what-it-changed.md`](../../../../research/2026-09-03-page-edit-judged-on-what-it-changed.md).
+- **A SOFT LINE BREAK has a spelling: the inline escape `\n`.** A `\n` inside a
+  run is first-class content everywhere else — the type says so, Shift+Enter
+  round-trips it, the Y doc keeps it as its own node, `read-only-view` paints a
+  `<br>`. Markdown had no spelling for it, so `escapeText` emitted the newline
+  verbatim, the walk fanned that ONE block into several document lines at its
+  own indent, and the parser read them back as exactly that: `read_page` →
+  `edit_page` unchanged planned CREATES, which nothing can subtract. Six pages
+  on main were un-editable by an agent that way.
+  Now `escapeText` writes the break as backslash + `n`, so the block stays on
+  one line and nothing about the document's line, indent or blank-line rules has
+  to know a break happened. Three silent losses fall out with it: a mark and a
+  link across a break are no longer dropped (`matchDelimiter` and `matchLink`
+  ABANDON a construct at a real newline — those guards are the reason the escape
+  exists, and they stay), and a block whose text is only a break is no longer
+  deleted by the empty-block pin.
+  - **The dialect is `MarkdownContext.softBreaks`**, required beside
+    `blankLines` and `emptyBlocks` and for the same reason. `"escaped"` is the
+    agent-facing document (`read_page`/`edit_page` and the planner's own
+    re-serialization, which MUST agree); `"newline"` is the clipboard, where a
+    person pasting into another app has to see a real line break. Serialize
+    only: the parse side decodes `\n` in both, because what we emit has to read
+    back.
+  - **One rule, no per-path exception.** The escape lives in `escapeText`, so
+    every path that renders run text inherits it — including a `body: "text"`
+    tag, which used to be the one place a real newline survived. A `prompt`
+    body is one line in the escaped dialect and the multi-line form in the
+    other; two spellings chosen by a condition an agent editing the body cannot
+    see is worse than one spelling everywhere.
+  - **`markdown.ts`'s `line.split("\n")` stays**, and `code-block` is its one
+    reason: it declares an explicit `markdown.serialize` returning a genuinely
+    multi-line fenced string. The escape belongs where run text is rendered and
+    nowhere else — at the split the line is already opaque, so escaping there
+    would collapse every fence onto one line.
+  - **The escaped dialect ASSERTS its one line.** Two paths emit bytes verbatim
+    and the escape cannot reach either: a `link` href holding a newline, and a
+    `"protect"` span whose pattern matched across one (which `MarkdownSpan` now
+    forbids). `serializeInlineMarkdown` throws naming the run instead of
+    corrupting it silently.
+  - **The accepted cost, stated:** decoding is unconditional, so a lone `\n` in
+    FOREIGN pasted markdown now means a break — `C:\new`, and
+    `` `printf "a\n"` `` inside a code span. Same class as the `\*`-in-a-code-span
+    leniency this module already pins, and unavoidable given the escape.
+  - **A break at the EDGE of a marked run is hoisted out of the mark**, which is
+    pre-existing: `hoistBoundaryWhitespace` trims with `trimStart`/`trimEnd`, and
+    those treat `\n` as whitespace. The round trip has always been
+    `parse(serialize(x)) === canonical(x)`, and this is one more case of it — it
+    lands as a text edit, which `subtractNoise` absorbs, never a create. An
+    INTERIOR break inside a marked run round-trips exactly.
+  Design:
+  [`research/2026-09-10-page-soft-break-markdown-round-trip.md`](../../../../research/2026-09-10-page-soft-break-markdown-round-trip.md).
 
 ### The page tags
 
@@ -3509,6 +3559,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `RowData`
     - `RunsXmlTextOptions`
     - `SerializedBlock`
+    - `SoftBreaks`
     - `TextBearingSchema`
     - `TextData`
     - `TextRun`

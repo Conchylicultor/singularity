@@ -103,9 +103,11 @@ const ctx: MarkdownContext = {
   // The server dialect: this module's documents are ones this codebase emitted.
   blankLines: "empty-block",
   // The server dialect on the way out too: an empty paragraph whose position a
-  // blank line cannot state is pinned as `<text/>`, so a faithful read applied
+  // blank line cannot state is pinned as `<text/>`, and a soft break is spelled
+  // `\n` so the block stays one line — together, a faithful read applied
   // straight back plans nothing.
   emptyBlocks: "pinned",
+  softBreaks: "escaped",
 };
 
 const PAGE_ID = "PAGE";
@@ -339,6 +341,33 @@ describe("T3: annexing the document's prose into a boundary", () => {
 });
 
 // ---------------------------------------------------------------------------
+// The identity round trip: a faithful read applied back plans NOTHING
+// ---------------------------------------------------------------------------
+//
+// The invariant the two pins below are both instances of, and the one this file
+// exists to hold. Shared rather than written twice: every way the projection can
+// lose something shows up here the same way — as writes to blocks the edit never
+// mentioned.
+
+/** Read the forest out and apply it straight back — an edit that changes nothing. */
+const noOpApply = (existing: StoredRow[]): MarkdownApplyPlan => {
+  const md = serializeForestToMarkdown(
+    markdownNodesOfRows(existing, PAGE_ID),
+    ctx,
+  );
+  const result = planMarkdownApply({
+    rootId: PAGE_ID,
+    pageId: PAGE_ID,
+    existing,
+    incoming: parseMarkdownToForest(md, ctx),
+    handles,
+  });
+  if (!result.ok)
+    throw new Error(`refused: ${result.reason} — ${result.detail}`);
+  return result.plan;
+};
+
+// ---------------------------------------------------------------------------
 // The pin: an empty paragraph a blank line cannot place
 // ---------------------------------------------------------------------------
 //
@@ -363,24 +392,6 @@ describe("an empty paragraph a blank line cannot place is pinned as a tag", () =
       raw(OPEN_TYPE, {}, [line("noted")]),
     ]);
 
-  /** Read the forest out and apply it straight back — an edit that changes nothing. */
-  const noOpApply = (existing: StoredRow[]): MarkdownApplyPlan => {
-    const md = serializeForestToMarkdown(
-      markdownNodesOfRows(existing, PAGE_ID),
-      ctx,
-    );
-    const result = planMarkdownApply({
-      rootId: PAGE_ID,
-      pageId: PAGE_ID,
-      existing,
-      incoming: parseMarkdownToForest(md, ctx),
-      handles,
-    });
-    if (!result.ok)
-      throw new Error(`refused: ${result.reason} — ${result.detail}`);
-    return result.plan;
-  };
-
   test("the read emits the empty paragraph as `<text/>`, at its own depth", () => {
     expect(
       serializeForestToMarkdown(markdownNodesOfRows(rows(), PAGE_ID), ctx),
@@ -393,6 +404,49 @@ describe("an empty paragraph a blank line cannot place is pinned as a tag", () =
         `</${OPEN_TYPE}>`,
       ].join("\n"),
     );
+  });
+
+  test("applying it straight back plans NOTHING", () => {
+    const plan = noOpApply(rows());
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(plan.patch.updates).toEqual([]);
+    expect(plan.textEdits).toEqual([]);
+  });
+
+  test("and boundary enforcement has nothing to refuse", () => {
+    const existing = rows();
+    expect(violationsOf(noOpApply(existing), existing)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The pin: a soft line break inside a block's text
+// ---------------------------------------------------------------------------
+//
+// The same shape, one round later. A `\n` inside a run is first-class content
+// (Shift+Enter, or a paste of multi-paragraph HTML), and markdown was the one
+// layer with no spelling for it: the newline went out verbatim, so `read_page`
+// printed ONE block as several document lines at its own indent and handing
+// them back unchanged planned two CREATES — which nothing can subtract, since
+// each planning pass mints fresh ids. They landed inside a `<todo>` card the
+// agent had never gone near and refused the whole edit. That cost
+// `conv-1788965027-vvze` four attempts and left six pages on main un-editable.
+//
+// The server dialect now spells the break `\n` (`MarkdownContext.softBreaks`),
+// so the block stays one line and the identity apply plans nothing. This is the
+// incident's minimal repro: two blocks, one of them holding a break.
+
+describe("a soft line break keeps its block on ONE line", () => {
+  // PAGE ├ b1 text "Notes"
+  //      └ b2 text "Goal: x⏎⏎Risk: y"   ← one block, not three
+  const rows = (): StoredRow[] =>
+    rowsOf([line("Notes"), line("Goal: x\n\nRisk: y")]);
+
+  test("the read emits it as two lines, not four", () => {
+    expect(
+      serializeForestToMarkdown(markdownNodesOfRows(rows(), PAGE_ID), ctx),
+    ).toBe(["Notes", "Goal: x\\n\\nRisk: y"].join("\n"));
   });
 
   test("applying it straight back plans NOTHING", () => {
