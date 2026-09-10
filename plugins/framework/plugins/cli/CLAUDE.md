@@ -137,12 +137,14 @@ true`, so a mid-push tree is never re-resolved). No bare `bun install` remains:
 one skipping the lock races `clonefileat`, one skipping the stamp makes the next
 process reinstall from scratch.
 
-**A process that installs must not then resolve an npm package — it re-execs**
-(`plugins/bootstrap/cli/reexec.ts`, on `installed: true`). Bun's resolver caches directory listings
-from process start, so the process that runs `bun install` cannot see the
-`node_modules` it just created — every workspace-local one (`commander` under
-`plugins/framework/plugins/cli/`) was already cached absent. The dynamic
-`await import("./cli")`
+**A process that found `node_modules` stale must not then resolve an npm
+package — it re-execs** (`plugins/bootstrap/cli/reexec.ts`, on any
+`EnsureDepsResult` kind but `fresh`). Bun's resolver caches directory listings
+from process start, so a process cannot see a `node_modules` that changed after
+it started — every workspace-local one (`commander` under
+`plugins/framework/plugins/cli/`) was already cached absent. Who installed is
+irrelevant: waiting on `.install.lock` while another command installs
+(`installed-by-other`) is as stale as installing. The dynamic `await import("./cli")`
 fixes *when* resolution happens, the re-exec fixes *which process* does it; both
 are required, and `cli:bootstrap-package-free` measures only the first.
 
@@ -166,10 +168,11 @@ Lock order is one-way: **`.build.lock` → `.install.lock`**, never the reverse
 The install lock is not `.build.lock` itself on purpose — sharing them would make
 a `./singularity check` block for an entire concurrent build.
 
-## Locks: the kernel owns them (`plugins/bootstrap/cli/build-lock.ts`)
+## Locks: the kernel owns them (`plugins/bootstrap/cli/checkout-lock.ts`)
 
 Both locks are an exclusive `flock(2)` on a regular file, via
-`packages/flock`. The kernel drops the lock when the fd closes **or the holder
+`packages/flock`, taken through one `acquireCheckoutLock` (required `what` names
+the lock in every wait line). The kernel drops the lock when the fd closes **or the holder
 dies** — SIGKILL and OOM included — and no pid is consulted, so PID reuse cannot
 confuse it.
 

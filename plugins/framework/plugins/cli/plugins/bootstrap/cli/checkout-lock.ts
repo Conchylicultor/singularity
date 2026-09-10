@@ -10,7 +10,18 @@ import { dirname } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";
 
-export interface AcquireBuildLockOptions {
+export interface AcquireCheckoutLockOptions {
+  /**
+   * What the lock guards, as the noun every wait line names: `"build"`,
+   * `"dependency install"`.
+   *
+   * REQUIRED because this one function guards two different locks in a checkout
+   * (`.build.lock` and `.install.lock`). The wait line used to be a hardcoded
+   * "Another build is in progress", so a `./singularity test` queued behind
+   * another command's `bun install` told the reader a build was running — and the
+   * `Cannot find package` crash that followed pointed nowhere near the install.
+   */
+  what: string;
   /** How often a waiter re-inspects the lock. */
   pollMs?: number;
   /** After this long waiting, the message starts naming what the holder is stuck in. */
@@ -41,7 +52,9 @@ export interface AcquireBuildLockOptions {
 }
 
 /**
- * Cross-process build mutex, owned by the kernel.
+ * Cross-process per-checkout mutex, owned by the kernel. It backs both of a
+ * checkout's locks — `.build.lock` (the build) and `.install.lock` (the
+ * dependency install) — which is why the caller names which one in `opts.what`.
  *
  * The lock is an exclusive `flock(2)` on a regular file. flock is owned by the
  * open file description, so the kernel drops it when the fd closes OR when the
@@ -71,9 +84,9 @@ export interface AcquireBuildLockOptions {
  * correctness reads it back, so a misleading pid can at worst produce a
  * misleading message.
  */
-export async function acquireBuildLock(
+export async function acquireCheckoutLock(
   lockPath: string,
-  opts: AcquireBuildLockOptions = {},
+  opts: AcquireCheckoutLockOptions,
 ): Promise<() => void> {
   const pollMs = opts.pollMs ?? 500;
   // Adaptive defaults computed lazily so tests overriding via `opts` don't pay
@@ -103,14 +116,17 @@ export async function acquireBuildLock(
     if (Date.now() - startedAt > capMs) {
       closeSync(fd);
       throw new Error(
-        `Timed out after ${capMs}ms waiting for the build lock at ${lockPath}` +
-          `${describeHolder(lockPath)}. Another build in this checkout has held it ` +
-          `for the entire wait.`,
+        `Timed out after ${capMs}ms waiting for the ${opts.what} lock at ${lockPath}` +
+          `${describeHolder(lockPath)}. Another command's ${opts.what} in this ` +
+          `checkout has held it for the entire wait.`,
       );
     }
 
     if (!warned) {
-      console.log("Another build is in progress; waiting...");
+      console.log(
+        `Waiting for the ${opts.what} another command is running in this ` +
+          `checkout${describeHolder(lockPath)}...`,
+      );
       warned = true;
     }
     // Past the stale threshold the holder is alive (the kernel says so) but has
@@ -121,6 +137,7 @@ export async function acquireBuildLock(
       console.log(
         describeStuckPhase(
           lockPath,
+          opts.what,
           Date.now() - startedAt,
           opts.describeHolderActivity,
         ),
@@ -172,12 +189,13 @@ function readHolderPid(lockPath: string): number | null {
  */
 function describeStuckPhase(
   lockPath: string,
+  what: string,
   waitedMs: number,
   describeHolderActivity: ((pid: number) => string | null) | undefined,
 ): string {
   const waited = `${Math.round(waitedMs / 1000)}s`;
   const pid = readHolderPid(lockPath);
-  const prefix = `Still waiting (${waited}) for the build lock`;
+  const prefix = `Still waiting (${waited}) for the ${what} lock`;
   if (pid === null) return `${prefix}.`;
   const activity = describeHolderActivity?.(pid) ?? null;
   if (activity === null) return `${prefix}; held by pid ${pid}.`;

@@ -48,7 +48,7 @@ import {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { isUnderDuress } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
-  acquireBuildLock,
+  acquireCheckoutLock,
   ensureDeps,
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 import {
@@ -314,10 +314,11 @@ function codegenStepFor(hooks: ArtifactHooks): CodegenStep {
  * leftovers immediately after this returns.
  */
 export async function acquireArtifactLock(webDir: string): Promise<void> {
-  // `acquireBuildLock` resolves to a release closure; the lock is deliberately
+  // `acquireCheckoutLock` resolves to a release closure; the lock is deliberately
   // held for the whole process lifetime (its own exit hook releases it), which
   // is exactly what build does today — so the closure is dropped here too.
-  await acquireBuildLock(resolve(webDir, ".build.lock"), {
+  await acquireCheckoutLock(resolve(webDir, ".build.lock"), {
+    what: "build",
     describeHolderActivity: describeBuildHolder,
   });
 }
@@ -326,7 +327,7 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
  * What the current lock holder is in the middle of, for the lock's "still
  * waiting" line — read from the durable build-progress log.
  *
- * Passed IN rather than read by `build-lock` itself, because that module is
+ * Passed IN rather than read by `checkout-lock` itself, because that module is
  * statically reachable from `bin/index.ts` and so loads before `bun install`;
  * the progress log reaches the file-sink primitive and a data-dir declaration,
  * neither of which the pre-install closure can afford. Here, deep inside a
@@ -415,17 +416,24 @@ export async function prepareCompositionSources(opts: {
   // `ensureDeps` OWNS every in-flight line of this phase (the lock-wait notice,
   // and the install child's passed-through output) — it is the only side that
   // knows an install is about to happen. This caller therefore announces
-  // nothing up front and reports RETROSPECTIVELY, from `installed`: a
+  // nothing up front and reports RETROSPECTIVELY, from `kind`: a
   // pre-emptive "Installing dependencies..." would be a plain false statement
   // on the normal fresh-skip path, and even on the install path it would land
   // after bun's own output, since the passthrough completes before the call
   // returns. Past tense for the same ordering reason.
+  //
+  // Neither non-`fresh` kind re-execs here, exactly as `installed` never did:
+  // this caller is mid-build with the CLI already loaded (see
+  // `EnsureDepsResult` for the constraint that places on it).
   let endSpan = hooks.span("bunInstall", "build:setup", "bun install");
   const deps = await ensureDeps({ root, log: hooks.log });
   hooks.log(
-    deps.installed
-      ? "Installed dependencies."
-      : "Dependencies already up to date.",
+    {
+      fresh: "Dependencies already up to date.",
+      installed: "Installed dependencies.",
+      "installed-by-other":
+        "Dependencies were installed by another command in this checkout.",
+    }[deps.kind],
   );
   // No footprint to report: the install usually does not RUN here (fresh-skip),
   // and when it does it is `ensureDeps`' own passthrough child, whose rusage it

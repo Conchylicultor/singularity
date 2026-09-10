@@ -1,4 +1,4 @@
-import { test, expect } from "bun:test";
+import { spyOn, test, expect } from "bun:test";
 import {
   closeSync,
   existsSync,
@@ -11,10 +11,10 @@ import {
 import os from "node:os";
 import { join } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { acquireBuildLock } from "./build-lock";
+import { acquireCheckoutLock } from "./checkout-lock";
 
 function freshTmpDir(): string {
-  return mkdtempSync(join(os.tmpdir(), "build-lock-test-"));
+  return mkdtempSync(join(os.tmpdir(), "checkout-lock-test-"));
 }
 
 /** A pid that is (with overwhelming probability) not a live process. */
@@ -78,7 +78,8 @@ test("acquires immediately after a holder was SIGKILLed", async () => {
     expect(existsSync(lockPath)).toBe(true); // the file outlives its holder…
 
     const startedAt = Date.now();
-    const release = await acquireBuildLock(lockPath, {
+    const release = await acquireCheckoutLock(lockPath, {
+      what: "build",
       pollMs: 10,
       capMs: 5_000,
     });
@@ -101,7 +102,8 @@ test("a stale pid in the file does not block acquisition", async () => {
     const lockPath = join(dir, ".build.lock");
     writeFileSync(lockPath, `${await deadPid()}\n`);
 
-    const release = await acquireBuildLock(lockPath, {
+    const release = await acquireCheckoutLock(lockPath, {
+      what: "build",
       pollMs: 10,
       capMs: 5_000,
     });
@@ -127,7 +129,8 @@ test("never acquires while another holder is alive", async () => {
 
     let message: string | undefined;
     try {
-      const release = await acquireBuildLock(lockPath, {
+      const release = await acquireCheckoutLock(lockPath, {
+        what: "build",
         pollMs: 10,
         capMs: 100,
         staleMs: 10_000,
@@ -145,12 +148,58 @@ test("never acquires while another holder is alive", async () => {
   }
 });
 
+// One function guards both of a checkout's locks, so every line a waiter prints
+// must say WHICH. It used to say "Another build is in progress" for the install
+// lock too: a command queued behind another's `bun install` announced a build
+// that did not exist, right before crashing on a package the install had added.
+test("every wait line names what the lock guards, never a hardcoded build", async () => {
+  const dir = freshTmpDir();
+  const logSpy = spyOn(console, "log").mockImplementation(() => {});
+  try {
+    const lockPath = join(dir, ".install.lock");
+    const heldFd = openSync(lockPath, "a");
+    expect(flockTry(heldFd)).toBe(true);
+    writeFileSync(lockPath, `${process.pid}\n`);
+
+    let message: string | undefined;
+    try {
+      const release = await acquireCheckoutLock(lockPath, {
+        what: "dependency install",
+        pollMs: 10,
+        capMs: 150,
+        staleMs: 20, // so the "still waiting" line fires inside the cap
+      });
+      release(); // unreachable
+    } catch (err) {
+      message = err instanceof Error ? err.message : String(err);
+    }
+    closeSync(heldFd);
+
+    const lines = logSpy.mock.calls.map((args) => String(args[0]));
+    expect(lines[0]).toBe(
+      `Waiting for the dependency install another command is running in this ` +
+        `checkout (held by pid ${process.pid})...`,
+    );
+    expect(
+      lines.some((l) => l.includes("for the dependency install lock")),
+    ).toBe(true);
+    expect(message).toContain("waiting for the dependency install lock");
+    expect([...lines, message].join("\n")).not.toContain("build");
+  } finally {
+    logSpy.mockRestore();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("uncontended acquire then release, and the lock file is never unlinked", async () => {
   const dir = freshTmpDir();
   try {
     const lockPath = join(dir, ".build.lock");
 
-    const release = await acquireBuildLock(lockPath, { pollMs: 10 });
+    const release = await acquireCheckoutLock(lockPath, {
+      what: "build",
+      pollMs: 10,
+    });
     expect(existsSync(lockPath)).toBe(true);
     release();
     // Unlinking is what let the old release() delete a SUCCESSOR's lock; the fd
@@ -158,7 +207,8 @@ test("uncontended acquire then release, and the lock file is never unlinked", as
     expect(existsSync(lockPath)).toBe(true);
 
     // Re-acquiring proves the release genuinely freed the kernel lock.
-    const release2 = await acquireBuildLock(lockPath, {
+    const release2 = await acquireCheckoutLock(lockPath, {
+      what: "build",
       pollMs: 10,
       capMs: 2_000,
     });

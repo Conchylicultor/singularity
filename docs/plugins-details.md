@@ -15402,14 +15402,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/push`
           - Cli:
             - Exports (types):
-              - `AcquireBuildLockOptions`
+              - `AcquireCheckoutLockOptions`
               - `EnsureDepsOptions`
               - `EnsureDepsResult`
               - `InstallOutcome`
               - `ReexecOptions`
               - `ReexecOutcome`
             - Exports (values):
-              - `acquireBuildLock`
+              - `acquireCheckoutLock`
               - `adaptiveTimeoutMs`
               - `disarmOrphanGuard`
               - `ensureDeps`
@@ -15420,7 +15420,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
             - Uses:
-              - `framework/cli/bootstrap.acquireBuildLock`
+              - `framework/cli/bootstrap.acquireCheckoutLock`
               - `framework/cli/bootstrap.adaptiveTimeoutMs`
               - `framework/cli/bootstrap.ensureDeps`
               - `framework/cli/git-artifacts.registerMergeDrivers`

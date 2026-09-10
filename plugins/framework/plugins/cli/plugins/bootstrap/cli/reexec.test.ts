@@ -113,48 +113,61 @@ test("a garbled counter spends the budget rather than granting an unbounded one"
  *
  * Runs real `bun`, so it is a statement about the runtime rather than about our
  * mock of it — the point being that the fix holds for the actual resolver.
+ *
+ * Run for both non-`fresh` kinds. The `installed-by-other` arm is the concurrent
+ * case: the package lands from ANOTHER process while this one waits (in the real
+ * CLI, on `.install.lock`), which leaves this process's resolver exactly as stale
+ * as installing itself — so it must re-exec too.
  */
-test("a bootstrap that installs can run a command needing the installed package", async () => {
-  const root = mkdtempSync(join(os.tmpdir(), "cli-reexec-"));
-  fixtures.push(root);
-  const bin = join(root, "pkg", "bin");
+test.each(["installed", "installed-by-other"] as const)(
+  "a bootstrap whose deps were %s can run a command needing the new package",
+  async (kind) => {
+    const root = mkdtempSync(join(os.tmpdir(), "cli-reexec-"));
+    fixtures.push(root);
+    const bin = join(root, "pkg", "bin");
 
-  write(
-    join(root, "staged", "fixture-pkg", "package.json"),
-    JSON.stringify({ name: "fixture-pkg", version: "1.0.0", main: "index.js" }),
-  );
-  write(
-    join(root, "staged", "fixture-pkg", "index.js"),
-    "module.exports = { ok: true };\n",
-  );
+    write(
+      join(root, "staged", "fixture-pkg", "package.json"),
+      JSON.stringify({
+        name: "fixture-pkg",
+        version: "1.0.0",
+        main: "index.js",
+      }),
+    );
+    write(
+      join(root, "staged", "fixture-pkg", "index.js"),
+      "module.exports = { ok: true };\n",
+    );
 
-  // Stands in for ensure-deps: installs from a subprocess, reports whether it did.
-  write(
-    join(bin, "install.ts"),
-    `export async function ensureDeps(root: string): Promise<{ installed: boolean }> {
+    // Stands in for ensure-deps: the package lands from a subprocess — this
+    // command's own install, or the other command's it waited on; to the resolver
+    // the two are the same — and it reports which, as the real one does.
+    write(
+      join(bin, "install.ts"),
+      `export async function ensureDeps(root: string): Promise<{ kind: string }> {
        if (await Bun.file(root + "/node_modules/fixture-pkg/package.json").exists()) {
-         return { installed: false };
+         return { kind: "fresh" };
        }
        const p = Bun.spawn(["sh", "-c",
          "mkdir -p " + root + "/node_modules && cp -R " + root + "/../staged/fixture-pkg " + root + "/node_modules/"],
          { stdout: "inherit", stderr: "inherit" });
        await p.exited;
-       return { installed: true };
+       return { kind: ${JSON.stringify(kind)} };
      }\n`,
-  );
-  // Stands in for cli.ts: the module whose npm import must resolve.
-  write(
-    join(bin, "cli.ts"),
-    `import pkg from "fixture-pkg";
+    );
+    // Stands in for cli.ts: the module whose npm import must resolve.
+    write(
+      join(bin, "cli.ts"),
+      `import pkg from "fixture-pkg";
      console.log("COMMAND RAN", JSON.stringify(pkg), process.argv.slice(2).join(" "));\n`,
-  );
-  // Stands in for bin/index.ts, steps 2-4.
-  write(
-    join(bin, "index.ts"),
-    `import { ensureDeps } from "./install";
+    );
+    // Stands in for bin/index.ts, steps 2-4.
+    write(
+      join(bin, "index.ts"),
+      `import { ensureDeps } from "./install";
      const root = import.meta.dir + "/..";
-     const { installed } = await ensureDeps(root);
-     if (installed && process.env.${REEXEC_ENV} === undefined) {
+     const deps = await ensureDeps(root);
+     if (deps.kind !== "fresh" && process.env.${REEXEC_ENV} === undefined) {
        const child = Bun.spawn([process.execPath, import.meta.path, ...process.argv.slice(2)], {
          stdio: ["inherit", "inherit", "inherit"],
          env: { ...process.env, ${REEXEC_ENV}: "1" },
@@ -162,27 +175,28 @@ test("a bootstrap that installs can run a command needing the installed package"
        process.exit(await child.exited);
      }
      await import("./cli");\n`,
-  );
+    );
 
-  // Explicitly cleared: when this suite is itself run through `./singularity
-  // test` on a checkout that installed, the CLI's own re-exec marker is in our
-  // environment, and inheriting it would make the fixture skip the very step
-  // under test.
-  const env = { ...process.env };
-  delete env[REEXEC_ENV];
-  const result = await spawnCaptured(
-    [process.execPath, join(bin, "index.ts"), "some-command"],
-    {
-      cwd: join(root, "pkg"),
-      env,
-      // The child is the CLI bootstrap re-exec'ing itself over a fixture package —
-      // no install, no build. A bound is here because a hung child would hang the
-      // whole test runner silently instead of failing this one case.
-      timeoutMs: 60_000,
-    },
-  );
+    // Explicitly cleared: when this suite is itself run through `./singularity
+    // test` on a checkout that installed, the CLI's own re-exec marker is in our
+    // environment, and inheriting it would make the fixture skip the very step
+    // under test.
+    const env = { ...process.env };
+    delete env[REEXEC_ENV];
+    const result = await spawnCaptured(
+      [process.execPath, join(bin, "index.ts"), "some-command"],
+      {
+        cwd: join(root, "pkg"),
+        env,
+        // The child is the CLI bootstrap re-exec'ing itself over a fixture package —
+        // no install, no build. A bound is here because a hung child would hang the
+        // whole test runner silently instead of failing this one case.
+        timeoutMs: 60_000,
+      },
+    );
 
-  expect(result.stderr).not.toContain("Cannot find package");
-  expect(result.exitCode).toBe(0);
-  expect(result.stdout).toContain('COMMAND RAN {"ok":true} some-command');
-});
+    expect(result.stderr).not.toContain("Cannot find package");
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('COMMAND RAN {"ok":true} some-command');
+  },
+);

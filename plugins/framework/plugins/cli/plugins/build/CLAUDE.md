@@ -54,7 +54,7 @@ through `SINGULARITY_BUILD_DETACHED` instead.
 - Description: `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
 - Cli:
   - Uses:
-    - `framework/cli/bootstrap.acquireBuildLock`
+    - `framework/cli/bootstrap.acquireCheckoutLock`
     - `framework/cli/bootstrap.adaptiveTimeoutMs`
     - `framework/cli/bootstrap.ensureDeps`
     - `framework/cli/git-artifacts.registerMergeDrivers`

@@ -1,7 +1,7 @@
 /**
  * `reexecAfterInstall()` — hand this invocation to a FRESH process once
- * `ensureDeps()` has actually installed, because the installing process can
- * never see what it installed.
+ * `ensureDeps()` reports that `node_modules` changed during the call, because a
+ * process can never see a `node_modules` that changed after it started.
  *
  * THE BUG THIS EXISTS FOR (reproduced deterministically, bun 1.3.13):
  *
@@ -24,12 +24,28 @@
  * importer is not seen, while one installed into the importer's own directory
  * is. Every workspace-local dependency in this repo has the first shape.
  *
- * It is NOT a race — nothing is concurrent, and there is no window to lose. It
- * is deterministic: EVERY invocation whose install has to create a
+ * On its own it is NOT a race — nothing is concurrent, and there is no window to
+ * lose. It is deterministic: EVERY invocation whose install has to create a
  * workspace-local `node_modules` dies this way, and only the retry works,
  * because by then the stamp is fresh and no install runs. Fresh clone, fresh
  * worktree and `rm -rf node_modules` are all that path — i.e. precisely the case
  * `ensureDeps` exists to serve.
+ *
+ * THE CONCURRENT VARIANT (reproduced deterministically too, same bun). Two
+ * commands launched together in a fresh worktree — agents background `test` and
+ * `build` side by side:
+ *
+ *     A: … 2524 packages installed [7.51s] … (runs fine, it re-execs)
+ *     B: Another build is in progress; waiting...
+ *     B: error: Cannot find package 'commander' from '…/cli/bin/cli.ts'
+ *
+ * B cached the same absent directory at start, waited on `.install.lock` while A
+ * installed, then found the stamp fresh and — under the old `installed: boolean`
+ * — reported `installed: false` and skipped this re-exec. Who ran the install is
+ * irrelevant to the resolver, so `ensureDeps` now reports it as its own kind
+ * (`installed-by-other`) and the bootstrap re-execs on anything but `fresh`.
+ * (The "build" in B's wait line was the lock's hardcoded wording; it names what
+ * it guards now.)
  *
  * The dynamic `await import("./cli")` was believed to be sufficient (see
  * `bin/index.ts`'s import-constraint docblock and the `cli:bootstrap-package-free`
@@ -38,12 +54,13 @@
  * PROCESS resolves. A cache populated before the install is stale whenever it is
  * read, so no amount of ordering inside one process can help.
  *
- * Hence the rule, which is about processes and not about imports: **the process
- * that runs the install must not go on to resolve an npm package.** It re-execs
- * instead, and the fresh process — whose resolver cache postdates the install —
- * runs the user's actual command. The cost lands only on the install path (one
- * extra process start, against a 10–25 s install); the common fresh-stamp case
- * never reaches this module.
+ * Hence the rule, which is about processes and not about imports: **a process
+ * that found `node_modules` stale must not go on to resolve an npm package** —
+ * whether it ran the install itself or waited while another command did. It
+ * re-execs instead, and the fresh process — whose resolver cache postdates the
+ * install — runs the user's actual command. The cost lands only on the install
+ * path (one extra process start, against a ~7.5 s fresh-worktree install); the
+ * common fresh-stamp case never reaches this module.
  */
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 

@@ -610,7 +610,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
   // The op log's record for this build. `markRequested` lands where the old
   // build-log "started" record did — but the old record's `startedAt` was
-  // ALSO the bar's start, stamped before `acquireBuildLock`, so `totalMs`
+  // ALSO the bar's start, stamped before `acquireCheckoutLock`, so `totalMs`
   // silently swallowed every wait: a build that queued 5 min and worked 1
   // rendered identically to one that worked 6. Here the waits below are
   // recorded as their own segments instead.
@@ -657,7 +657,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // the true end timestamp. Only a hard kill (SIGKILL/OOM/power loss) —
   // which can't run handlers — legitimately leaves a record open; those are
   // the orphans `finalizeOrphanedOps` closes as "interrupted".
-  // Mirrors the on-exit lock release in acquireBuildLock above.
+  // Mirrors the on-exit lock release in acquireCheckoutLock above.
   //
   // The deploy receipts this build owns, ONE PER TARGET NAMESPACE. A receipt
   // is per-namespace by definition — it is the file the gateway-facing
@@ -830,7 +830,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
 
   // Catchable fatal signals → graceful exit so the exit handlers above
   // (build-log finalize) and the lock release run. SIGKILL is uncatchable —
-  // the dead-holder ESRCH steal in acquireBuildLock is the backstop there.
+  // the kernel dropping acquireCheckoutLock's flock is the backstop there.
   // `onSignal` records the death BEFORE the exit hooks run, so both of them
   // see it. See fatal-signals.ts for the shared map and the ordering rule.
   //

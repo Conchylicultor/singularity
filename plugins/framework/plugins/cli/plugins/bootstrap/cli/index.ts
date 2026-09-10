@@ -12,12 +12,12 @@
  *
  * That constraint is also WHY these five modules are here rather than in
  * `op-runtime`: they are already in the pre-install closure today
- * (`ensure-deps → build-lock → adaptive-timeout`), and `orphan-guard` / `reexec`
+ * (`ensure-deps → checkout-lock → adaptive-timeout`), and `orphan-guard` / `reexec`
  * are reached directly by the bootstrap. Nothing else belongs here — a module
  * that only *some* command needs goes in `op-runtime`, whose closure is free.
  *
- * `build-lock` therefore does NOT read `op-runtime`'s build-progress log to say
- * what a lock holder is stuck in — `acquireBuildLock` takes a
+ * `checkout-lock` therefore does NOT read `op-runtime`'s build-progress log to say
+ * what a lock holder is stuck in — `acquireCheckoutLock` takes a
  * `describeHolderActivity` hook and the build passes one in. A dynamic import
  * would also have kept this closure clean, but it hid a real cross-plugin edge
  * from the boundary system (R9 `inline-import`); inverting it means the edge
@@ -40,7 +40,7 @@ export {
   installOrphanGuard,
 } from "./orphan-guard";
 
-export { acquireBuildLock } from "./build-lock";
-export type { AcquireBuildLockOptions } from "./build-lock";
+export { acquireCheckoutLock } from "./checkout-lock";
+export type { AcquireCheckoutLockOptions } from "./checkout-lock";
 
 export { adaptiveTimeoutMs } from "./adaptive-timeout";

@@ -22,14 +22,14 @@ drift from what actually loads.
 
 ## Why these five and nothing else
 
-They are already in the pre-install closure: `ensure-deps → build-lock →
+They are already in the pre-install closure: `ensure-deps → checkout-lock →
 adaptive-timeout`, plus `orphan-guard` and `reexec` which `bin/index.ts` reaches
 directly. A module only *some* command needs belongs in `op-runtime`, whose
 closure carries no such constraint.
 
-`build-lock` says which span a lock holder is stuck in, and the authority on
+`checkout-lock` says which span a lock holder is stuck in, and the authority on
 that is `op-runtime`'s build-progress reader — which this barrel may not import,
-static or dynamic. So it does not: `acquireBuildLock` takes a
+static or dynamic. So it does not: `acquireCheckoutLock` takes a
 `describeHolderActivity` hook and the caller that HAS the progress log
 (`app-artifacts`, deep in the build) passes it in.
 
@@ -59,14 +59,14 @@ the build lock.
     - `framework/cli/push`
 - Cli:
   - Exports (types):
-    - `AcquireBuildLockOptions`
+    - `AcquireCheckoutLockOptions`
     - `EnsureDepsOptions`
     - `EnsureDepsResult`
     - `InstallOutcome`
     - `ReexecOptions`
     - `ReexecOutcome`
   - Exports (values):
-    - `acquireBuildLock`
+    - `acquireCheckoutLock`
     - `adaptiveTimeoutMs`
     - `disarmOrphanGuard`
     - `ensureDeps`

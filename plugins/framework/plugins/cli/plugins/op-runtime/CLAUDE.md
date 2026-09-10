@@ -48,7 +48,7 @@ It does not import `bootstrap` either, and `bootstrap` does not import it.
 Keeping the two apart is what lets the bootstrap closure stay npm-free while this
 one is unconstrained. The one place they nearly met is the build lock's
 "still waiting" diagnostic, which wants this plugin's build-progress log:
-`acquireBuildLock` takes a `describeHolderActivity` hook instead, and
+`acquireCheckoutLock` takes a `describeHolderActivity` hook instead, and
 `app-artifacts` — which already has the log loaded — supplies it. There is no
 edge between the two plugins in either direction.
 

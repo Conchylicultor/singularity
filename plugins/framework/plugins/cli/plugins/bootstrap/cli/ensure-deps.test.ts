@@ -14,7 +14,7 @@ import {
 import os from "node:os";
 import { dirname, join } from "path";
 import { flockTry } from "@plugins/packages/plugins/flock/server";
-import { acquireBuildLock } from "./build-lock";
+import { acquireCheckoutLock } from "./checkout-lock";
 import { ensureDeps, type InstallOutcome } from "./ensure-deps";
 
 const STAMP_REL = join("node_modules", ".singularity-deps");
@@ -115,13 +115,13 @@ async function expectInstalls(dir: string): Promise<void> {
     log: silent,
     installer: rec.installer,
   });
-  expect(result.installed).toBe(true);
+  expect(result).toEqual({ kind: "installed" });
   expect(rec.calls()).toBe(1);
   expect(lockHeld(dir)).toBe(false);
 }
 
 /**
- * Assert `ensureDeps` skipped: no install spawned, nothing reported as installed.
+ * Assert `ensureDeps` took the fast path: no install spawned, reported `fresh`.
  * Deliberately says nothing about the lock — the caller does, since a released
  * lock leaves no trace.
  */
@@ -132,7 +132,7 @@ async function expectSkips(dir: string): Promise<void> {
     log: silent,
     installer: rec.installer,
   });
-  expect(result.installed).toBe(false);
+  expect(result).toEqual({ kind: "fresh" });
   expect(rec.calls()).toBe(0);
 }
 
@@ -203,7 +203,8 @@ test("a matching stamp skips without ever touching the lock", async () => {
   // (Asserting the lock is merely free afterwards would not do — the lock is
   // released before returning, so "free" cannot tell "never acquired" from
   // "acquired and released".)
-  const release = await acquireBuildLock(join(dir, ".install.lock"), {
+  const release = await acquireCheckoutLock(join(dir, ".install.lock"), {
+    what: "dependency install",
     pollMs: 20,
   });
   try {
@@ -330,13 +331,19 @@ test("an install killed by a signal names the signal, not a bare exit code", asy
   expect(message).toContain("killed by SIGTERM");
 });
 
-test("the under-lock re-check skips an install the lock holder already did", async () => {
+test("the under-lock re-check skips an install the lock holder already did — and says so", async () => {
   // A waiter must not blindly install after waiting: the holder it waited on has
   // very likely just done that exact install. Simulated by holding the lock,
   // dropping in a matching stamp, then releasing.
+  //
+  // And it must NOT report `fresh`: `node_modules` changed after the waiter
+  // started, so its module resolver is stale exactly as if it had installed
+  // itself. Reporting this as "nothing changed" is what let a `build` launched
+  // beside a `test` skip its re-exec and die on `Cannot find package 'commander'`.
   const donor = await seeded();
   const dir = makeFixture();
-  const release = await acquireBuildLock(join(dir, ".install.lock"), {
+  const release = await acquireCheckoutLock(join(dir, ".install.lock"), {
+    what: "dependency install",
     pollMs: 20,
   });
 
@@ -352,7 +359,7 @@ test("the under-lock re-check skips an install the lock holder already did", asy
   copyFileSync(join(donor, STAMP_REL), join(dir, STAMP_REL));
   release();
 
-  expect((await pending).installed).toBe(false);
+  expect(await pending).toEqual({ kind: "installed-by-other" });
   expect(rec.calls()).toBe(0);
   // The waiter took the lock to re-check, and handed it straight back.
   expect(lockHeld(dir)).toBe(false);

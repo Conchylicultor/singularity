@@ -9,7 +9,7 @@ const LOCK_UN = 8;
  * libc's `flock`, dlopen'd LAZILY on first use rather than at module eval.
  *
  * Two reasons, both load-bearing. (1) This module is reachable from the CLI
- * bootstrap (`bin/index.ts` → `ensure-deps.ts` → `build-lock.ts`), and every
+ * bootstrap (`bin/index.ts` → `ensure-deps.ts` → `checkout-lock.ts`), and every
  * `./singularity <anything>` would otherwise pay a dlopen before its first
  * statement. (2) It keeps the module importable in non-FFI contexts — type-only
  * consumers, tooling, a docgen pass — which a module-eval dlopen would break.

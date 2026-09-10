@@ -53,7 +53,7 @@ import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
-import { acquireBuildLock } from "./build-lock";
+import { acquireCheckoutLock } from "./checkout-lock";
 
 /**
  * The freshness stamp, INSIDE `node_modules` on purpose: the stamp can never
@@ -94,20 +94,40 @@ const PROVISION_REGISTRY_REL = join(
 /** Never walked: `node_modules` is the OUTPUT, and `.git` holds no dep inputs. */
 const SKIP_DIRS = new Set(["node_modules", ".git"]);
 
-export interface EnsureDepsResult {
+/**
+ * What happened to `node_modules` during the call — and, through that, whether
+ * THIS process can still trust its own module resolver.
+ *
+ * **Every kind but `fresh` is a constraint on the CALLER, not just a report:**
+ * Bun's resolver caches directory listings from process start, so a process
+ * whose `node_modules` changed after it started cannot see the change — a
+ * workspace-local `node_modules` cached as absent stays absent for the process's
+ * whole life. A caller that goes on to import an npm package after a non-`fresh`
+ * result may die with `Cannot find package …`. The bootstrap answers this by
+ * re-execing (`./reexec.ts`); a caller that cannot re-exec must be satisfied that
+ * everything it still needs is already resolved.
+ *
+ * WHO ran the install does not matter to that constraint, which is why this is
+ * not a `{ installed: boolean }`. It was, and its `false` arm covered both "the
+ * stamp was fresh on the first look" and "the stamp was stale, so I waited on
+ * `.install.lock` while ANOTHER command installed, and the re-check under the
+ * lock found it fresh". The second is exactly as stale-cached as installing
+ * yourself, but read as "nothing changed": `./singularity build` launched beside
+ * a `./singularity test` in a fresh worktree skipped its re-exec and died on
+ * `commander`. With the concurrent case its own kind, no caller can read it as
+ * the untouched one.
+ */
+export type EnsureDepsResult =
+  /** The stamp matched on the first look: `node_modules` did not change during this call. */
+  | { kind: "fresh" }
+  /** This call ran `bun install`. */
+  | { kind: "installed" }
   /**
-   * false when the freshness stamp matched and no install ran.
-   *
-   * **true is a constraint on the CALLER, not just a report:** Bun's resolver
-   * caches directory listings, so a process that installs cannot resolve what it
-   * installed — a `node_modules` cached as absent before the install stays absent
-   * for this process's whole life. A caller that goes on to import an npm package
-   * after a `true` may die with `Cannot find package …`. The bootstrap answers
-   * this by re-execing (`./reexec.ts`); a caller that cannot re-exec must be
-   * satisfied that everything it still needs is already resolved.
+   * The stamp was stale on the first look, and fresh by the time this call held
+   * `.install.lock` — another command in this checkout installed in between
+   * (almost always the lock holder this call waited on).
    */
-  installed: boolean;
-}
+  | { kind: "installed-by-other" };
 
 /** The subset of a spawn result this module reads — see `EnsureDepsOptions.installer`. */
 export interface InstallOutcome {
@@ -133,7 +153,7 @@ export interface EnsureDepsOptions {
    * exercise the freshness gate, the under-lock re-check and the failure wording
    * without a real 10–25 s `bun install` (three agents share a checkout;
    * concurrent installs are the bug under repair). Production callers pass
-   * nothing and get `runBunInstall`. Mirrors how `build-lock.ts` exposes its
+   * nothing and get `runBunInstall`. Mirrors how `checkout-lock.ts` exposes its
    * timings through `opts` purely so its own test can drive them.
    *
    * Takes `frozenLockfile` as an argument rather than closing over it, so the
@@ -421,7 +441,7 @@ export async function ensureDeps(
 
   // Fast path: no lock, no subprocess, no output.
   if (freshness(readStamp(stampPath), computeDepSignature(root)).fresh) {
-    return { installed: false };
+    return { kind: "fresh" };
   }
 
   // The lock spans EXACTLY the install + stamp write, and is released before we
@@ -431,7 +451,7 @@ export async function ensureDeps(
   // by another route: agent A edits a `package.json` and runs a 3-minute
   // `./singularity build`; agent B's `./singularity check` sees the same stale
   // inputs and would block on A's ENTIRE BUILD rather than on A's install — and
-  // since `acquireBuildLock`'s cap is 10–30 min, a long enough holder converts a
+  // since `acquireCheckoutLock`'s cap is 10–30 min, a long enough holder converts a
   // waiter's wait into a thrown timeout.
   //
   // Residual hazard, accepted and stated rather than silently traded away: a
@@ -441,12 +461,16 @@ export async function ensureDeps(
   // practice is a human typing bare `bun install`, which takes no lock at all.
   //
   // Lock order is one-way: `.build.lock` → `.install.lock`, never the reverse.
-  const release = await acquireBuildLock(resolve(root, INSTALL_LOCK_REL));
+  const release = await acquireCheckoutLock(resolve(root, INSTALL_LOCK_REL), {
+    what: "dependency install",
+  });
   try {
     // Re-check UNDER the lock: if we waited at all, the holder we waited on has
-    // very likely just done this exact install.
+    // very likely just done this exact install. NOT `fresh` though — the stamp
+    // was stale on this process's first look, so `node_modules` changed under it
+    // (see `EnsureDepsResult`).
     const state = freshness(readStamp(stampPath), computeDepSignature(root));
-    if (state.fresh) return { installed: false };
+    if (state.fresh) return { kind: "installed-by-other" };
 
     log(`Installing dependencies — ${state.reason}...`);
     const result = await install(root, opts.frozenLockfile === true);
@@ -455,7 +479,7 @@ export async function ensureDeps(
     // Recompute AFTER the install: it rewrites `bun.lock`, and its postinstall
     // provisions can rewrite the provision registry.
     writeStamp(stampPath, computeDepSignature(root));
-    return { installed: true };
+    return { kind: "installed" };
   } finally {
     release();
   }
