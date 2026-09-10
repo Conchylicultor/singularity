@@ -5,7 +5,9 @@ clickable chips. Agents write the bare id in their text — no tag wrapping
 needed — and the active-data linkify primitive replaces matches at render
 time.
 
-Clicking opens the referenced attempt in `attemptPane` (`/a/:attemptId`).
+Clicking opens the referenced attempt in `attemptPane` (`/a/:attemptId`)
+as a regular push to the right of the host pane. Only the conversation
+toolbar's attempt-switch toggle opens the attempt pane on the left.
 The chip resolves the attempt's status and conversation count via
 `attemptsResource`; falls back to the raw id if the attempt isn't in the
 index yet.

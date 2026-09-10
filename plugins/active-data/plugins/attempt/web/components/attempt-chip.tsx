@@ -31,14 +31,19 @@ export function AttemptChip({
 
   if (!attemptId) return null;
 
+  // A regular push to the right, like every other chip. Opening the attempt
+  // pane on the LEFT of a conversation is the conversation toolbar's
+  // attempt-switch toggle alone — the one control that also closes it again.
+  const openAttempt = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openPane(attemptPane, { attemptId }, { mode: "push" });
+  };
+
   // While pending, render the degraded raw-id chip so it never disappears.
   return matchResource(result, {
     pending: () => (
       <LinkChip
-        onClick={(e) => {
-          e.stopPropagation();
-          openPane(attemptPane, { attemptId }, { mode: "push", side: "left" });
-        }}
+        onClick={openAttempt}
         title={attemptId}
         leading={<StatusDot colorClass={UNKNOWN_DOT} />}
         mono
@@ -53,14 +58,7 @@ export function AttemptChip({
         : UNKNOWN_DOT;
       return (
         <LinkChip
-          onClick={(e) => {
-            e.stopPropagation();
-            openPane(
-              attemptPane,
-              { attemptId },
-              { mode: "push", side: "left" },
-            );
-          }}
+          onClick={openAttempt}
           title={
             attempt
               ? `${attemptStatusLabel(attempt.status)} · ${attemptId}`
