@@ -2763,14 +2763,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/gallery.PrototypeStages`
               - `primitives/bar.Bar`
               - `primitives/css/badge.Badge`
-              - `primitives/css/card.Card`
+              - `primitives/css/clip.Clip`
               - `primitives/css/column.Column`
+              - `primitives/css/line.Line`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
@@ -22299,7 +22299,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/pages/welcome/quick-create`
               - `apps/pages/welcome/recent-pages`
-              - `apps/prototypes/compare`
               - `apps/sonata/library`
               - `apps/story/renderers/blog`
               - `apps/story/renderers/slides`
@@ -22428,6 +22427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/shell`
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/compare`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
@@ -23056,6 +23056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/search`
               - `apps/mail/threads`
               - `apps/pages/history`
+              - `apps/prototypes/compare`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`

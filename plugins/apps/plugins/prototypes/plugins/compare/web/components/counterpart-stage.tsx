@@ -1,10 +1,10 @@
-import { useState, type ReactElement, type ReactNode } from "react";
-import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useState, type ReactElement, type ReactNode, type Ref } from "react";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Inset,
   Stack,
@@ -16,7 +16,9 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import type { CounterpartResolution, WidthChoices } from "../types";
 import { MockFrame } from "./mock-frame";
-import { ScaledBox, boxStyle } from "./scaled-box";
+import { ScaledBox } from "./scaled-box";
+import { usePairRoom } from "./use-pair-room";
+import { fitPair, type PairLayout } from "../fit-pair";
 
 /**
  * Widths to offer while the counterpart has none to offer — it is still
@@ -27,8 +29,10 @@ const PLACEHOLDER_WIDTHS: WidthChoices = [360, 640, 960];
 
 /**
  * How the pair is painted. `fit` zooms both halves out by one factor until the
- * pair fits the pane's width (never zooming in); `actual` paints them at 100%
- * and lets the stage scroll. Zoom never changes the width they are LAID OUT at.
+ * whole pair fits the pane — both axes, side by side or stacked, whichever
+ * paints them bigger (never zooming in); `actual` paints them side by side at
+ * 100% and lets the stage scroll. Zoom never changes the width they are LAID
+ * OUT at.
  */
 type Zoom = "fit" | "actual";
 
@@ -69,13 +73,16 @@ export function CounterpartStage({
 
   const [zoom, setZoom] = useState<Zoom>("fit");
   const fit = zoom === "fit";
-  // ONE scale for both halves, read off the mock half's box — it renders in
-  // every arm, so there is always a box to read. Under Fit that box is the
-  // shared width capped to the room its half has, so the ratio is the zoom that
-  // fits; before the first measure (same commit, before paint) it is 1.
-  const [mockBoxRef, { width: mockBoxWidth }] =
-    useElementSize<HTMLDivElement>();
-  const scale = fit && mockBoxWidth > 0 ? Math.min(1, mockBoxWidth / width) : 1;
+  // ONE scale for both halves, fitted to the room the stage measures. The pair
+  // is fitted to the MOCK's size — it renders in every arm, so there is always
+  // one to fit — and a route counterpart's frame is that same box by
+  // construction. Before the first measure (same commit, before paint) the
+  // pair sits side by side at 100%.
+  const { roomRef, pairRef, halfRef, frameRef, measured } = usePairRoom();
+  const { direction, scale }: PairLayout =
+    fit && measured !== null
+      ? fitPair({ ...measured, unit: { width, height: meta.viewport.h } })
+      : { direction: "row", scale: 1 };
 
   return (
     <Column
@@ -107,7 +114,7 @@ export function CounterpartStage({
                       ? `Fit · ${String(Math.round(scale * 100))}%`
                       : "Fit",
                   title:
-                    "Zoom both halves out together until the pair fits the pane",
+                    "Zoom both halves out together until the pair fits the pane — side by side, or stacked when that shows them bigger",
                 },
                 { id: "actual", label: "100%", title: "Actual size" },
               ]}
@@ -129,31 +136,49 @@ export function CounterpartStage({
         // Column's own managed body is not an option — it scrolls y only, and
         // two fixed-width halves in a row need x.
         <Scroll axis="both" className="h-full">
-          <Inset pad="lg">
-            <Stack direction="row" gap="lg" align="start">
-              <Half title="Prototype mock" subtitle={meta.title}>
-                <ScaledBox
+          {/* Under Fit the inset and the room are pinned to the pane's height,
+              so the room measures the space the pair may fill rather than the
+              pair itself. At 100% they hug the content, which scrolls. */}
+          <Inset pad="sm" className={fit ? "h-full" : undefined}>
+            <Stack
+              ref={roomRef}
+              gap="none"
+              className={fit ? "h-full" : undefined}
+            >
+              {/* `m-auto` centres the pair in whatever the fit leaves over, and
+                  — unlike `place-items: center` — falls back to the top-left
+                  edge when the pair is the larger (100%, or a fixture taller
+                  than the mock), so none of it is pushed out of scroll reach. */}
+              <Stack
+                ref={pairRef}
+                direction={direction}
+                gap="sm"
+                align="start"
+                className="m-auto"
+              >
+                <Half
+                  title="Prototype mock"
+                  subtitle={meta.title}
+                  halfRef={halfRef}
+                  frameRef={frameRef}
+                >
+                  <ScaledBox width={width} scale={scale}>
+                    {/* The prototype's declared viewport height: the frame is as
+                        tall as the mock says it means to be, and as wide as the
+                        stage says. */}
+                    <MockFrame
+                      meta={meta}
+                      version={version}
+                      height={meta.viewport.h}
+                    />
+                  </ScaledBox>
+                </Half>
+                <CounterpartHalf
+                  resolution={resolution}
                   width={width}
                   scale={scale}
-                  fit={fit}
-                  boxRef={mockBoxRef}
-                >
-                  {/* The prototype's declared viewport height: the frame is as
-                      tall as the mock says it means to be, and as wide as the
-                      stage says. */}
-                  <MockFrame
-                    meta={meta}
-                    version={version}
-                    height={meta.viewport.h}
-                  />
-                </ScaledBox>
-              </Half>
-              <CounterpartHalf
-                resolution={resolution}
-                width={width}
-                scale={scale}
-                fit={fit}
-              />
+                />
+              </Stack>
             </Stack>
           </Inset>
         </Scroll>
@@ -168,20 +193,19 @@ function CounterpartHalf({
   resolution,
   width,
   scale,
-  fit,
 }: {
   resolution: CounterpartResolution;
   width: number;
   scale: number;
-  fit: boolean;
 }): ReactElement {
-  // A notice is prose, not a rendering to compare: it takes the half's box so
-  // the two halves stay the same size, but reflows inside it instead of zooming.
+  // A notice is prose, not a rendering to compare: it takes the half's painted
+  // width so the two halves line up, but reflows inside it instead of zooming.
+  const noticeWidth = { width: width * scale };
   switch (resolution.status) {
     case "loading":
       return (
         <Half title="Counterpart">
-          <Inset pad="lg" style={boxStyle(width, fit)}>
+          <Inset pad="lg" style={noticeWidth}>
             <Loading label={resolution.label ?? "Loading the counterpart…"} />
           </Inset>
         </Half>
@@ -189,7 +213,7 @@ function CounterpartHalf({
     case "unresolved":
       return (
         <Half title="Counterpart">
-          <Inset pad="lg" style={boxStyle(width, fit)}>
+          <Inset pad="lg" style={noticeWidth}>
             <Stack gap="sm">
               <Text variant="body">{resolution.title}</Text>
               {typeof resolution.detail === "string" ? (
@@ -216,7 +240,7 @@ function CounterpartHalf({
             slot="prototype-compare"
             label={`${resolution.badge ?? resolution.title} @ ${String(width)}px`}
           >
-            <ScaledBox width={width} scale={scale} fit={fit}>
+            <ScaledBox width={width} scale={scale}>
               {resolution.render(width)}
             </ScaledBox>
           </PluginErrorBoundary>
@@ -226,40 +250,46 @@ function CounterpartHalf({
 }
 
 /**
- * One labelled half. Its content (a `ScaledBox`, or a notice in `boxStyle`)
- * carries the shared width; the card only wraps it.
+ * One labelled half: a one-line label over a frame. Its content (a
+ * `ScaledBox`, or a notice) carries the painted width; the frame only outlines
+ * and rounds it.
+ *
+ * The chrome is kept to what does not steal room from the rendering. The label
+ * is ONE line (it truncates rather than wraps), so its height is a constant the
+ * fit can subtract. The frame is a ring, not a padded card: a ring paints
+ * outside the box and takes no layout, so the rendering's edge is the frame's.
  */
 function Half({
   title,
   subtitle,
+  halfRef,
+  frameRef,
   children,
 }: {
   title: string;
   subtitle?: string;
+  /** The stage measures the mock half's label band off these two. */
+  halfRef?: Ref<HTMLElement>;
+  frameRef?: Ref<HTMLElement>;
   children: ReactNode;
 }): ReactElement {
   return (
-    // `minWidth: 0` lets Fit shrink the half below its content's width. Both
-    // halves have the same flex basis (the shared width plus the same card
-    // chrome), so they shrink by the same amount and keep one box size.
-    <Stack gap="2xs" style={{ minWidth: 0 }}>
-      {/* `contain: inline-size` keeps the label out of the half's basis: a long
-          caption must wrap, not widen one half and break the symmetry. */}
-      <Stack
-        direction="row"
-        gap="sm"
-        align="baseline"
-        wrap
-        style={{ contain: "inline-size" }}
-      >
-        <Text variant="label">{title}</Text>
-        {subtitle !== undefined ? (
-          <Text variant="caption" tone="muted">
-            {subtitle}
-          </Text>
-        ) : null}
-      </Stack>
-      <Card>{children}</Card>
+    <Stack ref={halfRef} gap="2xs">
+      {/* `contain: inline-size` keeps the label out of the half's width: a long
+          caption must truncate, not widen one half past its frame. */}
+      <Line style={{ contain: "inline-size" }}>
+        <Stack direction="row" gap="sm" align="baseline">
+          <Text variant="label">{title}</Text>
+          {subtitle !== undefined ? (
+            <Text variant="caption" tone="muted">
+              {subtitle}
+            </Text>
+          ) : null}
+        </Stack>
+      </Line>
+      <Clip ref={frameRef} className="rounded-md ring-1 ring-border">
+        {children}
+      </Clip>
     </Stack>
   );
 }

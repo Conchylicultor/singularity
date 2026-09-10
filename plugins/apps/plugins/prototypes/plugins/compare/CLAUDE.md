@@ -78,11 +78,23 @@ ONE factor without changing the width they are laid out at: each half's content
 sits in a `ScaledBox` exactly the shared width wide, `transform: scale()`d. So
 the zoomed pair is the 100% pair shrunk, every proportion kept.
 
-The factor is read off the mock half's box, which under Fit is the shared width
-capped to the room its half has. Both halves have the same flex basis (same
-width, same card chrome; labels kept out by `contain: inline-size`), so the row
-shrinks them equally — that symmetry is what lets one measured box stand for
-both. Fit never zooms in.
+Fit is the largest factor at which the WHOLE pair fits the pane — width and
+height both — computed by `fitPair` (`web/fit-pair.ts`, pure and tested) from
+what `usePairRoom` measures: the room inside the stage's inset, the one-line
+label band above each frame, and the gap between halves (the chrome that does
+not zoom comes off the room first). It tries the pair side by side and stacked,
+and takes whichever paints them bigger: two wide screens side by side are a
+strip three times wider than tall, which a landscape pane holds well and a
+narrow one (the gallery open beside it, a portrait window) holds far better
+stacked. The pair is fitted to the mock's declared viewport — a route
+counterpart's frame is that same box — and centred in whatever is left over.
+A fixture taller than the mock overflows and scrolls. Fit never zooms in; 100%
+is always side by side.
+
+The chrome is kept to what does not steal room from the renderings: a small
+inset, a small gap, a one-line label (it truncates, so its height is constant),
+and a frame that is a ring rather than a padded card — a ring paints outside
+the box and takes no layout.
 
 ## Why the mock frame is not `ScaledIframe`
 
@@ -118,14 +130,14 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
     - `apps/prototypes/gallery.PrototypeStages`
     - `primitives/bar.Bar`
     - `primitives/css/badge.Badge`
-    - `primitives/css/card.Card`
+    - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`
+    - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
-    - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/loading.Loading`
