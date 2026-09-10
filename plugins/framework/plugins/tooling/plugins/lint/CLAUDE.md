@@ -94,6 +94,8 @@ see a class string parked in a `const` or a style map.
     - `collectTokenNodes`
     - `collectTokens`
     - `findPluginDirs`
+    - `isLintScopeExcluded`
+    - `LINT_SCOPE_EXCLUDE_GLOBS`
     - `lintCollectedDir`
     - `lintToolkit`
 - Sub-plugins:
@@ -120,6 +122,7 @@ see a class string parked in a `const` or a style map.
   - **`namespace-identity`** — Lint rule banning the cast of a checkout directory name to a Namespace — a name is one input to a namespace, not a namespace, and the guess names the wrong deploy the moment a composition is served from a non-main checkout.
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
+  - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
   - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
   - **`route-teardown-safety`** — route-teardown-safety lint rule: no-unroute
   - **`runtime-isolation`** — runtime-isolation lint rule: no-cross-runtime-import

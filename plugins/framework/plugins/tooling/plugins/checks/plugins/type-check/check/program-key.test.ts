@@ -168,6 +168,20 @@ test("an unrelated non-TypeScript file does NOT change the key", async () => {
   expect(await keyNow()).toBe(before);
 });
 
+test("a .ts in a GITIGNORED directory does not change the key", async () => {
+  // The reported bug. `.cache/` is gitignored build output this very check
+  // writes into, and the walk that used to enumerate the tree pruned by a
+  // hand-written list of directory names that `.cache/` was not on — so a
+  // scratch `.ts` there counted as source. The ignore rule is written by THIS
+  // test rather than the shared fixture, so what keeps the file out is visibly
+  // `.gitignore`, not a directory name spelled somewhere in code.
+  write(".gitignore", ".cache/\n");
+  const before = await keyNow();
+  write(".cache/scratch.ts", "export const scratch = 1;\n");
+  expect(await keyNow()).toBe(before);
+  expect((await readTreeListing(root)).files).not.toContain(".cache/scratch.ts");
+});
+
 test("no buildinfo means no key — a cold run, never a skip", async () => {
   rmSync(join(root, ".cache"), { recursive: true, force: true });
   expect(await keyNow()).toBeNull();

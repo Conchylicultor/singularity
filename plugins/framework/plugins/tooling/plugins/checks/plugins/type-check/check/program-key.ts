@@ -43,6 +43,7 @@ import { createHash } from "crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { fileURLToPath } from "url";
+import { listNamedCompositionRegistries } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { programPassDir } from "../data-dirs";
 import { findFiles, type TreeListing } from "./fingerprint";
 import { openPassSet, type PassSetBounds } from "./pass-set";
@@ -229,7 +230,26 @@ export function openProgramKeyContext(listing: TreeListing): ProgramKeyContext {
   // Names only: an ADDED or REMOVED `.ts` anywhere can change how an unchanged
   // import specifier resolves, and no content hash of an existing file would
   // show it. Over-invalidating on every add/remove is the cheap safe side.
-  const allTsNames = findFiles(listing, isTsName);
+  //
+  // `listing` is what git knows about, which is the right universe everywhere
+  // else — but NOT here, and this is the one place the difference bites. The
+  // per-composition registries (`web.composition.sonata.generated.ts` and its
+  // siblings) are gitignored, yet they sit inside a tsconfig `include` and tsc
+  // compiles them. Two of them exist on `main` right now. Left out, this census
+  // would stop noticing when one appears or vanishes — and this key is what
+  // decides whether tsc runs for a target at all, so there would be no compiler
+  // behind it to catch the miss.
+  //
+  // The list comes from the WRITER's own function, not from a glob retyped
+  // here: `listNamedCompositionRegistries` is what the codegen stage uses to
+  // sweep these same files, so the reader and the writer cannot drift about
+  // where they live or how they are spelled.
+  const allTsNames = [
+    ...findFiles(listing, isTsName),
+    ...listNamedCompositionRegistries(listing.root).map((r) =>
+      relative(listing.root, r.file).split(sep).join("/"),
+    ),
+  ].sort();
   return {
     root: listing.root,
     contentHash: new Map(),

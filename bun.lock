@@ -2996,6 +2996,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-reactive-server-io",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/repo-walk-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-repo-walk-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
       "version": "0.0.1",
@@ -7360,6 +7364,8 @@
     "@singularity/plugin-framework-tooling-lint-promise-safety": ["@singularity/plugin-framework-tooling-lint-promise-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety"],
 
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
+
+    "@singularity/plugin-framework-tooling-lint-repo-walk-safety": ["@singularity/plugin-framework-tooling-lint-repo-walk-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/repo-walk-safety"],
 
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
 

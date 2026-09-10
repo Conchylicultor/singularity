@@ -20,22 +20,19 @@ import {
   findImports,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { isLintScopeExcluded } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
-// What remains of eslint's ignore list (`lint/core/build-lint-config.ts`) once
-// git has done its part. `.gitignore` already withholds node_modules, dist (and
-// dist.staging/live/old.*), .check-*, .claude/worktrees and web-core/dist, so a
-// git-enumerated set never contains them and this predicate must not restate
-// them. These two are tracked, so git DOES list them: generated sources, and
-// `prototypes/` — standalone CDN-React mocks belonging to no tsconfig.
-function isIgnoredRelPath(rel: string): boolean {
-  if (rel.endsWith(".generated.ts")) return true;
-  if (rel.startsWith("prototypes/")) return true;
-  return false;
-}
-
+// What remains of eslint's ignore list once git has done its part. `.gitignore`
+// already withholds node_modules, dist (and dist.staging/live/old.*), .check-*,
+// .claude/worktrees and web-core/dist, so a git-enumerated set never contains
+// them and this predicate must not restate them. What is left are TRACKED files
+// lint skips on purpose — generated sources and `prototypes/` — and those come
+// from `lint/core`'s one shared list, the same one the ESLint config spreads.
+// This used to be a hand-copy of that list, which is how `prototypes/**` had
+// drifted out of the walk while ESLint still ignored it.
 export function isLintable(rel: string): boolean {
   if (!(rel.endsWith(".ts") || rel.endsWith(".tsx"))) return false;
-  return !isIgnoredRelPath(rel);
+  return !isLintScopeExcluded(rel);
 }
 
 export function safeRead(absPath: string): string | null {

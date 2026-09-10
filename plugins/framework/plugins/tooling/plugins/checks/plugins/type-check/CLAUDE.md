@@ -152,6 +152,17 @@ It is a value rather than a cache behind the function on purpose. A listing is a
 that keeps changing, so its staleness window belongs at the call site; as a module-level memo the
 window was silently "the rest of the process".
 
+**One exception, in `program-key.ts`.** The per-composition registries
+(`web.composition.<name>.generated.ts`) are gitignored yet sit inside a tsconfig `include`, so tsc
+compiles them — and two exist on `main`. A git-derived listing drops them, which silently removed them
+from the name census that guards against resolution shadowing; since that key decides whether tsc runs
+for a target at all, nothing behind it would catch the miss. The census unions them back in via
+`listNamedCompositionRegistries` — the codegen function that WRITES them, so reader and writer cannot
+drift about where they live.
+
+`no-adhoc-repo-walk` (lint) bans the hand-written directory deny-list shape, so the next copy cannot
+appear.
+
 A BUILD will skip less than a bare check of the same tree, by construction: `./singularity build`
 regenerates barrel stubs and plugin registries before it runs checks, and those generated files sit
 in six of the seven programs. Measured on the build that shipped this change: `skipped 1 of 7`

@@ -18,6 +18,15 @@ would then slip past the check and only fail at runtime. `listCandidateSources`
 is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
 `grepCode`/`grepImports`), so it sees those uncommitted files.
 
+A check that enumerates the repo's SOURCE FILES must get them from
+**`listRepoFiles`** (exported from `checks/core`), never a `readdirSync` walk
+that prunes directories by name. Such a list is a guess at what `.gitignore`
+already states, and it is always missing one: type-check's two copies both
+omitted `.cache/`, so a `.ts` left in that gitignored directory counted as
+source and failed its coverage gate. `listRepoFiles` asks git for tracked +
+untracked-not-ignored — the same universe `computeTreeHash` builds. The
+`no-adhoc-repo-walk` lint rule enforces it.
+
 ## A `scope: "tree"` verdict must not depend on the process that produced it
 
 A passing check writes an entry to the shared cache under

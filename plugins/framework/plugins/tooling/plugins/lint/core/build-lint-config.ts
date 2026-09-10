@@ -29,6 +29,9 @@ import reactHooks from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
 import { lintEntries } from "./lint.generated";
 import { NON_APP_FILE_GLOBS } from "./non-app-globs";
+// Relative, not `@plugins/*`: this file is dual-loaded, by jiti for the root
+// `eslint.config.ts` (which cannot resolve the alias) and by Bun for the worker.
+import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { lintToolkit, type LintToolkit } from "./class-token-walk";
 
 interface PluginContribution {
@@ -349,16 +352,30 @@ export async function buildLintConfig(
     },
     {
       ignores: [
+        // BUILD OUTPUT — every one of these is a `.gitignore` pattern, restated
+        // here only because ESLint's own file discovery cannot read that file.
+        //
+        // This list gates NOTHING. The `type-check` check never uses ESLint's
+        // discovery: it hands `Linter.verify` an explicit file list built from
+        // `listRepoFiles`, which asks git. So these entries only shape what a
+        // stray `bunx eslint .` and the editor integration walk into, where
+        // drift costs a squiggle rather than a red check. Do not add source
+        // policy here — that goes in `lint-scope-exceptions.ts`.
+        //
+        // (`@eslint/compat`'s `includeIgnoreFile` would collapse these into
+        // `.gitignore` outright. It is not a dependency of this repo today.)
         "**/node_modules/**",
         "**/dist/**",
         "**/.git/**",
+        "**/.cache/**",
         "**/.check-*/**",
         ".claude/worktrees/**",
         "plugins/framework/plugins/web-core/dist/**",
-        "**/*.generated.ts",
-        // Repo-root prototype mocks: standalone CDN-React/Babel-in-browser files,
-        // not part of any tsconfig/plugin tree. Skip a stray `bunx eslint prototypes/`.
-        "prototypes/**",
+        // LINT SCOPE — tracked, committed files deliberately out of scope. The
+        // one list the check shares, so its file set and ESLint's cannot
+        // disagree about a real source file the way they did over
+        // `prototypes/**`.
+        ...LINT_SCOPE_EXCLUDE_GLOBS,
       ],
     },
   ];
