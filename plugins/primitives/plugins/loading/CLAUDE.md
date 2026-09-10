@@ -89,9 +89,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/prototypes/present`
     - `apps/sonata/library`
     - `apps/sonata/sources/ultimate-guitar`
-    - `apps/story/render`
-    - `apps/story/renderers/blog`
-    - `apps/story/shell`
     - `apps/studio/compositions`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/draft-actions`
@@ -106,9 +103,6 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/studio/explorer`
     - `apps/studio/explorer/excluded`
     - `apps/studio/graph`
-    - `apps/workflows/definitions`
-    - `apps/workflows/executions`
-    - `apps/workflows/steps/user-input`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`

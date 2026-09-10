@@ -54,8 +54,6 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `apps/pages/welcome/quick-create`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`
-    - `apps/story/renderers/blog`
-    - `apps/story/renderers/slides`
     - `apps/website/landing/contact`
     - `apps/website/landing/fork`
     - `conversations/conversation-view/code/file-pane/markdown`

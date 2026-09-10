@@ -459,8 +459,6 @@ Design, measurements, prior art and the risks to watch:
     - `apps/pages/history`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
-    - `apps/story/generation`
-    - `apps/workflows/engine`
     - `backup`
     - `build`
     - `conversations`

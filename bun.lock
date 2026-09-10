@@ -861,54 +861,6 @@
       "name": "@singularity/plugin-apps-sonata-voicing",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/story": {
-      "name": "@singularity/plugin-apps-story",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/content": {
-      "name": "@singularity/plugin-apps-story-content",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/content/plugins/text": {
-      "name": "@singularity/plugin-apps-story-content-text",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/generation": {
-      "name": "@singularity/plugin-apps-story-generation",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/marker": {
-      "name": "@singularity/plugin-apps-story-marker",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/pages-integration": {
-      "name": "@singularity/plugin-apps-story-pages-integration",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/render": {
-      "name": "@singularity/plugin-apps-story-render",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/renderers": {
-      "name": "@singularity/plugin-apps-story-renderers",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/renderers/plugins/blog": {
-      "name": "@singularity/plugin-apps-story-renderers-blog",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/renderers/plugins/slides": {
-      "name": "@singularity/plugin-apps-story-renderers-slides",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/shell": {
-      "name": "@singularity/plugin-apps-story-shell",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/story/plugins/story-core": {
-      "name": "@singularity/plugin-apps-story-story-core",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/studio": {
       "name": "@singularity/plugin-apps-studio",
       "version": "0.0.1",
@@ -1059,62 +1011,6 @@
     },
     "plugins/apps/plugins/website/plugins/story": {
       "name": "@singularity/plugin-apps-website-story",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows": {
-      "name": "@singularity/plugin-apps-workflows",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/definitions": {
-      "name": "@singularity/plugin-apps-workflows-definitions",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/editor": {
-      "name": "@singularity/plugin-apps-workflows-editor",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/engine": {
-      "name": "@singularity/plugin-apps-workflows-engine",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/executions": {
-      "name": "@singularity/plugin-apps-workflows-executions",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/shell": {
-      "name": "@singularity/plugin-apps-workflows-shell",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps": {
-      "name": "@singularity/plugin-apps-workflows-steps",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/branch": {
-      "name": "@singularity/plugin-apps-workflows-steps-branch",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/http-request": {
-      "name": "@singularity/plugin-apps-workflows-steps-http-request",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/llm-prompt": {
-      "name": "@singularity/plugin-apps-workflows-steps-llm-prompt",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/set-value": {
-      "name": "@singularity/plugin-apps-workflows-steps-set-value",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/template": {
-      "name": "@singularity/plugin-apps-workflows-steps-template",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/templating": {
-      "name": "@singularity/plugin-apps-workflows-steps-templating",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/workflows/plugins/steps/plugins/user-input": {
-      "name": "@singularity/plugin-apps-workflows-steps-user-input",
       "version": "0.0.1",
     },
     "plugins/auth": {
@@ -6340,30 +6236,6 @@
 
     "@singularity/plugin-apps-sonata-voicing": ["@singularity/plugin-apps-sonata-voicing@workspace:plugins/apps/plugins/sonata/plugins/voicing"],
 
-    "@singularity/plugin-apps-story": ["@singularity/plugin-apps-story@workspace:plugins/apps/plugins/story"],
-
-    "@singularity/plugin-apps-story-content": ["@singularity/plugin-apps-story-content@workspace:plugins/apps/plugins/story/plugins/content"],
-
-    "@singularity/plugin-apps-story-content-text": ["@singularity/plugin-apps-story-content-text@workspace:plugins/apps/plugins/story/plugins/content/plugins/text"],
-
-    "@singularity/plugin-apps-story-generation": ["@singularity/plugin-apps-story-generation@workspace:plugins/apps/plugins/story/plugins/generation"],
-
-    "@singularity/plugin-apps-story-marker": ["@singularity/plugin-apps-story-marker@workspace:plugins/apps/plugins/story/plugins/marker"],
-
-    "@singularity/plugin-apps-story-pages-integration": ["@singularity/plugin-apps-story-pages-integration@workspace:plugins/apps/plugins/story/plugins/pages-integration"],
-
-    "@singularity/plugin-apps-story-render": ["@singularity/plugin-apps-story-render@workspace:plugins/apps/plugins/story/plugins/render"],
-
-    "@singularity/plugin-apps-story-renderers": ["@singularity/plugin-apps-story-renderers@workspace:plugins/apps/plugins/story/plugins/renderers"],
-
-    "@singularity/plugin-apps-story-renderers-blog": ["@singularity/plugin-apps-story-renderers-blog@workspace:plugins/apps/plugins/story/plugins/renderers/plugins/blog"],
-
-    "@singularity/plugin-apps-story-renderers-slides": ["@singularity/plugin-apps-story-renderers-slides@workspace:plugins/apps/plugins/story/plugins/renderers/plugins/slides"],
-
-    "@singularity/plugin-apps-story-shell": ["@singularity/plugin-apps-story-shell@workspace:plugins/apps/plugins/story/plugins/shell"],
-
-    "@singularity/plugin-apps-story-story-core": ["@singularity/plugin-apps-story-story-core@workspace:plugins/apps/plugins/story/plugins/story-core"],
-
     "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
 
     "@singularity/plugin-apps-studio-compositions": ["@singularity/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
@@ -6439,34 +6311,6 @@
     "@singularity/plugin-apps-website-shell": ["@singularity/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 
     "@singularity/plugin-apps-website-story": ["@singularity/plugin-apps-website-story@workspace:plugins/apps/plugins/website/plugins/story"],
-
-    "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
-
-    "@singularity/plugin-apps-workflows-definitions": ["@singularity/plugin-apps-workflows-definitions@workspace:plugins/apps/plugins/workflows/plugins/definitions"],
-
-    "@singularity/plugin-apps-workflows-editor": ["@singularity/plugin-apps-workflows-editor@workspace:plugins/apps/plugins/workflows/plugins/editor"],
-
-    "@singularity/plugin-apps-workflows-engine": ["@singularity/plugin-apps-workflows-engine@workspace:plugins/apps/plugins/workflows/plugins/engine"],
-
-    "@singularity/plugin-apps-workflows-executions": ["@singularity/plugin-apps-workflows-executions@workspace:plugins/apps/plugins/workflows/plugins/executions"],
-
-    "@singularity/plugin-apps-workflows-shell": ["@singularity/plugin-apps-workflows-shell@workspace:plugins/apps/plugins/workflows/plugins/shell"],
-
-    "@singularity/plugin-apps-workflows-steps": ["@singularity/plugin-apps-workflows-steps@workspace:plugins/apps/plugins/workflows/plugins/steps"],
-
-    "@singularity/plugin-apps-workflows-steps-branch": ["@singularity/plugin-apps-workflows-steps-branch@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/branch"],
-
-    "@singularity/plugin-apps-workflows-steps-http-request": ["@singularity/plugin-apps-workflows-steps-http-request@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/http-request"],
-
-    "@singularity/plugin-apps-workflows-steps-llm-prompt": ["@singularity/plugin-apps-workflows-steps-llm-prompt@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/llm-prompt"],
-
-    "@singularity/plugin-apps-workflows-steps-set-value": ["@singularity/plugin-apps-workflows-steps-set-value@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/set-value"],
-
-    "@singularity/plugin-apps-workflows-steps-template": ["@singularity/plugin-apps-workflows-steps-template@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/template"],
-
-    "@singularity/plugin-apps-workflows-steps-templating": ["@singularity/plugin-apps-workflows-steps-templating@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/templating"],
-
-    "@singularity/plugin-apps-workflows-steps-user-input": ["@singularity/plugin-apps-workflows-steps-user-input@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/user-input"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 

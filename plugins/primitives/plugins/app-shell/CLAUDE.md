@@ -63,8 +63,6 @@
     - `apps/studio/explorer`
     - `apps/studio/graph`
     - `apps/studio/shell`
-    - `apps/workflows/definitions`
-    - `apps/workflows/shell`
     - `backup`
     - `build`
     - `code-explorer`

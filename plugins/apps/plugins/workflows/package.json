@@ -1,7 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-workflows",
-  "description": "Workflows app.",
-  "private": true,
-  "version": "0.0.1",
-  "singularity": { "collapsed": true }
-}

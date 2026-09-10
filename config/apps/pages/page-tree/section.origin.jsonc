@@ -1,4 +1,4 @@
-// @hash 21a1ede5952c
+// @hash c6db4b9fe7fd
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,7 +6,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.pages.page-tree:backlinks",
-    "apps.story.pages-integration:story"
+    "apps.pages.page-tree:backlinks"
   ]
 }

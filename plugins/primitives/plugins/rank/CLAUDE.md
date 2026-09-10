@@ -131,7 +131,6 @@ import { withRank } from "@plugins/primitives/plugins/rank/server";
     - `withRank`
 - Cross-plugin:
   - Imported by:
-    - `apps/story/story-core`
     - `apps/studio/explorer`
     - `conversations/agents`
     - `conversations/conversations-view/grouped`

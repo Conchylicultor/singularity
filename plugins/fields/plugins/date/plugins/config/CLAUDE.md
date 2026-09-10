@@ -20,7 +20,6 @@
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
-    - `apps/story/generation`
     - `conversations/summary`
     - `debug/boot-profile`
     - `debug/slow-ops`

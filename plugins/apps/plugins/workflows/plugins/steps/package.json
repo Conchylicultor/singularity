@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-workflows-steps",
-  "description": "Umbrella for workflow step type plugins.",
-  "private": true,
-  "version": "0.0.1"
-}

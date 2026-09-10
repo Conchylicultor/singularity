@@ -28,7 +28,6 @@
     - `apps/events/sources`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/primitives/toolbar-control`
-    - `apps/workflows/editor`
     - `build`
     - `config_v2/settings`
     - `conversations/conversation-preprompt`

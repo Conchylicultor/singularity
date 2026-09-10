@@ -1495,7 +1495,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes:
-    - `ConfigV2.WebRegister` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+    - `ConfigV2.WebRegister` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme"
     - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
     - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
     - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -1676,7 +1676,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `useServerDataSource`
     - `useSortController`
 - Server:
-  - Contributes: `ConfigV2.Register` ×40: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "story.gallery", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme", "workflows.definitions", "workflows.executions"
+  - Contributes: `ConfigV2.Register` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme"
   - Uses:
     - `config_v2.getConfig`
     - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -1696,13 +1696,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `apps/pages/page-tree`
     - `apps/prototypes/gallery`
     - `apps/sonata/library`
-    - `apps/story/shell`
     - `apps/studio/compositions`
     - `apps/studio/compositions/closure-tree`
     - `apps/studio/compositions/release`
     - `apps/studio/explorer`
-    - `apps/workflows/definitions`
-    - `apps/workflows/executions`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`

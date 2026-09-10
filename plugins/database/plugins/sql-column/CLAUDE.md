@@ -270,7 +270,6 @@ hand-written jsonb columns, where the rule closes).
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/rich/rhythm-controls`
-    - `apps/workflows/engine`
     - `backup`
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`

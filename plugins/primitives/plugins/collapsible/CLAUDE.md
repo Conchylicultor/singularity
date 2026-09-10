@@ -76,7 +76,6 @@ could accept — which is how `sidebar-pane-section` used to read them one by on
   - Imported by:
     - `apps/deploy/ssh-setup`
     - `apps/mail/reading-pane`
-    - `apps/workflows/engine`
     - `build/build-logs`
     - `code-explorer/commit-detail`
     - `conversations/agents`

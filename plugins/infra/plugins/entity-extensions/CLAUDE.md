@@ -114,7 +114,6 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
     - `apps/sonata/sources/midi`
     - `apps/sonata/sources/ultimate-guitar`
     - `apps/sonata/transpose`
-    - `apps/story/marker`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-view/notes`

@@ -43,7 +43,6 @@ Design rationale lives in:
 - Cross-plugin:
   - Imported by:
     - `active-data`
-    - `apps/story/renderers/blog`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/teammate-message`

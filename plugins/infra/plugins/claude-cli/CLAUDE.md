@@ -130,8 +130,6 @@ collapsed header; callers supply their own chrome (card, indent, collapse).
   - Imported by:
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/url-extract`
-    - `apps/story/generation`
-    - `apps/workflows/steps/llm-prompt`
     - `conversations/conversation-category`
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`

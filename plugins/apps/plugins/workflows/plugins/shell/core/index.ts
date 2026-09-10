@@ -1,1 +1,0 @@
-export { workflowsApp } from "./app";

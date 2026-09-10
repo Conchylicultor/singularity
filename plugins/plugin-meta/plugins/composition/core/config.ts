@@ -203,11 +203,9 @@ export const compositionsConfig = defineConfig({
         // a follow-up. The guard mechanism is live; see
         // plugins/.../checks/.../composition-closure.
         app("sonata", "apps.sonata", ["data-views"], ["agent-runtime", "auth"]),
-        app("story", "apps.story"),
         app("debug", "apps.debug"),
         app("deploy", "apps.deploy"),
         app("file-explorer", "apps.file-explorer"),
-        app("workflows", "apps.workflows"),
 
         // The public equin site: the whole `apps.website` subtree
         // (`"apps.website.**"` seeds the `apps.website` node + its ENTIRE

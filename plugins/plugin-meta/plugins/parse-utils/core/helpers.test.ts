@@ -340,13 +340,13 @@ test("readStaticCallId is parseStaticCallId flattened to string | null", () => {
 test("unresolvableCallIdMessage names file, line, marker and expression", () => {
   const msg = unresolvableCallIdMessage({
     marker: "defineRenderSlot",
-    file: "plugins/apps/plugins/story/plugins/shell/web/slots.ts",
+    file: "plugins/apps/plugins/pages/plugins/page-tree/web/slots.ts",
     line: 42,
     expr: "ID",
     hint: "Inline the literal.",
   });
   expect(msg).toContain(
-    "plugins/apps/plugins/story/plugins/shell/web/slots.ts:42",
+    "plugins/apps/plugins/pages/plugins/page-tree/web/slots.ts:42",
   );
   expect(msg).toContain("defineRenderSlot");
   expect(msg).toContain("`ID`");

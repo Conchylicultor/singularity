@@ -53,7 +53,6 @@ declared on the pane.**
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/shell`
-    - `apps/story/shell`
     - `apps/website/shell`
     - `layouts/host`
 

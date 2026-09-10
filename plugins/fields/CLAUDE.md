@@ -102,7 +102,6 @@ tokens, so anything that imports the barrels back would cycle.
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
-    - `apps/story/generation`
     - `config_v2`
     - `conversations/summary`
     - `debug/boot-profile`

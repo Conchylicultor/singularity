@@ -1,4 +1,4 @@
-// @hash 12ffe3521d67
+// @hash fe50134575e2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -18,9 +18,7 @@
     "apps.prototypes.shell:prototypes",
     "apps.settings.shell:settings",
     "apps.sonata.shell:sonata",
-    "apps.story.shell:story",
     "apps.studio.shell:studio",
-    "apps.website.shell:website",
-    "apps.workflows.shell:workflows"
+    "apps.website.shell:website"
   ]
 }

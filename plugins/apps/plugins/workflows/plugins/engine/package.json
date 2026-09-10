@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-workflows-engine",
-  "description": "Core backend infrastructure for the workflows app.",
-  "private": true,
-  "version": "0.0.1"
-}

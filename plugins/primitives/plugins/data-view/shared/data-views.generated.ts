@@ -44,7 +44,6 @@ export const dataViews: DataViewEntry[] = [
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
   { id: "runs", pluginId: "runs" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
-  { id: "story.gallery", pluginId: "apps.story.shell" },
   { id: "studio.compositions", pluginId: "apps.studio.compositions" },
   { id: "studio.compositions.closure-tree", pluginId: "apps.studio.compositions.closure-tree" },
   { id: "studio.explorer.tree", pluginId: "apps.studio.explorer" },
@@ -53,6 +52,4 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks-list", pluginId: "tasks.task-list" },
   { id: "tweakcn.community-browser", pluginId: "ui.tweakcn.community-browser" },
   { id: "tweakcn.quick-theme", pluginId: "ui.tweakcn.community-browser" },
-  { id: "workflows.definitions", pluginId: "apps.workflows.definitions" },
-  { id: "workflows.executions", pluginId: "apps.workflows.executions" },
 ];

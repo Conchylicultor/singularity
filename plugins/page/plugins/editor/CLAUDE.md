@@ -3751,9 +3751,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `apps/pages/page-tree`
     - `apps/pages/starred`
     - `apps/pages/welcome/recent-pages`
-    - `apps/story/marker`
-    - `apps/story/shell`
-    - `apps/story/story-core`
     - `page/annotations`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
@@ -3810,7 +3807,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Extended by:
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
     - `apps/pages/starred` (table `page_blocks_ext_starred`)
-    - `apps/story/marker` (table `page_blocks_ext_story`)
     - `page/annotations/todo/task-link` (table `page_blocks_ext_todo_task`)
   - Endpoint callers: `editor-collab`
 

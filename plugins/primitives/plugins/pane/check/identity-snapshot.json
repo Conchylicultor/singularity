@@ -505,18 +505,6 @@
       "parent": null
     },
     {
-      "paneId": "story-detail",
-      "segment": "s/:pageId",
-      "appIndex": false,
-      "parent": null
-    },
-    {
-      "paneId": "story-gallery",
-      "segment": "",
-      "appIndex": true,
-      "parent": null
-    },
-    {
       "paneId": "table-detail",
       "segment": "t/:pluginId/:tableName",
       "appIndex": false,
@@ -587,24 +575,6 @@
       "segment": "workflow-node/:toolUseId/:nodeId",
       "appIndex": false,
       "parent": null
-    },
-    {
-      "paneId": "workflows-definition-detail",
-      "segment": "def/:definitionId",
-      "appIndex": false,
-      "parent": "workflows-definitions"
-    },
-    {
-      "paneId": "workflows-definitions",
-      "segment": "",
-      "appIndex": true,
-      "parent": null
-    },
-    {
-      "paneId": "workflows-execution-detail",
-      "segment": "exec/:executionId",
-      "appIndex": false,
-      "parent": "workflows-definitions"
     },
     {
       "paneId": "worktree-cleanup",

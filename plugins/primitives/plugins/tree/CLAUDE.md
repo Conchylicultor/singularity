@@ -204,7 +204,6 @@ return is `useMemo`'d because it is now a context value.
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`
-    - `apps/story/story-core`
     - `page/editor`
     - `primitives/data-view/tree`
     - `ui/tree-disclosure`

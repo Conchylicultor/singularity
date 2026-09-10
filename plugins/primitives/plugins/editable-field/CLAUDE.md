@@ -115,9 +115,6 @@ self-echo behavior that must keep holding.
     - `apps/deploy/servers`
     - `apps/pages/page-tree`
     - `apps/sonata/library`
-    - `apps/story/shell`
-    - `apps/workflows/definitions`
-    - `apps/workflows/editor`
     - `conversations/agents`
     - `conversations/conversation-view/notes`
     - `tasks/task-description`

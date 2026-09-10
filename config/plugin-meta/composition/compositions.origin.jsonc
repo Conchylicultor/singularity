@@ -1,4 +1,4 @@
-// @hash 0ffb51b05e0e
+// @hash fb505fced0f0
 {
   "manifests": [
     {
@@ -135,20 +135,6 @@
       "serve": "off"
     },
     {
-      "id": "story",
-      "name": "story",
-      "category": "app",
-      "entryPoints": [
-        "apps.story.**"
-      ],
-      "selectedContributors": [],
-      "extends": [
-        "served-baseline"
-      ],
-      "excludes": [],
-      "serve": "off"
-    },
-    {
       "id": "debug",
       "name": "debug",
       "category": "app",
@@ -182,20 +168,6 @@
       "category": "app",
       "entryPoints": [
         "apps.file-explorer.**"
-      ],
-      "selectedContributors": [],
-      "extends": [
-        "served-baseline"
-      ],
-      "excludes": [],
-      "serve": "off"
-    },
-    {
-      "id": "workflows",
-      "name": "workflows",
-      "category": "app",
-      "entryPoints": [
-        "apps.workflows.**"
       ],
       "selectedContributors": [],
       "extends": [

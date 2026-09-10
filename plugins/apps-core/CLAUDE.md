@@ -25,7 +25,7 @@ contribution id from `app.id`. Consumers read `entry.app.name` /
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.website.shell`, `apps.workflows.shell`
+    - `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.events.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.studio.shell`, `apps.website.shell`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBar` ← `apps-core.tab-bar`
@@ -80,10 +80,8 @@ contribution id from `app.id`. Consumers read `entry.app.name` /
     - `apps/prototypes/shell`
     - `apps/settings/shell`
     - `apps/sonata/shell`
-    - `apps/story/shell`
     - `apps/studio/shell`
     - `apps/website/shell`
-    - `apps/workflows/shell`
     - `config_v2/config-link`
     - `config_v2/settings`
     - `shell/global-action-bar`

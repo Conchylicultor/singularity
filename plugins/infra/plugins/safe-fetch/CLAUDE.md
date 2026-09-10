@@ -16,7 +16,6 @@
     - `apps/events/sources/url-extract`
     - `apps/mail/remote-images`
     - `apps/sonata/sources/ultimate-guitar`
-    - `apps/workflows/steps/http-request`
     - `infra/safe-fetch/browser-fetch`
     - `page/bookmark`
     - `stats/cost`

@@ -20,8 +20,6 @@
 //   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
-//   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
-//   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/compositions/plugins/release: dependency closure (imported by an eager plugin)
 //   - apps/plugins/studio/plugins/explorer: dependency closure (imported by an eager plugin)
@@ -144,11 +142,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/sonata/plugins/transport-bar",
   "apps/plugins/sonata/plugins/transpose",
   "apps/plugins/sonata/plugins/view-options",
-  "apps/plugins/story/plugins/content/plugins/text",
-  "apps/plugins/story/plugins/generation",
-  "apps/plugins/story/plugins/pages-integration",
-  "apps/plugins/story/plugins/renderers/plugins/blog",
-  "apps/plugins/story/plugins/renderers/plugins/slides",
   "apps/plugins/studio/plugins/compositions/plugins/closure-tree",
   "apps/plugins/studio/plugins/compositions/plugins/contributors",
   "apps/plugins/studio/plugins/compositions/plugins/draft-actions",
@@ -175,14 +168,4 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/website/plugins/questions/plugins/apps",
   "apps/plugins/website/plugins/questions/plugins/harness",
   "apps/plugins/website/plugins/story",
-  "apps/plugins/workflows/plugins/definitions",
-  "apps/plugins/workflows/plugins/editor",
-  "apps/plugins/workflows/plugins/engine",
-  "apps/plugins/workflows/plugins/executions",
-  "apps/plugins/workflows/plugins/steps/plugins/branch",
-  "apps/plugins/workflows/plugins/steps/plugins/http-request",
-  "apps/plugins/workflows/plugins/steps/plugins/llm-prompt",
-  "apps/plugins/workflows/plugins/steps/plugins/set-value",
-  "apps/plugins/workflows/plugins/steps/plugins/template",
-  "apps/plugins/workflows/plugins/steps/plugins/user-input",
 ]);

@@ -292,7 +292,6 @@ importing `db` never touches a worktree — no test env shim needed.
     - `apps/mail/reading-pane`
     - `apps/pages/agent-origin`
     - `apps/pages/starred`
-    - `apps/story/generation`
     - `build`
     - `conversations/agents`
     - `conversations/conversation-category`

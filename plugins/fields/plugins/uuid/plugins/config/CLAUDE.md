@@ -15,7 +15,6 @@
   - Exports (values): `uuidField`
 - Cross-plugin:
   - Imported by:
-    - `apps/story/generation`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`

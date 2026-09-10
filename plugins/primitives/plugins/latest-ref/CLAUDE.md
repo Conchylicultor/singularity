@@ -36,7 +36,6 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `apps/sonata/primitives/keyboard`
     - `apps/sonata/shell`
     - `apps/sonata/track-mixer`
-    - `apps/workflows/editor`
     - `build/serve-composition`
     - `conversations/conversation-view/prompt-input`
     - `conversations/conversation-view/push-and-exit`
