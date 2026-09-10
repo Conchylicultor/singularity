@@ -5,7 +5,9 @@ import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PaneScroll } from "./pane-scroll";
+import { FloatingHeaderScroll } from "./floating-header-scroll";
 import { PaneIconAction } from "./pane-icon-action";
 import { PaneHeaderCell, type PaneHeaderItem } from "./pane-header-item";
 import { PaneTitleContext, type PaneTitleValue } from "./pane-title";
@@ -80,6 +82,18 @@ interface PaneChromeProps {
    * same tree it always was.
    */
   overlay?: ReactNode;
+  /**
+   * Float the header over the TOP of the body instead of above it: the bar is
+   * the first thing in the pane's one scroll, pinned to its top edge,
+   * see-through with no rule while the body sits at its top, and masking what
+   * scrolls under it — rule drawn — once anything does.
+   *
+   * For a page whose opening band is designed to run up behind its header (the
+   * website hero's glow), which a header above the scroll can never show. At
+   * rest the bar still takes its height in flow, so nothing moves until the
+   * body scrolls. Default false.
+   */
+  floatingHeader?: boolean;
   children: ReactNode;
 }
 
@@ -103,6 +117,7 @@ export function PaneChrome({
   titleOnly,
   headerSpill,
   overlay,
+  floatingHeader = false,
   children,
 }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
@@ -124,24 +139,23 @@ export function PaneChrome({
   const showLeading =
     contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
   const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
-  return (
-    <Column
-      className="h-full"
-      header={
-        <Bar
-          tier="pane"
-          overflow={headerSpill ? "visible" : "hidden"}
-          endSafeArea={reserveEnd}
-          className={
-            layoutCtx?.dragHandleProps
-              ? "cursor-grab active:cursor-grabbing"
-              : undefined
-          }
-          onDoubleClick={layoutCtx?.onDoubleClickHeader}
-          {...layoutCtx?.dragHandleProps}
-        >
-          {showLeading && leadingControl}
-          {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
+  // `atTop` is only ever true for a floating header resting over the top of the
+  // body — nothing below it to separate, so the rule goes.
+  const header = (atTop: boolean) => (
+    <Bar
+      tier="pane"
+      overflow={headerSpill ? "visible" : "hidden"}
+      endSafeArea={reserveEnd}
+      className={cn(
+        layoutCtx?.dragHandleProps && "cursor-grab active:cursor-grabbing",
+        floatingHeader && "transition-colors",
+        atTop && "border-transparent",
+      )}
+      onDoubleClick={layoutCtx?.onDoubleClickHeader}
+      {...layoutCtx?.dragHandleProps}
+    >
+      {showLeading && leadingControl}
+      {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
               there is no `Fill` beside it: a second claimant on the same slack
               breaks the one contract the primitive has. Which is also why
               `align` is the bar's own prop — nothing outside it can place
@@ -150,37 +164,47 @@ export function PaneChrome({
               title's yielding cell holds the leftover in front of them, so a
               header with a title reads exactly as it always has and a header
               without one costs nothing. */}
-          <AdaptiveBar
-            gap="xs"
-            label="More actions"
-            align="end"
-            spill={headerSpill}
-          >
-            <PaneTitleContext.Provider value={titleValue}>
-              <pane.Actions.Render>
-                {(item) => renderHeaderItem(item, titleOnly)}
-              </pane.Actions.Render>
-              {extra != null && !titleOnly && (
-                <AdaptiveBar.Item id="pane-extra">{extra}</AdaptiveBar.Item>
-              )}
-            </PaneTitleContext.Provider>
-          </AdaptiveBar>
-          {chrome.promote && promote && (
-            <PaneIconAction
-              label={
-                promote.kind === "cross-app"
-                  ? `Open in ${promote.app.name}`
-                  : "Expand pane"
-              }
-              icon={MdOpenInFull}
-              {...linkGestureProps(promote.run)}
-            />
+      <AdaptiveBar
+        gap="xs"
+        label="More actions"
+        align="end"
+        spill={headerSpill}
+      >
+        <PaneTitleContext.Provider value={titleValue}>
+          <pane.Actions.Render>
+            {(item) => renderHeaderItem(item, titleOnly)}
+          </pane.Actions.Render>
+          {extra != null && !titleOnly && (
+            <AdaptiveBar.Item id="pane-extra">{extra}</AdaptiveBar.Item>
           )}
-          {chrome.close && doClose && (
-            <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
-          )}
-        </Bar>
-      }
+        </PaneTitleContext.Provider>
+      </AdaptiveBar>
+      {chrome.promote && promote && (
+        <PaneIconAction
+          label={
+            promote.kind === "cross-app"
+              ? `Open in ${promote.app.name}`
+              : "Expand pane"
+          }
+          icon={MdOpenInFull}
+          {...linkGestureProps(promote.run)}
+        />
+      )}
+      {chrome.close && doClose && (
+        <PaneIconAction label="Close" icon={MdClose} onClick={doClose} />
+      )}
+    </Bar>
+  );
+  const content = <ContentScope>{children}</ContentScope>;
+  const scroll = floatingHeader ? (
+    <FloatingHeaderScroll header={header}>{content}</FloatingHeaderScroll>
+  ) : (
+    <PaneScroll>{content}</PaneScroll>
+  );
+  return (
+    <Column
+      className="h-full"
+      header={floatingHeader ? undefined : header(false)}
       // The pane body owns exactly one scroll, expressed via the shared
       // `PaneScroll` scaffold (`<Scroll axis="y" fill h-full>`) instead of
       // Column's managed `Scroll` body — identical scrolling, one sanctioned
@@ -188,15 +212,11 @@ export function PaneChrome({
       scrollBody={false}
       body={
         overlay == null ? (
-          <PaneScroll>
-            <ContentScope>{children}</ContentScope>
-          </PaneScroll>
+          scroll
         ) : (
           // positioning host for the pane's overlay layer: it must be the scroller's PARENT (an absolute child of a scroller scrolls away) and sit below the header
           <div className="relative isolate h-full">
-            <PaneScroll>
-              <ContentScope>{children}</ContentScope>
-            </PaneScroll>
+            {scroll}
             {overlay}
           </div>
         )

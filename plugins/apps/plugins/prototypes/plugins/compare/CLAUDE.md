@@ -124,7 +124,8 @@ the other:
 
 ```bash
 ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-  --name proto-1786877040-3k6f [--width 1280] [--out /tmp/mist] [--fail-above 5]
+  --name proto-1786877040-3k6f [--width 1280] [--options theme=launch,palette=azure] \
+  [--out /tmp/mist] [--fail-above 5]
 ```
 
 It opens this pane's Compare stage on the deploy this checkout built, waits for
@@ -133,6 +134,14 @@ writes `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` and
 `<out>-side-by-side.png`, logging the differing-pixel ratio and a per-cell
 heatmap. `--fail-above <pct>` turns the ratio into a verdict; without it the
 run is a transcript tool.
+
+A mock that declares options (`<meta name="prototype-option">`) is
+photographed at its authored defaults unless `--options` names the variant.
+The values are judged against the page's declarations by the same rule the
+server applies to a frame URL (an undeclared name or value refuses the run),
+picked through the stage's own options pill, and checked on the mock
+document's `<html data-*>` before the capture — so a page carrying two
+directions cannot be diffed against the wrong one without saying so.
 
 The pixel diff is salient by construction — a surface one shade off passes
 it — so colour is reported separately, with the colours named: the dominant

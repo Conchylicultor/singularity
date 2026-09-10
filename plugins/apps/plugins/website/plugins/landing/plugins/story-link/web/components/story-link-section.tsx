@@ -1,9 +1,11 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import {
+  WebsiteArrow,
+  WebsiteBand,
+} from "@plugins/apps/plugins/website/plugins/shell/web";
 import { storyPane } from "@plugins/apps/plugins/website/plugins/story/web";
-import { MdArrowForward } from "react-icons/md";
 
 const PROMPT = "Curious how equin came to be?";
 const LINK = "Read the full story and context";
@@ -32,7 +34,7 @@ export function StoryLinkSection() {
           onClick={() => openPane(storyPane, {}, { mode: "root" })}
         >
           {LINK}
-          <MdArrowForward />
+          <WebsiteArrow />
         </Button>
       </Text>
     </WebsiteBand>

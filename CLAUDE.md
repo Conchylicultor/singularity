@@ -208,8 +208,10 @@ the dominant colours, region means and luminance profiles of each half:
 
 ```bash
 ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-  --name <proto-id> [--width 1280] [--out /tmp/compare] [--fail-above 5]
+  --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out /tmp/compare] [--fail-above 5]
 ```
+
+A mock with variants is captured at its defaults unless `--options` picks the one the app was built from.
 
 For a repeatable flow, write a standalone E2E script in the plugin it verifies,
 at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner

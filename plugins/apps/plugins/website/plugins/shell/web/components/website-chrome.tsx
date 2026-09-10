@@ -10,6 +10,11 @@ import { WebsitePage } from "./website-page";
  * is borrowed by naming `actions: WebsiteHeader` on the pane, and the footer
  * comes from being inside this. A pane that reached for `PaneChrome` directly
  * would be a page missing its footer, and nothing would say so.
+ *
+ * The header floats over the top of the page (`floatingHeader`): clear while
+ * the reader is at the top, so the hero's glow runs up behind the wordmark and
+ * the nav as the design draws it, and masked with its rule once the page
+ * scrolls under it.
  */
 export function WebsiteChrome({
   pane,
@@ -19,7 +24,7 @@ export function WebsiteChrome({
   children: ReactNode;
 }) {
   return (
-    <PaneChrome pane={pane}>
+    <PaneChrome pane={pane} floatingHeader>
       <WebsitePage>{children}</WebsitePage>
     </PaneChrome>
   );

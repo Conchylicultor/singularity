@@ -50,7 +50,11 @@ export function WordmarkText({
       className={cn("font-bold tracking-tight", className)}
     >
       equin
-      <Text tone="primary">.</Text>
+      {/* A plain run, not a nested `<Text>`: in the header's single-line
+          context a `<Text>` becomes its own clipped inline-block, which sits on
+          its box's bottom edge rather than the text's baseline — lifting the
+          full stop off the line. */}
+      <span className="text-primary">.</span>
     </Text>
   );
 }

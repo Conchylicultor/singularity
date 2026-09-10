@@ -4,7 +4,7 @@
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
-//     --name <proto-id> [--width <px>] [--out <prefix>] [--threshold 0.1] \
+//     --name <proto-id> [--width <px>] [--options <name>=<value>,…] [--out <prefix>] [--threshold 0.1] \
 //     [--delta-e 5] [--fail-above <pct>] [--wait <ms>] [--color-scheme dark|light] [--headed]
 //
 // The prototype names its counterpart itself, in its own
@@ -20,6 +20,14 @@
 // --width picks one of the widths the stage offers for this counterpart (the
 // prototype's own declared width by default). The run refuses, listing the
 // choices, when the width is not one of them.
+//
+// --options picks the mock's variant (`theme=launch,palette=azure`) — the
+// values its `<meta name="prototype-option">` lines declare. Without it the
+// mock is photographed at its authored defaults, which for a page carrying
+// several directions is only one of them. Picked through the stage's own
+// options picker, so the capture shows exactly what a person would see; a name
+// or value the page does not declare refuses the run instead of photographing
+// the default.
 //
 // Writes `<out>-mock.png`, `<out>-app.png`, `<out>-diff.png` (the mock in
 // faint grey, every differing pixel red) and `<out>-side-by-side.png` (all
@@ -42,7 +50,7 @@
 //     --name proto-1786877040-3k6f --out /tmp/mist-panes
 
 import { writeFileSync } from "node:fs";
-import type { Locator, Page } from "playwright";
+import type { Frame, Locator, Page } from "playwright";
 import {
   agentFetch,
   arg,
@@ -61,7 +69,10 @@ import {
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
+  humanizeToken,
   isPrototypeId,
+  picksFromQuery,
+  type OptionPicks,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { compareHalfSelector } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
@@ -117,8 +128,47 @@ if (decl.kind !== "declared") {
   );
 }
 
+/**
+ * `--options theme=launch,palette=azure` → picks, judged against the options
+ * the page declares by the same rule the server applies to a frame URL's query:
+ * an undeclared name or value refuses the run rather than photographing the
+ * default and calling it the variant.
+ */
+function readPicks(): OptionPicks {
+  const raw = arg("options");
+  if (raw === undefined) return {};
+  const declared =
+    meta.options.length === 0
+      ? "it declares none"
+      : meta.options
+          .map((o) => `${o.name}: ${o.values.join(" | ")}`)
+          .join("; ");
+  const search = new URLSearchParams();
+  for (const pair of raw.split(",")) {
+    const [key, value, ...rest] = pair.split("=");
+    if (!key || value === undefined || rest.length > 0) {
+      usage(
+        `--options expects <name>=<value>,… — got "${pair}" (${meta.title} ${declared})`,
+      );
+    }
+    search.append(key.trim(), value.trim());
+  }
+  const result = picksFromQuery(meta.options, search);
+  if (!result.ok) usage(`--options: ${result.reason}`);
+  return result.picks;
+}
+
+const picks = readPicks();
+
 console.log(`prototype:    ${meta.title} (${name})`);
 console.log(`mocks:        ${decl.tag}:${decl.ref}`);
+console.log(
+  `options:      ${
+    meta.options
+      .map((o) => `${o.name}=${picks[o.name] ?? `${o.default} (default)`}`)
+      .join(", ") || "none declared"
+  }`,
+);
 console.log(`color-scheme: ${colorScheme}`);
 
 /** The width chips the stage offers: every radio labelled `<n>px`. */
@@ -148,6 +198,48 @@ async function settle(page: Page): Promise<void> {
   await Promise.all(page.frames().map((f) => f.waitForLoadState("load")));
 }
 
+/** The frames showing this prototype's document (Focus's, or Compare's mock). */
+function prototypeFrames(page: Page): Frame[] {
+  return page
+    .frames()
+    .filter((f) => f.url().includes(`/api/prototypes/${name}/index.html`));
+}
+
+/** Each picked value, as the prototype document's `<html data-*>` carries it now. */
+async function shownPicks(page: Page): Promise<Record<string, string | null>> {
+  const [frame] = prototypeFrames(page);
+  if (!frame) return {};
+  return frame.evaluate(
+    (keys) =>
+      Object.fromEntries(
+        keys.map((k) => [
+          k,
+          document.documentElement.getAttribute(`data-${k}`),
+        ]),
+      ),
+    Object.keys(picks),
+  );
+}
+
+/**
+ * Pick each `--options` value through the stage's options pill — hover reveals
+ * one radio group per option — and wait for the prototype document to carry it.
+ */
+async function pickOptions(page: Page): Promise<void> {
+  const entries = Object.entries(picks);
+  if (entries.length === 0) return;
+  const pill = page.getByLabel("Prototype options");
+  for (const [option, value] of entries) {
+    await pill.hover();
+    const group = page.getByRole("radiogroup", { name: humanizeToken(option) });
+    await group.waitFor({ state: "visible", timeout: 5000 });
+    await group
+      .getByRole("radio", { name: humanizeToken(value), exact: true })
+      .click();
+  }
+  await page.mouse.move(0, 0);
+}
+
 async function capture(loc: Locator, suffix: string): Promise<Buffer> {
   const png = await loc.screenshot({ timeout: 15_000 });
   const path = `${out}-${suffix}.png`;
@@ -170,6 +262,7 @@ await withBrowser(async (h) => {
     marker: "iframe",
     settleMs: 500,
   });
+  await pickOptions(page);
   await page.getByRole("radio", { name: "Compare", exact: true }).click();
   // The stage opens zoomed to fit the pane; a capture wants actual size, so
   // a pixel of the mock is a pixel of the app.
@@ -218,6 +311,22 @@ await withBrowser(async (h) => {
   await fitViewport(page, sharedWidth);
 
   await settle(page);
+
+  // The mock half must show the variant asked for — checked on the document
+  // itself, since a capture of the default would diff just as happily.
+  if (Object.keys(picks).length > 0) {
+    const shown = await shownPicks(page);
+    const off = Object.entries(picks).filter(([k, v]) => shown[k] !== v);
+    if (off.length > 0) {
+      r.fail(
+        "the mock half shows the picked options",
+        off
+          .map(([k, v]) => `data-${k}=${String(shown[k])}, wanted ${v}`)
+          .join("; "),
+      );
+      await r.finish();
+    }
+  }
 
   const mockPng = await capture(mock, "mock");
   const appPng = await capture(counterpart, "app");
@@ -270,6 +379,18 @@ await withBrowser(async (h) => {
       `mismatch is at most ${failAbove}%`,
       diff.ratio * 100 <= failAbove,
       `${pct}% differs`,
+    );
+  }
+  // A variant nobody picked was photographed at its default — say so beside
+  // the verdict, where a reader of the number will see it.
+  const unpicked = meta.options.filter((o) => !(o.name in picks));
+  if (unpicked.length > 0) {
+    r.note(
+      `mock captured at its default ${unpicked
+        .map((o) => `${o.name}=${o.default}`)
+        .join(", ")} — pass --options to compare another variant (${unpicked
+        .map((o) => `${o.name}: ${o.values.join(" | ")}`)
+        .join("; ")})`,
     );
   }
   // The prototype runs its own scripts; an error there is worth knowing but is

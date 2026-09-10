@@ -29,7 +29,7 @@ const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
 export interface WebsiteBandProps {
   /** Host element. Defaults to `section` — pass `footer` for the site footer. */
   as?: "section" | "footer" | "header";
-  /** Hairline above this band, separating it from the one before. */
+  /** Hairline above this band's content, separating it from the one before. */
   divider?: boolean;
   /** The band's role on the page, which fixes its block padding. Defaults to `page`. */
   rhythm?: WebsiteBandRhythm;
@@ -56,7 +56,10 @@ export interface WebsiteBandProps {
  *
  * `divider` paints the hairline ABOVE the band. The site separates its bands
  * with a rule rather than with more air, which is what keeps a long page reading
- * as one document rather than a stack of unrelated cards.
+ * as one document rather than a stack of unrelated cards. The rule is as wide
+ * as the measure, not the viewport — it belongs to the column of text it
+ * divides — which is why it and the rhythm's padding sit on the measure box:
+ * the rule above the padding, both inside the gutter.
  *
  * `rhythm` is the band's vertical padding, named by the band's role rather than
  * spelled as a ramp step: the page's rhythm is a designed scale of its own, and
@@ -70,13 +73,20 @@ export function WebsiteBand({
   children,
 }: WebsiteBandProps) {
   return (
-    <As
-      className={cn(RHYTHM_CLASS[rhythm], divider && "border-border border-t")}
-    >
+    <As>
       {/* The side gutter only bites once the viewport is narrower than the
           measure plus two gutters; at full width the measure centres itself. */}
       <Inset x="2xl">
-        <div className={cn(MEASURE, className)}>{children}</div>
+        <div
+          className={cn(
+            MEASURE,
+            RHYTHM_CLASS[rhythm],
+            divider && "border-border border-t",
+            className,
+          )}
+        >
+          {children}
+        </div>
       </Inset>
     </As>
   );

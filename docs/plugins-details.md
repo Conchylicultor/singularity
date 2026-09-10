@@ -5166,6 +5166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `WebsiteHeader` "contact" → `ContactNavItem`
                 - Uses:
                   - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteArrow`
                   - `apps/website/shell.WebsiteBand`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
@@ -5207,6 +5208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
                 - Uses:
                   - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteArrow`
                   - `apps/website/shell.WebsiteBand`
                   - `apps/website/story.storyPane`
                   - `primitives/css/text.Text`
@@ -5302,6 +5304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `landingPane`
               - `Website`
+              - `WebsiteArrow`
               - `WebsiteBand`
               - `WebsiteChrome`
               - `WebsiteHeader`
@@ -15560,6 +15563,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/pitch-layout`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
+              - `apps/website/shell`
               - `build`
               - `code-explorer`
               - `config_v2/settings`
@@ -23544,6 +23548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view`
               - `primitives/data-view/tree`
               - `primitives/multi-select`
+              - `primitives/pane`
               - `primitives/tree`
               - `review/code-review`
           - Plugins:
@@ -25566,6 +25571,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination`
               - `primitives/dom/auto-scroll`
               - `primitives/outline/scroll-spy`
+              - `primitives/pane`
         - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
@@ -27101,6 +27107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/scroll.Scroll`
           - `primitives/css/scroll.ScrollProps`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/sticky.Sticky`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.appThemeScope`
@@ -27108,6 +27115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.PortalForwardProvider`
           - `primitives/css/ui-kit.SingleLineProvider`
+          - `primitives/dom/in-view.useInView`
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/link-gesture.linkGestureProps`

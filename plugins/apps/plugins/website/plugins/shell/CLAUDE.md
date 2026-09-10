@@ -86,6 +86,7 @@ hover.
   - Exports (values):
     - `landingPane`
     - `Website`
+    - `WebsiteArrow`
     - `WebsiteBand`
     - `WebsiteChrome`
     - `WebsiteHeader`

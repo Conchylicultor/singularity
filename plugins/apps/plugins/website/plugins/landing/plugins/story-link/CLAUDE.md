@@ -17,6 +17,7 @@ its words and the story page's opening the same.
   - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
   - Uses:
     - `apps/website/shell.Website`
+    - `apps/website/shell.WebsiteArrow`
     - `apps/website/shell.WebsiteBand`
     - `apps/website/story.storyPane`
     - `primitives/css/text.Text`

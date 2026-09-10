@@ -370,6 +370,15 @@ goes in `<PaneChrome overlay={…}>`, which renders it as a sibling of the singl
 your own `relative` host instead: that host spans the header too, so a
 corner-pinned overlay lands on the header's own right-hand actions.
 
+### `floatingHeader` — a page that runs up behind its header
+
+`<PaneChrome floatingHeader>` moves the header bar from above the scroll to
+inside it, as its first child, pinned to the top: see-through with no rule while
+the body is at its top, masked with its rule once content scrolls under it.
+Layout at rest is unchanged. Only for a page designed to show through the header
+(the website's hero glow) — a header above the scroll can never show anything
+behind it. An `overlay` then spans the header too.
+
 ### The header slot (`Actions`)
 
 Each pane auto-creates an `Actions` slot other plugins contribute to
@@ -802,6 +811,7 @@ See "Open questions" in the design doc.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/scroll.ScrollProps`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.appThemeScope`
@@ -809,6 +819,7 @@ See "Open questions" in the design doc.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.SingleLineProvider`
+    - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/link-gesture.linkGestureProps`

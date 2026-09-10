@@ -84,10 +84,14 @@ function ForkColumn({ fork }: { fork: Fork }) {
     <Card
       as="button"
       interactive
-      // The card is a flat panel — the site's cards carry no elevation shadow.
-      // (That it is a `<button>` changes nothing about the box: Surface owns the
-      // display, so the column packs to the top and reads left like prose.)
-      className="h-full rounded-2xl shadow-none"
+      // The card is a flat panel at rest — the site's cards carry no elevation
+      // shadow. Under the pointer it lifts (`website-fork-card`, see the CSS)
+      // and its border brightens toward the foreground, in place of the
+      // interactive card's accent border and tinted fill: the lift is the
+      // affordance, and the panel keeps its colour. (That it is a `<button>`
+      // changes nothing about the box: Surface owns the display, so the column
+      // packs to the top and reads left like prose.)
+      className="website-fork-card hover:border-foreground/22 hover:bg-card h-full rounded-2xl shadow-none"
       onClick={() => openPane(fork.pane, {}, { mode: "root" })}
     >
       <Stack gap="xl">

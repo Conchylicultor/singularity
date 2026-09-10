@@ -24,6 +24,7 @@ an address.
     - `WebsiteHeader` "contact" → `ContactNavItem`
   - Uses:
     - `apps/website/shell.Website`
+    - `apps/website/shell.WebsiteArrow`
     - `apps/website/shell.WebsiteBand`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`

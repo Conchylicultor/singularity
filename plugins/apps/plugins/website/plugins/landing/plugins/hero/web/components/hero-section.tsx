@@ -15,8 +15,9 @@ const LEDE_TAIL =
 /**
  * The wash's geometry, as the design measured it: a 1100×700 ellipse tile
  * centred on the page, its top 120px above the document's top edge. The
- * document's top edge is the site header's bottom, and the header is 72px of
- * pane chrome above this band — so the tile starts 192px above the band.
+ * document's top edge is the site header's top — the header floats over the
+ * page, 72px tall above this band, and is clear at rest so the wash shows
+ * through it — so the tile starts 192px above the band.
  * Measurements, not ramp steps, which is what `<Placed>` is for. The width
  * caps at the pane's so a narrow viewport never scrolls sideways to reach it
  * (the blur beyond the box is ink, not scrollable overflow).

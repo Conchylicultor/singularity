@@ -25,6 +25,7 @@ import {
 
 export { Website, WebsiteHeader } from "./slots";
 export { WebsiteNavLink } from "./components/website-nav-link";
+export { WebsiteArrow } from "./components/website-arrow";
 export { WebsiteBand } from "./components/website-band";
 export type { WebsiteBandRhythm } from "./components/website-band";
 export { WebsiteChrome } from "./components/website-chrome";

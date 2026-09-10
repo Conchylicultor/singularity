@@ -5,3 +5,32 @@
 .website-audience-dot {
   box-shadow: 0 0 12px currentColor;
 }
+
+/* A fork card rises to meet the pointer: 3px up, with a long soft shadow
+ * falling beneath it. The cards rest flat (`shadow-none`), so this is their only
+ * shadow — a motion, not a resting elevation, which is why it is not a rung of
+ * the shadow scale: that scale is derived from one set of parameters, and bending
+ * it to produce this one hover would reshape every other shadow on the site.
+ * Motion is dropped for a reader who asked for less of it; the border still
+ * brightens (the card's own `hover:` class), so the affordance survives. */
+.website-fork-card {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.website-fork-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 24px 48px -28px oklch(0 0 0 / 90%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .website-fork-card {
+    transition: border-color 0.2s ease;
+  }
+
+  .website-fork-card:hover {
+    transform: none;
+  }
+}

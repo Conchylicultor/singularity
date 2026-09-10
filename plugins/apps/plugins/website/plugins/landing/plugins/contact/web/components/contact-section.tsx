@@ -7,8 +7,10 @@ import {
   insetClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { MdArrowForward } from "react-icons/md";
+import {
+  WebsiteArrow,
+  WebsiteBand,
+} from "@plugins/apps/plugins/website/plugins/shell/web";
 import { SiGithub } from "react-icons/si";
 import { SOURCE_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "../internal/contact";
@@ -69,7 +71,7 @@ export function ContactSection() {
                   render={<a href={CONTACT_MAILTO} />}
                 >
                   {offer.action}
-                  {offer.emphasis === "filled" && <MdArrowForward />}
+                  {offer.emphasis === "filled" && <WebsiteArrow />}
                 </Button>
               </Stack>
             </Card>

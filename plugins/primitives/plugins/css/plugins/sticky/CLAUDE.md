@@ -86,6 +86,7 @@ toggle, silently resetting any child component state (e.g. an inner
     - `primitives/data-view`
     - `primitives/data-view/tree`
     - `primitives/multi-select`
+    - `primitives/pane`
     - `primitives/tree`
     - `review/code-review`
 - Sub-plugins:

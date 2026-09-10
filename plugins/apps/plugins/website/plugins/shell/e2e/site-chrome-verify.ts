@@ -1,0 +1,242 @@
+// Verifies the landing page's chrome and motion against the Launch mock
+// (`proto-1788797350-gqju`, theme=launch): what a pixel diff at rest cannot see.
+//
+//   - the floating header is clear with no rule at the top, and masked with its
+//     rule once the page scrolls under it;
+//   - the band hairlines span the reading measure, not the viewport;
+//   - the wordmark's full stop sits on the text's line, not above it;
+//   - a quiet nav link's hover changes only its colour (no hover box);
+//   - a fork card lifts 3px under the pointer;
+//   - the forward arrows (story link, contact call to action) step 4px toward
+//     their destination on hover.
+//
+// Usage:
+//   ./singularity run plugins/apps/plugins/website/plugins/shell/e2e/site-chrome-verify.ts \
+//     [--out /tmp/site-chrome] [--headed]
+//
+// Manual only — nothing runs this automatically.
+
+import type { Locator, Page } from "playwright";
+import {
+  arg,
+  boot,
+  pathUrl,
+  report,
+  snap,
+  waitFor,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+
+const out = arg("out", "/tmp/site-chrome");
+
+/** The reading measure `website-band.css` declares (65rem at a 16px root). */
+const MEASURE_PX = 1040;
+
+/** A CSS colour's alpha, from the `rgb()` / `rgba()` / `color()` a computed style returns. */
+function alphaOf(color: string): number {
+  if (color === "transparent") return 0;
+  const slash = /\/\s*([\d.]+)\s*\)$/.exec(color);
+  if (slash?.[1] !== undefined) return Number(slash[1]);
+  const rgba = /^rgba\([^)]*,\s*([\d.]+)\s*\)$/.exec(color);
+  if (rgba?.[1] !== undefined) return Number(rgba[1]);
+  return 1;
+}
+
+/**
+ * The x offset of a computed `translate` (`"4px"`, `"4px 0px"`, `"none"`) —
+ * the property Tailwind's `translate-x-*` sets, apart from `transform`.
+ */
+function translatePropX(value: string): number {
+  const first = value.trim().split(/\s+/)[0];
+  return first === undefined || first === "none" ? 0 : parseFloat(first);
+}
+
+/** The translate a computed `transform` matrix carries, `[x, y]`. */
+function translateOf(transform: string): [number, number] {
+  const m = /^matrix\(([^)]*)\)$/.exec(transform);
+  if (!m?.[1]) return [0, 0];
+  const parts = m[1].split(",").map((s) => Number(s.trim()));
+  return [parts[4] ?? 0, parts[5] ?? 0];
+}
+
+/** The pinned header box and its bar, read as colours. */
+async function headerPaint(
+  page: Page,
+): Promise<{ background: string; rule: string; found: boolean }> {
+  return page.evaluate(() => {
+    const story = [...document.querySelectorAll("button")].find(
+      (b) => b.textContent?.trim() === "Story",
+    );
+    let el: HTMLElement | null = story ?? null;
+    while (el && getComputedStyle(el).position !== "sticky") {
+      el = el.parentElement;
+    }
+    const bar = el?.firstElementChild;
+    if (!el || !(bar instanceof HTMLElement)) {
+      return { background: "", rule: "", found: false };
+    }
+    return {
+      background: getComputedStyle(el).backgroundColor,
+      rule: getComputedStyle(bar).borderBottomColor,
+      found: true,
+    };
+  });
+}
+
+async function computed(loc: Locator, prop: string): Promise<string> {
+  return loc.evaluate(
+    (el, p) => getComputedStyle(el).getPropertyValue(p),
+    prop,
+  );
+}
+
+await withBrowser(async (h) => {
+  const r = report("website chrome & motion");
+  const { page } = await h.session({
+    viewport: { width: 1280, height: 900 },
+    colorScheme: "dark",
+  });
+  await boot(page, pathUrl("/website"), {
+    marker: "text=Curious how equin came to be?",
+    settleMs: 800,
+  });
+
+  // --- header at rest: clear, no rule --------------------------------------
+  const atRest = await headerPaint(page);
+  r.ok("the header is pinned inside the page's scroll", atRest.found);
+  r.ok(
+    "at the top the header paints no background",
+    alphaOf(atRest.background) === 0,
+    atRest.background,
+  );
+  r.ok(
+    "at the top the header draws no rule",
+    alphaOf(atRest.rule) === 0,
+    atRest.rule,
+  );
+  await snap(page, out, "top");
+
+  // --- the wordmark's full stop ---------------------------------------------
+  // Compared glyph-run to glyph-run: the word's own text node (a Range) against
+  // the stop's inline box — two runs of one font share a bottom exactly when
+  // they share a baseline. The word's ELEMENT box is its line-height box, taller.
+  const dot = await page.evaluate(() => {
+    const stop = [...document.querySelectorAll("span")].find(
+      (s) => s.textContent === "." && s.parentElement?.textContent === "equin.",
+    );
+    const text = stop?.parentElement?.firstChild;
+    if (!stop || !text) return null;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    return {
+      dot: stop.getBoundingClientRect().bottom,
+      word: range.getBoundingClientRect().bottom,
+      display: getComputedStyle(stop).display,
+    };
+  });
+  r.ok(
+    "the wordmark's full stop sits on the word's line",
+    dot !== null &&
+      dot.display === "inline" &&
+      Math.abs(dot.dot - dot.word) <= 1,
+    JSON.stringify(dot),
+  );
+
+  // --- nav link hover: colour only -------------------------------------------
+  const forUsers = page.getByRole("button", { name: "For users", exact: true });
+  await forUsers.hover();
+  await page.waitForTimeout(250);
+  const navBg = await computed(forUsers, "background-color");
+  r.ok("a quiet nav link paints no hover box", alphaOf(navBg) === 0, navBg);
+
+  // --- band hairlines span the measure ----------------------------------------
+  // A hairline is a top border alone — a card's all-round border is not one.
+  const rules = await page.evaluate(() =>
+    [...document.querySelectorAll("section, footer")]
+      .flatMap((band) => [band, ...band.querySelectorAll("div")])
+      .filter((el) => {
+        const s = getComputedStyle(el);
+        return s.borderTopWidth === "1px" && s.borderLeftWidth === "0px";
+      })
+      .map((el) => Math.round(el.getBoundingClientRect().width)),
+  );
+  r.ok(
+    "every band hairline is as wide as the reading measure",
+    rules.length > 0 && rules.every((w) => w === MEASURE_PX),
+    `widths ${rules.join(", ")}px, measure ${MEASURE_PX}px`,
+  );
+
+  // --- fork card lift --------------------------------------------------------
+  const card = page.getByRole("button", { name: /What will apps evolve into/ });
+  await card.hover();
+  const lifted = await waitFor(
+    async () => translateOf(await computed(card, "transform"))[1],
+    (y) => Math.abs(y + 3) < 0.01,
+    { timeoutMs: 2000, intervalMs: 50 },
+  );
+  r.ok(
+    "a fork card lifts 3px under the pointer",
+    lifted.ok,
+    `translateY ${lifted.value}px`,
+  );
+  await snap(page, out, "card-hover");
+
+  // --- forward arrows ---------------------------------------------------------
+  for (const [what, control] of [
+    [
+      "the story link",
+      page.getByRole("button", { name: "Read the full story and context" }),
+    ],
+    [
+      "the contact call to action",
+      // The header's pill says the same words; the card's carries the arrow.
+      page
+        .getByRole("link", { name: "Get in touch" })
+        .filter({ has: page.locator("svg") }),
+    ],
+  ] as const) {
+    await control.scrollIntoViewIfNeeded();
+    await control.hover();
+    const arrow = control.locator("svg");
+    const nudged = await waitFor(
+      async () => translatePropX(await computed(arrow, "translate")),
+      (x) => Math.abs(x - 4) < 0.01,
+      { timeoutMs: 2000, intervalMs: 50 },
+    );
+    r.ok(
+      `${what}'s arrow steps 4px on hover`,
+      nudged.ok,
+      `translate-x ${nudged.value}px`,
+    );
+  }
+
+  // --- header once scrolled: masked, rule drawn ------------------------------
+  await page.mouse.move(640, 450);
+  await page.mouse.wheel(0, 600);
+  const scrolled = await waitFor(
+    () => headerPaint(page),
+    (p) => alphaOf(p.background) > 0 && alphaOf(p.rule) > 0,
+    { timeoutMs: 3000, intervalMs: 100 },
+  );
+  r.ok(
+    "scrolled, the header masks the page and draws its rule",
+    scrolled.ok,
+    JSON.stringify(scrolled.value),
+  );
+  await snap(page, out, "scrolled");
+
+  // --- and back to the top: clear again ---------------------------------------
+  await page.mouse.wheel(0, -2000);
+  const back = await waitFor(
+    () => headerPaint(page),
+    (p) => alphaOf(p.background) === 0 && alphaOf(p.rule) === 0,
+    { timeoutMs: 3000, intervalMs: 100 },
+  );
+  r.ok(
+    "back at the top, the header is clear again",
+    back.ok,
+    JSON.stringify(back.value),
+  );
+
+  await r.finish();
+});

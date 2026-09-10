@@ -8,7 +8,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  * Two emphases, and the split is about destination rather than importance:
  * `quiet` (the default) is a place on this site, and there are several of them,
  * so they must not compete with each other — they sit in the secondary grey and
- * come up to full foreground under the pointer. `strong` is the one entry that
+ * come up to full foreground under the pointer, with no hover box: the colour
+ * change is the whole affordance, as in running text. `strong` is the one entry that
  * leaves the site — writing an email — and there is exactly one of it, which is
  * what earns it a filled pill.
  *
@@ -37,7 +38,7 @@ export function WebsiteNavLink({
   ) : (
     <Button
       variant="ghost"
-      className="text-muted-foreground hover:text-foreground"
+      className="text-muted-foreground hover:text-foreground hover:bg-transparent"
       {...rest}
     >
       {label}
