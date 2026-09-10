@@ -18,8 +18,25 @@ import { liveBlocks } from "./live-blocks";
  * `liveBlocks` rather than `_blocks` is what makes a `select(BLOCK_WIRE_COLUMNS)
  * .from(_blocks)` a drizzle type error: the projection can only be read from
  * the relation it names.
+ *
+ * Annotated, not inferred: the inferred type spells `BlockData`'s private brand
+ * symbol, which a declaration cannot name (TS4023 — the type-check emits
+ * declarations, see its CLAUDE.md). Naming the columns through the exported
+ * `liveBlocks` relation keeps the declaration writable, and the object literal
+ * is still checked key for key against it.
  */
-export const BLOCK_WIRE_COLUMNS = {
+export const BLOCK_WIRE_COLUMNS: Pick<
+  typeof liveBlocks,
+  | "id"
+  | "pageId"
+  | "parentId"
+  | "type"
+  | "data"
+  | "rank"
+  | "expanded"
+  | "createdAt"
+  | "updatedAt"
+> = {
   id: liveBlocks.id,
   pageId: liveBlocks.pageId,
   parentId: liveBlocks.parentId,
@@ -29,4 +46,4 @@ export const BLOCK_WIRE_COLUMNS = {
   expanded: liveBlocks.expanded,
   createdAt: liveBlocks.createdAt,
   updatedAt: liveBlocks.updatedAt,
-} as const;
+};

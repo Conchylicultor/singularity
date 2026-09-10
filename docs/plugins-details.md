@@ -2432,6 +2432,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor._blocks`
               - `page/editor.BlockLifecycle`
               - `page/editor.deleteBlocksSubtree`
+              - `page/editor.liveBlocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
             - Exports (values):
@@ -2460,12 +2461,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
               - `infra/warmup.defineWarmup`
-              - `page/editor._blocks`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.BlockRestoreHook`
               - `page/editor.blocksChanged`
               - `page/editor.BlockTrashHook`
+              - `page/editor.DeletedBlockRow`
+              - `page/editor.liveBlocks`
               - `page/editor.PAGE_BLOCK_TYPE`
               - `page/editor.pageData`
               - `search/engine.deleteSearchDocs`
@@ -15843,7 +15845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
           - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses:
@@ -18603,6 +18605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.defineJob`
           - `page/editor._blocks`
           - `page/editor.blocksChanged`
+          - `page/editor.liveBlocks`
         - DB schema: `plugins/page/plugins/attachment-block/server/internal/tables.ts`
         - Exports (types): `BlockAttachmentCollector`
         - Exports (values): `AttachmentBlock`
@@ -18918,6 +18921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
           - `primitives/text-editor/token-extension/node.TokenPastePlugin`
           - `primitives/undo-redo.surfaceUndoProps`
+          - `primitives/undo-redo.usePendingFlush`
           - `primitives/undo-redo.useScopedUndoRedo`
           - `reorder.isNodeData`
           - `reorder.TopLevelEntry`
@@ -18963,6 +18967,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageOption`
           - `PageOptionsResult`
           - `TextBlockLayoutProps`
+          - `UndoConflictReason`
+          - `UndoConflictReport`
           - `VoidCaret`
           - `VoidCaretOptions`
         - Exports (values):
@@ -19002,6 +19008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `registerBlockTextExtension`
           - `registerBlockTextExtensionSource`
           - `TextBlockLayout`
+          - `undoConflictReportSink`
           - `useBlockActivate`
           - `useBlockDecorations`
           - `useBlockEditor`
@@ -19063,6 +19070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blockTextServerNodes`
           - `deleteBlocksSubtree`
           - `Editor`
+          - `liveBlocks`
           - `PAGE_BLOCK_TYPE`
           - `pageData`
           - `PageDataSchema`
@@ -19070,9 +19078,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `replacePageContent`
           - `resolveBlockAnnotations`
           - `serializePageContent`
+          - `untrashBlocks`
         - Register:
           - `defineTriggerEvent('page.blocksChanged')`
           - `defineTrashSource('pages')`
+          - `defineTrashSource('page-blocks')`
         - Routes:
           - `GET /api/pages`
           - `GET /api/pages/:pageId/blocks`
@@ -19196,6 +19206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `nextVisibleLine`
           - `opNamedIds`
           - `PAGE_BLOCK_TYPE`
+          - `PAGE_BLOCKS_TRASH_SOURCE`
           - `pageBlockHandle`
           - `pageBlockMarkdown`
           - `PageCoverSchema`
@@ -19215,6 +19226,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `rankWindow`
           - `RichTextSchema`
           - `rowDataOf`
+          - `runsEqual`
           - `runsLength`
           - `runsOf`
           - `runsOfNode`
@@ -19314,6 +19326,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/date-picker`
           - `reports/caret-flight`
           - `reports/collab-hydration`
+          - `reports/page-undo-conflict`
         - Extended by:
           - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
           - `apps/pages/starred` (table `page_blocks_ext_starred`)
@@ -19560,6 +19573,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor._blocks`
           - `page/editor.blocksChanged`
           - `page/editor.Editor`
+          - `page/editor.liveBlocks`
           - `shell/notifications.recordNotification`
         - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`
         - Register:
@@ -19655,6 +19669,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BlockRestoreHook`
           - `page/editor.blocksChanged`
           - `page/editor.BlockTrashHook`
+          - `page/editor.DeletedBlockRow`
+          - `page/editor.liveBlocks`
           - `page/editor.PAGE_BLOCK_TYPE`
         - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
         - Exports (types): `PageLinkExtractor`
@@ -19700,12 +19716,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor-collab.initBlockDoc`
           - `page/editor-collab.loadBlockDoc`
           - `page/editor-collab.mergeBlockDocUpdate`
-          - `page/editor._blocks`
           - `page/editor.applyPageBlockPatch`
           - `page/editor.blockTextProtectedSpans`
           - `page/editor.blockTextServerExtensions`
           - `page/editor.blockTextServerNodes`
           - `page/editor.Editor`
+          - `page/editor.liveBlocks`
           - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.resolveBlockAnnotations`
           - `page/editor.serializePageContent`
@@ -21736,6 +21752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
+              - `reports/page-undo-conflict`
               - `reports/render-loop`
               - `reports/viewport-escape`
               - `review/code-review`
@@ -22414,6 +22431,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/collab-hydration`
               - `reports/live-state-stale-drop`
               - `reports/optimistic-divergence`
+              - `reports/page-undo-conflict`
               - `reports/render-loop`
               - `reports/turn-unconfirmed`
               - `reports/viewport-escape`
@@ -28327,7 +28345,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `UI_CONTEXT_FIELDS`
           - `UI_CONTEXT_RE`
           - `UiContextMetaSchema`
-    - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
+    - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), a pending-flush seam (usePendingFlush / registerPendingFlush: a producer holding a not-yet-recorded entry seals it at the start of every undo/redo turn, outside the replay guard, so it is the entry popped), serialized turns (an undo/redo during an in-flight thunk queues FIFO behind it instead of running under the guard), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
       - Web:
         - Uses:
           - `primitives/latest-ref.useLatestRef`
@@ -28335,6 +28353,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/shortcuts.useSurfaceShortcuts`
         - Exports (types):
           - `HistoryEntry`
+          - `PendingFlush`
+          - `ReplayDirection`
           - `UndoOwner`
           - `UndoRedoApi`
           - `UndoRedoProviderProps`
@@ -28345,6 +28365,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `surfaceUndoProps`
           - `UNDO_OWNER_ATTR`
           - `UndoRedoProvider`
+          - `UndoRedoThunkError`
+          - `usePendingFlush`
           - `useScopedUndoRedo`
           - `useUndoRedo`
           - `useUndoRedoShortcuts`
@@ -28755,7 +28777,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -28869,6 +28891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/live-state-stale-drop`
       - `reports/noise-rules`
       - `reports/optimistic-divergence`
+      - `reports/page-undo-conflict`
       - `reports/plugin-load-errors`
       - `reports/render-loop`
       - `reports/turn-unconfirmed`
@@ -29023,6 +29046,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `optimisticDivergenceFingerprint`
           - `OptimisticDivergencePayloadSchema`
           - `StoredOptimisticDivergencePayloadSchema`
+    - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `PageUndoConflictCollector`
+          - `Reports.KindView` → `PageUndoConflictKindView`
+        - Uses:
+          - `page/editor.undoConflictReportSink`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "page-undo-conflict"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `PageUndoConflictPayload`
+        - Exports (values):
+          - `pageUndoConflictFingerprint`
+          - `PageUndoConflictPayloadSchema`
     - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
       - Web:
         - Contributes: `Core.Root` → `PluginLoadErrorReporter`
