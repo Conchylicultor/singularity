@@ -56,6 +56,7 @@ written there is a lint error, not a silent override.
     - `FloatingActionFadeIn`
 - Cross-plugin:
   - Imported by:
+    - `apps/sonata/track-mixer`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/outline/rail`
     - `shell/global-action-bar`

@@ -35,6 +35,7 @@ capabilities from `number` via the identity `extends` chain.
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/library`
+    - `apps/sonata/track-mixer`
     - `apps/sonata/voicing`
     - `debug/live-state-churn/monitor`
     - `debug/queue-health`

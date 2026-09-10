@@ -6,7 +6,7 @@
 
 - Description: Sonata — extensible piano and music app.
 - Sub-plugins:
-  - **`audio`** [6 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
+  - **`audio`** [7 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
   - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.
   - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
   - **`look`** — Web registration of the Sonata look config (flat / realistic / sketch) plus its View-popover switch — the app's single appearance choice. The palette itself is plain data in core/. Server registration of the Sonata look config (flat / realistic / sketch).

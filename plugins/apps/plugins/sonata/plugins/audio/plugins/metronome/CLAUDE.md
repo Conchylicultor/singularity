@@ -47,6 +47,7 @@ on/off, subdivision, count-in bars, click volume, accent downbeat) live in the
     - `primitives/css/center.Center`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
+    - `primitives/css/slider.Slider`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`

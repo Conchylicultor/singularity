@@ -30,8 +30,30 @@ export interface TrackMixerEntry {
   color: string;
   muted: boolean;
   hidden: boolean;
-  /** Whether any field has a persisted override (drives reset affordance). */
+  /**
+   * Fader position as a linear gain multiplier: 1 is unity (the track as
+   * recorded), 0 is silent, 2 is +6 dB. Defaults to 1 for a track with no
+   * persisted row. This is a separate concept from `muted`: mute drops the
+   * track's notes upstream, so a muted track gets no audio channel at all,
+   * while `volume: 0` is a fader position on a channel that keeps existing and
+   * keeps being scheduled — which is what makes raising it again instant.
+   */
+  volume: number;
+  /**
+   * Whether ANY field has a persisted override — drives the per-song reset
+   * affordance, which deletes the whole row. Use `instrumentCustomized` for the
+   * narrower "has this track's timbre been chosen by hand?" question.
+   */
   customized: boolean;
+  /**
+   * Whether the track's timbre was chosen by hand, as opposed to derived from
+   * its GM program or the default instrument. This is what the instrument
+   * picker asks, and it must NOT be `customized`: a row exists the moment the
+   * user mutes the track or moves its fader, and reading that as "instrument
+   * overridden" would make the picker stop showing "Auto" and mark the merely
+   * resolved instrument as an explicit choice.
+   */
+  instrumentCustomized: boolean;
 }
 
 /** Persisted overrides for the open song, keyed by trackId. */
@@ -39,14 +61,23 @@ function useCurrentSongOverrides(): Map<string, TrackViewRow> {
   const { currentSongId } = useSonata();
   const result = useResource(trackViewResource);
   // Empty map while pending is genuinely correct: tracks fall back to palette-
-  // default color, muted=false, hidden=false — the same defaults an unoverridden
-  // track would have at any point. Piano-roll and audio engine work correctly
-  // with these defaults while overrides are still loading.
+  // default color, muted=false, hidden=false, volume=1 — the same defaults an
+  // unoverridden track would have at any point. Piano-roll and audio engine work
+  // correctly with these defaults while overrides are still loading.
+  //
+  // `volume` does not change that reasoning: a not-yet-loaded track reading as
+  // unity gain is the same class of default as reading as audible + visible —
+  // the track as recorded, which is what it would be with no row at all. What
+  // would break the argument is a default that is a *claim* about the user's
+  // data rather than the absence of one (a fader parked at zero, say); unity is
+  // the absence of an opinion, so a late-arriving override moves the level from
+  // "untouched" to the user's position rather than reversing a stated one.
   return useMemo(() => {
     const m = new Map<string, TrackViewRow>();
     if (!currentSongId) return m;
     if (result.pending) return m;
-    for (const r of result.data) if (r.songId === currentSongId) m.set(r.trackId, r);
+    for (const r of result.data)
+      if (r.songId === currentSongId) m.set(r.trackId, r);
     return m;
   }, [result, currentSongId]);
 }
@@ -90,7 +121,8 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
     const { byId, byProgram, fallbackId } = instrumentIndex;
     return score.tracks.map((t, i) => {
       const row = overrides.get(t.id);
-      const name = t.name?.trim() || t.instrumentHint?.trim() || `Track ${i + 1}`;
+      const name =
+        t.name?.trim() || t.instrumentHint?.trim() || `Track ${i + 1}`;
 
       // Resolution precedence: (1) a non-null override that still matches a
       // registered id, (2) the timbre matching the track's GM program, (3) the
@@ -116,7 +148,9 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
         color: row?.color ?? defaultTrackColor(i),
         muted: row?.muted ?? false,
         hidden: row?.hidden ?? false,
+        volume: row?.volume ?? 1,
         customized: row !== undefined,
+        instrumentCustomized: row?.instrument != null,
       };
     });
   }, [score.tracks, score.notes, overrides, instrumentIndex]);
@@ -154,6 +188,23 @@ export function useTrackInstrumentMap(): Map<string, string> {
   const entries = useTrackMixerEntries();
   return useMemo(
     () => new Map(entries.map((e) => [e.trackId, e.instrumentId])),
+    [entries],
+  );
+}
+
+/**
+ * Fader position per trackId, as a linear gain multiplier (1 = unity, 0 =
+ * silent, 2 = +6 dB) — consumed by the audio engine to set each track's fader
+ * gain. Every track in the score appears, unity included, so the engine can
+ * read a channel's level without having to know whether a row was persisted.
+ * Muted tracks are NOT filtered out here: mute is a separate mechanism applied
+ * upstream (see `useMutedTrackIds`), and a muted track keeps whatever fader
+ * position it will return to when unmuted.
+ */
+export function useTrackVolumeMap(): Map<string, number> {
+  const entries = useTrackMixerEntries();
+  return useMemo(
+    () => new Map(entries.map((e) => [e.trackId, e.volume])),
     [entries],
   );
 }

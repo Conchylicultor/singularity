@@ -20,6 +20,7 @@ export const handleUpsertTrackView = implement(
     if (body.instrument !== undefined) set.instrument = body.instrument;
     if (body.muted !== undefined) set.muted = body.muted;
     if (body.hidden !== undefined) set.hidden = body.hidden;
+    if (body.volume !== undefined) set.volume = body.volume;
 
     await db.transaction(async (tx) => {
       for (const trackId of body.trackIds) {
@@ -32,6 +33,7 @@ export const handleUpsertTrackView = implement(
             instrument: body.instrument ?? null,
             muted: body.muted ?? false,
             hidden: body.hidden ?? false,
+            volume: body.volume ?? 1,
           })
           .onConflictDoUpdate({
             target: [_trackView.songId, _trackView.trackId],

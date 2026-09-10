@@ -3,6 +3,7 @@ import type {
   InstrumentVoices,
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
+import { sharedSampleLoader } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader/web";
 import { PIANO_MIRROR_ID } from "../shared/mirror";
 
 /**
@@ -23,9 +24,13 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  * server-side 502 + log, not a client exception.
  *
  * smplr@0.26 API used here (verified against `smplr/dist/index.d.ts`):
- *  - factory `SplendidGrandPiano(ctx, { destination, baseUrl })` — callable
- *    without `new`; `destination` routes output into the provided AudioNode;
- *    `baseUrl` overrides the default sample CDN.
+ *  - factory `SplendidGrandPiano(ctx, { destination, baseUrl, loader })` —
+ *    callable without `new`; `destination` routes output into the provided
+ *    AudioNode; `baseUrl` overrides the default sample CDN; `loader` supplies a
+ *    `SampleLoader` in place of the private one the instrument would build.
+ *    `loader` is one of smplr's cross-instrument options rather than a piano
+ *    option, so it is accepted by every instrument factory without appearing in
+ *    `SplendidGrandPianoConfig`.
  *  - `piano.ready: Promise<void>` resolves when sample loading settles (`.load`
  *    is deprecated).
  *  - `piano.start({ note, velocity, time, duration })` — `note` accepts a MIDI
@@ -37,6 +42,12 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  *    pre-scheduled but smplr hasn't dispatched yet keep firing. Use
  *    `piano.scheduler.stop()` to flush that queue (see allOff).
  *  - `piano.dispose()` stops all voices and disposes the output channel.
+ *
+ * The engine builds one voice manager per TRACK, so a two-hand piano score
+ * creates two of these. They share a `SampleLoader` (the `sample-loader` leaf)
+ * so the sample set is downloaded and decoded once, not once per track. The
+ * `scheduler` is deliberately NOT shared: `allOff` flushes it, and a shared one
+ * would flush every other track's queued notes too.
  */
 /** smplr's `SplendidGrandPiano` instance type, taken from the dynamically
  *  imported module so the module is only reached in type position (erased). */
@@ -67,19 +78,29 @@ export function createVoices(
   // called before the smplr chunk resolves has no instance to act on yet.
   let disposed = false;
 
-  const loaded = import("smplr").then(({ SplendidGrandPiano }) => {
-    // Disposed before the chunk landed (fast unmount / instrument-switch): skip
-    // instantiation entirely — there is nothing to sound or tear down.
-    if (disposed) return;
-    piano = SplendidGrandPiano(ctx, {
-      destination,
-      // Same-origin mirror instead of smplr's default CDN. smplr appends
-      // `/<sample>.<format>` and URL-encodes it, so the mirror receives a
-      // well-formed path; `formats` is left at smplr's default ["ogg","m4a"].
-      baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
-    });
-    return piano.ready;
-  });
+  // The shared loader is awaited ALONGSIDE the chunk rather than after it, so
+  // this factory still has exactly one point at which the outside world lands —
+  // and therefore still needs exactly one `disposed` re-check. (Both promises
+  // resolve from the same module anyway: `sharedSampleLoader` reaches `smplr`
+  // through the same dynamic import.)
+  const loaded = Promise.all([import("smplr"), sharedSampleLoader(ctx)]).then(
+    ([{ SplendidGrandPiano }, loader]) => {
+      // Disposed before the chunk landed (fast unmount / instrument-switch): skip
+      // instantiation entirely — there is nothing to sound or tear down.
+      if (disposed) return;
+      piano = SplendidGrandPiano(ctx, {
+        destination,
+        // Same-origin mirror instead of smplr's default CDN. smplr appends
+        // `/<sample>.<format>` and URL-encodes it, so the mirror receives a
+        // well-formed path; `formats` is left at smplr's default ["ogg","m4a"].
+        baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
+        // Shared per AudioContext: the sample set is fetched and decoded once
+        // however many piano tracks the score has.
+        loader,
+      });
+      return piano.ready;
+    },
+  );
 
   return {
     loaded,

@@ -19,7 +19,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`pages`** [12 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [8 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
     - **`settings`** [4 sub-plugins] — Settings app.
-    - **`sonata`** [62 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [11 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [10 sub-plugins] — Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
@@ -247,7 +247,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
-    - **`css`** [46 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
+    - **`css`** [47 sub-plugins] — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
     - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.

@@ -11,20 +11,84 @@ import {
 import {
   useMutedTrackIds,
   useTrackInstrumentMap,
+  useTrackVolumeMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import {
   startScheduling,
   type LoopWindowBeats,
   type ScheduleHandle,
 } from "../scheduler";
-import { DEFAULT_VOLUME, useAudioControls, useAudioState } from "../audio-store";
+import {
+  DEFAULT_VOLUME,
+  useAudioControls,
+  useAudioState,
+} from "../audio-store";
+
+/**
+ * One track's channel strip: the track's own fader, and the voices feeding it.
+ *
+ * The `GainNode` belongs to the TRACK, not to the instrument — which is what
+ * lets an instrument change swap `voices` in place (rebuilt into the same node)
+ * while the fader position, and any glide still running on it, stay put.
+ */
+interface TrackChannel {
+  /** The fader, connected to master. */
+  gain: GainNode;
+  /** The voice manager, created with `createVoices(ctx, gain)`. */
+  voices: InstrumentVoices;
+  /** The instrument id `voices` was built against — the swap trigger. */
+  instrumentId: string;
+}
+
+/** Fader position of a track with no persisted level: the track as recorded. */
+const UNITY_GAIN = 1;
+
+/**
+ * Time constant (seconds) of the fader glide. A level change is applied as a
+ * short exponential approach rather than a step, because a step across a
+ * sounding note is a waveform discontinuity — heard as a click.
+ */
+const FADER_GLIDE_SECONDS = 0.03;
+
+// Separators for the content fingerprints below. Every id written into a
+// fingerprint is `encodeURIComponent`-escaped, which escapes both of these, so a
+// fingerprint round-trips exactly whatever an id contains. That exactness is
+// what lets an effect keyed on a fingerprint read its payload back OUT of the
+// fingerprint, instead of also listing a Map whose identity churns.
+const ENTRY_SEP = "\n";
+const FIELD_SEP = "|";
+
+/** Sorted, joined fingerprint of a (trackId → instrumentId) set. */
+function channelKey(pairs: Iterable<readonly [string, string]>): string {
+  const entries: string[] = [];
+  for (const [trackId, instrumentId] of pairs) {
+    const track = encodeURIComponent(trackId);
+    const instrument = encodeURIComponent(instrumentId);
+    entries.push(`${track}${FIELD_SEP}${instrument}`);
+  }
+  return entries.sort().join(ENTRY_SEP);
+}
+
+/** Read a channel fingerprint back as trackId → instrumentId. */
+function parseChannelKey(key: string): Map<string, string> {
+  const map = new Map<string, string>();
+  if (key === "") return map;
+  for (const entry of key.split(ENTRY_SEP)) {
+    const cut = entry.indexOf(FIELD_SEP);
+    map.set(
+      decodeURIComponent(entry.slice(0, cut)),
+      decodeURIComponent(entry.slice(cut + 1)),
+    );
+  }
+  return map;
+}
 
 /**
  * The headless Sonata audio engine — a `Sonata.Effect`, mounted once inside
  * `SonataProvider` (in `SonataLayout`) and therefore **always mounted while the
  * Sonata app is open**, independent of which pane is active or whether the
  * player's section column is collapsed. It owns the Web Audio graph
- * (`AudioContext` + master gain), the per-instrument voice managers, and the
+ * (`AudioContext` + master gain), the per-track channel strips, and the
  * scheduling effect; it renders nothing.
  *
  * Previously this lived inside `AudioPanel` (a collapsible `Sonata.Section`), so
@@ -42,13 +106,16 @@ import { DEFAULT_VOLUME, useAudioControls, useAudioState } from "../audio-store"
  * schedule anchor at the same play instant and derive time from `beatToSeconds`,
  * sound stays locked to the cursor through tempo changes.
  *
- * Instruments are PER-TRACK: there is no global picker here (instrument
- * selection lives in the Tracks panel). The engine maintains one voice manager
- * per *distinct in-use* instrument id — shared by every track resolving to that
- * instrument — and routes each note to its track's manager. The set of in-use
- * instruments derives live from `useTrackInstrumentMap()` + the audible score,
- * so changing a track's instrument mid-session loads the new timbre and the
- * scheduling effect re-runs to play it.
+ * Instruments and levels are PER-TRACK: there is no global picker here — both
+ * the instrument choice and the fader live in the Tracks panel. The engine keeps
+ * one CHANNEL STRIP per audible track: a `GainNode` connected to master, fed by
+ * a voice manager created into it, with every one of that track's notes routed
+ * to it. Two tracks on the same instrument share nothing, and that is precisely
+ * what makes a per-track fader possible — a voice manager shared between tracks
+ * has a single output node, so there would be nowhere to put one. The strip set
+ * derives live from `useTrackInstrumentMap()` + the audible score, so changing a
+ * track's instrument mid-session loads the new timbre and re-schedules to play
+ * it, in the same gain node, at the same level.
  */
 export function AudioEngine() {
   const { score, isPlaying, seekEpoch, registerClock, loop } = useSonata();
@@ -82,23 +149,31 @@ export function AudioEngine() {
 
   // Muted tracks are dropped from the play-list before scheduling. We derive the
   // audible NOTE LIST (not a whole filtered score) keyed on `[score.notes,
-  // mutedIds]`: `scaleTempo` preserves the `score.notes` array reference, so this
+  // mutedKey]`: `scaleTempo` preserves the `score.notes` array reference, so this
   // memo's identity is **stable across tempo changes** and only flips on a real
   // note/mute change. That stability is what lets the rebuild effect ignore tempo
   // churn (tempo is handled by the separate retime effect below) — so dragging the
   // speed wheel no longer tears down and re-attacks every ringing note.
+  //
+  // The key, not the Set, is the dep, and the filter rebuilds its set FROM the
+  // key: `useMutedTrackIds()` re-mints its Set whenever ANY persisted track-view
+  // field changes — a fader move included — so keying on the Set's identity would
+  // hand the rebuild effect a fresh note array every time someone moved a level,
+  // cutting every ringing note. Same hazard as tempo, same remedy.
   const mutedIds = useMutedTrackIds();
-  const audibleNotes = useMemo(
-    () =>
-      mutedIds.size === 0
-        ? score.notes
-        : score.notes.filter((n) => !mutedIds.has(n.track)),
-    [score.notes, mutedIds],
+  const mutedKey = useMemo(
+    () => [...mutedIds].map(encodeURIComponent).sort().join(ENTRY_SEP),
+    [mutedIds],
   );
+  const audibleNotes = useMemo(() => {
+    if (mutedKey === "") return score.notes;
+    const muted = new Set(mutedKey.split(ENTRY_SEP).map(decodeURIComponent));
+    return score.notes.filter((n) => !muted.has(n.track));
+  }, [score.notes, mutedKey]);
 
   // Resolved trackId → instrumentId (override ?? GM-program match ?? default),
   // live-state backed: it changes when someone picks a new instrument for a
-  // track, which flows into the in-use set and the scheduling effect below.
+  // track, which flows into the channel fingerprint below.
   const trackInstrumentMap = useTrackInstrumentMap();
 
   // Instruments are read generically — never names a contributor (collection
@@ -109,20 +184,48 @@ export function AudioEngine() {
     [instruments],
   );
 
-  // The DISTINCT instrument ids actually in use: resolve every track that still
-  // has audible notes. A track whose notes are all muted contributes nothing
-  // (so its manager is torn down). Sorted + joined into a stable key so the
-  // reconcile effect fires only when the *set* of in-use ids changes — not on
-  // every render and not when an unrelated track's note tally shifts.
-  const inUseIds = useMemo(() => {
-    const ids = new Set<string>();
+  // The channel strips that SHOULD exist: one per track that still has audible
+  // notes, paired with the instrument that track resolves to. A track whose notes
+  // are all muted contributes nothing (so its strip is torn down). Folded into a
+  // single sorted fingerprint so the effects below fire only when that SET
+  // changes: not on every render, not on a level change (which re-mints
+  // `trackInstrumentMap` with identical contents), not on a tempo change
+  // (`audibleNotes` is reference-stable across those), and not when an unrelated
+  // track's note tally shifts. The fingerprint is also the payload — the
+  // reconcile effect reads the pairs back out of it — so no churning Map has to
+  // sit in any dependency list.
+  const inUseKey = useMemo(() => {
+    const pairs: [string, string][] = [];
+    const seen = new Set<string>();
     for (const n of audibleNotes) {
+      if (seen.has(n.track)) continue;
+      seen.add(n.track);
       const id = trackInstrumentMap.get(n.track);
-      if (id) ids.add(id);
+      if (id) pairs.push([n.track, id]);
     }
-    return ids;
+    return channelKey(pairs);
   }, [audibleNotes, trackInstrumentMap]);
-  const inUseKey = useMemo(() => [...inUseIds].sort().join("|"), [inUseIds]);
+
+  // Per-track fader positions (linear gain: 1 = unity, 0 = silent, 2 = +6 dB),
+  // read through the latest-ref EVERYWHERE outside the fader effect below. Two
+  // reasons, in increasing order of importance: the map is re-minted on every
+  // persisted track-view change, and a level is not a reason to touch any audio
+  // node's lifetime. Letting it into the reconcile effect's deps would churn
+  // strips; letting it into the rebuild effect's deps would cancel and re-attack
+  // every ringing note each time one fader moved — the exact regression the
+  // tempo jog-wheel fix exists to prevent.
+  const trackVolumes = useTrackVolumeMap();
+  const trackVolumesRef = useLatestRef(trackVolumes);
+  // Content fingerprint of the levels: a fresh Map identity every render would
+  // re-fire the fader effect on every render.
+  const volumeKey = useMemo(
+    () =>
+      [...trackVolumes]
+        .map(([trackId, v]) => `${encodeURIComponent(trackId)}${FIELD_SEP}${v}`)
+        .sort()
+        .join(ENTRY_SEP),
+    [trackVolumes],
+  );
 
   // Master volume is owned by the shared store (the panel slider writes it).
   const { volume } = useAudioState();
@@ -133,10 +236,10 @@ export function AudioEngine() {
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
-  // One voice manager per distinct in-use instrument id, shared across every
-  // track that resolves to it (safe: muted tracks are already filtered out
-  // upstream, so a shared manager never sounds a muted track).
-  const managersRef = useRef<Map<string, InstrumentVoices>>(new Map());
+  // One channel strip per audible track, keyed by trackId: its own fader into
+  // master, feeding its own voice manager. Two tracks on the same instrument
+  // share nothing — that separation is what gives each track a node to fade.
+  const channelsRef = useRef<Map<string, TrackChannel>>(new Map());
   // The currently-running schedule, shared between the rebuild effect (which
   // creates/cancels it) and the retime effect (which re-times its tail on a
   // tempo-only change). Nulled on cancel so retime never lands on a dead handle.
@@ -170,16 +273,22 @@ export function AudioEngine() {
     };
     document.addEventListener("pointerdown", unlock, { once: true });
 
-    const managers = managersRef.current;
+    const channels = channelsRef.current;
     return () => {
       unregisterClock();
       // Retract the published graph before tearing the context down so a sibling
       // never schedules onto a closing context.
       setGraph(null);
       document.removeEventListener("pointerdown", unlock);
-      // Dispose every voice manager before tearing down the context.
-      for (const manager of managers.values()) manager.dispose();
-      managers.clear();
+      // Tear every strip down before the context: dispose the voices AND
+      // disconnect the fader, then drop the map. That completeness is what lets
+      // React StrictMode's second mount rebuild cleanly against the new context
+      // instead of reusing nodes belonging to the closed one.
+      for (const channel of channels.values()) {
+        channel.voices.dispose();
+        channel.gain.disconnect();
+      }
+      channels.clear();
       // Guard against React StrictMode's double invoke: only close once.
       if (ctx.state !== "closed") {
         void ctx.close();
@@ -197,34 +306,30 @@ export function AudioEngine() {
     if (masterRef.current) masterRef.current.gain.value = volume;
   }, [volume]);
 
-  // --- Manager reconcile: one InstrumentVoices per distinct in-use id. ------
-  // Keyed on `inUseKey` (the stable set fingerprint) so it fires only when the
-  // in-use *set* changes: create managers for newly-needed ids, dispose ones no
-  // longer in use. Aggregate load errors loudly (mirror the prior per-instrument
-  // `loaded.then(ok, err)` pattern). This effect is declared BEFORE the
-  // scheduling/status effects, so on any render where the in-use set changes it
-  // mutates the ref first — the later effects then read the up-to-date managers
+  // --- Channel reconcile: one strip per audible track. -----------------------
+  // Keyed on `inUseKey` (the stable (track → instrument) set fingerprint) so it
+  // fires only when that set changes: build a strip for a newly-audible track,
+  // re-voice a track whose instrument changed, tear down a track that dropped
+  // out. Aggregate load errors loudly (mirror the prior per-instrument
+  // `loaded.then(ok, err)` pattern). This effect is declared BEFORE the fader /
+  // scheduling / status effects, so on any render where the set changes it
+  // mutates the ref first — the later effects then read the up-to-date strips
   // without needing a separate version signal.
   useEffect(() => {
     const ctx = ctxRef.current;
     const master = masterRef.current;
     if (!ctx || !master) return;
 
-    const managers = managersRef.current;
+    const channels = channelsRef.current;
+    const inUse = parseChannelKey(inUseKey);
+    const volumes = trackVolumesRef.current;
     let changed = false;
     let cancelled = false;
 
-    // Add newly-needed instruments.
-    for (const id of inUseIds) {
-      if (managers.has(id)) continue;
-      const contribution = instrumentById.get(id);
-      if (!contribution) continue; // no registered contribution for this id
-      const next = contribution.createVoices(ctx, master);
-      managers.set(id, next);
-      changed = true;
-      // Surface a rejected load instead of spinning "Loading…" forever (and
-      // leaving the rejection floating).
-      void next.loaded.then(
+    // Surface a rejected load instead of spinning "Loading…" forever (and
+    // leaving the rejection floating).
+    const watchLoad = (voices: InstrumentVoices) => {
+      void voices.loaded.then(
         () => {},
         (err: unknown) => {
           if (!cancelled) {
@@ -232,13 +337,47 @@ export function AudioEngine() {
           }
         },
       );
+    };
+
+    // Build the strips that are missing, and re-voice the ones whose track now
+    // resolves to a different instrument.
+    for (const [trackId, instrumentId] of inUse) {
+      const existing = channels.get(trackId);
+      if (existing?.instrumentId === instrumentId) continue;
+      const contribution = instrumentById.get(instrumentId);
+      // No registered contribution for this id: skip creating, exactly as
+      // before. An existing strip keeps its now-stale voices rather than falling
+      // silent on an id nothing can sound.
+      if (!contribution) continue;
+
+      if (existing) {
+        // Instrument change: dispose the old voices and build the new ones into
+        // the SAME GainNode. The fader belongs to the track, so its position —
+        // and any glide still running on it — survives the new timbre.
+        existing.voices.dispose();
+        existing.voices = contribution.createVoices(ctx, existing.gain);
+        existing.instrumentId = instrumentId;
+        watchLoad(existing.voices);
+      } else {
+        const gain = ctx.createGain();
+        // A plain write, not a ramp: nothing has ever played through this node,
+        // so there is no discontinuity for a jump to make audible. Read through
+        // the ref precisely so the levels do NOT become a dep of this effect.
+        gain.gain.value = volumes.get(trackId) ?? UNITY_GAIN;
+        gain.connect(master);
+        const voices = contribution.createVoices(ctx, gain);
+        channels.set(trackId, { gain, voices, instrumentId });
+        watchLoad(voices);
+      }
+      changed = true;
     }
 
-    // Remove instruments no longer in use.
-    for (const [id, manager] of managers) {
-      if (inUseIds.has(id)) continue;
-      manager.dispose();
-      managers.delete(id);
+    // Tear down the strips of tracks that are no longer audible.
+    for (const [trackId, channel] of channels) {
+      if (inUse.has(trackId)) continue;
+      channel.voices.dispose();
+      channel.gain.disconnect();
+      channels.delete(trackId);
       changed = true;
     }
 
@@ -247,28 +386,67 @@ export function AudioEngine() {
     return () => {
       cancelled = true;
     };
-    // `inUseKey` is the stable fingerprint of `inUseIds`; `instrumentById` only
-    // changes when contributions change. `setLoadError` is memoized-stable. All
-    // intentional deps.
-  }, [inUseKey, inUseIds, instrumentById, setLoadError]);
+    // `inUseKey` carries the whole (track → instrument) set, so it is both the
+    // change signal and the payload; `instrumentById` only changes when
+    // contributions change; `setLoadError` is memoized-stable. `trackVolumesRef`
+    // is a stable latest-ref — deliberately the ref and not the map, so moving a
+    // fader never reconciles an audio node. All intentional deps.
+  }, [inUseKey, instrumentById, setLoadError]);
+
+  // --- Fader effect: apply live level changes to the strips that exist. ------
+  // Separate from the reconcile effect on purpose: reconcile creates and
+  // destroys audio nodes, and moving a level is not a reason to do either.
+  // Keyed on the level fingerprint AND on `inUseKey`, so a strip created
+  // mid-session picks up the current fader position on the very next commit
+  // rather than waiting for the next drag. Neither key is read in the body —
+  // they are the change signals; the levels themselves come through the stable
+  // latest-ref, so a re-minted map with identical contents cannot re-fire this.
+  useEffect(() => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+    const volumes = trackVolumesRef.current;
+    for (const [trackId, channel] of channelsRef.current) {
+      // A short glide rather than a step: the fader can move while the track is
+      // sounding, and a discontinuous jump there is heard as a click.
+      channel.gain.gain.setTargetAtTime(
+        volumes.get(trackId) ?? UNITY_GAIN,
+        ctx.currentTime,
+        FADER_GLIDE_SECONDS,
+      );
+    }
+  }, [volumeKey, inUseKey]);
 
   // --- Rebuild effect: anchor on play, schedule upfront, allOff on stop. ------
   // Re-runs on `seekEpoch` (a seek repositions the origin without changing the
-  // notes), on `audibleNotes` (an edit or mute toggle), and on `trackInstrumentMap`
-  // (a track's instrument changed) — each legitimately needs the in-flight schedule
-  // cancelled (allOff) and rebuilt from the current cursor. It deliberately does
-  // NOT depend on `score`: a tempo-only change keeps `audibleNotes` referentially
-  // stable, so this effect doesn't run and no ringing note is cut — the separate
-  // retime effect below re-times the tail instead. Tempo is read live via
-  // `scoreRef` so a rebuild that DOES fire still uses the current tempo.
+  // notes), on `audibleNotes` (an edit or mute toggle), and on `inUseKey` (a
+  // track's instrument changed, or a track became audible / silent) — each
+  // legitimately needs the in-flight schedule cancelled (allOff) and rebuilt from
+  // the current cursor. On an instrument change the rebuild is what awaits the
+  // new instrument's `loaded` promise and gives a clean allOff → dispose →
+  // create → re-attack cutover: the reconcile effect above is declared first, so
+  // React runs this effect's cleanup (allOff) before that one's setup (dispose),
+  // an ordering the instrument wrappers' `disposed` guard explicitly tolerates.
+  //
+  // `inUseKey` rather than `trackInstrumentMap` itself: that map's identity is
+  // re-minted whenever ANY persisted track-view field changes — a fader move
+  // included — so listing it here would cut every ringing note each time one
+  // track's level moved. The fingerprint changes only when a track's resolved
+  // instrument, or the audible track set, really does.
+  //
+  // It also deliberately does NOT depend on `score`: a tempo-only change keeps
+  // `audibleNotes` referentially stable, so this effect doesn't run and no ringing
+  // note is cut — the separate retime effect below re-times the tail instead.
+  // Tempo is read live via `scoreRef` so a rebuild that DOES fire still uses the
+  // current tempo. Per-track levels are never read here at all: they live on the
+  // strips' faders, downstream of everything this effect schedules.
   useEffect(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
 
-    const managers = [...managersRef.current.values()];
+    const channels = [...channelsRef.current.values()];
 
     if (!isPlaying) {
-      for (const manager of managers) manager.allOff();
+      for (const channel of channels) channel.voices.allOff();
       return;
     }
 
@@ -280,15 +458,15 @@ export function AudioEngine() {
     const audioAnchor = ctx.currentTime;
     const fromBeat = cursorRef.current.getBeat();
 
-    // Route a track to its instrument's manager, reading the ref live so it
-    // always reflects the latest reconcile.
+    // Route a track to its own channel strip, reading the ref live so it always
+    // reflects the latest reconcile.
     const resolveVoices = (trackId: string): InstrumentVoices | undefined =>
-      managersRef.current.get(trackInstrumentMap.get(trackId) ?? "");
+      channelsRef.current.get(trackId)?.voices;
 
     let handle: ScheduleHandle | null = null;
     let cancelled = false;
     void (async () => {
-      await Promise.all(managers.map((m) => m.loaded));
+      await Promise.all(channels.map((c) => c.voices.loaded));
       if (cancelled) return;
       // Compose the play-list score from the live tempo + the (mute-filtered)
       // audible notes. `score.notes` is reference-stable across tempo changes, so
@@ -308,14 +486,14 @@ export function AudioEngine() {
       cancelled = true;
       handle?.cancel();
       if (handleRef.current === handle) handleRef.current = null;
-      for (const manager of managers) manager.allOff();
+      for (const channel of channels) channel.voices.allOff();
     };
     // `loopKey` (the enabled-loop bounds signature) is in deps so toggling the
     // loop or moving its bounds rebuilds from the current cursor with the new
     // window — a deliberate edit. A repeated wrap at a stable loop leaves `loopKey`
     // unchanged, so the pre-scheduled iterations in `startScheduling` keep playing
     // with no teardown (the seamless-loop fix). `loopRef` is a stable latest-ref.
-  }, [isPlaying, audibleNotes, trackInstrumentMap, seekEpoch, loopKey]);
+  }, [isPlaying, audibleNotes, inUseKey, seekEpoch, loopKey]);
 
   // --- Retime effect: follow the speed jog-wheel without cutting any note. ----
   // Keyed on `score` (which changes only via tempo or content). A pure tempo drag
@@ -338,20 +516,20 @@ export function AudioEngine() {
     handle.retime(score, audioAnchor);
   }, [score]);
 
-  // Aggregate status: "Loading…" until every in-use manager is loaded, the
+  // Aggregate status: "Loading…" until every live strip's voices are loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it
-  // re-evaluates whenever the in-use set changes (the reconcile effect, declared
+  // re-evaluates whenever the strip set changes (the reconcile effect, declared
   // earlier, has already updated the ref by then). Published to the store as the
   // engine's health slice (no UI surface reads it yet).
   useEffect(() => {
-    const managers = [...managersRef.current.values()];
-    if (managers.length === 0) {
+    const channels = [...channelsRef.current.values()];
+    if (channels.length === 0) {
       setStatus("empty");
       return;
     }
     setStatus("loading");
     let cancelled = false;
-    void Promise.all(managers.map((m) => m.loaded)).then(
+    void Promise.all(channels.map((c) => c.voices.loaded)).then(
       () => {
         if (!cancelled) setStatus("ready");
       },
@@ -364,7 +542,7 @@ export function AudioEngine() {
       cancelled = true;
     };
     // `setStatus` is memoized-stable, so adding it doesn't change when this
-    // re-evaluates (still on every in-use-set change via `inUseKey`).
+    // re-evaluates (still on every strip-set change via `inUseKey`).
   }, [inUseKey, setStatus]);
 
   return null;

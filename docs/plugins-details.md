@@ -3067,6 +3067,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/shell.useSonata`
                   - `apps/sonata/track-mixer.useMutedTrackIds`
                   - `apps/sonata/track-mixer.useTrackInstrumentMap`
+                  - `apps/sonata/track-mixer.useTrackVolumeMap`
+                  - `primitives/css/slider.Slider`
                   - `primitives/css/spacing.Stack`
                   - `primitives/icon-button.IconButton`
                   - `primitives/latest-ref.useLatestRef`
@@ -3136,6 +3138,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/center.Center`
                   - `primitives/css/control-panel.ControlPanel`
                   - `primitives/css/control-panel.ControlPanelPopover`
+                  - `primitives/css/slider.Slider`
                   - `primitives/css/toggle-chip.SegmentedControl`
                   - `primitives/css/viewport-overlay.ViewportOverlay`
                   - `primitives/icon-button.IconButton`
@@ -3146,13 +3149,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `SonataAudio.Instrument` "Acoustic Piano"
-                - Uses: `apps/sonata/audio/instruments.SonataAudio`
+                - Uses:
+                  - `apps/sonata/audio/instruments.SonataAudio`
+                  - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
+            - **`sample-loader`** — Sonata audio sample loader: one smplr SampleLoader per AudioContext, shared by every instrument instance built against it, so N copies of an instrument cost one download and one decode instead of N.
+              - Cross-plugin:
+                - Imported by:
+                  - `apps/sonata/audio/piano`
+                  - `apps/sonata/audio/soundfont`
+              - Web:
+                - Exports (values): `sharedSampleLoader`
             - **`soundfont`** — Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.
               - Web:
                 - Contributes: `SonataAudio.Instrument` ×127: "Accordion", "Acoustic Bass", "Acoustic Guitar (nylon)", "Acoustic Guitar (steel)", "Agogo", "Alto Sax", "Applause", "Bagpipe", "Banjo", "Baritone Sax", "Bassoon", "Bird Tweet", "Blown Bottle", "Brass Section", "Breath Noise", "Bright Acoustic Piano", "Celesta", "Cello", "Choir Aahs", "Church Organ", "Clarinet", "Clavinet", "Contrabass", "Distortion Guitar", "Drawbar Organ", "Dulcimer", "Electric Bass (finger)", "Electric Bass (pick)", "Electric Grand Piano", "Electric Guitar (clean)", "Electric Guitar (jazz)", "Electric Guitar (muted)", "Electric Piano 1", "Electric Piano 2", "English Horn", "FX 1 (rain)", "FX 2 (soundtrack)", "FX 3 (crystal)", "FX 4 (atmosphere)", "FX 5 (brightness)", "FX 6 (goblins)", "FX 7 (echoes)", "FX 8 (sci-fi)", "Fiddle", "Flute", "French Horn", "Fretless Bass", "Glockenspiel", "Guitar Fret Noise", "Guitar Harmonics", "Gunshot", "Harmonica", "Harpsichord", "Helicopter", "Honky-tonk Piano", "Kalimba", "Koto", "Lead 1 (square)", "Lead 2 (sawtooth)", "Lead 3 (calliope)", "Lead 4 (chiff)", "Lead 5 (charang)", "Lead 6 (voice)", "Lead 7 (fifths)", "Lead 8 (bass + lead)", "Marimba", "Melodic Tom", "Music Box", "Muted Trumpet", "Oboe", "Ocarina", "Orchestra Hit", "Orchestral Harp", "Overdriven Guitar", "Pad 1 (new age)", "Pad 2 (warm)", "Pad 3 (polysynth)", "Pad 4 (choir)", "Pad 5 (bowed)", "Pad 6 (metallic)", "Pad 7 (halo)", "Pad 8 (sweep)", "Pan Flute", "Percussive Organ", "Piccolo", "Pizzicato Strings", "Recorder", "Reed Organ", "Reverse Cymbal", "Rock Organ", "Seashore", "Shakuhachi", "Shamisen", "Shanai", "Sitar", "Slap Bass 1", "Slap Bass 2", "Soprano Sax", "Steel Drums", "String Ensemble 1", "String Ensemble 2", "Synth Bass 1", "Synth Bass 2", "Synth Brass 1", "Synth Brass 2", "Synth Choir", "Synth Drum", "Synth Strings 1", "Synth Strings 2", "Taiko Drum", "Tango Accordion", "Telephone Ring", "Tenor Sax", "Timpani", "Tinkle Bell", "Tremolo Strings", "Trombone", "Trumpet", "Tuba", "Tubular Bells", "Vibraphone", "Viola", "Violin", "Voice Oohs", "Whistle", "Woodblock", "Xylophone"
-                - Uses: `apps/sonata/audio/instruments.SonataAudio`
+                - Uses:
+                  - `apps/sonata/audio/instruments.SonataAudio`
+                  - `apps/sonata/audio/sample-loader.sharedSampleLoader`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
         - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.
@@ -4410,13 +4424,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
+              - `primitives/css/slider.Slider`
+              - `primitives/css/spacing.insetClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/yield.yieldClass`
               - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/live-state.useResource`
+              - `primitives/optimistic-mutation.enqueueResourceWrite`
+              - `primitives/overlay/floating-action.FloatingAction`
+              - `primitives/overlay/floating-action.FloatingActionFadeIn`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/search.SearchInput`
               - `primitives/search.useTextFilter`
@@ -4429,6 +4449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useTrackColorMap`
               - `useTrackInstrumentMap`
               - `useTrackMixerEntries`
+              - `useTrackVolumeMap`
           - Server:
             - Contributes: `resource.declare` "sonata-track-view"
             - Uses:
@@ -4450,6 +4471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields.nullable`
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
+              - `fields/float/config.floatField`
               - `fields/text/config.textField`
               - `infra/entities.wireSchema`
             - Exports (types): `TrackViewRow`
@@ -14524,6 +14546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/library`
+              - `apps/sonata/track-mixer`
               - `apps/sonata/voicing`
               - `debug/live-state-churn/monitor`
               - `debug/queue-health`
@@ -16097,6 +16120,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/library`
               - `apps/sonata/look`
               - `apps/sonata/pitch-layout`
+              - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
               - `build`
               - `code-explorer`
@@ -23664,6 +23688,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
               - `page/read-only-view`
               - `primitives/css/control-panel`
+        - **`slider`** — Thin-track range slider: a themed range input that normalizes its own fill against (min, max) — so a range other than 0–1 cannot paint a fill that disagrees with its thumb — and owns the optional `detent` home position, both the tick on the track and the magnetic snap onto it.
+          - Web:
+            - Uses: `primitives/css/ui-kit.cn`
+            - Exports (types): `SliderProps`
+            - Exports (values): `Slider`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/sonata/audio/engine`
+              - `apps/sonata/audio/metronome`
+              - `apps/sonata/track-mixer`
         - **`space-ramp`** — The spacing ramp's one declaration: the closed step set and the literal class each step-keyed @utility family gives each step, generated from app.css so a step that exists in TypeScript but has no @utility behind it is unspellable. Read by every consumer (Stack, Inset, Column, railClass, Sticky, Pin) instead of re-spelling the steps.
           - Cross-plugin:
             - Imported by: `primitives/css/rail`
@@ -24966,6 +25000,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/row`
               - `primitives/css/scroll`
               - `primitives/css/selection-indicator`
+              - `primitives/css/slider`
               - `primitives/css/spacing`
               - `primitives/css/spinner`
               - `primitives/css/status-dot`
@@ -26642,6 +26677,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/primitives/inertial-drag`
           - `apps/sonata/primitives/keyboard`
           - `apps/sonata/shell`
+          - `apps/sonata/track-mixer`
           - `apps/workflows/editor`
           - `build/serve-composition`
           - `conversations/conversation-view/prompt-input`
@@ -27370,6 +27406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useOptimisticResource`
       - Cross-plugin:
         - Imported by:
+          - `apps/sonata/track-mixer`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
           - `page/editor`
@@ -27452,6 +27489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FloatingActionFadeIn`
           - Cross-plugin:
             - Imported by:
+              - `apps/sonata/track-mixer`
               - `conversations/conversation-view/prompt-templates`
               - `primitives/outline/rail`
               - `shell/global-action-bar`

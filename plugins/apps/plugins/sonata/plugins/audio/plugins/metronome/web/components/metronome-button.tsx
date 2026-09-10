@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import { MdAvTimer } from "react-icons/md";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -9,8 +8,8 @@ import {
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { metronomeConfig } from "../../shared/config";
-import "./metronome-button.css";
 
 // Count-in lengths as a single-select segmented control. The ids are strings
 // (SegmentedControl is keyed by string); they map 1:1 to the `countInBars` int.
@@ -96,18 +95,16 @@ export function MetronomeButton() {
       </ControlPanel.Section>
 
       <ControlPanel.Section label="Click volume">
-        <input
-          type="range"
+        <Slider
+          value={volume}
           min={0}
           max={1}
           step={0.01}
-          value={volume}
-          onChange={(e) => setConfig("volume", Number(e.target.value))}
+          onValueChange={(v) => setConfig("volume", v)}
           aria-label="Click volume"
           // Full width of the panel's content box: the panel's width is a role
           // now, so the slider follows it instead of naming its own measurement.
-          className="metronome-slider w-full"
-          style={{ "--fill": volume * 100 } as CSSProperties}
+          className="w-full"
         />
       </ControlPanel.Section>
 

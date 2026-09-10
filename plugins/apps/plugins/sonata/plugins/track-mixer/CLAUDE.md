@@ -2,8 +2,9 @@
 
 Per-track view-state for the Sonata player: each track of the open song gets a
 **categorical color**, a **mute** toggle (silences it in the audio scheduler),
-a **hide** toggle (drops its notes from the piano-roll), and an **instrument**
-override (the timbre it sounds with). The compact `Sonata.Section` panel
+a **hide** toggle (drops its notes from the piano-roll), an **instrument**
+override (the timbre it sounds with), and a **volume** (its fader position in
+the mix). The compact `Sonata.Section` panel
 ("Tracks", area `player`) lists every track with its name (MIDI track name →
 instrument hint → `Track N`), a functional instrument picker, and note count,
 plus a per-song reset.
@@ -16,7 +17,23 @@ plus a per-song reset.
   null `color` means "use the palette default for the track's index"; null
   `instrument` means "auto" — derive the timbre from the track's GM program
   (`TrackMeta.gmProgram`), else the default instrument. `muted`/`hidden` default
-  to false so an absent row reads as audible + visible.
+  to false and `volume` to 1 so an absent row reads as audible + visible at the
+  level it was recorded.
+- **Volume is a linear gain multiplier, not dB and not a percentage** — 1 unity,
+  0 silent, 2 is +6 dB. It goes straight into a Web Audio `GainNode.gain`, so
+  any other unit would put a conversion between the persisted number and the
+  thing it controls. The panel is what renders it as a percentage.
+- **Mute and `volume: 0` are different mechanisms, deliberately.** Mute removes
+  the track's notes upstream, so a muted track has no channel in the engine at
+  all — no sample load, no scheduling. Volume 0 is a fader position on a channel
+  that keeps existing and keeps being scheduled, so raising it again is instant;
+  folding it into the audible set would make every fader-to-zero cut every other
+  track's ringing notes.
+- **Two "customized" questions, two flags.** `customized` is "any override at
+  all" and drives the reset affordance (which deletes the row). The instrument
+  picker asks the narrower `instrumentCustomized` (`row.instrument != null`) —
+  a row exists as soon as the track is muted or its fader moved, and reading
+  that as an instrument override would make the picker stop showing "Auto".
 - **Instrument resolution.** `useTrackMixerEntries` reads the registered timbres
   generically via `SonataAudio.Instrument.useContributions()` (never names a
   contributor) and resolves each track's effective instrument id with the
@@ -29,12 +46,17 @@ plus a per-song reset.
   live-state rollup is the single source of truth. The panel reads + writes it;
   the **piano-roll** imports `useTrackColorMap` + `useHiddenTrackIds` to color
   and filter notes; the **audio engine** imports `useMutedTrackIds` to drop muted
-  tracks' notes and `useTrackInstrumentMap` to route each track's notes to its
-  resolved timbre. The narrow hooks all derive from `useTrackMixerEntries`, which
+  tracks' notes, `useTrackInstrumentMap` to route each track's notes to its
+  resolved timbre, and `useTrackVolumeMap` to set each track's fader gain. The
+  narrow hooks all derive from `useTrackMixerEntries`, which
   joins `score.tracks` (order → default color, GM program → instrument) with the
   persisted overrides and a per-track note tally.
-- **Writes are fire-and-forget** (`void fetchEndpoint`): the UI never reads the
-  response — state refreshes via the live-state push the upsert/reset emits.
+- **Writes are fire-and-forget, but ordered.** The UI never reads the response
+  — state refreshes via the live-state push the upsert/reset emits. Every write
+  still goes through the resource's send lane (`enqueueResourceWrite`), because
+  these are last-writer-wins upserts: sent as bare concurrent fetches, a loaded
+  backend can apply an older fader position after a newer one and silently keep
+  the wrong level. The lane departs writes in the order they were issued.
 - **The upsert addresses many tracks at once.** Its body carries `trackIds`
   (a single-track edit passes `[trackId]`) and the handler writes every row in
   one transaction — so a whole-arrangement flip is one commit and one push. The
@@ -73,13 +95,19 @@ plus a per-song reset.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/slider.Slider`
+    - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/yield.yieldClass`
     - `primitives/icon-button.IconButton`
+    - `primitives/latest-ref.useEventCallback`
     - `primitives/live-state.useResource`
+    - `primitives/optimistic-mutation.enqueueResourceWrite`
+    - `primitives/overlay/floating-action.FloatingAction`
+    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/search.SearchInput`
     - `primitives/search.useTextFilter`
@@ -92,6 +120,7 @@ plus a per-song reset.
     - `useTrackColorMap`
     - `useTrackInstrumentMap`
     - `useTrackMixerEntries`
+    - `useTrackVolumeMap`
 - Server:
   - Contributes: `resource.declare` "sonata-track-view"
   - Uses:
@@ -113,6 +142,7 @@ plus a per-song reset.
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/float/config.floatField`
     - `fields/text/config.textField`
     - `infra/entities.wireSchema`
   - Exports (types): `TrackViewRow`

@@ -88,6 +88,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   radius: "a token standard (corner radius) + its own lint rule",
   rail: "a dev-only guard on who owns a region's content edge — an inset audit, not a box to reach for",
   "selection-indicator": "checkbox/radio glyph boxes — leaves",
+  slider:
+    "a form control (a themed range input) — a leaf, and a sibling of `switch` and `radio-group` above. It takes a `className` for its own width the way any leaf does; nothing about it arranges other boxes.",
   "space-ramp":
     "a token standard (the spacing ramp's steps and the class each names, generated from app.css) — the scale Stack/Inset/Grid draw their gap and pad from, not a box to reach for. The boxes are Stack and Inset, which the message already names.",
   spinner: "loading indicator — a leaf",

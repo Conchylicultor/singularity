@@ -1,0 +1,137 @@
+/*
+ * The thin-track slider look. A native `<input type="range">` is chunky by
+ * default, so we strip the UA appearance and paint a thin (3px) themed track
+ * with a small (11px) thumb, which reads as a quiet secondary control rather
+ * than a form widget.
+ *
+ * The filled portion is theme `--primary`, the rest `--border`. WebKit has no
+ * "progress" pseudo-element, so the fill is a hard-stop gradient driven by the
+ * `--slider-fill` custom property (0-100, written inline by the component from
+ * the value normalized against its own min/max). Firefox has a real
+ * `::-moz-range-progress` and needs no gradient.
+ */
+.slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  --slider-track: 3px;
+  --slider-thumb: 11px;
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  /* The mark layer is positioned against the wrapper, so the input has to BE
+     the wrapper's width for a mark to land on the track. The UA gives a range
+     input a 2px margin of its own; zeroing it is what makes that true. */
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 1rem; /* hit area; centers the thin track vertically */
+  background: transparent;
+  cursor: pointer;
+  /* Lifts the input above the mark layer, so the opaque track hides the middle
+     of a mark and only its ends show above and below — and so the thumb covers
+     a mark entirely when it is parked on it. */
+  position: relative;
+  z-index: 1;
+}
+
+.slider-input:focus-visible {
+  outline: none;
+}
+.slider-input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.slider-input:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* WebKit / Blink */
+.slider-input::-webkit-slider-runnable-track {
+  height: var(--slider-track);
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) calc(var(--slider-fill, 0) * 1%),
+    var(--border) calc(var(--slider-fill, 0) * 1%)
+  );
+}
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: var(--slider-thumb);
+  width: var(--slider-thumb);
+  margin-top: calc((var(--slider-track) - var(--slider-thumb)) / 2);
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: transform 0.1s ease;
+}
+.slider-input:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* Firefox */
+.slider-input::-moz-range-track {
+  height: var(--slider-track);
+  border-radius: 9999px;
+  background: var(--border);
+}
+.slider-input::-moz-range-progress {
+  height: var(--slider-track);
+  border-radius: 9999px;
+  background: var(--primary);
+}
+.slider-input::-moz-range-thumb {
+  height: var(--slider-thumb);
+  width: var(--slider-thumb);
+  border: none;
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: transform 0.1s ease;
+}
+.slider-input:hover::-moz-range-thumb {
+  transform: scale(1.15);
+}
+
+/*
+ * The mark layer, and the reason it is inset rather than full-bleed.
+ *
+ * A range input does NOT put the thumb's centre at `value%` of the track: it
+ * insets the travel by half a thumb at each end, so the centre travels between
+ * `thumb/2` and `width - thumb/2`. A mark placed at a plain `value%` of the
+ * whole track would therefore sit up to half a thumb away from the thumb it is
+ * supposed to be under — dead-on in the middle, worst at the ends, which is
+ * exactly the kind of error that looks like nothing until someone puts a
+ * detent near an edge.
+ *
+ * Insetting this layer by half a thumb on each side makes its box the thumb's
+ * actual travel, so `left: <pct>%` inside it lands under the thumb at every
+ * value. That is why the correction is a property of the LAYER and not
+ * arithmetic repeated at each mark.
+ */
+.slider-marks {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--slider-thumb) / 2);
+  right: calc(var(--slider-thumb) / 2);
+  pointer-events: none;
+}
+
+/* The detent mark: a short vertical nub straddling the track at the home
+   position — taller than the track so it reads through, narrower than the
+   thumb so the thumb swallows it on arrival. */
+.slider-detent {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--slider-detent, 0) * 1%);
+  width: 2px;
+  height: 9px;
+  /* X centres the nub on its position, Y centres it on the track. */
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: var(--muted-foreground);
+  opacity: 0.5;
+}

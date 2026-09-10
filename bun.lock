@@ -606,6 +606,13 @@
         "smplr": "^0.26.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader": {
+      "name": "@singularity/plugin-apps-sonata-audio-sample-loader",
+      "version": "0.0.1",
+      "dependencies": {
+        "smplr": "^0.26.0",
+      },
+    },
     "plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont": {
       "name": "@singularity/plugin-apps-sonata-audio-soundfont",
       "version": "0.0.1",
@@ -4097,6 +4104,10 @@
       "name": "@singularity/plugin-primitives-css-selection-indicator",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/slider": {
+      "name": "@singularity/plugin-primitives-css-slider",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/space-ramp": {
       "name": "@singularity/plugin-primitives-css-space-ramp",
       "version": "0.0.1",
@@ -6215,6 +6226,8 @@
 
     "@singularity/plugin-apps-sonata-audio-piano": ["@singularity/plugin-apps-sonata-audio-piano@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/piano"],
 
+    "@singularity/plugin-apps-sonata-audio-sample-loader": ["@singularity/plugin-apps-sonata-audio-sample-loader@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader"],
+
     "@singularity/plugin-apps-sonata-audio-soundfont": ["@singularity/plugin-apps-sonata-audio-soundfont@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont"],
 
     "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
@@ -7872,6 +7885,8 @@
     "@singularity/plugin-primitives-css-scroll": ["@singularity/plugin-primitives-css-scroll@workspace:plugins/primitives/plugins/css/plugins/scroll"],
 
     "@singularity/plugin-primitives-css-selection-indicator": ["@singularity/plugin-primitives-css-selection-indicator@workspace:plugins/primitives/plugins/css/plugins/selection-indicator"],
+
+    "@singularity/plugin-primitives-css-slider": ["@singularity/plugin-primitives-css-slider@workspace:plugins/primitives/plugins/css/plugins/slider"],
 
     "@singularity/plugin-primitives-css-space-ramp": ["@singularity/plugin-primitives-css-space-ramp@workspace:plugins/primitives/plugins/css/plugins/space-ramp"],
 

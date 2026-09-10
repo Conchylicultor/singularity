@@ -3,10 +3,7 @@ import {
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
 import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
-import {
-  trackViewFields,
-  TRACK_VIEW_SERVER_ONLY,
-} from "../../core/schemas";
+import { trackViewFields, TRACK_VIEW_SERVER_ONLY } from "../../core/schemas";
 
 /**
  * Per-(song, track) view override. 1:many over a song (one row per track), so
@@ -26,6 +23,8 @@ export const trackView = defineEntity("sonata_track_view", trackViewFields, {
     },
     muted: { default: false },
     hidden: { default: false },
+    // Unity gain, so a track with no persisted row sounds exactly as recorded.
+    volume: { default: 1 },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
   },

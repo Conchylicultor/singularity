@@ -9,19 +9,29 @@ import {
   MdExpandMore,
   MdVisibility,
   MdVisibilityOff,
+  MdVolumeDown,
+  MdVolumeMute,
   MdVolumeOff,
   MdVolumeUp,
 } from "react-icons/md";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SonataAudio } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  FloatingAction,
+  FloatingActionFadeIn,
+} from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  insetClass,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   SearchInput,
@@ -35,6 +45,7 @@ import {
   setTrackMuted,
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
+import { useTrackFader } from "../use-track-fader";
 import { TRACK_PALETTE, accidentalColor } from "../palette";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 
@@ -95,14 +106,21 @@ function InstrumentPicker({
   options,
   resolvedId,
   resolvedLabel,
-  customized,
+  instrumentCustomized,
 }: {
   songId: string;
   trackId: string;
   options: InstrumentOption[];
   resolvedId: string;
   resolvedLabel: string;
-  customized: boolean;
+  /**
+   * Whether the timbre was chosen by hand. Deliberately NOT the entry's
+   * `customized`, which means "any override at all": a row exists as soon as
+   * the track is muted or its fader moved, so reading that here would make the
+   * picker stop offering "Auto" and tick the merely-resolved instrument as if
+   * the user had picked it.
+   */
+  instrumentCustomized: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const { query, setQuery, filtered } = useTextFilter({
@@ -172,10 +190,10 @@ function InstrumentPicker({
         <Row
           size="sm"
           hover="muted"
-          selected={!customized}
+          selected={!instrumentCustomized}
           icon={<MdAutoMode />}
           actions={
-            !customized ? (
+            !instrumentCustomized ? (
               <MdCheck className="size-3.5 text-primary" />
             ) : undefined
           }
@@ -194,7 +212,7 @@ function InstrumentPicker({
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixer channel strips (bespoke instrument UI) */}
             {groupOptions.map((o) => {
               const Icon = o.icon;
-              const active = customized && o.id === resolvedId;
+              const active = instrumentCustomized && o.id === resolvedId;
               return (
                 <Row
                   key={o.id}
@@ -227,6 +245,119 @@ function InstrumentPicker({
   );
 }
 
+/**
+ * Which speaker the trigger shows. The icon reports the LEVEL, not just the
+ * mute flag: a track dragged all the way down is silent, and showing it the
+ * same "audible" speaker as a track at unity is the icon lying about what you
+ * will hear. Mute keeps its own destructive-tinted glyph because it is a
+ * different thing — it removes the track's notes upstream, rather than being a
+ * fader position — and it is what a click on this button toggles.
+ */
+function levelIcon(muted: boolean, volume: number): IconType {
+  if (muted) return MdVolumeOff;
+  if (volume === 0) return MdVolumeMute;
+  return volume < 1 ? MdVolumeDown : MdVolumeUp;
+}
+
+/**
+ * The track's level control: a speaker button that expands leftwards into a
+ * fader on hover / focus / tap, with no extra click.
+ *
+ * The whole thing is one `FloatingAction` — the primitive for exactly this
+ * disclosure (grace delay on close, no re-entry dead zone, a stable hitbox that
+ * cures open/close flicker), with the speaker as its required `trigger` so the
+ * collapsed footprint can never shrink away next to the revealed fader.
+ *
+ * Clicking the speaker still mutes. The primitive marks the panel `inert` while
+ * closed, but the pointer-enter that opens it is delivered to the always-live
+ * wrapper underneath and lands before the press, so by the time the click
+ * arrives the button is live again — the disclosure never swallows it.
+ */
+function TrackLevel({
+  songId,
+  trackId,
+  name,
+  muted,
+  volume,
+}: {
+  songId: string;
+  trackId: string;
+  name: string;
+  muted: boolean;
+  volume: number;
+}) {
+  const fader = useTrackFader(songId, trackId, volume);
+  const percent = Math.round(fader.value * 100);
+
+  return (
+    <FloatingAction
+      // The wrapper reserves the collapsed footprint in the row, so it must be
+      // EXACTLY the neighbouring hide button's box — hence the density var
+      // rather than a hardcoded `size-6`, which would drift out of alignment
+      // the moment the user picked a different density preset.
+      className="relative size-(--control-height-sm) z-popover"
+      variant="ghost"
+      direction="row"
+      // Speaker pinned at the right where the mute button already was; the
+      // fader is revealed leftwards, over the track name.
+      triggerAt="end"
+      anchor="top-right"
+      align="center"
+      gap="xs"
+      // No `pad`: padding on the panel would widen the collapsed box past the
+      // trigger and break the row alignment above. The revealed content carries
+      // its own breathing room from the panel's left edge instead.
+      panelClassName={cn(
+        "max-w-(--control-height-sm) group-data-open/fa:max-w-48",
+      )}
+      trigger={
+        <IconButton
+          icon={levelIcon(muted, fader.value)}
+          label={muted ? "Unmute track" : "Mute track"}
+          aria-pressed={muted}
+          className={cn(muted && "text-destructive")}
+          onClick={() => setTrackMuted(songId, trackId, !muted)}
+        />
+      }
+    >
+      {/* Rigid, so the collapsed panel REVEALS the fader by clipping it rather
+          than squashing it: without this the flex row would shrink the slider
+          to nothing under the clamp, and the morph would read as a control
+          being stretched into existence instead of slid out from behind the
+          speaker. */}
+      <FloatingActionFadeIn
+        className={cn(rigidClass(), insetClass({ l: "xs" }))}
+      >
+        <Stack direction="row" gap="xs" align="center">
+          {/* Fixed width + tabular figures: the readout runs 0% to 200%, and
+              letting it size itself would shove the fader sideways as you
+              drag it. */}
+          <Text
+            as="span"
+            variant="caption"
+            tone="muted"
+            className="w-10 whitespace-nowrap tabular-nums text-right"
+          >
+            {percent}%
+          </Text>
+          <Slider
+            value={fader.value}
+            min={0}
+            max={2}
+            step={0.01}
+            // Unity gets a tick and a magnet, so "back to how it was recorded"
+            // stays findable on a fader that travels past it.
+            detent={1}
+            onValueChange={fader.onValueChange}
+            aria-label={`Volume for ${name}`}
+            className="w-24"
+          />
+        </Stack>
+      </FloatingActionFadeIn>
+    </FloatingAction>
+  );
+}
+
 function TrackRow({
   songId,
   options,
@@ -243,9 +374,10 @@ function TrackRow({
     color,
     muted,
     hidden,
+    volume,
     instrumentId,
     instrumentLabel,
-    customized,
+    instrumentCustomized,
   } = entry;
   return (
     <Stack direction="row" gap="sm" align="center" className="py-xs">
@@ -271,7 +403,7 @@ function TrackRow({
             options={options}
             resolvedId={instrumentId}
             resolvedLabel={instrumentLabel}
-            customized={customized}
+            instrumentCustomized={instrumentCustomized}
           />
           <span>
             · {noteCount} {noteCount === 1 ? "note" : "notes"}
@@ -281,12 +413,12 @@ function TrackRow({
 
       <ControlSizeProvider size="sm">
         <Stack direction="row" align="center" gap="sm">
-          <IconButton
-            icon={muted ? MdVolumeOff : MdVolumeUp}
-            label={muted ? "Unmute track" : "Mute track"}
-            aria-pressed={muted}
-            className={cn(muted && "text-destructive")}
-            onClick={() => setTrackMuted(songId, trackId, !muted)}
+          <TrackLevel
+            songId={songId}
+            trackId={trackId}
+            name={name}
+            muted={muted}
+            volume={volume}
           />
           <IconButton
             icon={hidden ? MdVisibilityOff : MdVisibility}
@@ -303,9 +435,10 @@ function TrackRow({
 
 /**
  * The "Tracks" section panel (`Sonata.Section`, area "player"). Lists every
- * track of the open song with a compact, toggle-icon control set: categorical
- * color, mute (audio), and hide (piano-roll), a functional per-track instrument
- * picker, plus name / note count. State persists per (song, track).
+ * track of the open song with a compact control set: categorical color, a
+ * speaker that mutes on click and expands into a volume fader on hover, and
+ * hide (piano-roll), plus a functional per-track instrument picker and the
+ * name / note count. State persists per (song, track).
  *
  * The host (SectionCard) paints the card chrome, title, and collapse; the
  * per-song reset is the section's header-right `actions` (`TrackMixerActions`).

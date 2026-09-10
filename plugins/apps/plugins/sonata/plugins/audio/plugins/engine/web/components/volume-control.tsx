@@ -1,9 +1,8 @@
-import type { CSSProperties } from "react";
 import { MdVolumeDown, MdVolumeOff, MdVolumeUp } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Slider } from "@plugins/primitives/plugins/css/plugins/slider/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useAudioControls, useAudioState } from "../audio-store";
-import "./volume-control.css";
 
 /**
  * The master-volume control pinned into the Sonata top toolbar
@@ -27,16 +26,14 @@ export function VolumeControl() {
         label={muted ? "Unmute" : "Mute"}
         onClick={toggleMute}
       />
-      <input
-        type="range"
+      <Slider
+        value={volume}
         min={0}
         max={1}
         step={0.01}
-        value={volume}
-        onChange={(e) => setVolume(Number(e.target.value))}
+        onValueChange={setVolume}
         aria-label="Volume"
-        className="volume-slider w-28"
-        style={{ "--fill": volume * 100 } as CSSProperties}
+        className="w-28"
       />
     </Stack>
   );

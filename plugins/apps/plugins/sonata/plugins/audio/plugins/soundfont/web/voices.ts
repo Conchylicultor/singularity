@@ -3,6 +3,7 @@ import type {
   InstrumentVoices,
   ScheduledNote,
 } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/instruments/web";
+import { sharedSampleLoader } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/sample-loader/web";
 import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
 
 /**
@@ -10,10 +11,13 @@ import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
  * by its gleitz file slug) into the Sonata `InstrumentVoices` contract.
  *
  * smplr@0.26 API used here (verified against `smplr/dist/index.d.ts`):
- *  - factory `Soundfont(ctx, { destination, instrumentUrl })` — callable without
- *    `new` (an `InstrumentFactory`, like `SplendidGrandPiano`). `instrumentUrl`
- *    is a FULL url to one `<gleitz>-<format>.js` soundfont file (when set, smplr
- *    ignores `kit`/`instrument`); `destination` routes output into the AudioNode.
+ *  - factory `Soundfont(ctx, { destination, instrumentUrl, loader })` — callable
+ *    without `new` (an `InstrumentFactory`, like `SplendidGrandPiano`).
+ *    `instrumentUrl` is a FULL url to one `<gleitz>-<format>.js` soundfont file
+ *    (when set, smplr ignores `kit`/`instrument`); `destination` routes output
+ *    into the AudioNode; `loader` supplies a `SampleLoader` in place of the
+ *    private one the instrument would build — one of smplr's cross-instrument
+ *    options, so it is accepted without appearing in `SoundfontOptions`.
  *  - `sf.ready: Promise<void>` resolves when sample loading settles (`.load` is
  *    the deprecated alias).
  *  - `sf.start({ note, velocity, time, duration })` — `note` a MIDI number;
@@ -37,6 +41,16 @@ import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
  * Caveat (mirrors the piano): smplr swallows per-sample fetch failures, so an
  * offline-and-never-warmed instrument resolves `load` but is silent; the loud
  * failure signal is the mirror's server-side 502 + log, not a client exception.
+ *
+ * The engine builds one voice manager per TRACK, so two tracks on the same
+ * timbre create two of these. They are given the context's shared `SampleLoader`
+ * (the `sample-loader` leaf) for the same reason the piano is — but note that it
+ * buys nothing HERE today: `Soundfont` fetches its `<gleitz>-mp3.js` file and
+ * base64-decodes every note itself, then hands the finished buffers to smplr, so
+ * the loader never sees a URL to cache. Passing it is correct and free, and it
+ * starts paying if smplr ever routes soundfont samples through the loader.
+ * The `scheduler` is deliberately NOT shared: `allOff` flushes it, and a shared
+ * one would flush every other track's queued notes too.
  */
 /** smplr's `Soundfont` instance type, taken from the dynamically imported
  *  module so the module is only reached in type position (erased). */
@@ -68,19 +82,29 @@ export function createSoundfontVoices(
   // called before the smplr chunk resolves has no instance to act on yet.
   let disposed = false;
 
-  const loaded = import("smplr").then(({ Soundfont }) => {
-    // Disposed before the chunk landed (fast unmount / instrument-switch): skip
-    // instantiation entirely — there is nothing to sound or tear down.
-    if (disposed) return;
-    sf = Soundfont(ctx, {
-      destination,
-      // Full same-origin URL to this patch's gleitz file. `<base>` already pins
-      // the kit directory, so the only trailing segment is the flat
-      // `<gleitz>-mp3.js` name the mirror route accepts.
-      instrumentUrl: `${assetMirrorUrl(SOUNDFONT_MIRROR_ID)}/${gleitzName}-mp3.js`,
-    });
-    return sf.ready;
-  });
+  // The shared loader is awaited ALONGSIDE the chunk rather than after it, so
+  // this factory still has exactly one point at which the outside world lands —
+  // and therefore still needs exactly one `disposed` re-check. (Both promises
+  // resolve from the same module anyway: `sharedSampleLoader` reaches `smplr`
+  // through the same dynamic import.)
+  const loaded = Promise.all([import("smplr"), sharedSampleLoader(ctx)]).then(
+    ([{ Soundfont }, loader]) => {
+      // Disposed before the chunk landed (fast unmount / instrument-switch):
+      // skip instantiation entirely — nothing to sound or tear down.
+      if (disposed) return;
+      sf = Soundfont(ctx, {
+        destination,
+        // Full same-origin URL to this patch's gleitz file. `<base>` already
+        // pins the kit directory, so the only trailing segment is the flat
+        // `<gleitz>-mp3.js` name the mirror route accepts.
+        instrumentUrl: `${assetMirrorUrl(SOUNDFONT_MIRROR_ID)}/${gleitzName}-mp3.js`,
+        // Shared per AudioContext, like the piano's. See the note above on why
+        // this is currently a no-op for soundfonts specifically.
+        loader,
+      });
+      return sf.ready;
+    },
+  );
 
   return {
     loaded,

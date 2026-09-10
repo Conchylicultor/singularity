@@ -9,6 +9,7 @@ export {
   useTrackMixerEntries,
   useTrackColorMap,
   useTrackInstrumentMap,
+  useTrackVolumeMap,
   useHiddenTrackIds,
   useMutedTrackIds,
   type TrackMixerEntry,

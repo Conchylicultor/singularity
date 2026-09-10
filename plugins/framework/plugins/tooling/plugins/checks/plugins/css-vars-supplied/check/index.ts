@@ -1,16 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
-
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
+import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -33,15 +25,6 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * names against custom-utilities.ts) — complementary, no overlap.
  */
 
-async function gitLsFiles(root: string, glob: string): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", glob], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  const out = result.stdout.trim();
-  return out ? out.split("\n") : [];
-}
-
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, "");
 }
@@ -53,7 +36,15 @@ const check: Check = {
   async run() {
     const root = await getWorktreeRoot();
 
-    const cssFiles = await gitLsFiles(root, "plugins/**/*.css");
+    // Selected from `listRepoFiles`'s one git-backed enumeration, never a
+    // hand-rolled `git ls-files <glob>`: that lists index entries whose file the
+    // worktree no longer has, so a CSS file deleted-but-not-yet-committed
+    // reached `readFileSync` below and crashed the check on the author's own
+    // deletion. `listRepoFiles` subtracts those, and includes not-yet-tracked
+    // files — so a brand-new plugin's CSS is checked from its first build.
+    const cssFiles = (await listRepoFiles(root)).filter(
+      (p) => p.startsWith("plugins/") && p.endsWith(".css"),
+    );
 
     // DEMAND: fallback-less var(--x) references, mapped to their first file.
     const demand = new Map<string, string>();

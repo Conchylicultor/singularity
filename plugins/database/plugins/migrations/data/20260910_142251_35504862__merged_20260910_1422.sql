@@ -1,0 +1,1 @@
+ALTER TABLE "sonata_track_view" ADD COLUMN "volume" double precision DEFAULT 1 NOT NULL;

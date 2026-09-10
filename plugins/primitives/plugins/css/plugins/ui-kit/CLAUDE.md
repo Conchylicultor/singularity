@@ -626,6 +626,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/row`
     - `primitives/css/scroll`
     - `primitives/css/selection-indicator`
+    - `primitives/css/slider`
     - `primitives/css/spacing`
     - `primitives/css/spinner`
     - `primitives/css/status-dot`

@@ -10,6 +10,12 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  * single-track edit passes `[trackId]`; a whole-arrangement flip (chord mode
  * deactivating every original track) passes them all, so the change lands as one
  * commit and one live-state push rather than a per-track flicker.
+ *
+ * `volume` is the fader position as a linear gain multiplier — 1 is unity, 0 is
+ * silent, 2 is +6 dB — which is why the range is validated here rather than left
+ * open: the number goes straight into a Web Audio `GainNode`, so an out-of-range
+ * value would be a real (and loud) bug rather than a display glitch. It is not
+ * nullable: there is no "no opinion" fader position, only unity.
  */
 export const upsertTrackView = defineEndpoint({
   route: "POST /api/sonata/songs/:songId/track-view",
@@ -19,6 +25,7 @@ export const upsertTrackView = defineEndpoint({
     instrument: z.string().nullable().optional(),
     muted: z.boolean().optional(),
     hidden: z.boolean().optional(),
+    volume: z.number().min(0).max(2).optional(),
   }),
 });
 
