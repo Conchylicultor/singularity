@@ -20,7 +20,19 @@ reconstructs the language's rhythm directly from the beats:
   carried into the following bars (a visual tie).
 
 Bars are arranged `BARS_PER_ROW` (4) across; head/tail rest bars are trimmed so
-the strip starts and ends on a chord. The active chord is tracked with
+the strip starts and ends on a chord.
+
+## A crowded bar wraps rather than shrinks
+
+A chord chip is never narrower than its own label and never wider than the share
+of the bar its beats own — `min-width: min-content` against a
+`max-width: <share>%`, on a wrapping flex line rather than a single grid row.
+CSS resolves `min-width` last, so the floor wins whenever the two disagree: a bar
+whose chords all fit reads exactly proportionally, and a bar with more chord
+changes than fit on one line runs onto a second line instead of grinding its
+chips down to unreadable slivers (analyzer-derived progressions routinely put
+half a dozen chords in one bar). Chips never shrink, so the break always falls
+between two chips and never inside a label. The active chord is tracked with
 `useCursorSelector` (reconciles only on chord boundaries, not per frame) and
 matched to chips by reference equality against the memoized chord array.
 

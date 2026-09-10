@@ -208,13 +208,16 @@ function BarRow({
 }) {
   return (
     // `auto minmax(0,1fr)`: rigid number gutter + a flexible chip track that
-    // owns the full bar width, so the per-chip `fr` weights map to real bar time.
+    // owns the full bar width, so the per-chip weights map to real bar time.
+    // Baseline alignment (not centring) puts the number on the first line of
+    // chips: a crowded bar wraps onto several lines, and its number has to mark
+    // where the bar STARTS, not float in the middle of the block.
     <div
       ref={rowRef}
       style={{
         display: "grid",
         gridTemplateColumns: "auto minmax(0, 1fr)",
-        alignItems: "center",
+        alignItems: "baseline",
         gap: "0.5rem",
       }}
     >
@@ -252,16 +255,19 @@ function BarBody({
       />
     );
   }
+  const total = segs.reduce((sum, s) => sum + s.grow, 0);
   return (
-    // `minmax(0, …fr)` (never bare `…fr`): the `0` floor lets every track shrink
-    // below its chip's content width, so chips truncate instead of overflowing
-    // into — and overlapping — their neighbours.
+    // A wrapping line, not a single grid row: every chip is at least as wide as
+    // its own label (`min-width: min-content`, which beats the max below), and at
+    // most as wide as the share of the bar its beats own (`max-width: <share>%`).
+    // So a bar reads proportionally while its chords fit on one line — and once
+    // they don't, the bar runs onto a second line instead of grinding its chips
+    // down to unreadable slivers. Chips never shrink (`flexShrink: 0`), so the
+    // break happens between chips, never inside a label.
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: segs
-          .map((s) => `minmax(0, ${s.grow}fr)`)
-          .join(" "),
+        display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: "0.125rem",
       }}
@@ -270,6 +276,7 @@ function BarBody({
         <ChordChip
           key={j}
           seg={seg}
+          share={total > 0 ? seg.grow / total : 1}
           isActive={seg.chord === active}
           label={labelByChord.get(seg.chord) ?? seg.chord.data.symbol}
           onSeek={onSeek}
@@ -279,14 +286,18 @@ function BarBody({
   );
 }
 
-/** A single chord chip — fills its `fr` track; dimmed when it's a held carry-over. */
+/** A single chord chip, sized by the share of the bar its beats own but never
+ *  narrower than its own label; dimmed when it's a held carry-over. */
 function ChordChip({
   seg,
+  share,
   isActive,
   label,
   onSeek,
 }: {
   seg: Seg;
+  /** Fraction of the bar's chord time this slice owns (0–1). */
+  share: number;
   isActive: boolean;
   label: string;
   onSeek: (beat: number) => void;
@@ -298,7 +309,18 @@ function ChordChip({
       mono
       onClick={() => onSeek(chord.start)}
       title={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}
-      className={cn("w-full", isContinuation && "opacity-40")}
+      className={cn(isContinuation && "opacity-40")}
+      style={{
+        // Grow by beat-weight, floor at the label, ceiling at the beats' share of
+        // the bar. `minWidth` wins over `maxWidth` when they disagree (CSS resolves
+        // min last), which is what keeps a short chord's label whole and pushes the
+        // overflowing chips onto the next line instead of truncating them.
+        flexGrow: seg.grow,
+        flexShrink: 0,
+        flexBasis: "auto",
+        minWidth: "min-content",
+        maxWidth: `${(share * 100).toFixed(4)}%`,
+      }}
     >
       {label}
     </ToggleChip>
