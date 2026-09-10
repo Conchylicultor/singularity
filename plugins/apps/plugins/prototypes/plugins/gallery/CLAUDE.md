@@ -56,7 +56,6 @@ The Prototypes app's two panes:
     `transform: scale()`, never upscaling past 1; the container owns the scaling
     box, the iframe is a rigid leaf), under a banner listing what is wrong with
     its folder.
-<<<<<<< .merge_file_5VPhNK
   - The active stage is the URL's optional `:stage` — every stage has an
     address (`proto/<id>/compare`), and the bare `proto/<id>` (what the CLI
     prints) opens whichever stage sorts first. It is held as an **id**, so an id
@@ -64,15 +63,6 @@ The Prototypes app's two panes:
     pane. The switcher writes it with `useSetParams()`, which rewrites the URL
     of the SAME pane instance — a `swap` would remount the column and drop its
     maximize/collapse state on every switch.
-  - Every iframe `src` carries the live `prototypesVersionResource` value as a
-    cache-bust, so an agent's edit (watcher → version bump → re-render) reloads
-    the iframe automatically.
-  - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`.
-=======
-  - The active stage is state on the provider, held as an **id** — so a picked
-    stage survives the contribution list changing under it, and an id that no
-    longer resolves falls back to whichever stage sorts first instead of
-    blanking the pane.
   - **One URL for the open prototype: `usePrototypeSrc(meta, version)`.** It
     carries the live `prototypesVersionResource` value as a cache-bust (an
     agent's edit → version bump → new `src` → the iframe reloads) and the picked
@@ -92,7 +82,6 @@ The Prototypes app's two panes:
     (stale picks drop).
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults.
->>>>>>> .merge_file_xnr0H1
 
 Layout uses inline styles for the dynamic scaling geometry (not banned className
 layout utilities).
