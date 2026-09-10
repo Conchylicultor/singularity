@@ -89,8 +89,10 @@ The gallery reads these out of your HTML — there is no metadata file.
 - `<title>` is the card's name — the prototype's ONLY human name, since the
   folder is an id. Without it every surface reads "Untitled prototype".
 - `<meta name="description">` is the card's blurb.
-- `<meta name="prototype-viewport">` is the canvas size in Focus and Compare.
-  Optional — it defaults to `1280x800`.
+- `<meta name="prototype-viewport">` is the size you design at: the canvas
+  in Focus and on the gallery card, and the width Compare opens at. Optional —
+  it defaults to `1280x800`. Don't copy it into your CSS as a fixed width (see
+  below).
 - `<meta name="mocks">` names the real app thing this prototype is a mockup
   of, as `<kind>:<ref>`, so the Compare stage can put the two side by side:
   - `fixture:control-panel/setting-rail` — an app **component**, by its Layout
@@ -102,6 +104,16 @@ The gallery reads these out of your HTML — there is no metadata file.
   with an example of each. A value with no `<kind>:` prefix is reported as a
   problem on the card. Most prototypes are not a mockup of anything in the app —
   leave the tag out and nothing is missing.
+
+## Lay it out fluid, not at a fixed width
+
+Use `max-width` plus side padding, not `width: 1280px`, and let grids stack when
+there is no room. The template's `#root` already fills its frame.
+
+Why: with a `mocks` tag, Compare frames your mock at the widths the reader picks
+(a `route:` screen offers 480 / 768 / 1024 / 1280 / 1600), and your media
+queries run. A fixed-width mock gets cropped there while the real screen
+reflows beside it. So a mock of a screen needs breakpoints for those widths.
 
 ## A prototype can be anything
 

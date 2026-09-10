@@ -8,7 +8,9 @@
 <title>Untitled prototype</title>
 <!-- The gallery card's blurb — a sentence or two. -->
 <meta name="description" content="" />
-<!-- Canvas size for Focus and Compare. Optional; defaults to 1280x800. -->
+<!-- The size you design at: the canvas Focus and the gallery card show, and the
+     width Compare opens at. Optional; defaults to 1280x800. It is where the
+     page starts, not a size to hardcode below. -->
 <meta name="prototype-viewport" content="1280x800" />
 <!-- Uncomment ONLY if this mocks something real in the app — the app can then
      show the two side by side. "fixture:<Layout Lab fixture id>" for a
@@ -21,8 +23,10 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; height: 100%; }
   body { font-family: system-ui, sans-serif; }
-  /* Keep in sync with prototype-viewport above. */
-  #root { width: 1280px; height: 800px; overflow: hidden; }
+  /* Fill the width you are given, like a real page. Compare frames the mock at
+     other widths too (480, 768, …), and a fixed px width there crops and
+     scrolls instead of reflowing. Cap wide content with max-width. */
+  #root { min-height: 100%; }
 </style>
 </head>
 <body>
