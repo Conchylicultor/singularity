@@ -11457,6 +11457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `connectionString`
           - `countActiveConnections`
           - `databaseExists`
+          - `databaseSizeBytes`
           - `describeUndeclaredSchema`
           - `dropDatabase`
           - `ensureDatabase`
@@ -11478,6 +11479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/serve-composition`
           - `database/change-feed`
           - `database/db-test-fixture`
+          - `database/db-test-fixture/sweep`
           - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
@@ -11531,7 +11533,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CreateTestDbOptions`
           - `TestDb`
         - Exports (values): `createTestDb`
+      - Core:
+        - Exports (types): `TestDbName`
+        - Exports (values):
+          - `mintTestDbName`
+          - `parseTestDbName`
+          - `TEST_DB_SUFFIX`
+          - `TEST_DB_TTL_MS`
       - Plugins:
+        - **`sweep`** — Reclaims throwaway test databases left behind when a test process is killed before its afterAll can drop them — the backstop half of createTestDb's lifetime, since a hook cannot run in a process that died. Every drop files a test-database-leaked report, so a destructive sweep is never silent.
+          - Server:
+            - Contributes: `report-kind` "test-database-leaked"
+            - Uses:
+              - `database/admin.countActiveConnections`
+              - `database/admin.databaseSizeBytes`
+              - `database/admin.dropDatabase`
+              - `database/admin.listDatabases`
+              - `infra/jobs.defineJob`
+              - `reports.recordReport`
+              - `reports.ReportKind`
+            - Exports (values): `leakedTestDbKind`
+            - Register: `defineJob('database.test-db-sweep')`
+          - Core:
+            - Exports (types): `LeakedTestDbPayload`
+            - Exports (values): `LeakedTestDbPayloadSchema`
         - **`worktree-db`** — Rolled-back-transaction harness for suites that must drive the REAL worktree DB (derived views included) rather than a throwaway: one scenario per transaction, always rolled back, with the excluded-from-fork queue schema installed once per process first.
           - Server:
             - Uses:
@@ -17517,6 +17542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view/queue`
           - `conversations/hibernation`
           - `conversations/transcript-retention`
+          - `database/db-test-fixture/sweep`
           - `database/db-test-fixture/worktree-db`
           - `database/fork`
           - `database/live-state-snapshot`
@@ -29292,6 +29318,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/pane-restore`
       - `conversations/runtime-tmux`
       - `conversations/transcript-watcher`
+      - `database/db-test-fixture/sweep`
       - `debug/boot-budget`
       - `debug/boot-watchdog`
       - `debug/duress-shed`

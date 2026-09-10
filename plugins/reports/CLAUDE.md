@@ -113,6 +113,7 @@ read as "recorded with no id".
     - `conversations/pane-restore`
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
+    - `database/db-test-fixture/sweep`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/duress-shed`

@@ -7,10 +7,15 @@ import { getAdminPool } from "./pool";
  * Scratch databases the cluster mints for itself, as opposed to an app's.
  *
  * Two producers, both of which build the whole name out of hex/base-36 and
- * underscores: `forkTempName` (`f_<sha8>_<rand8>__forking`) and `createTestDb`
- * (`<prefix>_<pid>_<base36>`). Capped at 63 like a namespace, and for the same
- * reason — Postgres truncates `datname` at 63 bytes silently, so a longer name
- * addresses a database other than the one it spells.
+ * underscores, and both of which end the name with the suffix that names the
+ * sweep responsible for reclaiming it: `forkTempName`
+ * (`f_<sha8>_<rand8>__forking`, swept by `database.fork-temp-sweep`) and
+ * `mintTestDbName` (`<prefix>_<pid>_<base36>__testdb`, swept by
+ * `database.test-db-sweep`). A scratch database that no sweep can recognise is
+ * one nothing ever reclaims, so the suffix is not decoration — it is the whole
+ * of each sweeper's admission test. Capped at 63 like a namespace, and for the
+ * same reason — Postgres truncates `datname` at 63 bytes silently, so a longer
+ * name addresses a database other than the one it spells.
  *
  * A separate arm rather than a widened single regex: these are not namespaces
  * and must never be routable as one, and keeping them apart is what lets the app
@@ -84,6 +89,22 @@ export async function ensureDatabase(name: string): Promise<void> {
     }
     throw err;
   }
+}
+
+// On-disk size of `name` in bytes. For a sweep that is about to DROP a database
+// this is the last moment the number exists, and "how much was this costing" is
+// most of why anyone reads the report afterwards.
+export async function databaseSizeBytes(name: string): Promise<number> {
+  assertSafeName(name);
+  // `pg_database_size` errors on a missing database rather than returning null,
+  // which is the right shape: a caller asking the size of something that is not
+  // there has a broken assumption, not a zero-byte database.
+  const { bytes } = await queryOne(getAdminPool(), {
+    sql: "SELECT pg_database_size($1)::bigint::double precision AS bytes",
+    params: [name],
+    row: z.object({ bytes: z.number() }),
+  });
+  return bytes;
 }
 
 // Number of active backend connections to `name` (via pg_stat_activity). Used

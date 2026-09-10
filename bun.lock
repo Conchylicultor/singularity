@@ -1839,6 +1839,10 @@
       "name": "@singularity/plugin-database-db-test-fixture",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/db-test-fixture/plugins/sweep": {
+      "name": "@singularity/plugin-database-db-test-fixture-sweep",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/db-test-fixture/plugins/worktree-db": {
       "name": "@singularity/plugin-database-db-test-fixture-worktree-db",
       "version": "0.0.1",
@@ -6784,6 +6788,8 @@
     "@singularity/plugin-database-change-feed": ["@singularity/plugin-database-change-feed@workspace:plugins/database/plugins/change-feed"],
 
     "@singularity/plugin-database-db-test-fixture": ["@singularity/plugin-database-db-test-fixture@workspace:plugins/database/plugins/db-test-fixture"],
+
+    "@singularity/plugin-database-db-test-fixture-sweep": ["@singularity/plugin-database-db-test-fixture-sweep@workspace:plugins/database/plugins/db-test-fixture/plugins/sweep"],
 
     "@singularity/plugin-database-db-test-fixture-worktree-db": ["@singularity/plugin-database-db-test-fixture-worktree-db@workspace:plugins/database/plugins/db-test-fixture/plugins/worktree-db"],
 

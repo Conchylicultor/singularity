@@ -4,7 +4,11 @@ import {
   dropDatabase,
   openShortLivedClient,
 } from "@plugins/database/plugins/admin/server";
-import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
+import {
+  buildConnectionString,
+  readDatabaseConfig,
+} from "@plugins/database/core";
+import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core";
 
 // A throwaway, isolated database on the ALREADY-RUNNING gateway-owned cluster,
 // for DB-backed test suites. The whole value of these tests is running the REAL
@@ -13,6 +17,13 @@ import { buildConnectionString, readDatabaseConfig } from "@plugins/database/cor
 // we provision an isolated database via admin's public barrel (the same primitives
 // forkDatabase / the backup sources use), hand back a drizzle handle plus a raw
 // libpq connection string, and drop the database after.
+//
+// `drop()` is the FAST path, not the guarantee. It runs in the suite's `afterAll`
+// and so reclaims the database on every path the process survives — and on no
+// other. The backstop for a killed run is the name itself: it is minted through
+// `mintTestDbName`, which stamps it disposable and dated, and the
+// `database.test-db-sweep` job (db-test-fixture/plugins/sweep) reclaims what a
+// dead process left behind. See `../../core/internal/scratch-name.ts`.
 export interface TestDb {
   db: NodePgDatabase;
   /**
@@ -41,8 +52,9 @@ export async function createTestDb(
   // Unique per run: pid disambiguates parallel test processes, the base-36
   // timestamp disambiguates repeated runs within one process. `Date.now()` /
   // `process.pid` are available under bun:test (the `Date.now` ban is a
-  // Workflow-script constraint only).
-  const name = `${prefix}_${process.pid}_${Date.now().toString(36)}`;
+  // Workflow-script constraint only). Both facts, and the disposable-marker
+  // suffix, are composed by the one module the sweep reads them back with.
+  const name = mintTestDbName(prefix, process.pid, Date.now());
 
   try {
     await ensureDatabase(name);

@@ -12,6 +12,7 @@ export {
   dropDatabase,
   ensureDatabase,
   countActiveConnections,
+  databaseSizeBytes,
 } from "./internal/databases";
 export { forkDatabase } from "./internal/fork";
 export type { ForkOutcome } from "./internal/fork";

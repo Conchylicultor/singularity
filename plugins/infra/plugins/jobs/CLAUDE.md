@@ -472,6 +472,7 @@ Design, measurements, prior art and the risks to watch:
     - `conversations/conversations-view/queue`
     - `conversations/hibernation`
     - `conversations/transcript-retention`
+    - `database/db-test-fixture/sweep`
     - `database/db-test-fixture/worktree-db`
     - `database/fork`
     - `database/live-state-snapshot`
