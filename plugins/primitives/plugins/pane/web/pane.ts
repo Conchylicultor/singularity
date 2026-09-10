@@ -1614,9 +1614,11 @@ export const PaneMatchContext = createContext<PaneMatch | null | undefined>(
 export const PaneInstanceContext = createContext<number | undefined>(undefined);
 
 /**
- * The single read of {@link PaneMatchContext}. Turns "rendered outside every
- * pane surface" into a loud throw and returns the honest `PaneMatch | null` for
- * everything inside one.
+ * The read of {@link PaneMatchContext}. Turns "rendered outside every pane
+ * surface" into a loud throw and returns the honest `PaneMatch | null` for
+ * everything inside one. The one exception is `pane.useOpenedHere()`, which
+ * reads the context itself because "outside every surface" has a true answer
+ * for it — see there.
  */
 function useMatchOrThrow(): PaneMatch | null {
   const match = useContext(PaneMatchContext);
@@ -1801,8 +1803,16 @@ export interface PaneObject<
    * not itself opened from one, and "the last entry" walks off to a grandchild
    * the moment the column this surface opened opens another beside it.
    *
-   * A caller rendered outside any pane instance (global chrome) has no "here",
-   * so the whole chain counts as after it and it reads the first entry.
+   * A caller inside a surface but outside any pane instance (a sidebar) has no
+   * position, so the whole chain counts as after it and it reads the first
+   * entry.
+   *
+   * Unlike every other route read, this one is legal OUTSIDE every surface
+   * (global chrome — the action bar and its popovers), where it returns
+   * `null`: it is the read half of {@link useOpenPane}, which is legal there,
+   * and a caller with no route cannot have opened anything in it. Throwing
+   * instead made every opener widget (a `conv-<id>` chip) crash the moment it
+   * was rendered in the Improve popover.
    */
   useOpenedHere(): PaneRouteEntry<OwnParams> | null;
   close(instanceId: number): void;
@@ -1968,7 +1978,13 @@ function makePaneObject(
   }
 
   function useOpenedHere(): PaneRouteEntry | null {
-    const match = useMatchOrThrow();
+    // Deliberately NOT `useMatchOrThrow()`: this is the read twin of
+    // `useOpenPane`, which is legal outside every surface, so an opener widget
+    // is one component whether it lands in a pane or in a popover off the
+    // action bar. There it has no route and no position — its opens are
+    // caller-less pushes into whichever tab is focused at click time — so
+    // nothing it opened is "here": `null` is the true answer, not a stand-in.
+    const match = useContext(PaneMatchContext);
     const selfInstanceId = useContext(PaneInstanceContext);
     if (!match) return null;
     // Where the caller sits in the chain. `-1` — no pane instance around us, or

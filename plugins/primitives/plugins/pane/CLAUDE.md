@@ -142,6 +142,13 @@ control reusable enough to appear both inside a pane and in a popover (a config
 gear, an active-data chip) is not written twice, so it crashed on arrival in the
 popover.
 
+**`useOpenedHere()` is the one read that is legal there too**, returning `null`.
+It is the read half of opening (an opener's "is this the one I opened?"), so it
+must go wherever `useOpenPane` goes or every opener widget crashes in the
+popover again. `null` is true there, not a stand-in: a caller with no route
+opens into the focused tab with no position, so nothing it opened is "here" —
+its toggle always opens and never closes a column in a tab it cannot see.
+
 ## Non-URL state: `options` and `hint`
 
 A pane can receive state at creation time that doesn't belong in the URL.

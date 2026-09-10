@@ -124,11 +124,39 @@ describe("useOpenPane outside every pane surface", () => {
     expect(second.getRoute().map((s) => s.paneId)).toEqual(["chrome-detail"]);
   });
 
-  it("still throws for the REACTIVE route read, which genuinely needs a surface", () => {
-    function RouteReader() {
+  it("answers useOpenedHere() with null — the read half of opening — instead of throwing", () => {
+    // The shape `useConversationOpener` has: open + "is this the one I opened?".
+    // A `conv-<id>` chip in the Improve popover crashed on the read half.
+    const focused = createPaneStore({ live: false });
+    setLiveStore(focused);
+    focused.openPaneImpl(detailPane._internal, { id: "7" }, {});
+
+    function ChromeOpener() {
+      const opened = detailPane.useOpenedHere();
+      return (
+        <>
+          <output>{opened === null ? "none" : opened.params.id}</output>
+          <GlobalChromeChip id="7" />
+        </>
+      );
+    }
+    const { getByRole } = render(<ChromeOpener />);
+
+    // The focused tab DOES hold a detail pane, but this caller has no route and
+    // no position, so it opened nothing "here".
+    expect(getByRole("status").textContent).toBe("none");
+  });
+
+  it("still throws for the REACTIVE route reads, which genuinely need a surface", () => {
+    function StoreReader() {
       usePaneStore();
       return null;
     }
-    expect(() => render(<RouteReader />)).toThrow(/PaneSurfaceProvider/);
+    function EntryReader() {
+      detailPane.useRouteEntry();
+      return null;
+    }
+    expect(() => render(<StoreReader />)).toThrow(/PaneSurfaceProvider/);
+    expect(() => render(<EntryReader />)).toThrow(/PaneSurfaceProvider/);
   });
 });
