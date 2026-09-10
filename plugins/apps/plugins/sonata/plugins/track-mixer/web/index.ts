@@ -14,6 +14,7 @@ export {
   type TrackMixerEntry,
 } from "./hooks";
 export { accidentalColor } from "./palette";
+export { setTracksActive } from "./actions";
 
 export default {
   description:

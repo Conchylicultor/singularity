@@ -696,6 +696,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/settings/config`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
+    - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/midi`

@@ -40,6 +40,7 @@ import { useCursorApi } from "./cursor-store";
 import { useKeyAutoDetect } from "./key-mode-store";
 import { useTransposeSemitones } from "./transpose-store";
 import { useRhythmGroove } from "./rhythm-store";
+import { useChordMode } from "./chord-mode-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -411,6 +412,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // bar-anchored groove over the same timeline), so it belongs in the view layer
   // and never rewinds the transport. `null` ⇒ today's block-chord behaviour.
   const groove = useRhythmGroove();
+  // Per-song chord mode (per-surface scoped store, written by the `chord-mode`
+  // plugin's observer / its toggle). When on, `baseScore` runs a SECOND
+  // re-voicing pass after chord analysis, so the analyzer-derived chords of a
+  // MIDI song become playable notes on the Chords / Bass tracks — through the
+  // same voicing config + groove a chord grid uses. A view transform: it lands
+  // notes on the chords' existing beats and never rewinds the transport.
+  const chordMode = useChordMode();
   // The per-surface cursor store's imperative facade. Resolves to the
   // `<CursorStoreProvider>` mounted in `SonataLayout` (wrapping this provider),
   // so every surface gets its own playhead. Memoized on the stable store, so it
@@ -566,7 +574,19 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // they must run after transpose / voicing / inference — they are part of the
     // view layer, not the content timeline.
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
-    return mergeAnnotations(spelled, derived);
+    const analyzed = mergeAnnotations(spelled, derived);
+    if (!chordMode) return analyzed;
+    // Chord mode: voice EVERY chord annotation — the analyzer-derived ones the
+    // MIDI notes just yielded included — onto the Chords / Bass tracks, in one
+    // pass so voice-leading stays continuous across authored and detected
+    // chords. It must run AFTER analysis (detection needs the original notes,
+    // which stay in the score; the track-mixer hides/mutes them) and re-spells
+    // so the new chord notes get enharmonics too (`spellScore` leaves
+    // already-spelled notes untouched, so this is idempotent). Same beats, same
+    // timeline span — a view transform, like everything else in this memo.
+    return spellScore(
+      reVoiceChords(analyzed, voicing, groove, { include: "all" }),
+    );
   }, [
     contentScore,
     analyzers,
@@ -574,6 +594,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     transposeSemitones,
     voicing,
     groove,
+    chordMode,
   ]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the

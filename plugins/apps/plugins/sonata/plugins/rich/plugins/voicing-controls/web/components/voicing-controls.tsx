@@ -18,10 +18,10 @@ const MAX_OCTAVE = 7;
  * notes from authored chord annotations. The tone-order (which figuration each
  * hand plays) is per-song and lives in the rhythm groove panel, not here.
  *
- * Hidden for MIDI-only songs: a song must carry at least one authored chord
- * annotation (a symbol source is loaded) for these controls to mean anything.
- * That applicability gate is the contribution's `useAvailable`
- * (`useHasAuthoredChord`) — the card is not painted at all otherwise — so this
+ * Hidden unless the shell is voicing this song's chords: a symbol source is
+ * loaded (authored chords), or the song's chord mode is on (its detected chords
+ * are voiced too). That applicability gate is the contribution's `useAvailable`
+ * (`useHasVoicedChords`) — the card is not painted at all otherwise — so this
  * body never needs a `return null`.
  */
 export function VoicingControls() {

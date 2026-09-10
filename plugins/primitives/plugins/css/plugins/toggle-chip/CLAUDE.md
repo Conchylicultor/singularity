@@ -40,6 +40,7 @@ anonymous index signature. See
     - `apps/sonata/audio/metronome`
     - `apps/sonata/pedal/indicator`
     - `apps/sonata/piano-roll`
+    - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/chord-progression`
     - `apps/sonata/rich/chord-readout`
     - `apps/sonata/rich/key-readout`

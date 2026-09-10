@@ -84,7 +84,7 @@ state, and the `useAvailable` gate. Sonata-specific on top of it:
   the panel lives in a headless `Sonata.Effect` — hence the chord-grid / Ultimate
   Guitar `*PersistObserver`s and `rhythm-controls`' `RhythmObserver`.
 - The shell exports the shared `useAvailable` gates `useHasChords` /
-  `useHasAuthoredChord`.
+  `useHasDerivedChord` / `useHasVoicedChords`.
 
 ## Song title ownership
 
@@ -224,6 +224,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/piano-roll`
     - `apps/sonata/playback-history`
     - `apps/sonata/progress/loop`
+    - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/chord-grid`
@@ -235,6 +236,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/transpose`
   - Extended by:
     - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
+    - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)
     - `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`)
     - `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`)
     - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)

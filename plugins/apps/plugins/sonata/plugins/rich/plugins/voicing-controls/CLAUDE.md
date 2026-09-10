@@ -4,12 +4,12 @@
 
 ## Plugin reference
 
-- Description: Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs with authored chord annotations.
+- Description: Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.
 - Web:
   - Contributes: `Sonata.Section` "Voicing" → `VoicingControls`
   - Uses:
     - `apps/sonata/shell.Sonata`
-    - `apps/sonata/shell.useHasAuthoredChord`
+    - `apps/sonata/shell.useHasVoicedChords`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
     - `primitives/css/spacing.Stack`

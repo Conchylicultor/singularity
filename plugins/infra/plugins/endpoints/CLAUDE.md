@@ -231,6 +231,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
+    - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/chord-grid`

@@ -59,6 +59,8 @@ without changing those types.
     - `FigurationContext`
     - `HandRole`
     - `Register`
+    - `ReVoiceInclude`
+    - `ReVoiceOptions`
     - `StruckTone`
     - `VoicingOptions`
   - Exports (values):

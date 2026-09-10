@@ -107,6 +107,7 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
     - `apps/pages/agent-origin`
     - `apps/pages/starred`
     - `apps/sonata/playback-history`
+    - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
     - `apps/sonata/sources/chord-grid`

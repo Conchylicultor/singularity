@@ -43,11 +43,20 @@ export {
   type RhythmGroove,
 } from "./rhythm-store";
 export {
+  ChordModeStoreProvider,
+  useChordMode,
+  useSetChordMode,
+} from "./chord-mode-store";
+export {
   LaneInsetsProvider,
   useLaneInsets,
   type LaneInsets,
 } from "./lane-insets";
-export { useHasChords, useHasAuthoredChord } from "./score-gates";
+export {
+  useHasChords,
+  useHasDerivedChord,
+  useHasVoicedChords,
+} from "./score-gates";
 
 export default {
   description:

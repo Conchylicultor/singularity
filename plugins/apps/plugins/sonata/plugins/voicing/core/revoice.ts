@@ -6,7 +6,9 @@
  * annotations under the global voicing config. Run reactively in the shell
  * (before key inference, so chord notes exist for detection), it makes
  * voice-leading an orthogonal modifier applied uniformly to every symbol source
- * — zero per-source code.
+ * — zero per-source code. The shell runs it a second time, after analysis, with
+ * `include: "all"` when a song's chord mode is on — so a MIDI song's DETECTED
+ * chords become playable notes through the very same voicing + groove.
  *
  * Pure and framework-free: a new `Score` in, a new `Score` out; the input is
  * never mutated.
@@ -15,6 +17,7 @@
 import type {
   Annotation,
   ChordAnnotation,
+  Note,
   Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
@@ -49,8 +52,56 @@ export const CHORD_BASS_TRACK = "chords-bass";
 /** Note-id namespace for re-voiced chord notes (see VoicingOptions.idPrefix). */
 const CHORD_NOTE_PREFIX = "chord";
 
-function isAuthoredChord(a: Annotation): a is ChordAnnotation {
-  return a.type === "chord" && a.source === "authored";
+function isChord(a: Annotation): a is ChordAnnotation {
+  return a.type === "chord";
+}
+
+/**
+ * Which chord annotations the pass voices.
+ *  - `"authored"` (default) — symbol-source chords only: the historical
+ *    behaviour, run before key inference so authored chord notes exist for
+ *    detection while analyzer-derived chords stay labels.
+ *  - `"all"` — every chord annotation, authored AND analyzer-derived. The
+ *    chord-mode pass the shell runs AFTER analysis on a MIDI song, so the
+ *    detected chords become playable notes. One pass over all of them keeps
+ *    voice-leading continuous across a mixed song (chord grid + MIDI).
+ */
+export type ReVoiceInclude = "authored" | "all";
+
+export interface ReVoiceOptions {
+  include?: ReVoiceInclude;
+}
+
+function chordSelector(
+  include: ReVoiceInclude,
+): (a: Annotation) => a is ChordAnnotation {
+  if (include === "all") return isChord;
+  return (a): a is ChordAnnotation => isChord(a) && a.source === "authored";
+}
+
+/**
+ * Re-anchor each voiced chord annotation onto the notes this pass generated for
+ * it: the chord-track notes whose onset falls inside the chord's span. A derived
+ * chord arrives targeting the ORIGINAL notes it was detected from; once voiced,
+ * those are no longer the notes that sound it (chord mode hides them), so leaving
+ * the old ids would be a dangling reference for the next consumer that reads
+ * `target.noteIds`. Both inputs are sorted by start, so this is one merge sweep.
+ */
+function retargetVoiced(
+  annotations: Annotation[],
+  voiced: ReadonlySet<Annotation>,
+  chordNotes: readonly Note[],
+): Annotation[] {
+  const sorted = [...chordNotes].sort((a, b) => a.start - b.start);
+  return annotations.map((a) => {
+    if (!voiced.has(a)) return a;
+    const noteIds: string[] = [];
+    for (const n of sorted) {
+      if (n.start >= a.end) break;
+      if (n.start >= a.start) noteIds.push(n.id);
+    }
+    return { ...a, target: { ...a.target, noteIds } };
+  });
 }
 
 /**
@@ -83,11 +134,14 @@ function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
 }
 
 /**
- * Regenerate chord notes from a score's authored chord annotations under `cfg`,
- * returning a new `Score`. All other tracks, notes, and annotations are kept
- * intact; only notes on {@link CHORD_TRACK} / {@link CHORD_BASS_TRACK} are
- * replaced, and a `TrackMeta` for each is ensured. When the score has no
- * authored chord annotations the input is returned unchanged.
+ * Regenerate chord notes from a score's chord annotations under `cfg`,
+ * returning a new `Score`. Which annotations count is `opts.include` (default:
+ * authored only — see {@link ReVoiceInclude}). All other tracks, notes, and
+ * annotations are kept intact; only notes on {@link CHORD_TRACK} /
+ * {@link CHORD_BASS_TRACK} are replaced (so a second pass replaces, never
+ * duplicates), a `TrackMeta` for each is ensured, and every voiced chord
+ * annotation is re-targeted at the notes generated for it. When the score has
+ * no selected chord annotations the input is returned unchanged.
  *
  * When `groove` is nullish the emitted notes are byte-for-byte today's block
  * chords (no `rhythm`/`figuration` reaches the engine). When present, each hand's
@@ -104,15 +158,18 @@ export function reVoiceChords(
     bassFigurationId: string;
     chordFigurationId: string;
   } | null,
+  opts?: ReVoiceOptions,
 ): Score {
-  const events: ChordEvent[] = score.annotations
-    .filter(isAuthoredChord)
+  const selected = score.annotations.filter(
+    chordSelector(opts?.include ?? "authored"),
+  );
+  const events: ChordEvent[] = selected
     .map((a) => ({ data: a.data, start: a.start, end: a.end }))
     .sort((x, y) => x.start - y.start);
 
   if (events.length === 0) return score;
 
-  const opts: VoicingOptions = {
+  const voicingOpts: VoicingOptions = {
     octave: cfg.octave,
     voiceLead: cfg.realistic,
     track: CHORD_TRACK,
@@ -120,17 +177,17 @@ export function reVoiceChords(
     idPrefix: CHORD_NOTE_PREFIX,
   };
   if (groove) {
-    opts.rhythm = {
+    voicingOpts.rhythm = {
       bass: resolvePattern(score, groove.hands.bass),
       chord: resolvePattern(score, groove.hands.chord),
     };
-    opts.figuration = {
+    voicingOpts.figuration = {
       bass: findFiguration(groove.bassFigurationId),
       chord: findFiguration(groove.chordFigurationId),
     };
   }
 
-  const chordNotes = voiceChords(events, opts);
+  const chordNotes = voiceChords(events, voicingOpts);
 
   const notes = [
     ...score.notes.filter(
@@ -142,9 +199,17 @@ export function reVoiceChords(
   // Ensure a TrackMeta for both synthesized tracks, preserving any existing
   // metadata and the original track order (new entries appended).
   const byId = new Map(score.tracks.map((t) => [t.id, t]));
-  if (!byId.has(CHORD_TRACK)) byId.set(CHORD_TRACK, { id: CHORD_TRACK, name: "Chords" });
-  if (!byId.has(CHORD_BASS_TRACK)) byId.set(CHORD_BASS_TRACK, { id: CHORD_BASS_TRACK, name: "Bass" });
+  if (!byId.has(CHORD_TRACK))
+    byId.set(CHORD_TRACK, { id: CHORD_TRACK, name: "Chords" });
+  if (!byId.has(CHORD_BASS_TRACK))
+    byId.set(CHORD_BASS_TRACK, { id: CHORD_BASS_TRACK, name: "Bass" });
   const tracks = [...byId.values()];
 
-  return { ...score, tracks, notes };
+  const annotations = retargetVoiced(
+    score.annotations,
+    new Set<Annotation>(selected),
+    chordNotes,
+  );
+
+  return { ...score, tracks, notes, annotations };
 }

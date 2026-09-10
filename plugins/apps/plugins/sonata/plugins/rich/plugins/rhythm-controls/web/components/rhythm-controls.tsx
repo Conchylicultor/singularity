@@ -3,7 +3,10 @@ import {
   useCursorApi,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { bars, scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  bars,
+  scoreEndBeat,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   effectiveOnsets,
   toggleOnset,
@@ -35,11 +38,12 @@ const BASS_COLOR = "var(--chart-2)";
  * hook, which the header On/Off toggle (`RhythmActions`) also reads — so the
  * collapsed card's toggle and the open card's circle drive one groove.
  *
- * Hidden for MIDI-only songs: a song must carry at least one authored chord
- * annotation for a groove to mean anything. That applicability gate is the
- * contribution's `useAvailable` (`useHasAuthoredChord`) — the card is not painted
- * at all otherwise — so this body never needs a `return null`. It serves ANY
- * chord source (chord-grid, ultimate-guitar), not just the chord grid.
+ * Hidden unless the shell is voicing this song's chords: a symbol source is
+ * loaded (authored chords), or the song's chord mode is on (its detected chords
+ * are voiced too). That applicability gate is the contribution's `useAvailable`
+ * (`useHasVoicedChords`) — the card is not painted at all otherwise — so this
+ * body never needs a `return null`. It serves ANY chord source (chord-grid,
+ * ultimate-guitar) and any MIDI song in chord mode, not just the chord grid.
  */
 export function RhythmControls() {
   const { score } = useSonata();
@@ -76,7 +80,9 @@ export function RhythmControls() {
       }
       const start = barList[idx]?.startBeat ?? 0;
       const nextStart =
-        idx + 1 < barList.length ? (barList[idx + 1]?.startBeat ?? endBeat) : endBeat;
+        idx + 1 < barList.length
+          ? (barList[idx + 1]?.startBeat ?? endBeat)
+          : endBeat;
       const span = nextStart - start;
       if (span <= 0) return; // degenerate bar — leave the needle put
       const phase = Math.max(0, Math.min(1, (beat - start) / span));

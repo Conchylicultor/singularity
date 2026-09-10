@@ -19,7 +19,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`pages`** [12 sub-plugins] — Notion-like pages app.
     - **`prototypes`** [8 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
     - **`settings`** [4 sub-plugins] — Settings app.
-    - **`sonata`** [61 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [62 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [11 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
     - **`website`** [10 sub-plugins] — Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.

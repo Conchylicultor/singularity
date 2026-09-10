@@ -24,12 +24,13 @@ with the playhead.
   owner of "which song's hands are in force": it writes `null` when no song is
   open, when the row is absent, or when `enabled` is false — so one song's groove
   never leaks into the next. Dependency arrow stays feature → shell.
-- **`hasAuthoredChord` gate.** The panel is a `Sonata.Section` gated exactly like
-  `voicing-controls`, via the contribution's `useAvailable: useHasAuthoredChord`
-  (the shell's shared score gate): a song must carry at least one
-  `type === "chord"`, `source === "authored"` annotation. So it appears for ANY
-  chord source (chord-grid, ultimate-guitar), not just the chord grid, and stays
-  hidden for MIDI-only songs. The gate lives on the contribution rather than as a
+- **`hasVoicedChords` gate.** The panel is a `Sonata.Section` gated exactly like
+  `voicing-controls`, via the contribution's `useAvailable: useHasVoicedChords`
+  (the shell's shared score gate): the shell must be voicing the song's chords —
+  a `source === "authored"` chord annotation exists (any chord source: chord-grid,
+  ultimate-guitar), or the song's per-song chord mode is on (a MIDI song whose
+  detected chords are voiced). A MIDI song with chord mode off stays hidden. The
+  gate lives on the contribution rather than as a
   `return null` in the body because the section-column host paints the card + its
   title *around* the body — a body that returned `null` would leave an empty
   titled card behind.
@@ -67,7 +68,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 
 ## Plugin reference
 
-- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs with authored chord annotations. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
+- Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
 - Web:
   - Contributes:
     - `Sonata.Effect` "rhythm-sync" → `RhythmObserver`
@@ -78,7 +79,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useCursorApi`
-    - `apps/sonata/shell.useHasAuthoredChord`
+    - `apps/sonata/shell.useHasVoicedChords`
     - `apps/sonata/shell.useRhythmGroove`
     - `apps/sonata/shell.useSetRhythmGroove`
     - `apps/sonata/shell.useSonata`

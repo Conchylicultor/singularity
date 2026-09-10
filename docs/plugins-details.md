@@ -3286,6 +3286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/piano-roll`
               - `apps/sonata/playback-history`
               - `apps/sonata/progress/loop`
+              - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/key-mode`
               - `apps/sonata/rich/rhythm-controls`
               - `apps/sonata/sources/chord-grid`
@@ -3297,6 +3298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/transpose`
             - Extended by:
               - `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`)
+              - `apps/sonata/rich/chord-mode` (table `sonata_songs_ext_chord_mode`)
               - `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`)
               - `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`)
               - `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
@@ -3784,6 +3786,35 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by:
                   - `apps/sonata/rich/chord-overlay`
                   - `apps/sonata/rich/chord-progression`
+            - **`chord-mode`** — Sonata Section: per-song chord mode. One On/Off chip in the 'Chords' card header: on, the shell voices the song's detected chords onto the Chords / Bass tracks (same voicing + rhythm options as a chord grid) and the original tracks are turned off in the Tracks card, where any of them can be re-enabled. Persists per song and syncs into the shell's score pipeline via a headless Sonata.Effect observer. Owns the sonata_songs_ext_chord_mode side-table: per-song toggle to play a song's detected chords (voiced onto the Chords / Bass tracks) instead of its notes. Serves the reactive rollup.
+              - Web:
+                - Contributes:
+                  - `Sonata.Effect` "chord-mode-sync" → `ChordModeObserver`
+                  - `Sonata.Section` "Chords"
+                - Uses:
+                  - `apps/sonata/shell.Sonata`
+                  - `apps/sonata/shell.useChordMode`
+                  - `apps/sonata/shell.useHasDerivedChord`
+                  - `apps/sonata/shell.useSetChordMode`
+                  - `apps/sonata/shell.useSonata`
+                  - `apps/sonata/track-mixer.setTracksActive`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `primitives/css/toggle-chip.ToggleChip`
+                  - `primitives/live-state.useResource`
+                - Exports (values): `useSaveChordMode`
+              - Server:
+                - Contributes: `resource.declare` "sonata-chord-mode"
+                - Uses:
+                  - `apps/sonata/library._songs`
+                  - `database.db`
+                  - `infra/endpoints.implement`
+                  - `infra/entity-extensions.defineExtension`
+                - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/chord-mode/server/internal/tables.ts`
+                - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_mode`)
+                - Exports (values):
+                  - `chordModeLiveResource`
+                  - `songChordMode`
+                - Routes: `POST /api/sonata/songs/:id/chord-mode`
             - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
               - Web:
                 - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
@@ -3879,7 +3910,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.SectionLabel`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.ToggleChip`
-            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs with authored chord annotations. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
+            - **`rhythm-controls`** — Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
               - Web:
                 - Contributes:
                   - `Sonata.Effect` "rhythm-sync" → `RhythmObserver`
@@ -3890,7 +3921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`
                   - `apps/sonata/shell.Sonata`
                   - `apps/sonata/shell.useCursorApi`
-                  - `apps/sonata/shell.useHasAuthoredChord`
+                  - `apps/sonata/shell.useHasVoicedChords`
                   - `apps/sonata/shell.useRhythmGroove`
                   - `apps/sonata/shell.useSetRhythmGroove`
                   - `apps/sonata/shell.useSonata`
@@ -3923,12 +3954,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `rhythmLiveResource`
                   - `songRhythm`
                 - Routes: `POST /api/sonata/songs/:id/rhythm`
-            - **`voicing-controls`** — Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs with authored chord annotations.
+            - **`voicing-controls`** — Sonata Section: chord-voicing controls (realistic voice-leading toggle, voicing-strategy picker, octave stepper) writing the global voicing config. Shown only for songs whose chords the shell voices: a symbol source (authored chords), or chord mode on.
               - Web:
                 - Contributes: `Sonata.Section` "Voicing" → `VoicingControls`
                 - Uses:
                   - `apps/sonata/shell.Sonata`
-                  - `apps/sonata/shell.useHasAuthoredChord`
+                  - `apps/sonata/shell.useHasVoicedChords`
                   - `config_v2.useConfig`
                   - `config_v2.useSetConfig`
                   - `primitives/css/spacing.Stack`
@@ -4015,11 +4046,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`
               - `Sonata.Home` ← `apps.sonata.library`
               - `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`
-              - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
+              - `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.audio.live-play`, `apps.sonata.audio.metronome`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.progress.loop`, `apps.sonata.rich.chord-mode`, `apps.sonata.rich.key-mode`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.transpose`
               - `Sonata.Transport` ← `apps.sonata.progress.scrubber`
               - `Sonata.Hud` ← `apps.sonata.audio.metronome`, `apps.sonata.rich.key-chip`, `apps.sonata.view-options`
               - `Sonata.ViewOption` ← `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`
-              - `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
+              - `Sonata.Section` ← `apps.sonata.rich.chord-mode`, `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.rhythm-controls`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses:
               - `apps-core.Apps`
@@ -4048,6 +4079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SonataSection`
               - `TransportClock`
             - Exports (values):
+              - `ChordModeStoreProvider`
               - `cursorApiFor`
               - `CursorStoreProvider`
               - `KeyModeStoreProvider`
@@ -4058,14 +4090,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SonataSectionItem`
               - `TEMPO_MATH_FLOOR`
               - `TransposeStoreProvider`
+              - `useChordMode`
               - `useCursorApi`
               - `useCursorBeat`
               - `useCursorSelector`
-              - `useHasAuthoredChord`
               - `useHasChords`
+              - `useHasDerivedChord`
+              - `useHasVoicedChords`
               - `useKeyAutoDetect`
               - `useLaneInsets`
               - `useRhythmGroove`
+              - `useSetChordMode`
               - `useSetKeyAutoDetect`
               - `useSetRhythmGroove`
               - `useSetTransposeSemitones`
@@ -4094,6 +4129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/sections`
               - `apps/sonata/rich/chord-analyzer`
               - `apps/sonata/rich/chord-label`
+              - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
@@ -4387,6 +4423,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `TrackMixerEntry`
             - Exports (values):
               - `accidentalColor`
+              - `setTracksActive`
               - `useHiddenTrackIds`
               - `useMutedTrackIds`
               - `useTrackColorMap`
@@ -4423,6 +4460,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/notation`
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/rich/chord-mode`
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata player pane's header.
           - Web:
             - Contributes: `sonataPlayerPane.Actions` "playback" → `PlaybackControls`
@@ -4504,6 +4542,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FigurationContext`
               - `HandRole`
               - `Register`
+              - `ReVoiceInclude`
+              - `ReVoiceOptions`
               - `StruckTone`
               - `VoicingOptions`
             - Exports (values):
@@ -11438,6 +11478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/pages/content-search`
       - `apps/sonata/library`
       - `apps/sonata/playback-history`
+      - `apps/sonata/rich/chord-mode`
       - `apps/sonata/rich/key-mode`
       - `apps/sonata/rich/rhythm-controls`
       - `apps/sonata/sources/chord-grid`
@@ -16773,6 +16814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
+          - `apps/sonata/rich/chord-mode`
           - `apps/sonata/rich/key-mode`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/sources/chord-grid`
@@ -17013,6 +17055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/agent-origin`
           - `apps/pages/starred`
           - `apps/sonata/playback-history`
+          - `apps/sonata/rich/chord-mode`
           - `apps/sonata/rich/key-mode`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/sources/chord-grid`
@@ -24520,6 +24563,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/metronome`
               - `apps/sonata/pedal/indicator`
               - `apps/sonata/piano-roll`
+              - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/chord-progression`
               - `apps/sonata/rich/chord-readout`
               - `apps/sonata/rich/key-readout`
@@ -26829,6 +26873,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/settings/config`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
+          - `apps/sonata/rich/chord-mode`
           - `apps/sonata/rich/key-mode`
           - `apps/sonata/rich/rhythm-controls`
           - `apps/sonata/sources/midi`

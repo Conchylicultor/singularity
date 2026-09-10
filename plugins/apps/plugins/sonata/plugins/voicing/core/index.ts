@@ -28,4 +28,5 @@ export {
   DEFAULT_CHORD_FIGURATION_ID,
 } from "./figuration";
 export { voicingConfig } from "./config";
+export type { ReVoiceInclude, ReVoiceOptions } from "./revoice";
 export { reVoiceChords, CHORD_TRACK, CHORD_BASS_TRACK } from "./revoice";
