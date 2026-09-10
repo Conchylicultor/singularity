@@ -162,7 +162,7 @@ async function settle(page: Page, ms = 800): Promise<void> {
 }
 
 /**
- * Unpin the global action bar if this profile left it pinned.
+ * Unpin the global action bar if it is pinned (the default for a fresh profile).
  *
  * "Pinned ⇒ never solo" is a real product rule (`global-action-bar` bounces the
  * surface straight back to docked while the bar is docked in the tab strip), so

@@ -4,7 +4,9 @@ Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
 app. Collapsed it's a status glyph (aggregating WS connectivity, stale-tab, and
 unread-notification signals) that expands on hover; a pin button sticks it
-expanded inline, persisted in localStorage. Owns the `enabled` config and the
+expanded inline, persisted in localStorage. Pinned is the default, so a fresh
+origin (every new worktree's `<wt>.localhost:9000`) shows the docked strip
+until the user unpins it there. Owns the `enabled` config and the
 status hook — kept out of `action-bar` (the slot owner) because the status hook
 imports `build` + `notifications`, which themselves contribute to
 `ActionBar.Item`; housing the renderer here keeps the import graph acyclic.

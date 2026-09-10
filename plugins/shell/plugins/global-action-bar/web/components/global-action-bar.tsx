@@ -86,12 +86,15 @@ function ActionRow({
 /**
  * Shared pin-toggle hook backing both hosts: the pin is the single persisted
  * preference (synced across the floating + docked mounts via persistent-draft).
+ * Pinned is the default: the preference lives in per-origin localStorage, so
+ * every fresh worktree origin (`<wt>.localhost:9000`) starts from it, and only
+ * an explicit unpin is ever stored.
  * Turning the pin **on** while the focused tab is solo (fullscreen) snaps it
  * back to docked, since the pinned strip lives in the tab bar and must be
  * visible — "pinned ⇒ never solo".
  */
 function useActionBarPin() {
-  const [pinned, setPinned] = useDraft<boolean>("action-bar-pinned", false, {
+  const [pinned, setPinned] = useDraft<boolean>("action-bar-pinned", true, {
     ttl: PIN_TTL,
   });
   const togglePin = () => {
