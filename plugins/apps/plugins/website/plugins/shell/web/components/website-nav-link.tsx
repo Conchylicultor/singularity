@@ -7,9 +7,14 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  *
  * Two emphases, and the split is about destination rather than importance:
  * `quiet` (the default) is a place on this site, and there are several of them,
- * so they must not compete with each other. `strong` is the one entry that leaves
- * the site — writing an email — and there is exactly one of it, which is what
- * earns it a filled pill.
+ * so they must not compete with each other — they sit in the secondary grey and
+ * come up to full foreground under the pointer. `strong` is the one entry that
+ * leaves the site — writing an email — and there is exactly one of it, which is
+ * what earns it a filled pill.
+ *
+ * The filled pill is the site's INVERTED fill (the foreground colour, with dark
+ * type), which the site's palette carries as `secondary`; the brand accent
+ * (`primary`) is reserved for identity and hover.
  */
 export function WebsiteNavLink({
   label,
@@ -21,11 +26,20 @@ export function WebsiteNavLink({
   emphasis?: "quiet" | "strong";
 } & Omit<ComponentProps<typeof Button>, "variant" | "shape" | "children">) {
   return emphasis === "strong" ? (
-    <Button variant="default" shape="pill" {...rest}>
+    <Button
+      variant="secondary"
+      shape="pill"
+      className="font-semibold"
+      {...rest}
+    >
       {label}
     </Button>
   ) : (
-    <Button variant="ghost" {...rest}>
+    <Button
+      variant="ghost"
+      className="text-muted-foreground hover:text-foreground"
+      {...rest}
+    >
       {label}
     </Button>
   );

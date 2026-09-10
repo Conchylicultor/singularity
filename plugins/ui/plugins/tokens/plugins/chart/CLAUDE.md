@@ -6,7 +6,7 @@
 
 - Description: Chart color token group with switchable presets.
 - Web:
-  - Slots: `Chart.Preset` ← `ui.tokens.chart`
+  - Slots: `Chart.Preset` ← `apps.website.shell`, `ui.tokens.chart`
   - Contributes:
     - `Chart.Preset` "Default"
     - `ConfigV2.WebRegister` "config"
@@ -34,6 +34,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Imported by: `apps/website/shell`
 - Shared:
   - Exports (types): `ChartTokenValues`
   - Exports (values):

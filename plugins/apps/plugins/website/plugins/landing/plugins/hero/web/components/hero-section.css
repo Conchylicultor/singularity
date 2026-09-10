@@ -1,18 +1,23 @@
 /* The hero's ambient wash — the site's one bespoke paint.
  *
- * Both stops READ the active theme (`--primary` and the light end of the chart
- * ramp) rather than pinning colours of their own, so the wash re-tints with a
- * preset swap instead of becoming the one blue that survives a re-theme. It is
- * decorative: `Layer decorative` makes it click-through, and the hero clips it so
- * it never bleeds into the band below. */
+ * An ellipse of the brand accent fading through the cyan counter-accent, blurred
+ * wide. Both stops READ the active theme (`--primary` and `--chart-1`) rather
+ * than pinning colours of their own, so the wash re-tints with a preset swap
+ * instead of becoming the one blue that survives a re-theme. Mixing with
+ * transparent in sRGB is what keeps the hue and lowers only the alpha.
+ *
+ * The box it paints is placed by the hero (`<Placed>`: a 1100×700 tile centred
+ * on the page, its top 120px above the document's top edge) and is decorative —
+ * click-through, and never clipped, so its tail can soften the top of the cards
+ * band below exactly as far as the design intends. */
 .website-hero-wash {
   background: radial-gradient(
-    62% 78% at 50% 0%,
-    color-mix(in oklab, var(--primary) 32%, transparent),
-    color-mix(in oklab, var(--chart-1) 12%, transparent) 45%,
-    transparent 74%
+    ellipse at center,
+    color-mix(in srgb, var(--primary) 36%, transparent),
+    color-mix(in srgb, var(--chart-1) 12%, transparent) 40%,
+    transparent 70%
   );
-  filter: blur(28px);
+  filter: blur(40px);
 }
 
 /* The emphasised half of the headline: the accent gradient painted THROUGH the
@@ -21,7 +26,7 @@
  * `background-clip: text` is unsupported is invisible text, which is why the
  * plain half of the sentence carries the meaning on its own. */
 .website-hero-accent {
-  background-image: linear-gradient(100deg, var(--primary), var(--chart-1));
+  background-image: linear-gradient(90deg, var(--primary), var(--chart-1));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

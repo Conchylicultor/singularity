@@ -1,6 +1,5 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { storyPane } from "@plugins/apps/plugins/website/plugins/story/web";
@@ -15,25 +14,27 @@ const LINK = "Read the full story and context";
  *
  * It is a sentence with a link in it, not a call to action — the two cards above
  * are the page's real choices, and this must not compete with them. Which is why
- * it is one quiet line on its own rule, and why the button is `link` rather than
- * anything filled.
+ * it is one centred line on its own rule, and why the link is the `inline`
+ * aspect of a `link` button — it takes the sentence's own size and sits in its
+ * flow, underlined in the quiet grey, coming up to full foreground on hover —
+ * rather than anything boxed or filled.
  */
 export function StoryLinkSection() {
   const openPane = useOpenPane();
   return (
-    <WebsiteBand divider y="xl">
-      <Inline gap="xs" wrap>
-        <Text as="p" variant="body" tone="muted">
-          {PROMPT}
-        </Text>
+    <WebsiteBand divider rhythm="interlude" className="text-center">
+      <Text as="p" variant="subheading" tone="muted" className="font-normal">
+        {PROMPT}{" "}
         <Button
           variant="link"
+          aspect="inline"
+          className="text-foreground decoration-muted-foreground/60 hover:decoration-foreground underline"
           onClick={() => openPane(storyPane, {}, { mode: "root" })}
         >
           {LINK}
           <MdArrowForward />
         </Button>
-      </Inline>
+      </Text>
     </WebsiteBand>
   );
 }

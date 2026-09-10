@@ -1,23 +1,45 @@
 import type { ReactNode } from "react";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import "./website-band.css";
 
-/** The site's one reading measure — see {@link WebsiteBand}. */
-const MEASURE = "mx-auto w-full max-w-5xl";
+/**
+ * The site's one reading measure — `--website-measure`, declared in
+ * `website-band.css` and read by the header's gutter too. See {@link WebsiteBand}.
+ */
+const MEASURE = "mx-auto w-full max-w-(--website-measure)";
+
+/**
+ * A band's place in the page's vertical score. Each role is a block padding
+ * pair declared once in `website-band.css`; see that file for what each
+ * measures and why the density ramp is not the source.
+ */
+export type WebsiteBandRhythm =
+  "hero" | "continuation" | "interlude" | "closing" | "footer" | "page";
+
+const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
+  hero: "website-band-hero",
+  continuation: "website-band-continuation",
+  interlude: "website-band-interlude",
+  closing: "website-band-closing",
+  footer: "website-band-footer",
+  page: "website-band-page",
+};
 
 export interface WebsiteBandProps {
   /** Host element. Defaults to `section` — pass `footer` for the site footer. */
   as?: "section" | "footer" | "header";
   /** Hairline above this band, separating it from the one before. */
   divider?: boolean;
-  /** Block padding, from the spacing ramp. Defaults to `2xl`. */
-  y?: SpaceStep;
+  /** The band's role on the page, which fixes its block padding. Defaults to `page`. */
+  rhythm?: WebsiteBandRhythm;
   /**
-   * Lands on the measure box. Reserved for the hero, which narrows and centres
-   * itself; a band that narrows any other way stops starting on the site's shared
-   * left edge (`mx-auto` centres whatever cap you give it), and a heading that no
-   * longer lines up with the cards below it reads as a mistake.
+   * Lands on the measure box — for a band that centres its text
+   * (`text-center`) or positions a decorative layer (`relative`). Never a width:
+   * a band that narrows any other way stops starting on the site's shared left
+   * edge (`mx-auto` centres whatever cap you give it), and a heading that no
+   * longer lines up with the cards below it reads as a mistake. A narrower
+   * paragraph caps ITSELF inside the measure instead (the hero's lede).
    */
   className?: string;
   children: ReactNode;
@@ -35,17 +57,25 @@ export interface WebsiteBandProps {
  * `divider` paints the hairline ABOVE the band. The site separates its bands
  * with a rule rather than with more air, which is what keeps a long page reading
  * as one document rather than a stack of unrelated cards.
+ *
+ * `rhythm` is the band's vertical padding, named by the band's role rather than
+ * spelled as a ramp step: the page's rhythm is a designed scale of its own, and
+ * it lives in `website-band.css`.
  */
 export function WebsiteBand({
   as: As = "section",
   divider = false,
-  y = "2xl",
+  rhythm = "page",
   className,
   children,
 }: WebsiteBandProps) {
   return (
-    <As className={divider ? "border-border border-t" : undefined}>
-      <Inset x="xl" y={y}>
+    <As
+      className={cn(RHYTHM_CLASS[rhythm], divider && "border-border border-t")}
+    >
+      {/* The side gutter only bites once the viewport is narrower than the
+          measure plus two gutters; at full width the measure centres itself. */}
+      <Inset x="2xl">
         <div className={cn(MEASURE, className)}>{children}</div>
       </Inset>
     </As>

@@ -1,0 +1,7 @@
+// @hash 2fccfe227c99
+{
+  // The site's chart ramp starts at its cyan counter-accent: the developers' dot
+  // and the far end of the headline gradient read `--chart-1`. Contributed by the
+  // website shell beside the palette; see that file.
+  "preset": "equin"
+}

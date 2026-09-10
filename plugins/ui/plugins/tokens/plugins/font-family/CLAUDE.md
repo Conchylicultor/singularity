@@ -6,7 +6,7 @@
 
 - Description: Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.
 - Web:
-  - Slots: `FontFamily.Preset` ← `ui.tokens.font-family`
+  - Slots: `FontFamily.Preset` ← `apps.website.shell`, `ui.tokens.font-family`
   - Contributes:
     - `FontFamily.Preset` "Default"
     - `ConfigV2.WebRegister` "config"
@@ -38,7 +38,9 @@
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
-  - Imported by: `ui/tokens/font-family/google-fonts`
+  - Imported by:
+    - `apps/website/shell`
+    - `ui/tokens/font-family/google-fonts`
 - Shared:
   - Exports (types): `FontFamilyTokenValues`
   - Exports (values):

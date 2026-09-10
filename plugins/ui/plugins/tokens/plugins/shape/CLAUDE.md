@@ -6,7 +6,7 @@
 
 - Description: Shape token group (border-radius) with switchable presets.
 - Web:
-  - Slots: `Shape.Preset` ← `ui.tokens.shape`
+  - Slots: `Shape.Preset` ← `apps.website.shell`, `ui.tokens.shape`
   - Contributes:
     - `Shape.Preset` "Default"
     - `Shape.Preset` "Sharp"
@@ -38,6 +38,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Imported by: `apps/website/shell`
 - Shared:
   - Exports (types): `ShapeTokenValues`
   - Exports (values):

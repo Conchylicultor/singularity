@@ -1,0 +1,48 @@
+/* The site's own scale — the two things the app-chrome token groups cannot say.
+ *
+ * `--website-measure` is the reading measure: every band's content box, AND the
+ * gutter the site header is inset by (the website density preset's `chromePadX`
+ * reads it), so the wordmark and the first card start on one edge. It lives on
+ * `:root` because the header is pane chrome, rendered outside the page body.
+ *
+ * The band rhythms are the page's vertical score. A marketing page breathes in
+ * a different unit from app chrome — 120px above its one headline, 96px after
+ * the fork — and the density spacing ramp tops out at its 2xl step (2rem,
+ * sized for chrome). Rather than stack ramp steps to approximate, each band
+ * names its ROLE on the page and this file says what that role measures. A new
+ * band picks a rhythm; it never writes a number. */
+:root {
+  --website-measure: 65rem; /* 1040px */
+}
+
+/* The title page: the one headline, 120px above, 88px below. */
+.website-band-hero {
+  padding-block: 7.5rem 5.5rem;
+}
+
+/* A band that follows straight on from the one above — the fork reads as the
+ * hero's second half — so it opens flush and closes with 96px. */
+.website-band-continuation {
+  padding-block: 0 6rem;
+}
+
+/* One quiet line on its own rule: 48px either side. */
+.website-band-interlude {
+  padding-block: 3rem;
+}
+
+/* The closing block, where the reader acts: 64px above, 80px below. */
+.website-band-closing {
+  padding-block: 4rem 5rem;
+}
+
+/* The signature at the end of the document: 28px above, 40px below. */
+.website-band-footer {
+  padding-block: 1.75rem 2.5rem;
+}
+
+/* An inner page's heading band (the question pages, the story): the
+ * interlude's rhythm, so a page that is only a heading so far still breathes. */
+.website-band-page {
+  padding-block: 3rem;
+}

@@ -6,17 +6,20 @@ import { appsPane } from "@plugins/apps/plugins/website/plugins/questions/plugin
 import { harnessPane } from "@plugins/apps/plugins/website/plugins/questions/plugins/harness/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import "./fork-section.css";
 
 interface Fork {
   /** Who this column is addressed to — the reader picks a column by picking themselves. */
   audience: string;
-  /** Tailwind background for the audience dot. */
+  /**
+   * The audience dot's colour, as a background AND a text colour: the halo
+   * behind it is painted from `currentColor` (see `fork-section.css`).
+   */
   dotClass: string;
   heading: string;
   body: string;
@@ -30,14 +33,14 @@ interface Fork {
 const FORKS: Fork[] = [
   {
     audience: "For users",
-    dotClass: "bg-primary",
+    dotClass: "bg-primary text-primary",
     heading: "What will apps evolve into?",
     body: "Most people are using agents to rebuild the software we already had, faster. That's the smallest thing they're good for. An application can now change shape while you use it — one app that composes itself around one person, instead of a hundred apps built for the average of everyone.",
     pane: appsPane,
   },
   {
     audience: "For developers",
-    dotClass: "bg-chart-1",
+    dotClass: "bg-chart-1 text-chart-1",
     heading:
       "What does software engineering look like when no human reviews the code?",
     body: "500,000 lines, most of them written by agents and read by nobody. It holds together because the mistakes are unwritable, not because someone checked them. That's the harness.",
@@ -56,17 +59,16 @@ const FORKS: Fork[] = [
  *
  * The two headings are lopsided on purpose (five words against twelve), and the
  * layout treats that as a fact rather than something to pad the copy around.
- * Both columns are the same box: a `Grid` cell stretches to the tallest of the
- * row, so the eyebrows and the headings start on one shared line at the top,
- * and the empty `<Fill>` pushes each paragraph down to a shared line at the
- * bottom. All the difference between a five-word heading and a twelve-word one
- * therefore collects in the middle, as air — which reads as composition, where
- * a ragged bottom edge would read as a rendering accident. Do not pad either
- * heading to balance them.
+ * Both columns are the same box — a `Grid` cell stretches to the tallest of the
+ * row — and each reads top-down: eyebrow, question, paragraph, then whatever air
+ * is left. The shorter column ends early and leaves its card's lower part empty,
+ * which is the design's own choice: the cards match as panels, and the text
+ * inside them is simply two paragraphs of different length. Do not pad either
+ * heading to balance them, and do not push the paragraphs to a shared baseline.
  */
 export function ForkSection() {
   return (
-    <WebsiteBand y="xl">
+    <WebsiteBand rhythm="continuation">
       <Grid minCellWidth="22rem" mode="fit" gap="lg">
         {FORKS.map((fork) => (
           <ForkColumn key={fork.heading} fork={fork} />
@@ -82,25 +84,38 @@ function ForkColumn({ fork }: { fork: Fork }) {
     <Card
       as="button"
       interactive
-      // A `<button>` centers its own text; the column is a paragraph of prose.
-      className="h-full rounded-xl text-left"
+      // The card is a flat panel — the site's cards carry no elevation shadow.
+      // (That it is a `<button>` changes nothing about the box: Surface owns the
+      // display, so the column packs to the top and reads left like prose.)
+      className="h-full rounded-2xl shadow-none"
       onClick={() => openPane(fork.pane, {}, { mode: "root" })}
     >
-      <Stack gap="md" className="h-full">
-        <Inline gap="xs">
-          <StatusDot colorClass={fork.dotClass} />
-          <Text variant="eyebrow" tone="muted">
+      <Stack gap="xl">
+        <Inline gap="sm">
+          <StatusDot
+            colorClass={fork.dotClass}
+            className="website-audience-dot"
+          />
+          {/* The eyebrow sits in the tertiary grey — a step below the muted
+              paragraph text, so the label defers to the question it introduces.
+              The palette has one muted tier; the step down is the same token at
+              60% over the card. */}
+          <Text
+            variant="eyebrow"
+            tone="muted"
+            className="text-muted-foreground/60 font-semibold tracking-widest"
+          >
             {fork.audience}
           </Text>
         </Inline>
-        <Text as="h2" variant="title">
-          {fork.heading}
-        </Text>
-        {/* The slack between the two shared baselines. */}
-        <Fill axis="y" />
-        <Text as="p" variant="body" tone="muted">
-          {fork.body}
-        </Text>
+        <Stack gap="md">
+          <Text as="h2" variant="title" className="tracking-tight">
+            {fork.heading}
+          </Text>
+          <Text as="p" variant="body" tone="muted">
+            {fork.body}
+          </Text>
+        </Stack>
       </Stack>
     </Card>
   );

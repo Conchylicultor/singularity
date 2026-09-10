@@ -1,6 +1,7 @@
 // @hash 7685ff6883a5
 {
-  // Softer corners than the app chrome: the site's cards are large blocks of
-  // prose, not dense controls, and the Ocean theme pairs with `rounded`.
-  "preset": "rounded"
+  // The site's own radius token, sized so a card corner (`rounded-2xl`) lands on
+  // the design's 20px and a button's (`rounded-lg`) on 11px. Contributed by the
+  // website shell beside the palette; see that file.
+  "preset": "equin"
 }

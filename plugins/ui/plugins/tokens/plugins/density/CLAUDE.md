@@ -6,7 +6,7 @@
 
 - Description: Density token group (padding intents) with switchable presets.
 - Web:
-  - Slots: `Density.Preset` ← `ui.tokens.density`
+  - Slots: `Density.Preset` ← `apps.website.shell`, `ui.tokens.density`
   - Contributes:
     - `Density.Preset` "Comfortable"
     - `Density.Preset` "Cozy"
@@ -36,6 +36,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Imported by: `apps/website/shell`
 - Shared:
   - Exports (types): `DensityTokenValues`
   - Exports (values):

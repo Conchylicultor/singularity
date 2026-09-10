@@ -10,6 +10,12 @@ painted through the emphasised half of the headline. Both are in
 colours — so a preset swap re-tints the hero with everything else. Never
 hardcode a colour here.
 
+The wash is a `<Placed>` box, not a `<Layer>`: the design measured it (an
+1100×700 ellipse centred on the page, starting 120px above the document), and it
+is deliberately not clipped to the band, so its tail softens the top of the
+cards below. The text sits above it because the band's measure box is positioned
+after it in the DOM.
+
 The register is still an essay's, not a pricing page's: the headline makes one
 claim and the paragraph says why it is a bet. Then it hands over to
 [`fork`](../fork/CLAUDE.md), which asks the questions.
@@ -24,9 +30,7 @@ claim and the paragraph says why it is a bet. Then it hands over to
   - Uses:
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteBand`
-    - `primitives/css/clip.Clip`
-    - `primitives/css/layer.Layer`
-    - `primitives/css/spacing.Inset`
+    - `primitives/css/coords.Placed`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
 

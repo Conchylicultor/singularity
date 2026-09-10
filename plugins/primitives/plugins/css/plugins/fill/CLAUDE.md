@@ -105,7 +105,6 @@ primitive exists to name.
     - `apps/story/shell`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release/release-logs`
-    - `apps/website/landing/fork`
     - `apps/website/shell`
     - `apps/workflows/editor`
     - `auth`

@@ -36,6 +36,15 @@ export interface SurfaceProps extends Passthrough {
 }
 
 /**
+ * The box a surface is, per host tag — see the class comment in {@link Surface}
+ * for why a `<button>` needs more than `block` to be a mere tag choice.
+ */
+const BOX_CLASS = {
+  default: "block",
+  button: "flex flex-col text-left",
+} as const;
+
+/**
  * The surface chrome primitive: one closed set of semantic elevation roles, each
  * a frozen bundle of background + border + radius + shadow drawn from the shared
  * SURFACE_LEVELS map (in ui-kit). Routing every panel / card / overlay through
@@ -71,16 +80,29 @@ export function Surface({
       tabIndex={tabIndex ?? selectScopeProps.tabIndex}
       {...rest}
       onKeyDown={handleKeyDown}
-      // `block` FIRST, so a consumer's own display class (`flex` / `grid` /
-      // `hidden`) still wins through tailwind-merge. A surface is a CONTAINED BOX,
-      // and `as` must not silently change what kind of box it is: `as="a"` renders
-      // an element that is `display: inline` by default, and an inline box holding
-      // block-level children is split into fragments — the browser then paints the
-      // bg/border/radius on the empty leading + trailing fragments instead of
-      // around the content, i.e. two stray slivers above and below and no card
-      // chrome at all. Owning the display here is what makes `as` purely a choice
-      // of TAG (semantics / interactivity), never of layout.
-      className={cn("block", SURFACE_LEVELS[level], className)}
+      // The box class FIRST, so a consumer's own display class (`flex` / `grid`
+      // / `hidden`) still wins through tailwind-merge. A surface is a CONTAINED
+      // BOX, and `as` must not silently change what kind of box it is — two tags
+      // carry layout of their own that would otherwise leak in:
+      //   - `as="a"` is `display: inline` by default, and an inline box holding
+      //     block-level children is split into fragments — the browser paints the
+      //     bg/border/radius on the empty leading + trailing fragments, i.e. two
+      //     stray slivers and no card chrome. `block` closes that.
+      //   - `as="button"` centres its content, vertically AND horizontally, by
+      //     UA rule (buttons are controls, and a control's label sits in its
+      //     middle). A card that is a column of prose then sinks to the middle of
+      //     whatever height its grid row stretched it to, and its lines centre —
+      //     the two fork cards of the website shipped with their eyebrows on two
+      //     different baselines for exactly this reason. A flex column with the
+      //     default `flex-start` main-axis packing is the box a card actually is,
+      //     and `text-left` returns the text to a paragraph's alignment.
+      // Owning the display here is what makes `as` purely a choice of TAG
+      // (semantics / interactivity), never of layout.
+      className={cn(
+        BOX_CLASS[Comp === "button" ? "button" : "default"],
+        SURFACE_LEVELS[level],
+        className,
+      )}
     >
       {children}
     </Comp>

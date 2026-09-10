@@ -5365,7 +5365,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
                   - `primitives/css/card.Card`
-                  - `primitives/css/fill.Fill`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/spacing.Stack`
@@ -5379,9 +5378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
-                  - `primitives/css/clip.Clip`
-                  - `primitives/css/layer.Layer`
-                  - `primitives/css/spacing.Inset`
+                  - `primitives/css/coords.Placed`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
             - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.
@@ -5391,7 +5388,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
                   - `apps/website/story.storyPane`
-                  - `primitives/css/inline.Inline`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/pane.useOpenPane`
@@ -5441,7 +5437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `WebsiteHarness`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/fork`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, and defines the Website.Section landing slot.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme presets (palette, chart ramp, type scale, density, shape, font) that the per-app token configs pin.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
@@ -5450,6 +5446,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
               - `Pane.Register` "website-landing"
+              - `ColorPalette.Preset` "equin"
+              - `Chart.Preset` "equin"
+              - `TypeScale.Preset` "equin"
+              - `Density.Preset` "equin"
+              - `Shape.Preset` "equin"
+              - `FontFamily.Preset` "equin"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
@@ -5459,6 +5461,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/text.TextVariant`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/pane.AnyPane`
@@ -5468,6 +5471,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/tokens/chart.Chart`
+              - `ui/tokens/color-palette.ColorPalette`
+              - `ui/tokens/density.Density`
+              - `ui/tokens/font-family.FontFamily`
+              - `ui/tokens/shape.Shape`
+              - `ui/tokens/type-scale.TypeScale`
+            - Exports (types): `WebsiteBandRhythm`
             - Exports (values):
               - `landingPane`
               - `Website`
@@ -22481,7 +22491,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/keyboard`
               - `apps/sonata/progress/scrubber`
               - `apps/studio/graph`
-              - `apps/website/landing/hero`
               - `build/build-logs`
               - `code-explorer`
               - `config_v2/settings`
@@ -22730,6 +22739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/sections`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
+              - `apps/website/landing/hero`
               - `debug/profiling`
               - `debug/profiling/ops/op-gantt`
               - `debug/timeline`
@@ -22777,7 +22787,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/story/shell`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
-              - `apps/website/landing/fork`
               - `apps/website/shell`
               - `apps/workflows/editor`
               - `auth`
@@ -22935,7 +22944,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/explorer`
               - `apps/website/landing/contact`
               - `apps/website/landing/fork`
-              - `apps/website/landing/story-link`
               - `backup/runs-arm`
               - `build/build-info`
               - `build/build-status`
@@ -23015,7 +23023,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/keys`
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
-              - `apps/website/landing/hero`
               - `page/code-block`
               - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
@@ -32253,7 +32260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `categoricalGroup`
         - **`chart`** — Chart color token group with switchable presets.
           - Web:
-            - Slots: `Chart.Preset` ← `ui.tokens.chart`
+            - Slots: `Chart.Preset` ← `apps.website.shell`, `ui.tokens.chart`
             - Contributes:
               - `Chart.Preset` "Default"
               - `ConfigV2.WebRegister` "config"
@@ -32281,6 +32288,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/website/shell`
           - Shared:
             - Exports (types): `ChartTokenValues`
             - Exports (values):
@@ -32326,7 +32335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `colorAdjustConfig`
         - **`color-palette`** — Color palette token group with switchable presets.
           - Web:
-            - Slots: `ColorPalette.Preset` ← `ui.tokens.color-palette`
+            - Slots: `ColorPalette.Preset` ← `apps.website.shell`, `ui.tokens.color-palette`
             - Contributes:
               - `ConfigV2.WebRegister` "config"
               - `DynamicEnum.Options` "Color Palette preset"
@@ -32360,6 +32369,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/website/shell`
           - Shared:
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values):
@@ -32367,7 +32378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `colorPaletteGroup`
         - **`density`** — Density token group (padding intents) with switchable presets.
           - Web:
-            - Slots: `Density.Preset` ← `ui.tokens.density`
+            - Slots: `Density.Preset` ← `apps.website.shell`, `ui.tokens.density`
             - Contributes:
               - `Density.Preset` "Comfortable"
               - `Density.Preset` "Cozy"
@@ -32397,6 +32408,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/website/shell`
           - Shared:
             - Exports (types): `DensityTokenValues`
             - Exports (values):
@@ -32404,7 +32417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `densityGroup`
         - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.
           - Web:
-            - Slots: `FontFamily.Preset` ← `ui.tokens.font-family`
+            - Slots: `FontFamily.Preset` ← `apps.website.shell`, `ui.tokens.font-family`
             - Contributes:
               - `FontFamily.Preset` "Default"
               - `ConfigV2.WebRegister` "config"
@@ -32436,7 +32449,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
-            - Imported by: `ui/tokens/font-family/google-fonts`
+            - Imported by:
+              - `apps/website/shell`
+              - `ui/tokens/font-family/google-fonts`
           - Shared:
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values):
@@ -32519,7 +32534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shadowGroup`
         - **`shape`** — Shape token group (border-radius) with switchable presets.
           - Web:
-            - Slots: `Shape.Preset` ← `ui.tokens.shape`
+            - Slots: `Shape.Preset` ← `apps.website.shell`, `ui.tokens.shape`
             - Contributes:
               - `Shape.Preset` "Default"
               - `Shape.Preset` "Sharp"
@@ -32551,6 +32566,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/website/shell`
           - Shared:
             - Exports (types): `ShapeTokenValues`
             - Exports (values):
@@ -32597,7 +32614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `sidebarPaletteGroup`
         - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with switchable presets.
           - Web:
-            - Slots: `TypeScale.Preset` ← `ui.tokens.type-scale`
+            - Slots: `TypeScale.Preset` ← `apps.website.shell`, `ui.tokens.type-scale`
             - Contributes:
               - `TypeScale.Preset` "Default"
               - `ConfigV2.WebRegister` "config"
@@ -32626,6 +32643,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/website/shell`
           - Shared:
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values):

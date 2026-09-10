@@ -36,28 +36,36 @@ const OFFERS = [
  * it is two readers — someone who wants to back this, and someone who is stuck on
  * the same problem — and naming which one you are is what makes an email easy to
  * start writing.
+ *
+ * The filled button is the site's INVERTED fill (the foreground colour with dark
+ * type — `secondary` in the site's palette), the other an outline; the brand
+ * accent stays for identity and hover.
  */
 export function ContactSection() {
   return (
-    <WebsiteBand divider y="xl">
-      <Stack gap="xl">
+    <WebsiteBand divider rhythm="closing">
+      <Stack gap="2xl">
         {/* `fit` collapses the empty trailing track: at the site's measure a 20rem
             minimum packs three, and two cards in a three-track row read as one
             card missing. Same minimum as the fork above, so the two card rows on
             the page break at the same width. */}
         <Grid minCellWidth="22rem" mode="fit" gap="lg">
           {OFFERS.map((offer) => (
-            <Card key={offer.heading} className="rounded-xl">
-              <Stack gap="sm" align="start">
-                <Text as="h2" variant="title">
-                  {offer.heading}
-                </Text>
-                <Text as="p" variant="body" tone="muted">
-                  {offer.body}
-                </Text>
+            <Card key={offer.heading} className="rounded-2xl shadow-none">
+              <Stack gap="xl" align="start">
+                <Stack gap="sm">
+                  <Text as="h2" variant="heading" className="tracking-tight">
+                    {offer.heading}
+                  </Text>
+                  <Text as="p" variant="body" tone="muted">
+                    {offer.body}
+                  </Text>
+                </Stack>
                 <Button
-                  variant={offer.emphasis === "filled" ? "default" : "outline"}
-                  shape="pill"
+                  variant={
+                    offer.emphasis === "filled" ? "secondary" : "outline"
+                  }
+                  className="font-semibold"
                   render={<a href={CONTACT_MAILTO} />}
                 >
                   {offer.action}
@@ -77,13 +85,19 @@ export function ContactSection() {
             rel="noreferrer noopener"
             aria-label="Source on GitHub"
             className={cn(
-              insetClass({ pad: "xs" }),
-              "border-border text-muted-foreground hover:border-foreground hover:text-foreground rounded-full border",
+              insetClass({ pad: "sm" }),
+              "border-border text-muted-foreground hover:border-muted-foreground hover:text-foreground rounded-full border",
             )}
           >
-            <SiGithub className="size-4" />
+            <SiGithub className="size-4.5" />
           </a>
-          <Text variant="caption" tone="muted">
+          {/* The address sits in the tertiary grey — the muted token, stepped
+              down to 60% over the page — like the footer's signature. */}
+          <Text
+            variant="caption"
+            tone="muted"
+            className="text-muted-foreground/60"
+          >
             {CONTACT_EMAIL}
           </Text>
         </Inline>

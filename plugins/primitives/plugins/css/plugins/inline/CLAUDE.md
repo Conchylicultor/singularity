@@ -66,7 +66,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `apps/studio/explorer`
     - `apps/website/landing/contact`
     - `apps/website/landing/fork`
-    - `apps/website/landing/story-link`
     - `backup/runs-arm`
     - `build/build-info`
     - `build/build-status`

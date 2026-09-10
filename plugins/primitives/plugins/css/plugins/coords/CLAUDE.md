@@ -173,6 +173,7 @@ default is stated twice and can therefore drift.
     - `apps/sonata/progress/sections`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/songsheet`
+    - `apps/website/landing/hero`
     - `debug/profiling`
     - `debug/profiling/ops/op-gantt`
     - `debug/timeline`

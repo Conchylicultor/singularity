@@ -1,0 +1,7 @@
+/* The audience dot glows in its own colour: a soft halo the width of the dot
+ * itself, painted from `currentColor` so the dot's text-colour class is the one
+ * place its hue is named. Decorative paint, so a CSS rule rather than a shadow
+ * token — the shadow scale is for elevation, and a glow is not a height. */
+.website-audience-dot {
+  box-shadow: 0 0 12px currentColor;
+}

@@ -6,7 +6,7 @@
 
 - Description: Color palette token group with switchable presets.
 - Web:
-  - Slots: `ColorPalette.Preset` ← `ui.tokens.color-palette`
+  - Slots: `ColorPalette.Preset` ← `apps.website.shell`, `ui.tokens.color-palette`
   - Contributes:
     - `ConfigV2.WebRegister` "config"
     - `DynamicEnum.Options` "Color Palette preset"
@@ -40,6 +40,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Imported by: `apps/website/shell`
 - Shared:
   - Exports (types): `ColorPaletteTokenValues`
   - Exports (values):

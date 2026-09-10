@@ -1,0 +1,9 @@
+// @hash 9414290f8830
+{
+  // The site draws no categorical series; the default ramp.
+  //
+  // Pinned explicitly even though it is the default: the site owns its theme
+  // whole. A group left unpinned follows the desktop's runtime theme, which git
+  // cannot show (enforced by the tokens:app-theme-pins-total check).
+  "preset": "default"
+}

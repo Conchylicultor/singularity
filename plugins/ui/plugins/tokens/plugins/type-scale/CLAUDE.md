@@ -6,7 +6,7 @@
 
 - Description: Type-scale token group (font sizes, line heights, weights) with switchable presets.
 - Web:
-  - Slots: `TypeScale.Preset` ← `ui.tokens.type-scale`
+  - Slots: `TypeScale.Preset` ← `apps.website.shell`, `ui.tokens.type-scale`
   - Contributes:
     - `TypeScale.Preset` "Default"
     - `ConfigV2.WebRegister` "config"
@@ -35,6 +35,8 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Cross-plugin:
+  - Imported by: `apps/website/shell`
 - Shared:
   - Exports (types): `TypeScaleTokenValues`
   - Exports (values):

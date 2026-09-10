@@ -19,7 +19,6 @@ its words and the story page's opening the same.
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteBand`
     - `apps/website/story.storyPane`
-    - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/pane.useOpenPane`
