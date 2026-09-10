@@ -134,6 +134,8 @@ Metadata is therefore read out of the HTML, not a sidecar file:
 - `<meta name="description">` → `blurb` (default: `""`)
 - `<meta name="prototype-viewport" content="WxH">` → `viewport` (default: 1280x800)
 - `<meta name="mocks" content="<kind>:<ref>">` → `mocks` (default: `{ kind: "none" }`)
+- every `<meta name="prototype-option" content="<name>: <v> | <v>">`, with its
+  default read off `<html data-<name>>` → `options` (default: `[]`)
 
 `mocks` is the real app thing this prototype is a mockup OF — the pairing the
 Compare stage reads: `fixture:control-panel/setting-rail` (a layout-harness
@@ -156,6 +158,16 @@ no `<kind>:` prefix, an empty half, a kind that is not lowercase letters, digits
 and dashes. It surfaces on the card and the Focus banner, where the author is
 looking, and the Compare stage repeats it beside the syntax.
 
+`options` are the variants a reader flips between (the contract is in
+`prototypes/CLAUDE.md` § Options). `core/options.ts` is pure (parse, fold,
+resolve picks, query → picks; pinned by `options.test.ts`);
+`core/option-source.ts` is the ONE HTML read of the declaration, shared by the
+list, `validatePrototypeFolder` and the server's stamping so they cannot
+disagree. The default lives on `<html>` — not "the first value" — so the page
+carries the attribute in every context (off disk, thumbnail, app) and the app
+only ever overwrites it. A line that cannot be an option is dropped from
+`options` and reported in `problems[]`.
+
 Parsed with `HTMLRewriter`; every value it yields is decoded once via
 `@plugins/infra/plugins/html-decode/core` — the rewriter decodes nothing.
 
@@ -173,7 +185,14 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
 - `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
   Content-Type by extension, `Cache-Control: no-store`. Raw handler (custom
   Content-Type, per-file bytes). Path-traversal-guarded to stay under
-  `prototypes/`; 400 on escape, 404 on missing.
+  `prototypes/`; 400 on escape, 404 on missing. **Except** `index.html` asked
+  for with option picks (`?palette=azure`, any key but `v`): the picks are
+  checked against the page's own declaration and stamped onto `<html>` as
+  `data-*` — the one HTMLRewriter *rewrite* in the repo (every other use only
+  extracts). An undeclared name or value is a **400** rendered in the frame: a
+  broken variant link must say so, not quietly show the default. The file is
+  read whole first because `<html>` streams before the `<meta>` tags that say
+  what is valid. With no picks the file streams through untouched.
 
 **Why the extra path segment.** Serving the document at `<name>/index.html`
 rather than at `<name>` is what makes a relative `href="styles.css"` inside it
@@ -240,7 +259,7 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
@@ -268,11 +287,17 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `MocksDeclaration`
+    - `OptionDeclaration`
+    - `OptionPicks`
+    - `OptionSource`
     - `PrototypeFolder`
     - `PrototypeMeta`
+    - `PrototypeOption`
     - `PrototypeProblem`
   - Exports (values):
     - `createPrototype`
+    - `foldOptions`
+    - `humanizeToken`
     - `isPrototypeId`
     - `isScannableFile`
     - `listPrototypes`
@@ -280,21 +305,29 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `mocksProblemDetail`
     - `newPrototypeId`
     - `parseMocks`
+    - `parseOptionDeclaration`
+    - `pickedValue`
+    - `picksFromQuery`
     - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_FILE_ROUTE`
     - `PROTOTYPE_ID_RE`
     - `PrototypeMetaSchema`
+    - `PrototypeOptionSchema`
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
     - `prototypesResource`
     - `prototypesVersionResource`
     - `prototypeUrl`
+    - `readOptionSource`
+    - `readPrototypeOptions`
+    - `resolvePicks`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
 
 <!-- AUTOGENERATED:END -->

@@ -20,8 +20,12 @@ import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import {
   prototypesResource,
   prototypesVersionResource,
+  type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { ScaledIframe } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import {
+  ScaledIframe,
+  usePrototypeSrc,
+} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 
 /**
  * How much of the screen the presentation covers, smallest first:
@@ -109,7 +113,7 @@ export function PresentOverlay({
               </Text>
             );
           }
-          return <ScaledIframe meta={meta} version={version} upscale />;
+          return <PresentedFrame meta={meta} version={version} />;
         },
       })}
       {/* Hidden until the pointer moves over the stage: a presentation shows
@@ -156,4 +160,20 @@ export function PresentOverlay({
       {stageBox}
     </ViewportOverlay>
   );
+}
+
+/**
+ * The presented prototype, on the variant the pane is showing: the same
+ * `usePrototypeSrc` URL as Focus and Compare, so presenting never drops the
+ * reader's picks.
+ */
+function PresentedFrame({
+  meta,
+  version,
+}: {
+  meta: PrototypeMeta;
+  version: number;
+}) {
+  const src = usePrototypeSrc(meta, version);
+  return <ScaledIframe meta={meta} src={src} upscale />;
 }

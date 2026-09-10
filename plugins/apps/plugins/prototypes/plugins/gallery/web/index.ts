@@ -7,14 +7,18 @@ import { FocusStage } from "./components/focus-stage";
 
 export { prototypesGalleryPane, prototypeDetailPane } from "./panes";
 export { ScaledIframe } from "./components/scaled-iframe";
-export { usePrototypeDetail } from "./context";
+export {
+  usePrototypeDetail,
+  usePrototypePicks,
+  usePrototypeSrc,
+} from "./context";
 export type { PrototypeDetailContextValue, PrototypeStage } from "./context";
 export { PrototypeStages } from "./slots";
 export type { PrototypeStageContribution, PrototypeStageProps } from "./slots";
 
 export default {
   description:
-    "Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance.",
+    "Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).",
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
     Pane.Register({ pane: prototypeDetailPane }),

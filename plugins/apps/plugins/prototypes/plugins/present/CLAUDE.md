@@ -47,6 +47,7 @@ another way to view a prototype is a sibling plugin, not an edit here.
     - `apps-core/tabs.useSurfaceFocused`
     - `apps/prototypes/gallery.prototypeDetailPane`
     - `apps/prototypes/gallery.ScaledIframe`
+    - `apps/prototypes/gallery.usePrototypeSrc`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -7,7 +7,7 @@ so a mock is live with no build and nothing to commit (the `prototypes` backup
 source is what makes it recoverable). Authored separately from this plugin:
 **one folder per prototype holding a self-contained `index.html`**, with
 its metadata read out of that HTML (`<title>`, `<meta name="description">`,
-`<meta name="prototype-viewport">`, `<meta name="mocks">`). Nothing is shared between prototypes — no
+`<meta name="prototype-viewport">`, `<meta name="mocks">`, `<meta name="prototype-option">`). Nothing is shared between prototypes — no
 harness, no tokens, no `meta.json`. `prototypes/CLAUDE.md` is the authoring
 contract; **do not edit a prototype from here without reading it.**
 
@@ -49,8 +49,8 @@ whose app surface still stands).
     - Plugins:
       - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
       - **`route`** — The route: counterpart kind for the prototype Compare stage: the running app itself, framed chromeless (no rail, no tab bar) at an in-app path (route:/agents/c/123) on this deploy's own origin, so a whole-screen mock is compared against the real screen as this branch renders it — never a second implementation that could drift.
-  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
-  - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance.
+  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
+  - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).
   - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
   - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.

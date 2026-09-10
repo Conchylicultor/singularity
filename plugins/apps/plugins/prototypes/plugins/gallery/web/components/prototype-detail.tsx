@@ -8,13 +8,21 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   prototypesResource,
   prototypesVersionResource,
+  type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "../panes";
-import { PrototypeDetailProvider, usePrototypeDetail } from "../context";
+import {
+  PrototypeDetailProvider,
+  usePrototypeDetail,
+  usePrototypeSrc,
+  type PrototypeStage,
+} from "../context";
 import { PrototypeStages } from "../slots";
+import { OptionsPicker } from "./options-picker";
 
 /**
  * The detail pane. Its header controls (the stage switcher, Present, Improve)
@@ -112,11 +120,51 @@ function StageBody() {
           </Text>
         );
       }
-      return renderIsolated(
-        PrototypeStages.Stage,
-        stage as unknown as Contribution,
-        { meta, gallery: rows, version },
+      return (
+        <ReadyStage
+          meta={meta}
+          gallery={rows}
+          version={version}
+          stage={stage}
+        />
       );
     },
   });
+}
+
+/**
+ * The resolved stage, with the options picker floating over it when the
+ * prototype declares any. The picker sits at the PANE level, not in a stage, so
+ * every stage shows the same variant under the same control.
+ *
+ * `src` is built once here (`usePrototypeSrc`) and handed down whole: a stage
+ * never composes a frame URL, so none can drop the picks or the cache-bust.
+ */
+function ReadyStage({
+  meta,
+  gallery,
+  version,
+  stage,
+}: {
+  meta: PrototypeMeta;
+  gallery: PrototypeMeta[];
+  version: number;
+  stage: PrototypeStage;
+}) {
+  const src = usePrototypeSrc(meta, version);
+  return (
+    // The positioning context the picker pins to.
+    <div className="relative h-full">
+      {renderIsolated(PrototypeStages.Stage, stage as unknown as Contribution, {
+        meta,
+        gallery,
+        src,
+      })}
+      {meta.options.length > 0 ? (
+        <Pin to="bottom-right" offset="md">
+          <OptionsPicker meta={meta} />
+        </Pin>
+      ) : null}
+    </div>
+  );
 }

@@ -15,12 +15,20 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
-  prototypeUrl,
+  matchResource,
+  useCombinedResources,
+  useResource,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  prototypesResource,
   prototypesVersionResource,
+  type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import {
+  prototypeDetailPane,
+  usePrototypeSrc,
+} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
 
 /**
@@ -113,32 +121,50 @@ function PresentItem({
 }
 
 /**
- * Opens the raw prototype document as its own browser tab. The URL carries the
- * same `?v=` cache-bust the in-app iframes use, so a new tab never opens a copy
- * an agent has already edited past — which is why the item waits for the
- * version rather than opening an un-busted URL while it loads.
+ * Opens the raw prototype document as its own browser tab. The URL is the pane's
+ * own (`usePrototypeSrc`): the same `?v=` cache-bust the in-app iframes use, so
+ * a new tab never opens a copy an agent has already edited past, and the picked
+ * options, so it opens on the variant on screen — which makes it the link to
+ * share for "this version". The item waits for both resources rather than
+ * opening an un-busted, pick-less URL while they load.
  */
 function NewTabItem({ name }: { name: string }) {
-  const versionResult = useResource(prototypesVersionResource);
-  if (versionResult.pending) {
-    return (
-      <PresentItem
-        icon={MdOpenInNew}
-        label="New browser tab"
-        hint="Opens the prototype on its own"
-        disabled
-      />
-    );
-  }
-  const v = versionResult.data;
+  const loaded = useCombinedResources({
+    rows: useResource(prototypesResource),
+    version: useResource(prototypesVersionResource),
+  });
+  const pending = (
+    <PresentItem
+      icon={MdOpenInNew}
+      label="New browser tab"
+      hint="Opens the prototype on its own"
+      disabled
+    />
+  );
+  return matchResource(loaded, {
+    pending: () => pending,
+    error: () => pending,
+    ready: ({ rows, version }) => {
+      const meta = rows.find((p) => p.name === name);
+      return meta ? <NewTabReady meta={meta} version={version} /> : pending;
+    },
+  });
+}
+
+function NewTabReady({
+  meta,
+  version,
+}: {
+  meta: PrototypeMeta;
+  version: number;
+}) {
+  const src = usePrototypeSrc(meta, version);
   return (
     <PresentItem
       icon={MdOpenInNew}
       label="New browser tab"
       hint="Opens the prototype on its own"
-      onClick={() =>
-        window.open(prototypeUrl(name, { v }), "_blank", "noopener,noreferrer")
-      }
+      onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
     />
   );
 }

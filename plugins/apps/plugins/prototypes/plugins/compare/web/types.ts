@@ -49,8 +49,6 @@ export interface CounterpartKindProps {
    */
   target: string;
   meta: PrototypeMeta;
-  /** Iframe cache-bust; bumps when the watcher sees an edit. */
-  version: number;
   /** Hand the stage the resolution. */
   children: (resolution: CounterpartResolution) => ReactNode;
 }

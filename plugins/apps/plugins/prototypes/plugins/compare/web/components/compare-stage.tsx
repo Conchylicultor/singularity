@@ -18,10 +18,7 @@ import { MalformedDeclaration, NoDeclaration } from "./notices";
  * only ever happen at runtime, and "this worktree has no such thing" is an
  * ordinary answer, not a fault.
  */
-export function CompareStage({
-  meta,
-  version,
-}: PrototypeStageProps): ReactElement {
+export function CompareStage({ meta, src }: PrototypeStageProps): ReactElement {
   const kinds = useCounterpartKinds();
   const decl = meta.mocks;
 
@@ -31,18 +28,9 @@ export function CompareStage({
   }
 
   return (
-    <Counterpart.Kind.Dispatch
-      kind={decl.tag}
-      target={decl.ref}
-      meta={meta}
-      version={version}
-    >
+    <Counterpart.Kind.Dispatch kind={decl.tag} target={decl.ref} meta={meta}>
       {(resolution) => (
-        <CounterpartStage
-          resolution={resolution}
-          meta={meta}
-          version={version}
-        />
+        <CounterpartStage resolution={resolution} meta={meta} src={src} />
       )}
     </Counterpart.Kind.Dispatch>
   );

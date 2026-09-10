@@ -1,6 +1,7 @@
 export {
   PrototypeMetaSchema,
   MocksDeclarationSchema,
+  PrototypeOptionSchema,
   prototypesResource,
   prototypesVersionResource,
   PROTOTYPES_API_BASE,
@@ -26,3 +27,18 @@ export {
 } from "./id";
 export { parseMocks, mocksProblemDetail } from "./mocks";
 export type { MocksDeclaration } from "./mocks";
+export {
+  parseOptionDeclaration,
+  foldOptions,
+  resolvePicks,
+  pickedValue,
+  picksFromQuery,
+  humanizeToken,
+} from "./options";
+export type {
+  PrototypeOption,
+  OptionDeclaration,
+  OptionPicks,
+  OptionSource,
+} from "./options";
+export { readOptionSource, readPrototypeOptions } from "./option-source";

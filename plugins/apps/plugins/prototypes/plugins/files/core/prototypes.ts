@@ -4,6 +4,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { PrototypeProblemSchema } from "./validate";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { MocksDeclaration } from "./mocks";
+import type { OptionPicks, PrototypeOption } from "./options";
 
 /**
  * The wire shape of a parsed `mocks` declaration. Mirrors `MocksDeclaration`
@@ -18,6 +19,13 @@ export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
   }),
   z.object({ kind: z.literal("declared"), tag: z.string(), ref: z.string() }),
 ]) satisfies ZodParser<MocksDeclaration>;
+
+/** The wire shape of one valid option. Mirrors `PrototypeOption` exactly. */
+export const PrototypeOptionSchema = z.object({
+  name: z.string(),
+  values: z.tuple([z.string(), z.string()]).rest(z.string()).readonly(),
+  default: z.string(),
+}) satisfies ZodParser<PrototypeOption>;
 
 /**
  * Metadata for a single prototype, parsed out of `<slug>/index.html` under the
@@ -40,6 +48,10 @@ export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
  *   unjudged: kinds are an open set contributed on the web, and the ref is
  *   resolved only there — a fixture catalog is per-worktree while prototypes
  *   are host-global, so the pairing can only ever be a runtime lookup.
+ * - `options` — every valid `<meta name="prototype-option">`, in picker order,
+ *   each with its default read off the page's own `<html data-<name>>` (see
+ *   `options.ts`). A line that cannot be an option is left out here and
+ *   reported in `problems`. Empty for most prototypes.
  * - `problems` — every way the folder breaks the self-contained contract, empty
  *   when it holds. Prototypes are user content, not code, so this rides the
  *   wire to the gallery card instead of gating a push.
@@ -53,6 +65,7 @@ export const PrototypeMetaSchema = z.object({
   blurb: z.string(),
   viewport: z.object({ w: z.number(), h: z.number() }),
   mocks: MocksDeclarationSchema,
+  options: z.array(PrototypeOptionSchema),
   problems: z.array(PrototypeProblemSchema),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
@@ -116,11 +129,20 @@ export const listPrototypes = defineEndpoint({
 /**
  * Build the URL the iframe loads: the prototype's own `index.html`, addressed
  * through the folder so its relative sub-resources resolve. `v` cache-busts on
- * edit.
+ * edit; `picks` become `?<option>=<value>`, which the server stamps onto the
+ * page's `<html data-<option>>` — so a frame reloaded by an edit comes back on
+ * the variant it was showing, and the URL on its own is a link to that variant.
  */
-export function prototypeUrl(name: string, opts: { v?: number } = {}): string {
-  const qs =
-    opts.v === undefined ? "" : `?v=${encodeURIComponent(String(opts.v))}`;
+export function prototypeUrl(
+  name: string,
+  opts: { v?: number; picks?: OptionPicks } = {},
+): string {
+  const params = new URLSearchParams();
+  if (opts.v !== undefined) params.set("v", String(opts.v));
+  for (const [option, value] of Object.entries(opts.picks ?? {})) {
+    params.set(option, value);
+  }
+  const qs = params.size === 0 ? "" : `?${params.toString()}`;
   return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${qs}`;
 }
 

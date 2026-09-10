@@ -18,6 +18,13 @@
      nothing and leave this out.
 <meta name="mocks" content="fixture:control-panel/setting-rail" />
 -->
+<!-- Uncomment ONLY if the design has variants to flip between. One tag per
+     option, values in picker order; the default goes on <html> itself
+     (<html lang="en" data-palette="violet">). The app draws the picker — never
+     build a switcher into the page. Style each value with
+     :root[data-palette="azure"] { … }, or read document.documentElement.dataset.
+<meta name="prototype-option" content="palette: violet | azure" />
+-->
 
 <style>
   * { box-sizing: border-box; }

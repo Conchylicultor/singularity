@@ -58,11 +58,12 @@ type Zoom = "fit" | "actual";
 export function CounterpartStage({
   resolution,
   meta,
-  version,
+  src,
 }: {
   resolution: CounterpartResolution;
   meta: PrototypeMeta;
-  version: number;
+  /** The mock's document URL, as the pane built it (picks included). */
+  src: string;
 }): ReactElement {
   const widths =
     resolution.status === "found" ? resolution.widths : PLACEHOLDER_WIDTHS;
@@ -173,11 +174,7 @@ export function CounterpartStage({
                     {/* The prototype's declared viewport height: the frame is as
                         tall as the mock says it means to be, and as wide as the
                         stage says. */}
-                    <MockFrame
-                      meta={meta}
-                      version={version}
-                      height={meta.viewport.h}
-                    />
+                    <MockFrame meta={meta} src={src} height={meta.viewport.h} />
                   </ScaledBox>
                 </Half>
                 <CounterpartHalf

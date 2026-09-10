@@ -12,6 +12,7 @@ would be absurd. Reach for those rather than hand-rolling a second envelope.
 - Description: Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/rich/chord-readout`
     - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

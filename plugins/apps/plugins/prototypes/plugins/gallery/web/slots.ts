@@ -18,10 +18,12 @@ export interface PrototypeStageProps {
    */
   gallery: PrototypeMeta[];
   /**
-   * Cache-bust for every prototype iframe `src`. It bumps when the watcher sees
-   * an edit, which is what reloads a stage's iframes live.
+   * The URL of the prototype's document, for a stage's iframe `src`. Built once
+   * by the pane (`usePrototypeSrc`): it carries the edit cache-bust — which is
+   * what reloads a stage's frame live — and the option values the reader picked,
+   * so a stage hands it to its frame as-is and cannot show another variant.
    */
-  version: number;
+  src: string;
 }
 
 /**

@@ -40,7 +40,11 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `apps/browser/shell`
     - `apps/pages/page-tree`
     - `apps/pages/welcome/recent-pages`
+<<<<<<< .merge_file_HrE066
     - `apps/prototypes/compare`
+=======
+    - `apps/prototypes/gallery`
+>>>>>>> .merge_file_nRPvCQ
     - `apps/sonata/library`
     - `apps/sonata/piano-roll`
     - `apps/sonata/primitives/jog-wheel`

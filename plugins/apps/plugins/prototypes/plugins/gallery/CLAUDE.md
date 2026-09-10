@@ -38,8 +38,8 @@ The Prototypes app's two panes:
     (`context.tsx`), which wraps `PaneChrome` so the header renders inside it.
   - **The stage set is a slot too** (`PrototypeStages.Stage`, `slots.ts`). A
     stage is `{ id, label, order?, component }`; the component is handed
-    `PrototypeStageProps` — the open prototype, the whole gallery list, and the
-    cache-bust version. The gallery contributes **Focus** like any sibling
+    `PrototypeStageProps` — the open prototype, the whole gallery list, and
+    `src`, the prototype's document URL. The gallery contributes **Focus** like any sibling
     would, and names a stage nowhere else: the switcher's options ARE the
     contributions, and the body renders whichever one is active
     (`renderIsolated`). The sibling `compare` plugin contributes **Compare** —
@@ -56,6 +56,7 @@ The Prototypes app's two panes:
     `transform: scale()`, never upscaling past 1; the container owns the scaling
     box, the iframe is a rigid leaf), under a banner listing what is wrong with
     its folder.
+<<<<<<< .merge_file_5VPhNK
   - The active stage is the URL's optional `:stage` — every stage has an
     address (`proto/<id>/compare`), and the bare `proto/<id>` (what the CLI
     prints) opens whichever stage sorts first. It is held as an **id**, so an id
@@ -67,6 +68,31 @@ The Prototypes app's two panes:
     cache-bust, so an agent's edit (watcher → version bump → re-render) reloads
     the iframe automatically.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`.
+=======
+  - The active stage is state on the provider, held as an **id** — so a picked
+    stage survives the contribution list changing under it, and an id that no
+    longer resolves falls back to whichever stage sorts first instead of
+    blanking the pane.
+  - **One URL for the open prototype: `usePrototypeSrc(meta, version)`.** It
+    carries the live `prototypesVersionResource` value as a cache-bust (an
+    agent's edit → version bump → new `src` → the iframe reloads) and the picked
+    options. Stages get it as `src`, and Present's overlay and new-tab link call
+    the hook, so no frame can show a different variant — a stage never composes
+    a frame URL itself.
+  - **Options picker** (`options-picker.tsx`) — when the prototype declares
+    `<meta name="prototype-option">` lines, a `FloatingAction` pill pinned to the
+    stage's bottom-right corner shows the current values and expands on hover
+    into one row of chips per option. It is app DOM over the stage, never in
+    the prototype's page — that is what keeps switchers out of the designs.
+    Chips, not a dropdown: a dropdown's portaled menu sits outside the hover box,
+    so reaching for it would close the panel. Picks are remembered per
+    prototype on this device (`useDraft`, scoped by name, on the provider) —
+    living outside the frame is what makes them survive the reload every edit
+    causes. `usePrototypePicks(meta)` resolves them against today's declaration
+    (stale picks drop).
+  - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
+    plus a line naming the picked options when any differ from the defaults.
+>>>>>>> .merge_file_xnr0H1
 
 Layout uses inline styles for the dynamic scaling geometry (not banned className
 layout utilities).
@@ -78,7 +104,10 @@ reach a prototype agent — they are always in its first user turn, unlike a
 `CLAUDE.md` it may never open. So they carry the rules that decide whether the
 result is an original design: **write to `~/.singularity/apps/prototypes/` and commit
 nothing, edit the blank template in place, never open another prototype's
-folder, never read `plugins/`**, keep the folder self-contained.
+folder, never read `plugins/`**, keep the folder self-contained — and
+**declare variants as options instead of building a switcher into the page**
+(`OPTIONS_RULE`, `launch-rules.ts`; the owner chose this instruction, not a
+check, as the guard).
 Keep them tight and let `prototypes/CLAUDE.md` hold the rest — but do not let
 them drift back into "follow the shape of the existing mocks", which is what
 they said before and is why every prototype looked alike.
@@ -111,7 +140,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance.
+- Description: Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
@@ -129,6 +158,8 @@ honest — the prototype does exist — and it self-corrects.
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
@@ -136,6 +167,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
@@ -146,10 +178,13 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/floating-action.FloatingAction`
+    - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
+    - `primitives/persistent-draft.useDraft`
     - `primitives/slot-render.renderIsolated`
     - `shell/notifications.toast`
   - Exports (types):
@@ -163,6 +198,8 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeStages`
     - `ScaledIframe`
     - `usePrototypeDetail`
+    - `usePrototypePicks`
+    - `usePrototypeSrc`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`

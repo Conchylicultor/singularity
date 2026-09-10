@@ -5,6 +5,7 @@ import {
 } from "@plugins/infra/plugins/html-decode/core";
 import { isPrototypeId } from "./id";
 import { mocksProblemDetail, parseMocks } from "./mocks";
+import { readPrototypeOptions } from "./option-source";
 
 // The rules that make a folder a prototype, as one pure function.
 //
@@ -212,6 +213,11 @@ export async function validatePrototypeFolder(
       const mocks = parseMocks(mocksRaw ?? "");
       if (mocks.kind === "malformed") {
         problems.push({ path: fileName, detail: mocksProblemDetail(mocks) });
+      }
+      // Every `prototype-option` line that cannot be an option: it is left out
+      // of the app's picker, so the card is where the author learns why.
+      for (const detail of (await readPrototypeOptions(text)).problems) {
+        problems.push({ path: fileName, detail });
       }
     }
 

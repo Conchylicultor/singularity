@@ -14,12 +14,12 @@ import { ScaledIframe } from "./scaled-iframe";
  * The Focus stage: the open prototype alone, in a sandboxed iframe scaled to fit
  * the pane, under whatever is wrong with its folder.
  */
-export function FocusStage({ meta, version }: PrototypeStageProps) {
+export function FocusStage({ meta, src }: PrototypeStageProps) {
   return (
     <Column
       className="h-full"
       header={<ProblemBanner meta={meta} />}
-      body={<ScaledIframe meta={meta} version={version} />}
+      body={<ScaledIframe meta={meta} src={src} />}
       scrollBody={false}
     />
   );

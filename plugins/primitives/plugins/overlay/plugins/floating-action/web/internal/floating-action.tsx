@@ -88,6 +88,12 @@ export interface FloatingActionProps extends Omit<
    * Declare the role here; `children` hold the expanding content.
    */
   trigger: ReactNode;
+  /**
+   * The accessible name of the control. It lands on the stable wrapper — the
+   * element that takes focus and carries `aria-expanded` — not on the panel,
+   * which is `inert` while closed and so names nothing a user can reach.
+   */
+  label?: string;
 }
 
 export function FloatingAction({
@@ -102,6 +108,7 @@ export function FloatingAction({
   closeDelay,
   anchor = "bottom-right",
   trigger,
+  label,
   children,
   ...props
 }: FloatingActionProps) {
@@ -133,6 +140,7 @@ export function FloatingAction({
       ref={wrapperRef}
       className={cn("group/fa outline-none", className)}
       data-open={open || undefined}
+      aria-label={label}
       {...rootProps}
     >
       <div className={cn("absolute w-max", anchorClasses[anchor])}>

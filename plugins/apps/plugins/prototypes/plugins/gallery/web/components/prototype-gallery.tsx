@@ -33,6 +33,7 @@ import {
   PrototypeThumbnail,
   usePrototypeThumbnails,
 } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/web";
+import { OPTIONS_RULE } from "./launch-rules";
 import { prototypeDetailPane } from "../panes";
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
@@ -110,6 +111,8 @@ function newPrototypeText(id: string): string {
     "files it needs, referenced relatively. It must render when you double-click it",
     "straight off disk (`file://`), so write your JSX inline in `index.html` —",
     "Babel fetches an external `src` over XHR, which the browser blocks on `file://`.",
+    "",
+    OPTIONS_RULE,
   ].join("\n");
 }
 

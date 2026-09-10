@@ -247,7 +247,10 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
+<<<<<<< .merge_file_pkn1YV
     - `apps/prototypes/compare`
+=======
+>>>>>>> .merge_file_F5dH3k
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`

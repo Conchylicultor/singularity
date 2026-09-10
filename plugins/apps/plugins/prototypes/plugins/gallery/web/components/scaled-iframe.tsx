@@ -1,9 +1,6 @@
 import { useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import {
-  prototypeUrl,
-  type PrototypeMeta,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
@@ -16,17 +13,19 @@ import {
  * shrunk via `transform: scale()` (the old `Stage`). The inner wrapper reserves
  * the scaled-down layout box so the iframe sits flush at the top-left.
  *
- * `version` is appended to the src as a cache-bust so a file edit (watcher →
- * resource bump → re-render with a new version) reloads the iframe.
+ * `src` is the prototype document URL from `usePrototypeSrc` — never built
+ * here. It carries the edit cache-bust (a file edit → watcher → version bump →
+ * new `src` → the iframe reloads) and the picked options.
  */
 export function ScaledIframe({
   meta,
-  version,
+  src,
   title,
   upscale = false,
 }: {
   meta: PrototypeMeta;
-  version: number;
+  /** The prototype's document URL, from `usePrototypeSrc`. */
+  src: string;
   /**
    * The frame's accessible name. Defaults to the prototype's own `<title>` —
    * never `meta.name`, which is a minted id and would read out as
@@ -47,8 +46,6 @@ export function ScaledIframe({
     const fit = Math.min(width / meta.viewport.w, height / meta.viewport.h);
     return upscale ? fit : Math.min(fit, 1);
   }, [width, height, meta.viewport.w, meta.viewport.h, upscale]);
-
-  const src = prototypeUrl(meta.name, { v: version });
 
   return (
     <div

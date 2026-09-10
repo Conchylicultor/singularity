@@ -6,7 +6,13 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  prototypesResource,
+  resolvePicks,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
+import { OPTIONS_RULE, pickedVariantLine } from "./launch-rules";
 
 /**
  * The detail pane's header controls, each a zero-prop contribution to
@@ -52,12 +58,15 @@ function improveText(name: string): string {
     "Keep it self-contained: flat files referenced relatively, JSX inline, and it",
     "must still render when double-clicked straight off disk (`file://`).",
     "`prototypes/CLAUDE.md` is the full contract.",
+    "",
+    OPTIONS_RULE,
   ].join("\n");
 }
 
 /** Launches an agent to iterate on the open prototype. */
 export function ImproveButton() {
-  const { name } = usePrototypeDetail();
+  const { name, storedPicks } = usePrototypeDetail();
+  const list = useResource(prototypesResource);
   return (
     <LaunchAgentPopover
       trigger={
@@ -70,6 +79,9 @@ export function ImproveButton() {
       description="Launch an agent to iterate on the open prototype."
       placeholder="What should change? (optional)"
       align="end"
+      // Until the list is known there is no declaration to say which variant
+      // is on screen against, so the launch waits for it.
+      disabled={list.pending}
       onLaunched={(conv) => {
         toast({
           type: "prototype",
@@ -82,6 +94,19 @@ export function ImproveButton() {
       }}
       getRequest={(userText) => {
         const parts = [improveText(name)];
+        // Which variant is on screen, so "make this darker" lands on the one
+        // the user is looking at, resolved against the declaration as loaded.
+        if (list.pending) {
+          // Unreachable: the popover is disabled while the list loads.
+          throw new Error(
+            "the prototype list is still loading — cannot say which variant is on screen",
+          );
+        }
+        const meta = list.data.find((p) => p.name === name);
+        const variant = meta
+          ? pickedVariantLine(resolvePicks(meta.options, storedPicks))
+          : null;
+        if (variant) parts.push(variant);
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };

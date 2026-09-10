@@ -38,7 +38,7 @@ export default {
   // string literal — so this one field cannot interpolate
   // PROTOTYPES_DIR_DISPLAY the way every other message here does.
   description:
-    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.",
+    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.",
   httpRoutes: {
     [listPrototypes.route]: handleList,
     [createPrototype.route]: handleCreate,

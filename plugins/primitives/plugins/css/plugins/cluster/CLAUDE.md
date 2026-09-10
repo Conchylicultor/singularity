@@ -46,6 +46,7 @@ defined in exactly one place. The distinct export buys two things:
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/pages/prompt-origin`
+    - `apps/prototypes/gallery`
     - `apps/studio/compositions`
     - `apps/studio/compositions/entry-points`
     - `apps/studio/compositions/membership-summary`

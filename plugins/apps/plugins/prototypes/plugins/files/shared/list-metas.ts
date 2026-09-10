@@ -16,6 +16,7 @@ import {
   PROTOTYPE_ENTRY_FILE,
   UNTITLED_PROTOTYPE,
   parseMocks,
+  readPrototypeOptions,
   validatePrototypeFolder,
   type MocksDeclaration,
   type PrototypeFolder,
@@ -135,6 +136,7 @@ async function readMeta(
     blurb: "",
     viewport: { ...DEFAULT_VIEWPORT },
     mocks: { kind: "none" } as const,
+    options: [],
   };
 
   let folder: PrototypeFolder;
@@ -160,6 +162,9 @@ async function readMeta(
     blurb: parsed.blurb,
     viewport: parsed.viewport,
     mocks: parsed.mocks,
+    // Valid options only; each broken line is already in `problems`, from the
+    // same read (`validatePrototypeFolder` calls `readPrototypeOptions` too).
+    options: (await readPrototypeOptions(html)).options,
     problems,
   };
 }

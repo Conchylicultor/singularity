@@ -105,6 +105,8 @@ The gallery reads these out of your HTML — there is no metadata file.
   problem on the card. Most prototypes are not a mockup of anything in the app —
   leave the tag out and nothing is missing.
 
+A fifth, `<meta name="prototype-option">`, declares variants — see Options.
+
 ## Lay it out fluid, not at a fixed width
 
 Use `max-width` plus side padding, not `width: 1280px`, and let grids stack when
@@ -114,6 +116,45 @@ Why: with a `mocks` tag, Compare frames your mock at the widths the reader picks
 (a `route:` screen offers 480 / 768 / 1024 / 1280 / 1600), and your media
 queries run. A fixed-width mock gets cropped there while the real screen
 reflows beside it. So a mock of a screen needs breakpoints for those widths.
+
+## Options: variants the reader flips between
+
+If the design has versions to compare — a palette, a pane style, a density —
+**declare them; never build a switcher, toggle bar or settings panel into the
+page to flip between them.** The app draws the picker itself, as a small pill
+floating over the stage, outside your page. So your page holds only the design:
+the picker takes no canvas space, shows up in no screenshot or thumbnail, and
+your CSS never has to style it.
+
+```html
+<html lang="en" data-palette="violet" data-pane="flush">
+<head>
+<meta name="prototype-option" content="palette: violet | indigo | azure" />
+<meta name="prototype-option" content="pane: flush | floating | soft-tray" />
+```
+
+- **One tag per option**: `<name>: <value> | <value> | …`. Tag order is picker
+  order; value order is chip order. Names are lowercase letters, digits and
+  dashes starting with a letter (`v` is reserved); values are lowercase letters,
+  digits and dashes (`3-octaves` is fine). The picker shows them humanized
+  (`soft-tray` → "Soft tray"), so pick readable tokens.
+- **The default is the attribute you write on `<html>`**: `data-<name>="<value>"`,
+  one of the declared values. The page then carries the attribute everywhere —
+  double-clicked off disk, in the thumbnail, in the app — and the app only
+  overwrites it with the value the reader picked.
+- **Style each value** with `:root[data-palette="azure"] { … }` (the default can
+  be targeted the same way), or read `document.documentElement.dataset.palette`
+  in JS. Read it once, at load: picking a value reloads the frame with the new
+  attribute, so nothing has to listen for a change.
+- Options are choices only — no sliders. A tuning slider that is part of what
+  the prototype explores stays in the page.
+
+Not an option: a control that is part of the design itself (the product's own
+dropdown, a play button in a player). Options are for the reader choosing which
+version of the design to look at.
+
+A line that cannot be an option (malformed, a missing or unknown default, a
+duplicate) is left out of the picker and reported as a problem on the card.
 
 ## A prototype can be anything
 

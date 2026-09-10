@@ -1,8 +1,12 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   PROTOTYPES_API_BASE,
+  PROTOTYPE_ENTRY_FILE,
   createPrototype,
   listPrototypes,
+  picksFromQuery,
+  readPrototypeOptions,
+  type OptionPicks,
 } from "../../core";
 import { mintPrototype } from "../../shared/mint";
 import { listPrototypeMetas } from "./list";
@@ -48,7 +52,9 @@ export function handlePrototypeFile(
 
 /**
  * `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim, with
- * a Content-Type by extension.
+ * a Content-Type by extension — except that `index.html` asked for with option
+ * picks (`?palette=azure`) comes back with them stamped onto `<html>`; see
+ * {@link servePickedDocument}.
  *
  * `Cache-Control: no-store` is load-bearing: the version query only cache-busts
  * the document, so without it the browser would keep serving the previously
@@ -58,7 +64,7 @@ export function handlePrototypeFile(
  * `prototypes/`; otherwise 400. Missing files → 404.
  */
 export async function handlePrototypeAsset(
-  _req: Request,
+  req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
   const name = params.name;
@@ -75,10 +81,69 @@ export async function handlePrototypeAsset(
     return new Response("not found", { status: 404 });
   }
 
-  return new Response(file, {
-    headers: {
-      "content-type": contentTypeForPath(fileName),
-      "cache-control": "no-store",
+  const headers = {
+    "content-type": contentTypeForPath(fileName),
+    "cache-control": "no-store",
+  };
+  const search = new URL(req.url).searchParams;
+  if (fileName === PROTOTYPE_ENTRY_FILE && hasPicks(search)) {
+    return servePickedDocument(await file.text(), search, headers);
+  }
+  return new Response(file, { headers });
+}
+
+/** Does the query carry anything besides the `v` cache-bust? */
+function hasPicks(search: URLSearchParams): boolean {
+  for (const key of search.keys()) if (key !== "v") return true;
+  return false;
+}
+
+/**
+ * The prototype's document with the picked option values stamped onto its
+ * `<html>` as `data-<option>="<value>"`, overwriting the defaults the author
+ * wrote there. Nothing else in the page changes, so the page needs no code of
+ * its own to be switchable: its CSS keys on `:root[data-<option>=…]`, its JS
+ * reads `document.documentElement.dataset`.
+ *
+ * The text is read whole first because `<html>` streams before the `<meta>`
+ * tags that say which picks are valid (prototype HTML is small). A pick the
+ * page does not declare is a 400, rendered inside the frame: a broken link must
+ * say so rather than show the default and let the reader believe they are
+ * looking at the variant they asked for.
+ *
+ * The one HTMLRewriter REWRITE in the repo — every other use only extracts.
+ */
+async function servePickedDocument(
+  html: string,
+  search: URLSearchParams,
+  headers: Record<string, string>,
+): Promise<Response> {
+  const { options } = await readPrototypeOptions(html);
+  const result = picksFromQuery(options, search);
+  if (!result.ok) {
+    return new Response(
+      `Cannot show this prototype variant: ${result.reason}.`,
+      {
+        status: 400,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      },
+    );
+  }
+  return new Response(await stampPicks(html, result.picks), { headers });
+}
+
+async function stampPicks(html: string, picks: OptionPicks): Promise<string> {
+  let stamped = false;
+  const rewriter = new HTMLRewriter().on("html", {
+    element(el) {
+      if (stamped) return;
+      stamped = true;
+      // Names and values are already validated against the declaration, which
+      // only admits [a-z0-9-] — nothing here can break out of the attribute.
+      for (const [option, value] of Object.entries(picks)) {
+        el.setAttribute(`data-${option}`, value);
+      }
     },
   });
+  return rewriter.transform(new Response(html)).text();
 }
