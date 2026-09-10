@@ -20,8 +20,8 @@ The Prototypes app's two panes:
   strictly after the list had painted — a guaranteed swatch-then-screenshot
   swap on every load. Side by side they prime in parallel, and the cover is
   right the first time it is painted.
-- **Detail pane** (`proto/:name`) — a switcher over **stages**, each a scaled live
-  iframe surface.
+- **Detail pane** (`proto/:name/:stage?`) — a switcher over **stages**, each a
+  scaled live iframe surface.
   - **Nothing in it shows `name`.** `name` is a minted id
     (`proto-1786877040-w2vi`), so the header title and the iframe's accessible
     name both read the prototype's `<title>`. The header has to look that up in
@@ -56,10 +56,13 @@ The Prototypes app's two panes:
     `transform: scale()`, never upscaling past 1; the container owns the scaling
     box, the iframe is a rigid leaf), under a banner listing what is wrong with
     its folder.
-  - The active stage is state on the provider, held as an **id** — so a picked
-    stage survives the contribution list changing under it, and an id that no
-    longer resolves falls back to whichever stage sorts first instead of
-    blanking the pane.
+  - The active stage is the URL's optional `:stage` — every stage has an
+    address (`proto/<id>/compare`), and the bare `proto/<id>` (what the CLI
+    prints) opens whichever stage sorts first. It is held as an **id**, so an id
+    that does not resolve falls back to that first stage instead of blanking the
+    pane. The switcher writes it with `useSetParams()`, which rewrites the URL
+    of the SAME pane instance — a `swap` would remount the column and drop its
+    maximize/collapse state on every switch.
   - Every iframe `src` carries the live `prototypesVersionResource` value as a
     cache-bust, so an agent's edit (watcher → version bump → re-render) reloads
     the iframe automatically.

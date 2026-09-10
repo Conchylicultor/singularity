@@ -11,12 +11,16 @@ import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/co
 // (`no-hand-built-namespace-url` enforces that), `prototypesApp.basePath` owns
 // `/prototypes`, and `fillSegment` applies the same per-segment encoding the
 // web router does. What is spelled here and nowhere else is the pane's own
-// `proto/:name` segment: it is declared in `gallery/web`, which a CLI process
-// must not import (React in a terminal verb), so this one literal is the seam.
+// `proto/:name/:stage?` segment: it is declared in `gallery/web`, which a CLI
+// process must not import (React in a terminal verb), so this one literal is
+// the seam.
 // `present/e2e/present-verify.ts` carries the same literal for the same reason.
 
-/** The detail pane's route segment, as `gallery/web/panes.tsx` declares it. */
-const DETAIL_SEGMENT = "proto/:name";
+/**
+ * The detail pane's route segment, as `gallery/web/panes.tsx` declares it. No
+ * `stage` is filled, so the URL is the bare one: whichever stage sorts first.
+ */
+const DETAIL_SEGMENT = "proto/:name/:stage?";
 
 /**
  * Resolve this checkout's namespace ONCE, and hand back the formatter —

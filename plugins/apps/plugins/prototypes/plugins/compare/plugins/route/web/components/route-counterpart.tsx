@@ -2,7 +2,10 @@ import type { ReactElement } from "react";
 import { useDeferredLoadState } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps, resolveAppForPath } from "@plugins/apps-core/web";
 import { parseUrl } from "@plugins/primitives/plugins/pane/web";
-import { embedUrl } from "@plugins/primitives/plugins/embed/web";
+import {
+  embedUrl,
+  isEmbeddedDocument,
+} from "@plugins/primitives/plugins/embed/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type {
   CounterpartKindProps,
@@ -52,6 +55,19 @@ function resolve(
   apps: ReturnType<typeof Apps.App.useContributions>,
   deferredComplete: boolean,
 ): CounterpartResolution {
+  // Framing stops at depth one. This document being a framed app screen means
+  // the path in some prototype led back to a Compare stage — its own
+  // (`route:/prototypes/proto/<id>/compare`) or another one that leads back —
+  // and framing again from here would nest app inside app with no floor.
+  if (isEmbeddedDocument()) {
+    return {
+      status: "unresolved",
+      title: "Not framing the app again inside a framed app screen.",
+      detail:
+        "This Compare stage is itself inside the app screen of another Compare stage, so its path leads back to a Compare stage. Framing stops at one level so the screens cannot nest without end.",
+    };
+  }
+
   if (!target.startsWith("/")) {
     return {
       status: "unresolved",

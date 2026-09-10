@@ -6,18 +6,23 @@
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Type machinery — extract `:param` and `:param*` names from a path template.
+// Type machinery — extract `:param`, `:param*` and `:param?` names from a path
+// template. An optional `:param?` (legal only as the LAST part of a segment —
+// `defineRoute` throws otherwise) becomes an optional key.
 // ---------------------------------------------------------------------------
 
 type ParamName<S extends string> = S extends `${infer N}*` ? N : S;
 
+type PartParams<Part extends string> = Part extends `:${infer P}?`
+  ? { [K in P]?: string }
+  : Part extends `:${infer P}`
+    ? { [K in ParamName<P>]: string }
+    : {};
+
 type ExtractParams<Path extends string> =
   Path extends `${infer Seg}/${infer Rest}`
-    ? (Seg extends `:${infer P}` ? { [K in ParamName<P>]: string } : {}) &
-        ExtractParams<Rest>
-    : Path extends `:${infer P}`
-      ? { [K in ParamName<P>]: string }
-      : {};
+    ? PartParams<Seg> & ExtractParams<Rest>
+    : PartParams<Path>;
 
 // Param inference for a route's own segment. The empty case is a plain `{}`
 // with no index signature, deliberately: routes CHAIN their params
@@ -39,6 +44,10 @@ type ExtractParams<Path extends string> =
 // `Pane.define` hands `ResolveHook`, which is keyed on `Record<string, string>`
 // because URL params ARE strings. Saying `string` outright keeps that true and
 // checkable rather than forcing the constraint to be loosened to `object`.
+//
+// The mapping is homomorphic (`K in keyof …`), so an optional `:param?` stays
+// an optional key — and `{ stage?: string }` still satisfies
+// `Record<string, string>`.
 export type RouteParams<Path extends string> = {
   [K in keyof ExtractParams<Path>]: string;
 };
@@ -87,9 +96,54 @@ export function defineApp(def: {
 // Pure per-segment substitution — the encoding shared by buildRouteUrl (web)
 // and `RouteDef.path`. Given ONE segment pattern and a flat params object,
 // returns the resolved URL parts. Supports static parts, ":name",
-// ":name*" (wildcard, splits the value on "/"), and encodeURIComponent.
-// Throws on a missing param (fail loud — matches buildRouteUrl).
+// ":name*" (wildcard, splits the value on "/"), ":name?" (optional — written
+// only when supplied), and encodeURIComponent. Throws on a missing required
+// param (fail loud — matches buildRouteUrl).
 // ---------------------------------------------------------------------------
+
+/** One `/`-separated part of a segment pattern, classified. */
+type SegmentPart =
+  | { kind: "static"; text: string }
+  | { kind: "param"; name: string }
+  | { kind: "optional"; name: string }
+  | { kind: "wildcard"; name: string };
+
+/**
+ * THE one reading of a segment pattern's parts, shared by the URL builder
+ * (`fillSegment`), the matcher (`web/pane.ts`), the param-name listing and the
+ * collision patterns — so what a `:name?` means cannot drift between them.
+ */
+export function parseSegmentParts(segment: string): SegmentPart[] {
+  return segment
+    .split("/")
+    .filter(Boolean)
+    .map((part): SegmentPart => {
+      if (!part.startsWith(":")) return { kind: "static", text: part };
+      if (part.endsWith("*"))
+        return { kind: "wildcard", name: part.slice(1, -1) };
+      if (part.endsWith("?"))
+        return { kind: "optional", name: part.slice(1, -1) };
+      return { kind: "param", name: part.slice(1) };
+    });
+}
+
+/**
+ * Throws unless an optional `:name?` is the segment's LAST part (and there is
+ * at most one). Anywhere else it would make the parts after it ambiguous — is
+ * `proto/x/y` the optional `x` then `y`, or `x` skipped? — so it has no
+ * spelling there. Called by `defineRoute`, the one place a segment is authored.
+ */
+function assertOptionalIsLast(id: string, segment: string): void {
+  const parts = parseSegmentParts(segment);
+  parts.forEach((part, i) => {
+    if (part.kind === "optional" && i !== parts.length - 1) {
+      throw new Error(
+        `Route "${id}": optional param ":${part.name}?" in segment "${segment}" must be the ` +
+          `segment's last part — anywhere else the parts after it would be ambiguous.`,
+      );
+    }
+  });
+}
 
 /**
  * A segment named a `:param` nobody supplied, so this route has no URL.
@@ -119,24 +173,37 @@ export function fillSegment(
   if (!segment || segment === "/") return [];
 
   const parts: string[] = [];
-  for (const seg of segment.split("/").filter(Boolean)) {
-    if (!seg.startsWith(":")) {
-      parts.push(seg);
+  for (const part of parseSegmentParts(segment)) {
+    if (part.kind === "static") {
+      parts.push(part.text);
       continue;
     }
-    const wildcard = seg.endsWith("*");
-    const name = seg.slice(1).replace(/\*$/, "");
-    const val = params[name];
+    const val = params[part.name];
     if (val === undefined) {
-      throw new MissingRouteParamError(name, segment);
+      if (part.kind === "optional") continue;
+      throw new MissingRouteParamError(part.name, segment);
     }
-    if (wildcard) {
+    if (part.kind === "wildcard") {
       parts.push(...val.split("/").map(encodeURIComponent));
     } else {
       parts.push(encodeURIComponent(val));
     }
   }
   return parts;
+}
+
+/** The `:name`s a segment declares — required, optional and wildcard alike. */
+export function segmentParamNames(segment: string): string[] {
+  return parseSegmentParts(segment).flatMap((part) =>
+    part.kind === "static" ? [] : [part.name],
+  );
+}
+
+/** The `:name`s a segment cannot be filled without (every name but `:name?`). */
+export function segmentRequiredParamNames(segment: string): string[] {
+  return parseSegmentParts(segment).flatMap((part) =>
+    part.kind === "param" || part.kind === "wildcard" ? [part.name] : [],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -167,21 +234,26 @@ export function normalizeRoutePath(pathname: string): string {
 // Segment match-pattern normalization — param *names* are erased, only their
 // structural shape survives. `s/:pageId` and `s/:serverId` both normalize to
 // `s/:`, so two panes that match the same URLs collide; `page/:pageId`
-// (`page/:`) does not collide with `s/:`. THE single definition: the runtime
+// (`page/:`) does not collide with `s/:`. A segment ending in an optional
+// `:name?` matches TWO shapes of URL — with that part and without — so it has
+// two patterns, and collides with anything claiming either (`proto/:name/:stage?`
+// is both `proto/:` and `proto/:/:`). THE single definition: the runtime
 // registry (`useSyncPaneRegistry`) enforces the globally-unique-segment
 // invariant at registration, and the `pane:segments-unique` check enforces the
 // same invariant statically at build time — both call this, so they can't drift.
 // ---------------------------------------------------------------------------
 
-export function normalizeSegmentPattern(segment: string): string {
-  return segment
-    .split("/")
-    .map((part) => {
-      if (part.startsWith(":") && part.endsWith("*")) return ":*";
-      if (part.startsWith(":")) return ":";
-      return part;
-    })
-    .join("/");
+export function segmentMatchPatterns(segment: string): string[] {
+  const parts = parseSegmentParts(segment);
+  const shape = (ps: SegmentPart[]) =>
+    ps
+      .map((part) => {
+        if (part.kind === "static") return part.text;
+        return part.kind === "wildcard" ? ":*" : ":";
+      })
+      .join("/");
+  if (parts.at(-1)?.kind !== "optional") return [shape(parts)];
+  return [shape(parts.slice(0, -1)), shape(parts)];
 }
 
 // ---------------------------------------------------------------------------
@@ -252,6 +324,8 @@ export function defineRoute<
   parent?: RouteDef<ParentParams, any>;
 }): RouteDef<ParentParams & RouteParams<Seg>, Seg> {
   type Params = ParentParams & RouteParams<Seg>;
+
+  assertOptionalIsLast(def.id, def.segment);
 
   // Root-first chain of RouteDefs, this route last.
   const chain: RouteDef<any, any>[] = [];

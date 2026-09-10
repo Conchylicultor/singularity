@@ -4,6 +4,7 @@ import {
   defineRoute,
   MissingRouteParamError,
   normalizeRoutePath,
+  segmentMatchPatterns,
 } from "./route";
 
 const agents = defineApp({
@@ -128,6 +129,45 @@ describe("route link builder", () => {
     expect(() => run.path({ runId: "r" })).toThrow(
       /Missing param "sourceId" for segment "source\/:sourceId"/,
     );
+  });
+});
+
+describe("an optional :param?", () => {
+  const detail = defineRoute({
+    id: "opt-detail",
+    segment: "proto/:name/:stage?",
+  });
+
+  test("is written only when supplied, so the bare URL stays valid", () => {
+    expect(detail.path({ name: "x" })).toBe("/proto/x");
+    expect(detail.path({ name: "x", stage: "compare" })).toBe(
+      "/proto/x/compare",
+    );
+    expect(detail.link(agents, { name: "a b", stage: "c/d" })).toBe(
+      "/agents/proto/a%20b/c%2Fd",
+    );
+  });
+
+  test("is an optional key — the required ones stay required", () => {
+    // @ts-expect-error — name is required; only stage is optional
+    expect(() => detail.path({ stage: "compare" })).toThrow(
+      MissingRouteParamError,
+    );
+  });
+
+  test("anywhere but the segment's last part has no spelling", () => {
+    expect(() =>
+      defineRoute({ id: "opt-mid", segment: "proto/:stage?/:name" }),
+    ).toThrow(/must be the segment's last part/);
+  });
+
+  test("claims both URL shapes for collisions", () => {
+    expect(segmentMatchPatterns("proto/:name/:stage?")).toEqual([
+      "proto/:",
+      "proto/:/:",
+    ]);
+    expect(segmentMatchPatterns("f/:path*")).toEqual(["f/:*"]);
+    expect(segmentMatchPatterns("t/:taskId")).toEqual(["t/:"]);
   });
 });
 

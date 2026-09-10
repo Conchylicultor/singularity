@@ -17,7 +17,10 @@ import {
   fillSegment,
   MissingRouteParamError,
   normalizeRoutePath,
-  normalizeSegmentPattern,
+  parseSegmentParts,
+  segmentMatchPatterns,
+  segmentParamNames,
+  segmentRequiredParamNames,
   type AppRef,
   type RouteDef,
   type RouteParams,
@@ -349,42 +352,6 @@ export function paneObjectFor(internal: PaneInternal): AnyPane {
 // Path helpers.
 // ---------------------------------------------------------------------------
 
-export function matchPath(
-  pattern: string,
-  pathname: string,
-  options: { prefix?: boolean } = {},
-): Record<string, string> | null {
-  const normalize = (p: string) => {
-    if (p === "/" || p === "") return "/";
-    return p.replace(/\/+$/, "");
-  };
-  const patParts = normalize(pattern).split("/");
-  const pathParts = normalize(pathname).split("/");
-
-  const params: Record<string, string> = {};
-  let pi = 0;
-  let xi = 0;
-  while (pi < patParts.length) {
-    const p = patParts[pi]!;
-    if (p.startsWith(":") && p.endsWith("*")) {
-      const name = p.slice(1, -1);
-      params[name] = decodeURIComponent(pathParts.slice(xi).join("/"));
-      return params;
-    }
-    if (xi >= pathParts.length) return null;
-    const x = pathParts[xi]!;
-    if (p.startsWith(":")) {
-      params[p.slice(1)] = decodeURIComponent(x);
-    } else if (p !== x) {
-      return null;
-    }
-    pi++;
-    xi++;
-  }
-  if (!options.prefix && xi !== pathParts.length) return null;
-  return params;
-}
-
 export interface MatchEntry {
   instanceId: number;
   uuid: string;
@@ -407,51 +374,65 @@ export interface PaneMatch {
 // Route-based URL parser + builder.
 // ---------------------------------------------------------------------------
 
-function segmentParamNames(segment: string): string[] {
-  if (!segment) return [];
-  return segment
-    .split("/")
-    .filter((seg) => seg.startsWith(":"))
-    .map((seg) => seg.slice(1).replace(/\*$/, ""));
-}
-
+/**
+ * Every way `segment` can match the URL starting at `cursor`, longest first.
+ *
+ * Exactly one way, or none — except for a segment ending in an optional
+ * `:name?`, which can match with that part or without it. Both are offered, so
+ * {@link parseUrl} can take the longer one and still fall back to the shorter
+ * one when the longer leaves a remainder no pane matches.
+ */
 function matchSegmentParts(
   segment: string,
   urlSegments: string[],
   cursor: number,
-): { params: Record<string, string>; consumed: number } | null {
-  if (!segment || segment === "/" || segment === "") return null;
+): Array<{ params: Record<string, string>; consumed: number }> {
+  if (!segment || segment === "/" || segment === "") return [];
 
-  const segParts = segment.split("/").filter(Boolean);
-  if (segParts.length === 0) return null;
+  const segParts = parseSegmentParts(segment);
+  if (segParts.length === 0) return [];
 
   const params: Record<string, string> = {};
   let consumed = 0;
 
-  for (let i = 0; i < segParts.length; i++) {
-    const pat = segParts[i]!;
+  for (const part of segParts) {
     const idx = cursor + consumed;
 
-    if (pat.startsWith(":") && pat.endsWith("*")) {
-      const name = pat.slice(1, -1);
+    if (part.kind === "wildcard") {
       const rest = urlSegments.slice(idx);
-      if (rest.length === 0) return null;
-      params[name] = rest.map((s) => decodeURIComponent(s)).join("/");
-      return { params, consumed: urlSegments.length - cursor };
+      if (rest.length === 0) return [];
+      params[part.name] = rest.map((s) => decodeURIComponent(s)).join("/");
+      return [{ params, consumed: urlSegments.length - cursor }];
     }
 
-    if (idx >= urlSegments.length) return null;
+    if (part.kind === "optional") {
+      // Always the last part (`defineRoute` enforces it), so both arms end here.
+      const without = { params: { ...params }, consumed };
+      if (idx >= urlSegments.length) return [without];
+      return [
+        {
+          params: {
+            ...params,
+            [part.name]: decodeURIComponent(urlSegments[idx]!),
+          },
+          consumed: consumed + 1,
+        },
+        without,
+      ];
+    }
 
-    if (pat.startsWith(":")) {
-      params[pat.slice(1)] = decodeURIComponent(urlSegments[idx]!);
-    } else if (pat !== urlSegments[idx]) {
-      return null;
+    if (idx >= urlSegments.length) return [];
+
+    if (part.kind === "param") {
+      params[part.name] = decodeURIComponent(urlSegments[idx]!);
+    } else if (part.text !== urlSegments[idx]) {
+      return [];
     }
 
     consumed++;
   }
 
-  return { params, consumed };
+  return [{ params, consumed }];
 }
 
 /**
@@ -470,33 +451,48 @@ export function parseUrl(pathname: string): ParsedRoute {
   const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
   const urlSegments = normalized ? normalized.split("/") : [];
 
-  let cursor = 0;
-  const route: PaneSlot[] = [];
-
-  while (cursor < urlSegments.length) {
-    let bestMatch: {
-      pane: PaneInternal;
+  // Longest match first, falling back to a shorter one only when the longer
+  // leaves a remainder no chain of panes can match. Two segments can both claim
+  // the same start of a URL — `t/:taskId` and `t/:pluginId/:tableName`, or one
+  // ending in an optional `:name?` — and taking the longer blindly turned a
+  // perfectly parseable URL into `unresolved`. Whether the rest of the URL
+  // parses from a cursor does not depend on how we got there, so a cursor that
+  // failed once is remembered and never searched again: linear in the URL, not
+  // exponential in the alternatives.
+  const failed = new Set<number>();
+  const parseFrom = (
+    cursor: number,
+  ): Array<{ paneId: string; params: Record<string, string> }> | null => {
+    if (cursor === urlSegments.length) return [];
+    if (failed.has(cursor)) return null;
+    const candidates: Array<{
+      paneId: string;
       params: Record<string, string>;
       consumed: number;
-    } | null = null;
-
+    }> = [];
     for (const pane of registry.values()) {
-      const result = matchSegmentParts(pane.segment, urlSegments, cursor);
-      if (!result) continue;
-      if (!bestMatch || result.consumed > bestMatch.consumed) {
-        bestMatch = { pane, params: result.params, consumed: result.consumed };
+      for (const m of matchSegmentParts(pane.segment, urlSegments, cursor)) {
+        candidates.push({ paneId: pane.id, ...m });
       }
     }
+    // Stable, so equal lengths keep registry order — the tie-break it always had.
+    candidates.sort((a, b) => b.consumed - a.consumed);
+    for (const c of candidates) {
+      if (c.consumed === 0) continue;
+      const rest = parseFrom(cursor + c.consumed);
+      if (rest) return [{ paneId: c.paneId, params: c.params }, ...rest];
+    }
+    failed.add(cursor);
+    return null;
+  };
 
-    // A segment matched no registered pane: the URL is not resolvable at this
-    // moment. `rawPath` is the normalized (slash-trimmed) app-relative path so a
-    // consumer can seed a pending route (deferred plugin still loading) or, once
-    // loading has settled, surface a not-found. Kept distinct from `matched []`.
-    if (!bestMatch) return { status: "unresolved", rawPath: normalized };
-
-    route.push(createSlot(bestMatch.pane.id, bestMatch.params));
-    cursor += bestMatch.consumed;
-  }
+  const parsed = parseFrom(0);
+  // No chain of registered panes matches the whole URL: it is not resolvable at
+  // this moment. `rawPath` is the normalized (slash-trimmed) app-relative path so
+  // a consumer can seed a pending route (deferred plugin still loading) or, once
+  // loading has settled, surface a not-found. Kept distinct from `matched []`.
+  if (!parsed) return { status: "unresolved", rawPath: normalized };
+  const route = parsed.map((s) => createSlot(s.paneId, s.params));
 
   // A bare app root (basePath-stripped pathname is "/") yields an EMPTY MATCHED
   // route — explicitly a match, not an unresolved URL. The index/landing pane is
@@ -613,6 +609,12 @@ export interface PaneStore {
   close(internal: PaneInternal, instanceId: number): void;
   unwrap(instanceId: number): void;
   promote(internal: PaneInternal, instanceId: number): void;
+  /** Rewrite one instance's own params in place. See `PaneObject.useSetParams`. */
+  setParams(
+    internal: PaneInternal,
+    instanceId: number,
+    params: Record<string, string>,
+  ): void;
   /** Whether route mutations mirror to the browser URL/history. */
   live: boolean;
 }
@@ -774,7 +776,18 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
       }
       Object.assign(accumulated, slot.params);
       const prev = prevResolvedByUuid.get(slot.uuid);
-      if (routeStable && prev && prev.pane === pane) {
+      const options = { ...pane.optionDefaults, ...slot.options };
+      // A uuid is the pane INSTANCE, not its address: `useSetParams` rewrites an
+      // instance's params in place, and back/forward restores an older address
+      // under the same uuid. So the cached entry is reused only while what it
+      // says still holds — otherwise the pane would read the params it had.
+      if (
+        routeStable &&
+        prev &&
+        prev.pane === pane &&
+        sameParams(prev.params, slot.params) &&
+        sameOptions(prev.options, options)
+      ) {
         entries.push(prev);
       } else {
         routeStable = false;
@@ -784,7 +797,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
           pane,
           params: { ...slot.params },
           fullParams: { ...accumulated },
-          options: { ...pane.optionDefaults, ...slot.options },
+          options,
           hint: slot.hint,
         });
       }
@@ -955,6 +968,29 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     });
   }
 
+  function setParams(
+    internal: PaneInternal,
+    instanceId: number,
+    params: Record<string, string>,
+  ): void {
+    const route = currentSlots();
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
+    if (idx < 0) {
+      throw new Error(
+        `Pane "${internal.id}": setParams on instance ${instanceId}, which is not in the route.`,
+      );
+    }
+    const slot = route[idx]!;
+    const own = extractOwnParams(internal, params);
+    if (sameParams(own, slot.params)) return;
+    // The SAME slot — instanceId, uuid, options, hint and every pane after it
+    // kept — so the column neither remounts nor loses its collapse / maximize
+    // state; only its address changes.
+    const next = [...route];
+    next[idx] = { ...slot, params: own };
+    setRoute(next, !internal.chrome.history);
+  }
+
   const store: PaneStore = {
     getRoute: () => currentSlots(),
     getRouteSnapshot: () => currentSlots(),
@@ -979,6 +1015,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     close,
     unwrap,
     promote,
+    setParams,
     live: opts.live,
   };
 
@@ -1311,6 +1348,16 @@ export function useRouteState(): RouteState {
   );
 }
 
+/** Shallow equality over two slots' own params. */
+function sameParams(
+  a: Record<string, string>,
+  b: Record<string, string>,
+): boolean {
+  const ak = Object.keys(a);
+  if (ak.length !== Object.keys(b).length) return false;
+  return ak.every((k) => a[k] === b[k]);
+}
+
 /** Shallow equality over two opener-supplied option partials. */
 function sameOptions(a: PaneOptions, b: PaneOptions): boolean {
   const ak = Object.keys(a);
@@ -1330,12 +1377,7 @@ function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i]!.paneId !== b[i]!.paneId) return false;
-    const ak = Object.keys(a[i]!.params);
-    const bk = Object.keys(b[i]!.params);
-    if (ak.length !== bk.length) return false;
-    for (const k of ak) {
-      if (a[i]!.params[k] !== b[i]!.params[k]) return false;
-    }
+    if (!sameParams(a[i]!.params, b[i]!.params)) return false;
     if (!sameOptions(a[i]!.options, b[i]!.options)) return false;
   }
   return true;
@@ -1474,18 +1516,23 @@ function chainSlots(
       skippedUnregistered = true;
       continue;
     }
-    const names = segmentParamNames(internal.segment);
-    const supplied = names.filter((name) => name in params);
-    if (supplied.length > 0 && supplied.length < names.length) {
+    // An optional `:name?` is never NEEDED — the ancestor has a URL without it
+    // — so only the required names decide whether it can be minted; an
+    // optional one the caller did supply still makes it carry something.
+    const required = segmentRequiredParamNames(internal.segment);
+    const supplied = required.filter((name) => name in params);
+    if (supplied.length > 0 && supplied.length < required.length) {
       throw new Error(
-        `Pane "${target.id}": ancestor "${id}" needs ${names.map((n) => `"${n}"`).join(", ")} ` +
+        `Pane "${target.id}": ancestor "${id}" needs ${required.map((n) => `"${n}"`).join(", ")} ` +
           `but only ${supplied.map((n) => `"${n}"`).join(", ")} was supplied. ` +
           `An open takes the CHAINED param set — every ancestor's, plus the target's own.`,
       );
     }
-    const carries = names.length > 0 && supplied.length === names.length;
+    const carries =
+      supplied.length === required.length &&
+      segmentParamNames(internal.segment).some((name) => name in params);
     if (opts.fromScratch) {
-      if (names.length > 0 && !carries) continue;
+      if (required.length > 0 && !carries) continue;
     } else {
       if (!carries) continue;
       if (prefix.some((s) => s.paneId === id)) continue;
@@ -1772,6 +1819,19 @@ export interface PaneObject<
    * `{ newTab: true }` to `run` to land a cross-app promote in a new tab.
    */
   usePromote(): PromoteAction | null;
+  /**
+   * Hook: rewrite THIS instance's own params in place — its URL changes, the
+   * instance does not. Same column, same React instance (no remount), same
+   * options and panes to its right; a history entry per `chrome.history`, like
+   * any other navigation.
+   *
+   * For state that is a VIEW of the entity the pane already shows (which tab,
+   * which stage), carried in an optional `:name?` so the bare URL stays valid.
+   * Showing a different entity is a navigation — `openPane(…, { mode: "swap" })`,
+   * which mints a fresh instance so nothing of the old entity leaks across.
+   * Throws when called from outside a pane instance.
+   */
+  useSetParams(): (params: OwnParams) => void;
   /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
@@ -2022,6 +2082,25 @@ function makePaneObject(
     }, [store, instanceId, slots, surfaceAppId, canNavigate]);
   }
 
+  function useSetParams(): (params: Record<string, string>) => void {
+    const store = usePaneStore();
+    const instanceId = useContext(PaneInstanceContext);
+    const set = useCallback(
+      (params: Record<string, string>) => {
+        if (instanceId !== undefined)
+          store.setParams(internal, instanceId, params);
+      },
+      [store, instanceId],
+    );
+    if (instanceId === undefined) {
+      throw new Error(
+        `Pane "${internal.id}".useSetParams() called outside a pane instance — it rewrites ` +
+          `the instance it is rendered in, so there must be one.`,
+      );
+    }
+    return set;
+  }
+
   function useToggle(
     params: Record<string, string>,
     opts?: PaneToggleOpts<PaneOptions, PaneHintBag>,
@@ -2090,6 +2169,7 @@ function makePaneObject(
     promote,
     useClose,
     usePromote,
+    useSetParams,
     useToggle,
     back,
     forward,
@@ -2376,16 +2456,18 @@ export function useSyncPaneRegistry(): void {
         internal.segment !== "/" &&
         internal.segment !== ""
       ) {
-        const pattern = normalizeSegmentPattern(internal.segment);
-        const owner = patternOwner.get(pattern);
-        if (owner) {
-          throw new Error(
-            `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
-              `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
-              `globally unique across all registered panes — rename one to disambiguate.`,
-          );
+        // A segment ending in `:name?` claims two shapes of URL; each is checked.
+        for (const pattern of segmentMatchPatterns(internal.segment)) {
+          const owner = patternOwner.get(pattern);
+          if (owner) {
+            throw new Error(
+              `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
+                `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
+                `globally unique across all registered panes — rename one to disambiguate.`,
+            );
+          }
+          patternOwner.set(pattern, internal.id);
         }
-        patternOwner.set(pattern, internal.id);
       }
       seen.add(internal.id);
       // The only place the pane's owning plugin is knowable: the loader stamps

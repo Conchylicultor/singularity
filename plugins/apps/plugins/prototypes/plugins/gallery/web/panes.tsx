@@ -29,11 +29,16 @@ function PrototypesGalleryBody() {
   );
 }
 
-/** Focus / Compare detail for one prototype. */
+/**
+ * Focus / Compare detail for one prototype. The picked stage is the optional
+ * last part of the URL (`proto/<id>/compare`), so every stage has an address;
+ * the bare `proto/<id>` — what the CLI prints and a `route:` counterpart names —
+ * opens whichever stage sorts first.
+ */
 export const prototypeDetailPane = Pane.define({
   route: defineRoute({
     id: "prototypes-detail",
-    segment: "proto/:name",
+    segment: "proto/:name/:stage?",
     parent: prototypesGalleryRoute,
   }),
   app: prototypesApp,

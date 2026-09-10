@@ -4,6 +4,9 @@ export {
   fillSegment,
   MissingRouteParamError,
   normalizeRoutePath,
-  normalizeSegmentPattern,
+  parseSegmentParts,
+  segmentMatchPatterns,
+  segmentParamNames,
+  segmentRequiredParamNames,
 } from "./route";
 export type { AppRef, RouteDef, RouteParams } from "./route";

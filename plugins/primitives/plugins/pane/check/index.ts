@@ -1,6 +1,6 @@
 import ts from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { normalizeSegmentPattern } from "../core";
+import { segmentMatchPatterns } from "../core";
 import identityManifestCheck from "./identity-manifest";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -86,10 +86,12 @@ const check: Check = {
         // Index/empty-segment panes resolve via appIndex, not URL matching —
         // multiple empties are legal (mirrors useSyncPaneRegistry).
         if (site.raw === "" || site.raw === "/") continue;
-        const pattern = normalizeSegmentPattern(site.raw);
-        const list = byPattern.get(pattern) ?? [];
-        list.push(site);
-        byPattern.set(pattern, list);
+        // A segment ending in `:name?` claims two shapes of URL; each is checked.
+        for (const pattern of segmentMatchPatterns(site.raw)) {
+          const list = byPattern.get(pattern) ?? [];
+          list.push(site);
+          byPattern.set(pattern, list);
+        }
       }
     }
 

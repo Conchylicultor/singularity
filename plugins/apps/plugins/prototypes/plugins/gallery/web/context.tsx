@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { PrototypeStages, type PrototypeStageContribution } from "./slots";
 
@@ -45,9 +39,15 @@ export function usePrototypeDetail(): PrototypeDetailContextValue {
 
 export function PrototypeDetailProvider({
   name,
+  stageId,
+  onStageChange,
   children,
 }: {
   name: string;
+  /** The stage the URL names, if it names one. */
+  stageId: string | undefined;
+  /** Pick a stage — the pane writes it into its URL. */
+  onStageChange: (id: string) => void;
   children: ReactNode;
 }) {
   const contributed = PrototypeStages.Stage.useContributions();
@@ -56,16 +56,16 @@ export function PrototypeDetailProvider({
     [contributed],
   );
 
-  // The id, not the stage: a picked id survives the contribution list changing
-  // under it, and an id that no longer resolves falls back to the first stage
-  // rather than leaving the pane blank. Nothing here names a stage — which is
-  // what lets the default be "whichever stage sorts first".
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const stage = stages.find((s) => s.id === pickedId) ?? stages[0] ?? null;
+  // The id, not the stage: a URL's id survives the contribution list changing
+  // under it, and one that does not resolve (no stage in the URL, a stage whose
+  // plugin is gone, a typo) falls back to the first stage rather than leaving
+  // the pane blank. Nothing here names a stage — which is what lets the default
+  // be "whichever stage sorts first".
+  const stage = stages.find((s) => s.id === stageId) ?? stages[0] ?? null;
 
   const value = useMemo<PrototypeDetailContextValue>(
-    () => ({ name, stages, stage, setStage: setPickedId }),
-    [name, stages, stage],
+    () => ({ name, stages, stage, setStage: onStageChange }),
+    [name, stages, stage, onStageChange],
   );
   return (
     <PrototypeDetailContext.Provider value={value}>

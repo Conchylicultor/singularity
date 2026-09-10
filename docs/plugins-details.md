@@ -2803,6 +2803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/prototypes/compare.Counterpart`
                   - `primitives/css/badge.Badge`
                   - `primitives/embed.embedUrl`
+                  - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
           - Server:
@@ -16037,6 +16038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
               - `apps/pages/starred`
+              - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/library`
@@ -27942,7 +27944,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fillSegment`
           - `MissingRouteParamError`
           - `normalizeRoutePath`
-          - `normalizeSegmentPattern`
+          - `parseSegmentParts`
+          - `segmentMatchPatterns`
+          - `segmentParamNames`
+          - `segmentRequiredParamNames`
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
       - Core:
         - Exports (types): `Passthrough`

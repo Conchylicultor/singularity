@@ -22,12 +22,19 @@ import { PrototypeStages } from "../slots";
  * `prototypeDetailPane.Actions`, so the pane's own header IS the action bar and
  * any plugin can add to it. The shared state those controls read lives in
  * {@link PrototypeDetailProvider}, which wraps `PaneChrome` (the header renders
- * inside it).
+ * inside it). The picked stage is the URL's optional `:stage` — read here and
+ * written back in place, so switching stage changes the address without
+ * remounting the pane.
  */
 export function PrototypeDetail() {
-  const { name } = prototypeDetailPane.useParams();
+  const { name, stage } = prototypeDetailPane.useParams();
+  const setParams = prototypeDetailPane.useSetParams();
   return (
-    <PrototypeDetailProvider name={name}>
+    <PrototypeDetailProvider
+      name={name}
+      stageId={stage}
+      onStageChange={(id) => setParams({ name, stage: id })}
+    >
       <PaneChrome
         pane={prototypeDetailPane}
         title={<PrototypeTitle name={name} />}
