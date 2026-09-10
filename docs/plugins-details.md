@@ -2815,7 +2815,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
@@ -2843,11 +2843,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.resourceDescriptor`
             - Exports (types):
               - `MocksDeclaration`
+              - `OptionDeclaration`
+              - `OptionPicks`
+              - `OptionSource`
               - `PrototypeFolder`
               - `PrototypeMeta`
+              - `PrototypeOption`
               - `PrototypeProblem`
             - Exports (values):
               - `createPrototype`
+              - `foldOptions`
+              - `humanizeToken`
               - `isPrototypeId`
               - `isScannableFile`
               - `listPrototypes`
@@ -2855,23 +2861,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mocksProblemDetail`
               - `newPrototypeId`
               - `parseMocks`
+              - `parseOptionDeclaration`
+              - `pickedValue`
+              - `picksFromQuery`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
               - `PROTOTYPE_ID_RE`
               - `PrototypeMetaSchema`
+              - `PrototypeOptionSchema`
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesResource`
               - `prototypesVersionResource`
               - `prototypeUrl`
+              - `readOptionSource`
+              - `readPrototypeOptions`
+              - `resolvePicks`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
+              - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance.
+        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
@@ -2889,6 +2903,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `primitives/css/badge.Badge`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
@@ -2896,6 +2912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
@@ -2906,10 +2923,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/floating-action.FloatingAction`
+              - `primitives/overlay/floating-action.FloatingActionFadeIn`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
+              - `primitives/persistent-draft.useDraft`
               - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
@@ -2923,6 +2943,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeStages`
               - `ScaledIframe`
               - `usePrototypeDetail`
+              - `usePrototypePicks`
+              - `usePrototypeSrc`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
@@ -2935,6 +2957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/tabs.useSurfaceFocused`
               - `apps/prototypes/gallery.prototypeDetailPane`
               - `apps/prototypes/gallery.ScaledIframe`
+              - `apps/prototypes/gallery.usePrototypeSrc`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -22521,6 +22544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/pages/welcome/recent-pages`
               - `apps/prototypes/compare`
+              - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/jog-wheel`
@@ -22574,6 +22598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/pages/prompt-origin`
+              - `apps/prototypes/gallery`
               - `apps/studio/compositions`
               - `apps/studio/compositions/entry-points`
               - `apps/studio/compositions/membership-summary`
@@ -27501,6 +27526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `FloatingActionFadeIn`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/prompt-templates`
               - `primitives/outline/rail`
@@ -28098,6 +28124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
+          - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/rich/chord-readout`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
