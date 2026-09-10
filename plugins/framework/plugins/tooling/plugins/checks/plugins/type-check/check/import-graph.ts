@@ -21,6 +21,7 @@ import {
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { isLintScopeExcluded } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+import type { TreeListing } from "./fingerprint";
 
 // What remains of eslint's ignore list once git has done its part. `.gitignore`
 // already withholds node_modules, dist (and dist.staging/live/old.*), .check-*,
@@ -33,6 +34,19 @@ import { isLintScopeExcluded } from "@plugins/framework/plugins/tooling/plugins/
 export function isLintable(rel: string): boolean {
   if (!(rel.endsWith(".ts") || rel.endsWith(".tsx"))) return false;
   return !isLintScopeExcluded(rel);
+}
+
+/**
+ * The lint universe of a listing: the files the check lints, and the files the
+ * outer read-set records a content fact for.
+ *
+ * ONE function for both on purpose. The read-set is recorded on the check
+ * runner's thread from the listing alone, while the graph is built on the
+ * preparation thread (`./prepare-thread`); both call this over the same listing
+ * value, so the recorded set and the linted set cannot disagree.
+ */
+export function lintableFiles(listing: TreeListing): string[] {
+  return listing.files.filter(isLintable);
 }
 
 export function safeRead(absPath: string): string | null {
@@ -151,16 +165,15 @@ export interface ImportGraphs {
  *   - forward: Map<importer, Set<importee>> — what each file imports.
  *   - reverse: Map<importee, Set<importer>> — who imports each file.
  *
- * `allFiles` is the run's one git-derived enumeration (`listRepoFiles`); the
- * lintable set is a filter over it, never a second walk. Reading each file's
- * bytes to extract its edges is unrelated to enumeration, so this stays
- * synchronous.
+ * `listing` is the run's one git-derived enumeration (`listRepoFiles`); the
+ * lintable set is `lintableFiles` over it, never a second walk. Reading each
+ * file's bytes to extract its edges is unrelated to enumeration, so this stays
+ * synchronous — which is why it runs on the preparation thread, never the
+ * check runner's.
  */
-export function buildImportGraphs(
-  root: string,
-  allFiles: string[],
-): ImportGraphs {
-  const files = allFiles.filter(isLintable);
+export function buildImportGraphs(listing: TreeListing): ImportGraphs {
+  const { root } = listing;
+  const files = lintableFiles(listing);
   const forward = new Map<string, Set<string>>();
   const reverse = new Map<string, Set<string>>();
   for (const importer of files) {

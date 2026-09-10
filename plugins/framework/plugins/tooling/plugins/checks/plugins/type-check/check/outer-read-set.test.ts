@@ -82,9 +82,7 @@ async function record(): Promise<ReadSet> {
   const snap = await loadTreeSnapshot(root, treeHash!);
   expect(snap).not.toBeNull();
   const view = snap!.createRecordingView();
-  const listing = await readTreeListing(root);
-  const graphs = buildImportGraphs(root, listing.files);
-  recordOuterReadSet(view, listing, graphs);
+  recordOuterReadSet(view, await readTreeListing(root));
   return view.readSet();
 }
 
@@ -113,6 +111,17 @@ test("records membership globs + a content fact per lintable & global-trigger fi
   expect(paths).toContain("b.ts");
   expect(paths).toContain("tsconfig.json");
   expect(paths).toContain("package.json");
+});
+
+test("every file the check lints has a recorded content fact", async () => {
+  // The read-set is recorded from the listing on the runner's thread; the graph
+  // is built from the same listing on the preparation thread. Both filter with
+  // `lintableFiles`, so a linted file can never be missing from the read-set.
+  const rs = await record();
+  const recorded = new Set(rs.files.map((f) => f.path));
+  const { files } = buildImportGraphs(await readTreeListing(root));
+  expect(files.length).toBeGreaterThan(0);
+  expect(files.filter((f) => !recorded.has(f))).toEqual([]);
 });
 
 test("case 1: a non-.ts (docs) change is a HIT — docs-only ⇒ zero workers", async () => {
@@ -202,10 +211,7 @@ test("a .ts under a gitignored directory is not in the lintable set", async () =
   write(".gitignore", "ignored/\n");
   write("ignored/stray.ts", "export const stray = 1;\n");
   try {
-    const { files } = buildImportGraphs(
-      root,
-      (await readTreeListing(root)).files,
-    );
+    const { files } = buildImportGraphs(await readTreeListing(root));
     expect(files).toContain("a.ts");
     expect(files).not.toContain("ignored/stray.ts");
   } finally {

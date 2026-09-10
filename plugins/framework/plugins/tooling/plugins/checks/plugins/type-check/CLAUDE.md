@@ -10,29 +10,51 @@ type-aware lint off it, via typescript-eslint's `parserOptions.programs`.
 
 ## Shape
 
-- `check/index.ts` — orchestrator. Discovers targets (`discoverTscTargets`),
-  enumerates the repo ONCE via `listRepoFiles`, builds the import graph +
-  per-file closure fingerprints, assigns every lintable file to exactly one
-  target's program (include-roots + forward-import closure; `web-core` first so
-  shared `core`/`shared` files match what projectService picks), asserts full
-  coverage (the gate that replaces projectService's "every file resolves to a
-  project"), fans out one worker per target with bounded concurrency, then
-  splits results into the two failure categories and records per-file lint
-  PASSes.
-- `shared/worker.ts` — per-target worker. `createIncrementalProgram` →
+- `check/index.ts` — the **check runner's thread**, shared by every check in
+  the pass. Only: the async git reads (`getWorktreeRoot`, `readTreeListing`),
+  the outer read-set (recorded from the listing alone), the grant fan-out, the
+  log lines, the verdict.
+- `check/prepare.ts` — the **preparation thread** (one Bun `Worker` per run;
+  entry `prepare-worker.ts`, runner-side host `prepare-thread.ts`). Discovers
+  targets, builds the import graph + closure fingerprints, parses each
+  tsconfig's include-expansion, assigns every lintable file to exactly one
+  program (include-roots + forward-import closure; `web-core` first so shared
+  `core`/`shared` files match what projectService picks), runs the coverage
+  gate (replaces projectService's "every file resolves to a project"), buckets
+  the closure cache, materializes warm bases, computes program keys → returns a
+  `Plan` and keeps the session. After the fan-out, `finalize` runs the records:
+  warm-base publish, lint PASSes, program PASSes, skipped re-records.
+- `shared/worker.ts` — per-target worker **process**. `createIncrementalProgram` →
   `getPreEmitDiagnostics` (+ persists the shared `.tsbuildinfo`) → ESLint
   `Linter.verify` with the program injected. One process per target so each
   single-threaded program build runs on its own core.
+
+**Nothing that reads file bytes or walks the tree goes in `index.ts`** — it goes
+in `prepare.ts`, whose values only the worker imports. That work is 70–130 s of
+synchronous CPU; on the runner's thread it froze every concurrent check (no
+timer, no socket), so `migration-applies-clean`'s pg connect sat silent past
+Postgres's 60 s `authentication_timeout` and failed with `ECONNREFUSED`
+(`research/2026-09-10-tooling-type-check-prepare-off-thread.md`).
+
+A thread, not a helper process, because the session must survive the fan-out:
+the record phase reuses the prepare phase's fingerprints, keys and
+`ProgramKeyContext.contentHash` memo, which a process would have to serialize.
+
+New files go FLAT in `check/` or `shared/`: `selfSourceHash()` hashes only the
+top-level `.ts` there, and it is part of every program key — a subdirectory
+would silently fall out of it.
 
 ## The file universe comes from git, and is enumerated once
 
 `run()` takes ONE `readTreeListing(root)` — a `TreeListing` whose files come
 from `listRepoFiles` (`checks/core`) — and hands that value to every consumer:
-`buildImportGraphs` filters it with `isLintable`, `findGlobalTriggerFiles` with
-`isGlobalTrigger`, the program key with `isTscTrigger` and `isTsName`, and
-`recordOuterReadSet` records facts over them. Nothing below the listing
-enumerates: `import-graph.ts`, `fingerprint.ts` and `program-key.ts` only read
-the bytes of files handed to them, which is why they stay synchronous.
+`buildImportGraphs` (preparation thread) and `recordOuterReadSet` (runner
+thread) both filter it with `lintableFiles`, so the recorded set is the linted
+set; `findGlobalTriggerFiles` with `isGlobalTrigger`; the program key with
+`isTscTrigger` and `isTsName`. The listing crosses to the thread as a value, so
+it never re-lists. Nothing below the listing enumerates: `import-graph.ts`,
+`fingerprint.ts` and `program-key.ts` only read the bytes of files handed to
+them, which is why they stay synchronous.
 
 This matters because the check is `inputKeyed`: its verdict must be a function
 of the tree its cache key hashes, and that key is git-derived
@@ -181,6 +203,11 @@ per run, and they are the instrument every claim about this check is made on:
   when the grant is narrower than the fleet.
 - `type-check worker <target>: cpu 86.6s, maxRSS 2.4 GB` — one per worker that
   RAN (a skipped target has no line, by construction).
+- `type-check: prepared off-thread in 71.3s (finalize 2.1s)` — once per run:
+  the preparation thread's cost before and after the fan-out (the work that
+  used to freeze the runner; most of it is `parseTargetRoots`' include
+  expansion). A coverage-gate failure says `(finalize skipped: coverage gate
+  failed)`.
 
 **Use `cpu`, not wall clock.** The identical `web-core` program build measured
 105s at host load 12.8 and 266s at load 14.0; wall clock on this box measures
