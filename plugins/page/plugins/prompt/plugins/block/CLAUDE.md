@@ -73,7 +73,7 @@ the join and the order: oldest run first.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/launch.LaunchControl`
-    - `primitives/live-state.useResource`
+    - `tasks/tasks-core.useTaskConversations`
   - Exports (values): `promptBlock`
 - Server:
   - Contributes: `page.block-data` "prompt"

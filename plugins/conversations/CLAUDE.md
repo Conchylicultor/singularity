@@ -188,6 +188,7 @@
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
+    - `conversations/conversation-ui/row`
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/commits-graph`
@@ -224,7 +225,6 @@
     - `conversations/runtime-tmux`
     - `conversations/summary`
     - `improve`
-    - `page/annotations/agent-notes/authorship`
     - `review`
     - `review/code-review`
     - `review/plugin-changes/file-changes`
@@ -243,6 +243,7 @@
     - Plugins:
       - **`chip`** — A conversation as a clickable chip that opens its run: a ghost ToggleChip around an inline ConversationItem, active while that run is the open column.
       - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
+      - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
   - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
     - Plugins:
       - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.

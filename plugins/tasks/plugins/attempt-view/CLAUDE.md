@@ -13,6 +13,7 @@
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-ui/item.CONV_STATUS_DOT`
+    - `conversations/conversation-ui/item.conversationTitle`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/action-bar.Conversation`
     - `primitives/css/badge.Badge`

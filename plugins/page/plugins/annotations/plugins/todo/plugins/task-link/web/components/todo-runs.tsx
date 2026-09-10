@@ -1,6 +1,7 @@
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
-import { useTodoTask, useTodoTaskConversations } from "../hooks";
+import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
+import { useTodoTask } from "../hooks";
 
 /**
  * The agents this TODO card has dispatched, as a row of chips — what the card's
@@ -44,7 +45,7 @@ export function TodoRuns({ blockId }: { blockId: string }) {
  * conditionally.
  */
 function DispatchedRuns({ taskId }: { taskId: string }) {
-  const runs = useTodoTaskConversations(taskId);
+  const runs = useTaskConversations([taskId]);
   // Nothing while the runs are still loading, and nothing when there are none —
   // rendered the same, decided separately. A placeholder strip at the foot of
   // every dispatched card on a freshly-opened page would be noise, and the

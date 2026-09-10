@@ -64,7 +64,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [4 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [136 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [137 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -431,7 +431,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-preprompt`** — Per-task preprompt picker, contributed as a launch option of both the task detail's Prompt card and the task-draft popover; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
-    - **`tasks-core`** [load-bearing] — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** [load-bearing] — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

@@ -3,18 +3,12 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
+import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { getRepoInfo } from "@plugins/tasks/core";
-import {
-  attemptsResource,
-  pushesByAttemptResource,
-} from "@plugins/tasks/plugins/tasks-core/core";
-import type {
-  AttemptWithConversations,
-  Push,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import { pushesByAttemptResource } from "@plugins/tasks/plugins/tasks-core/core";
+import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
+import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -113,18 +107,6 @@ function AttemptPushList({
 }
 
 /**
- * This task's attempts, newest first. Both sections read the same live
- * resource — one cached query, two independent cards.
- */
-function useTaskAttempts(taskId: string): AttemptWithConversations[] | null {
-  const attemptsQ = useResource(attemptsResource);
-  if (attemptsQ.pending) return null;
-  return attemptsQ.data
-    .filter((a) => a.taskId === taskId)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-}
-
-/**
  * A task with no attempts has neither pushes nor attempts to list. Declared as
  * both contributions' `useAvailable` rather than an empty-state placeholder in
  * the body: the host paints the card before it reaches the body, so "No pushes
@@ -132,15 +114,15 @@ function useTaskAttempts(taskId: string): AttemptWithConversations[] | null {
  */
 export function useHasTaskAttempts({ taskId }: { taskId: string }): boolean {
   const attempts = useTaskAttempts(taskId);
-  return attempts !== null && attempts.length > 0;
+  return !attempts.pending && attempts.data.length > 0;
 }
 
 export function TaskPushes({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
   const githubBase = useGithubBase();
 
-  if (!attempts) return <Loading variant="rows" />;
-  if (attempts.length === 0) {
+  if (attempts.pending) return <Loading variant="rows" />;
+  if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">
         No pushes yet.
@@ -150,7 +132,7 @@ export function TaskPushes({ taskId }: { taskId: string }) {
 
   return (
     <Stack as="ul" gap="xs">
-      {attempts.map((a) => (
+      {attempts.data.map((a) => (
         <AttemptPushList key={a.id} attemptId={a.id} githubBase={githubBase} />
       ))}
     </Stack>
@@ -159,16 +141,10 @@ export function TaskPushes({ taskId }: { taskId: string }) {
 
 export function TaskAttempts({ taskId }: { taskId: string }) {
   const attempts = useTaskAttempts(taskId);
-  const openPane = useOpenPane();
-  // Find the last conversationPane in the chain — if there are multiple
-  // (host + nested), the last one is the one the user opened from here.
-  const convEntries = conversationPane.useRouteEntries();
-  const activeConvEntry =
-    convEntries.length > 1 ? convEntries[convEntries.length - 1]! : null;
-  const activeConvId = activeConvEntry?.params.convId;
+  const opener = useConversationOpener();
 
-  if (!attempts) return <Loading variant="rows" />;
-  if (attempts.length === 0) {
+  if (attempts.pending) return <Loading variant="rows" />;
+  if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">
         No attempts yet.
@@ -178,7 +154,7 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
 
   return (
     <Stack as="ul" gap="sm">
-      {attempts.map((attempt) => {
+      {attempts.data.map((attempt) => {
         const convs = attempt.conversations;
         return (
           <Stack
@@ -209,47 +185,21 @@ export function TaskAttempts({ taskId }: { taskId: string }) {
               </Text>
             ) : (
               <Stack as="ul" gap="xs">
-                {convs.map((c) => {
-                  const isActive = activeConvId === c.id;
-                  return (
-                    <li key={c.id}>
-                      <Row
-                        selected={isActive}
-                        onClick={() => {
-                          if (activeConvId === c.id && activeConvEntry) {
-                            conversationPane.close(activeConvEntry.instanceId);
-                          } else {
-                            openPane(
-                              conversationPane,
-                              {
-                                convId: c.id,
-                              },
-                              { mode: "push" },
-                            );
-                          }
-                        }}
-                        actions={
-                          <IconButton
-                            icon={MdOpenInNew}
-                            label="Open as page"
-                            tooltip="Open in a new page"
-                            onClick={() => {
-                              openPane(
-                                conversationPane,
-                                {
-                                  convId: c.id,
-                                },
-                                { mode: "root" },
-                              );
-                            }}
-                          />
-                        }
-                      >
-                        <ConversationItem conv={c} />
-                      </Row>
-                    </li>
-                  );
-                })}
+                {convs.map((c) => (
+                  <li key={c.id}>
+                    <ConversationRow
+                      conv={c}
+                      actions={
+                        <IconButton
+                          icon={MdOpenInNew}
+                          label="Open as page"
+                          tooltip="Open in a new page"
+                          onClick={() => opener.openAsPage(c.id)}
+                        />
+                      }
+                    />
+                  </li>
+                ))}
               </Stack>
             )}
           </Stack>

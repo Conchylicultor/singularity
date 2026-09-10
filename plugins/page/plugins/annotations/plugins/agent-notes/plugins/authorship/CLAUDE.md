@@ -89,15 +89,10 @@ gap in that plugin.
   - Resources: `agent-notes-authors` (keyed)
 - Web:
   - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-ui/item.ConversationItem`
-    - `conversations/conversation-view.conversationPane`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/row.Row`
+    - `conversations/conversation-ui/row.ConversationRowById`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/live-state.useResource`
-    - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):

@@ -7,7 +7,10 @@ import {
   useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import {
+  CONV_STATUS_DOT,
+  conversationTitle,
+} from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
@@ -107,7 +110,7 @@ function AttemptSection({
                 >
                   <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
                   <Fill as="span" className="truncate">
-                    {c.title ?? "Starting…"}
+                    {conversationTitle(c)}
                   </Fill>
                 </Line>
                 {convInstanceId !== undefined && !isActive && (
@@ -140,9 +143,13 @@ export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
   const result = useResource(attemptsResource);
   const openPane = useOpenPane();
-  const selectedConvId = conversationPane.useRouteEntry()?.params.convId;
-  const convEntries = conversationPane.useRouteEntries();
-  const convInstanceId = convEntries[convEntries.length - 1]?.instanceId;
+  // ONE read of "the conversation column this pane opened". It used to be two —
+  // the first conversation pane in the chain for the highlight, the last one for
+  // the instance the side-by-side button pushes from — so with two conversation
+  // columns open the pane lit up one row and opened alongside the other.
+  const openedConv = conversationPane.useOpenedHere();
+  const selectedConvId = openedConv?.params.convId;
+  const convInstanceId = openedConv?.instanceId;
 
   if (result.pending) return <Loading />;
 

@@ -8,6 +8,7 @@ export {
   ConvTitle,
   ConvRelativeTime,
   CONV_STATUS_DOT,
+  conversationTitle,
   type ConversationItemConv,
   type ConversationItemProps,
 } from "./components/conversation-item";

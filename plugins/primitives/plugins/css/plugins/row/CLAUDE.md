@@ -159,7 +159,6 @@ genuine transient-chrome list escapes with
     - `SectionHeaderRow`
 - Cross-plugin:
   - Imported by:
-    - `active-data/task`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
@@ -175,14 +174,13 @@ genuine transient-chrome list escapes with
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `conversations/agents`
+    - `conversations/conversation-ui/row`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `debug/trace/pane`
     - `debug/zero-test`
     - `history/dialog`
-    - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo`
-    - `page/annotations/todo/task-link`
     - `page/editor`
     - `page/inline-date`
     - `page/page-link`

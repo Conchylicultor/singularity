@@ -142,12 +142,11 @@ the page are one text — and returns `{ taskId, prompt }`.
 
 ## The runs are one join, read by both surfaces
 
-`useTodoTaskConversations(taskId)` is the card's runs, oldest first, joined off
-the boot-critical `attempts` resource. The foot renders all of them as chips; the
-panel takes `.at(-1)` as the run its "open" row navigates to. One list, so the
-run the panel offers is by construction the last chip at the foot — the two used
-to derive it separately, with their own filter/sort/reduce, and only agreed by
-coincidence.
+`useTaskConversations([taskId])` (tasks-core's, the one join every surface in the
+repo uses) is the card's runs, oldest first, off the boot-critical `attempts`
+resource. The foot renders all of them as chips; the panel takes `.at(-1)` as the
+run its "open" row navigates to. One list, so the run the panel offers is by
+construction the last chip at the foot.
 
 Several runs per card costs nothing: `createConversation` with a `taskId` and no
 `attemptId` mints a new attempt, so "Dispatch another agent" returns the same
@@ -172,7 +171,7 @@ card, not a collection.
 
 ## Plugin reference
 
-- Description: Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState / useTodoTaskConversations, joined live to the tasks and attempts resources) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+- Description: Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
 - Server:
   - Contributes:
     - `resource.declare` "todo-block-task"
@@ -206,20 +205,17 @@ card, not a collection.
 - Web:
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`
-    - `conversations/conversation-ui/item.ConversationItem`
-    - `conversations/conversation-view.conversationPane`
+    - `conversations/conversation-ui/row.ConversationRow`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
-    - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchAgentForm`
-    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
-    - `primitives/pane.useOpenPane`
     - `tasks/task-status.StatusBadge`
+    - `tasks/tasks-core.useTaskConversations`
   - Exports (types):
     - `TodoTaskLink`
     - `TodoTaskState`
@@ -227,7 +223,6 @@ card, not a collection.
     - `TodoDispatch`
     - `TodoRuns`
     - `useTodoTask`
-    - `useTodoTaskConversations`
     - `useTodoTaskState`
 - Cross-plugin:
   - Imported by: `page/annotations/todo`

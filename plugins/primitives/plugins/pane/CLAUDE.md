@@ -107,6 +107,17 @@ presence and read params — without reaching into `_internal` or importing
 `usePaneMatch()`. Each entry is `{ instanceId, params, fullParams }`; pass
 `instanceId` to `pane.close(instanceId)` to close the specific instance found.
 
+`pane.useOpenedHere()` answers the narrower question a surface that opens things
+actually asks: **which instance did *I* open?** — the first entry for this pane
+sitting after the caller's own pane in the chain. `useRouteEntries()` cannot
+answer it, and the two heuristics that grew up in its place were each wrong in
+their own direction: "the last entry, but only if there are two" goes blind
+whenever the calling surface's pane was not itself opened from one, and "the last
+entry" walks off to a grandchild as soon as the column you opened opens another
+beside it. Reach for `useRouteEntries()` only when the question really is about
+the whole chain (the sidebar's "which conversation is the user reading" wants the
+deepest column, not the one below it).
+
 **Outside every surface there is no route to READ.** Global chrome (the action
 bar at `Core.Root`, `Apps.TabBarActions`, and every popover hanging off it) is
 not inside any `PaneSurfaceProvider`, so these hooks throw there rather than
@@ -877,7 +888,6 @@ See "Open questions" in the design doc.
   - Imported by:
     - `active-data/attempt`
     - `active-data/commit-link`
-    - `active-data/conv`
     - `active-data/page-link`
     - `active-data/plugin-link`
     - `active-data/prototype`
@@ -952,7 +962,6 @@ See "Open questions" in the design doc.
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`
-    - `conversations/conversation-ui/chip`
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
@@ -1001,8 +1010,6 @@ See "Open questions" in the design doc.
     - `layouts/host`
     - `layouts/miller`
     - `layouts/route-fallback`
-    - `page/annotations/agent-notes/authorship`
-    - `page/annotations/todo/task-link`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`
@@ -1021,7 +1028,6 @@ See "Open questions" in the design doc.
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`
     - `tasks/task-detail`
-    - `tasks/task-events`
     - `tasks/task-graph`
     - `tasks/task-header`
     - `tasks/tasks-core`

@@ -165,7 +165,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
 
 ## Plugin reference
 
-- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Server:
   - Contributes:
@@ -336,6 +336,13 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `pushes-by-attempt` (keyed)
     - `task-detail` (push)
     - `tasks` (keyed)
+- Web:
+  - Uses:
+    - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.useResource`
+  - Exports (values):
+    - `useTaskAttempts`
+    - `useTaskConversations`
 - Core:
   - Uses:
     - `conversations/model-provider.DEFAULT_MODEL`
@@ -407,6 +414,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
 - Cross-plugin:
   - Imported by:
     - `active-data`
+    - `active-data/task`
     - `backup/sources/transcripts`
     - `code-explorer`
     - `conversations`
@@ -441,6 +449,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `debug/slow-ops/cluster`
     - `debug/worktree-cleanup`
     - `page/annotations/todo/task-link`
+    - `page/prompt/block`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `review/plugin-changes`
@@ -452,6 +461,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `tasks/reports-investigation`
     - `tasks/task-category`
     - `tasks/task-effort`
+    - `tasks/task-events`
     - `tasks/task-preprompt`
     - `tasks/task-title`
   - Extended by:

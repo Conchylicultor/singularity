@@ -32,11 +32,13 @@
     - `primitives/loading.Loading`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.useOpenPane`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
     - `shell/toast.showToast`
     - `tasks/task-draft-form.setActiveRelateContext`
+  - Exports (types): `ConversationOpener`
   - Exports (values):
     - `Conversation`
     - `conversationPane`
@@ -44,6 +46,7 @@
     - `draftToPlainText`
     - `isDraftEmpty`
     - `PromptInsertProvider`
+    - `useConversationOpener`
     - `usePromptInsert`
 - Cross-plugin:
   - Imported by:
@@ -58,6 +61,7 @@
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
     - `conversations/conversation-ui/chip`
+    - `conversations/conversation-ui/row`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/code/docs-button`
@@ -96,8 +100,6 @@
     - `conversations/conversations-view`
     - `conversations/summary`
     - `debug/profiling/ops`
-    - `page/annotations/agent-notes/authorship`
-    - `page/annotations/todo/task-link`
     - `primitives/launch`
     - `review`
     - `stats/cost`

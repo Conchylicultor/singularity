@@ -1740,6 +1740,24 @@ export interface PaneObject<
   useRouteEntry(): PaneRouteEntry<OwnParams> | null;
   /** Find all instances of this pane in the current route (for panes that can appear multiple times). */
   useRouteEntries(): PaneRouteEntry<OwnParams>[];
+  /**
+   * The instance of this pane that the CALLING surface opened: the first entry
+   * for this pane sitting AFTER the caller's own pane in the route chain, or
+   * `null` when the caller has none open.
+   *
+   * This is the question a surface listing things it can open actually asks —
+   * "which of these is the one I opened?" — and it is the one a pane that can
+   * appear more than once (`conversationPane`) cannot answer from
+   * {@link useRouteEntries} alone. Every consumer that tried invented a
+   * heuristic instead, and each was wrong in its own direction: "the last entry,
+   * but only if there are two" goes blind whenever the surface's own pane was
+   * not itself opened from one, and "the last entry" walks off to a grandchild
+   * the moment the column this surface opened opens another beside it.
+   *
+   * A caller rendered outside any pane instance (global chrome) has no "here",
+   * so the whole chain counts as after it and it reads the first entry.
+   */
+  useOpenedHere(): PaneRouteEntry<OwnParams> | null;
   close(instanceId: number): void;
   /** Remove this pane from the route while preserving its children. */
   unwrap(instanceId: number): void;
@@ -1866,11 +1884,7 @@ function makePaneObject(
     return useMemo(() => (bag ? makeHint(bag) : EMPTY_HINT), [bag]);
   }
 
-  function useRouteEntry(): PaneRouteEntry | null {
-    const match = useMatchOrThrow();
-    if (!match) return null;
-    const entry = match.panes.find((e) => e.pane === internal);
-    if (!entry) return null;
+  function toRouteEntry(entry: MatchEntry): PaneRouteEntry {
     return {
       instanceId: entry.instanceId,
       uuid: entry.uuid,
@@ -1880,18 +1894,34 @@ function makePaneObject(
     };
   }
 
+  function useRouteEntry(): PaneRouteEntry | null {
+    const match = useMatchOrThrow();
+    if (!match) return null;
+    const entry = match.panes.find((e) => e.pane === internal);
+    return entry ? toRouteEntry(entry) : null;
+  }
+
   function useRouteEntries(): PaneRouteEntry[] {
     const match = useMatchOrThrow();
     if (!match) return [];
-    return match.panes
-      .filter((e) => e.pane === internal)
-      .map((e) => ({
-        instanceId: e.instanceId,
-        uuid: e.uuid,
-        params: e.params,
-        fullParams: e.fullParams,
-        options: e.options,
-      }));
+    return match.panes.filter((e) => e.pane === internal).map(toRouteEntry);
+  }
+
+  function useOpenedHere(): PaneRouteEntry | null {
+    const match = useMatchOrThrow();
+    const selfInstanceId = useContext(PaneInstanceContext);
+    if (!match) return null;
+    // Where the caller sits in the chain. `-1` — no pane instance around us, or
+    // one that is somehow not in the match — reads the whole chain as "after
+    // me", which is the right answer for chrome rendered outside every pane.
+    const selfIndex =
+      selfInstanceId === undefined
+        ? -1
+        : match.panes.findIndex((e) => e.instanceId === selfInstanceId);
+    const entry = match.panes
+      .slice(selfIndex + 1)
+      .find((e) => e.pane === internal);
+    return entry ? toRouteEntry(entry) : null;
   }
 
   // Imperative methods on the PaneObject target the live store (the focused
@@ -2054,6 +2084,7 @@ function makePaneObject(
     useHint,
     useRouteEntry,
     useRouteEntries,
+    useOpenedHere,
     close,
     unwrap,
     promote,

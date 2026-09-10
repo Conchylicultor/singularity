@@ -280,6 +280,7 @@ fixed raw size escapes per-site via
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-ui/row`
     - `conversations/conversation-view`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/branch`

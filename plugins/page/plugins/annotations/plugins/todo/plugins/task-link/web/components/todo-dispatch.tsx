@@ -1,18 +1,12 @@
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
+import { useTaskConversations } from "@plugins/tasks/plugins/tasks-core/web";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
-import {
-  useTodoTaskConversations,
-  useTodoTaskState,
-  type TodoTaskState,
-} from "../hooks";
+import { useTodoTaskState, type TodoTaskState } from "../hooks";
 import { dispatchTodoAgent } from "../internal/api";
 
 /**
@@ -107,26 +101,11 @@ function DispatchedTask({
  * answer computed here.
  */
 function LatestRun({ taskId, onOpen }: { taskId: string; onOpen: () => void }) {
-  const openPane = useOpenPane();
-  const runs = useTodoTaskConversations(taskId);
+  const runs = useTaskConversations([taskId]);
   if (runs.pending) return null;
 
   const latest = runs.data.at(-1);
   if (!latest) return null;
 
-  return (
-    <Row
-      size="sm"
-      hover="muted"
-      title={latest.title ?? "Starting…"}
-      onClick={() => {
-        openPane(conversationPane, { convId: latest.id }, { mode: "push" });
-        onOpen();
-      }}
-    >
-      <Fill>
-        <ConversationItem conv={latest} layout="inline" />
-      </Fill>
-    </Row>
-  );
+  return <ConversationRow conv={latest} layout="inline" onOpen={onOpen} />;
 }

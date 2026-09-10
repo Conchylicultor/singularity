@@ -115,6 +115,7 @@ primitive exists to name.
     - `config_v2/config-link`
     - `config_v2/settings`
     - `conversations/conversation-ui/item`
+    - `conversations/conversation-ui/row`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/commits-graph`
     - `conversations/conversation-view/dependencies`
@@ -147,7 +148,6 @@ primitive exists to name.
     - `debug/worktree-cleanup`
     - `improve/element-picker`
     - `infra/events-test`
-    - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
     - `page/code-block`

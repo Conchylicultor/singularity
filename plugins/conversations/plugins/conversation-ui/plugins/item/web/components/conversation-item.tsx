@@ -83,6 +83,18 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
   return <Badge className="text-muted-foreground/80">sys</Badge>;
 }
 
+/**
+ * What to call this conversation in one line.
+ *
+ * A conversation exists before its title is generated, so every surface that
+ * names one needs the same word for that window — as the visible label here, and
+ * as the hover title of the row / chip / token wrapped around it. Spelled once
+ * so those two can never disagree.
+ */
+export function conversationTitle(conv: ConversationItemConv): string {
+  return conv.title?.trim() || "Starting…";
+}
+
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   const muted = conv.status === "gone" || conv.status === "done";
   // The title is an intrinsically single-line atom — it's used both in the
@@ -96,7 +108,7 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
         variant="caption"
         className={cn(muted && "text-muted-foreground")}
       >
-        {conv.title ?? "Starting…"}
+        {conversationTitle(conv)}
       </Text>
     </SingleLineProvider>
   );

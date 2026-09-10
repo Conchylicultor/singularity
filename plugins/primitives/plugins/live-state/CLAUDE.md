@@ -778,7 +778,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`
-    - `page/prompt/block`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `primitives/data-view/custom-columns`

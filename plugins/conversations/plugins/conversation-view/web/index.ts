@@ -7,6 +7,10 @@ import { ConversationTitle } from "./components/conversation-title";
 
 export { Conversation } from "./slots";
 export { conversationPane } from "./panes";
+export {
+  useConversationOpener,
+  type ConversationOpener,
+} from "./use-conversation-opener";
 export { ConversationView } from "./components/conversation-view";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";

@@ -1,9 +1,9 @@
 import {
   ConversationItem,
+  conversationTitle,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useConversationOpener } from "@plugins/conversations/plugins/conversation-view/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 export type ConversationChipProps = {
@@ -22,28 +22,22 @@ export type ConversationChipProps = {
  * The sibling `item` plugin is pure presentation — it paints a conversation and
  * nothing else, on purpose, so that a row, a chip and a card can each wrap their
  * own chrome around one rendering. This is that wrapper for the chip case,
- * written once: a ghost `ToggleChip` around an inline `ConversationItem`, which
- * pushes a conversation column on click and lights up while that column is the
- * one open.
+ * written once; `row` is its full-width twin. Both take their navigation and
+ * their active state from `useConversationOpener`, so the chip lights up for
+ * exactly the column the row would.
  *
  * A chip with no title yet reads "Starting…" — a conversation is created before
  * its title is generated, so the alternative is a chip that is momentarily blank.
  */
 export function ConversationChip({ conv }: ConversationChipProps) {
-  const openPane = useOpenPane();
-  // The conversation column this chip's surface opened, if one is currently in
-  // the route. Pages mounts Miller columns, so a conversation pane in the chain
-  // is by definition one opened from a page — take the last (rightmost) one.
-  const activeConvId = conversationPane.useRouteEntries().at(-1)?.params.convId;
+  const opener = useConversationOpener();
 
   return (
     <ToggleChip
       variant="ghost"
-      active={activeConvId === conv.id}
-      title={conv.title ?? "Starting…"}
-      onClick={() =>
-        openPane(conversationPane, { convId: conv.id }, { mode: "push" })
-      }
+      active={opener.isOpen(conv.id)}
+      title={conversationTitle(conv)}
+      onClick={() => opener.toggle(conv.id)}
     >
       <ConversationItem conv={conv} layout="inline" />
     </ToggleChip>

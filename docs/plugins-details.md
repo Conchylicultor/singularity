@@ -154,10 +154,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
           - `conversations/conversation-ui/item.ConversationItem`
-          - `conversations/conversation-view.conversationPane`
+          - `conversations/conversation-view.useConversationOpener`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
-          - `primitives/pane.useOpenPane`
         - Exports (values): `ConvChip`
       - Server:
         - Contributes: `page.inline-token` "(?<!\/)conv-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"
@@ -232,12 +231,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data.ActiveData`
           - `active-data.useActiveDataBinding`
           - `conversations.useConversationById`
-          - `conversations/conversation-ui/item.ConversationItem`
+          - `conversations/conversation-ui/row.ConversationRow`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/css/card.Card`
           - `primitives/css/link-chip.LinkChip`
-          - `primitives/css/row.Row`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
@@ -248,6 +246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/text-editor.TextEditor`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.taskDetailPane`
+          - `tasks/tasks-core.useTaskAttempts`
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
         - Contributes: `ActiveData.Tag` "task-link" → `TaskLinkChip`
@@ -8217,6 +8216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-category`
       - `conversations/conversation-preprompt`
       - `conversations/conversation-progress`
+      - `conversations/conversation-ui/row`
       - `conversations/conversation-view`
       - `conversations/conversation-view/code/docs-button`
       - `conversations/conversation-view/commits-graph`
@@ -8253,7 +8253,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-tmux`
       - `conversations/summary`
       - `improve`
-      - `page/annotations/agent-notes/authorship`
       - `review`
       - `review/code-review`
       - `review/plugin-changes/file-changes`
@@ -8704,9 +8703,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `conversations/conversation-ui/item.ConversationItem`
               - `conversations/conversation-ui/item.ConversationItemConv`
-              - `conversations/conversation-view.conversationPane`
+              - `conversations/conversation-ui/item.conversationTitle`
+              - `conversations/conversation-view.useConversationOpener`
               - `primitives/css/toggle-chip.ToggleChip`
-              - `primitives/pane.useOpenPane`
             - Exports (types): `ConversationChipProps`
             - Exports (values): `ConversationChip`
           - Cross-plugin:
@@ -8740,6 +8739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `CONV_STATUS_DOT`
               - `ConversationItem`
+              - `conversationTitle`
               - `ConvRelativeTime`
               - `ConvStatusDot`
               - `ConvSysBadge`
@@ -8748,21 +8748,43 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `active-data/conv`
-              - `active-data/task`
               - `conversations/agents`
               - `conversations/all-conversations`
               - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
               - `conversations/conversation-ui/chip`
+              - `conversations/conversation-ui/row`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/op-status`
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
+              - `tasks/attempt-view`
+        - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
+          - Web:
+            - Uses:
+              - `conversations.useConversationById`
+              - `conversations/conversation-ui/item.ConversationItem`
+              - `conversations/conversation-ui/item.ConversationItemConv`
+              - `conversations/conversation-ui/item.conversationTitle`
+              - `conversations/conversation-view.useConversationOpener`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/row.Row`
+              - `primitives/css/text.Text`
+            - Exports (types):
+              - `ConversationRowByIdProps`
+              - `ConversationRowChrome`
+              - `ConversationRowLayout`
+              - `ConversationRowProps`
+            - Exports (values):
+              - `ConversationRow`
+              - `ConversationRowById`
+          - Cross-plugin:
+            - Imported by:
+              - `active-data/task`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
-              - `tasks/attempt-view`
               - `tasks/task-events`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
@@ -8792,11 +8814,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/loading.Loading`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
+          - `primitives/pane.useOpenPane`
           - `primitives/scope/surface-id.useSurfaceTabId`
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`
           - `shell/toast.showToast`
           - `tasks/task-draft-form.setActiveRelateContext`
+        - Exports (types): `ConversationOpener`
         - Exports (values):
           - `Conversation`
           - `conversationPane`
@@ -8804,6 +8828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `draftToPlainText`
           - `isDraftEmpty`
           - `PromptInsertProvider`
+          - `useConversationOpener`
           - `usePromptInsert`
       - Cross-plugin:
         - Imported by:
@@ -8818,6 +8843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
           - `conversations/conversation-ui/chip`
+          - `conversations/conversation-ui/row`
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/code/docs-button`
@@ -8856,8 +8882,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversations-view`
           - `conversations/summary`
           - `debug/profiling/ops`
-          - `page/annotations/agent-notes/authorship`
-          - `page/annotations/todo/task-link`
           - `primitives/launch`
           - `review`
           - `stats/cost`
@@ -15980,6 +16004,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/settings`
               - `config_v2/settings/conflict-agent`
               - `conversations/conversation-category`
+              - `conversations/conversation-ui/row`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/investigate-event`
               - `conversations/conversation-view/jsonl-viewer/outline`
@@ -18878,15 +18903,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Resources: `agent-notes-authors` (keyed)
               - Web:
                 - Uses:
-                  - `conversations.useConversationById`
-                  - `conversations/conversation-ui/item.ConversationItem`
-                  - `conversations/conversation-view.conversationPane`
-                  - `primitives/css/fill.Fill`
-                  - `primitives/css/row.Row`
+                  - `conversations/conversation-ui/row.ConversationRowById`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/live-state.useResource`
-                  - `primitives/pane.useOpenPane`
                   - `primitives/relative-time.RelativeTime`
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
@@ -18964,7 +18984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `todoBlock`
               - `todoDataSchema`
           - Plugins:
-            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState / useTodoTaskConversations, joined live to the tasks and attempts resources) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource; the runs come from tasks-core's useTaskConversations) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
               - Server:
                 - Contributes:
                   - `resource.declare` "todo-block-task"
@@ -18998,20 +19018,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Uses:
                   - `conversations/conversation-ui/chip.ConversationChip`
-                  - `conversations/conversation-ui/item.ConversationItem`
-                  - `conversations/conversation-view.conversationPane`
+                  - `conversations/conversation-ui/row.ConversationRow`
                   - `infra/endpoints.fetchEndpoint`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
-                  - `primitives/css/row.Row`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/launch.LaunchAgentForm`
-                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
-                  - `primitives/pane.useOpenPane`
                   - `tasks/task-status.StatusBadge`
+                  - `tasks/tasks-core.useTaskConversations`
                 - Exports (types):
                   - `TodoTaskLink`
                   - `TodoTaskState`
@@ -19019,7 +19036,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `TodoDispatch`
                   - `TodoRuns`
                   - `useTodoTask`
-                  - `useTodoTaskConversations`
                   - `useTodoTaskState`
               - Cross-plugin:
                 - Imported by: `page/annotations/todo`
@@ -20467,7 +20483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/launch.LaunchControl`
-              - `primitives/live-state.useResource`
+              - `tasks/tasks-core.useTaskConversations`
             - Exports (values): `promptBlock`
           - Server:
             - Contributes: `page.block-data` "prompt"
@@ -22674,6 +22690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2/config-link`
               - `config_v2/settings`
               - `conversations/conversation-ui/item`
+              - `conversations/conversation-ui/row`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/commits-graph`
               - `conversations/conversation-view/dependencies`
@@ -22706,7 +22723,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/worktree-cleanup`
               - `improve/element-picker`
               - `infra/events-test`
-              - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
               - `page/bookmark`
               - `page/code-block`
@@ -23386,7 +23402,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SectionHeaderRow`
           - Cross-plugin:
             - Imported by:
-              - `active-data/task`
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
@@ -23402,14 +23417,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `conversations/agents`
+              - `conversations/conversation-ui/row`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
               - `debug/trace/pane`
               - `debug/zero-test`
               - `history/dialog`
-              - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo`
-              - `page/annotations/todo/task-link`
               - `page/editor`
               - `page/inline-date`
               - `page/page-link`
@@ -24201,6 +24215,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-ui/item`
+              - `conversations/conversation-ui/row`
               - `conversations/conversation-view`
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/branch`
@@ -26823,7 +26838,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
-          - `page/prompt/block`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `primitives/data-view/custom-columns`
@@ -27703,7 +27717,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data/attempt`
           - `active-data/commit-link`
-          - `active-data/conv`
           - `active-data/page-link`
           - `active-data/plugin-link`
           - `active-data/prototype`
@@ -27778,7 +27791,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/agents`
           - `conversations/all-conversations`
-          - `conversations/conversation-ui/chip`
           - `conversations/conversation-view`
           - `conversations/conversation-view/code/docs-button`
           - `conversations/conversation-view/code/file-pane`
@@ -27827,8 +27839,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/host`
           - `layouts/miller`
           - `layouts/route-fallback`
-          - `page/annotations/agent-notes/authorship`
-          - `page/annotations/todo/task-link`
           - `plugin-meta/contributions-table`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
@@ -27847,7 +27857,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-dependencies`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-          - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
           - `tasks/tasks-core`
@@ -30641,6 +30650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.CONV_STATUS_DOT`
+          - `conversations/conversation-ui/item.conversationTitle`
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/action-bar.Conversation`
           - `primitives/css/badge.Badge`
@@ -31143,8 +31153,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TaskDetailSlots.Section` "Pushes" → `TaskPushes`
           - `TaskDetailSlots.Section` "Attempts" → `TaskAttempts`
         - Uses:
-          - `conversations/conversation-ui/item.ConversationItem`
-          - `conversations/conversation-view.conversationPane`
+          - `conversations/conversation-ui/row.ConversationRow`
+          - `conversations/conversation-view.useConversationOpener`
           - `infra/endpoints.useEndpoint`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -31156,9 +31166,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
-          - `primitives/pane.useOpenPane`
           - `tasks/attempt-status.AttemptStatusBadge`
           - `tasks/task-detail.TaskDetailSlots`
+          - `tasks/tasks-core.useTaskAttempts`
     - **`task-graph`** — Renders the dependency-DAG as a card at the foot of a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
@@ -31340,7 +31350,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `page/prompt/link`
           - `tasks`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
         - Contributes:
           - `resource.declare` "tasks"
@@ -31510,6 +31520,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pushes-by-attempt` (keyed)
           - `task-detail` (push)
           - `tasks` (keyed)
+      - Web:
+        - Uses:
+          - `primitives/live-state.ResourceResult`
+          - `primitives/live-state.useResource`
+        - Exports (values):
+          - `useTaskAttempts`
+          - `useTaskConversations`
       - Core:
         - Uses:
           - `conversations/model-provider.DEFAULT_MODEL`
@@ -31581,6 +31598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `active-data`
+          - `active-data/task`
           - `backup/sources/transcripts`
           - `code-explorer`
           - `conversations`
@@ -31615,6 +31633,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/cluster`
           - `debug/worktree-cleanup`
           - `page/annotations/todo/task-link`
+          - `page/prompt/block`
           - `page/prompt/link`
           - `plugin-meta/plugin-health`
           - `review/plugin-changes`
@@ -31626,6 +31645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/reports-investigation`
           - `tasks/task-category`
           - `tasks/task-effort`
+          - `tasks/task-events`
           - `tasks/task-preprompt`
           - `tasks/task-title`
         - Extended by:

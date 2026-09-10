@@ -1314,6 +1314,10 @@
       "name": "@singularity/plugin-conversations-conversation-ui-item",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-ui/plugins/row": {
+      "name": "@singularity/plugin-conversations-conversation-ui-row",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view": {
       "name": "@singularity/plugin-conversations-conversation-view",
       "version": "0.0.1",
@@ -6530,6 +6534,8 @@
     "@singularity/plugin-conversations-conversation-ui-chip": ["@singularity/plugin-conversations-conversation-ui-chip@workspace:plugins/conversations/plugins/conversation-ui/plugins/chip"],
 
     "@singularity/plugin-conversations-conversation-ui-item": ["@singularity/plugin-conversations-conversation-ui-item@workspace:plugins/conversations/plugins/conversation-ui/plugins/item"],
+
+    "@singularity/plugin-conversations-conversation-ui-row": ["@singularity/plugin-conversations-conversation-ui-row@workspace:plugins/conversations/plugins/conversation-ui/plugins/row"],
 
     "@singularity/plugin-conversations-conversation-view": ["@singularity/plugin-conversations-conversation-view@workspace:plugins/conversations/plugins/conversation-view"],
 

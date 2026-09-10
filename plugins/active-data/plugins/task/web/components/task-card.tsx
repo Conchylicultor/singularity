@@ -10,14 +10,12 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { attemptsResource, tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  createTask as createTaskEndpoint,
-} from "@plugins/tasks/core";
+import { ConversationRow } from "@plugins/conversations/plugins/conversation-ui/plugins/row/web";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
+import { createTask as createTaskEndpoint } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -66,7 +64,9 @@ export function TaskCard({
         // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
         className="my-2"
       >
-        <Text as="p" variant="body" tone="muted">{initial}</Text>
+        <Text as="p" variant="body" tone="muted">
+          {initial}
+        </Text>
         <LaunchedAttempts taskId={value.taskId} />
       </Stack>
     );
@@ -80,7 +80,11 @@ export function TaskCard({
   const disabled = creating || !trimmed;
 
   const createTask = async () => {
-    return fetchEndpoint(createTaskEndpoint, {}, { body: { folderId: hostTaskId, description: trimmed } });
+    return fetchEndpoint(
+      createTaskEndpoint,
+      {},
+      { body: { folderId: hostTaskId, description: trimmed } },
+    );
   };
 
   const onCreate = async () => {
@@ -115,7 +119,13 @@ export function TaskCard({
       />
       <Stack direction="row" align="center" justify="end" gap="sm">
         {error ? (
-          <Text as="span" variant="caption" tone="destructive" className="mr-auto truncate" title={error}>
+          <Text
+            as="span"
+            variant="caption"
+            tone="destructive"
+            className="mr-auto truncate"
+            title={error}
+          >
             {error}
           </Text>
         ) : null}
@@ -150,23 +160,11 @@ export function TaskCard({
 }
 
 function LaunchedAttempts({ taskId }: { taskId: string }) {
-  const attemptsQ = useResource(attemptsResource);
-  const openPane = useOpenPane();
-  // Find the last conversationPane in the chain — if there are multiple
-  // (host + nested), the last one is the one the user opened from here.
-  const convEntries = conversationPane.useRouteEntries();
-  const activeConvEntry = convEntries.length > 1
-    ? convEntries[convEntries.length - 1]!
-    : null;
-  const activeConvId = activeConvEntry?.params.convId;
+  const attempts = useTaskAttempts(taskId);
 
-  if (attemptsQ.pending) return <Loading variant="text" />;
+  if (attempts.pending) return <Loading variant="text" />;
 
-  const attempts = attemptsQ.data
-    .filter((a) => a.taskId === taskId)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-
-  if (attempts.length === 0) {
+  if (attempts.data.length === 0) {
     return (
       <Text as="span" variant="caption" tone="muted" className="block">
         Launching…
@@ -176,35 +174,26 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 
   return (
     <Stack as={Card} gap="sm" className="px-md py-sm bg-transparent">
-      {attempts.map((attempt) => (
+      {attempts.data.map((attempt) => (
         <Stack key={attempt.id} gap="xs">
           <Stack direction="row" align="center" gap="sm">
             <AttemptStatusBadge status={attempt.status} />
-            <Text as="span" variant="caption" tone="muted" className="truncate font-mono">
+            <Text
+              as="span"
+              variant="caption"
+              tone="muted"
+              className="truncate font-mono"
+            >
               {attempt.worktreePath.split("/").pop()}
             </Text>
           </Stack>
           {attempt.conversations.length > 0 && (
             <Stack as="ul" gap="2xs">
-              {attempt.conversations.map((c) => {
-                const isActive = activeConvId === c.id;
-                return (
-                  <li key={c.id}>
-                    <Row
-                      selected={isActive}
-                      onClick={() => {
-                        if (activeConvId === c.id && activeConvEntry) {
-                          conversationPane.close(activeConvEntry.instanceId);
-                        } else {
-                          openPane(conversationPane, { convId: c.id }, { mode: "push" });
-                        }
-                      }}
-                    >
-                      <ConversationItem conv={c} />
-                    </Row>
-                  </li>
-                );
-              })}
+              {attempt.conversations.map((c) => (
+                <li key={c.id}>
+                  <ConversationRow conv={c} />
+                </li>
+              ))}
             </Stack>
           )}
         </Stack>
