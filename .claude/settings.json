@@ -1,9 +1,13 @@
 {
   "showThinkingSummaries": true,
+  "skillOverrides": {
+    "auto-mode-setup": "off"
+  },
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
+    "allow": ["mcp__singularity__query_db", "Bash(rg:*)", "Bash(ls:*)"],
     "deny": ["EnterWorktree", "ExitWorktree"]
   },
   "enableAllProjectMcpServers": true,
