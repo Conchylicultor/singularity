@@ -6,7 +6,6 @@ export { useViewsConfig } from "./internal/use-views-config";
 export type { ViewsConfigHandle } from "./internal/use-views-config";
 export { useViewModel } from "./internal/use-view-model";
 export type { ViewModelCore, ViewActionsCore } from "./internal/use-view-model";
-export { useViewVariants } from "./internal/use-view-variants";
 export { buildViewDescriptors } from "./internal/build-descriptors";
 export { buildViewConfigContributions } from "./internal/config-registrations";
 export { EditableViewSwitcher } from "./components/editable-view-switcher";

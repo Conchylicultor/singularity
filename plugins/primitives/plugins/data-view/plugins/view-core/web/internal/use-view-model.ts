@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type {
   AddableSource,
   AddableViewType,
@@ -11,6 +12,7 @@ import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
 import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 import { resolveActiveId } from "./resolve-active-id";
+import { usableTypes } from "./usable-types";
 
 /**
  * Instance actions for the editable view-switcher (every view surface has
@@ -22,6 +24,14 @@ export interface ViewActionsCore {
    *  contributions ∩ `views` whitelist ∩ hierarchical gate). A single-source
    *  surface yields exactly one untitled group — the flat-menu fast path. */
   availableSources: AddableSource[];
+  /**
+   * The type-switcher registry for ONE instance's settings popover: the types
+   * that instance's own source can render (the same gate the add menu uses),
+   * each paired with its options sub-form. Per-instance, never global — a
+   * global registry is what let a flat surface switch a view to a hierarchical
+   * type that then could not resolve, silently emptying the switcher.
+   */
+  variantsFor: (id: string) => Map<string, VariantEntry>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => void;
@@ -99,22 +109,11 @@ export function useViewModel<T extends ViewTypeMeta>(
   // Generic — driven by the entries, never by a named view child.
   const availableSources = useMemo<AddableSource[]>(() => {
     return entries.map((entry) => {
-      const usable = (
-        entry.hasHierarchy
-          ? entry.contributions
-          : entry.contributions.filter((c) => !c.hierarchical)
-      ).filter((c) => (entry.views ? entry.views.includes(c.type) : true));
-      const types = usable
-        .slice()
-        .sort(
-          (a, b) =>
-            (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
-        )
-        .map<AddableViewType>((c) => ({
-          type: c.type,
-          title: c.title,
-          icon: c.icon,
-        }));
+      const types = usableTypes(entry).map<AddableViewType>((c) => ({
+        type: c.type,
+        title: c.title,
+        icon: c.icon,
+      }));
       return {
         sourceId: entry.id,
         title: entry.title,
@@ -124,9 +123,35 @@ export function useViewModel<T extends ViewTypeMeta>(
     });
   }, [entries]);
 
+  // The settings popover's type list, derived per instance from that instance's
+  // OWN source entry through the same `usableTypes` gate the add menu uses.
+  // The instance's current type is always listed even when the entry's `views`
+  // whitelist excludes it: the whitelist gates addability, not authored rows
+  // (`buildInstanceFromRow` renders them), so the picker must be able to show
+  // the value it is bound to.
+  const variantsFor = useCallback(
+    (id: string): Map<string, VariantEntry> => {
+      const resolved = cfg.instances.find((r) => r.instance.id === id);
+      if (!resolved) return new Map();
+      const entry = entries.find((e) => e.id === resolved.instance.source);
+      const usable = entry ? usableTypes(entry) : [];
+      const listed = usable.some((c) => c.type === resolved.instance.type)
+        ? usable
+        : [...usable, resolved.viewType];
+      return new Map(
+        listed.map((c) => [
+          c.type,
+          { label: c.title, fields: c.configSchema ?? {} },
+        ]),
+      );
+    },
+    [cfg.instances, entries],
+  );
+
   const actions = useMemo<ViewActionsCore>(
     () => ({
       availableSources,
+      variantsFor,
       addView: cfg.addView,
       renameView: cfg.renameView,
       duplicateView: cfg.duplicateView,
@@ -134,7 +159,7 @@ export function useViewModel<T extends ViewTypeMeta>(
       reorderView: cfg.reorderView,
       updateView: cfg.updateView,
     }),
-    [availableSources, cfg],
+    [availableSources, variantsFor, cfg],
   );
 
   return useMemo(

@@ -3,7 +3,6 @@ import { MdContentCopy, MdDelete } from "react-icons/md";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
-import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewTypeMeta } from "../../core";
@@ -21,25 +20,32 @@ import type { ViewActionsCore } from "../internal/use-view-model";
  * outline button beside a destructive ghost one. view-core imports the primitive
  * and nothing else — it must never import data-view, which sits above it.
  *
- * The `viewField` is built **web-side at render** with the injected `useVariants`
- * registry, so the type selector + each type's `configSchema` sub-fields recurse
- * through `FieldRenderer`. The stored descriptor stays server-safe (no
+ * The `viewField` is built **web-side at render** with the registry the panel
+ * asks the model for ITSELF (`actions.variantsFor(id)` — the instance's own
+ * source, gated exactly like the `+` add menu), so the type selector + each
+ * type's `configSchema` sub-fields recurse through `FieldRenderer`. Asking
+ * rather than being handed a map is the point: a caller cannot pass a registry
+ * that belongs to a different instance, or an ungated one listing types this
+ * surface cannot render — which is what silently emptied a switcher when a flat
+ * surface was offered the tree. The stored descriptor stays server-safe (no
  * `useVariants`). `updateView(id, v, { merge: true })` shallow-merges over the
  * raw view, preserving any host-injected keys (sort/filter) the sub-form omits.
  */
 export function ViewSettingsPopover<T extends ViewTypeMeta>({
   instance,
   actions,
-  viewVariants,
   onClose,
 }: {
   instance: ResolvedViewInstance<T>;
   actions: ViewActionsCore;
-  viewVariants: Map<string, VariantEntry>;
   onClose: () => void;
 }): ReactNode {
   const id = instance.instance.id;
 
+  // Memoized on (actions, id): `variantsFor` mints a fresh Map per call, and an
+  // unstable map would rebuild the field def — and with it the whole sub-form —
+  // on every keystroke in the Name input above.
+  const viewVariants = useMemo(() => actions.variantsFor(id), [actions, id]);
   const viewField = useMemo(
     () => variantField({ label: "View", useVariants: () => viewVariants }),
     [viewVariants],

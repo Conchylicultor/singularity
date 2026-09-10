@@ -20,7 +20,6 @@ import {
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
@@ -38,15 +37,16 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   activeId,
   onSelect,
   actions,
-  viewVariants,
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   onSelect: (id: string) => void;
   actions: ViewActionsCore;
-  viewVariants: Map<string, VariantEntry>;
 }): ReactNode {
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // WHICH view's settings are open, not merely whether some are: a bare boolean
+  // stayed true when the active instance changed under it, so the panel silently
+  // re-aimed at a different view and the next click in it edited that one.
+  const [settingsForId, setSettingsForId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   // The `+` add-view button is chrome that only surfaces on hover/focus of the
   // switcher — kept revealed while its menu is open so it never vanishes under
@@ -89,8 +89,12 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 icon={<Icon />}
                 title={r.instance.name}
                 onClick={() => {
-                  if (isActive) setSettingsOpen((o) => !o);
-                  else onSelect(id);
+                  if (isActive) {
+                    setSettingsForId((open) => (open === id ? null : id));
+                  } else {
+                    setSettingsForId(null);
+                    onSelect(id);
+                  }
                 }}
               >
                 {r.instance.name}
@@ -101,8 +105,10 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 {() =>
                   isActive ? (
                     <ControlPanelPopover
-                      open={settingsOpen}
-                      onOpenChange={setSettingsOpen}
+                      open={settingsForId === id}
+                      onOpenChange={(open) =>
+                        setSettingsForId(open ? id : null)
+                      }
                       align="start"
                       trigger={chip}
                       label={`${r.instance.name} settings`}
@@ -110,8 +116,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                       <ViewSettingsPopover
                         instance={r}
                         actions={actions}
-                        viewVariants={viewVariants}
-                        onClose={() => setSettingsOpen(false)}
+                        onClose={() => setSettingsForId(null)}
                       />
                     </ControlPanelPopover>
                   ) : (

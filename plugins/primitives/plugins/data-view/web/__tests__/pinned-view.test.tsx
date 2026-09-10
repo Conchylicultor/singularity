@@ -90,7 +90,6 @@ function renderShell(opts: { activeId: string; pinnedView?: string }) {
       <DataViewShellFrame
         storageKey={STORAGE_KEY}
         viewModel={model(opts.activeId)}
-        contributions={[]}
         pinnedView={opts.pinnedView}
       >
         {(activeInstance, chrome) => {
@@ -141,7 +140,6 @@ describe("pinnedView", () => {
         <DataViewShellFrame
           storageKey={STORAGE_KEY}
           viewModel={{ ...model(""), instances: [] } as unknown as ViewModel}
-          contributions={[]}
         >
           {() => <div data-testid="body">rows</div>}
         </DataViewShellFrame>

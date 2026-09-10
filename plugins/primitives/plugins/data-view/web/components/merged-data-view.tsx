@@ -93,7 +93,6 @@ export function MergedDataView<THostProps>(
     <DataViewShellFrame
       storageKey={storageKey}
       viewModel={viewModel}
-      contributions={contributions}
       title={title}
       actions={actions}
       density={density}

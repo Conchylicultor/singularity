@@ -114,10 +114,19 @@ group chrome), and the `views` whitelist.
   source (label = source title — a groupless label would crash the menu), with
   a byte-identical flat-item fast path when there is exactly one untitled
   source.
-- **`useViewVariants` is deliberately global.** The `View` registry is one
-  shared vocabulary, identical for every source, so ONE variants map serves the
-  settings popover (it only ever opens on the active chip). Do not "fix" it to
-  be per-source.
+- **The settings popover's type picker is per-instance, and shares the add
+  menu's gate.** `usableTypes(entry)` (`web/internal/usable-types.ts`) is the ONE
+  gate — contributions ∩ `views` whitelist ∩ the hierarchical gate — read by both
+  `availableSources` (the `+` menu) and `actions.variantsFor(id)` (the popover's
+  `variantField` registry). They used to disagree: a global
+  `useViewVariants(contributions)` handed the popover every registered view-type,
+  so a flat surface could not *create* a tree view but could *switch* one into a
+  tree — and `buildInstanceFromRow` then dropped that row, silently emptying the
+  switcher of a view whose config row was still on disk. `useViewVariants` is
+  **deleted**, not merely bypassed, so no ungated map is left to hand the popover.
+  `variantsFor` always lists the instance's OWN current type even when the
+  whitelist excludes it (the whitelist gates addability, not authored rows), so
+  the picker can render the value it is bound to.
 
 ## ⚠️ Invariant: never import data-view (no cycle)
 
@@ -133,8 +142,8 @@ rg "data-view/(core|web|server)" plugins/primitives/plugins/data-view/plugins/vi
 ```
 
 must return **nothing**. The engine must stay genuinely generic — parameterized
-by the consumer's id list (`buildViewDescriptors(ids)`), contributions
-(`useViewVariants(contributions)`), and per-entry plugin id
+by the consumer's id list (`buildViewDescriptors(ids)`), the per-entry
+contributions each surface passes in, and per-entry plugin id
 (`buildViewConfigContributions(entries)` where each entry carries its own
 `pluginId`), never reaching back into data-view.
 
@@ -148,7 +157,7 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
   `buildViewConfigRegistrations(entries: { id, pluginId }[])`.
 - `web`: `buildInstanceFromRow`, `ResolvedViewInstance`, `useViewsConfig`,
   `ViewsConfigHandle`, `useViewModel`, `ViewModelCore`, `ViewActionsCore`,
-  `useViewVariants`, `buildViewDescriptors`,
+  `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
   `EditableViewSwitcher`, `ViewSettingsPopover` — the last drawn in the
   `control-panel` vocabulary (a sibling primitive; view-core still imports NO
@@ -199,7 +208,6 @@ by the consumer's id list (`buildViewDescriptors(ids)`), contributions
     - `EditableViewSwitcher`
     - `useViewModel`
     - `useViewsConfig`
-    - `useViewVariants`
     - `ViewSettingsPopover`
 - Server:
   - Uses: `config_v2.ConfigV2`

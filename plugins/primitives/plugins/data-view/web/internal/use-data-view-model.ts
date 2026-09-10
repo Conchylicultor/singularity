@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type {
@@ -21,6 +22,10 @@ export interface ViewActions {
    *  contributions ∩ `views` whitelist ∩ hierarchical gate). A single-source
    *  DataView yields exactly one untitled group — the flat-menu fast path. */
   availableSources: AddableSource[];
+  /** The type-switcher registry for ONE instance's settings popover — that
+   *  instance's source ∩ the same gate the add menu uses (see
+   *  `ViewActionsCore.variantsFor`). */
+  variantsFor: (id: string) => Map<string, VariantEntry>;
   addView: (type: string, sourceId?: string) => void;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => void;
@@ -277,6 +282,7 @@ export function useDataViewModel(
   const actions = useMemo<ViewActions>(
     () => ({
       availableSources: core.actions.availableSources,
+      variantsFor: core.actions.variantsFor,
       addView: core.actions.addView,
       renameView: core.actions.renameView,
       duplicateView: core.actions.duplicateView,

@@ -244,6 +244,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/css/ui-kit`
     - `primitives/data-view`
     - `primitives/data-view/tree`
+    - `primitives/data-view/view-core`
     - `primitives/date-picker`
     - `primitives/dom/copy-source-text`
     - `primitives/dom/overscroll-hint`

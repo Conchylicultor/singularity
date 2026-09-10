@@ -16042,6 +16042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit`
               - `primitives/data-view`
               - `primitives/data-view/tree`
+              - `primitives/data-view/view-core`
               - `primitives/date-picker`
               - `primitives/dom/copy-source-text`
               - `primitives/dom/overscroll-hint`
@@ -25163,7 +25164,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/view-core.EditableViewSwitcher`
           - `primitives/data-view/view-core.ResolvedViewInstance`
           - `primitives/data-view/view-core.useViewModel`
-          - `primitives/data-view/view-core.useViewVariants`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
@@ -25755,7 +25755,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `EditableViewSwitcher`
               - `useViewModel`
               - `useViewsConfig`
-              - `useViewVariants`
               - `ViewSettingsPopover`
           - Server:
             - Uses: `config_v2.ConfigV2`

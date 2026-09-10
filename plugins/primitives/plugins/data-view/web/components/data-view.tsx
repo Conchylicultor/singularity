@@ -1,6 +1,5 @@
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -15,7 +14,6 @@ import {
 } from "../../core";
 import {
   EditableViewSwitcher,
-  useViewVariants,
   type ResolvedViewInstance,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
@@ -65,7 +63,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     <DataViewShellFrame
       storageKey={props.storageKey}
       viewModel={viewModel}
-      contributions={contributions}
       title={props.title}
       actions={props.actions}
       creators={props.creators}
@@ -98,7 +95,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
 export function DataViewShellFrame(props: {
   storageKey: DataViewId;
   viewModel: ViewModel;
-  contributions: SealContributions<DataViewContribution>[];
   title?: ReactNode;
   actions?: ReactNode;
   creators?: CreateOption[];
@@ -117,7 +113,6 @@ export function DataViewShellFrame(props: {
   const {
     storageKey,
     viewModel,
-    contributions,
     title,
     actions,
     creators,
@@ -139,8 +134,6 @@ export function DataViewShellFrame(props: {
   // height. Mirrors the `--chrome-mask` cross-plugin CSS-var convention. The ref
   // crosses into the body, which attaches it to the toolbar's `<Sticky>`.
   const [toolbarRef, { height: toolbarHeight }] = useElementSize();
-
-  const viewVariants = useViewVariants(contributions);
 
   // The surface's own views are not known yet (the config document has not
   // arrived — a cold boot whose snapshot failed, a WS still catching up). We
@@ -221,7 +214,6 @@ export function DataViewShellFrame(props: {
         activeId={activeViewId}
         onSelect={viewModel.setActiveView}
         actions={viewModel.actions}
-        viewVariants={viewVariants}
       />
     ),
     switcherCount: pinned ? 1 : instances.length,

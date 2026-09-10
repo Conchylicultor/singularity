@@ -160,15 +160,27 @@ domain data. See
 
 **Per-instance options sub-form.** A view-type's optional `configSchema`
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
-web-side `variantField({ useVariants })` from the live contributions
-(`use-view-variants.ts` — generic, never names a view child) and renders it via
-`FieldRenderer`. The gallery's `coverField` is the reference `configSchema`.
+web-side `variantField({ useVariants })` from **that instance's own** addable
+types (`actions.variantsFor(id)` — generic, never names a view child) and renders
+it via `FieldRenderer`. The gallery's `coverField` is the reference
+`configSchema`. The type picker inside that sub-form is gated exactly like the `+`
+add menu (view-core's `usableTypes`), so a surface can never switch a view to a
+type it could not have created — see the orphan hazard below for what that used
+to do.
 
 **Orphan hazard.** A config row whose `view.type` references a renamed/removed
 view-type (or a hierarchical type when the source has no hierarchy) **fail-soft
 skips** in `buildInstanceFromRow` — the same documented hazard as reorder
 node-type ids. The row stays in the config; it just isn't rendered until its
 view-type returns.
+
+That skip is only safe while nothing the USER can click puts a row into it. It
+did not used to be: the settings popover's type picker listed every registered
+view-type regardless of source, so picking Tree on a flat surface wrote a row the
+resolver then dropped — the view vanished from the switcher, looking for all the
+world like a delete, while its row (name, sort, filter) sat untouched on disk. The
+gate now shared with the add menu is what keeps the skip reachable only by an
+authoring mistake, never by a click.
 
 ## Multi-source surfaces (`MergedDataView`)
 
@@ -1530,7 +1542,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/data-view/view-core.EditableViewSwitcher`
     - `primitives/data-view/view-core.ResolvedViewInstance`
     - `primitives/data-view/view-core.useViewModel`
-    - `primitives/data-view/view-core.useViewVariants`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
