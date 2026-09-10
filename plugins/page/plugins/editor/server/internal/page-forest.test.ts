@@ -16,9 +16,16 @@
  * (requires the running embedded cluster — `./singularity build` first).
  */
 
-import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
+import {
+  describe,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from "bun:test";
 import { z } from "zod";
-import { eq, sql } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
@@ -27,14 +34,19 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import { applyBlockOp, defineBlock, type BlockOp } from "../../core";
-import { pageBlockHandle } from "../../core/schemas";
+import { pageBlockHandle, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor } from "./block-registry";
 import { parseBlockData } from "./parse-block-data";
 import { BlockLifecycle, type DeletedBlockRow } from "./document-hooks";
 import { withPageForest } from "./page-forest";
-import { insertBlocks, updateBlockFields, writeForestTarget } from "./forest-writer";
+import {
+  insertBlocks,
+  updateBlockFields,
+  writeForestTarget,
+} from "./forest-writer";
 import { rowToNode } from "./reconcile";
 
 // Stand-in for the `page/text` block type the seeds use: the concrete text block
@@ -56,6 +68,8 @@ let dbB: NodePgDatabase;
 
 /** Every delete set an `OnDelete` hook was handed, in dispatch order. */
 const handedDeletes: DeletedBlockRow[][] = [];
+/** Every trashed set an `OnTrash` hook was handed, in dispatch order. */
+const handedTrashes: DeletedBlockRow[][] = [];
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "page_forest_test" });
@@ -76,6 +90,11 @@ beforeAll(async () => {
             handedDeletes.push([...rows]);
           },
         }),
+        BlockLifecycle.OnTrash({
+          onTrash: (rows) => {
+            handedTrashes.push([...rows]);
+          },
+        }),
       ],
     },
   ]);
@@ -91,7 +110,9 @@ afterAll(async () => {
 
 beforeEach(async () => {
   handedDeletes.length = 0;
+  handedTrashes.length = 0;
   await t.db.execute(sql`DELETE FROM page_blocks`);
+  await t.db.execute(sql`DELETE FROM trash_entries`);
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -112,7 +133,9 @@ async function seedBlock(args: {
     rank: args.rank,
     data: parseBlockData(
       args.type,
-      args.type === "page" ? { title: args.id, icon: null } : { label: args.label ?? "" },
+      args.type === "page"
+        ? { title: args.id, icon: null }
+        : { label: args.label ?? "" },
     ),
   });
 }
@@ -122,7 +145,17 @@ async function row(id: string) {
   return r;
 }
 
+/** The ids a reader can still see — every delete is a trash, so this excludes flagged rows. */
 async function liveIds(): Promise<string[]> {
+  const rows = await t.db
+    .select({ id: _blocks.id })
+    .from(_blocks)
+    .where(isNull(_blocks.deletedAt));
+  return rows.map((r) => r.id).sort();
+}
+
+/** Every stored id, trashed rows included. */
+async function allIds(): Promise<string[]> {
   const rows = await t.db.select({ id: _blocks.id }).from(_blocks);
   return rows.map((r) => r.id).sort();
 }
@@ -199,7 +232,13 @@ async function interleave(
 
 describe("withPageForest — lost update", () => {
   beforeEach(async () => {
-    await seedBlock({ id: "P", parentId: null, pageId: null, type: "page", rank: "a0" });
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
     await seedBlock({
       id: "x",
       parentId: "P",
@@ -270,11 +309,29 @@ describe("withPageForest — lost update", () => {
 
 // ── 2. Delete-set agreement ────────────────────────────────────────────────
 
-describe("OnDelete — the hook sees what is actually deleted", () => {
-  test("the handed set equals the set the transaction removed, with a writer racing it", async () => {
-    await seedBlock({ id: "P", parentId: null, pageId: null, type: "page", rank: "a0" });
-    await seedBlock({ id: "c1", parentId: "P", pageId: "P", type: "text", rank: "a0" });
-    await seedBlock({ id: "c1a", parentId: "c1", pageId: "P", type: "text", rank: "a0" });
+describe("OnTrash — the hook sees what is actually removed", () => {
+  test("the handed set equals the set the transaction trashed, with a writer racing it", async () => {
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "c1",
+      parentId: "P",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "c1a",
+      parentId: "c1",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
 
     const inserterHasLock = gate();
     const inserterMayCommit = gate();
@@ -320,16 +377,23 @@ describe("OnDelete — the hook sees what is actually deleted", () => {
     await inserter;
     const { value: write } = await deleter;
 
-    expect(handedDeletes).toHaveLength(1);
-    const handed = handedDeletes[0]!.map((r) => r.id).sort();
+    expect(handedTrashes).toHaveLength(1);
+    const handed = handedTrashes[0]!.map((r) => r.id).sort();
 
     // The authoritative agreement: what the hook was told, what the writer
-    // reported, and what the database no longer holds are ONE set.
+    // reported, and what the database no longer shows live are ONE set.
     expect(handed).toEqual(["c1", "c1a", "c1b"]);
     expect(write.deletedRows.map((r) => r.id).sort()).toEqual(handed);
     expect(await liveIds()).toEqual(["P"]);
-    // Only the roots are deleted; the FK cascade reclaims the rest.
+    // …and every one of them is still STORED, flagged under the write's entry:
+    // a delete is a trash, never a hard delete of live content.
+    expect(await allIds()).toEqual(["P", "c1", "c1a", "c1b"]);
+    expect(write.trashedEntryId).not.toBeNull();
+    // The roots the caller would hand to the chokepoint had the set contained a
+    // page; here it did not, so nothing was deferred.
     expect(write.deleteRootIds).toEqual(["c1"]);
+    expect(write.deferredToChokepoint).toBe(false);
+    expect(handedDeletes).toHaveLength(0);
   });
 });
 
@@ -337,10 +401,34 @@ describe("OnDelete — the hook sees what is actually deleted", () => {
 
 describe("withPageForest — multi-page locking", () => {
   test("two writers naming the same pages in OPPOSITE order both complete", async () => {
-    await seedBlock({ id: "P1", parentId: null, pageId: null, type: "page", rank: "a0" });
-    await seedBlock({ id: "P2", parentId: null, pageId: null, type: "page", rank: "a1" });
-    await seedBlock({ id: "x1", parentId: "P1", pageId: "P1", type: "text", rank: "a0" });
-    await seedBlock({ id: "x2", parentId: "P2", pageId: "P2", type: "text", rank: "a0" });
+    await seedBlock({
+      id: "P1",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "P2",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "x1",
+      parentId: "P1",
+      pageId: "P1",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "x2",
+      parentId: "P2",
+      pageId: "P2",
+      type: "text",
+      rank: "a0",
+    });
 
     // Each writer touches BOTH pages while holding both locks. An acquisition
     // order taken from the argument list rather than a sort would put these two
@@ -419,10 +507,22 @@ describe("writeForestTarget — the drag/selection ops", () => {
 
   /** P ▸ [A, B, C, D] — four siblings sharing one ordering space. */
   async function seedRun(): Promise<void> {
-    await seedBlock({ id: "P", parentId: null, pageId: null, type: "page", rank: "a0" });
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
     const ranks = ["a0", "a1", "a2", "a3"];
     for (const [i, id] of ["A", "B", "C", "D"].entries()) {
-      await seedBlock({ id, parentId: "P", pageId: "P", type: "text", rank: ranks[i]! });
+      await seedBlock({
+        id,
+        parentId: "P",
+        pageId: "P",
+        type: "text",
+        rank: ranks[i]!,
+      });
     }
   }
 
@@ -431,56 +531,130 @@ describe("writeForestTarget — the drag/selection ops", () => {
     // Moving {B, D} after C mints ["a3","a4"] from the window ("a2", null) — and
     // `B → "a3"` lands while D still holds "a3". Parking is what makes the final
     // writes collision-free in any order.
-    await commitOp("P", { kind: "bulkMove", ids: ["B", "D"], parentId: "P", afterId: "C" });
+    await commitOp("P", {
+      kind: "bulkMove",
+      ids: ["B", "D"],
+      parentId: "P",
+      afterId: "C",
+    });
     expect(await childIds("P")).toEqual(["A", "C", "B", "D"]);
   });
 
   test("move: positional intent resolves against the row set the server holds", async () => {
     await seedRun();
-    await commitOp("P", { kind: "move", blockId: "D", parentId: "P", targetId: "A", zone: "after" });
+    await commitOp("P", {
+      kind: "move",
+      blockId: "D",
+      parentId: "P",
+      targetId: "A",
+      zone: "after",
+    });
     expect(await childIds("P")).toEqual(["A", "D", "B", "C"]);
     // …and back out to the list's start, the boundary form.
-    await commitOp("P", { kind: "move", blockId: "C", parentId: "P", targetId: null, zone: "before" });
+    await commitOp("P", {
+      kind: "move",
+      blockId: "C",
+      parentId: "P",
+      targetId: null,
+      zone: "before",
+    });
     expect(await childIds("P")).toEqual(["C", "A", "D", "B"]);
   });
 
   test("move: reparenting into a sibling opens it and re-ranks nothing else", async () => {
     await seedRun();
-    await t.db.update(_blocks).set({ expanded: false }).where(eq(_blocks.id, "A"));
-    await commitOp("P", { kind: "move", blockId: "D", parentId: "A", targetId: null, zone: "after" });
+    await t.db
+      .update(_blocks)
+      .set({ expanded: false })
+      .where(eq(_blocks.id, "A"));
+    await commitOp("P", {
+      kind: "move",
+      blockId: "D",
+      parentId: "A",
+      targetId: null,
+      zone: "after",
+    });
     expect(await childIds("A")).toEqual(["D"]);
     expect(await childIds("P")).toEqual(["A", "B", "C"]);
     expect((await row("A"))?.expanded).toBe(true);
   });
 
-  test("delete: ONE op removes every named subtree, and the hook sees that exact set", async () => {
+  test("delete: ONE op trashes every named subtree INLINE under one entry, and the hook sees that exact set", async () => {
     await seedRun();
-    await seedBlock({ id: "A1", parentId: "A", pageId: "P", type: "text", rank: "a0" });
-    await seedBlock({ id: "A1a", parentId: "A1", pageId: "P", type: "text", rank: "a0" });
+    await seedBlock({
+      id: "A1",
+      parentId: "A",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "A1a",
+      parentId: "A1",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
 
     const write = await commitOp("P", { kind: "delete", blockIds: ["A", "C"] });
 
     expect(await liveIds()).toEqual(["B", "D", "P"]);
-    // Roots only — the self-FK cascade reclaims the descendants…
+    // Nothing is hard-deleted: every row is still stored, flagged.
+    expect(await allIds()).toEqual(["A", "A1", "A1a", "B", "C", "D", "P"]);
     expect(write.deleteRootIds.sort()).toEqual(["A", "C"]);
-    // …but the hook is handed the whole AUTHORITATIVE set, reconciled under the
-    // lock: a bulk delete used to run its hooks over a set predicted outside it.
-    expect(handedDeletes).toHaveLength(1);
-    expect(handedDeletes[0]!.map((r) => r.id).sort()).toEqual(["A", "A1", "A1a", "C"]);
-    expect(write.deferredPageDelete).toBe(false);
+    // ONE `page-blocks` entry for the whole gesture — one Cmd+Z restores it —
+    // anchored on the first root and carrying every trashed row's id.
+    expect(write.trashedEntryId).not.toBeNull();
+    const entries = await t.db.select().from(_trashEntries);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.id).toBe(write.trashedEntryId!);
+    expect(entries[0]!.sourceId).toBe(PAGE_BLOCKS_TRASH_SOURCE);
+    expect(entries[0]!.rootEntityId).toBe("A");
+    expect(entries[0]!.meta).toEqual({
+      pageId: "P",
+      rootIds: ["A", "C"],
+      count: 4,
+    });
+    for (const id of ["A", "A1", "A1a", "C"]) {
+      expect((await row(id))?.trashEntryId).toBe(write.trashedEntryId!);
+    }
+    // The OnTrash hook is handed the whole AUTHORITATIVE set, reconciled under
+    // the lock; OnDelete (the hard-delete hook) did not fire.
+    expect(handedTrashes).toHaveLength(1);
+    expect(handedTrashes[0]!.map((r) => r.id).sort()).toEqual([
+      "A",
+      "A1",
+      "A1a",
+      "C",
+    ]);
+    expect(handedDeletes).toHaveLength(0);
+    expect(write.deferredToChokepoint).toBe(false);
   });
 
-  test("delete: a set containing a PAGE row defers, so nothing is hard-deleted here", async () => {
+  test("delete: a set containing a PAGE row defers to the chokepoint, so nothing is trashed here", async () => {
     await seedRun();
-    await seedBlock({ id: "SUB", parentId: "P", pageId: "P", type: "page", rank: "a4" });
+    await seedBlock({
+      id: "SUB",
+      parentId: "P",
+      pageId: "P",
+      type: "page",
+      rank: "a4",
+    });
 
-    const write = await commitOp("P", { kind: "delete", blockIds: ["A", "SUB"] });
+    const write = await commitOp("P", {
+      kind: "delete",
+      blockIds: ["A", "SUB"],
+    });
 
-    // The 2026-07-10 data-loss branch: the caller routes these through the trash
-    // chokepoint instead, and `OnDelete` deliberately did not fire.
-    expect(write.deferredPageDelete).toBe(true);
+    // The 2026-07-10 data-loss branch: a sub-page's content lives under its
+    // own lock, so the caller routes these through the trash chokepoint after
+    // commit; neither hook fired here and nothing was flagged.
+    expect(write.deferredToChokepoint).toBe(true);
+    expect(write.trashedEntryId).toBeNull();
     expect(handedDeletes).toHaveLength(0);
+    expect(handedTrashes).toHaveLength(0);
     expect(await liveIds()).toEqual(["A", "B", "C", "D", "P", "SUB"]);
+    expect(await t.db.select().from(_trashEntries)).toHaveLength(0);
     expect(write.deleteRootIds.sort()).toEqual(["A", "SUB"]);
   });
 });

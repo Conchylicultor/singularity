@@ -363,11 +363,12 @@ await withBrowser(async (h) => {
   // --- Phase 3: Backspace at the stop deletes the DELIMITER -------------------
   // Which is what "strip the mark from the span" means in this model — the
   // markdown-source behavior, without markdown source. The undo half is the other
-  // requirement: `captureBlockDocEdit` fences the strip off the typing run with
-  // `stopCapturing()` on BOTH sides, so ONE Cmd+Z restores the mark and nothing
-  // else. Unlike the sibling script's undo phase, the press count here IS the
-  // claim — it is a property of the fence, not of the `Y.UndoManager`'s 500ms
-  // grouping.
+  // requirement: `recordDocEdit` records the strip as its own data entry,
+  // fenced off the typing run on BOTH sides (the run tracker's `untracked`
+  // scope closes the open run first and ignores the strip), so ONE Cmd+Z
+  // restores the mark and nothing else. Unlike the sibling script's undo phase,
+  // the press count here IS the claim — it is a property of the fence, not of
+  // the 500ms idle grouping.
   const p3 = await enterNewBlock(page, pageId);
   await page.keyboard.type("`zz`", { delay: 25 });
   await page.waitForTimeout(TRANSFORM_MS);

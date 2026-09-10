@@ -1,10 +1,14 @@
 import { and, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
 import { planForestInsert } from "../../core/block-forest";
-import { withMintedIds, type SerializedBlock } from "../../core/serialized-block";
-import type { BlockNode } from "../../core/block-ops";
+import {
+  withMintedIds,
+  type SerializedBlock,
+} from "../../core/serialized-block";
+import { textOf, type BlockNode } from "../../core/block-ops";
 import type { Block } from "../../core/schemas";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
 import { namesField, type BlockFieldChanges } from "../../core/block-diff";
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
@@ -26,13 +30,20 @@ import type { PageForestCtx, PageForestTx } from "./page-forest";
  * There are exactly TWO write shapes, and keeping them distinct is deliberate:
  *
  *  - {@link writeForestTarget} — the op handler's whole write. Reconcile
- *    before→after, persist the diff, dispatch the delete hooks over the
- *    AUTHORITATIVE set.
+ *    before→after, persist the diff, trash the AUTHORITATIVE delete set.
  *  - {@link writeBlockPatch} — the patch handler's whole write. Rank-park, then
  *    the FIELD-SCOPED columns each update names. It must stay field-scoped: a
  *    "hand me the new forest" contract would regress `BlockPatch` back into
  *    whole-row writes, the exact thing
  *    `research/2026-07-28-page-block-write-ownership.md` removed.
+ *
+ * **No hard delete of live content.** Neither write shape ever `DELETE`s a row
+ * the user can see: every delete is a trash — the rows are flagged under ONE
+ * ledger entry per operation (`trashDeletedRows`), and their content docs, ext
+ * side-tables and version history survive until purge. The real `DELETE`
+ * ({@link deleteBlockRoots}) is reachable only from purge and from history
+ * restore's content wipe ({@link deletePageContentRows}).
+ * `research/2026-09-09-page-data-based-text-undo-entries-v2.md` §3.
  */
 
 /** Every column an INSERT may name. `createdAt`/`updatedAt` default in the DB. */
@@ -77,6 +88,11 @@ export async function updateBlockFields(
  * their descendants (and their `page_block_docs`, ext side-tables, and
  * attachment links). Roots only — deleting every id would be redundant, not
  * safer.
+ *
+ * Reachable from PURGE only (`purgeTrashedBlocks`, the trash sources' deferred
+ * hard delete). A user-facing delete never lands here — it is a trash
+ * ({@link trashDeletedRows}), so the content survives for undo and for the
+ * 30-day grace period.
  */
 export async function deleteBlockRoots(
   tx: PageForestTx,
@@ -311,7 +327,9 @@ export async function parkRanks(
       .select({ rank: _blocks.rank })
       .from(_blocks)
       .where(
-        parentId === null ? isNull(_blocks.parentId) : eq(_blocks.parentId, parentId),
+        parentId === null
+          ? isNull(_blocks.parentId)
+          : eq(_blocks.parentId, parentId),
       )
       .orderBy(desc(_blocks.rank))
       .limit(1);
@@ -349,20 +367,36 @@ export function pairChanged(
 /**
  * What a forest write removed from the page's live content.
  *
- * `deferredPageDelete` is a real branch, not a flag to ignore: the reducers and
- * the patch writer already refuse to cascade a `type="page"` row, but a
- * silently-cascading page is the 2026-07-10 data-loss bug, so if one ever lands
- * in the delete set the hard delete is NOT performed here — the caller routes
- * `deleteRootIds` through the trash chokepoint (soft delete + `OnTrash`) after
- * the transaction, and `OnDelete` deliberately did not fire.
+ * Every removal is a TRASH, and the only question is WHERE it happens:
+ *
+ *  - a page-free delete set is trashed INLINE, in this write's own transaction
+ *    (`trashDeletedRows`): one ledger entry in the `page-blocks` source, whose
+ *    id is `trashedEntryId`. The hot path stays one transaction.
+ *  - a delete set containing a `type="page"` row is DEFERRED: a page's own
+ *    content lives in its own `page_id` partition under its own lock, which
+ *    this transaction does not hold, so the caller routes `deleteRootIds`
+ *    through `deleteBlocksSubtree` (which takes every page lock it needs) AFTER
+ *    the transaction. `deferredToChokepoint` is a real branch, not a flag to
+ *    ignore — a page silently cascading here is the 2026-07-10 data-loss bug.
+ *
+ * `OnDelete` fires on neither: nothing here is hard-deleted.
  */
 export interface ForestWriteResult {
   /** Rows removed from the page's live content, AUTHORITATIVE (reconciled under the lock). */
   deletedRows: DeletedBlockRow[];
   /** Deleted ids whose parent is not itself deleted — the cascade roots. */
   deleteRootIds: string[];
-  /** The delete set contained a page row, so it was NOT hard-deleted here. */
-  deferredPageDelete: boolean;
+  /**
+   * The delete set contained a page row, so it was NOT trashed here — the
+   * caller must hand `deleteRootIds` to `deleteBlocksSubtree` after commit.
+   */
+  deferredToChokepoint: boolean;
+  /**
+   * The `page-blocks` ledger entry this write minted for its delete set, or
+   * `null` when the set was empty or deferred. Non-null ⇔ rows were trashed
+   * inline — exactly when the caller has a handle to offer as "Undo".
+   */
+  trashedEntryId: string | null;
 }
 
 /** Deleted ids whose parent is not itself being deleted. */
@@ -371,6 +405,45 @@ function deleteRootsOf(deleted: DeletedBlockRow[]): string[] {
   return deleted
     .filter((r) => r.parentId === null || !ids.has(r.parentId))
     .map((r) => r.id);
+}
+
+/**
+ * The rows a delete set REALLY removes from a forest: the named ids plus every
+ * live descendant of theirs in `forest`, in forest order. A hard delete used to
+ * get this closure for free from the FK cascade; a trash flags exactly the ids
+ * it is handed, so the writer must close the set itself — a descendant left
+ * live under a trashed parent is unreachable by any read and unrestorable by
+ * any entry. The forest is one page's live partition, so the closure cannot
+ * cross into a sub-page's content: a `type="page"` row in it is what defers
+ * the whole set to the chokepoint, which walks across page boundaries.
+ */
+function deleteClosureOf(
+  forest: readonly DeletedBlockRow[],
+  deleteIds: ReadonlySet<string>,
+): DeletedBlockRow[] {
+  const childrenOf = new Map<string, DeletedBlockRow[]>();
+  for (const row of forest) {
+    if (row.parentId === null) continue;
+    const list = childrenOf.get(row.parentId);
+    if (list) list.push(row);
+    else childrenOf.set(row.parentId, [row]);
+  }
+  const removed = new Set<string>();
+  const stack = forest.filter((r) => deleteIds.has(r.id)).map((r) => r.id);
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (removed.has(id)) continue;
+    removed.add(id);
+    for (const child of childrenOf.get(id) ?? []) stack.push(child.id);
+  }
+  return forest
+    .filter((r) => removed.has(r.id))
+    .map((r) => ({
+      id: r.id,
+      type: r.type,
+      pageId: r.pageId,
+      parentId: r.parentId,
+    }));
 }
 
 /**
@@ -393,6 +466,121 @@ export async function runOnDelete(
     const cb = await hook.onDelete(rows, ctx.tx);
     if (cb) ctx.afterCommit(cb);
   }
+}
+
+/**
+ * Run the `OnTrash` hooks over a set of rows that were just flagged. Always
+ * AFTER the trashing transaction commits (queue it on `ctx.afterCommit`): the
+ * hooks do heavy re-derivation (search deindex, backlink edge deletes) that
+ * must not hold the page locks.
+ */
+export async function runOnTrash(
+  rows: readonly DeletedBlockRow[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  for (const hook of BlockLifecycle.OnTrash.getContributions()) {
+    await hook.onTrash(rows);
+  }
+}
+
+/** The `OnRestore` twin of {@link runOnTrash}: after the restoring commit. */
+export async function runOnRestore(
+  rows: readonly DeletedBlockRow[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  for (const hook of BlockLifecycle.OnRestore.getContributions()) {
+    await hook.onRestore(rows);
+  }
+}
+
+/** What a ledger entry is minted from — the arguments of `recordTrashEntry`. */
+export interface TrashEntryArgs {
+  sourceId: string;
+  rootEntityId: string;
+  label: string;
+  meta: Record<string, unknown>;
+}
+
+/** The longest label a `page-blocks` entry carries; longer text is cut. */
+const BLOCK_ENTRY_LABEL_MAX = 80;
+
+/**
+ * The ONE spelling of a `page-blocks` ledger entry — the anchor entry a delete
+ * with no page root mints for its content rows. Shared by both write shapes
+ * and by the chokepoint, so an entry cannot be labelled three ways:
+ *
+ *  - `rootEntityId` = the first delete root;
+ *  - `label` = the first non-empty line of that root's text, cut to
+ *    {@link BLOCK_ENTRY_LABEL_MAX}, else `"N blocks"` (a void block, or an
+ *    empty one);
+ *  - `meta` = `{ pageId, rootIds, count }`, so a future "Deleted blocks" UI can
+ *    say where the rows came from without re-walking anything.
+ */
+export function pageBlocksTrashEntry(args: {
+  pageId: string | null;
+  /** The delete roots, first one first, with their stored `data`. */
+  roots: readonly { id: string; data: unknown }[];
+  /** Every row the operation trashes (roots + descendants). */
+  count: number;
+}): TrashEntryArgs {
+  const first = args.roots[0];
+  if (first === undefined) {
+    throw new Error(
+      "pageBlocksTrashEntry: a trash entry needs at least one root",
+    );
+  }
+  const firstLine =
+    textOf(first)
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? "";
+  const label =
+    firstLine.length === 0
+      ? `${args.count} block${args.count === 1 ? "" : "s"}`
+      : firstLine.length > BLOCK_ENTRY_LABEL_MAX
+        ? `${firstLine.slice(0, BLOCK_ENTRY_LABEL_MAX - 1)}…`
+        : firstLine;
+  return {
+    sourceId: PAGE_BLOCKS_TRASH_SOURCE,
+    rootEntityId: first.id,
+    label,
+    meta: {
+      pageId: args.pageId,
+      rootIds: args.roots.map((r) => r.id),
+      count: args.count,
+    },
+  };
+}
+
+/**
+ * Trash a delete set INLINE, inside the caller's locked transaction: record ONE
+ * ledger entry, flag every row under it, and queue the `OnTrash` hooks for
+ * after commit. Returns the entry id — the caller's undo handle.
+ *
+ * The ledger insert and the flag UPDATE share `ctx.tx`, which is what makes the
+ * ledger invariant ("an entry exists ⇔ at least one row carries its id") hold
+ * by construction on the trash side; `untrashBlocks` holds it on the restore
+ * side by deleting the entry in the same transaction that clears the flags.
+ * `rows` must be non-empty — an entry with no rows would violate it.
+ */
+export async function trashDeletedRows(
+  ctx: PageForestCtx,
+  rows: readonly DeletedBlockRow[],
+  entry: TrashEntryArgs,
+): Promise<string> {
+  if (rows.length === 0) {
+    throw new Error(
+      "trashDeletedRows: refusing to mint a ledger entry with no rows",
+    );
+  }
+  const entryId = await recordTrashEntry(ctx.tx, entry);
+  await trashBlockRoots(
+    ctx.tx,
+    rows.map((r) => r.id),
+    entryId,
+  );
+  ctx.afterCommit(() => runOnTrash(rows));
+  return entryId;
 }
 
 // ---------------------------------------------------------------------------
@@ -426,12 +614,13 @@ export async function writeForestTarget(
 ): Promise<ForestWriteResult> {
   const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
 
-  const deletedSet = new Set(deletedIds);
-  const deletedRows: DeletedBlockRow[] = before
-    .filter((n) => deletedSet.has(n.id))
-    .map((n) => ({ id: n.id, type: n.type, pageId: n.pageId, parentId: n.parentId }));
+  // Closed under descendants (a reducer already removes a subtree whole, so
+  // this is a no-op for it — the closure is the guarantee, not the common path).
+  const deletedRows = deleteClosureOf(before, new Set(deletedIds));
   const deleteRootIds = deleteRootsOf(deletedRows);
-  const deferredPageDelete = deletedRows.some((r) => r.type === PAGE_BLOCK_TYPE);
+  const deferredToChokepoint = deletedRows.some(
+    (r) => r.type === PAGE_BLOCK_TYPE,
+  );
 
   // Vacate every `(parent_id, rank)` pair this diff reassigns before any final
   // key lands, so the per-tuple unique index cannot fire on a transient
@@ -443,10 +632,18 @@ export async function writeForestTarget(
       const prev = beforeById.get(id)!;
       if (!pairChanged(prev, node)) return [];
       return [
-        { id, currentParentId: prev.parentId, parentId: node.parentId, rank: node.rank },
+        {
+          id,
+          currentParentId: prev.parentId,
+          parentId: node.parentId,
+          rank: node.rank,
+        },
       ];
     }),
-    incoming: inserted.map((node) => ({ parentId: node.parentId, rank: node.rank })),
+    incoming: inserted.map((node) => ({
+      parentId: node.parentId,
+      rank: node.rank,
+    })),
   });
 
   const now = new Date();
@@ -478,15 +675,25 @@ export async function writeForestTarget(
     });
   }
 
-  // Page-free hard delete stays inline (cascade clears descendants). A
-  // page-containing set is trashed by the caller via the chokepoint, which runs
-  // its own lifecycle hooks — so `OnDelete` fires on this branch only.
-  if (!deferredPageDelete) {
-    await runOnDelete(ctx, deletedRows);
-    await deleteBlockRoots(ctx.tx, deleteRootIds);
+  // A page-free delete set is trashed inline, under ONE `page-blocks` entry
+  // (the ranks above landed first, so a same-op move + delete is one commit).
+  // A page-containing set is trashed by the caller via the chokepoint, which
+  // takes the sub-pages' own locks and runs the lifecycle hooks itself.
+  let trashedEntryId: string | null = null;
+  if (!deferredToChokepoint && deletedRows.length > 0) {
+    const roots = deleteRootIds.map((id) => beforeById.get(id)!);
+    trashedEntryId = await trashDeletedRows(
+      ctx,
+      deletedRows,
+      pageBlocksTrashEntry({
+        pageId: roots[0]!.pageId,
+        roots,
+        count: deletedRows.length,
+      }),
+    );
   }
 
-  return { deletedRows, deleteRootIds, deferredPageDelete };
+  return { deletedRows, deleteRootIds, deferredToChokepoint, trashedEntryId };
 }
 
 // ---------------------------------------------------------------------------
@@ -495,25 +702,30 @@ export async function writeForestTarget(
 
 /**
  * A `BlockPatch` resolved against the LOCKED forest: which creates are fresh
- * inserts, which restore a trashed row, which re-assert a live one, and which
- * updates/deletes survived the "an update never creates" rule.
+ * inserts, which re-assert a live row, and which updates/deletes survived the
+ * "an update never creates" rule.
  *
- * Resolution is the handler's policy — it owns the trash partition, the
- * page-type transition guard and the notify heuristic. This is the write.
+ * Resolution is the handler's policy — it owns the un-trash prelude (a create
+ * whose id is TRASHED restores its whole ledger entry BEFORE this write, and
+ * is then excluded from every bucket here), the page-type transition guard and
+ * the notify heuristic. This is the write. There is deliberately no "un-trash"
+ * bucket: clearing a row's flags without consuming its ledger entry would leave
+ * an entry that points at nothing, which the ledger invariant forbids.
  */
 export interface ResolvedBlockPatch {
   /** Rows that do not exist yet. */
   inserts: Block[];
   /** Full-row re-asserts onto rows that are already live (a replayed undo). */
   overwrites: Block[];
-  /** Full-row writes onto rows that are currently TRASHED — clears the flags. */
-  untrashes: Block[];
   /** Field-scoped updates; ids are guaranteed live. */
   updates: { id: string; changes: BlockFieldChanges }[];
-  /** The stored rows the updates/overwrites are written onto, keyed by id. */
+  /** The LOCKED page forest (every live row), keyed by id. */
   stored: Map<string, BlockRow>;
-  /** Rows this patch removes from the page's live content. */
-  deletedRows: DeletedBlockRow[];
+  /**
+   * The ids this patch removes. Ids not in `stored` are skipped (already gone);
+   * the writer closes the set under descendants itself.
+   */
+  deleteIds: readonly string[];
 }
 
 /** Every column of a full row — what a create asserts. */
@@ -543,10 +755,16 @@ export async function writeBlockPatch(
   ctx: PageForestCtx,
   patch: ResolvedBlockPatch,
 ): Promise<ForestWriteResult> {
-  const { inserts, overwrites, untrashes, updates, stored } = patch;
+  const { inserts, overwrites, updates, stored } = patch;
 
-  const deleteRootIds = deleteRootsOf(patch.deletedRows);
-  const deferredPageDelete = patch.deletedRows.some((r) => r.type === PAGE_BLOCK_TYPE);
+  const deletedRows = deleteClosureOf(
+    [...stored.values()],
+    new Set(patch.deleteIds),
+  );
+  const deleteRootIds = deleteRootsOf(deletedRows);
+  const deferredToChokepoint = deletedRows.some(
+    (r) => r.type === PAGE_BLOCK_TYPE,
+  );
 
   // Rows whose `(parentId, rank)` pair moves must be parked before the final
   // writes land — see `parkRanks`. This is a blind writer: undoing a swap hands
@@ -558,12 +776,17 @@ export async function writeBlockPatch(
     // A create asserts the whole row, so it always names both halves of the pair.
     ...overwrites.map((b) => ({
       id: b.id,
-      changes: { parentId: b.parentId, rank: b.rank } satisfies BlockFieldChanges,
+      changes: {
+        parentId: b.parentId,
+        rank: b.rank,
+      } satisfies BlockFieldChanges,
     })),
   ].flatMap(({ id, changes }) => {
     const before = stored.get(id)!;
     const next = {
-      parentId: namesField(changes, "parentId") ? changes.parentId! : before.parentId,
+      parentId: namesField(changes, "parentId")
+        ? changes.parentId!
+        : before.parentId,
       rank: namesField(changes, "rank") ? changes.rank!.toJSON() : before.rank,
     };
     if (!pairChanged(before, next)) return [];
@@ -616,25 +839,29 @@ export async function writeBlockPatch(
     if (namesField(changes, "rank")) set.rank = changes.rank!.toJSON();
     if (namesField(changes, "expanded")) set.expanded = changes.expanded!;
     if (namesField(changes, "type")) set.type = changes.type!;
-    if (namesField(changes, "data")) set.data = parseBlockData(type, changes.data);
-    else if (namesField(changes, "type")) set.data = parseBlockData(type, before.data);
+    if (namesField(changes, "data"))
+      set.data = parseBlockData(type, changes.data);
+    else if (namesField(changes, "type"))
+      set.data = parseBlockData(type, before.data);
     await updateBlockFields(ctx.tx, u.id, set);
   }
 
-  // Un-trash a content row: clear its flags and apply the client's row (its old
-  // slot was freed when it was trashed, so no re-park is needed).
-  for (const b of untrashes) {
-    await updateBlockFields(ctx.tx, b.id, {
-      deletedAt: null,
-      trashEntryId: null,
-      ...fullRow(b),
-    });
+  // Same delete branch as `writeForestTarget`: a page-free set is trashed
+  // inline under one `page-blocks` entry; a page-containing set is the
+  // caller's to route through the chokepoint after commit.
+  let trashedEntryId: string | null = null;
+  if (!deferredToChokepoint && deletedRows.length > 0) {
+    const roots = deleteRootIds.map((id) => stored.get(id)!);
+    trashedEntryId = await trashDeletedRows(
+      ctx,
+      deletedRows,
+      pageBlocksTrashEntry({
+        pageId: roots[0]!.pageId,
+        roots,
+        count: deletedRows.length,
+      }),
+    );
   }
 
-  if (!deferredPageDelete) {
-    await runOnDelete(ctx, patch.deletedRows);
-    await deleteBlockRoots(ctx.tx, deleteRootIds);
-  }
-
-  return { deletedRows: patch.deletedRows, deleteRootIds, deferredPageDelete };
+  return { deletedRows, deleteRootIds, deferredToChokepoint, trashedEntryId };
 }

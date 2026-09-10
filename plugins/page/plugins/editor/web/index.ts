@@ -56,6 +56,11 @@ export type {
   CollabHydrationReason,
   CollabHydrationReport,
 } from "./internal/hydration-report";
+export { undoConflictReportSink } from "./internal/undo-conflict-report";
+export type {
+  UndoConflictReason,
+  UndoConflictReport,
+} from "./internal/undo-conflict-report";
 export { PageContentColumn } from "./components/page-content-column";
 export {
   BLOCK_INSET,

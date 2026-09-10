@@ -147,15 +147,16 @@ async function markedTexts(
  * padding but the doc-init gate itself: a freshly split block mounts its editor
  * from the optimistic overlay BEFORE the structural POST creates its
  * `page_blocks` row, and its content `Y.Doc` cannot seed until that row is
- * confirmed (`rowConfirmed` in `use-collab-block-doc.ts`). Typing into that gap
- * races the seed. Two failures observed while this was a blind 700ms sleep, both
- * on a loaded host where the app's own monitor reported `element page-block-doc …
- * took 2705ms`: `**` persisting as a single `*` (a lost keystroke), and
- * `` `c` `` persisting as `c` + a leftover `` ` `` (a merge re-inserting a
- * character the transform had deleted). Those are pre-existing doc-init races,
- * unrelated to inline markdown; waiting on the real signal keeps the spec's
- * SETUP out of them instead of hiding them — a recurrence still surfaces loudly
- * as a phase-1/5 text mismatch.
+ * confirmed (`rowTruth === "present"` lifts the FK gate in
+ * `use-collab-block-doc.ts`). Typing into that gap races the seed. Two failures
+ * observed while this was a blind 700ms sleep, both on a loaded host where the
+ * app's own monitor reported `element page-block-doc … took 2705ms`: `**`
+ * persisting as a single `*` (a lost keystroke), and `` `c` `` persisting as
+ * `c` + a leftover `` ` `` (a merge re-inserting a character the transform had
+ * deleted). Those are pre-existing doc-init races, unrelated to inline
+ * markdown; waiting on the real signal keeps the spec's SETUP out of them
+ * instead of hiding them — a recurrence still surfaces loudly as a phase-1/5
+ * text mismatch.
  */
 async function enterNewBlock(page: Page, pageId: string): Promise<string> {
   const before = await editableIds(page);
@@ -369,8 +370,8 @@ await withBrowser(async (h) => {
   // block. It must not reach the Enter that created the block, which is a
   // separate entry we never pop.
   //
-  // The number of presses that takes is the per-block `Y.UndoManager`'s
-  // `captureTimeout` (500ms) granularity, NOT something this feature specifies:
+  // The number of presses that takes is the run tracker's idle-window (500ms)
+  // granularity, NOT something this feature specifies:
   // one press in a quiet run, but a >500ms gap between two keystrokes of
   // `**again**` splits the typing into several items (observed on a loaded host:
   // one press left `"**a"`). So press until empty, bounded, and report the count
@@ -454,9 +455,10 @@ await withBrowser(async (h) => {
   }
 
   // --- Phase 4: no merge into the format undo item ---------------------------
-  // The TRAILING `stopCapturing()` in `captureBlockDocEdit` closes the format
-  // item, so typing straight after starts a fresh one and a later Cmd+Z removes
-  // only that typing — never the format.
+  // `recordDocEdit` records the format as its own data entry and the run
+  // tracker's `untracked` scope closes around it, so typing straight after
+  // starts a fresh run and a later Cmd+Z removes only that typing — never the
+  // format.
   const mergeId = await enterNewBlock(page, pageId);
   await page.keyboard.type("**x**", { delay: 25 });
   await page.waitForTimeout(300);
@@ -467,8 +469,8 @@ await withBrowser(async (h) => {
     const visible = await blockText(editableOf(page, mergeId));
     r.ok("P4 composed 'x more'", visible === "x more", JSON.stringify(visible));
   }
-  // Undo the trailing typing — one press in a quiet run, more if the
-  // `Y.UndoManager` split it (phase 3's note). The claim is not the press count:
+  // Undo the trailing typing — one press in a quiet run, more if the idle
+  // window split it (phase 3's note). The claim is not the press count:
   // it is that the trailing typing peels off WITHOUT the format, so the text
   // lands on `x` and no state on the way there has a delimiter in it. Had the
   // format merged into the typing item, `**x**` would appear instead.

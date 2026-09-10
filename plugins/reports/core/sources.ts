@@ -47,6 +47,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-adaptive-bar",
   "client-viewport-escape",
   "client-collab-hydration",
+  "client-page-undo-conflict",
   "boot-snapshot",
   "plugin-load",
   "client-storage",

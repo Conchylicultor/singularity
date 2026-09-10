@@ -3,10 +3,12 @@
  *
  * Test-only: nothing in the shipped app imports this module, and it is
  * deliberately NOT re-exported from `core/index.ts`. It lives in `core/` (not
- * next to one of its consumers) because the two suites that need it sit on
+ * next to one of its consumers) because the suites that need it sit on
  * opposite sides of a runtime boundary:
  *
  *  - `core/runs-yjs.test.ts` — the runs ↔ `Y.XmlText` round-trip;
+ *  - `core/runs-splice.test.ts` — the minimal splice's identity and content
+ *    properties over the same generator;
  *  - `web/internal/block-text-extensions.test.ts` — the same corpus read back
  *    through a hydrated Lexical editor (`$xmlBasisContentLength`).
  *

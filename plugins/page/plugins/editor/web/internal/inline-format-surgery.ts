@@ -29,7 +29,7 @@ export { INLINE_FORMAT_TAG };
 // LEXICAL (never hand-rolled `Y.XmlText` deltas) so the `CollaborationPlugin`
 // binding syncs it into the block's `Y.Doc` exactly like typing, and pass
 // `discrete: true` so that transaction lands synchronously inside the caller's
-// `captureBlockDocEdit` window.
+// `recordDocEdit` scope (the run tracker's `untracked`).
 //
 // Two mutations live here, and they are deliberately together rather than in two
 // near-identical modules — both need the same paragraph-local leaf walk, the same
@@ -215,11 +215,12 @@ export function $scanInlineFormat(): InlineFormatPlan | null {
  * matches live state (aborted, nothing changed).
  *
  * `discrete: true` is load-bearing for the same reason as
- * `truncateBlockTextFrom`: the caller wraps this in `captureBlockDocEdit`, whose
- * capture window closes when the wrapper returns, so the binding's Yjs
- * transaction must land synchronously. Lexical's default commit is a microtask,
- * which would leak the edit past the boundary and mis-record it as a plain
- * typing entry — the exact undo bug this affordance exists to avoid.
+ * `truncateBlockTextFrom`: the caller (`recordDocEdit`) runs this inside the run
+ * tracker's `untracked` scope and reads the doc's runs on both sides of it, so
+ * the binding's Yjs transaction must land synchronously. Lexical's default
+ * commit is a microtask, which would leak the edit past the scope and record
+ * it as a plain typing entry — the exact undo bug this affordance exists to
+ * avoid.
  *
  * A consequence of that contract: this MUST be called from outside any
  * `editor.update()`. Inside one, Lexical *enqueues* the update rather than
@@ -446,8 +447,8 @@ function $stripMarkSpan(
  * The `discrete: true` + must-be-called-outside-an-update contract is byte-for-
  * byte {@link applyInlineFormat}'s, including the loud throw — a Lexical command
  * listener runs INSIDE an `editor.update()`, where a nested discrete update is
- * *enqueued rather than committed*, and the caller's `captureBlockDocEdit` window
- * would already have closed. Hence the executor's `queueMicrotask`.
+ * *enqueued rather than committed*, and the caller's `untracked` scope would
+ * already have closed. Hence `recordDocEdit`'s own microtask.
  *
  * **Both sides are walked, from the two leaves the boundary sits between.** A
  * mark lives on exactly ONE side of a boundary (that is what makes it part of the

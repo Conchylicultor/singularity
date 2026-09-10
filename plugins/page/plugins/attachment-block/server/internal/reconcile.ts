@@ -1,6 +1,6 @@
-import { and, eq, isNull, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _blocks } from "@plugins/page/plugins/editor/server";
+import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import { collectBlockAttachmentIds } from "../../core";
 import { blockAttachments } from "./tables";
 import { AttachmentBlock } from "./collectors";
@@ -27,14 +27,9 @@ import { AttachmentBlock } from "./collectors";
 export async function reconcilePageAttachments(pageId: string): Promise<void> {
   const collectors = AttachmentBlock.Collector.getContributions();
   const blocks = await db
-    .select({ id: _blocks.id, data: _blocks.data })
-    .from(_blocks)
-    .where(
-      and(
-        or(eq(_blocks.id, pageId), eq(_blocks.pageId, pageId)),
-        isNull(_blocks.deletedAt),
-      ),
-    );
+    .select({ id: liveBlocks.id, data: liveBlocks.data })
+    .from(liveBlocks)
+    .where(or(eq(liveBlocks.id, pageId), eq(liveBlocks.pageId, pageId)));
   const entries = blocks.map((block) => {
     const ids = new Set(collectBlockAttachmentIds(block.data));
     for (const c of collectors)

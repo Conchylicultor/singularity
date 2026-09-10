@@ -420,7 +420,8 @@ export function translateOpForStore(
   const byAnchor = pageByAnchor(mounts);
   if (v.tag === "patch") {
     const patch = translatePatchForStore(v.patch, patchAnchorPages ?? byAnchor);
-    return patch === v.patch ? v : { tag: "patch", patch };
+    // `restoreIds` is keyed by row id, which translation never rewrites.
+    return patch === v.patch ? v : { ...v, patch };
   }
   if (byAnchor.size === 0) return v;
   let op = v.op;

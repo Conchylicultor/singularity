@@ -285,7 +285,7 @@ export interface BlockHandle<T> {
    * entry.
    *
    * Keeping the origin's id is load-bearing — its per-block content `Y.Doc`, its
-   * `Y.UndoManager` and its registered `BlockFocusHandle` are all keyed by block
+   * content owner and its registered `BlockFocusHandle` are all keyed by block
    * id, so the caret simply stays put. Generic — resolved inside `convertTo`, so
    * every caller (`/` menu, gutter-`+` draft, Turn-into, url-paste) is unchanged.
    */

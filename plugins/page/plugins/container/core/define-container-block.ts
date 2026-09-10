@@ -122,7 +122,7 @@ export interface ContainerBlockOptions<S extends AnyZodObject> {
  *   the origin keeps its id, type, `data` and children and becomes the anchor's
  *   first child. A void type has nowhere to put the retyped block's text, so a
  *   swap would silently drop it; and keeping the origin's id is what keeps the
- *   caret still (its content `Y.Doc`, its `Y.UndoManager` and its registered
+ *   caret still (its content `Y.Doc`, its content owner and its registered
  *   focus handle are all keyed by block id). It is also what lets the
  *   container's first visible line be a heading, a to-do, an image or a code
  *   block.

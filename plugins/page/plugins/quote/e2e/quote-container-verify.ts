@@ -13,8 +13,8 @@
 //     for its REASON too — an unregistered block type 400s here as well.
 //  2. `/quote` WRAPS (`wrapOnConvert: true`): the origin keeps its id and its
 //     `text` type and becomes the quote's first child. Keeping the id is the
-//     load-bearing part — the content `Y.Doc`, the `Y.UndoManager` and the
-//     registered focus handle are all keyed by block id.
+//     load-bearing part — the content `Y.Doc`, its owner and the registered
+//     focus handle are all keyed by block id.
 //  3. ENTER YIELDS A SECOND PARAGRAPH INSIDE THE SAME BAR. Exactly one new row, a
 //     child of the SAME quote, and NO second bar. This is the headline
 //     regression: under the text-bearing model another line meant another quote,

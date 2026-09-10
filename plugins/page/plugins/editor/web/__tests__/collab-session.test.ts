@@ -29,7 +29,8 @@ vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
   return { ...actual, fetchEndpoint: vi.fn() };
 });
 
-const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> = [];
+const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
+  [];
 vi.mock("@plugins/primitives/plugins/networking/web", () => ({
   subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
     wsStatusListeners.push(cb);
@@ -64,7 +65,9 @@ function toBase64(bytes: Uint8Array): string {
 }
 
 function flushMicrotasks(): Promise<void> {
-  return Promise.resolve().then(() => Promise.resolve()).then(() => {});
+  return Promise.resolve()
+    .then(() => Promise.resolve())
+    .then(() => {});
 }
 
 const buildSeedState = () => encodedState(111, "seed");
@@ -83,7 +86,7 @@ afterEach(() => {
 test("deferred end retains an owner with buffered edits and finalizes after the queue drains", async () => {
   const blockId = "blk-session-teardown";
 
-  const session = CollabSession.start(blockId, buildSeedState, true, true);
+  const session = CollabSession.start(blockId, buildSeedState, "present", true);
   const owner = session.owner;
   await owner.provider.connect();
   owner.provider.onServerState(toBase64(encodedState(222, "stored")));
@@ -107,19 +110,25 @@ test("deferred end retains an owner with buffered edits and finalizes after the 
 
   // RETAINED: a new session over the block gets the SAME owner (nothing was
   // destroyed while unflushed bytes remained).
-  const reopened = CollabSession.start(blockId, buildSeedState, true, true);
+  const reopened = CollabSession.start(
+    blockId,
+    buildSeedState,
+    "present",
+    true,
+  );
   expect(reopened.owner).toBe(owner);
   reopened.end();
   await vi.advanceTimersByTimeAsync(1);
 
   // The tab reconnects; the retained provider drains its queue…
   fetchEndpointMock.mockResolvedValue(undefined);
-  for (const cb of [...wsStatusListeners]) cb({ status: "open", url: "ws://x/worktree" });
+  for (const cb of [...wsStatusListeners])
+    cb({ status: "open", url: "ws://x/worktree" });
   await flushMicrotasks();
 
   // …and the owner is finalized push-based: a fresh session now mints a NEW
   // owner (the old one was destroyed once safe).
-  const fresh = CollabSession.start(blockId, buildSeedState, true, true);
+  const fresh = CollabSession.start(blockId, buildSeedState, "present", true);
   expect(fresh.owner).not.toBe(owner);
   fresh.end();
   await vi.advanceTimersByTimeAsync(1);
@@ -133,7 +142,7 @@ test("a spent session's end never decrements the owner that replaced it", async 
   // the owner reference, so there is no id left to resolve wrongly.
   const blockId = "blk-session-identity";
 
-  const first = CollabSession.start(blockId, buildSeedState, true, false);
+  const first = CollabSession.start(blockId, buildSeedState, "present", false);
   const firstOwner = first.owner;
   first.end();
   await vi.advanceTimersByTimeAsync(1);
@@ -142,7 +151,7 @@ test("a spent session's end never decrements the owner that replaced it", async 
   expect(firstOwner.doc.isDestroyed).toBe(true);
 
   // A second editor opens the same block: a genuinely different owner.
-  const second = CollabSession.start(blockId, buildSeedState, true, false);
+  const second = CollabSession.start(blockId, buildSeedState, "present", false);
   expect(second.owner).not.toBe(firstOwner);
 
   // The stale session tears down again (a late cleanup, a double release).
@@ -170,7 +179,12 @@ test("a restart racing an unmount never destroys a replica whose binding is stil
   // destroy() is guarded and silent, so the loss would be invisible).
   const blockId = "blk-session-restart-race";
 
-  const session = CollabSession.start(blockId, buildSeedState, true, false);
+  const session = CollabSession.start(
+    blockId,
+    buildSeedState,
+    "present",
+    false,
+  );
   const replica = session.replicaForBinding();
   replica.connect(); // the binding attached and connected
 
@@ -187,7 +201,9 @@ test("a restart racing an unmount never destroys a replica whose binding is stil
     const root = replica.replicaDoc.get("root", Y.XmlText);
     root.insert(root.length, "!tail");
   }, "binding");
-  expect(session.owner.doc.get("root", Y.XmlText).toString()).toContain("!tail");
+  expect(session.owner.doc.get("root", Y.XmlText).toString()).toContain(
+    "!tail",
+  );
 
   // The outgoing binding finally unmounts: the end finishes push-based, on the
   // disconnect itself — never on a second timer.

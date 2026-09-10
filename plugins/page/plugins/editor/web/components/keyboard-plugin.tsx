@@ -157,8 +157,8 @@ export function KeyboardPlugin({
         case "markStep":
           // Selection only: the caret must NOT move, so the arrow's default is
           // suppressed and the linear offset is left exactly where it was. No
-          // undo capture and no `discrete` — `captureBlockDocEdit` fences
-          // CONTENT mutations, and this changes none.
+          // `recordDocEdit` and no `discrete` — those fence CONTENT mutations
+          // off the typing run, and this changes none.
           event.preventDefault();
           markStep(lexicalEditor, intent.marks, intent.escaped);
           return true;
@@ -210,11 +210,11 @@ export function KeyboardPlugin({
           event.preventDefault();
           // A Lexical command listener runs INSIDE an `editor.update()`, where a
           // nested `discrete: true` update is ENQUEUED rather than committed —
-          // so `recordDocEdit`'s capture window would already have closed by the
-          // time the edit landed, losing the undo boundary AND double-recording
-          // through the mirror. Deferring one microtask is the same contract the
-          // inline autoformat and `split` already keep; `removeMarkSpan` throws
-          // rather than degrade if it is ever violated.
+          // so an edit run here would land outside the run tracker's
+          // `untracked` scope and be recorded as plain typing. `recordDocEdit`
+          // defers the edit one microtask itself (the same contract the inline
+          // autoformat keeps); `removeMarkSpan` throws rather than degrade if
+          // it is ever violated.
           //
           // Deferring means the caret may have moved, hence the plan: snapshot
           // the live position now, re-verify it there, and abort changing
@@ -223,17 +223,15 @@ export function KeyboardPlugin({
             .getEditorState()
             .read(() => $scanMarkSpan(intent.delimiter));
           if (plan === null) return true;
-          queueMicrotask(() => {
-            // Its own undo entry, fenced off the 500ms typing run on both sides:
-            // ONE Cmd+Z restores the mark and nothing else.
-            recordDocEditRef.current(
-              blockIdRef.current,
-              "Remove formatting",
-              () => {
-                removeMarkSpan(lexicalEditor, plan);
-              },
-            );
-          });
+          // Its own undo entry, fenced off the 500ms typing run on both sides:
+          // ONE Cmd+Z restores the mark and nothing else.
+          recordDocEditRef.current(
+            blockIdRef.current,
+            "Remove formatting",
+            () => {
+              removeMarkSpan(lexicalEditor, plan);
+            },
+          );
           return true;
         }
         case "indent":

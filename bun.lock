@@ -4633,6 +4633,10 @@
       "name": "@singularity/plugin-reports-optimistic-divergence",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/page-undo-conflict": {
+      "name": "@singularity/plugin-reports-page-undo-conflict",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/plugin-load-errors": {
       "name": "@singularity/plugin-reports-plugin-load-errors",
       "version": "0.0.1",
@@ -8017,6 +8021,8 @@
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
 
     "@singularity/plugin-reports-optimistic-divergence": ["@singularity/plugin-reports-optimistic-divergence@workspace:plugins/reports/plugins/optimistic-divergence"],
+
+    "@singularity/plugin-reports-page-undo-conflict": ["@singularity/plugin-reports-page-undo-conflict@workspace:plugins/reports/plugins/page-undo-conflict"],
 
     "@singularity/plugin-reports-plugin-load-errors": ["@singularity/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 

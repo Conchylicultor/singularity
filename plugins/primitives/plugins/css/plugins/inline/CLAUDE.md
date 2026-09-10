@@ -113,6 +113,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `reports/collab-hydration`
     - `reports/live-state-stale-drop`
     - `reports/optimistic-divergence`
+    - `reports/page-undo-conflict`
     - `reports/render-loop`
     - `reports/turn-unconfirmed`
     - `reports/viewport-escape`

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { CollaborationPlugin } from "@lexical/react/LexicalCollaborationPlugin";
 import { LexicalCollaboration } from "@lexical/react/LexicalCollaborationContext";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -21,6 +21,7 @@ import {
 } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import {
+  $linearCaretOffset,
   $xmlBasisContentLength,
   serializeBlockRuns,
 } from "../internal/block-text-extensions";
@@ -28,7 +29,7 @@ import {
   collabHydrationReportSink,
   type CollabHydrationReason,
 } from "../internal/hydration-report";
-import type { CapturedBlockDocEdit } from "../internal/collab-session";
+import type { BlockRunsEdit } from "../internal/block-run-tracker";
 import {
   useCollabBlockDoc,
   useLocalCollabBlockDoc,
@@ -244,44 +245,70 @@ function useHydrationVerification(doc: CollabBlockDoc): void {
 }
 
 /**
- * The undo-capture callback handed to whichever content-doc hook runs.
- * Storage-agnostic: 1:1 `Y.UndoManager`-item mirroring applies on both the
- * server and in-memory paths.
+ * The text-history callback handed to whichever content-doc hook runs.
+ * Storage-agnostic: the run tracker closes runs identically on the server and
+ * in-memory paths.
  *
- * Stage 3b: each new coalesced local editing run in this block's content doc
- * (one Y.UndoManager stack item — the seam does the grouping and filters out
- * remote applies, replays, and split/merge-folded edits) is mirrored 1:1 onto
- * the app's single document-level undo stack, interleaved with structural
- * entries in true chronological order.
+ * Each closed local editing run in this block's content doc — the owner's run
+ * tracker does the grouping (a 500 ms idle window) and keeps remote applies,
+ * replays and `untracked` surgeries out — arrives as DATA, the block's runs
+ * before and after it, and is recorded as one entry on the app's single
+ * document-level undo stack, interleaved with structural entries in true
+ * chronological order. The entry holds no pointer into this block's doc, so it
+ * replays whether or not this editor still exists.
+ *
+ * The caret is stamped HERE, because only this component has an editor: the
+ * tracker observes the doc and cannot read a selection. A replay lands in the
+ * binding as a remote edit, so without a recorded offset the caret would drift
+ * to wherever Lexical parks it. `caretAfter` is the live caret at the moment
+ * the run closes — an APPROXIMATION of where the run ended (the idle timer
+ * fires up to 500 ms later, and the caret may have moved without editing in
+ * between). `caretBefore` is the previous run's `caretAfter` for this block
+ * when there is one (runs on one block are recorded in order, so that IS
+ * where the caret stood when this run opened), else the live offset clamped
+ * into the `before` text — the first run of a session has no earlier entry to
+ * read from. The recorder clamps both into the restored text at replay.
  *
  * The `doc → data.text` projection used to be its sibling here. It is now owned
  * by the seam (`use-collab-block-doc.ts`), which holds the canonical doc it
  * reads — this component no longer participates in it at all.
  */
-function useUndoableEditRecorder(
-  block: Block,
-): (edit: CapturedBlockDocEdit) => void {
+function useRunsEditRecorder(): (edit: BlockRunsEdit) => void {
+  const [editor] = useLexicalComposerContext();
   const { recordTextEdit } = useBlockEditor();
-  return useEventCallback((edit: CapturedBlockDocEdit) =>
-    recordTextEdit(block.id, edit),
-  );
+  const lastCaretAfterRef = useRef<number | undefined>(undefined);
+  return useEventCallback((edit: BlockRunsEdit) => {
+    const caretAfter =
+      editor.getEditorState().read($linearCaretOffset) ?? undefined;
+    const caretBefore =
+      lastCaretAfterRef.current ??
+      (caretAfter === undefined
+        ? undefined
+        : Math.min(caretAfter, runsLength(edit.before)));
+    lastCaretAfterRef.current = caretAfter;
+    recordTextEdit({ ...edit, caretBefore, caretAfter });
+  });
 }
 
 /** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
 function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
-  const onUndoableEdit = useUndoableEditRecorder(block);
-  const { projectText, serverIds } = useBlockEditor();
-  // Doc-init FK gate (Stage 4a): a freshly created / split block renders from
-  // the optimistic overlay before its `_blocks` row exists server-side —
-  // seeding then would FK-violate. Gate on AUTHORITATIVE presence; the same
-  // blocks push that commits the row flips this true and unlatches the seed.
-  const rowConfirmed = serverIds.has(block.id);
+  const onRunsEdit = useRunsEditRecorder();
+  const { projectText, rowTruthOf } = useBlockEditor();
+  // What this client knows about the block id in server truth
+  // (`internal/row-truth.ts`). `"present"` lifts the doc-init FK gate (Stage
+  // 4a): a freshly created / split block renders from the optimistic overlay
+  // before its `_blocks` row exists server-side, and seeding then would
+  // FK-violate — the same blocks push that commits the row flips this and
+  // unlatches the seed. `"unseen"` (client-minted, nothing stored) pre-seeds
+  // instantly; `"removed"` (a re-created row whose doc survived its trash)
+  // waits for the subscription like any existing block.
+  const rowTruth = rowTruthOf(block.id);
   const doc = useCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
-    rowConfirmed,
+    rowTruth,
     projectText,
-    onUndoableEdit,
+    onRunsEdit,
   );
   useHydrationGuard(block, doc);
   useHydrationVerification(doc);
@@ -290,13 +317,13 @@ function ServerCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
 
 /** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
 function LocalCollabTextPlugin({ block, textVariant }: CollabTextPluginProps) {
-  const onUndoableEdit = useUndoableEditRecorder(block);
+  const onRunsEdit = useRunsEditRecorder();
   const { projectText } = useBlockEditor();
   const doc = useLocalCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
     projectText,
-    onUndoableEdit,
+    onRunsEdit,
   );
   // The blind-binding arm applies here too (a local doc can outrun its binding
   // the same way); the starved-doc arm self-disables — a local provider reports
@@ -352,13 +379,13 @@ function CollabBinding({
     savedAt: saveState.lastFlushedAt,
   });
 
-  // CollaborationPlugin force-installs its OWN per-block Y.UndoManager on
-  // Lexical's UNDO/REDO commands. This app deliberately has NO per-block
-  // history — undo is the single document-level stack routed through
-  // window-level shortcuts (see editor/CLAUDE.md), which since Stage 3b also
-  // drives text via the seam's Y.UndoManager (recorded above). Swallow the
-  // commands at CRITICAL priority so CollaborationPlugin's manager never
-  // fires; the native keydown still bubbles to the document stack.
+  // CollaborationPlugin force-installs its OWN per-block undo manager (over
+  // the binding's replica) on Lexical's UNDO/REDO commands. This app
+  // deliberately has NO per-block history — undo is the single document-level
+  // stack routed through window-level shortcuts (see editor/CLAUDE.md), which
+  // drives text through the data entries recorded above. Swallow the commands
+  // at CRITICAL priority so CollaborationPlugin's manager never fires; the
+  // native keydown still bubbles to the document stack.
   useEffect(() => {
     const unregisterUndo = editor.registerCommand(
       UNDO_COMMAND,

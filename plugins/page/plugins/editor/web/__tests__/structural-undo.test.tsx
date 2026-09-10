@@ -28,28 +28,51 @@
 //   `block-selection.test.tsx` keeps a `FakeBlockEditor`. Rendering the real
 //   `<BlockEditor>` instead would need every block type registered plus Lexical
 //   and a Yjs binding per row in a layout-less DOM.
-// - An EMPTY plugin list is the right fidelity: block handles only supply
-//   `anchorTypes` (the childless-anchor prune and the split/merge refusals) and
-//   `wrapOnConvert`, none of which any case here exercises.
-// - `merge`/`mergeNext` are deliberately EXCLUDED. With no mounted focus handle,
-//   `mergeBlock` takes the offscreen branch into `appendRunsToBlockDoc`, which
-//   hits two doc endpoints — a different subject, needing endpoint mocks. Merge
-//   and split-with-a-doc-edit belong to `e2e/crdt-undo-verify.ts`.
+// - The plugin list carries ONE handle, the seeded text type: block handles
+//   supply `anchorTypes`, `wrapOnConvert` (neither exercised here) and
+//   `textBearingTypes`, which the merge cases need — see `textHandle`.
+// - `merge`/`mergeNext` run with no mounted focus handle, so `mergeBlock` takes
+//   the OFFSCREEN branch: one `spliceStoredBlockDoc` against the two doc
+//   endpoints, stubbed below with a stored doc that holds the target's row
+//   text. Undo/redo then replay the entry's runs edit onto the ROW (memory mode
+//   with no live owner — `applyBlockRuns`' last arm), which is what lets the
+//   quadruple compare row snapshots. Merge into a MOUNTED target, and split
+//   with a live doc, are `text-undo-entries.test.tsx`'s.
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useEffect, useMemo } from "react";
-import { PluginProvider } from "@plugins/framework/plugins/web-sdk/core";
+import { encodeStateAsUpdate } from "yjs";
+
+vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, fetchEndpoint: vi.fn() };
+});
+
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  blockDocInit,
+  blockDocUpdate,
+} from "@plugins/page/plugins/editor-collab/core";
+import {
+  PluginProvider,
+  type LoadedPlugin,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
+  defineBlock,
   planForestInsert,
+  runsOf,
   runsToXmlText,
+  textBlockSchema,
   withMintedIds,
   type Block,
   type RichText,
   type SerializedBlock,
 } from "../../core";
+import { Editor } from "../slots";
+import { CollabSession } from "../internal/collab-session";
 import {
   projectableRunsOf,
   type DocSourcedRuns,
@@ -59,6 +82,27 @@ import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 
 const PAGE_ID = "page-1";
 const TEXT = "page/text";
+
+// The text-bearing handle for the seeded type. Registered so the reducer's
+// `BlockOpContext.textBearingTypes` names it: with an EMPTY registry that set
+// is empty and `applyMerge` refuses every merge (its target "cannot hold
+// text"), which would make the merge cases here pass vacuously as refused
+// no-ops. Nothing mounts it — the harness renders only `RowsProbe`.
+const textHandle = defineBlock({
+  type: TEXT,
+  schema: textBlockSchema({}),
+  label: "Fixture text",
+  empty: () => ({ text: [] }),
+});
+const plugins = [
+  {
+    id: "undo-fixture",
+    description: "the text block type, for the reducer's context",
+    contributions: [
+      Editor.Block({ id: `${TEXT}-block`, match: TEXT, block: textHandle }),
+    ],
+  } as unknown as LoadedPlugin,
+];
 
 // Readable, reproducible ids: `withMintedIds` and every `newId` site mint
 // through `crypto.randomUUID`, so a counter makes a failure's row set legible.
@@ -71,8 +115,29 @@ Object.defineProperty(globalThis.crypto, "randomUUID", {
 
 beforeEach(() => {
   uuidCounter = 0;
+  installFakeDocServer();
 });
 afterEach(cleanup);
+
+/**
+ * The offscreen merge's two endpoints, stubbed: doc-init answers with a stored
+ * doc holding the same text the TARGET row holds (`"B"`, the target every merge
+ * case here resolves to — first-writer-wins, so the row's own proposal is
+ * ignored), doc-update accepts the delta. Row text and stored text agreeing is
+ * what makes the replay's row write (memory mode, no owner) reproduce exactly
+ * the rows the patch pair restores.
+ */
+function installFakeDocServer(): void {
+  const stored = encodeStateAsUpdate(runsToXmlText([{ text: "B" }]).doc!);
+  let bin = "";
+  for (const byte of stored) bin += String.fromCharCode(byte);
+  const state = btoa(bin);
+  vi.mocked(fetchEndpoint).mockImplementation((async (endpoint: unknown) => {
+    if (endpoint === blockDocInit) return { state };
+    if (endpoint === blockDocUpdate) return undefined;
+    throw new Error("unexpected endpoint");
+  }) as typeof fetchEndpoint);
+}
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -109,6 +174,16 @@ function docRuns(runs: RichText): DocSourcedRuns {
   const doc = runsToXmlText(runs).doc;
   if (!doc) throw new Error("docRuns: seed XmlText is not attached to a doc");
   return projectableRunsOf(doc);
+}
+
+/** The seed bytes a content owner would be handed for `runs` (memory transport). */
+function seedBytesFor(runs: RichText): () => Uint8Array {
+  return () => {
+    const doc = runsToXmlText(runs).doc;
+    if (!doc)
+      throw new Error("seedBytesFor: seed XmlText is not attached to a doc");
+    return encodeStateAsUpdate(doc);
+  };
 }
 
 /** The comparable projection of a row set — order-free (rows are keyed by id). */
@@ -174,9 +249,13 @@ function mount(): Harness {
   const sink: { ctx: Ctx | null } = { ctx: null };
   const initialBlocks = seed();
   render(
-    <PluginProvider plugins={[]}>
+    <PluginProvider plugins={plugins}>
       <UndoRedoProvider>
-        <BlockEditorProvider pageId={PAGE_ID} persist={false} initialBlocks={initialBlocks}>
+        <BlockEditorProvider
+          pageId={PAGE_ID}
+          persist={false}
+          initialBlocks={initialBlocks}
+        >
           <RowsProbe
             onCtx={(next) => {
               sink.ctx = next;
@@ -207,9 +286,21 @@ function mount(): Harness {
 }
 
 /**
+ * Let everything a mutation or a replay deferred land: the offscreen merge
+ * dispatches after its (stubbed) endpoint round trip, a replay dispatches its
+ * patch after `await applyBlockRuns`, and `act` alone does not wait past the
+ * callback's own promise. One macrotask drains every microtask chain in flight.
+ */
+const settle = () =>
+  act(async () => {
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  });
+
+/**
  * The whole invariant, in one place, so a new mutation is a one-line addition.
- * Everything is driven through `await act(async …)`: `undo`/`redo` run their
- * thunks through `void runGuarded(...)` and `split` defers its record a microtask.
+ * Everything is driven through `await act(async …)` plus a settle: `undo`/`redo`
+ * run their thunks as floating promises and `split` defers its record a
+ * microtask.
  */
 async function expectRecorded(run: (h: Harness) => void): Promise<void> {
   const h = mount();
@@ -217,6 +308,7 @@ async function expectRecorded(run: (h: Harness) => void): Promise<void> {
   expect(h.ctx().canUndo).toBe(false);
 
   await act(async () => run(h));
+  await settle();
   const after = snapshot(h.ctx().blocks);
 
   // (1) The forward mutation actually changed the document. Without this the
@@ -227,10 +319,12 @@ async function expectRecorded(run: (h: Harness) => void): Promise<void> {
 
   // (3) Undo restores the prior row set EXACTLY.
   await act(async () => h.ctx().undo());
+  await settle();
   expect(snapshot(h.ctx().blocks)).toEqual(before);
 
   // (4) Redo reproduces the post-mutation row set.
   await act(async () => h.ctx().redo());
+  await settle();
   expect(snapshot(h.ctx().blocks)).toEqual(after);
 }
 
@@ -239,10 +333,7 @@ async function expectRecorded(run: (h: Harness) => void): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const RECORDED: [name: string, run: (h: Harness) => void][] = [
-  [
-    "paste",
-    (h) => h.ctx().paste({ blocks: [node("P")], afterId: h.id("B") }),
-  ],
+  ["paste", (h) => h.ctx().paste({ blocks: [node("P")], afterId: h.id("B") })],
   [
     // TWO roots on purpose: one gesture is ONE `duplicate` op however many roots
     // it clones, so a per-root dispatch (N entries, N undos) fails the quadruple
@@ -253,7 +344,11 @@ const RECORDED: [name: string, run: (h: Harness) => void][] = [
   [
     "bulkMove",
     (h) =>
-      h.ctx().bulkMove({ ids: [h.id("C")], parentId: h.id("A"), afterId: h.id("A1") }),
+      h.ctx().bulkMove({
+        ids: [h.id("C")],
+        parentId: h.id("A"),
+        afterId: h.id("A1"),
+      }),
   ],
   ["bulkDelete", (h) => h.ctx().bulkDelete([h.id("B")])],
   ["move", (h) => h.ctx().move(h.id("C"), "before", h.id("B"))],
@@ -273,15 +368,33 @@ const RECORDED: [name: string, run: (h: Harness) => void][] = [
     "convertTo",
     (h) => h.ctx().makeBlockAPI(h.id("B")).convertTo("page/heading-1", {}),
   ],
-  [
-    "update",
-    (h) => h.ctx().makeBlockAPI(h.id("B")).update({ checked: true }),
-  ],
+  ["update", (h) => h.ctx().makeBlockAPI(h.id("B")).update({ checked: true })],
   [
     // Enter at offset 0 of a non-empty block: the identity-preserving arm, which
     // records a PLAIN structural entry (no content-doc edit to fold in).
     "split at offset 0",
-    (h) => h.ctx().makeBlockAPI(h.id("B")).split(0, { runs: [{ text: "B" }] }),
+    (h) =>
+      h
+        .ctx()
+        .makeBlockAPI(h.id("B"))
+        .split(0, { runs: [{ text: "B" }] }),
+  ],
+  [
+    // Backspace at the start of C merges it up into B (its previous visible
+    // line). B has no mounted editor here, so the append goes to the stored
+    // doc (stubbed) and the entry carries it as a runs edit on B.
+    "merge (offscreen target)",
+    (h) =>
+      h
+        .ctx()
+        .makeBlockAPI(h.id("C"))
+        .merge({ runs: [{ text: "C" }] }),
+  ],
+  [
+    // Delete at the end of B pulls C up into B — the same merge from the
+    // other originating block.
+    "mergeNext (offscreen target)",
+    (h) => h.ctx().makeBlockAPI(h.id("B")).mergeNext(),
   ],
 ];
 
@@ -310,7 +423,9 @@ describe("mutations that deliberately stay off the stack", () => {
   it("projectText changes the rows but records nothing (Yjs owns text history)", async () => {
     const h = mount();
     const before = snapshot(h.ctx().blocks);
-    await act(async () => h.ctx().projectText(h.id("B"), docRuns([{ text: "typed" }])));
+    await act(async () =>
+      h.ctx().projectText(h.id("B"), docRuns([{ text: "typed" }])),
+    );
     expect(snapshot(h.ctx().blocks)).not.toEqual(before);
     expect(h.ctx().canUndo).toBe(false);
   });
@@ -324,5 +439,51 @@ describe("mutations that deliberately stay off the stack", () => {
     await act(async () => h.ctx().indentBlocks([h.id("A")]));
     expect(snapshot(h.ctx().blocks)).toEqual(before);
     expect(h.ctx().canUndo).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The reverse patch pins a removed row's text to its DOC, not its lagged row
+// ---------------------------------------------------------------------------
+
+describe("undo of a delete restores the row with its content doc's runs", () => {
+  it("pins the recreated row's data.text to the live owner's runsNow(), not the ~1 s-lagged projection", async () => {
+    const h = mount();
+    const id = h.id("B");
+    // A live content owner for B whose doc holds MORE than the row does: the
+    // `data.text` projection is debounced ~1 s, so at delete time the row still
+    // says "B" while the doc already says "B typed". Memory transport, so the
+    // seed IS the doc's whole content and the owner is authoritative at once.
+    const session = CollabSession.start(
+      id,
+      seedBytesFor([{ text: "B typed" }]),
+      "present",
+      false,
+    );
+    await session.owner.provider.connect();
+    const live = session.owner.runsNow();
+    const rowText = (row: Block | undefined): string =>
+      runsOf((row?.data as { text?: unknown } | null)?.text)
+        .map((r) => r.text)
+        .join("");
+    expect(live.map((r) => r.text).join("")).toBe("B typed");
+    expect(rowText(h.ctx().blocks.find((b) => b.id === id))).toBe("B");
+
+    await act(async () => h.ctx().bulkDelete([id]));
+    expect(h.ctx().blocks.some((b) => b.id === id)).toBe(false);
+    await act(async () => h.ctx().undo());
+
+    // The row is back under its original id, carrying what the DOC held — the
+    // value the projection would have written had it flushed, and the seed of
+    // the block's doc wherever that doc did not survive.
+    const restored = h.ctx().blocks.find((b) => b.id === id);
+    expect(restored).toBeDefined();
+    expect(rowText(restored)).toBe("B typed");
+    expect(runsOf((restored?.data as { text?: unknown }).text)).toEqual(live);
+
+    session.end();
+    await act(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 1));
+    });
   });
 });

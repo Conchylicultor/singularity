@@ -32,6 +32,8 @@ import {
 
 /** A few stable, ascending rank keys for readable fixtures. */
 const a = Rank.between(null, null).toJSON();
+/** No restores: every create in the patch is a client-minted row. */
+const none: ReadonlySet<string> = new Set();
 function after(prev: string): string {
   return Rank.between(Rank.from(prev), null).toJSON();
 }
@@ -338,14 +340,18 @@ describe("applyPatch", () => {
       mk("A", null, a, { text: "a" }),
       mk("B", null, after(a), { text: "b" }),
     ];
-    const out = applyPatch(blocks, {
-      creates: [
-        mk("A", null, a, { text: "A!" }),
-        mk("C", null, after(after(a)), { text: "c" }),
-      ],
-      updates: [],
-      deleteIds: ["B"],
-    });
+    const out = applyPatch(
+      blocks,
+      {
+        creates: [
+          mk("A", null, a, { text: "A!" }),
+          mk("C", null, after(after(a)), { text: "c" }),
+        ],
+        updates: [],
+        deleteIds: ["B"],
+      },
+      none,
+    );
     expect(out.map((b) => b.id).sort()).toEqual(["A", "C"]);
     expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
       "A!",
@@ -356,11 +362,15 @@ describe("applyPatch", () => {
     const blocks = [
       mk("A", "P", a, { text: "keep me", type: "callout", expanded: true }),
     ];
-    const out = applyPatch(blocks, {
-      creates: [],
-      updates: [{ id: "A", changes: { expanded: false } }],
-      deleteIds: [],
-    });
+    const out = applyPatch(
+      blocks,
+      {
+        creates: [],
+        updates: [{ id: "A", changes: { expanded: false } }],
+        deleteIds: [],
+      },
+      none,
+    );
     const row = out[0]!;
     expect(row.expanded).toBe(false);
     // Everything the patch did not name is untouched — the whole point.
@@ -375,11 +385,15 @@ describe("applyPatch", () => {
       mk("C1", "P", after(a)),
       mk("C2", "C1", after(after(a))),
     ];
-    const out = applyPatch(blocks, {
-      creates: [],
-      updates: [],
-      deleteIds: ["P"],
-    });
+    const out = applyPatch(
+      blocks,
+      {
+        creates: [],
+        updates: [],
+        deleteIds: ["P"],
+      },
+      none,
+    );
     expect(out.length).toBe(0);
   });
 
@@ -389,11 +403,15 @@ describe("applyPatch", () => {
     // child already gone from the subtree — reading pre-patch parentage here
     // instead swallowed every promoted child.
     const blocks = [mk("P", null, a, { expanded: true }), mk("C", "P", a)];
-    const out = applyPatch(blocks, {
-      creates: [],
-      updates: [{ id: "C", changes: { parentId: null } }],
-      deleteIds: ["P"],
-    });
+    const out = applyPatch(
+      blocks,
+      {
+        creates: [],
+        updates: [{ id: "C", changes: { parentId: null } }],
+        deleteIds: ["P"],
+      },
+      none,
+    );
     expect(out.map((b) => b.id)).toEqual(["C"]);
     expect(out[0]!.parentId).toBe(null);
   });
@@ -407,15 +425,15 @@ describe("isPatchReflected", () => {
       updates: [],
       deleteIds: ["B"],
     };
-    expect(isPatchReflected(base, patch)).toBe(true);
+    expect(isPatchReflected(base, patch, none)).toBe(true);
     // A create whose column differs ⇒ not yet reflected.
-    expect(isPatchReflected([mk("A", null, a, { type: "text" })], patch)).toBe(
-      false,
-    );
+    expect(
+      isPatchReflected([mk("A", null, a, { type: "text" })], patch, none),
+    ).toBe(false);
     // A delete id still present ⇒ not reflected.
-    expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(
-      false,
-    );
+    expect(
+      isPatchReflected([...base, mk("B", null, after(a))], patch, none),
+    ).toBe(false);
   });
 
   // Confirmation is deliberately data-BLIND (server truth legitimately differs:
@@ -428,11 +446,11 @@ describe("isPatchReflected", () => {
       updates: [{ id: "A", changes: { data: { text: "projected" } } }],
       deleteIds: [],
     };
-    expect(isPatchReflected([mk("A", null, a, { text: "stale" })], patch)).toBe(
-      true,
-    );
     expect(
-      isPatchReflected([mk("A", null, a, { text: "projected" })], patch),
+      isPatchReflected([mk("A", null, a, { text: "stale" })], patch, none),
+    ).toBe(true);
+    expect(
+      isPatchReflected([mk("A", null, a, { text: "projected" })], patch, none),
     ).toBe(true);
   });
 
@@ -468,12 +486,14 @@ describe("isPatchReflected", () => {
     };
     // Row present, text stale — the write demonstrably has NOT landed.
     expect(
-      isPatchReflected([mk("A", null, a, { text: "stale" })], dataOnly),
+      isPatchReflected([mk("A", null, a, { text: "stale" })], dataOnly, none),
     ).toBe(true);
     // Row absent entirely: the update is skipped, so nothing is left to fail.
-    expect(isPatchReflected([mk("B", null, after(a))], dataOnly)).toBe(true);
+    expect(isPatchReflected([mk("B", null, after(a))], dataOnly, none)).toBe(
+      true,
+    );
     // The strongest form: an EMPTY snapshot confirms it too.
-    expect(isPatchReflected([], dataOnly)).toBe(true);
+    expect(isPatchReflected([], dataOnly, none)).toBe(true);
   });
 
   test("only the NAMED fields are compared", () => {
@@ -487,20 +507,24 @@ describe("isPatchReflected", () => {
       isPatchReflected(
         [mk("A", "Z", a, { expanded: true, type: "quote", text: "x" })],
         patch,
+        none,
       ),
     ).toBe(true);
     expect(
-      isPatchReflected([mk("A", "Z", a, { expanded: false })], patch),
+      isPatchReflected([mk("A", "Z", a, { expanded: false })], patch, none),
     ).toBe(false);
   });
 
   test("applyOverlayOp on a patch that the base already reflects throws", () => {
     const base = [mk("A", null, a)];
-    const overlay = buildPatchOverlayOp({
-      creates: [mk("A", null, a)],
-      updates: [],
-      deleteIds: [],
-    });
+    const overlay = buildPatchOverlayOp(
+      {
+        creates: [mk("A", null, a)],
+        updates: [],
+        deleteIds: [],
+      },
+      { restoreIds: none },
+    );
     expect(() => applyOverlayOp(base, overlay)).toThrow(OpNoLongerApplies);
   });
 });
@@ -526,22 +550,25 @@ describe("isPatchAbsorbed", () => {
   };
 
   test("a data-only patch is NOT absorbed, though it IS reflected", () => {
-    expect(isPatchAbsorbed(base, dataOnly)).toBe(false);
+    expect(isPatchAbsorbed(base, dataOnly, none)).toBe(false);
     // The confirmation predicate stays data-blind on purpose (server truth
     // legitimately differs — `parseBlockData` normalization, a lagging
     // `data.text` projection), which is why it cannot double as the guard.
-    expect(isPatchReflected(base, dataOnly)).toBe(true);
+    expect(isPatchReflected(base, dataOnly, none)).toBe(true);
   });
 
   test("applyOverlayOp APPLIES a data-only patch instead of swallowing it", () => {
-    const out = applyOverlayOp(base, buildPatchOverlayOp(dataOnly));
+    const out = applyOverlayOp(
+      base,
+      buildPatchOverlayOp(dataOnly, { restoreIds: none }),
+    );
     expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
       "new",
     );
     // …and re-applying it onto the result is a genuine no-op ⇒ guard trips.
-    expect(() => applyOverlayOp(out, buildPatchOverlayOp(dataOnly))).toThrow(
-      OpNoLongerApplies,
-    );
+    expect(() =>
+      applyOverlayOp(out, buildPatchOverlayOp(dataOnly, { restoreIds: none })),
+    ).toThrow(OpNoLongerApplies);
   });
 
   test("`data` equality is by VALUE, not reference (a re-serialized identical payload is absorbed)", () => {
@@ -550,7 +577,7 @@ describe("isPatchAbsorbed", () => {
       updates: [{ id: "A", changes: { data: { text: "old" } } }],
       deleteIds: [],
     };
-    expect(isPatchAbsorbed(base, same)).toBe(true);
+    expect(isPatchAbsorbed(base, same, none)).toBe(true);
   });
 
   test("the structural cases behave identically under both predicates", () => {
@@ -620,8 +647,8 @@ describe("isPatchAbsorbed", () => {
       },
     ];
     for (const { patch, expected } of cases) {
-      expect(isPatchAbsorbed(base, patch)).toBe(expected);
-      expect(isPatchReflected(base, patch)).toBe(expected);
+      expect(isPatchAbsorbed(base, patch, none)).toBe(expected);
+      expect(isPatchReflected(base, patch, none)).toBe(expected);
     }
   });
 
@@ -631,16 +658,16 @@ describe("isPatchAbsorbed", () => {
       updates: [{ id: "GONE", changes: { data: { text: "projected" } } }],
       deleteIds: [],
     };
-    expect(isPatchAbsorbed(base, projected)).toBe(true);
-    expect(isPatchReflected(base, projected)).toBe(true);
+    expect(isPatchAbsorbed(base, projected, none)).toBe(true);
+    expect(isPatchReflected(base, projected, none)).toBe(true);
     // The same row as a CREATE should have been created ⇒ neither is satisfied.
     const created = {
       creates: [mk("GONE", null, a, { text: "projected" })],
       updates: [],
       deleteIds: [],
     };
-    expect(isPatchAbsorbed(base, created)).toBe(false);
-    expect(isPatchReflected(base, created)).toBe(false);
+    expect(isPatchAbsorbed(base, created, none)).toBe(false);
+    expect(isPatchReflected(base, created, none)).toBe(false);
   });
 
   test("a PRESENT row's data still counts for the guard (the projection applies optimistically)", () => {
@@ -649,8 +676,8 @@ describe("isPatchAbsorbed", () => {
       updates: [{ id: "A", changes: { data: { text: "projected" } } }],
       deleteIds: [],
     };
-    expect(isPatchAbsorbed(base, projected)).toBe(false);
-    expect(isPatchReflected(base, projected)).toBe(true);
+    expect(isPatchAbsorbed(base, projected, none)).toBe(false);
+    expect(isPatchReflected(base, projected, none)).toBe(true);
   });
 });
 
@@ -673,6 +700,7 @@ describe("updates never create", () => {
     const out = applyPatch(
       [mk("A", null, a, { text: "old" }), mk("B", null, after(a))],
       projected,
+      none,
     );
     expect(out.map((b) => b.id)).toEqual(["A", "B"]);
     expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe(
@@ -682,21 +710,27 @@ describe("updates never create", () => {
 
   test("applyPatch NEVER re-creates an absent row (no resurrection)", () => {
     // Base without A — e.g. a restore replaced the page's rows.
-    const out = applyPatch([mk("B", null, after(a))], projected);
+    const out = applyPatch([mk("B", null, after(a))], projected, none);
     expect(out.map((b) => b.id)).toEqual(["B"]);
   });
 
   test("isPatchReflected treats an absent row as vacuously absorbed (confirms, never sticks)", () => {
     // Row gone from server truth: the server writer skipped the update, so the
     // op must confirm against this base instead of replaying forever.
-    expect(isPatchReflected([mk("B", null, after(a))], projected)).toBe(true);
+    expect(isPatchReflected([mk("B", null, after(a))], projected, none)).toBe(
+      true,
+    );
     // Same row as a CREATE: NOT reflected (the row should have been created).
     expect(
-      isPatchReflected([mk("B", null, after(a))], {
-        creates: [mk("A", null, a, { text: "projected" })],
-        updates: [],
-        deleteIds: [],
-      }),
+      isPatchReflected(
+        [mk("B", null, after(a))],
+        {
+          creates: [mk("A", null, a, { text: "projected" })],
+          updates: [],
+          deleteIds: [],
+        },
+        none,
+      ),
     ).toBe(false);
   });
 
@@ -706,8 +740,115 @@ describe("updates never create", () => {
       updates: [{ id: "A", changes: { parentId: "B" } }],
       deleteIds: [],
     };
-    expect(isPatchReflected([mk("A", null, a)], moved)).toBe(false);
-    expect(isPatchReflected([mk("A", "B", a)], moved)).toBe(true);
+    expect(isPatchReflected([mk("A", null, a)], moved, none)).toBe(false);
+    expect(isPatchReflected([mk("A", "B", a)], moved, none)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A create of a row this client has seen in server truth is a RESTORE.
+//
+// Every block delete is a trash, and a patch `create` whose id matches a
+// trashed row restores the STORED row: the server keeps the row's own fields
+// (re-ranked after a slot occupant, reparented to the root if its parent is
+// gone, expanded if the user toggled it between the delete and the undo) and
+// ignores the create's copy. So a restore asserts PRESENCE only, under both
+// predicates — otherwise the op could never confirm (no later push arrives:
+// the restore ran in its own transaction and the patch wrote nothing) and the
+// overlay would keep painting the recorded fields over the server's row. The
+// ids come from `restoreIds` on the patch variant, derived at dispatch from
+// `RowTruth`; a client-minted id is never in the set and keeps the full
+// comparison.
+// ---------------------------------------------------------------------------
+
+describe("restore creates are presence-only", () => {
+  // Recorded at delete time: a collapsed toggle T at rank `a` under the root,
+  // with its child B.
+  const recordedT = mk("T", null, a, { type: "toggle", expanded: false });
+  const recordedB = mk("B", "T", a, { text: "hidden child" });
+  const undoDelete = {
+    creates: [recordedT, recordedB],
+    updates: [],
+    deleteIds: [],
+  };
+  const restoring: ReadonlySet<string> = new Set(["T", "B"]);
+  // What the server restored: T expanded (toggled meanwhile), re-ranked after
+  // a sibling that took its slot, and B reparented to the root.
+  const restoredT = mk("T", null, after(a), { type: "toggle", expanded: true });
+  const restoredB = mk("B", null, after(after(a)), { text: "hidden child" });
+  const serverTruth = [mk("S", null, a), restoredT, restoredB];
+
+  test("a restore create is reflected when the row is present with DIFFERENT expanded / rank / parentId", () => {
+    expect(isPatchReflected(serverTruth, undoDelete, restoring)).toBe(true);
+    // Absent is still absent: presence is the one thing a restore asserts.
+    expect(isPatchReflected([mk("S", null, a)], undoDelete, restoring)).toBe(
+      false,
+    );
+    expect(
+      isPatchReflected([mk("S", null, a), restoredT], undoDelete, restoring),
+    ).toBe(false);
+  });
+
+  test("a client-minted create with different fields is still NOT reflected", () => {
+    // Same patch, same snapshot, but nothing says these ids are restores: the
+    // full comparison stands, and the differing rows do not confirm it.
+    expect(isPatchReflected(serverTruth, undoDelete, none)).toBe(false);
+    // Only one of the two is a restore: the other keeps its field comparison.
+    expect(isPatchReflected(serverTruth, undoDelete, new Set(["T"]))).toBe(
+      false,
+    );
+    // The genuine create confirms exactly when its row matches.
+    expect(
+      isPatchReflected(
+        [mk("S", null, a), restoredT, recordedB],
+        undoDelete,
+        new Set(["T"]),
+      ),
+    ).toBe(true);
+  });
+
+  test("the apply-guard drops a restore op whose row is present (the server's row shows through)", () => {
+    const op = buildPatchOverlayOp(undoDelete, { restoreIds: restoring });
+    expect(isPatchAbsorbed(serverTruth, undoDelete, restoring)).toBe(true);
+    expect(() => applyOverlayOp(serverTruth, op)).toThrow(OpNoLongerApplies);
+    // The same rows judged as genuine creates would be re-asserted whole.
+    expect(isPatchAbsorbed(serverTruth, undoDelete, none)).toBe(false);
+    const clobbered = applyOverlayOp(
+      serverTruth,
+      buildPatchOverlayOp(undoDelete, { restoreIds: none }),
+    );
+    expect(clobbered.find((b) => b.id === "T")!.expanded).toBe(false);
+  });
+
+  test("while the row is ABSENT a restore renders its recorded copy; once PRESENT the present row wins", () => {
+    // The optimistic render before the server answers: the recorded rows.
+    const optimistic = applyPatch([mk("S", null, a)], undoDelete, restoring);
+    expect(optimistic.map((b) => b.id)).toEqual(["S", "T", "B"]);
+    expect(optimistic.find((b) => b.id === "T")!.expanded).toBe(false);
+    // A mixed patch replayed over a base that already holds the restored row
+    // (the guard did not fire because the update below has not landed): the
+    // restore must not paint its recorded copy over the server's row.
+    const mixed = {
+      ...undoDelete,
+      updates: [{ id: "S", changes: { expanded: true } }],
+    };
+    const out = applyPatch(serverTruth, mixed, restoring);
+    expect(out.find((b) => b.id === "T")).toBe(restoredT);
+    expect(out.find((b) => b.id === "B")).toBe(restoredB);
+    expect(out.find((b) => b.id === "S")!.expanded).toBe(true);
+  });
+
+  test("a restore's ids still count as targets for the ordering rule", () => {
+    const restore = buildPatchOverlayOp(undoDelete, { restoreIds: restoring });
+    const toggleT = buildPatchOverlayOp(
+      {
+        creates: [],
+        updates: [{ id: "T", changes: { expanded: true } }],
+        deleteIds: [],
+      },
+      { restoreIds: none },
+    );
+    expect(sameOverlayTarget(restore, toggleT)).toBe(true);
   });
 });
 
@@ -723,18 +864,24 @@ describe("updates never create", () => {
 
 describe("sameOverlayTarget", () => {
   const patchOn = (ids: string[], deleteIds: string[] = []): BlockOverlayOp =>
-    buildPatchOverlayOp({
-      creates: ids.map((id) => mk(id, null, a)),
-      updates: [],
-      deleteIds,
-    });
+    buildPatchOverlayOp(
+      {
+        creates: ids.map((id) => mk(id, null, a)),
+        updates: [],
+        deleteIds,
+      },
+      { restoreIds: none },
+    );
 
   test("an update's target counts as a written row", () => {
-    const upd = buildPatchOverlayOp({
-      creates: [],
-      updates: [{ id: "A", changes: { expanded: true } }],
-      deleteIds: [],
-    });
+    const upd = buildPatchOverlayOp(
+      {
+        creates: [],
+        updates: [{ id: "A", changes: { expanded: true } }],
+        deleteIds: [],
+      },
+      { restoreIds: none },
+    );
     expect(sameOverlayTarget(upd, patchOn(["A"]))).toBe(true);
     expect(sameOverlayTarget(upd, patchOn(["B"]))).toBe(false);
   });
@@ -769,11 +916,14 @@ describe("sameOverlayTarget", () => {
       rows,
     ).vars;
     // The projection patch: a `data`-only update on the minted block alone.
-    const projection = buildPatchOverlayOp({
-      creates: [],
-      updates: [{ id: "NEW", changes: { data: { text: "typed" } } }],
-      deleteIds: [],
-    });
+    const projection = buildPatchOverlayOp(
+      {
+        creates: [],
+        updates: [{ id: "NEW", changes: { data: { text: "typed" } } }],
+        deleteIds: [],
+      },
+      { restoreIds: none },
+    );
     expect(sameOverlayTarget(split, projection)).toBe(true);
     // …but the split also rewrote "A", which the patch never mentions, so the
     // match is an overlap and not containment in either direction.
@@ -835,11 +985,14 @@ describe("predictOp targets", () => {
     return v;
   };
   const patchOn = (id: string): BlockOverlayOp =>
-    buildPatchOverlayOp({
-      creates: [],
-      updates: [{ id, changes: { data: { text: "typed" } } }],
-      deleteIds: [],
-    });
+    buildPatchOverlayOp(
+      {
+        creates: [],
+        updates: [{ id, changes: { data: { text: "typed" } } }],
+        deleteIds: [],
+      },
+      { restoreIds: none },
+    );
 
   // The residue case the measurement exists for. `merge{blockId: M}` names only
   // M, but `applyMerge` writes the previous visible line T as well (T's runs

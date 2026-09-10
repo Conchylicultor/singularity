@@ -34,18 +34,24 @@ import type { Provider, ProviderAwareness } from "@lexical/yjs";
  * - replica `update` → `Y.applyUpdate(canonical, update, origin)`.
  *
  * The transaction origin is passed through VERBATIM. Origin passthrough (not
- * rewriting to a relay marker) is load-bearing — it preserves every existing
- * origin-discipline consumer unchanged:
+ * rewriting to a relay marker) is load-bearing: every consumer on either side
+ * classifies a transaction by its origin, and the set of origins that reach a
+ * canonical doc is a STATED three — the transport provider (a server apply or
+ * a seed), `TEXT_REPLAY_ORIGIN` (a data undo entry replaying,
+ * `block-text-write.ts`), and the binding, relayed from here (every Lexical
+ * edit). What the passthrough preserves, per consumer:
  *
- * - the binding's own `origin !== binding` check (a replica's binding origin
- *   arriving at another replica is "not me" → processed);
- * - `isFromUndoManger` (`origin instanceof UndoManager`) selection handling
- *   when the canonical `Y.UndoManager` replays into the replicas;
- * - the canonical UndoManager's dynamic tracked-origin learning (a relayed
- *   binding origin is "not provider, not UndoManager" → tracked, exactly as a
- *   direct binding on the canonical was);
+ * - the binding's own `origin !== binding` check on the replica side: a
+ *   canonical apply under the provider or the replay origin arrives at the
+ *   replica as "not me" → rendered, while a replica's OWN binding origin
+ *   echoing back is skipped by the latch below before the check even runs;
+ * - the canonical run tracker (`block-run-tracker.ts`): a relayed binding
+ *   origin is "not the provider, not the replay origin" → a local edit that
+ *   opens or extends a typing run, exactly as a direct binding on the
+ *   canonical would; a provider origin mid-run aborts the run; the replay
+ *   origin opens none. Nothing is learned — the rule is written down;
  * - the transport provider's flush trigger (`origin !== provider`), so
- *   relayed local edits still POST and relayed server states still don't.
+ *   relayed local edits and replays POST while relayed server states don't.
  *
  * Loop prevention therefore CANNOT come from origins — it is a synchronous
  * re-entrancy latch per relay pair: Yjs fires `update` handlers synchronously
@@ -177,7 +183,9 @@ export class CanonicalConnection {
     this.connectedReplicas -= 1;
     if (this.connectedReplicas < 0) {
       // A replica released more than it acquired — a lifecycle bug upstream.
-      throw new Error("CanonicalConnection: release() without matching acquire()");
+      throw new Error(
+        "CanonicalConnection: release() without matching acquire()",
+      );
     }
     if (this.connectedReplicas === 0) this.provider.disconnect();
   }
@@ -221,7 +229,9 @@ export class BindingReplica implements Provider {
   private disconnectListener: (() => void) | null = null;
 
   private readonly syncListeners = new Set<(isSynced: boolean) => void>();
-  private readonly statusListeners = new Set<(arg: { status: string }) => void>();
+  private readonly statusListeners = new Set<
+    (arg: { status: string }) => void
+  >();
   private readonly updateListeners = new Set<(arg: unknown) => void>();
   private readonly reloadListeners = new Set<(doc: Doc) => void>();
 
@@ -250,7 +260,10 @@ export class BindingReplica implements Provider {
     this.emitSync(isSynced);
   };
 
-  private readonly onCanonicalUpdate = (update: Uint8Array, origin: unknown): void => {
+  private readonly onCanonicalUpdate = (
+    update: Uint8Array,
+    origin: unknown,
+  ): void => {
     if (this.relaying) return;
     this.relaying = true;
     try {
@@ -260,7 +273,10 @@ export class BindingReplica implements Provider {
     }
   };
 
-  private readonly onReplicaUpdate = (update: Uint8Array, origin: unknown): void => {
+  private readonly onReplicaUpdate = (
+    update: Uint8Array,
+    origin: unknown,
+  ): void => {
     if (this.relaying) return;
     this.relaying = true;
     try {
@@ -367,9 +383,12 @@ export class BindingReplica implements Provider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.add(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.add(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.add(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.add(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.add(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.add(cb as (arg: unknown) => void);
     else this.reloadListeners.add(cb as (doc: Doc) => void);
   }
 
@@ -385,9 +404,12 @@ export class BindingReplica implements Provider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.delete(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.delete(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.delete(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.delete(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.delete(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.delete(cb as (arg: unknown) => void);
     else this.reloadListeners.delete(cb as (doc: Doc) => void);
   }
 

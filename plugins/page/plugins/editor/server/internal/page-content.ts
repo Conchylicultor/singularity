@@ -1,11 +1,11 @@
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import type { PageData } from "../../core/schemas";
 import type { SerializedBlock } from "../../core/serialized-block";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { loadPageBlocks } from "./forest";
 import { withPageForest, pageScopesOf } from "./page-forest";
 import {
@@ -57,14 +57,8 @@ export async function serializePageContent(
 ): Promise<PageContentSnapshot | null> {
   const [pageBlock] = await executor
     .select()
-    .from(_blocks)
-    .where(
-      and(
-        eq(_blocks.id, pageId),
-        eq(_blocks.type, PAGE_BLOCK_TYPE),
-        isNull(_blocks.deletedAt),
-      ),
-    )
+    .from(liveBlocks)
+    .where(and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)))
     .limit(1);
   if (!pageBlock) return null;
   const rows = await loadPageBlocks(pageId, executor);
@@ -169,10 +163,10 @@ export async function replacePageContent(
       // rebuilt content strictly after the highest surviving rank so the
       // `(parent_id, rank)` live unique index can never collide.
       const [maxRow] = await ctx.tx
-        .select({ rank: _blocks.rank })
-        .from(_blocks)
-        .where(and(eq(_blocks.parentId, pageId), isNull(_blocks.deletedAt)))
-        .orderBy(desc(_blocks.rank))
+        .select({ rank: liveBlocks.rank })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.parentId, pageId))
+        .orderBy(desc(liveBlocks.rank))
         .limit(1);
       const floor = maxRow ? Rank.from(maxRow.rank) : null;
       const rootRanks = Rank.nBetween(floor, null, forest.length);

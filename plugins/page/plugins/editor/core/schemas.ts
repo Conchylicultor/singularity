@@ -108,6 +108,15 @@ export const PAGE_BLOCK_TYPE = "page";
 // `/api/trash/:sourceId/…` with it. One name per concept.
 export const PAGES_TRASH_SOURCE = "pages";
 
+// The SECOND `infra/trash` source this plugin registers: the anchor entry a
+// delete operation with no page root mints for its content rows (every block
+// delete is a trash — `research/2026-09-09-page-data-based-text-undo-entries-v2.md`
+// §3). One entry per gesture, so one Cmd+Z restores it; the Pages Trash dialog
+// subscribes to `PAGES_TRASH_SOURCE` only, so these never appear there. Named
+// here for the same reason as its sibling: the undoable-delete seam on the web
+// addresses `/api/trash/:sourceId/…` with whatever source the server answered.
+export const PAGE_BLOCKS_TRASH_SOURCE = "page-blocks";
+
 // A page cover: either an uploaded image (stored as an attachment id + a
 // vertical reposition offset, applied as object-position Y%) or a preset
 // gradient (stored as a frozen preset id, resolved to CSS client-side). The

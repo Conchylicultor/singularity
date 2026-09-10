@@ -244,7 +244,14 @@ export function CompositeServerProviderHost({
           const patch = translatePatchForStore(group, seenAnchorsRef.current);
           const feed = feedsRef.current.get(owner);
           if (feed) {
-            feed.store.current.dispatch({ tag: "patch", patch });
+            // The whole gesture's `restoreIds` ride along: the set is keyed by
+            // row id, which neither grouping nor translation rewrites, and a
+            // predicate only consults it for the creates its own group carries.
+            feed.store.current.dispatch({
+              tag: "patch",
+              patch,
+              restoreIds: v.restoreIds,
+            });
           } else {
             // Detached persist (undo/redo targeting a collapsed page): no
             // mounted feed means no overlay to reconcile, so write the patch

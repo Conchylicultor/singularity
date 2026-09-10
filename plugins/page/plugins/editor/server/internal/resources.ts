@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -12,7 +12,7 @@ import {
 import { pagesResource, blocksResource } from "../../core/resources";
 import type { Block, PageRow } from "../../core/schemas";
 import { docOrderPaths } from "./page-doc-order";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { BLOCK_WIRE_COLUMNS } from "./wire-columns";
 
 // Element-wise rank-path comparison — the document-order comparator. Sorting in
@@ -57,11 +57,12 @@ export async function loadPages(
   const rows = (
     await executor
       .select(BLOCK_WIRE_COLUMNS)
-      .from(_blocks)
-      // Trashed pages disappear from the sidebar; the change-feed re-runs this on
-      // the trash/restore UPDATE, so the exclusion is membership-correct.
-      .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)))
-      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt))
+      // Trashed pages disappear from the sidebar (`liveBlocks`); the change-feed
+      // re-runs this on the trash/restore UPDATE, so the exclusion is
+      // membership-correct.
+      .from(liveBlocks)
+      .where(eq(liveBlocks.type, PAGE_BLOCK_TYPE))
+      .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt))
   ).map(withRank);
 
   const paths = await docOrderPaths(executor);
@@ -132,9 +133,9 @@ export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
   loader: async ({ pageId }): Promise<Block[]> => {
     const rows = await db
       .select(BLOCK_WIRE_COLUMNS)
-      .from(_blocks)
-      .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)))
-      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
+      .from(liveBlocks)
+      .where(eq(liveBlocks.pageId, pageId))
+      .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt));
     return rows.map(withRank);
   },
 });

@@ -21,12 +21,12 @@ import {
   blockTextServerNodes,
 } from "@plugins/page/plugins/editor/server";
 import {
+  $spliceRunsInto,
   coalesce,
   runsToXmlText,
   xmlTextToRuns,
   type RichText,
 } from "@plugins/page/plugins/editor/core";
-import { $spliceRunsInto } from "./runs-splice";
 
 /**
  * Writing a block's TEXT from the server, with no mounted editor.

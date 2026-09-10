@@ -109,7 +109,7 @@ export function useServerBlockStore(pageId: string): BlockStore {
           ),
     isConfirmedBy: (serverData, v) =>
       v.tag === "patch"
-        ? isPatchReflected(serverData, v.patch)
+        ? isPatchReflected(serverData, v.patch, v.restoreIds)
         : isReflected(serverData, v.effect),
     // Op identity for cascade confirmation: only a newer confirmed op writing
     // the SAME block row(s) may supersede an older resolved one, so an inverse

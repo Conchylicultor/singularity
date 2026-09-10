@@ -100,9 +100,9 @@ const REPLAY_COMMANDS = {
  * coalesced insert never presents those intermediate states, so replaying
  * `"- Bravo bullet"` in one go left the block a plain paragraph and the Enter
  * after it inherited `text` instead of `bulleted-list`. Coalescing was an
- * optimization against a cost that does not exist: the block's `Y.UndoManager`
- * folds a typing run into ONE item via its 500ms `captureTimeout`, exactly as it
- * does for a real burst.
+ * optimization against a cost that does not exist: the block's run tracker
+ * folds a typing run into ONE undo entry via its 500ms idle window, exactly as
+ * it does for a real burst.
  *
  * A key replays as its Lexical command carrying a SYNTHETIC `KeyboardEvent`:
  * `KeyboardPlugin.handle` takes `KeyboardEvent | null` and only needs a real
@@ -410,7 +410,7 @@ export function BlockTextEditor({
       <ClickableLinkPlugin newTab />
       {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
           split/merge are content-doc-aware, and text edits ride the
-          unified undo stack via the seam's Y.UndoManager. */}
+          unified undo stack as the run tracker's data entries. */}
       <CollabTextPlugin block={block} textVariant={textVariant} />
       <KeyboardPlugin blockId={block.id} editor={editor} />
       {/* Crossing an inline decorator (a `@date` chip, an inline page link, an
@@ -475,8 +475,8 @@ export function BlockTextEditor({
           No CRDT surgery helper, deliberately. `collab-text-surgery.ts` is for
           edits driven from OUTSIDE a Lexical command; a `PASTE_COMMAND` listener
           already runs inside `editor.update()`, so `selection.insertNodes` syncs
-          through the `@lexical/yjs` binding exactly like typing and lands on the
-          block's own `Y.UndoManager` for free. */}
+          through the `@lexical/yjs` binding exactly like typing and is recorded
+          by the block's run tracker for free. */}
       <TokenPastePlugin extensions={blockTextTokenExtensions()} />
       <EditorRefPlugin editorRef={lexicalEditorRef} />
     </LexicalComposer>

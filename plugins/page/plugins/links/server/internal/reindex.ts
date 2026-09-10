@@ -1,6 +1,9 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
+import {
+  liveBlocks,
+  PAGE_BLOCK_TYPE,
+} from "@plugins/page/plugins/editor/server";
 import { PageLinks } from "./extractor";
 import { _pageLinks } from "./tables";
 
@@ -27,9 +30,9 @@ export async function reindexPage(pageId: string): Promise<void> {
   }
 
   const blocks = await db
-    .select({ type: _blocks.type, data: _blocks.data })
-    .from(_blocks)
-    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
+    .select({ type: liveBlocks.type, data: liveBlocks.data })
+    .from(liveBlocks)
+    .where(eq(liveBlocks.pageId, pageId));
 
   const targets = new Set<string>();
   const collect = (extract: (data: unknown) => string[], data: unknown) => {
@@ -47,13 +50,12 @@ export async function reindexPage(pageId: string): Promise<void> {
   let validTargets = new Set<string>();
   if (targets.size > 0) {
     const existing = await db
-      .select({ id: _blocks.id })
-      .from(_blocks)
+      .select({ id: liveBlocks.id })
+      .from(liveBlocks)
       .where(
         and(
-          inArray(_blocks.id, [...targets]),
-          eq(_blocks.type, PAGE_BLOCK_TYPE),
-          isNull(_blocks.deletedAt),
+          inArray(liveBlocks.id, [...targets]),
+          eq(liveBlocks.type, PAGE_BLOCK_TYPE),
         ),
       );
     validTargets = new Set(existing.map((r) => r.id));

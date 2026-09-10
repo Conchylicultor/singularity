@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
-  _blocks,
+  liveBlocks,
   PAGE_BLOCK_TYPE,
   pageData,
 } from "@plugins/page/plugins/editor/server";
@@ -47,14 +47,10 @@ export async function buildPageSearchDoc(
   // Only `data` is read (the page's title + icon), so that is all this projects:
   // a narrower read AND a checked assignment, where `select()` needed a cast.
   const pageRows = await db
-    .select({ data: _blocks.data })
-    .from(_blocks)
+    .select({ data: liveBlocks.data })
+    .from(liveBlocks)
     .where(
-      and(
-        eq(_blocks.id, pageId),
-        eq(_blocks.type, PAGE_BLOCK_TYPE),
-        isNull(_blocks.deletedAt),
-      ),
+      and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)),
     );
   const pageBlock = pageRows[0];
 
@@ -63,9 +59,9 @@ export async function buildPageSearchDoc(
   if (!pageBlock) return null;
 
   const contentBlocks = await db
-    .select({ type: _blocks.type, data: _blocks.data })
-    .from(_blocks)
-    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
+    .select({ type: liveBlocks.type, data: liveBlocks.data })
+    .from(liveBlocks)
+    .where(eq(liveBlocks.pageId, pageId));
 
   const data = pageData(pageBlock);
   const title = data.title || "Untitled";

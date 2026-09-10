@@ -12,7 +12,11 @@ registered exactly once per surface (two same-id registrations would race in the
 page-global `ShortcutManager`). Consumers only `record`.
 
 ```tsx
-import { useScopedUndoRedo, useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
+import {
+  usePendingFlush,
+  useScopedUndoRedo,
+  useUndoRedo,
+} from "@plugins/primitives/plugins/undo-redo/web";
 
 // Recording a reversible command into the tab's history:
 const { record, undo, redo, canUndo, canRedo, clear } = useUndoRedo();
@@ -25,6 +29,11 @@ record({
 
 // Same api, but every entry dies with this mount (see "Entry lifetime" below):
 const scoped = useScopedUndoRedo();
+
+// A producer holding an entry it has not recorded yet (a typing run still
+// inside its idle window) seals it before any undo/redo pops (see "Pending
+// flush" below). Registered for this mount's lifetime:
+usePendingFlush(closeAllOpenTextRuns);
 ```
 
 ## Behavior
@@ -37,17 +46,60 @@ const scoped = useScopedUndoRedo();
   arrives within `coalesceWindowMs` (default 500ms), the two merge into one —
   **keep the first entry's `undo`, take the latest entry's `redo` + label**. Used
   for run-together edits (typing, dragging) that should undo as a unit.
-- **Re-entrancy guard.** While an `undo`/`redo` thunk runs, the store's
-  `replaying` flag is raised, so the reverse/forward patch the thunk dispatches
-  (which usually flows back through the same `record` path) is **ignored** rather
-  than recorded as a brand-new command.
+- **Re-entrancy guard.** For exactly the **synchronous span** of an
+  `undo`/`redo` thunk's call — raised before the call, lowered the moment it
+  returns, never held across an async thunk's `await` — the store's `replaying`
+  flag is raised, so a reverse/forward patch the thunk dispatches synchronously
+  and that flows straight back through the same `record` path (a re-entrant
+  echo) is **ignored** rather than recorded as a brand-new command. That echo is
+  the ONLY thing the guard is for. A `record` that arrives while an async thunk
+  is awaiting its round trip is a real entry from another producer (the page
+  editor's idle timer closing a typing run while a stored-doc replay is in
+  flight) and **lands** as the top entry; the page editor's thunks never record
+  synchronously. See "Pending flush" for what else runs outside the guard.
+- **Serialized turns.** `undo()`/`redo()` are **turns** on one FIFO queue per
+  provider. When nothing is in flight a turn runs synchronously (flush, pop, and
+  the thunk's start all happen before the call returns). A call while a thunk is
+  in flight **queues behind it** instead of running concurrently: two rapid
+  undos replay strictly LIFO, and a flush registered during the flight runs at
+  the start of the queued turn. A queued turn that finds nothing to pop is a
+  no-op. A failed turn never wedges the queue: hand-over is in `finally`.
 - **Fresh records clear `future`** and the `past` stack is capped to `maxDepth`
   (default 200) by dropping the oldest entries.
 - **`canUndo` / `canRedo` are reactive** (selector reads) — components re-render
-  when they flip. `record` / `undo` / `redo` / `clear` are stable callbacks.
+  when they flip. They describe the **recorded** stack as it stands: neither an
+  entry a pending flush would still seal nor a turn still waiting in the queue
+  counts. `record` / `undo` / `redo` / `clear` / `registerPendingFlush` are
+  stable callbacks.
 - **Loud failures.** A rejected `undo`/`redo` thunk surfaces as an
-  `UndoRedoThunkError` (the guard runs the thunk fire-and-forget; a rejection
-  becomes an unhandled rejection, never silently swallowed).
+  `UndoRedoThunkError` whose message names the cause (`cause` stays attached).
+  The turn runs fire-and-forget, so a rejection becomes an unhandled rejection —
+  the crash collector files it — never silently swallowed.
+
+## Pending flush (`usePendingFlush` / `registerPendingFlush`)
+
+A producer that coalesces many small edits into ONE entry (the page editor's
+typing runs: the entry is recorded when the run goes idle) has, between the first
+keystroke and that deadline, an entry that **exists but is not on the stack**. A
+⌘Z in that window would pop the entry below it — the previous action — while the
+half-typed run stayed put.
+
+The seam: every registered flush runs **synchronously at the start of each
+turn, before the pop, outside any thunk call**, so its `record` lands as the
+top entry and the stack the user acts on is complete. Flushes are idempotent by
+contract (nothing open ⇒ record nothing) and run for `redo` too — a flush that
+seals anything clears `future`, so that redo is rightly a no-op.
+
+- `usePendingFlush(fn)` — the mount-bound form: registered on mount,
+  unregistered on unmount, reads the latest `fn` through a ref (a new identity
+  per render neither re-registers nor moves it in the run order). Use this.
+- `registerPendingFlush(fn): () => void` on the api — the imperative form for a
+  producer that is not a component. Returns the unregister.
+
+The registry is one `Set` per provider mount (per tab), in registration order.
+Serialization (above) is what makes the flush the entry POPPED rather than one
+recorded beside a replay: the flush runs at the start of the queued turn, so
+what it seals is on top when that turn pops.
 
 ## Entry lifetime (scopes)
 
@@ -62,9 +114,10 @@ about what it needs to replay:
 `useScopedUndoRedo()` is the whole mechanism: same `UndoRedoApi`, but `record`
 stamps a `useId()`-derived scope onto every entry and the unmount cleanup calls
 `dropScope(scope)`. Use it whenever the thunks close over a per-mount store, doc,
-or editor (the page editor's optimistic overlay and per-block `Y.UndoManager`s die
-with its mount — replaying one after would be a no-op at best, and a patch
-dispatched into the wrong page's overlay at worst). Use plain `useUndoRedo()` when
+or editor (the page editor's entries are data, but their patch thunks close over
+the page's optimistic store, which dies with its mount — replaying one after
+would be a patch dispatched into the wrong page's overlay at worst). Use plain
+`useUndoRedo()` when
 `undo`/`redo` are just server calls valid anywhere in the tab (a trash restore),
 so the entry rightly survives navigating away.
 
@@ -76,11 +129,15 @@ removal never disturbs surrounding entries.
 `useUndoRedoShortcuts({ when? })` registers three surface-scoped bindings via
 `useSurfaceShortcuts`: `mod+z` (undo), `mod+shift+z` and `mod+y` (redo). All have
 `enableInInputs: true` so they fire inside editable surfaces; undo is gated on
-`canUndo && when?.(event)`, redo on `canRedo && when?.(event)`. **`tab-surface`
-already calls it once per tab — a consumer never calls it again**, or two same-id
-registrations race in the page-global `ShortcutManager`. A tab whose app records
-nothing keeps an empty stack, so the `when` guard rejects and the keys are never
-claimed.
+`(canUndo || a pending flush is registered) && when?.(event)`, redo on
+`canRedo && when?.(event)`. The flush half of the undo gate is what lets the very
+first typing run on a fresh page be undone: the stack cannot see an entry a
+producer is still holding, so with a flush registered the key must reach
+`undo()` — which seals it first — even while the recorded stack is empty.
+**`tab-surface` already calls it once per tab — a consumer never calls it
+again**, or two same-id registrations race in the page-global `ShortcutManager`.
+A tab whose app records nothing and registers no flush keeps an empty stack, so
+the `when` guard rejects and the keys are never claimed.
 
 ### This stack is not the only undo history on screen (`resolveUndoOwner`)
 
@@ -147,14 +204,23 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
 
 - Pure stack/coalescing logic lives in `web/internal/stack.ts` (React-free,
   unit-tested in `stack.test.ts`); the store only wires it to `scoped-store` and
-  runs the thunks. `Date.now()` is read only inside `record` (never during render).
+  runs the turns (`web/internal/use-undo-redo.ts`, exercised in
+  `web/__tests__/pending-flush.test.tsx`). `Date.now()` is read only inside
+  `record` (never during render).
+- The replay guard is raised by the turn runner around the thunk's
+  SYNCHRONOUS call and nowhere else — never across an `await` — so the only
+  `record` it ever drops is a thunk's own synchronous echo. A flush can never
+  observe it raised, and neither can a producer recording during an async
+  thunk's round trip. A producer holding a not-yet-recorded entry still goes
+  through a pending flush — not because a direct `record` would be dropped,
+  but because it must be sealed BEFORE the pop so it is the entry popped.
 - No contributions — a pure library primitive. Renders no visible UI.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
+- Description: Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, mount-scoped entries (useScopedUndoRedo drops its entries when its mount unmounts), a pending-flush seam (usePendingFlush / registerPendingFlush: a producer holding a not-yet-recorded entry seals it at the start of every undo/redo turn, outside the replay guard, so it is the entry popped), serialized turns (an undo/redo during an in-flight thunk queues FIFO behind it instead of running under the guard), and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
 - Web:
   - Uses:
     - `primitives/latest-ref.useLatestRef`
@@ -162,6 +228,8 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (types):
     - `HistoryEntry`
+    - `PendingFlush`
+    - `ReplayDirection`
     - `UndoOwner`
     - `UndoRedoApi`
     - `UndoRedoProviderProps`
@@ -172,6 +240,8 @@ undoes the title text only — an ordinary autosaved input, never on this stack.
     - `surfaceUndoProps`
     - `UNDO_OWNER_ATTR`
     - `UndoRedoProvider`
+    - `UndoRedoThunkError`
+    - `usePendingFlush`
     - `useScopedUndoRedo`
     - `useUndoRedo`
     - `useUndoRedoShortcuts`

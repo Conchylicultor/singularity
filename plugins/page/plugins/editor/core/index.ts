@@ -6,6 +6,7 @@ export {
   SvgNodeSchema,
   PAGE_BLOCK_TYPE,
   PAGES_TRASH_SOURCE,
+  PAGE_BLOCKS_TRASH_SOURCE,
   pageData,
   pageBlockHandle,
   pageBlockMarkdown,
@@ -90,6 +91,7 @@ export {
   runsLength,
   splitRuns,
   mergeRuns,
+  runsEqual,
   coalesce,
   TextRunSchema,
   RichTextSchema,
@@ -118,6 +120,8 @@ export {
   serializeBlockRuns,
   tokenOf,
 } from "./runs-lexical";
+
+export { $spliceRunsInto } from "./runs-splice";
 
 export { runsToXmlText, xmlTextToRuns, xmlTextContentLength } from "./runs-yjs";
 export type { RunsXmlTextOptions } from "./runs-yjs";

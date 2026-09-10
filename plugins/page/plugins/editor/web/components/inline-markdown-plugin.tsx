@@ -36,24 +36,26 @@ import {
  * (`internal/inline-format-surgery.ts`). This component is only the *guard set*
  * that decides when to ask, plus the undo boundary.
  *
- * ## The undo requirement, and why `queueMicrotask` is mandatory
+ * ## The undo requirement, and why the edit is deferred
  *
  * Ctrl+Z immediately after an autoformat must revert only the FORMATTING,
  * restoring the literal `**xxx**` — a user who wanted real asterisks keeps them.
- * That needs the transform to land in its own `Y.UndoManager` item rather than
- * merging into the 500 ms-coalesced typing run that produced it, which is
- * exactly what `recordDocEdit` (→ `captureBlockDocEdit`) fences.
+ * That needs the transform to be its own undo entry rather than merging into
+ * the 500 ms idle-closed typing run that produced it, which is exactly what
+ * `recordDocEdit` does: it closes the open run, runs the edit inside the run
+ * tracker's `untracked` scope, and records the doc's runs before and after as
+ * one entry under this plugin's label.
  *
- * That fence only holds if the transform's Yjs transaction lands INSIDE the
- * capture window, and an update listener runs with `editor._updating === true`:
- * an `editor.update()` issued from inside one is *enqueued* and only begins at
- * `$triggerEnqueuedUpdates` — after `captureBlockDocEdit` has already closed its
- * capture scope, silently losing the boundary AND double-recording the edit
- * through the mirror. In the microtask `_updating` is
- * false, so `discrete: true` commits synchronously and the binding's transaction
- * lands where it belongs. `editor/CLAUDE.md` records the same hazard for split
- * ("defers its capture one microtask because it runs from a Lexical command
- * handler"). `applyInlineFormat` throws rather than degrade if this is ever
+ * That scope only holds if the transform's Yjs transaction lands INSIDE it, and
+ * an update listener runs with `editor._updating === true`: an
+ * `editor.update()` issued from inside one is *enqueued* and only begins at
+ * `$triggerEnqueuedUpdates` — after the scope has closed, silently losing the
+ * boundary AND recording the edit as plain typing. So `recordDocEdit` DEFERS
+ * the edit one microtask itself; there `_updating` is false, `discrete: true`
+ * commits synchronously and the binding's transaction lands where it belongs.
+ * `editor/CLAUDE.md` records the same hazard for split (which keeps its own
+ * microtask around the truncation because it runs from a Lexical command
+ * handler). `applyInlineFormat` throws rather than degrade if this is ever
  * violated.
  */
 export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
@@ -76,7 +78,11 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
         // and autoformatting there would apply a mark on nobody's keystroke.
         // `HISTORIC_TAG` in particular is what guarantees the transform cannot
         // re-fire on the Ctrl+Z that reverted it — by tag, not by heuristics.
-        if (tags.has(HISTORIC_TAG) || tags.has(COLLABORATION_TAG) || tags.has(PASTE_TAG)) {
+        if (
+          tags.has(HISTORIC_TAG) ||
+          tags.has(COLLABORATION_TAG) ||
+          tags.has(PASTE_TAG)
+        ) {
           return;
         }
         if (tags.has(INLINE_FORMAT_TAG)) return; // our own transform
@@ -88,14 +94,16 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
         // needs no node reads, so the two editor states are never active at once.
         const prev = prevEditorState.read(() => {
           const selection = $getSelection();
-          if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+          if (!$isRangeSelection(selection) || !selection.isCollapsed())
+            return null;
           return { key: selection.anchor.key, offset: selection.anchor.offset };
         });
         if (prev === null) return;
 
         const plan = editorState.read((): InlineFormatPlan | null => {
           const selection = $getSelection();
-          if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+          if (!$isRangeSelection(selection) || !selection.isCollapsed())
+            return null;
           const anchor = selection.anchor;
           if (anchor.type !== "text") return null;
           // The caret's own leaf must be among the leaves this update dirtied —
@@ -115,7 +123,9 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
           // offset-changed test. It also subsumes the collapsed-and-CHANGED
           // check: both arms below imply the caret moved.
           const typedOneChar =
-            anchor.key === prev.key ? anchor.offset === prev.offset + 1 : anchor.offset === 1;
+            anchor.key === prev.key
+              ? anchor.offset === prev.offset + 1
+              : anchor.offset === 1;
           if (!typedOneChar) return null;
 
           return $scanInlineFormat();
@@ -123,15 +133,13 @@ export function InlineMarkdownPlugin({ blockId }: { blockId: string }) {
         if (plan === null) return;
 
         pending = true;
-        queueMicrotask(() => {
+        // `recordDocEdit` runs the edit one microtask later. `applyInlineFormat`
+        // re-verifies the plan against live state there and returns false if
+        // anything drifted — a legitimate typed outcome, not a swallowed error.
+        // Nothing changed in that case, so nothing lands on the undo stack.
+        recordDocEditRef.current(blockId, "Format text", () => {
           pending = false;
-          // `applyInlineFormat` re-verifies the plan against live state and
-          // returns false if anything drifted in this microtask — a legitimate
-          // typed outcome, not a swallowed error. Nothing changed in that case,
-          // so `recordDocEdit` puts nothing on the undo stack.
-          recordDocEditRef.current(blockId, "Format text", () => {
-            applyInlineFormat(editor, plan);
-          });
+          applyInlineFormat(editor, plan);
         });
       },
     );

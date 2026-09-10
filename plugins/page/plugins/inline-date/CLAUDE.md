@@ -16,6 +16,7 @@
     - `page/editor._blocks`
     - `page/editor.blocksChanged`
     - `page/editor.Editor`
+    - `page/editor.liveBlocks`
     - `shell/notifications.recordNotification`
   - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`
   - Register:

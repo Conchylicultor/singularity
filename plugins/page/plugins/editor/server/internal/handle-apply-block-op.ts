@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
@@ -9,7 +9,7 @@ import {
   type BlockOpContext,
 } from "../../core/block-ops";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { Editor as BlockRegistry } from "./block-registry";
 import { withPageForest } from "./page-forest";
 import { writeForestTarget } from "./forest-writer";
@@ -95,10 +95,10 @@ export const handleApplyBlockOp = implement(
         }
         const after = applyBlockOp(before, body, blockOpCtx());
 
-        // Reconciles, persists, and dispatches `OnDelete` over the AUTHORITATIVE
-        // delete set — the one this transaction really removes. There is no longer a
-        // predicted set read outside the lock, so there is nothing for the two to
-        // disagree about.
+        // Reconciles, persists, and trashes the AUTHORITATIVE delete set — the
+        // one this transaction really removes — inline under one `page-blocks`
+        // entry. There is no longer a predicted set read outside the lock, so
+        // there is nothing for the two to disagree about.
         const write = await writeForestTarget(ctx, before, after);
 
         // pageId invariant: NO op reachable through this endpoint crosses a page
@@ -119,11 +119,12 @@ export const handleApplyBlockOp = implement(
     );
     const { write } = value;
 
-    // Route a page-containing delete through the trash chokepoint (soft delete +
-    // OnTrash hooks). Runs after the write transaction so the reducer's other
-    // diffs land first; the delete set is disjoint from the insert/update set, and
-    // the chokepoint takes the page locks it needs itself.
-    if (write.deferredPageDelete && write.deleteRootIds.length > 0) {
+    // Route a page-containing delete through the trash chokepoint (its
+    // sub-pages' own locks + `pages` entries). Runs after the write transaction
+    // so the reducer's other diffs land first; the delete set is disjoint from
+    // the insert/update set, and the chokepoint takes the page locks it needs
+    // itself.
+    if (write.deferredToChokepoint && write.deleteRootIds.length > 0) {
       await deleteBlocksSubtree(write.deleteRootIds);
     }
 
@@ -138,9 +139,9 @@ export const handleApplyBlockOp = implement(
     // Return the reloaded LIVE page rows (mirrors the live push payload).
     const finalRows = await db
       .select()
-      .from(_blocks)
-      .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
-      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
+      .from(liveBlocks)
+      .where(eq(liveBlocks.pageId, params.pageId))
+      .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt));
     return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
   },
 );

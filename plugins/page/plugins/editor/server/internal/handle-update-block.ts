@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { updateBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { withPageForest } from "./page-forest";
 import { updateBlockFields, type BlockColumnChanges } from "./forest-writer";
 import { notifyBlockChange } from "./notify";
@@ -14,10 +14,12 @@ export const handleUpdateBlock = implement(
   async ({ params, body }) => {
     // The row's page scope names the forest to lock; its `type` is what `data`
     // must be validated against (`body.type ?? row.type`), not blindly persisted.
+    // A trashed row is not addressable (404, like an unknown id) — writing onto
+    // it would edit content the user cannot see.
     const [existing] = await db
-      .select({ type: _blocks.type, pageId: _blocks.pageId })
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .select({ type: liveBlocks.type, pageId: liveBlocks.pageId })
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!existing) throw new HttpError(404, "Not found");
 
@@ -37,11 +39,12 @@ export const handleUpdateBlock = implement(
       async (ctx) => {
         // Re-read the type under the lock: a concurrent conversion between the scope
         // read above and this write would otherwise have `data` validated against a
-        // type the row no longer holds.
+        // type the row no longer holds — and a concurrent delete would have
+        // trashed it, which is the same 404.
         const [row] = await ctx.tx
-          .select({ type: _blocks.type })
-          .from(_blocks)
-          .where(eq(_blocks.id, params.id))
+          .select({ type: liveBlocks.type })
+          .from(liveBlocks)
+          .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!row) throw new HttpError(404, "Not found");
 
@@ -55,12 +58,12 @@ export const handleUpdateBlock = implement(
 
         const [after] = await ctx.tx
           .select({
-            id: _blocks.id,
-            pageId: _blocks.pageId,
-            type: _blocks.type,
+            id: liveBlocks.id,
+            pageId: liveBlocks.pageId,
+            type: liveBlocks.type,
           })
-          .from(_blocks)
-          .where(eq(_blocks.id, params.id))
+          .from(liveBlocks)
+          .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!after) throw new HttpError(404, "Not found");
         return after;
@@ -74,8 +77,8 @@ export const handleUpdateBlock = implement(
     });
     const [row] = await db
       .select()
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!row) throw new HttpError(404, "Not found after update");
     return BlockSchema.parse(row);

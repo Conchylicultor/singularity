@@ -7,7 +7,7 @@
 // changes).
 //
 // Keeping the origin's id is the whole point, and it is invisible to a unit
-// test: the block's content `Y.Doc`, its `Y.UndoManager` and its registered
+// test: the block's content `Y.Doc`, its owner and its registered
 // `BlockFocusHandle` are ALL keyed by block id, so an id churn would drop the
 // caret, orphan the doc and split the undo history. What this script asserts:
 //
@@ -187,8 +187,8 @@ await withBrowser(async (h) => {
   // Not one Cmd+Z from here, though — and the extra press is NOT the wrap
   // splitting in two. Every slash commit is two entries by construction
   // (`block-menu-plugin.tsx`'s `handleSelect`): it first strips the `/query`
-  // through a `lexicalEditor.update()`, which the per-block `Y.UndoManager`
-  // mirrors onto the shared stack as a text entry, and only then calls
+  // through a `lexicalEditor.update()`, which the block's run tracker records
+  // onto the shared stack as a text entry, and only then calls
   // `convertTo`. That is generic to every `/` conversion — `/h1` behaves
   // identically — and is the same shape the gutter `+` documents ("`insertAfter`
   // + `convertTo`, i.e. two undo entries"). So the ladder back out is:

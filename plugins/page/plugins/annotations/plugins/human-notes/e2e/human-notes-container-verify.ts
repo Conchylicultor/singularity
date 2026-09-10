@@ -58,8 +58,8 @@
 //  7. `/human` ON AN EXISTING BLOCK WRAPS IT (`wrapOnConvert: true`): the origin
 //     keeps its id, type, `data` and children and becomes the card's first child;
 //     a brand-new row is minted for the anchor. Keeping the origin's id is the
-//     load-bearing part — its content `Y.Doc`, its `Y.UndoManager` and its
-//     registered focus handle are ALL keyed by block id.
+//     load-bearing part — its content `Y.Doc`, its owner and its registered
+//     focus handle are ALL keyed by block id.
 //  8. NESTING: a `human` card as the MIDDLE child of a `callout` paints BOTH
 //     boxes, the callout's strictly containing the card's (above and below, one
 //     indent shallower) rather than partially overlapping it.
@@ -1071,8 +1071,8 @@ await withBrowser(async (h) => {
       // nowhere for its text to go. So the origin keeps its id, type, `data` and
       // children and becomes the card's FIRST child, while a brand-new row is
       // minted for the card. Keeping the id is the load-bearing half — the
-      // block's content `Y.Doc`, its `Y.UndoManager` and its registered focus
-      // handle are ALL keyed by block id, so an id churn would drop the caret,
+      // block's content `Y.Doc`, its owner and its registered focus handle
+      // are ALL keyed by block id, so an id churn would drop the caret,
       // orphan the doc and split the undo history.
       const gBeforeWrap = await geometry(page, seeded.end);
       const ownersBeforeWrap = boxOwners(gBeforeWrap);

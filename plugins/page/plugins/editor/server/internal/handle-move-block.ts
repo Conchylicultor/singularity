@@ -4,7 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rankAdjacentTo } from "@plugins/primitives/plugins/rank/server";
 import { moveBlock } from "../../core/endpoints";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { blocksChanged } from "./tables-events";
 import { loadLiveSiblings } from "./forest";
 import { withPageForest } from "./page-forest";
@@ -26,11 +26,12 @@ export const handleMoveBlock = implement(
     // each page's op stream. Read outside the lock deliberately: it decides which
     // locks to take, never what to write, and everything authoritative is re-read
     // under them. (`computePageId` is also the destination's liveness guard, so a
-    // trashed or missing parent still 404s.)
+    // trashed or missing parent still 404s — and so does a trashed SOURCE: a
+    // trashed block is not addressable.)
     const [source] = await db
-      .select({ pageId: _blocks.pageId })
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .select({ pageId: liveBlocks.pageId })
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!source) throw new HttpError(404, "Not found");
     const destPageId = await computePageId(body.parentId);
@@ -42,13 +43,13 @@ export const handleMoveBlock = implement(
       async (ctx) => {
         const [before] = await ctx.tx
           .select({
-            id: _blocks.id,
-            pageId: _blocks.pageId,
-            parentId: _blocks.parentId,
-            type: _blocks.type,
+            id: liveBlocks.id,
+            pageId: liveBlocks.pageId,
+            parentId: liveBlocks.parentId,
+            type: liveBlocks.type,
           })
-          .from(_blocks)
-          .where(eq(_blocks.id, params.id))
+          .from(liveBlocks)
+          .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!before) throw new HttpError(404, "Not found");
 
@@ -108,8 +109,8 @@ export const handleMoveBlock = implement(
 
         const [row] = await ctx.tx
           .select()
-          .from(_blocks)
-          .where(eq(_blocks.id, params.id))
+          .from(liveBlocks)
+          .where(eq(liveBlocks.id, params.id))
           .limit(1);
         if (!row) throw new HttpError(404, "Not found after move");
         return { before, row };

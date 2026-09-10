@@ -459,10 +459,14 @@ producer of a `PageForestTx`, and every export of
   that permutes `(parent_id, rank)` among siblings transiently duplicates a pair
   mid-loop, and the index is per-tuple and not deferrable. `pairChanged` filters
   it, so ops that permute nothing pay nothing.
-- `BlockLifecycle.OnDelete(rows, tx)` fires from the writer, inside the lock, on
-  exactly the branch that really hard-deletes. `rows` is authoritative, so a hook
-  answers "which of these were pages" with `row.type` — no DB round-trip, nothing
-  predicted. Anything else it needs pre-delete it reads on `tx`.
+- **A delete set is never hard-deleted by the writer** — see *Every block delete
+  is a trash* below. `BlockLifecycle.OnTrash(rows)` runs after commit over the
+  AUTHORITATIVE set the writer flagged (closed under descendants under the lock);
+  `BlockLifecycle.OnDelete(rows, tx)` fires inside the lock only from purge and
+  from history restore's content wipe, the two paths that really hard-delete.
+  `rows` is authoritative in both, so a hook answers "which of these were pages"
+  with `row.type` — no DB round-trip, nothing predicted. Anything an `OnDelete`
+  hook needs pre-delete it reads on `tx`.
 
 ### The context both runtimes must agree on
 
@@ -568,8 +572,8 @@ Nothing bounded that window; human typing speed just usually won the race.
     shortcut fires on the `"- "` transition and the inline one demands
     exactly-one-char-typed, so a coalesced `insertText` skips every incremental
     transform: `"- Bravo bullet"` stayed a paragraph and the next Enter inherited
-    `text`. The Yjs cost coalescing avoided does not exist (the `Y.UndoManager`'s
-    500ms `captureTimeout` folds a run into one item either way).
+    `text`. The Yjs cost coalescing avoided does not exist (the run tracker's
+    500ms idle window folds a run into one undo entry either way).
   - **`discrete: true` on every replayed edit** — Lexical's default commit is a
     microtask, so the next entry would resolve against pre-insert state: offset 0,
     empty runs, a split at `position: 0` whose `truncateAt(0)` wipes the doc
@@ -1003,9 +1007,10 @@ that exists but isn't painted); a position that does not exist. Design:
   `decideTransfer`'s `{kind:"inline"}` arm) so it reaches the system clipboard with
   no code of ours in the path; and (b) it is a character in the plain-text offset
   basis, which reaches a SERVER consumer —
-  `page/markdown-apply/server/internal/runs-splice.ts` splices a block's `Y.Doc`
-  from seam-free runs, so every agent write would delete every seam and every
-  client re-mint them. A Lexical-only seam excluded from the Y doc is not
+  `$spliceRunsInto` (`core/runs-splice.ts`, called by
+  `page/markdown-apply/server/internal/block-doc-text.ts`) splices a block's
+  `Y.Doc` from seam-free runs, so every agent write would delete every seam and
+  every client re-mint them. A Lexical-only seam excluded from the Y doc is not
   available either: `CollabElementNode.syncChildrenFromYjs`
   (`@lexical/yjs@0.44.0 LexicalYjs.dev.mjs:529-540`) unconditionally
   `removeFromParent`s every Lexical child with no collab twin on every remote
@@ -1096,9 +1101,9 @@ The unmark is a content mutation, so it lives in `inline-format-surgery.ts`
 (`removeMarkSpan`) rather than a third near-identical surgery module: that file
 already owns the leaf walks, the `hasFormat`-guarded `toggleFormat` idiom that
 makes the runs round-trip correct by construction, and the defer-then-re-verify
-contract a command listener needs. Wired through `recordDocEdit`, so the
-`captureBlockDocEdit` fence gives it its own undo item — **one Cmd+Z restores the
-mark and nothing else**.
+contract a command listener needs. Wired through `recordDocEdit`, which runs it
+inside the run tracker's `untracked` scope and records the doc's runs before and
+after as its own data entry — **one Cmd+Z restores the mark and nothing else**.
 
 ### `MARK_ORDER` is a storage sort key, NOT a nesting order
 
@@ -1221,7 +1226,7 @@ adoption, so comparing rank strings would fail even on a correct round-trip.
 At offset 0 with text after the caret, split inserts an **empty sibling ABOVE** and
 leaves the origin untouched (same id, text, children, content doc, `data`,
 `expanded`), caret staying put — so the origin's **block id never changes** and
-every block-id-keyed thing (content-doc registry, per-block `Y.UndoManager`, undo
+every block-id-keyed thing (content-doc registry, its owner and run tracker, undo
 focus routing) stays stable. Notion's model; pinned by `block-ops.test.ts`'s
 `identity:` split cases and `e2e/enter-at-start-verify.ts`.
 
@@ -1811,12 +1816,13 @@ structure — no per-block Lexical history.
 
 - **The editor's entries are mount-scoped.** `BlockEditorProvider` records through
   `useScopedUndoRedo()`, so its entries drop off the stack when the editor unmounts.
-  Required, not cosmetic: its thunks close over the per-`pageId` optimistic store and
-  the per-block `Y.UndoManager`s, which die with the doc — so replaying one after
-  unmount is a no-op at best and a patch into another page's overlay at worst. Net
-  effect: after navigating away, Cmd+Z does not reach back into the old page.
-  Entries whose thunks are pure server calls (the sidebar's trash-restore) are
-  unscoped and survive.
+  Required, not cosmetic: its thunks close over the per-`pageId` optimistic store
+  and its row truth, which die with the editor — so replaying one after unmount
+  would be a patch into another page's overlay at worst. Net effect: after
+  navigating away, Cmd+Z does not reach back into the old page. Entries whose
+  thunks are pure server calls (the sidebar's trash-restore) are unscoped and
+  survive. (Making the editor's entries mount-free is a recorded follow-up; the
+  entries themselves are already self-contained data.)
 - **One stack, surface-level router.** There is deliberately no Lexical
   `HistoryPlugin` — a per-block parallel history is a layering error: the
   `page_blocks` row tree, not a Lexical document, is the source of truth. Cmd+Z /
@@ -1833,17 +1839,24 @@ structure — no per-block Lexical history.
   undo leaves it) still resolves to the surface, so the old focus-independence
   this relied on is preserved where it mattered. See `primitives/undo-redo`'s
   *This stack is not the only undo history on screen*.
-- **Text edits are per-block `Y.UndoManager` items mirrored onto the stack.** Text
-  history lives in each block's content doc; `recordTextEdit` mirrors each new
-  manager item 1:1 as a shared-stack entry calling `um.undo()`/`um.redo()` (see the
-  CRDT section). There is no `data.text` autosave path — rows receive text only
+- **Text edits are DATA entries: a block's runs before and after one typing
+  run.** Each block's run tracker (see the CRDT section) closes a run after a
+  500 ms idle window and `recordTextEdit` records it as `{blockId, before,
+  after}`; replay brings the block back to those runs on whichever host holds
+  it then. There is no `data.text` autosave path — rows receive text only
   through the debounced doc→`data.text` projection.
-- **Command-pattern patches, not snapshots.** At the mutation chokepoints in
-  `block-editor-context.tsx`: snapshot `before`, compute `after`, `diffBlocks`
-  (pure, `core/block-diff.ts`), derive minimal forward/reverse `BlockPatch`es, and
-  `record` thunks that re-apply them onto the CURRENT state — so undoing an old
-  action never clobbers later unrelated edits. `recordPatchEntry` is the shared
-  helper; `recordStructural` calls it with no `coalesceKey` (structural ops never
+- **ONE recorder, command-pattern patches, not snapshots.** Every entry goes
+  through `recordEntry({label, focusId, before, after, runsEdits?,
+  coalesceKey?})` in `block-editor-context.tsx`: it seals every open typing run
+  first (a structural op never records ahead of the run that preceded it),
+  snapshots `before`, computes `after`, `diffBlocks` (pure,
+  `core/block-diff.ts`), derives minimal forward/reverse `BlockPatch`es, pins
+  every removed row's text to its doc, and `record`s thunks that re-apply them
+  onto the CURRENT state — so undoing an old action never clobbers later
+  unrelated edits. Undo replays each runs edit's `before` THEN dispatches the
+  reverse patch; redo dispatches the forward patch THEN replays each `after` —
+  a doc edit always runs while its row exists. `recordStructural` /
+  `recordTextEdit` / `recordDocEdit` are thin wrappers (structural ops never
   coalesce).
 - **One single-row chokepoint (`commitRow`).** It snapshots rows, applies the
   transform to just that row, diffs into a minimal patch pair, optionally records
@@ -1869,6 +1882,22 @@ structure — no per-block Lexical history.
   `data`: `parseBlockData` normalizes it and `data.text` trails the doc by ~1s, so a
   snapshot that provably contains the write can still differ, and comparing would
   stick the op in the overlay. Same question, different subject; don't merge them.
+- **A create of a row this client has SEEN in server truth is a restore, and a
+  restore is judged by presence alone — under both predicates.** Every delete is
+  a trash, so a patch `create` whose id matches a trashed row restores the
+  STORED row and the server ignores the create's fields (re-ranked after a slot
+  occupant, reparented to the root, expanded if toggled between delete and undo).
+  Comparing those fields is the `data` mistake again, with no later push to
+  rescue it (the restore ran in its own transaction; the patch wrote nothing):
+  the op sat in the overlay painting the recorded collapsed toggle over the
+  server's expanded one until an unrelated write moved it. The patch variant
+  carries `restoreIds` — derived at the ONE dispatch chokepoint (`dispatchPatch`)
+  as the creates whose `RowTruth` is `"removed"`, never chosen per call site —
+  and for those ids `isPatchReflected` / `isPatchAbsorbed` ask only "is the row
+  there", while `applyPatch` inserts the recorded copy only while the row is
+  ABSENT and keeps a present row as it is. A client-minted id (`"unseen"`) is
+  never in the set: a genuine create keeps its full field comparison. Pinned by
+  `optimistic-block-ops.test.ts`'s *restore creates are presence-only*.
 - **A patch's delete cascade reads POST-patch parentage.** `handlePatchBlocks`
   UPDATEs before it DELETEs, so a row the same patch re-parents out of the deleted
   subtree has already left; `applyPatch` must agree or the overlay drops rows the
@@ -1878,7 +1907,7 @@ structure — no per-block Lexical history.
 mutation, `paste` / `duplicate` / `move` / `delete` / `bulkMove` included —
 plus `convertTo` and non-text `data` edits (to-do `checked`, callout color, image
 src… — via `commitRow` with `coalesceKey: blockId`), each with an exact
-purely-computed after-state; text edits as mirrored `Y.UndoManager` items. The
+purely-computed after-state; text edits as the run tracker's data entries. The
 editor no longer uses `updateBlock` at all (`handle-update-block.ts` stays for
 page-level consumers: page title, sidebar expand, cover).
 `web/__tests__/structural-undo.test.tsx` is the per-mutation guardrail, asserting a
@@ -2247,7 +2276,13 @@ Two invariants fall out, and both used to be hand-maintained approximations:
   `applyPatch`, in `isPatchReflected` (vacuously absorbed, so the op confirms
   rather than replaying forever), and in the server writer. Only `creates` bring
   a row into existence, or back: a create whose id matches a soft-deleted row
-  un-trashes it (undo of a page delete restores the whole subtree).
+  restores that row's WHOLE trash entry — every row the same delete flagged,
+  page shell or paragraph alike — before the write transaction, consumes the
+  entry, and is then excluded from the write (the stored row wins over the
+  patch's copy, so a re-ranked or reparented root keeps its repair). Undo of
+  any delete thereby restores the exact rows and their surviving content docs
+  — and the client confirms such a create by the row's PRESENCE alone (the
+  `restoreIds` on the patch overlay op; see the undo section).
 
 Consequences worth knowing:
 
@@ -2267,6 +2302,71 @@ Consequences worth knowing:
   rows that left with a collapse) — `groupPatchByOwnerPage`. Creates still route
   by their own denormalized `pageId`, which is what makes the detached-persist
   path work for a collapsed page.
+
+### Every block delete is a trash (server)
+
+> No write shape ever `DELETE`s a row the user can see. A delete flags its rows
+> under ONE ledger entry per gesture; the real `DELETE` runs only at purge
+> (30 days, or "Delete permanently") and in history restore's content wipe.
+> `research/2026-09-09-page-data-based-text-undo-entries-v2.md` §3.
+
+Until 2026-09-09 a page-free delete was a hard delete, and the row's content doc
+cascaded away with it; undo re-created the row and re-derived a doc from the
+~1 s-lagged `data.text` projection, which under load raced to an empty seed —
+a to-do came back without its text. Now:
+
+- **Two sources, one mechanism.** A `type="page"` root mints its own `pages`
+  entry (what the Pages Trash lists); every other row of the operation folds
+  into ONE anchor entry — the first page entry when there is one, else a fresh
+  entry in the `page-blocks` source (`PAGE_BLOCKS_TRASH_SOURCE`, undo + purge
+  only, no UI), labelled by the first root's first line and carrying
+  `{pageId, rootIds, count}`. One gesture is one undo. A page nested under a
+  deleted non-page root anchors a `pages` entry on that root, so it stays
+  findable in the Trash.
+- **Where the trash happens.** A page-free set is trashed INLINE in the write
+  transaction (`trashDeletedRows` in `forest-writer.ts`, both write shapes),
+  so the hot path stays one transaction; a set containing a page row is
+  deferred to `deleteBlocksSubtree`, which takes the sub-pages' own locks.
+  Either way the set is CLOSED under descendants under the lock — a trash flags
+  exactly the ids it is handed, and a descendant left live under a trashed
+  parent is unreachable by any read.
+- **The ledger invariant: an entry exists ⇔ at least one row carries its id.**
+  Flags are set only by `trashBlockRoots` in the same transaction as
+  `recordTrashEntry`, and cleared only by `untrashBlocks`, which deletes its
+  entry in the same transaction. The `page_blocks_trash_flags_agree` CHECK
+  (`(deleted_at IS NULL) = (trash_entry_id IS NULL)`) rejects the half-states.
+  There is no "un-trash" bucket in the patch writer: clearing flags without
+  consuming the entry is exactly what the invariant forbids.
+- **Restore repairs only what the world changed.** A restored root keeps its
+  stored row; a `(parent_id, rank)` slot a live sibling took is repaired by
+  re-ranking right AFTER the occupant (`rankAdjacentTo`), and a vanished parent
+  reparents to the workspace root. Restore never fails on a slot collision.
+- **A trashed block is not addressable.** The id-addressed handlers (update,
+  move, turn-into-page, delete, list) read `liveBlocks` and answer 404, the
+  same answer an unknown id gets.
+- **Readers read `liveBlocks`, never `_blocks`** (`live-blocks.ts`, exported
+  beside `_blocks`): a drizzle subquery over `page_blocks WHERE deleted_at IS
+  NULL`, so the predicate is never spelled by a reader and cannot be forgotten.
+  A subquery and not a DB view because the rendered SQL still says
+  `from "page_blocks"`, which the live-state read-set extractor and the
+  change-feed match by name. `page-editor/no-unfiltered-blocks-read` flags any
+  `.from(_blocks)` / `.join(_blocks)` outside the trash machinery (the
+  allowlist in `lint/index.ts`); raw `sql\`… page_blocks …\`` reads are held
+  to the same list by convention.
+- **Trash never touches `page_block_docs`.** `doc-init` on a trashed or
+  restored row returns the SURVIVING state and `doc-update` merges into it (the
+  FK is satisfied while soft-deleted). A client that pre-seeds a restored row
+  from `data.text` and then merges the surviving doc duplicates the paragraph —
+  which is why the provider's pre-seed keys on *this client has never seen this
+  id in server truth* (`RowTruth`), not on "row unconfirmed".
+- **Derived state re-derives through the hooks.** `OnTrash` / `OnRestore` are
+  handed rows (search deindex + reindex, backlink edge delete + rebuild, both
+  filtering page rows in memory); content-block derived state follows the
+  page's `blocksChanged`, whose readers are live-filtered. A reminder row is
+  canceled when its token leaves the live text and REVIVED when a restore
+  brings the same token back (`inline-date`'s reconciler). Attachment links of
+  a trashed block are untouched (the reconcile writes live owners only), so the
+  orphan sweep keeps the file until purge cascades the link.
 
 ## Text is doc-owned: a row write can never say `text`
 
@@ -2354,9 +2454,8 @@ nothing and `isEmptyPatch` drops it: the redundant write is not rejected, it is
 never sent.
 
 **This covers DIRECT row writes — not ops.** `dispatchOp` / `applyOverlay` /
-`mergeBlock` diff raw `applyBlockOp` output through `recordPatchEntry` /
-`recordStructuralWithDocEdit`, which reach the same strict endpoint without
-passing through `commitRows`. Their half of the same rule is enforced in the
+`mergeBlock` diff raw `applyBlockOp` output through `recordEntry`, which
+reaches the same strict endpoint without passing through `commitRows`. Their half of the same rule is enforced in the
 reducer instead (see *A page's structural writes are one ordered stream*):
 `applyMerge` refuses a text-less merge target, and `page.editor:split-targets-are-text-bearing`
 fails the build on a declared split target that cannot hold text. Conforming op
@@ -2557,7 +2656,7 @@ Lifetime lives in `internal/collab-session.ts` (read its module comment before
 touching any of it):
 
 > A block has ONE **owner** (`BlockDocOwner`) — canonical `Y.Doc`, transport
-> provider, `Y.UndoManager` — and each mounted binding has ONE **session**
+> provider, run tracker — and each mounted binding has ONE **session**
 > (`CollabSession`) holding it. The session owns the replica's lifetime, the
 > hold on the owner, and **the single retention policy**.
 
@@ -2574,10 +2673,12 @@ touching any of it):
 - **Nothing releases by block id** — a session holds the owner *reference*, so a
   stale hold can never decrement the owner that replaced its own.
   `blockDocOwnerOf(id)` is the one id-keyed READ left, for the editor context's
-  mutation chokepoints, which pair it with `captureBlockDocEdit(owner, edit)`.
-- **The owner's refcount and undo-capture suppression are `private`.**
-  Suppression is the *scope* of `captureEdit()`, not a field another listener
-  reads, so "who raised it" has exactly one answer.
+  mutation chokepoints (which read `runsNow()` and run their surgery inside
+  `untracked`) and the replay host selection. A read at record time is a
+  *capture* of the doc's runs, never a reference an entry holds.
+- **The owner's refcount is `private`, and the run tracker's suppression is a
+  scope.** `untracked(edit)` is the only thing that can raise it, so "who raised
+  it" has exactly one answer.
 
 #### A session PROVES its hydration, and the proof gates the write path
 
@@ -2587,9 +2688,9 @@ touching any of it):
 **monotonic** and **per session** (recovery is a new session), so a later
 re-assert — the `markBlockRowConfirmed` doc-init, a second push, a StrictMode
 re-`connect()` — cannot re-open a gate a proof already closed. Two arms, picked
-at `start()` from the render-time `rowConfirmed`:
+at `start()` from the render-time `RowTruth` (below):
 
-- **Locally authoritative** (`!rowConfirmed`, and all of memory mode): the
+- **Locally authoritative** (`"unseen"`, and all of memory mode): the
   content is this client's own deterministic seed, applied *after* the binding
   attached, so no remote answer can be missing and there is nothing to prove —
   `attaching → hydrated` inside one synchronous `connect()`. **This is what
@@ -2597,7 +2698,7 @@ at `start()` from the render-time `rowConfirmed`:
   while the row is unconfirmed, so waiting on the server here would cost a
   freshly-split block a full round trip. It also makes `stalled` structurally
   unreachable in memory mode.
-- **Server authoritative**: `hydrating` until the first `COLLABORATION_TAG`
+- **Server authoritative** (`"present"` and `"removed"`): `hydrating` until the first `COLLABORATION_TAG`
   commit proves agreement — or until the transport announces `sync` with
   nothing renderable in the replica. That second exit is load-bearing: Yjs
   emits no event for an apply that integrates nothing, so **no commit is ever
@@ -2641,11 +2742,66 @@ see *The hydration guard* below.
 Until stage 5 (the diff-shaped `doc-init` pull) hydration is still the delivered
 push, so the detector below stays the net for a push that never arrives.
 
+#### A restored row binds to its surviving doc (`RowTruth`)
+
+> The one thing that licenses an instant `data.text` pre-seed is: *this client
+> has never seen this block id in server truth.*
+
+The provider used to infer "no stored doc can exist" from "the row is not
+confirmed" — true only while a delete hard-deleted the doc with its row. **Every
+block delete is a trash** (the server soft-deletes; `page_block_docs` is never
+touched, `doc-init` on a trashed or restored row returns the SURVIVING state and
+`doc-update` merges into it), so an optimistically re-created row — undo of a
+delete — is unconfirmed AND has a doc. A seed pre-applied for it lands as a
+second paragraph the moment that doc merges. `internal/row-truth.ts` states
+the fact the seed actually needs, DERIVED rather than inferred:
+
+| `RowTruth` | meaning | seed | FK gate |
+| --- | --- | --- | --- |
+| `"present"` | in `serverIds` now | never | open |
+| `"removed"` | in some EARLIER authoritative push, not now | only on a positive `null` answer | closed until confirmed |
+| `"unseen"` | never seen in server truth by this editor | instantly at `connect()` | closed until confirmed |
+
+- **Derived on the context** — `rowTruthOf(id)`, over `serverIds` and a
+  monotonic `everServerIds` grown from every `store.serverData` push and never
+  shrunk. `collab-text-plugin` passes it where `rowConfirmed` used to go;
+  `useCollabBlockDoc` gates `markBlockRowConfirmed` on `"present"`;
+  `CollabSession.start` sets `locallyAuthoritative = !serverSync || rowTruth ===
+  "unseen"`.
+- **Two provider facts, one immutable.** `blockRowConfirmed = rowTruth ===
+  "present"` is the doc-init FK gate and only that (a one-way latch, lifted by
+  the confirmation push). `mayHaveStoredDoc = rowTruth !== "unseen"` is the
+  pre-seed discriminator, `readonly`: what this client had observed when the
+  owner was minted, and the pre-seed it licenses happens once. `connect()`
+  pre-seeds only `!mayHaveStoredDoc && serverState === undefined && clients ===
+  0`; `ingestServerState` pre-applies the seed on a positive `null` answer for
+  an unconfirmed row (`"removed"` whose doc did not survive, or `"unseen"`
+  answered before connect), so a restored never-opened block renders after ONE
+  round trip and the doc-init the confirmation then posts carries those exact
+  bytes — its echo is a no-op.
+- **Not a `restore` flag chosen per call site** (a second spelling, missing
+  redo-of-split-undo and paste routes), and not strict-null everywhere (the
+  instant split path would render an empty root for a round trip). The patch
+  overlay op's `restoreIds` is the same fact read at the one dispatch
+  chokepoint — `"removed"` creates — not a flag a caller sets.
+- **The one residual**: `everServerIds` sees the pushes React RENDERED. An id
+  created and deleted inside one batched render was never `"present"` here and
+  reads `"unseen"` on re-creation — reachable only by a create→delete→undo
+  faster than one commit.
+
+Consequences on the write side: a flush racing a delete now SUCCEEDS into the
+trashed doc (the better outcome — it is what undo restores); the provider's 409
+path remains only for purge and the "doc row vanished" anomaly; `doc-init` 404s
+only after purge.
+
 ### Projection + content-doc-aware split/merge
 
 - **`doc → data.text` projection — a pure function of the OWNER.** It lives in
   the seam (`use-collab-block-doc.ts`), not in a consumer, and reads the
-  canonical doc: `projectableRunsOf(entry.doc)` → `xmlTextToRuns`, which *is*
+  canonical doc through `owner.runsNow()` — `projectableRunsOf(doc)` memoized
+  on a content generation bumped in `doc.on("update")`, so a structural entry
+  pinning a deleted row's text and the projection flush landing on the same
+  generation share one headless read. `xmlTextToRuns` *is*
   `readYDoc(doc, e => serializeBlockRuns(e, extensions), …)` — the same walk and
   the same function object the live editor's own serialization uses, over a
   headless replica. Trigger: every canonical-doc update (push-based, local +
@@ -2688,10 +2844,13 @@ push, so the detector below stays the net for a push that never arrives.
   `rowsRef`, so an ungated flush would resurrect the just-deleted row.
 - **Merge (Backspace-at-start)** appends the merging block's LIVE runs onto the
   target's bound editor (`BlockFocusHandle.appendRunsAtEnd`), then the structural
-  merge deletes the block (its `page_block_docs` row FK-cascades). If the target's
-  editor is NOT mounted, a lossless doc-level fallback (`appendRunsToBlockDoc`) runs
-  FIRST and the delete only fires after it lands — a failed append leaves both
-  blocks intact.
+  merge deletes the block (a trash: its `page_block_docs` row survives, and undo
+  binds the restored row back to it — see `RowTruth`). The append runs inside
+  the target owner's `untracked` scope. If the target's editor is NOT mounted,
+  the append goes through the stored-doc host (`spliceStoredBlockDoc`, relative
+  to the runs the server holds) FIRST and the delete only fires after it lands —
+  a failed append leaves both blocks intact. Either way the entry carries the
+  target's runs before and after the append as data (see the undo section).
 - **The doc-update pipeline is what reports "Saved".** The provider derives a
   `saveState` (`idle | syncing | error` + `lastFlushedAt`) from its own queue and
   publishes it via `onSaveState`/`getSaveState` (a memoized frozen snapshot, so a
@@ -2706,52 +2865,99 @@ push, so the detector below stays the net for a push that never arrives.
   `idle` (bytes deliberately dropped; their content moved with the merge). The
   `data.text` projection is deliberately NOT reported: it is derived
   denormalization dispatched through the optimistic pipeline, which reports itself.
-- **A `doc-update` 409 after sync means the doc row vanished** — usually
-  FK-cascade-deleted (merge/delete) mid-flush. The provider never guesses: it
+- **A `doc-update` 409 after sync means the doc row vanished** — a trashed
+  block was PURGED mid-flush (a mere delete keeps the doc, so a flush racing a
+  delete succeeds into the trashed doc). The provider never guesses: it
   re-arms its init path and lets a doc-init probe arbitrate. 404 (block genuinely
-  deleted) is a quiet terminal stop; success (block ALIVE, row unexpectedly gone)
+  gone) is a quiet terminal stop; success (block ALIVE, row unexpectedly gone)
   re-creates the row from the FULL local doc state — never the `data.text` seed,
   which would duplicate content the doc already holds — and resumes the flush loop,
   so a 409 can never silently stop a live block from saving.
 
 ### CRDT text on the ONE unified undo stack
 
-- **Per-block `Y.UndoManager`, owned by the seam.** Each registry entry in
-  `use-collab-block-doc.ts` creates one manager over the doc's content root, with
-  tracked origins learned dynamically on `beforeTransaction`: anything that is
-  neither the provider (server-applied state) nor an `UndoManager` (replays) is a
-  local editing source — in practice exactly the `@lexical/yjs` binding, which is
-  private to `CollaborationPlugin` and otherwise unreachable. Remote/echoed applies
-  therefore never enter a block's text history. `CollaborationPlugin`'s own forced
-  manager stays inert: its UNDO/REDO commands are swallowed at CRITICAL priority,
-  while the native keydown still bubbles to the window-level shortcut.
-- **Typing runs mirror 1:1 onto the shared stack.** The manager's `captureTimeout`
-  (500 ms) folds a typing run into ONE item; each NEW item fires `onUndoableEdit`,
-  which `recordTextEdit` records as one entry calling `um.undo()`/`um.redo()`.
-  Deliberately NO `coalesceKey`: grouping already happened in the manager, and
-  shared-stack coalescing would merge two entries over two manager items and break
-  the 1:1 LIFO correspondence (`um.undo()` pops exactly one item). Thunks are
-  generation-guarded on registry-entry identity, so a destroyed doc no-ops rather
-  than popping a recreated manager's unrelated items.
-- **Split/merge are ONE combined stack entry** (`recordStructuralWithDocEdit`): the
-  structural patch pair AND the content-doc edit reverse/re-apply together, so rows
-  and docs can never disagree after a single Cmd+Z. `captureBlockDocEdit` is the
-  explicit capture boundary (`stopCapturing` on both sides + a suppress flag so the
-  folded edit never double-records via the mirror); the surgery updates pass
-  `discrete: true` so the binding's Yjs transaction lands synchronously inside that
-  window, and `split` defers its capture one microtask because it runs from a
-  Lexical command handler (a nested update would queue past the window). Merge also
-  pins the restored source row's `data.text` to the LIVE merging runs
-  (`undoTextOverride`) — the source doc was FK-cascaded with the row, so undo
-  re-seeds from that row, which must be exactly what was un-appended from the
-  target, not a projection-lagged snapshot. The unmounted-target merge records
-  doc-level thunks instead.
-- **Known degradations (consistent no-ops, never divergence):** redoing a text
-  entry for a block whose creation was itself undone (doc destroyed + recreated →
-  generation guard skips); undoing text in a block whose editor unmounted
-  (collapsed ancestor — the manager died with the doc); a typing run within 500 ms
-  after a non-doc structural op on the same block merging into the pre-op manager
-  item (coarse grouping). All leave docs ≡ rows.
+Design: [`research/2026-09-09-page-data-based-text-undo-entries-v2.md`](../../../../research/2026-09-09-page-data-based-text-undo-entries-v2.md)
+(supersedes Plan B's §Undo/redo).
+
+- **Every entry is DATA.** A structural entry is a `BlockPatch` pair; a text
+  entry is `{blockId, before, after}` runs (`BlockRunsEdit`); a gesture that is
+  both (split, merge, an inline autoformat's strip) is ONE entry carrying a
+  patch pair AND `runsEdits`. Nothing on the stack points into a doc's history.
+  It used to: a text entry was a thunk popping the block's per-doc undo
+  manager, guarded by "is this owner still live" — a **silent no-op** once the
+  block's doc was destroyed, which is how a deleted to-do came back from Cmd+Z
+  without its text. That manager and every thunk over it are deleted; a
+  genuine replay failure now throws (`BlockTextReplayError`) and reaches
+  Reports as a crash.
+- **The run tracker records typing** (`internal/block-run-tracker.ts`, owned by
+  `BlockDocOwner`). Every local transaction on the canonical doc opens or
+  extends a run (`before = runsNow()` at open); a 500 ms idle window closes it
+  and emits the runs edit, which `recordTextEdit` records with NO
+  `coalesceKey` — the tracker already grouped the keystrokes, and app-level
+  coalescing would merge two runs' data into one entry whose bracket no longer
+  matches what one Cmd+Z reverts. Origins are classified by the **stated**
+  three-origin rule, never learned: the transport provider (a server apply or
+  a seed), `TEXT_REPLAY_ORIGIN` (an entry replaying), and the binding relayed
+  verbatim (the user). `page-editor/no-adhoc-doc-write` keeps it three: only
+  the replay host, the two providers and the relay may `applyUpdate` onto an
+  owner's doc.
+- **`untracked(edit)` is the suppression scope** for a gesture recording its
+  own runs edit: it closes the open run first (so the entry sits above a fully
+  recorded run, never inside it) and ignores every local transaction inside.
+  The split's `truncateAt`, the merge's `appendRunsAtEnd` and
+  `recordDocEdit`'s edit all run inside it — without it each would open a run
+  and double-record on top of the structural entry (one Cmd+Z would restore
+  the origin's full text while the split's tail still existed). Because the
+  scope wraps the real Yjs transaction, the transaction must land
+  synchronously inside it (`discrete: true`), and a caller inside a Lexical
+  command handler or update listener must defer one microtask first (a nested
+  `editor.update` is enqueued past the scope): the split keeps its own
+  `queueMicrotask` around the truncation; `recordDocEdit` defers internally.
+- **Replay has two hosts and one entry point** (`applyBlockRuns`,
+  `internal/block-text-write-stored.ts`): a live owner whose doc holds content
+  is spliced in process (host A, `spliceOpenBlockDoc`: a headless
+  `$spliceRunsInto` delta applied under `TEXT_REPLAY_ORIGIN`, which the relay
+  fans into every binding and the provider queues for flush); a live owner
+  still waiting on its subscription waits for its `sync`; a block with no
+  editor goes through the server (host B, `spliceStoredBlockDoc`: `doc-init`
+  with the row's text as the proposal → headless splice → `doc-update`); a row
+  just re-created optimistically waits, push-based, for the `serverIds`
+  transition that confirms it — never `doc-init` a row the server may not
+  have; memory mode with no owner writes the row. The stored write takes
+  `runs` as a function of the authoritative current runs, so the unmounted
+  merge appends onto what the server holds, never onto a lagged row.
+- **Every removed row's `data.text` is pinned to its doc in the reverse patch.**
+  `derivePatchEntry` pins, for each row in `before` and not in `after` that has
+  a live AUTHORITATIVE owner (`BlockDocOwner.docAuthoritative` — synced, or a
+  doc nothing can be stored behind; never a doc still waiting on its
+  subscription, whose emptiness is a not-known-yet), the reverse `create`'s
+  text to `owner.runsNow()`. A restored row's `data.text` is therefore
+  doc-exact — what history snapshots, search and backlinks read, and the seed
+  of a block whose doc did not survive (a purge).
+- **The absolute-vs-CRDT trade, and the apply-and-report policy.** A data entry
+  is absolute ("make this block read these runs"), where a CRDT undo manager
+  was relative (undo *these items*). Under single-writer LIFO the two agree
+  exactly; they part only when a SECOND writer edits the block between record
+  and replay. The policy is: compare the block's current runs to what the
+  entry expects (`after` on undo, `before` on redo), apply anyway, and report
+  `stale-entry` (`undoConflictReportSink` → `reports/page-undo-conflict`).
+  The user asked for their undo; clobbering the other writer's text is the
+  residual, acceptable while it is measurably rare, and the report is what
+  keeps it measurable. Upgrade path: a runs-level 3-way merge. The other seam
+  is a remote apply landing INSIDE an open typing run: the run is aborted and
+  `run-aborted` reported — one lost undo step at a genuinely concurrent
+  moment (the hydration window included), never an entry that would carry the
+  remote text as if the user had typed it.
+- **Residuals, stated.** (1) Replay onto a block whose editor is mid-hydration
+  waits on the transport; on a purged block host B's `doc-init` 404s and the
+  replay throws. (2) Entries are still mount-scoped (they close over the page's
+  optimistic store), so Cmd+Z does not reach back after navigating away — a
+  follow-up. (3) The caret a replay lands on is an APPROXIMATION: the tracker
+  observes the doc, not an editor, so `collab-text-plugin`'s recorder stamps
+  `caretAfter` from the live selection when the run closes (up to 500 ms after
+  the last keystroke) and `caretBefore` from the previous run's `caretAfter`
+  on that block (else the live offset clamped into `before`); replay clamps
+  both into the restored text.
 - **Inverse pairs are handled by the overlay's ordering rule, not by absorption.**
   An undo patch followed by a redo patch before the undo's confirming push arrives
   leaves the undo op unable to ever confirm — every later snapshot shows X present,
@@ -2775,29 +2981,31 @@ push, so the detector below stays the net for a push that never arrives.
   fails to converge stays rendered and files a `stalled` divergence report instead
   of un-splitting the user's block.
 
-### Inline markdown autoformat is ONE captured doc edit
+### Inline markdown autoformat is ONE data entry
 
 Typing `**x**` bolds `x` and drops the delimiters (also `__x__`, `*x*`/`_x_`,
 `***x***`/`___x___`, `~~x~~`, `` `x` ``). The requirement is **one Cmd+Z reverts
 only the formatting, restoring the literal `**x**`** — so it goes through
-`recordDocEdit` (→ `captureBlockDocEdit`), not a bare `editor.update`: the
-`Y.UndoManager`'s 500 ms `captureTimeout` would fold the transform into the typing
-run's item and one Cmd+Z would eat `**x**` whole. `stopCapturing()` on both sides
-detaches it from the preceding run and stops later keystrokes merging in. Third
-consumer of that fence, not a new mechanism.
+`recordDocEdit`, not a bare `editor.update`: the run tracker's 500 ms idle
+window would fold the transform into the typing run and one Cmd+Z would eat
+`**x**` whole. `recordDocEdit` closes the open run, runs the edit inside
+`untracked`, and records the doc's runs before and after as one entry under
+this plugin's label. Third consumer of that scope, not a new mechanism.
 
-- **`queueMicrotask` before applying is mandatory.** An update listener runs with
-  `editor._updating === true`, so an `editor.update()` issued there is *enqueued*
-  and begins after `captureBlockDocEdit` has closed its window — formatting still
-  applies, undo boundary silently doesn't exist. `applyInlineFormat` **throws**
-  rather than returning `false` there, since that is indistinguishable from a
-  benign drift-abort. (Same deferral as split's.)
+- **The edit is deferred one microtask, inside `recordDocEdit`.** An update
+  listener runs with `editor._updating === true`, so an `editor.update()` issued
+  there is *enqueued* and begins after the `untracked` scope has closed —
+  formatting still applies, undo boundary silently doesn't exist (the tracker
+  records it as typing). `applyInlineFormat` **throws** rather than returning
+  `false` there, since that is indistinguishable from a benign drift-abort.
+  (Same deferral as split's, which keeps its own.)
 - **Tag-guarded (`historic`/`collaboration`/`paste`/`INLINE_FORMAT_TAG`), which is
-  what makes undo reachable at all**: `um.undo()` re-inserts the delimiters and
-  `@lexical/yjs` applies that tagged `historic`, so an unguarded listener
-  re-formats instantly and Cmd+Z looks broken. The exactly-one-char-typed rule is
-  a second defence, deliberately stricter than `@lexical/markdown`'s, which admits
-  a *decreasing* offset and so auto-formats on **Backspace**.
+  what makes undo reachable at all**: a replay re-inserts the delimiters on the
+  canonical doc under `TEXT_REPLAY_ORIGIN` and `@lexical/yjs` renders it as a
+  `collaboration` change, so an unguarded listener would re-format instantly
+  and Cmd+Z look broken. The exactly-one-char-typed rule is a second defence,
+  deliberately stricter than `@lexical/markdown`'s, which admits a *decreasing*
+  offset and so auto-formats on **Backspace**.
 - **Single-`TextNode` scope** (plus `isSimpleText()` — `splitText` on a segmented
   node or subclass slices characters that carry semantics). Makes the decorator
   tokens (`[[pageId]]`, `\(latex\)`) unreachable by any offset. Cost:
@@ -2941,28 +3149,31 @@ makes that state observable and self-correcting:
 Validated against offline/reconnect, multi-tab, agent concurrency, and history
 restore.
 
-- **Doc-init is gated on the row being authoritative** (`rowConfirmed` →
-  `markBlockRowConfirmed`, one-way, lifted push-based by the same blocks push that
-  commits the row). A freshly split block mounts its editor from the optimistic
-  overlay *before* the structural POST creates its `_blocks` row, so an ungated
-  doc-init FK-violates and the `initStarted` latch wedges the block
-  editable-but-never-synced. Local edits in the gap buffer in the doc and flush
-  right after the seed. Any `initDoc` failure re-arms `initStarted`; a doc-init 404
-  (block deleted — the server maps the FK violation to a clean 404) is a deliberate
-  quiet TERMINAL stop, latching `blockGone` and dropping buffered bytes.
+- **Doc-init is gated on the row being authoritative** (`RowTruth ===
+  "present"` → `markBlockRowConfirmed`, one-way, lifted push-based by the same
+  blocks push that commits the row). A freshly split block mounts its editor
+  from the optimistic overlay *before* the structural POST creates its
+  `_blocks` row, so an ungated doc-init FK-violates and the `initStarted` latch
+  wedges the block editable-but-never-synced. Local edits in the gap buffer in
+  the doc and flush right after the seed. Any `initDoc` failure re-arms
+  `initStarted`; a doc-init 404 (block gone for good — purged; a trashed block
+  is still addressable to doc-init) is a deliberate quiet TERMINAL stop,
+  latching `blockGone` and dropping buffered bytes.
 - **Seeds are deterministic, so pre-seeding is safe.** `runsToXmlText` takes a fixed
   Yjs `clientID` content-hashed from the runs JSON, so identical runs yield
   byte-identical encodings (and a mismatched seed can only duplicate, never corrupt
-  by item-id collision). An UNCONFIRMED block therefore pre-applies its seed locally
+  by item-id collision). An `"unseen"` block therefore pre-applies its seed locally
   at `connect()` — hydrating synchronously instead of sitting EMPTY until
   confirm-push, where typing would merge badly with the later seed. The seed bytes
   are built ONCE per provider and reused for pre-apply and every doc-init retry,
   which must never post different bytes. The pre-seed DISCRIMINATOR is the
-  provider's construction-time `blockRowConfirmed`, never an effect ordering: an
-  existing block is confirmed from its first render, so it can never pre-seed over
-  its stored doc (DUPLICATED text on reopen). Keystrokes landing before the new
-  block's editor is caret-ready are not dropped and not misrouted — the caret
-  authority buffers them (see "The caret authority" above).
+  provider's construction-time `mayHaveStoredDoc` (`RowTruth !== "unseen"`),
+  never the row's confirmation and never an effect ordering: an existing block
+  is `"present"` and a re-created one `"removed"` from their first render, so
+  neither can pre-seed over a stored doc (DUPLICATED text on reopen / on
+  restore). Keystrokes landing before the new block's editor is caret-ready are
+  not dropped and not misrouted — the caret authority buffers them (see "The
+  caret authority" above).
 - **Split focus/caret under pre-seed.** The origin's deferred truncation carries
   `SKIP_DOM_SELECTION_TAG` (it is background surgery on the block the user is
   LEAVING; reconciling its cut-point selection would yank DOM focus back), and
@@ -2990,12 +3201,13 @@ restore.
   row; pending flushes 409 → doc-init probe 404s → quiet terminal drop; the restored
   rows seed fresh docs from the restored `data.text`). Read the invariant note on
   `replacePageContent` before ever preserving ids there.
-- **Dormant positional-truncation hazard (offscreen-merge undo).**
-  `truncateBlockDocFrom` truncates the target doc POSITIONALLY, from the join offset
-  to the doc end, so under a FUTURE virtualized + multi-writer target a concurrent
-  append past that offset would be lost. Dormant today (the page editor doesn't
-  virtualize). The correct fix is CRDT-relative — a delete-set over the appended
-  items, not an offset range — deferred until virtualization exists.
+- **The offscreen-merge undo is a splice, not a positional cut.** Undoing a
+  merge whose target had no editor brings the target's stored doc back to the
+  recorded `before` runs through `$spliceRunsInto`, whose prefix alignment
+  removes exactly the appended suffix and keeps every untouched unit's CRDT
+  item. A concurrent append past the join is not an offset this write names —
+  it shows up as a `stale-entry` conflict and is applied over (see the undo
+  section's policy).
 
 ## In-memory mode (`persist={false}`)
 
@@ -3022,7 +3234,7 @@ the whole document lives in React state and is discarded on unmount.
   in-memory path uses `useLocalCollabBlockDoc` with `LocalYjsProvider`, a purely
   local per-block `Y.Doc` seeded from `data.text` at `connect()` that NEVER networks
   — no subscription (which would also need a `NotificationsProvider` the demo does
-  not mount), no doc-init/doc-update. The projection + undo-capture observers fire
+  not mount), no doc-init/doc-update. The projection + run-tracker observers fire
   identically, so text edits still ride the unified undo stack. Both hooks return
   the same `CollabBlockDoc`, so `CollabBinding` reports to the sync-status cloud on
   either transport — the local provider is permanently `idle`, aggregating to
@@ -3128,8 +3340,8 @@ stay literal forever, since nothing re-scans an existing doc — materializes.
 **No CRDT surgery helper, deliberately.** `collab-text-surgery.ts` is for edits
 driven from OUTSIDE a Lexical command; a `PASTE_COMMAND` listener already runs
 inside `editor.update()`, so `selection.insertNodes` syncs through the
-`@lexical/yjs` binding exactly like typing and lands on the block's own
-`Y.UndoManager` for free.
+`@lexical/yjs` binding exactly like typing and is recorded by the block's
+run tracker for free.
 
 **Typing an id into an existing block leaves plain text**, and that is the
 declared behaviour — there is no convert-as-you-type transform and no typeahead.
@@ -3408,6 +3620,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/text-editor/decorator-nav.DecoratorNavPlugin`
     - `primitives/text-editor/token-extension/node.TokenPastePlugin`
     - `primitives/undo-redo.surfaceUndoProps`
+    - `primitives/undo-redo.usePendingFlush`
     - `primitives/undo-redo.useScopedUndoRedo`
     - `reorder.isNodeData`
     - `reorder.TopLevelEntry`
@@ -3453,6 +3666,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageOption`
     - `PageOptionsResult`
     - `TextBlockLayoutProps`
+    - `UndoConflictReason`
+    - `UndoConflictReport`
     - `VoidCaret`
     - `VoidCaretOptions`
   - Exports (values):
@@ -3492,6 +3707,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `registerBlockTextExtension`
     - `registerBlockTextExtensionSource`
     - `TextBlockLayout`
+    - `undoConflictReportSink`
     - `useBlockActivate`
     - `useBlockDecorations`
     - `useBlockEditor`
@@ -3553,6 +3769,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `blockTextServerNodes`
     - `deleteBlocksSubtree`
     - `Editor`
+    - `liveBlocks`
     - `PAGE_BLOCK_TYPE`
     - `pageData`
     - `PageDataSchema`
@@ -3560,9 +3777,11 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `replacePageContent`
     - `resolveBlockAnnotations`
     - `serializePageContent`
+    - `untrashBlocks`
   - Register:
     - `defineTriggerEvent('page.blocksChanged')`
     - `defineTrashSource('pages')`
+    - `defineTrashSource('page-blocks')`
   - Routes:
     - `GET /api/pages`
     - `GET /api/pages/:pageId/blocks`
@@ -3686,6 +3905,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `nextVisibleLine`
     - `opNamedIds`
     - `PAGE_BLOCK_TYPE`
+    - `PAGE_BLOCKS_TRASH_SOURCE`
     - `pageBlockHandle`
     - `pageBlockMarkdown`
     - `PageCoverSchema`
@@ -3705,6 +3925,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `rankWindow`
     - `RichTextSchema`
     - `rowDataOf`
+    - `runsEqual`
     - `runsLength`
     - `runsOf`
     - `runsOfNode`
@@ -3804,6 +4025,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/date-picker`
     - `reports/caret-flight`
     - `reports/collab-hydration`
+    - `reports/page-undo-conflict`
   - Extended by:
     - `apps/pages/agent-origin` (table `page_blocks_ext_origin`)
     - `apps/pages/starred` (table `page_blocks_ext_starred`)

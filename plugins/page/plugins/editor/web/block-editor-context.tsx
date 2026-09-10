@@ -13,7 +13,10 @@ import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
-import { useScopedUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
+import {
+  usePendingFlush,
+  useScopedUndoRedo,
+} from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -21,6 +24,9 @@ import {
   nextVisibleLine,
   runsOfNode,
   runsLength,
+  runsEqual,
+  splitRuns,
+  mergeRuns,
   blockSelectionRoots,
   childrenOf,
   diffBlocks,
@@ -41,15 +47,16 @@ import {
   type SerializedBlock,
 } from "../core";
 import {
-  appendRunsToBlockDoc,
-  truncateBlockDocFrom,
-} from "./internal/use-collab-block-doc";
+  applyBlockRuns,
+  spliceStoredBlockDoc,
+} from "./internal/block-text-write-stored";
+import type { BlockRunsEdit } from "./internal/block-run-tracker";
 import {
   blockDocOwnerOf,
-  captureBlockDocEdit,
-  type CapturedBlockDocEdit,
+  closeAllOpenTextRuns,
 } from "./internal/collab-session";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
+import type { RowTruth } from "./internal/row-truth";
 import {
   buildPatchOverlayOp,
   predictOp,
@@ -127,24 +134,85 @@ function opFocusId(op: BlockOp, before: Block[]): string | null {
 }
 
 /**
- * Shared before→after derivation for the two structural recorders
- * (`recordPatchEntry` and `recordStructuralWithDocEdit`): diff the two full-row
- * snapshots into a minimal forward/reverse `BlockPatch` pair, splice the optional
- * `undoTextOverride` into the reverse patch (no-op when undefined — pins a
- * restored row's `data.text` to LIVE runs captured at op time, used by merge),
- * and derive the per-direction focus targets. Returns `null` when BOTH patches are
- * empty; the caller decides whether that is a full bail (patch-only entry) or a
- * still-record (a docEdit-only entry). Redo keeps the `focusId` the user was on;
- * undo PREFERS the block the reverse patch restores over `focusId` — undoing a
- * split deletes the new block, so landing focus on it would drop focus to <body>,
- * whereas the reverse write's target is the surviving block — falling back to
- * `focusId` then the forward patch so every op still lands somewhere sane.
+ * Pin a restored row's `data.text` to the DOC-EXACT runs captured at op time.
+ *
+ * `data.text` is a ~1 s-debounced projection of the block's content doc, so the
+ * row snapshot an op diffs from can lag the doc by a whole typing run. The
+ * reverse patch's `create` restores the row from that snapshot — and that text
+ * is what history snapshots, search and backlinks read back, and what SEEDS the
+ * block's doc when no stored doc survives the delete (a purged block, a block
+ * whose doc-init never ran). So for every row the op removes (in `before`, not
+ * in `after`) that has a live content owner, the create is pinned to what that
+ * owner's doc holds NOW (`runsNow()`, a memo hit on the common path) — the very
+ * value the projection would have written had it flushed. A row with no live
+ * owner (never opened here) keeps its snapshot text.
+ *
+ * Only an AUTHORITATIVE doc pins (`BlockDocOwner.docAuthoritative`): an owner
+ * whose transport has not answered yet holds an empty doc because nothing
+ * ARRIVED, and pinning that would turn a not-known-yet into "this block is
+ * empty" — the absorbable failure the rest of the text pipeline is built to
+ * keep out of `data.text`.
+ *
+ * This generalises what merge once did by hand for its source row: every
+ * removed row is pinned the same way, so a merged-away, deleted or unwrapped
+ * block all come back carrying exactly what their doc held.
+ *
+ * The pin lands only where the reverse patch ALREADY writes `data`. A create
+ * restores the whole row, so it always does; an update that says nothing about
+ * `data` must keep saying nothing — pinning text there would turn a
+ * field-scoped write back into an authority claim over a field it doesn't own.
+ * (A removed row always comes back as a create, so the update arm is
+ * unreachable today and kept only so the rule reads whole.)
+ */
+function pinRestoredText(
+  undoPatch: BlockPatch,
+  before: readonly Block[],
+  after: readonly Block[],
+): BlockPatch {
+  const pins = new Map<string, RichText>();
+  const afterIds = new Set(after.map((b) => b.id));
+  for (const b of before) {
+    if (afterIds.has(b.id) || !hasTextKey(b.data)) continue;
+    const owner = blockDocOwnerOf(b.id);
+    if (owner && owner.docAuthoritative) pins.set(b.id, owner.runsNow());
+  }
+  if (pins.size === 0) return undoPatch;
+  const pin = (data: unknown, runs: RichText) => ({
+    ...((data as Record<string, unknown> | null) ?? {}),
+    text: runs,
+  });
+  return {
+    ...undoPatch,
+    creates: undoPatch.creates.map((b) => {
+      const runs = pins.get(b.id);
+      return runs ? { ...b, data: pin(b.data, runs) } : b;
+    }),
+    updates: undoPatch.updates.map((u) => {
+      const runs = pins.get(u.id);
+      return runs && namesField(u.changes, "data")
+        ? { ...u, changes: { ...u.changes, data: pin(u.changes.data, runs) } }
+        : u;
+    }),
+  };
+}
+
+/**
+ * The structural half of {@link recordEntry}: diff the two full-row snapshots
+ * into a minimal forward/reverse `BlockPatch` pair, pin every removed row's
+ * `data.text` in the reverse patch to its doc's live runs
+ * ({@link pinRestoredText}), and derive the per-direction focus targets.
+ * Returns `null` when BOTH patches are empty; the recorder then bails unless
+ * the entry carries `runsEdits` (a pure text entry). Redo keeps the `focusId`
+ * the user was on; undo PREFERS the block the reverse patch restores over
+ * `focusId` — undoing a split deletes the new block, so landing focus on it
+ * would drop focus to <body>, whereas the reverse write's target is the
+ * surviving block — falling back to `focusId` then the forward patch so every
+ * op still lands somewhere sane.
  */
 function derivePatchEntry(
   before: Block[],
   after: Block[],
   focusId: string | null,
-  undoTextOverride?: { blockId: string; runs: RichText },
 ): {
   undoPatch: BlockPatch;
   redoPatch: BlockPatch;
@@ -153,30 +221,7 @@ function derivePatchEntry(
 } | null {
   const patches = patchesFromDiff(diffBlocks(before, after));
   const redoPatch = patches.redo;
-  let undoPatch = patches.undo;
-  if (undoTextOverride) {
-    const { blockId, runs } = undoTextOverride;
-    const pin = (data: unknown) => ({
-      ...((data as Record<string, unknown> | null) ?? {}),
-      text: runs,
-    });
-    // Only where the reverse patch ALREADY writes `data`. A create restores the
-    // whole row, so it always does; an update that says nothing about `data`
-    // must keep saying nothing — pinning text there would turn a field-scoped
-    // write back into an authority claim over a field it doesn't own. (In
-    // practice merge's source row was deleted, so it is a create.)
-    undoPatch = {
-      ...undoPatch,
-      creates: undoPatch.creates.map((b) =>
-        b.id === blockId ? { ...b, data: pin(b.data) } : b,
-      ),
-      updates: undoPatch.updates.map((u) =>
-        u.id === blockId && namesField(u.changes, "data")
-          ? { ...u, changes: { ...u.changes, data: pin(u.changes.data) } }
-          : u,
-      ),
-    };
-  }
+  const undoPatch = pinRestoredText(patches.undo, before, after);
   if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return null;
   // Order mirrors the patch's own precedence: redo's first write is its creates
   // (a split's new block), undo's is its updates (the surviving origin row).
@@ -218,6 +263,32 @@ function preserveText(prev: unknown, next: RowData): Record<string, unknown> {
 /** Empty type set — the `BlockOpContext` default, hoisted so it is stable. */
 const EMPTY_TYPES: ReadonlySet<string> = new Set<string>();
 
+/** The patch a pure text entry dispatches: nothing. */
+const EMPTY_PATCH: BlockPatch = { creates: [], updates: [], deleteIds: [] };
+
+/**
+ * What ONE undo entry of this editor records — the unit of a Cmd+Z. Every
+ * recorder in this file funnels into {@link recordEntry} with this shape.
+ *
+ * `before`/`after` are the full row snapshots around the mutation (equal for a
+ * pure text entry); `runsEdits` are the content-doc edits the same gesture
+ * made, as DATA — each block's runs before and after
+ * (`block-run-tracker.ts`). Undo replays every `runsEdits[i].before` and then
+ * dispatches the reverse patch; redo dispatches the forward patch and then
+ * replays every `after`. Text before patch on undo, patch before text on redo,
+ * so a doc edit always runs while its row exists.
+ */
+interface RecordEntryArgs {
+  label: string;
+  /** The block the user was on; undo/redo restore focus there (see `derivePatchEntry`). */
+  focusId: string | null;
+  before: Block[];
+  after: Block[];
+  runsEdits?: readonly BlockRunsEdit[];
+  /** Merges run-together edits into one step (a to-do's `checked` flips); structural ops pass none. */
+  coalesceKey?: string;
+}
+
 interface BlockEditorContextValue {
   pageId: string;
   /** Server truth with all pending structural ops replayed optimistically. */
@@ -230,6 +301,17 @@ interface BlockEditorContextValue {
    * FK-satisfyingly real (the content-doc seed, Stage 4a) gate on this set.
    */
   serverIds: ReadonlySet<string>;
+  /**
+   * What THIS client knows about a block id in server truth
+   * (`internal/row-truth.ts`): `"present"` if it is in {@link serverIds} now,
+   * `"removed"` if it was in some earlier authoritative push and is not now,
+   * `"unseen"` if this editor has never seen it there. The content-doc seam
+   * reads it to decide whether a `data.text` seed may be applied without
+   * waiting for the server — a removed row's stored doc survives its delete
+   * (every delete is a trash), so only an unseen id may pre-seed. Identity
+   * changes with {@link serverIds}, so a consumer re-renders on every push.
+   */
+  rowTruthOf: (id: string) => RowTruth;
   /** True until the first authoritative blocks snapshot arrives. */
   pending: boolean;
   /**
@@ -421,30 +503,27 @@ interface BlockEditorContextValue {
    */
   commitRecordedRowData: (blockId: string, data: RowData) => void;
   /**
-   * Text-history recorder: mirror ONE captured `Y.UndoManager` item (a
-   * coalesced typing run in `blockId`'s content doc) onto the unified undo
-   * stack. Called by `CollabTextPlugin` from the content-doc seam's
-   * `onUndoableEdit`.
-   *
-   * `label` defaults to the typing-run label ("Edit text"); a caller that
-   * captured a NON-typing content-doc edit (see {@link recordDocEdit}) names
-   * what it actually did, so the history reads truthfully.
+   * Text-history recorder: record ONE closed typing run — the block's runs
+   * before and after it, as data — as an entry on the unified undo stack.
+   * Called by `CollabTextPlugin` from the content-doc seam's `onRunsEdit`.
+   * Replay brings the block back to those runs on whichever host holds it
+   * then (its open doc, or its stored doc through the server) — never a
+   * pointer that can go stale.
    */
-  recordTextEdit: (
-    blockId: string,
-    edit: CapturedBlockDocEdit,
-    label?: string,
-  ) => void;
+  recordTextEdit: (edit: BlockRunsEdit) => void;
   /**
-   * Capture a SYNCHRONOUS content-doc edit as ONE standalone text undo entry.
-   * `edit` must drive its Lexical/Yjs changes synchronously (`discrete: true`) —
-   * see `captureBlockDocEdit`. No-ops when the edit changed nothing.
+   * Record a content-doc edit as ONE standalone text undo entry, under its own
+   * `label`. Defers `edit` one microtask (a caller inside a Lexical command
+   * handler or update listener is inside an `editor.update()`, where a nested
+   * `discrete` update is enqueued rather than committed), then runs it inside
+   * the owner's `untracked` scope between two `runsNow()` reads, so the run
+   * tracker neither opens a run for it nor folds it into the typing run around
+   * it. No-ops when the edit changed nothing; with no live owner the edit
+   * simply runs (there is no doc to record against).
    *
    * It lives here rather than in the calling component so that ALL undo
-   * recording stays at this documented chokepoint, next to
-   * `recordStructuralWithDocEdit`, instead of a component reaching into
-   * `captureBlockDocEdit` itself — and it hands the same capability to any
-   * future "toolbar bold as its own undo step".
+   * recording stays at this documented chokepoint — and it hands the same
+   * capability to any future "toolbar bold as its own undo step".
    */
   recordDocEdit: (blockId: string, label: string, edit: () => void) => void;
   /** Structural (document-tier) undo — reverses the last recorded block edit. */
@@ -645,6 +724,84 @@ export function BlockEditorProviderInner({
     () => new Set(store.serverData.map((b) => b.id)),
     [store.serverData],
   );
+  // Every id this editor has EVER seen in server truth — monotonic, grown from
+  // each authoritative push and never shrunk. Together with `serverIds` it
+  // derives `RowTruth` (see the interface doc): an id that left the set was
+  // deleted, and a delete is a trash whose stored doc survives — so the doc
+  // seam must not pre-seed it. An id never seen here is client-minted; nothing
+  // can be stored for it. Grown in an effect (one per push) and read only from
+  // the callback below, never in render; a child's render in the same commit
+  // asks about ids that were present in an EARLIER push, which this effect has
+  // already recorded.
+  const everServerIdsRef = useRef(new Set<string>());
+  // The SAME transition, as a promise: a text replay onto a row that was just
+  // re-created optimistically (undo of a delete) must not doc-init a row the
+  // server may not have yet, so it waits — push-based, off this effect — for
+  // the authoritative push that carries the id (`block-text-write-stored.ts`).
+  // A waiter is only ever registered for a row in THIS client's rows (the
+  // optimistic create it is waiting on); the moment that row leaves them
+  // without having entered server truth — the create was rolled back or
+  // denied — nothing will ever confirm it, so the waiter is REJECTED, loudly,
+  // rather than left pending (a pending replay wedges the tab's serialized
+  // undo queue). Keyed on the rows too, since a rollback is a rows change.
+  const serverIdsRef = useLatestRef(serverIds);
+  const rowWaitersRef = useRef(
+    new Map<string, { resolve: () => void; reject: (err: Error) => void }[]>(),
+  );
+  useEffect(() => {
+    const ever = everServerIdsRef.current;
+    for (const id of serverIds) ever.add(id);
+    const waiters = rowWaitersRef.current;
+    for (const [id, list] of waiters) {
+      if (serverIds.has(id)) {
+        waiters.delete(id);
+        for (const w of list) w.resolve();
+      } else if (!liveRowsRef.current.some((b) => b.id === id)) {
+        waiters.delete(id);
+        for (const w of list)
+          w.reject(
+            new Error(
+              `text replay waited for row "${id}" to enter server truth, but its optimistic create was rolled back`,
+            ),
+          );
+      }
+    }
+  }, [serverIds, store.data, liveRowsRef]);
+  useEffect(() => {
+    const waiters = rowWaitersRef.current;
+    return () => {
+      // The editor is gone, and with it the store whose push would have
+      // resolved these. A replay left hanging would wedge the tab's serialized
+      // undo queue forever; a loud rejection reaches the crash collector.
+      for (const [id, list] of waiters) {
+        for (const w of list)
+          w.reject(
+            new Error(
+              `page editor unmounted while a text replay waited for row "${id}"`,
+            ),
+          );
+      }
+      waiters.clear();
+    };
+  }, []);
+  const waitRowPresent = useCallback(
+    (id: string): Promise<void> => {
+      if (serverIdsRef.current.has(id)) return Promise.resolve();
+      return new Promise<void>((resolve, reject) => {
+        const list = rowWaitersRef.current.get(id) ?? [];
+        list.push({ resolve, reject });
+        rowWaitersRef.current.set(id, list);
+      });
+    },
+    [serverIdsRef],
+  );
+  const rowTruthOf = useCallback(
+    (id: string): RowTruth => {
+      if (serverIds.has(id)) return "present";
+      return everServerIdsRef.current.has(id) ? "removed" : "unseen";
+    },
+    [serverIds],
+  );
 
   // --- The caret authority ---------------------------------------------------
   // The ONE owner of "where the caret is" and of the block focus-handle registry
@@ -749,72 +906,180 @@ export function BlockEditorProviderInner({
   // --- Unified undo/redo (single document-level stack) ----------------------
   // ONE stack covers both text and structure (there is no per-block Lexical
   // `HistoryPlugin`): structural ops (create/split/merge/indent/outdent/delete/
-  // move/convert/bulk) AND text edits (mirrored per-block `Y.UndoManager`
-  // items via `recordTextEdit`). Structural recording happens at the mutation
-  // chokepoints below: snapshot the current rows, compute the resulting rows,
-  // diff into a minimal patch pair, and `record` undo/redo thunks that
-  // dispatch those patches.
+  // move/convert/bulk) AND text edits (each closed typing run, as the block's
+  // runs before and after it). Every entry is DATA — a patch pair and/or a list
+  // of `BlockRunsEdit`s — recorded through the ONE recorder below,
+  // `recordEntry`, at the mutation chokepoints: snapshot the current rows,
+  // compute the resulting rows, diff into a minimal patch pair, capture the doc
+  // runs a surgery moved, and `record` thunks that replay them onto the CURRENT
+  // state.
   // SCOPED: the stack itself is the tab's (mounted in `TabSurface`), but these
-  // thunks close over THIS editor's mount — the per-`pageId` optimistic store and
-  // per-block `Y.UndoManager`s, which die with the doc. So the editor's entries
-  // are dropped when it unmounts (a Miller `swap` remounts the column on page
-  // navigation), leaving other plugins' mount-free entries on the stack.
+  // thunks close over THIS editor's mount — the per-`pageId` optimistic store
+  // and its row truth. So the editor's entries are dropped when it unmounts (a
+  // Miller `swap` remounts the column on page navigation), leaving other
+  // plugins' mount-free entries on the stack.
   const { record, undo, redo, canUndo, canRedo } = useScopedUndoRedo();
+  // Seal every block's open typing run before an undo/redo pops: the run the
+  // user is in the middle of is then the entry on top, not the one below it.
+  usePendingFlush(closeAllOpenTextRuns);
 
   // Dispatch a minimal patch through the store's overlay pipeline (instant
   // overlay + server reconcile on the persistent path; a synchronous state write
   // in memory). Goes DIRECTLY to `store.dispatch`, never through
-  // `recordStructural`, so a replayed patch is never re-recorded — and the
+  // `recordEntry`, so a replayed patch is never re-recorded — and the
   // primitive's re-entrancy guard ignores `record` during replay anyway.
+  //
+  // The ONE place a patch's creates are sorted into creates and RESTORES: a
+  // create whose id this editor has seen in server truth and that is not there
+  // now (`RowTruth` `"removed"`) restores a trashed row, whose stored fields
+  // the server keeps — so the overlay must judge it by presence alone (see
+  // `restoreIds` on `BlockOverlayOp`). Derived from the same two sets
+  // `rowTruthOf` reads, through their refs: this runs from undo/redo thunks
+  // and commit callbacks, after the push that grew `everServerIds` committed,
+  // and a render-keyed identity here would re-mint every consumer on each
+  // push for nothing.
   const dispatchPatch = useCallback(
     (patch: BlockPatch) => {
       if (isEmptyPatch(patch)) return;
-      store.dispatch(buildPatchOverlayOp(patch));
+      const restoreIds = new Set(
+        patch.creates
+          .map((c) => c.id)
+          .filter(
+            (id) =>
+              !serverIdsRef.current.has(id) && everServerIdsRef.current.has(id),
+          ),
+      );
+      store.dispatch(buildPatchOverlayOp(patch, { restoreIds }));
     },
-    [store],
+    [store, serverIdsRef],
   );
 
-  // Record a before→after change as a reversible command. Diffs the two full-row
-  // snapshots into minimal forward/reverse patches; the thunks dispatch them and
-  // best-effort restore focus to `focusId` (the block the user was on). A no-op
-  // diff records nothing. `coalesceKey` is threaded into the entry so run-together
-  // edits (typing) merge into one undo step; structural ops pass none.
-  const recordPatchEntry = useCallback(
-    (
-      before: Block[],
-      after: Block[],
-      label: string,
-      focusId: string | null,
-      coalesceKey?: string,
-    ) => {
+  // Replay ONE `BlockRunsEdit` in `direction`: bring the block to the entry's
+  // `before` (undo) or `after` (redo), checking that it currently holds the
+  // other side (a mismatch is a second writer — applied anyway, reported as a
+  // `stale-entry` conflict). `applyBlockRuns` picks the host — the block's open
+  // canonical doc when an editor holds one, its stored doc through the server
+  // otherwise, the row itself in memory mode — and waits, push-based, for a
+  // re-created row to enter server truth before ever touching a stored doc.
+  const replayRunsEdit = useCallback(
+    async (edit: BlockRunsEdit, direction: "undo" | "redo"): Promise<void> => {
+      const { blockId } = edit;
+      const rowOf = (): Block | undefined =>
+        liveRowsRef.current.find((b) => b.id === blockId) ??
+        rowsRef.current.find((b) => b.id === blockId);
+      await applyBlockRuns({
+        blockId,
+        runs: direction === "undo" ? edit.before : edit.after,
+        expected: direction === "undo" ? edit.after : edit.before,
+        direction,
+        serverSync,
+        // Host B's doc-init proposal: the row's own projection, read at apply
+        // time (only ever used for a block the server holds no doc for).
+        rowRuns: () => runsOfNode(rowOf() ?? {}),
+        // Memory mode, no owner: the row IS the text. A field-scoped update
+        // straight into the overlay — this is a replay, so nothing records.
+        writeRow: (runs) => {
+          const row = rowOf();
+          if (!row) return;
+          dispatchPatch({
+            creates: [],
+            updates: [
+              {
+                id: blockId,
+                changes: {
+                  data: { ...((row.data as object | null) ?? {}), text: runs },
+                },
+              },
+            ],
+            deleteIds: [],
+          });
+        },
+        rowPresent: () => serverIdsRef.current.has(blockId),
+        // The render-fresh rows — the same set the waiter effect reads, so
+        // "wait for it" and "reject, it was rolled back" judge one fact.
+        rowLive: () => liveRowsRef.current.some((b) => b.id === blockId),
+        waitRowPresent: () => waitRowPresent(blockId),
+      });
+    },
+    [serverSync, liveRowsRef, dispatchPatch, serverIdsRef, waitRowPresent],
+  );
+
+  // THE recorder. Every undo entry this editor puts on the stack — structural,
+  // text, or a gesture that is both (split, merge) — is recorded here and
+  // nowhere else. It:
+  //
+  //  - seals every block's open typing run FIRST, so a structural op never
+  //    records ahead of the run that preceded it (the run's own entry lands
+  //    below this one, and LIFO pops this one first);
+  //  - pins every removed row's `data.text` to its doc's live runs in the
+  //    reverse patch (`derivePatchEntry` → `pinRestoredText`);
+  //  - bails only when the patches are empty AND there is no runs edit;
+  //  - on undo replays each runs edit's `before` and THEN dispatches the
+  //    reverse patch; on redo dispatches the forward patch and THEN replays
+  //    each `after` — a doc edit always runs while its row exists;
+  //  - restores focus at the recorded caret when the entry carries one for the
+  //    block it lands on (a replay lands in the binding as a remote edit, so
+  //    without it the cursor would drift), else a plain focus.
+  //
+  // The thunks are async only for the replay's sake; the undo-redo primitive
+  // serializes turns, so a second Cmd+Z during an in-flight stored-doc write
+  // queues behind it instead of running under the replay guard.
+  const recordEntry = useCallback(
+    ({
+      label,
+      focusId,
+      before,
+      after,
+      runsEdits = [],
+      coalesceKey,
+    }: RecordEntryArgs) => {
+      closeAllOpenTextRuns();
       const derived = derivePatchEntry(before, after, focusId);
-      if (!derived) return;
-      const { undoPatch, redoPatch, undoFocus, redoFocus } = derived;
+      if (!derived && runsEdits.length === 0) return;
+      const { undoPatch, redoPatch, undoFocus, redoFocus } = derived ?? {
+        undoPatch: EMPTY_PATCH,
+        redoPatch: EMPTY_PATCH,
+        undoFocus: focusId,
+        redoFocus: focusId,
+      };
+      // The recorded caret for the block undo/redo lands on, clamped into the
+      // text that replay restores there (the offset is an approximation read
+      // at run close — see `useRunsEditRecorder` — and must never exceed it).
+      const caretFor = (
+        id: string | null,
+        direction: "undo" | "redo",
+      ): number | undefined => {
+        const edit = runsEdits.find((e) => e.blockId === id);
+        if (!edit) return undefined;
+        const caret = direction === "undo" ? edit.caretBefore : edit.caretAfter;
+        if (caret === undefined) return undefined;
+        const restored = direction === "undo" ? edit.before : edit.after;
+        return Math.min(caret, runsLength(restored));
+      };
+      const land = (id: string | null, caret: number | undefined): void => {
+        // Undo/redo reveals the affected block — it may be off-screen.
+        if (id) queueMicrotask(() => focusBlock(id, caret, { scroll: true }));
+      };
       record({
         label,
         coalesceKey,
-        undo: () => {
+        undo: async () => {
+          for (const e of runsEdits) await replayRunsEdit(e, "undo");
           dispatchPatch(undoPatch);
-          // Undo/redo reveals the affected block — it may be off-screen.
-          if (undoFocus)
-            queueMicrotask(() =>
-              focusBlock(undoFocus, undefined, { scroll: true }),
-            );
+          land(undoFocus, caretFor(undoFocus, "undo"));
         },
-        redo: () => {
+        redo: async () => {
           dispatchPatch(redoPatch);
-          if (redoFocus)
-            queueMicrotask(() =>
-              focusBlock(redoFocus, undefined, { scroll: true }),
-            );
+          for (const e of runsEdits) await replayRunsEdit(e, "redo");
+          land(redoFocus, caretFor(redoFocus, "redo"));
         },
       });
     },
-    [record, dispatchPatch, focusBlock],
+    [record, dispatchPatch, focusBlock, replayRunsEdit],
   );
 
-  // Structural ops never coalesce (each is a distinct undo step), so this passes
-  // no `coalesceKey` — preserving the previous `recordStructural` behavior exactly.
+  // A structural op is a patch-only entry. Never coalesces (each is a distinct
+  // undo step), so it passes no `coalesceKey`.
   const recordStructural = useCallback(
     (
       before: Block[],
@@ -822,120 +1087,59 @@ export function BlockEditorProviderInner({
       label: string,
       focusId: string | null,
     ) => {
-      recordPatchEntry(before, after, label, focusId);
+      recordEntry({ label, focusId, before, after });
     },
-    [recordPatchEntry],
+    [recordEntry],
   );
 
-  // Combined recorder: a structural op whose forward apply
-  // ALSO edited a content doc (split's origin-truncation, merge's target-append)
-  // is ONE stack entry — a single Cmd+Z reverses the rows AND the doc together,
-  // so they can never disagree. `docEdit` comes from `captureBlockDocEdit` (or a
-  // hand-built doc-level pair for an unmounted target); undo runs it FIRST
-  // (while the doc's editor is still bound), redo re-applies the patch first
-  // (recreating rows the doc edit's subscribers may need). `undoTextOverride`
-  // pins a restored row's `data.text` to the LIVE runs captured at op time —
-  // for merge, the deleted source block's doc is re-SEEDED from that row on
-  // undo, and the row snapshot may lag the doc by the projection debounce.
-  const recordStructuralWithDocEdit = useCallback(
-    (
-      before: Block[],
-      after: Block[],
-      label: string,
-      focusId: string | null,
-      docEdit: CapturedBlockDocEdit | null,
-      undoTextOverride?: { blockId: string; runs: RichText },
-    ) => {
-      const derived = derivePatchEntry(
-        before,
-        after,
-        focusId,
-        undoTextOverride,
-      );
-      // Bail only when there is NOTHING to record: empty patches AND no doc edit.
-      // A docEdit-only entry (empty structural diff) must still record so its
-      // content-doc reverse/re-apply lands on the stack; its (empty) patches
-      // no-op through `dispatchPatch` and focus falls back to `focusId`.
-      if (!derived && !docEdit) return;
-      const { undoPatch, redoPatch, undoFocus, redoFocus } = derived ?? {
-        undoPatch: { creates: [], updates: [], deleteIds: [] },
-        redoPatch: { creates: [], updates: [], deleteIds: [] },
-        undoFocus: focusId,
-        redoFocus: focusId,
-      };
-      record({
-        label,
-        undo: async () => {
-          await docEdit?.undo();
-          dispatchPatch(undoPatch);
-          // Undo/redo reveals the affected block — it may be off-screen.
-          if (undoFocus)
-            queueMicrotask(() =>
-              focusBlock(undoFocus, undefined, { scroll: true }),
-            );
-        },
-        redo: async () => {
-          dispatchPatch(redoPatch);
-          await docEdit?.redo();
-          if (redoFocus)
-            queueMicrotask(() =>
-              focusBlock(redoFocus, undefined, { scroll: true }),
-            );
-        },
-      });
-    },
-    [record, dispatchPatch, focusBlock],
-  );
-
-  // Text recorder: one shared-stack entry per captured
-  // `Y.UndoManager` item. Deliberately NO `coalesceKey`: the manager's
-  // captureTimeout already folded the typing run into the ONE item these
-  // thunks pop — app-level coalescing would merge two entries over two manager
-  // items and break the 1:1 LIFO correspondence (`um.undo()` pops exactly one).
+  // A closed typing run is a text-only entry: equal row snapshots, one runs
+  // edit. Deliberately NO `coalesceKey` — the run tracker already grouped the
+  // keystrokes (one entry per idle-closed run), and app-level coalescing would
+  // merge two runs' data into one entry whose `before`/`after` no longer bracket
+  // what a single Cmd+Z reverts.
   const recordTextEdit = useCallback(
-    (blockId: string, edit: CapturedBlockDocEdit, label = "Edit text") => {
-      record({
-        label,
-        undo: async () => {
-          await edit.undo();
-          // Undo/redo reveals the edited block — it may be off-screen.
-          queueMicrotask(() =>
-            focusBlock(blockId, undefined, { scroll: true }),
-          );
-        },
-        redo: async () => {
-          await edit.redo();
-          queueMicrotask(() =>
-            focusBlock(blockId, undefined, { scroll: true }),
-          );
-        },
+    (edit: BlockRunsEdit) => {
+      const rows = rowsRef.current;
+      recordEntry({
+        label: "Edit text",
+        focusId: edit.blockId,
+        before: rows,
+        after: rows,
+        runsEdits: [edit],
       });
     },
-    [record, focusBlock],
+    [recordEntry],
   );
 
-  // Standalone content-doc recorder: capture a SYNCHRONOUS doc edit (the
-  // inline-markdown autoformat today) as ONE text entry of its own, rather than
-  // folded into a structural op the way `recordStructuralWithDocEdit` does it.
-  // `captureBlockDocEdit` is the whole mechanism — leading/trailing
-  // `stopCapturing` fence the edit off from the surrounding typing run, and the
-  // mirror is suppressed so the entry is recorded HERE, once, under the caller's
-  // own label. `null` means the edit changed nothing (or the block has no live
-  // doc): nothing to reverse, so nothing lands on the stack.
-  //
-  // Recording lives at this chokepoint deliberately: a component that reached
-  // into `captureBlockDocEdit` itself would be a second, undocumented undo
-  // recorder outside the two that this file owns.
-  //
-  // No `coalesceKey`, same reasoning as `recordTextEdit` above: the manager's
-  // captureTimeout already did the grouping, and app-level coalescing would
-  // break the 1:1 LIFO correspondence (`um.undo()` pops exactly one item).
+  // Standalone content-doc recorder (the inline-markdown autoformat, the
+  // mark-boundary unmark): ONE text entry of its own, under the caller's label,
+  // fenced off the typing run on both sides. See the interface doc for the
+  // deferral; the `untracked` scope is what keeps the run tracker from also
+  // recording the same edit as typing — and it closes the open run first, so
+  // the entry sits ABOVE a fully recorded typing run rather than inside it.
   const recordDocEdit = useCallback(
     (blockId: string, label: string, edit: () => void) => {
-      const captured = captureBlockDocEdit(blockDocOwnerOf(blockId), edit);
-      if (captured) recordTextEdit(blockId, captured, label);
+      queueMicrotask(() => {
+        const owner = blockDocOwnerOf(blockId);
+        if (!owner) {
+          edit();
+          return;
+        }
+        const before = owner.runsNow();
+        owner.untracked(edit);
+        const after = owner.runsNow();
+        if (runsEqual(before, after)) return;
+        const rows = rowsRef.current;
+        recordEntry({
+          label,
+          focusId: blockId,
+          before: rows,
+          after: rows,
+          runsEdits: [{ blockId, before, after }],
+        });
+      });
     },
-    [recordTextEdit],
+    [recordEntry],
   );
 
   // The row model's ONE text rule, enforced where every direct row write lands:
@@ -1003,10 +1207,9 @@ export function BlockEditorProviderInner({
   // swap, and the `wrapOnConvert` wrap, which mints the container row and
   // reparents the origin in ONE patch, hence ONE undo entry).
   //
-  // Undo/redo restore focus to `focusId` (at `caretOffset` when given).
-  // `coalesceKey` merges run-together edits into one undo step; `record: false`
-  // keeps a mutation off the stack (view state) while still flowing it through
-  // the optimistic pipeline.
+  // Undo/redo restore focus to `focusId`. `coalesceKey` merges run-together
+  // edits into one undo step; `record: false` keeps a mutation off the stack
+  // (view state) while still flowing it through the optimistic pipeline.
   const commitRows = useCallback(
     (
       transform: (rows: Block[]) => Block[],
@@ -1015,7 +1218,6 @@ export function BlockEditorProviderInner({
         /** Block to re-focus on undo/redo; null when no row owns the caret. */
         focusId: string | null;
         coalesceKey?: string;
-        caretOffset?: number;
         record?: boolean;
       },
     ) => {
@@ -1045,45 +1247,21 @@ export function BlockEditorProviderInner({
       const after = transform(before).map((row) =>
         byId.get(row.id) === row ? row : conformRowText(row),
       );
-      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(
-        diffBlocks(before, after),
-      );
-      if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
+      const { redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
+      if (isEmptyPatch(redoPatch)) return;
       advanceRows(after);
-      const { focusId } = opts;
       if (opts.record !== false) {
-        record({
+        recordEntry({
           label: opts.label,
+          focusId: opts.focusId,
           coalesceKey: opts.coalesceKey,
-          undo: () => {
-            dispatchPatch(undoPatch);
-            // Undo/redo reveals the mutated block — it may be off-screen.
-            if (focusId) {
-              queueMicrotask(() =>
-                focusBlock(focusId, opts.caretOffset, { scroll: true }),
-              );
-            }
-          },
-          redo: () => {
-            dispatchPatch(redoPatch);
-            if (focusId) {
-              queueMicrotask(() =>
-                focusBlock(focusId, opts.caretOffset, { scroll: true }),
-              );
-            }
-          },
+          before,
+          after,
         });
       }
       dispatchPatch(redoPatch);
     },
-    [
-      record,
-      dispatchPatch,
-      focusBlock,
-      liveRowsRef,
-      advanceRows,
-      conformRowText,
-    ],
+    [recordEntry, dispatchPatch, liveRowsRef, advanceRows, conformRowText],
   );
 
   // The one-row case of `commitRows`: rewrite exactly the target row and land
@@ -1095,7 +1273,6 @@ export function BlockEditorProviderInner({
       opts: {
         label: string;
         coalesceKey?: string;
-        caretOffset?: number;
         record?: boolean;
       },
     ) => {
@@ -1111,9 +1288,8 @@ export function BlockEditorProviderInner({
   );
 
   // `content doc → data.text` projection write (see the interface doc). NEVER
-  // recorded: text history lives in the block's `Y.Doc` (wired into the
-  // unified stack via `recordTextEdit`), so a projection landing on the undo
-  // stack would double-count it. Still flows through the shared optimistic
+  // recorded: text history is the run tracker's data entries (`recordTextEdit`),
+  // so a projection landing on the undo stack would double-count it. Still flows through the shared optimistic
   // patch pipeline (server write + `blocksChanged` fan-out) and no-ops when
   // the row is unchanged or gone.
   const projectText = useCallback<ProjectTextFn>(
@@ -1405,7 +1581,7 @@ export function BlockEditorProviderInner({
   // The ORIGIN keeps its id, type, `data` (its `text` projection included, since
   // its content doc is untouched), children and rank. Keeping the id is
   // load-bearing, not an optimization: its `page_block_docs` Yjs doc, its
-  // `Y.UndoManager` and its registered `BlockFocusHandle` are all keyed by block
+  // content owner and its registered `BlockFocusHandle` are all keyed by block
   // id, so the caret simply stays put — no `focusNew`, no remount race. The NEW
   // id goes to the container, which is void and never opens a content doc, so
   // the doc-init FK gate applies to neither row.
@@ -1463,9 +1639,8 @@ export function BlockEditorProviderInner({
   // `prevVisibleLine(source)`, so we resolve the same target here to land the
   // caret at the JOIN offset (the target's text length BEFORE the append) and
   // drive the target's bound editor. Both source blocks flow through ONE
-  // implementation, so the microtask-deferred append-first ordering,
-  // `captureBlockDocEdit`, `recordStructuralWithDocEdit`, and `undoTextOverride`
-  // (keyed to the SOURCE row) are reused unchanged.
+  // implementation, so the microtask-deferred append-first ordering and the
+  // combined data entry are reused unchanged.
   const mergeBlock = useCallback(
     (sourceId: string, runs?: RichText) => {
       const nodes = toNodes(rowsRef.current);
@@ -1483,13 +1658,14 @@ export function BlockEditorProviderInner({
       // The reducer's row-level text concatenation is ignored by bound
       // editors — the merging block's LIVE runs (may contain unflushed
       // edits) must land in the TARGET's content doc too. Both variants
-      // record ONE combined stack entry (structural patch + doc edit) so a
-      // single Cmd+Z restores this block's row AND un-appends the target's
-      // doc together. The restored source row's `data.text` is pinned to
-      // the live `mergingRuns` (undoTextOverride): the source doc was
-      // FK-cascade-dropped with the row, so on undo it re-seeds from
-      // `data.text` — which must be exactly what was removed from the
-      // target, not a projection-lagged snapshot.
+      // record ONE combined entry: the structural patch plus a runs edit on
+      // the target (`targetBefore` → `targetAfter`), so a single Cmd+Z
+      // restores this block's row AND un-appends the target's doc together.
+      // The restored source row's `data.text` is pinned to its doc's runs by
+      // `derivePatchEntry` (the delete is a trash, so the source doc normally
+      // SURVIVES and undo binds back to it — but the row's text is what
+      // history, search and backlinks read, and what seeds the doc when it did
+      // not survive, so it must be exactly what was merged away).
       const mergingRuns = runs ?? runsOfNode(block);
       const targetHandle = authority.surgeryOf(target.id);
       const op: BlockOp = { kind: "merge", blockId: sourceId, runs };
@@ -1508,24 +1684,30 @@ export function BlockEditorProviderInner({
         const before = rowsRef.current;
         const { after, vars } = predictOp(op, before, opCtx);
         queueMicrotask(() => {
-          // `captureBlockDocEdit` runs `append` synchronously (surgery uses
-          // `discrete: true`), so a throw propagates out of the microtask
-          // BEFORE the dispatch — the source row is never removed.
-          const docEdit = captureBlockDocEdit(blockDocOwnerOf(target.id), () =>
-            append(mergingRuns),
-          );
+          // The target's runs before the append come from its DOC (the
+          // authority, memoized), never from its ~1 s-lagged row. The append
+          // runs inside `untracked` (surgery uses `discrete: true`, so the
+          // binding's transaction lands synchronously inside the scope): the
+          // run tracker must not ALSO record it as typing on top of this
+          // entry. A throw propagates out of the microtask BEFORE the
+          // dispatch — the source row is never removed.
+          const targetOwner = blockDocOwnerOf(target.id);
+          const targetBefore = targetOwner
+            ? targetOwner.runsNow()
+            : runsOfNode(target);
+          const targetAfter = mergeRuns(targetBefore, mergingRuns);
+          if (targetOwner) targetOwner.untracked(() => append(mergingRuns));
+          else append(mergingRuns);
           store.dispatch(vars);
-          recordStructuralWithDocEdit(
+          recordEntry({
+            label: OP_LABELS.merge,
+            focusId: sourceId,
             before,
             after,
-            OP_LABELS.merge,
-            sourceId,
-            docEdit,
-            {
-              blockId: sourceId,
-              runs: mergingRuns,
-            },
-          );
+            runsEdits: [
+              { blockId: target.id, before: targetBefore, after: targetAfter },
+            ],
+          });
         });
       } else {
         // Unmounted target (virtualized offscreen): lossless doc-level
@@ -1533,58 +1715,35 @@ export function BlockEditorProviderInner({
         // append leaves both blocks intact (loud unhandled rejection)
         // instead of orphaning the text in a row the target's doc would
         // later overwrite via projection. No caret to place: the target
-        // has no editor. No live undo manager either, so the combined
-        // entry's doc thunks are doc-level: undo truncates the target's
-        // doc back to the returned join offset, redo re-appends. The
-        // target's `data.text` is read at thunk run time (doc-init seeds
-        // from it only if the doc row vanished meanwhile).
+        // has no editor. The append goes through the stored-doc replay
+        // host (`spliceStoredBlockDoc`), RELATIVE to the authoritative runs
+        // the server holds — never to the row's lagged projection — and
+        // hands back what it read and wrote, which IS the entry's runs edit:
+        // undo splices the target back to `targetBefore` (the prefix
+        // alignment removes exactly the appended suffix), redo brings it to
+        // `targetAfter` again. The target's `data.text` is read at write time
+        // (doc-init seeds from it only if no doc exists — a never-opened
+        // block).
         const targetId = target.id;
-        void appendRunsToBlockDoc(
-          targetId,
-          runsOfNode(target),
-          mergingRuns,
-        ).then(({ joinOffset }) => {
+        const targetDataText = () =>
+          runsOfNode(rowsRef.current.find((b) => b.id === targetId) ?? target);
+        void spliceStoredBlockDoc(targetId, targetDataText(), (current) =>
+          mergeRuns(current, mergingRuns),
+        ).then(({ before: targetBefore, after: targetAfter }) => {
           const { before, after } = applyOverlay(op);
-          const targetDataText = () =>
-            (
-              rowsRef.current.find((b) => b.id === targetId)?.data as Record<
-                string,
-                unknown
-              > | null
-            )?.text;
-          const docEdit: CapturedBlockDocEdit = {
-            undo: () =>
-              truncateBlockDocFrom(targetId, targetDataText(), joinOffset),
-            redo: async () => {
-              await appendRunsToBlockDoc(
-                targetId,
-                targetDataText(),
-                mergingRuns,
-              );
-            },
-          };
-          recordStructuralWithDocEdit(
+          recordEntry({
+            label: OP_LABELS.merge,
+            focusId: sourceId,
             before,
             after,
-            OP_LABELS.merge,
-            sourceId,
-            docEdit,
-            {
-              blockId: sourceId,
-              runs: mergingRuns,
-            },
-          );
+            runsEdits: [
+              { blockId: targetId, before: targetBefore, after: targetAfter },
+            ],
+          });
         });
       }
     },
-    [
-      store,
-      applyOverlay,
-      recordStructuralWithDocEdit,
-      opCtx,
-      isAnchorNode,
-      authority,
-    ],
+    [store, applyOverlay, recordEntry, opCtx, isAnchorNode, authority],
   );
 
   // THE row-side half of a type change, shared by `BlockEditorAPI.convertTo` and
@@ -1749,7 +1908,7 @@ export function BlockEditorProviderInner({
         // offset 0 and never lost focus — the Enter keydown was preventDefaulted,
         // so DOM focus stays in the origin editor. So do NOT `focusNew` (that
         // would steal focus to the new empty block), do NOT truncate the origin's
-        // live doc (nothing moved out of it — no `captureBlockDocEdit`), and
+        // live doc (nothing moved out of it — no runs edit), and
         // record a PLAIN structural entry. `derivePatchEntry` sees the empty block
         // as the sole insert, so with `focusId = blockId` (the ORIGIN) redo re-focuses
         // the origin and undo (which deletes the empty block) also lands on the origin —
@@ -1766,37 +1925,59 @@ export function BlockEditorProviderInner({
         // --- existing path (mid/end split, empty-block Enter, asChild) ---
         focusNew(newId);
         // The reducer left the HEAD in this block's row, but the bound editor
-        // ignores rows — the LIVE content must be
-        // truncated from the caret too. The op's `runs` were captured from the
-        // live editor BEFORE this truncation, so the new block's `data.text`
-        // seed (the tail its content doc initializes from on mount) is
-        // caret-exact. Driving the deletion through Lexical (`truncateAt`)
-        // lets the collab binding sync it into the content doc like any local
-        // edit — and `captureBlockDocEdit` folds that doc edit into ONE
-        // combined stack entry with the structural patch, so a single Cmd+Z
-        // removes the new block AND restores this block's full pre-split
-        // content (rows and docs reverse together, never half).
+        // ignores rows — the LIVE content must be truncated from the caret
+        // too. The op's `runs` were captured from the live editor BEFORE this
+        // truncation, so the new block's `data.text` seed (the tail its content
+        // doc initializes from on mount) is caret-exact. Driving the deletion
+        // through Lexical (`truncateAt`) lets the collab binding sync it into
+        // the content doc like any local edit — and the entry recorded below
+        // carries that doc edit as DATA beside the structural patch (the
+        // origin's runs before the cut → the head), so a single Cmd+Z removes
+        // the new block AND restores this block's full pre-split content (rows
+        // and docs reverse together, never half).
         //
-        // The capture is DEFERRED a microtask: `split` is called from a
+        // The truncation is DEFERRED a microtask: `split` is called from a
         // Lexical command handler, i.e. INSIDE this editor's own update — a
         // nested `editor.update` (even `discrete`) is queued by Lexical, so a
         // synchronous truncation call here would commit (and transact into
-        // Yjs) only after `captureBlockDocEdit`'s window closed, escaping the
-        // fold and double-recording as a plain text entry. One microtask puts
-        // it outside the outer update; record order is unaffected (no other
+        // Yjs) only after the `untracked` scope closed, escaping it and
+        // double-recording as a plain typing entry. One microtask puts it
+        // outside the outer update; record order is unaffected (no other
         // record can interleave within the same task).
+        //
+        // `originBefore` is the DOC's runs (the authority) when the block has
+        // a live owner — the op's `runs` are the editor's VIEW at keydown and
+        // the row is a lagged projection, either of which can differ from what
+        // the doc holds by the time the cut lands. No owner ⇒ no doc to edit
+        // and nothing to replay: the entry stays structural.
         const { before, after } = applyOverlay(op);
         queueMicrotask(() => {
-          const docEdit = captureBlockDocEdit(blockDocOwnerOf(blockId), () => {
+          const owner = blockDocOwnerOf(blockId);
+          const truncate = (): void => {
             authority.surgeryOf(blockId)?.truncateAt?.(position);
-          });
-          recordStructuralWithDocEdit(
+          };
+          if (!owner) {
+            truncate();
+            recordEntry({
+              label: OP_LABELS.split,
+              focusId: newId,
+              before,
+              after,
+            });
+            return;
+          }
+          const originBefore = owner.runsNow();
+          const [head] = splitRuns(originBefore, position);
+          owner.untracked(truncate);
+          recordEntry({
+            label: OP_LABELS.split,
+            focusId: newId,
             before,
             after,
-            OP_LABELS.split,
-            newId,
-            docEdit,
-          );
+            runsEdits: runsEqual(originBefore, head)
+              ? []
+              : [{ blockId, before: originBefore, after: head }],
+          });
         });
       },
       merge(opts?: { runs?: RichText }) {
@@ -1911,7 +2092,7 @@ export function BlockEditorProviderInner({
       convertRow,
       applyOverlay,
       recordStructural,
-      recordStructuralWithDocEdit,
+      recordEntry,
       mergeBlock,
       isAnchorNode,
       authority,
@@ -1923,6 +2104,7 @@ export function BlockEditorProviderInner({
       pageId,
       blocks: store.data,
       serverIds,
+      rowTruthOf,
       pending: store.pending,
       enabledBlockTypes,
       allowAttachments: serverSync,
@@ -1964,6 +2146,7 @@ export function BlockEditorProviderInner({
       pageId,
       store.data,
       serverIds,
+      rowTruthOf,
       store.pending,
       enabledBlockTypes,
       serverSync,

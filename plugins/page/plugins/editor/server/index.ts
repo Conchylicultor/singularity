@@ -12,10 +12,17 @@ import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
-import { untrashBlocks, purgeTrashedPages } from "./internal/trash-blocks";
+import {
+  restoreTrashedBlocks,
+  purgeTrashedBlocks,
+} from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
-import { pageBlockHandle, PAGES_TRASH_SOURCE } from "../core/schemas";
+import {
+  pageBlockHandle,
+  PAGES_TRASH_SOURCE,
+  PAGE_BLOCKS_TRASH_SOURCE,
+} from "../core/schemas";
 import {
   listPages,
   listBlocks,
@@ -30,6 +37,10 @@ import {
 } from "../core/endpoints";
 
 export { _blocks } from "./internal/tables";
+// The LIVE relation every reader takes (`page_blocks WHERE deleted_at IS NULL`,
+// the predicate never spelled). `_blocks` itself is for the trash machinery —
+// `page-editor/no-unfiltered-blocks-read` flags any other read of it.
+export { liveBlocks } from "./internal/live-blocks";
 export { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
@@ -43,7 +54,9 @@ export type {
   DeletedBlockRow,
 } from "./internal/document-hooks";
 export type { PageForestTx } from "./internal/page-forest";
-export { deleteBlocksSubtree } from "./internal/trash-blocks";
+// The delete chokepoint and its inverse: every block delete is a trash, and a
+// consumer that trashed through the chokepoint restores through this.
+export { deleteBlocksSubtree, untrashBlocks } from "./internal/trash-blocks";
 export {
   BlockSchema,
   PageDataSchema,
@@ -83,13 +96,22 @@ export default {
   },
   register: [
     blocksChanged,
-    // The pages trash source: soft-deleted pages restore by clearing their
-    // `deleted_at` flags (untrashBlocks) and are hard-deleted only at purge
-    // (purgeTrashedPages runs the OnDelete hooks + cascades).
+    // Two trash sources over ONE ledger mechanism — every block delete is a
+    // trash. `pages` holds the entries page roots mint (what the Pages Trash
+    // dialog lists); `page-blocks` holds the anchor entry a page-free delete
+    // mints for its content rows (undo + purge only, no UI). Both restore by
+    // clearing the rows' flags and consuming the entry (restoreTrashedBlocks →
+    // untrashBlocks), and are hard-deleted only at purge (purgeTrashedBlocks
+    // runs the OnDelete hooks + cascades).
     defineTrashSource({
       id: PAGES_TRASH_SOURCE,
-      restore: untrashBlocks,
-      purge: purgeTrashedPages,
+      restore: restoreTrashedBlocks,
+      purge: purgeTrashedBlocks,
+    }),
+    defineTrashSource({
+      id: PAGE_BLOCKS_TRASH_SOURCE,
+      restore: restoreTrashedBlocks,
+      purge: purgeTrashedBlocks,
     }),
   ],
   contributions: [

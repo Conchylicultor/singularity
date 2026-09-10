@@ -1,3 +1,4 @@
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { blocksChanged } from "./tables-events";
 
@@ -14,27 +15,34 @@ import { blocksChanged } from "./tables-events";
  * only fans out the cross-plugin event. Factored out of the per-handler bodies
  * so the two structural endpoints share one trigger path.
  */
-export async function notifyStructuralChange(args: {
-  pageId: string;
-  /**
-   * Rows removed from the page's live content by this edit (hard-deleted OR
-   * trashed), to fan out one `blocksChanged` per emptied sub-page. Only `id` and
-   * `type` are read.
-   */
-  deletedRows: { id: string; type: string }[];
-}): Promise<void> {
+export async function notifyStructuralChange(
+  args: {
+    pageId: string;
+    /**
+     * Rows removed from the page's live content by this edit (hard-deleted OR
+     * trashed), to fan out one `blocksChanged` per emptied sub-page. Only `id` and
+     * `type` are read.
+     */
+    deletedRows: { id: string; type: string }[];
+  },
+  executor?: NodePgDatabase,
+): Promise<void> {
+  // `executor` rides the emit so a caller driving a db-test-fixture DB emits
+  // against ITS trigger table (subscriber-less there — a no-op); production
+  // passes nothing and the event dispatches on the global handle.
+  const opts = executor ? { tx: executor } : undefined;
   // Deliberately NOT `notifyBlockChange`: its extra page-block branch needs a
   // `blockId` (a page block's cover attachments are scoped to the page block's
   // own id, not its `page_id`), and a structural edit has no single block to
   // name. If that emit is ever wanted here, pass a `blockId` — do not go back to
   // deriving a `type` from the edited blocks, which selected the branch without
   // supplying what it needs and so did nothing at all.
-  await blocksChanged.emit({ pageId: args.pageId });
+  await blocksChanged.emit({ pageId: args.pageId }, opts);
 
   const deletedPages = args.deletedRows.filter(
     (r) => r.type === PAGE_BLOCK_TYPE,
   );
   for (const p of deletedPages) {
-    await blocksChanged.emit({ pageId: p.id });
+    await blocksChanged.emit({ pageId: p.id }, opts);
   }
 }

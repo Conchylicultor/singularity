@@ -1,6 +1,7 @@
 import {
   type AnyPgColumn,
   boolean,
+  check,
   index,
   pgTable,
   text,
@@ -54,7 +55,8 @@ export const _blocks = pgTable(
     // instead of DELETEing the row, so the self-referential FK cascades never
     // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
     // version history all survive until purge. `trashEntryId` correlates the
-    // flagged subtree to its `trash_entries` ledger row for exact-restore.
+    // flagged subtree to its `trash_entries` ledger row for exact-restore. The
+    // two are ONE flag spelled twice — see the CHECK below.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     trashEntryId: text("trash_entry_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -95,5 +97,17 @@ export const _blocks = pgTable(
       .on(t.rank)
       .where(sql`deleted_at IS NULL AND parent_id IS NULL`),
     index("page_blocks_trash_entry_idx").on(t.trashEntryId),
+    // A trashed row ALWAYS names its ledger entry, and a live row never does.
+    // Half of the ledger invariant "an entry exists ⇔ at least one row carries
+    // its id" (the other half is that the flags are set only by
+    // `trashBlockRoots` in the same transaction as `recordTrashEntry`, and
+    // cleared only by `untrashBlocks`, which deletes its entry in the same
+    // transaction — `trash-blocks.ts`). A writer that sets one flag without the
+    // other is rejected by Postgres rather than leaving a row that is neither
+    // live nor restorable.
+    check(
+      "page_blocks_trash_flags_agree",
+      sql`(deleted_at IS NULL) = (trash_entry_id IS NULL)`,
+    ),
   ],
 );

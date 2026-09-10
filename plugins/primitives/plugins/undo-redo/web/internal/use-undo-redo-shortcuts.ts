@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type { ShortcutDescriptor } from "@plugins/primitives/plugins/shortcuts/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { UndoRedoStore } from "./store";
 import { useUndoRedo } from "./use-undo-redo";
 import { resolveUndoOwner } from "./undo-owner";
 
@@ -22,6 +23,14 @@ export interface UndoRedoShortcutsOptions {
  * ⌘Z typed in the agent prompt (a Lexical editor with its own `HistoryPlugin`)
  * undoes the prompt and nothing else.
  *
+ * Undo is eligible while `canUndo` OR while any pending flush is registered:
+ * the stack cannot see an entry a producer is still holding (a typing run
+ * inside its coalescing window), so with a flush registered the key must reach
+ * `undo()` — which seals it first — even when the recorded stack is empty.
+ * Otherwise the very first typing run on a fresh page could never be undone.
+ * Redo stays gated on `canRedo` alone: a flush that seals anything clears
+ * `future`, so there is nothing a sealed entry could make redoable.
+ *
  * The api + `when` are read through a ref so the descriptor array stays
  * referentially stable across `canUndo`/`canRedo` flips — `useSurfaceShortcuts`
  * keys its effect on the array, and a fresh array each render would
@@ -30,8 +39,12 @@ export interface UndoRedoShortcutsOptions {
  */
 export function useUndoRedoShortcuts(opts?: UndoRedoShortcutsOptions): void {
   const api = useUndoRedo();
+  const hasPendingFlush = UndoRedoStore.useSelector(
+    (s) => s.flushes.size > 0,
+    [],
+  );
 
-  const latest = useLatestRef({ api, when: opts?.when });
+  const latest = useLatestRef({ api, hasPendingFlush, when: opts?.when });
 
   const descriptors = useMemo<Omit<ShortcutDescriptor, "surfaceId">[]>(() => {
     const gate = (event: KeyboardEvent): boolean =>
@@ -44,7 +57,9 @@ export function useUndoRedoShortcuts(opts?: UndoRedoShortcutsOptions): void {
         label: "Undo",
         group: "Edit",
         enableInInputs: true,
-        when: (event) => latest.current.api.canUndo && gate(event),
+        when: (event) =>
+          (latest.current.api.canUndo || latest.current.hasPendingFlush) &&
+          gate(event),
         handler: () => latest.current.api.undo(),
       },
       {

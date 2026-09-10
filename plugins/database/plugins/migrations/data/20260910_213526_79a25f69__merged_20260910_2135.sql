@@ -1,0 +1,1 @@
+ALTER TABLE "page_blocks" ADD CONSTRAINT "page_blocks_trash_flags_agree" CHECK ((deleted_at IS NULL) = (trash_entry_id IS NULL));

@@ -1,5 +1,14 @@
 # Trash / soft-delete primitive + Pages adoption
 
+> **Amended (2026-09-10)** by
+> [`2026-09-09-page-data-based-text-undo-entries-v2.md`](./2026-09-09-page-data-based-text-undo-entries-v2.md)
+> §3: **every** block delete is a trash. The "page-free subtree stays a hard
+> delete" branch this doc keeps is gone — a page-free delete set is trashed
+> inline under one `page-blocks` entry, the ledger invariant (entry ⇔ rows) is
+> backed by a CHECK on `page_blocks`, and `untrashBlocks` consumes its own
+> entry. Read the v2 plan for the current policy; the audit table below is
+> historical.
+
 ## Context
 
 On July 10 a block-selection delete in the "Website" page destroyed the full content of two

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   nextRankUnder,
   rankAfterSibling,
@@ -9,6 +9,7 @@ import { createBlock } from "../../core/endpoints";
 import { newBlockId } from "../../core/block-id";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { computePageId } from "./page-id";
 import { withPageForest } from "./page-forest";
 import { insertBlocks, updateBlockFields } from "./forest-writer";
@@ -29,9 +30,9 @@ export const handleCreateBlock = implement(
     let parentId = body.parentId ?? null;
     if (body.afterId) {
       const [after] = await db
-        .select({ parentId: _blocks.parentId })
-        .from(_blocks)
-        .where(and(eq(_blocks.id, body.afterId), isNull(_blocks.deletedAt)))
+        .select({ parentId: liveBlocks.parentId })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.id, body.afterId))
         .limit(1);
       if (!after) throw new HttpError(404, "Block not found");
       parentId = after.parentId;
@@ -80,8 +81,8 @@ export const handleCreateBlock = implement(
     }
     const [row] = await db
       .select()
-      .from(_blocks)
-      .where(eq(_blocks.id, id))
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, id))
       .limit(1);
     if (!row) throw new HttpError(500, "Failed to retrieve created block");
     return BlockSchema.parse(row);

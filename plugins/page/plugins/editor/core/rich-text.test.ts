@@ -13,6 +13,7 @@ import {
   sortMarks,
   splitRuns,
   type RichText,
+  runsEqual,
 } from "./rich-text";
 
 describe("runsOf", () => {
@@ -25,7 +26,10 @@ describe("runsOf", () => {
   });
 
   test("valid array passes through (validated)", () => {
-    const runs: RichText = [{ text: "a", marks: ["bold"] }, { text: "b", color: "red" }];
+    const runs: RichText = [
+      { text: "a", marks: ["bold"] },
+      { text: "b", color: "red" },
+    ];
     expect(runsOf(runs)).toEqual(runs);
   });
 
@@ -51,7 +55,9 @@ describe("plainOf", () => {
   });
 
   test("runs concatenate", () => {
-    expect(plainOf([{ text: "foo" }, { text: "bar", marks: ["bold"] }])).toBe("foobar");
+    expect(plainOf([{ text: "foo" }, { text: "bar", marks: ["bold"] }])).toBe(
+      "foobar",
+    );
   });
 
   test("preserves [[pageId]] tokens verbatim", () => {
@@ -66,7 +72,9 @@ describe("plainOf", () => {
 
 describe("runsLength", () => {
   test("sums run text lengths", () => {
-    expect(runsLength([{ text: "abc" }, { text: "de", marks: ["italic"] }])).toBe(5);
+    expect(
+      runsLength([{ text: "abc" }, { text: "de", marks: ["italic"] }]),
+    ).toBe(5);
     expect(runsLength([])).toBe(0);
   });
 });
@@ -74,7 +82,11 @@ describe("runsLength", () => {
 describe("sortMarks", () => {
   test("canonical order + dedupe", () => {
     expect(sortMarks(["italic", "bold", "italic"])).toEqual(["bold", "italic"]);
-    expect(sortMarks(["code", "underline", "bold"])).toEqual(["bold", "underline", "code"]);
+    expect(sortMarks(["code", "underline", "bold"])).toEqual([
+      "bold",
+      "underline",
+      "code",
+    ]);
   });
 });
 
@@ -99,10 +111,16 @@ describe("splitRuns", () => {
   });
 
   test("mid-run divides into two runs sharing attributes", () => {
-    const runs: RichText = [{ text: "helloworld", marks: ["italic"], color: "red", link: "u" }];
+    const runs: RichText = [
+      { text: "helloworld", marks: ["italic"], color: "red", link: "u" },
+    ];
     const [b, a] = splitRuns(runs, 5);
-    expect(b).toEqual([{ text: "hello", marks: ["italic"], color: "red", link: "u" }]);
-    expect(a).toEqual([{ text: "world", marks: ["italic"], color: "red", link: "u" }]);
+    expect(b).toEqual([
+      { text: "hello", marks: ["italic"], color: "red", link: "u" },
+    ]);
+    expect(a).toEqual([
+      { text: "world", marks: ["italic"], color: "red", link: "u" },
+    ]);
   });
 
   test("across multiple marked runs", () => {
@@ -131,7 +149,10 @@ describe("mergeRuns / coalesce", () => {
   });
 
   test("does not coalesce differing marks", () => {
-    const out = mergeRuns([{ text: "foo", marks: ["bold"] }], [{ text: "bar" }]);
+    const out = mergeRuns(
+      [{ text: "foo", marks: ["bold"] }],
+      [{ text: "bar" }],
+    );
     expect(out).toEqual([{ text: "foo", marks: ["bold"] }, { text: "bar" }]);
   });
 
@@ -144,7 +165,9 @@ describe("mergeRuns / coalesce", () => {
   });
 
   test("drops empty-text runs", () => {
-    expect(coalesce([{ text: "" }, { text: "x" }, { text: "" }])).toEqual([{ text: "x" }]);
+    expect(coalesce([{ text: "" }, { text: "x" }, { text: "" }])).toEqual([
+      { text: "x" },
+    ]);
   });
 
   test("color + link participate in the coalesce key", () => {
@@ -153,6 +176,39 @@ describe("mergeRuns / coalesce", () => {
       { text: "b", color: "red" },
       { text: "c", color: "blue" },
     ]);
-    expect(out).toEqual([{ text: "ab", color: "red" }, { text: "c", color: "blue" }]);
+    expect(out).toEqual([
+      { text: "ab", color: "red" },
+      { text: "c", color: "blue" },
+    ]);
+  });
+});
+
+describe("runsEqual", () => {
+  test("equal text in different run boundaries is equal", () => {
+    expect(
+      runsEqual([{ text: "foo" }, { text: "bar" }], [{ text: "foobar" }]),
+    ).toBe(true);
+  });
+
+  test("mark order, default color and empty runs do not matter", () => {
+    expect(
+      runsEqual(
+        [
+          { text: "", marks: [] },
+          { text: "a", marks: ["italic", "bold"], color: "default" },
+        ],
+        [{ text: "a", marks: ["bold", "italic"] }],
+      ),
+    ).toBe(true);
+  });
+
+  test("a mark difference is a difference", () => {
+    expect(runsEqual([{ text: "a", marks: ["bold"] }], [{ text: "a" }])).toBe(
+      false,
+    );
+  });
+
+  test("a text difference is a difference", () => {
+    expect(runsEqual([{ text: "ab" }], [{ text: "a" }])).toBe(false);
   });
 });

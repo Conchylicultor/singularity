@@ -139,9 +139,9 @@ export function $setCaretMarks(
  * marks to `marks`, and record the step when `escaped` (clear it when stepping
  * back inside).
  *
- * SELECTION ONLY. No `captureBlockDocEdit`, no `recordDocEdit`, no
- * `discrete: true` — those exist to fence CONTENT mutations off the typing run's
- * undo item, and nothing here changes content. A plain `editor.update()`, exactly
+ * SELECTION ONLY. No `recordDocEdit`, no `discrete: true` — those exist to
+ * fence CONTENT mutations off the typing run's undo entry, and nothing here
+ * changes content. A plain `editor.update()`, exactly
  * like `placeCaretAtOffset` in `caret-geometry.ts`; being enqueued rather than
  * committed synchronously (this runs from a Lexical command listener, i.e. from
  * inside an update) costs nothing, because no boundary is being held open.

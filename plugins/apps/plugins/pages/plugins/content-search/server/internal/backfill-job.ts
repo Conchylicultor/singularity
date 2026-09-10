@@ -1,8 +1,11 @@
 import { z } from "zod";
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
+import {
+  liveBlocks,
+  PAGE_BLOCK_TYPE,
+} from "@plugins/page/plugins/editor/server";
 import {
   upsertSearchDocs,
   deleteSearchDocs,
@@ -37,9 +40,9 @@ export const backfillPagesSearchJob = defineJob({
   dedup: "singleton",
   run: async () => {
     const pages = await db
-      .select({ id: _blocks.id })
-      .from(_blocks)
-      .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)));
+      .select({ id: liveBlocks.id })
+      .from(liveBlocks)
+      .where(eq(liveBlocks.type, PAGE_BLOCK_TYPE));
 
     // Fingerprints of the docs already indexed for this source, keyed by pageId.
     // A page absent from this map (never indexed) has `undefined`, which can

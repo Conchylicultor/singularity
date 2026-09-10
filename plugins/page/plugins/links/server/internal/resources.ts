@@ -7,7 +7,7 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { SvgNodeSchema } from "@plugins/page/plugins/editor/core";
-import { _blocks } from "@plugins/page/plugins/editor/server";
+import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import { BacklinkRowSchema, PageLinkEdgeSchema } from "../../core/schemas";
 import {
   backlinksResource as backlinksDescriptor,
@@ -25,8 +25,8 @@ import { _pageLinks } from "./tables";
 // JSON the block's `data` happens to hold, which is exactly the value worth
 // parsing rather than asserting. `orderBy` reuses the same expression object;
 // the decoder rides along and is simply never invoked there.
-const titleExpr = sql`${_blocks.data} ->> 'title'`.mapWith(String);
-const iconSvgNodesExpr = sql`${_blocks.data} -> 'iconSvgNodes'`.mapWith(
+const titleExpr = sql`${liveBlocks.data} ->> 'title'`.mapWith(String);
+const iconSvgNodesExpr = sql`${liveBlocks.data} -> 'iconSvgNodes'`.mapWith(
   nullable(parsed(z.array(SvgNodeSchema), "backlinks.iconSvgNodes")),
 );
 
@@ -42,12 +42,14 @@ export const backlinksResource = defineResource<
   loader: async ({ pageId }) =>
     db
       .select({
-        id: _blocks.id,
+        id: liveBlocks.id,
         title: titleExpr,
         iconSvgNodes: iconSvgNodesExpr,
       })
       .from(_pageLinks)
-      .innerJoin(_blocks, eq(_pageLinks.sourcePageId, _blocks.id))
+      // A trashed source page's edges are dropped by the trash hook; the LIVE
+      // join is what makes that a fact rather than a race.
+      .innerJoin(liveBlocks, eq(_pageLinks.sourcePageId, liveBlocks.id))
       .where(eq(_pageLinks.targetPageId, pageId))
       .orderBy(asc(titleExpr)),
 });

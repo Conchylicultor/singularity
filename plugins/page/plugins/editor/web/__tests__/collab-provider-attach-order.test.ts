@@ -39,7 +39,12 @@ function attachBinding(doc: Doc): { updates: number } {
 describe("LiveStateYjsProvider — server state reaches the binding", () => {
   it("holds a pre-connect server state and applies it on connect()", () => {
     const doc = new Doc();
-    const provider = new LiveStateYjsProvider(doc, "block-1", () => new Uint8Array(), true);
+    const provider = new LiveStateYjsProvider(
+      doc,
+      "block-1",
+      () => new Uint8Array(),
+      "present",
+    );
 
     // Warm nav: the subscription is already settled, so the owning hook's effect
     // delivers the value BEFORE CollaborationPlugin has built its binding.
@@ -59,7 +64,12 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
 
   it("applies a post-connect push straight through (the cold path)", () => {
     const doc = new Doc();
-    const provider = new LiveStateYjsProvider(doc, "block-2", () => new Uint8Array(), true);
+    const provider = new LiveStateYjsProvider(
+      doc,
+      "block-2",
+      () => new Uint8Array(),
+      "present",
+    );
     const binding = attachBinding(doc);
 
     provider.connect(); // subscription still pending — nothing to apply
@@ -73,7 +83,12 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
 
   it("never double-applies the same state (idempotent re-delivery)", () => {
     const doc = new Doc();
-    const provider = new LiveStateYjsProvider(doc, "block-3", () => new Uint8Array(), true);
+    const provider = new LiveStateYjsProvider(
+      doc,
+      "block-3",
+      () => new Uint8Array(),
+      "present",
+    );
     const state = storedState("once");
     provider.onServerState(state);
     const binding = attachBinding(doc);
@@ -91,14 +106,21 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
     (seedDoc.get("root", XmlText) as XmlText).insert(0, "split-tail");
     const seed = encodeStateAsUpdate(seedDoc);
 
-    // rowConfirmed = false: no `_blocks` row yet ⇒ no stored doc can exist (FK),
+    // "unseen": this client has never seen the id in server truth ⇒ nothing can be stored for it,
     // so the seed hydrates the editor instantly at connect().
-    const provider = new LiveStateYjsProvider(doc, "block-4", () => seed, false);
+    const provider = new LiveStateYjsProvider(
+      doc,
+      "block-4",
+      () => seed,
+      "unseen",
+    );
     const binding = attachBinding(doc);
     provider.connect();
 
     expect(binding.updates).toBe(1);
-    expect((doc.get("root", XmlText) as XmlText).toString()).toContain("split-tail");
+    expect((doc.get("root", XmlText) as XmlText).toString()).toContain(
+      "split-tail",
+    );
     provider.destroy();
   });
 
@@ -114,7 +136,9 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
     const binding = attachBinding(doc);
     applyUpdate(doc, bytes, "server");
 
-    expect((doc.get("root", XmlText) as XmlText).toString()).toContain("stranded");
+    expect((doc.get("root", XmlText) as XmlText).toString()).toContain(
+      "stranded",
+    );
     expect(binding.updates).toBe(0); // ← the editor renders empty forever
   });
 });

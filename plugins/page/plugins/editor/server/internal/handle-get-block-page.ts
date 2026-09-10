@@ -1,9 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getBlockPage } from "../../core/endpoints";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 
 // The one "no page to open" answer, shared by all three ways of reaching it.
 const MISS = { found: false } as const;
@@ -21,12 +21,16 @@ export const handleGetBlockPage = implement(
   getBlockPage,
   async ({ params }) => {
     const [row] = await db
-      .select({ id: _blocks.id, type: _blocks.type, pageId: _blocks.pageId })
-      .from(_blocks)
-      // Trashed rows are `deletedAt`-flagged, not deleted — excluded here so a
-      // link to a trashed page degrades to plain text rather than opening a pane
-      // the pages resource cannot resolve.
-      .where(and(eq(_blocks.id, params.id), isNull(_blocks.deletedAt)))
+      .select({
+        id: liveBlocks.id,
+        type: liveBlocks.type,
+        pageId: liveBlocks.pageId,
+      })
+      // Trashed rows are `deletedAt`-flagged, not deleted — `liveBlocks` excludes
+      // them so a link to a trashed page degrades to plain text rather than
+      // opening a pane the pages resource cannot resolve.
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
 
     if (!row) return MISS;

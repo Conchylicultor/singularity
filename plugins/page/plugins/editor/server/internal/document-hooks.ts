@@ -25,9 +25,11 @@ export interface BlockCreateHook {
 }
 
 /**
- * A row a hard delete is removing, as the writer reconciled it. `type` is the
- * fact every contributor actually wants ("which of these were page rows"), so
- * it is answered in memory rather than by a DB round-trip per hook.
+ * A row a delete removes from a page's LIVE content — trashed (the common case:
+ * every user delete) or hard-deleted (purge, history restore) — as the writer
+ * reconciled it. `type` is the fact every contributor actually wants ("which of
+ * these were page rows"), so it is answered in memory rather than by a DB
+ * round-trip per hook. The same shape is handed back on restore.
  */
 export interface DeletedBlockRow {
   id: string;
@@ -64,31 +66,41 @@ export interface BlockDeleteHook {
   ) => Promise<AfterCommit | void> | AfterCommit | void;
 }
 
-// A subtree was soft-deleted (trashed): the rows still exist with `deleted_at`
-// set, so FK cascades did NOT fire — a hook must therefore actively drop any
-// derived state that a hard-delete cascade would have reclaimed (search docs,
-// backlink edges). `blockIds` is the full trashed set (root + descendants).
+// A set of rows was soft-deleted (trashed) — which is what EVERY user delete
+// is: the rows still exist with `deleted_at` set, so FK cascades did NOT fire —
+// a hook must therefore actively drop any derived state that a hard-delete
+// cascade would have reclaimed (search docs, backlink edges). `rows` is the full
+// trashed set (roots + descendants), handed as ROWS for the same reason
+// `onDelete` is: "which of these were page rows" is answered by `row.type` in
+// memory, never by a DB read per hook. Runs AFTER the trashing transaction
+// commits (never under the page lock).
 export interface BlockTrashHook {
-  onTrash: (blockIds: string[]) => Promise<void> | void;
+  onTrash: (rows: readonly DeletedBlockRow[]) => Promise<void> | void;
 }
 
-// A trashed subtree was restored: its rows are live again. A hook rebuilds the
-// derived state it dropped in `onTrash` (reindex search, re-extract links).
+// A trashed set was restored: its rows are live again (a root may have been
+// re-ranked or reparented — `parentId`/`pageId` are the RESTORED values). A hook
+// rebuilds the derived state it dropped in `onTrash` (reindex search,
+// re-extract links). Runs after the restoring transaction commits.
 export interface BlockRestoreHook {
-  onRestore: (blockIds: string[]) => Promise<void> | void;
+  onRestore: (rows: readonly DeletedBlockRow[]) => Promise<void> | void;
 }
 
 export const BlockLifecycle = {
   AfterCreate: defineServerContribution<BlockCreateHook>(
     "page.editor.block.afterCreate",
   ),
-  // Fires on HARD delete and PURGE only (the row + its cascade subtree really
-  // vanish). Version history stays bound here — deleted only at purge — which is
-  // the core of the trash fix: trashing a page no longer destroys its versions.
+  // Fires on PURGE and on history restore's content wipe only — the two paths
+  // that really hard-delete (the row + its cascade subtree vanish). A user
+  // delete is always a trash and never reaches this. Version history stays
+  // bound here — deleted only at purge — which is the core of the trash fix:
+  // trashing a page no longer destroys its versions.
   OnDelete: defineServerContribution<BlockDeleteHook>(
     "page.editor.block.onDelete",
   ),
-  OnTrash: defineServerContribution<BlockTrashHook>("page.editor.block.onTrash"),
+  OnTrash: defineServerContribution<BlockTrashHook>(
+    "page.editor.block.onTrash",
+  ),
   OnRestore: defineServerContribution<BlockRestoreHook>(
     "page.editor.block.onRestore",
   ),

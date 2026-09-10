@@ -1,11 +1,11 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { turnIntoPage } from "../../core/endpoints";
 import { newBlockId } from "../../core/block-id";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { recomputePageIdSubtree } from "./page-id";
 import { withPageForest } from "./page-forest";
 import { insertBlocks, updateBlockFields } from "./forest-writer";
@@ -39,10 +39,11 @@ import { parseBlockData } from "./parse-block-data";
 export const handleTurnIntoPage = implement(
   turnIntoPage,
   async ({ params, body }) => {
+    // A trashed block is not addressable (404, like an unknown id).
     const [block] = await db
-      .select({ pageId: _blocks.pageId, type: _blocks.type })
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .select({ pageId: liveBlocks.pageId, type: liveBlocks.type })
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!block) throw new HttpError(404, "Block not found");
     if (block.type === PAGE_BLOCK_TYPE) {
@@ -74,9 +75,9 @@ export const handleTurnIntoPage = implement(
       // hand-roll for exactly that TOCTOU: no concurrent structural write to
       // either forest can interleave here at all.
       const children = await ctx.tx
-        .select({ id: _blocks.id })
-        .from(_blocks)
-        .where(and(eq(_blocks.parentId, params.id), isNull(_blocks.deletedAt)));
+        .select({ id: liveBlocks.id })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.parentId, params.id));
 
       if (children.length === 0) {
         await insertBlocks(ctx.tx, [
@@ -101,8 +102,8 @@ export const handleTurnIntoPage = implement(
 
     const [row] = await db
       .select()
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!row) throw new HttpError(500, "Block vanished during turn-into-page");
 

@@ -1,7 +1,10 @@
-import { and, inArray, isNull } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineRetention } from "@plugins/infra/plugins/retention/server";
-import { _blocks, deleteBlocksSubtree } from "@plugins/page/plugins/editor/server";
+import {
+  liveBlocks,
+  deleteBlocksSubtree,
+} from "@plugins/page/plugins/editor/server";
 import { _pageBlocksOriginExt } from "./tables";
 
 // 24h: comfortably longer than the "open the page and see why the assertion
@@ -42,9 +45,9 @@ export const agentPagesSweep = defineRetention({
     // the same pre-filter the trash purge applies. Its marker still expires in
     // the DELETE below.
     const live = await db
-      .select({ id: _blocks.id })
-      .from(_blocks)
-      .where(and(inArray(_blocks.id, parentIds), isNull(_blocks.deletedAt)));
+      .select({ id: liveBlocks.id })
+      .from(liveBlocks)
+      .where(inArray(liveBlocks.id, parentIds));
     // One call per page so each gets its own independently-restorable
     // `trash_entries` row, rather than folding a night's worth of unrelated
     // agent pages into a single all-or-nothing restore.

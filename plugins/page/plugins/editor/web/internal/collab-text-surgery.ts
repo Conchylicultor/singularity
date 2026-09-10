@@ -39,8 +39,11 @@ const SKIP_SCROLL_TAG = "skip-scroll-into-view";
  * runs identically in a live editor and a headless replica (`editYDocState`).
  *
  * The cut is a POSITION, not a CRDT-relative anchor: a concurrent append past
- * `offset` would be swept along with the tail — fine under single-client LIFO,
- * fragile under a virtualized multi-writer target (see `truncateBlockDocFrom`).
+ * `offset` would be swept along with the tail — fine for the live split, whose
+ * caller reads the offset off the same editor it cuts. A block with no mounted
+ * editor is never cut this way any more: its content is brought to a run list
+ * by the stored-doc splice (`block-text-write-stored.ts`), whose alignment
+ * removes exactly what changed.
  */
 export function $truncateFromLinearOffset(offset: number): void {
   if (offset >= $paragraphsPlainLength()) return; // caret at end — nothing to cut
@@ -68,11 +71,12 @@ export function $truncateFromLinearOffset(offset: number): void {
  * Enter-split truncation: after it, the bound editor (and via the binding, the
  * content doc) holds exactly the HEAD the reducer computed for the row.
  *
- * `discrete: true` is load-bearing (Stage 3b): the caller wraps this call in
- * `captureBlockDocEdit`, whose capture window closes when the wrapper returns —
+ * `discrete: true` is load-bearing: the split runs this inside the owner's
+ * `untracked` scope (the run tracker ignores the transaction, and the split's
+ * own entry carries the edit as data), which closes when the wrapper returns —
  * the binding's Yjs transaction must therefore land synchronously (Lexical's
- * default commit is a microtask, which would leak the edit past the boundary
- * and double-record it as a plain text entry).
+ * default commit is a microtask, which would leak the edit past the scope and
+ * double-record it as a plain typing entry).
  *
  * `SKIP_DOM_SELECTION_TAG` is load-bearing too (Stage 4a): this is BACKGROUND
  * surgery on the block the user is LEAVING — the split already moved DOM focus
@@ -286,8 +290,8 @@ export function focusHydratingAware(
  * concatenation. Computing the join from the LIVE editor (not `data.text`)
  * keeps the caret exact even when the target has unflushed edits.
  *
- * `discrete: true` for the same capture-boundary reason as
- * {@link truncateBlockTextFrom}: the merge wraps this in `captureBlockDocEdit`.
+ * `discrete: true` for the same scope reason as
+ * {@link truncateBlockTextFrom}: the merge runs this inside `untracked`.
  *
  * `scroll` defaults to TRUE: a Backspace-merge wants the joined caret revealed,
  * so callers keep today's `editor.focus()` + untagged update. A no-scroll caller

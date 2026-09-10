@@ -2,7 +2,11 @@ import { applyUpdate, type Doc } from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import type { ProviderAwareness } from "@lexical/yjs";
 import type { BlockDocProvider } from "./collab-session";
-import { IDLE_SAVE_STATE, type CollabSaveState } from "./live-state-yjs-provider";
+import {
+  IDLE_SAVE_STATE,
+  type CollabSaveState,
+} from "./live-state-yjs-provider";
+import type { RowTruth } from "./row-truth";
 
 /**
  * Local-only content-doc provider for the in-memory editor mode
@@ -30,11 +34,17 @@ export class LocalYjsProvider implements BlockDocProvider {
   private destroyed = false;
 
   private readonly syncListeners = new Set<(isSynced: boolean) => void>();
-  private readonly statusListeners = new Set<(arg: { status: string }) => void>();
+  private readonly statusListeners = new Set<
+    (arg: { status: string }) => void
+  >();
   private readonly updateListeners = new Set<(arg: unknown) => void>();
   private readonly reloadListeners = new Set<(doc: Doc) => void>();
 
-  constructor(doc: Doc, buildSeedState: () => Uint8Array) {
+  // `RowTruth` is accepted so the owner constructs both transports through one
+  // signature, and IGNORED: with no server there is no stored doc a seed could
+  // collide with, so every local doc is seeded at connect() whatever the row's
+  // standing in server truth.
+  constructor(doc: Doc, buildSeedState: () => Uint8Array, _rowTruth: RowTruth) {
     this.doc = doc;
     this.buildSeedState = buildSeedState;
     this._awareness = new Awareness(doc);
@@ -48,10 +58,11 @@ export class LocalYjsProvider implements BlockDocProvider {
   connect(): void {
     this.emitStatus("connected");
     // Seed the doc from `data.text` exactly once (an empty doc = first
-    // connect). Applied with `this` as transaction origin so the block's
-    // `Y.UndoManager` (which tracks NON-provider origins as local edits) never
-    // captures the seed as a user edit. `shouldBootstrap={false}` means the
-    // editor's initial content comes entirely from this seed.
+    // connect). Applied with `this` as transaction origin so the block's run
+    // tracker (whose three-origin rule reads a non-provider, non-replay origin
+    // as the user typing) never opens a run for the seed.
+    // `shouldBootstrap={false}` means the editor's initial content comes
+    // entirely from this seed.
     if (this.doc.store.clients.size === 0) {
       applyUpdate(this.doc, this.buildSeedState(), this);
     }
@@ -78,9 +89,12 @@ export class LocalYjsProvider implements BlockDocProvider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.add(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.add(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.add(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.add(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.add(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.add(cb as (arg: unknown) => void);
     else this.reloadListeners.add(cb as (doc: Doc) => void);
   }
 
@@ -96,9 +110,12 @@ export class LocalYjsProvider implements BlockDocProvider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.delete(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.delete(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.delete(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.delete(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.delete(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.delete(cb as (arg: unknown) => void);
     else this.reloadListeners.delete(cb as (doc: Doc) => void);
   }
 
@@ -124,6 +141,12 @@ export class LocalYjsProvider implements BlockDocProvider {
     return true;
   }
 
+  // Nothing is ever stored, so nothing can be waiting on the server: the seed
+  // applied at connect() is the whole authority (see `docAuthoritative`).
+  get mayHaveStoredDoc(): boolean {
+    return false;
+  }
+
   // Same reason, for the hydration state machine: the seed IS the authoritative
   // answer and it lands synchronously in connect(), so there is never an
   // outstanding read. A local session is locally authoritative for its whole
@@ -131,6 +154,16 @@ export class LocalYjsProvider implements BlockDocProvider {
   // structurally unreachable in memory mode (see `collab-session.ts`).
   get isSynced(): boolean {
     return true;
+  }
+
+  // No server, so no server can report the block gone: the owner's
+  // finalization is the only terminal exit a replay's wait has here.
+  get isBlockGone(): boolean {
+    return false;
+  }
+
+  onBlockGone(): () => void {
+    return () => {};
   }
 
   // …and therefore nothing ever holds this transport's flush. There is no

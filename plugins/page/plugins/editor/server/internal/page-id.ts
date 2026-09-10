@@ -1,8 +1,9 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import type { PageForestTx } from "./page-forest";
 
 /**
@@ -58,9 +59,13 @@ export async function requireLiveParent(
 ): Promise<LiveParent | null> {
   if (parentId === null) return null;
   const [parent] = await executor
-    .select({ id: _blocks.id, type: _blocks.type, pageId: _blocks.pageId })
-    .from(_blocks)
-    .where(and(eq(_blocks.id, parentId), isNull(_blocks.deletedAt)))
+    .select({
+      id: liveBlocks.id,
+      type: liveBlocks.type,
+      pageId: liveBlocks.pageId,
+    })
+    .from(liveBlocks)
+    .where(eq(liveBlocks.id, parentId))
     .limit(1);
   if (!parent) throw new HttpError(404, `Block ${parentId} not found`);
   return parent;

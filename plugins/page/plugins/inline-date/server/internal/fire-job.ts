@@ -1,11 +1,11 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
-import { _blocks } from "@plugins/page/plugins/editor/server";
+import { liveBlocks } from "@plugins/page/plugins/editor/server";
 import { plainOf } from "@plugins/page/plugins/editor/core";
 import { stripInlineTokens } from "../../core";
 import { _pageReminders } from "./tables";
@@ -36,13 +36,13 @@ export const reminderFireJob = defineJob({
 
     await ctx.step("notify", async () => {
       const [block] = await db
-        .select({ data: _blocks.data })
-        .from(_blocks)
-        .where(and(eq(_blocks.id, row.blockId), isNull(_blocks.deletedAt)));
+        .select({ data: liveBlocks.data })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.id, row.blockId));
       const [page] = await db
-        .select({ data: _blocks.data })
-        .from(_blocks)
-        .where(and(eq(_blocks.id, row.pageId), isNull(_blocks.deletedAt)));
+        .select({ data: liveBlocks.data })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.id, row.pageId));
 
       const pageParsed = PageShape.safeParse(page?.data);
       const pageTitle =

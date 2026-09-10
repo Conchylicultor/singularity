@@ -19,9 +19,15 @@ export type TrashEntry = z.infer<typeof TrashEntrySchema>;
 
 /**
  * What a trashing mutation returns: either it trashed something — and hands back
- * the ledger handle needed to restore it (`sourceId` + `entryId`) — or it did
- * not (the domain decided the delete was a genuine hard delete, e.g. a page-free
- * block subtree), in which case there is NOTHING to undo.
+ * the ledger handle needed to restore it (`sourceId` + `entryId`) — or there
+ * was NOTHING to trash (the id was unknown, or already trashed), in which case
+ * there is nothing to undo. User content is never hard-deleted by a user
+ * action, so `trashed: false` never means "the domain deleted it for real".
+ *
+ * `sourceId` is part of the handle, not a constant a consumer may assume: one
+ * domain can answer with different sources for different roots (the page
+ * editor: `pages` for a page root, `page-blocks` for a paragraph), and the
+ * restore endpoint is addressed by both.
  *
  * Deliberately a discriminated union and not `{ trashed: boolean; entryId?:
  * string }`: a nullable `entryId` is an absorbable failure — a consumer would

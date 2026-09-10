@@ -1,8 +1,13 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { _blocks } from "./tables";
-import { requireLiveParent, type BlockReadExecutor, type LiveParent } from "./page-id";
+import { liveBlocks } from "./live-blocks";
+import {
+  requireLiveParent,
+  type BlockReadExecutor,
+  type LiveParent,
+} from "./page-id";
 
 export type BlockRow = typeof _blocks.$inferSelect;
 
@@ -27,11 +32,11 @@ export interface LiveDestination {
  * re-query it outside the lock, where a concurrent writer can change the answer.
  *
  * `siblings` is EVERY LIVE row under `parentId` — not scoped by `page_id`, not
- * filtered by `type`, but excluding trashed rows. `(parent_id, rank)` is ONE
- * ordering space shared by sub-page rows and content rows, and several live
- * resources project it disjointly, so arithmetic over a filtered projection
- * mints keys that collide with the siblings it cannot see. Trashed rows are
- * excluded for the opposite reason: the unique index is partial
+ * filtered by `type`, but excluding trashed rows (`liveBlocks`). `(parent_id,
+ * rank)` is ONE ordering space shared by sub-page rows and content rows, and
+ * several live resources project it disjointly, so arithmetic over a filtered
+ * projection mints keys that collide with the siblings it cannot see. Trashed
+ * rows are excluded for the opposite reason: the unique index is partial
  * (`WHERE deleted_at IS NULL`), so a trashed row may legitimately share a live
  * row's rank — including it would hand the rank math two siblings at one rank
  * and abort with `Rank.between(r, r)`.
@@ -46,20 +51,21 @@ export async function loadLiveSiblings(
   const parent = await requireLiveParent(parentId, executor);
   const siblings = await executor
     .select()
-    .from(_blocks)
+    .from(liveBlocks)
     .where(
       parentId === null
-        ? and(isNull(_blocks.parentId), isNull(_blocks.deletedAt))
-        : and(eq(_blocks.parentId, parentId), isNull(_blocks.deletedAt)),
+        ? isNull(liveBlocks.parentId)
+        : eq(liveBlocks.parentId, parentId),
     );
   return { parent, siblings };
 }
 
 /**
  * Load every LIVE content block of a page (raw rows, rank as the stored string).
- * Trashed rows are excluded: this feeds the op/patch reducers AND the rank-window
- * math, and the partial unique index only constrains live rows — so rank
- * arithmetic must run over exactly the live sibling set to stay consistent.
+ * Trashed rows are excluded (`liveBlocks`): this feeds the op/patch reducers AND
+ * the rank-window math, and the partial unique index only constrains live rows
+ * — so rank arithmetic must run over exactly the live sibling set to stay
+ * consistent.
  */
 export async function loadPageBlocks(
   pageId: string,
@@ -67,8 +73,8 @@ export async function loadPageBlocks(
 ): Promise<BlockRow[]> {
   return executor
     .select()
-    .from(_blocks)
-    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
+    .from(liveBlocks)
+    .where(eq(liveBlocks.pageId, pageId));
 }
 
 /**
@@ -83,6 +89,6 @@ export async function loadPagesBlocks(
   if (pageIds.length === 0) return [];
   return executor
     .select()
-    .from(_blocks)
-    .where(and(inArray(_blocks.pageId, pageIds), isNull(_blocks.deletedAt)));
+    .from(liveBlocks)
+    .where(inArray(liveBlocks.pageId, pageIds));
 }

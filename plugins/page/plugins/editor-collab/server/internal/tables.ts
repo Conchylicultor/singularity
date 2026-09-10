@@ -10,7 +10,10 @@ import { _blocks } from "@plugins/page/plugins/editor/server";
 // never interprets the doc (no runs, no Lexical, no decorator tokens — those
 // live in the editor's web runtime, so only a client can build a
 // decorator-correct doc). Rows are created exclusively by the first-writer-wins
-// `doc-init` endpoint and die with their block via the FK cascade.
+// `doc-init` endpoint. A user delete is a TRASH (the block row is flagged, not
+// deleted), so the doc survives it and an undo binds the restored row back to
+// it; the row dies only when the FK cascade finally fires — at purge (30 days,
+// or "Delete permanently") and in history restore's content wipe.
 //
 // Deliberately NOT excluded from the DB change-feed: the `doc-update` UPDATE is
 // what pushes `blockContentResource` to the block's subscribers.
@@ -20,5 +23,7 @@ export const _pageBlockDocs = pgTable("page_block_docs", {
     .references(() => _blocks.id, { onDelete: "cascade" }),
   /** `Y.encodeStateAsUpdate(doc)` — compacted whole-doc state. */
   state: bytea("state").notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });

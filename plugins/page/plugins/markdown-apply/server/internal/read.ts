@@ -1,9 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   PAGE_BLOCK_TYPE,
-  _blocks,
+  liveBlocks,
   resolveBlockAnnotations,
   serializePageContent,
   type StoredBlock,
@@ -45,12 +45,17 @@ export interface BlockScope {
  */
 export async function loadBlockScope(blockId: string): Promise<BlockScope> {
   const [row] = await db
-    .select({ id: _blocks.id, type: _blocks.type, pageId: _blocks.pageId })
-    .from(_blocks)
-    // Trashed rows are `deletedAt`-flagged, not deleted. A trashed block is not
-    // addressable: its subtree is not in the page's live forest, so scoping to
-    // it would silently read and write an empty document.
-    .where(and(eq(_blocks.id, blockId), isNull(_blocks.deletedAt)))
+    .select({
+      id: liveBlocks.id,
+      type: liveBlocks.type,
+      pageId: liveBlocks.pageId,
+    })
+    // Trashed rows are `deletedAt`-flagged, not deleted, and `liveBlocks` hides
+    // them. A trashed block is not addressable: its subtree is not in the page's
+    // live forest, so scoping to it would silently read and write an empty
+    // document.
+    .from(liveBlocks)
+    .where(eq(liveBlocks.id, blockId))
     .limit(1);
 
   if (!row) throw new HttpError(404, `block ${blockId} does not exist`);

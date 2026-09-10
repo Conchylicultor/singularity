@@ -80,8 +80,9 @@ export type OpEffect =
  *    (the forward keystroke/structural edits). Confirmed by its `OpEffect`.
  *  - `patch` — a minimal `BlockPatch` (create rows + field-scoped updates +
  *    delete ids) applied directly onto the client `Block[]` (the undo/redo
- *    inverse path). Confirmed when every created row is present and matching,
- *    every update's NAMED fields have landed, and every deleted id is absent.
+ *    inverse path). Confirmed when every created row is present (and, for a
+ *    genuine create, matching — see `restoreIds`), every update's NAMED fields
+ *    have landed, and every deleted id is absent.
  */
 export type BlockOverlayOp =
   | {
@@ -100,7 +101,43 @@ export type BlockOverlayOp =
        */
       targets: ReadonlySet<string>;
     }
-  | { tag: "patch"; patch: BlockPatch };
+  | {
+      tag: "patch";
+      patch: BlockPatch;
+      /**
+       * The `creates` of this patch that are RESTORES rather than creates: ids
+       * this client has seen in server truth and that are not in it now
+       * (`RowTruth` `"removed"`, `internal/row-truth.ts`). Derived at the one
+       * dispatch chokepoint (`dispatchPatch` in `block-editor-context.tsx`)
+       * from `everServerIds`, never chosen per call site.
+       *
+       * Every block delete is a trash, and a create whose id matches a trashed
+       * row RESTORES the stored row (server §3.1 P4): the row comes back with
+       * the fields it HAS — re-ranked after a slot occupant, reparented to the
+       * root if its parent is gone, expanded if the user toggled it between
+       * the delete and this undo — and the create's fields are ignored. So a
+       * restore asserts only PRESENCE. Judging it field-by-field (what a
+       * genuine create asserts) can never confirm when the stored row differs,
+       * and no later push ever will: the restore ran in its own transaction
+       * and the patch transaction wrote nothing. The op then sits in the
+       * overlay rendering the recorded fields over the server's row — a toggle
+       * recorded collapsed hiding a child the server has expanded — until an
+       * unrelated write happens to move it.
+       *
+       * Presence-only is exact for both predicates: `isPatchReflected` (the
+       * row is in the snapshot ⇒ the restore landed, whatever its fields) and
+       * the apply-guard (an already-present row is the restored row ⇒ the
+       * op has nothing left to do, so replay drops it and the server's row
+       * shows through). A client-minted id (`"unseen"`) is never in this set
+       * and keeps the full comparison — nothing here weakens a genuine
+       * create's confirmation.
+       *
+       * `overlayOpTargets` still counts these ids: a restore WRITES its row
+       * (the flags flip, the entry is consumed), so the ordering rule must
+       * still see it.
+       */
+      restoreIds: ReadonlySet<string>;
+    };
 
 /**
  * Block ids an overlay op writes — the op-identity basis for the overlay's
@@ -249,8 +286,15 @@ function allFields(row: Block): BlockFieldChanges {
 }
 
 /**
- * Shared body of the two patch predicates: every created row present and
- * matching, every update's NAMED fields landed, every deleted id gone.
+ * Shared body of the two patch predicates: every created row present (and,
+ * for a genuine create, matching), every update's NAMED fields landed, every
+ * deleted id gone.
+ *
+ * A create in `restoreIds` asserts PRESENCE only — see the field's doc on
+ * `BlockOverlayOp`: the server restores the STORED row and ignores the
+ * create's copy, so the row's fields are the server's to decide, under both
+ * predicates. A create outside the set is a client-minted row the server
+ * writes column-for-column, so every field is compared.
  *
  * An update naming an absent row is vacuously satisfied under both: an update
  * never creates, so `applyPatch` and the server writer skip it too — applying
@@ -261,12 +305,14 @@ function allFields(row: Block): BlockFieldChanges {
 function patchLanded(
   blocks: Block[],
   patch: BlockPatch,
+  restoreIds: ReadonlySet<string>,
   compareData: boolean,
 ): boolean {
   const byId = new Map(blocks.map((b) => [b.id, b]));
   for (const c of patch.creates) {
     const cur = byId.get(c.id);
     if (!cur) return false;
+    if (restoreIds.has(c.id)) continue;
     if (!fieldsReflected(cur, allFields(c), compareData)) return false;
   }
   for (const u of patch.updates) {
@@ -295,9 +341,19 @@ function patchLanded(
  *
  * Being liberal is safe for confirmation and NOT safe for the apply-guard, which
  * is exactly why they are two functions.
+ *
+ * `restoreIds` (the patch variant's own set — see `BlockOverlayOp`): a create
+ * in it is a restore of a trashed row, and is reflected by the row's PRESENCE
+ * alone. The server keeps the stored row's fields, so comparing them here is
+ * the same mistake as comparing `data`, with the same symptom (an op that can
+ * never confirm) and no later push to rescue it.
  */
-export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
-  return patchLanded(blocks, patch, false);
+export function isPatchReflected(
+  blocks: Block[],
+  patch: BlockPatch,
+  restoreIds: ReadonlySet<string>,
+): boolean {
+  return patchLanded(blocks, patch, restoreIds, false);
 }
 
 /** Overlay a change set onto a row, touching only the fields it names. */
@@ -325,9 +381,18 @@ function mergeFields(row: Block, changes: BlockFieldChanges): Block {
  * made `update` a complete no-op in `persist={false}` memory mode (whose
  * `dispatch` catches `OpNoLongerApplies` and keeps the current rows) and
  * non-optimistic on the server path.
+ *
+ * A create in `restoreIds` is absorbed by the row's PRESENCE alone, exactly as
+ * under {@link isPatchReflected}: an already-present row IS the restored row
+ * (the server's, or an earlier op's), and the create has nothing left to do
+ * to it — see `applyPatch`, which keeps the present row for the same reason.
  */
-export function isPatchAbsorbed(blocks: Block[], patch: BlockPatch): boolean {
-  return patchLanded(blocks, patch, true);
+export function isPatchAbsorbed(
+  blocks: Block[],
+  patch: BlockPatch,
+  restoreIds: ReadonlySet<string>,
+): boolean {
+  return patchLanded(blocks, patch, restoreIds, true);
 }
 
 /**
@@ -338,8 +403,19 @@ export function isPatchAbsorbed(blocks: Block[], patch: BlockPatch): boolean {
  * subtree). Ordering is by rank at render time, so we don't need to position
  * inserts — just include them. An update whose row is absent is skipped, which
  * mirrors the server writer exactly.
+ *
+ * A create in `restoreIds` (a restore of a trashed row) inserts its recorded
+ * copy only while the row is ABSENT — the optimistic render until the server
+ * answers. Once the row is present it is the restored row, with the fields the
+ * server decided (re-ranked, reparented, toggled since the delete), and the
+ * recorded copy must not paint over it: the create asserts presence, nothing
+ * more. A genuine create landing on a present row still replaces it whole.
  */
-export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
+export function applyPatch(
+  blocks: Block[],
+  patch: BlockPatch,
+  restoreIds: ReadonlySet<string>,
+): Block[] {
   const createById = new Map(patch.creates.map((b) => [b.id, b]));
   const changesById = new Map(patch.updates.map((u) => [u.id, u.changes]));
   const deleted = new Set(patch.deleteIds);
@@ -356,7 +432,7 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
   // `parentId: null`, which `??` would silently read as "no opinion".
   const parentOf = (b: Block) => {
     const created = createById.get(b.id);
-    if (created) return created.parentId;
+    if (created && !restoreIds.has(b.id)) return created.parentId;
     const changes = changesById.get(b.id);
     return changes && namesField(changes, "parentId")
       ? (changes.parentId ?? null)
@@ -379,12 +455,20 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
   const seen = new Set<string>();
   for (const b of blocks) {
     if (dropped.has(b.id)) continue;
-    // A create landing on a row that is already present is an idempotent
-    // re-assert of the whole row (a replayed undo-of-delete): the create IS the
-    // full state, so it wins outright. An update only merges its named fields.
+    // A genuine create landing on a row that is already present is an
+    // idempotent re-assert of the whole row: the create IS the full state, so
+    // it wins outright. A RESTORE landing on a present row is the opposite —
+    // the present row is the restored one and wins (see the header). An update
+    // only merges its named fields.
     const created = createById.get(b.id);
     const changes = changesById.get(b.id);
-    next.push(created ?? (changes ? mergeFields(b, changes) : b));
+    next.push(
+      created && !restoreIds.has(b.id)
+        ? created
+        : changes
+          ? mergeFields(b, changes)
+          : b,
+    );
     seen.add(b.id);
   }
   // Append creates that weren't already present (re-created / inserted rows).
@@ -447,16 +531,28 @@ export function applyOverlayOp(
   if (v.tag === "patch") {
     // `isPatchAbsorbed`, NOT the confirmation predicate: the guard asks "would
     // applying this change anything here", which includes `data` (see both docs).
-    if (isPatchAbsorbed(blocks, v.patch)) throw new OpNoLongerApplies();
-    return applyPatch(blocks, v.patch);
+    if (isPatchAbsorbed(blocks, v.patch, v.restoreIds))
+      throw new OpNoLongerApplies();
+    return applyPatch(blocks, v.patch, v.restoreIds);
   }
   if (isReflected(blocks, v.effect)) throw new OpNoLongerApplies();
   return fromNodes(applyBlockOp(toNodes(blocks), v.op, ctx), blocks);
 }
 
-/** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
-export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
-  return { tag: "patch", patch };
+/**
+ * Build the overlay vars for a minimal patch (the undo/redo inverse path).
+ * `restoreIds` is the subset of `patch.creates` ids that restore a trashed row
+ * (`RowTruth` `"removed"` at dispatch) — see the field's doc on
+ * `BlockOverlayOp`. Required, not defaulted: a caller that cannot say which
+ * creates are restores has no business dispatching a patch with creates, and
+ * an empty default would silently give every restore a confirmation it can
+ * never earn.
+ */
+export function buildPatchOverlayOp(
+  patch: BlockPatch,
+  { restoreIds }: { restoreIds: ReadonlySet<string> },
+): BlockOverlayOp {
+  return { tag: "patch", patch, restoreIds };
 }
 
 /**

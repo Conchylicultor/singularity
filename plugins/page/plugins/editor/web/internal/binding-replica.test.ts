@@ -12,7 +12,7 @@ import {
  * always attaches to an EMPTY doc, and ALL content — the initial state of an
  * already-populated canonical included — arrives as post-attach update events
  * the binding can hydrate from. Plus the relay's origin passthrough (the
- * canonical UndoManager / transport provider / other bindings see the true
+ * canonical run tracker / transport provider / other bindings see the true
  * origin), the synchronous re-entrancy latch (relays terminate, echoes are
  * deliberate skips), and the refcounted connect/disconnect delegation to the
  * canonical transport — which HOLDS a delivered server state until its own
@@ -318,8 +318,8 @@ describe("BindingReplica — bidirectional relay with origin passthrough", () =>
     expect(canonical.root.toString()).toBe("base+typed");
     expect(bindingB.root.toString()).toBe("base+typed");
     // Passthrough: the canonical and replica B both saw A's binding origin
-    // verbatim (transport flush trigger + UndoManager origin learning depend
-    // on it), never a relay-minted marker.
+    // verbatim (the transport flush trigger and the run tracker's three-origin
+    // rule depend on it), never a relay-minted marker.
     expect(canonicalOrigins).toEqual([bindingOriginA]);
     expect(bindingB.origins.at(-1)).toBe(bindingOriginA);
     replicaA.destroy();
@@ -353,7 +353,7 @@ describe("BindingReplica — bidirectional relay with origin passthrough", () =>
     replicaB.destroy();
   });
 
-  test("a canonical UndoManager undo of a replica-originated edit is reflected in both replicas as an UndoManager-origin event", () => {
+  test("a canonical apply under a replay origin reaches both replicas carrying that origin", () => {
     const canonical = makeCanonical("base");
     const replicaA = canonical.newReplica();
     const replicaB = canonical.newReplica();
@@ -362,27 +362,27 @@ describe("BindingReplica — bidirectional relay with origin passthrough", () =>
     replicaA.connect();
     replicaB.connect();
 
-    // The registry's UndoManager learns binding origins dynamically; here the
-    // tracked origin is declared up front — same effect for one origin.
     const bindingOriginA = { binding: "A" };
-    const um = new Y.UndoManager(canonical.root, {
-      trackedOrigins: new Set([bindingOriginA]),
-    });
-
     replicaA.replicaDoc.transact(() => {
       bindingA.root.insert(4, "+typed");
     }, bindingOriginA);
-    expect(um.undoStack.length).toBe(1); // the relayed edit was captured
+    expect(canonical.root.toString()).toBe("base+typed");
 
-    um.undo();
+    // A data undo entry replays onto the CANONICAL under a Symbol origin
+    // (`block-text-write.ts`): the relay must carry that origin into every
+    // replica verbatim, so each binding reads it as "not me" and renders it,
+    // while the canonical run tracker reads it as "not the user" and opens no
+    // run.
+    const replayOrigin = Symbol("replay");
+    canonical.doc.transact(() => {
+      canonical.root.delete(4, "+typed".length);
+    }, replayOrigin);
 
     expect(canonical.root.toString()).toBe("base");
     expect(bindingA.root.toString()).toBe("base");
     expect(bindingB.root.toString()).toBe("base");
-    // Passthrough again: both bindings can see `origin instanceof UndoManager`
-    // (the isFromUndoManger selection handling in @lexical/yjs).
-    expect(bindingA.origins.at(-1)).toBe(um);
-    expect(bindingB.origins.at(-1)).toBe(um);
+    expect(bindingA.origins.at(-1)).toBe(replayOrigin);
+    expect(bindingB.origins.at(-1)).toBe(replayOrigin);
     replicaA.destroy();
     replicaB.destroy();
   });
@@ -396,7 +396,11 @@ describe("BindingReplica — bidirectional relay with origin passthrough", () =>
     // The canonical merging a state it already holds emits nothing, so the
     // relay has nothing to forward — and a hypothetical forward would merge
     // as a no-op on the replica too.
-    Y.applyUpdate(canonical.doc, Y.encodeStateAsUpdate(replica.replicaDoc), "server");
+    Y.applyUpdate(
+      canonical.doc,
+      Y.encodeStateAsUpdate(replica.replicaDoc),
+      "server",
+    );
     expect(canonical.root.toString()).toBe("hello");
     expect(binding.root.toString()).toBe("hello");
     expect(binding.updates).toBe(1); // only the connect() hydration

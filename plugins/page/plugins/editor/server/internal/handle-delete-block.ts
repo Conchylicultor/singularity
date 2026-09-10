@@ -3,8 +3,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { TrashOutcome } from "@plugins/infra/plugins/trash/core";
 import { deleteBlock } from "../../core/endpoints";
-import { PAGES_TRASH_SOURCE } from "../../core/schemas";
-import { _blocks } from "./tables";
+import { liveBlocks } from "./live-blocks";
 import { blocksChanged } from "./tables-events";
 import { deleteBlocksSubtree } from "./trash-blocks";
 
@@ -14,20 +13,26 @@ import { deleteBlocksSubtree } from "./trash-blocks";
 export const handleDeleteBlock = implement(
   deleteBlock,
   async ({ params }): Promise<TrashOutcome> => {
+    // A trashed block is not addressable — it appears in no resource, so no
+    // client can legitimately name one — hence the same 404 an unknown id gets.
     const [target] = await db
-      .select({ id: _blocks.id, pageId: _blocks.pageId, type: _blocks.type })
-      .from(_blocks)
-      .where(eq(_blocks.id, params.id))
+      .select({
+        id: liveBlocks.id,
+        pageId: liveBlocks.pageId,
+        type: liveBlocks.type,
+      })
+      .from(liveBlocks)
+      .where(eq(liveBlocks.id, params.id))
       .limit(1);
     if (!target) throw new HttpError(404, "Not found");
 
-    // The single delete chokepoint: a subtree containing a `type="page"` block is
-    // trashed (soft delete — the FK cascade never fires, so descendants +
-    // page_block_docs + history survive), a page-free subtree is hard-deleted
-    // exactly as before. It runs the OnDelete / OnTrash lifecycle hooks.
+    // The delete chokepoint: EVERY delete is a trash (soft delete — the FK
+    // cascade never fires, so descendants + page_block_docs + history survive).
+    // A page root mints a `pages` entry; a page-free subtree a `page-blocks` one.
+    // It runs the OnTrash lifecycle hooks.
     const outcome = await deleteBlocksSubtree([params.id]);
 
-    // The deleted/trashed block's content list lost a row. Fan out to reindex
+    // The trashed block's content list lost a row. Fan out to reindex
     // subscribers for its containing page; the page_blocks live resources
     // invalidate via the L4 DB change-feed on the underlying write.
     if (target.pageId !== null) {
@@ -38,11 +43,12 @@ export const handleDeleteBlock = implement(
 
     // ONE root ⇒ exactly one entry: a page root mints its own entry, and any
     // leftover rows fold into that first entry (see `deleteBlocksSubtree`). The
-    // caller gets that ledger handle so it can offer an Undo (restore).
-    const entryId = outcome.entryIds[0];
-    if (entryId === undefined) {
+    // caller gets that ledger handle — WITH its source — so it can offer an Undo
+    // (restore) against the right `/api/trash/:sourceId/…`.
+    const entry = outcome.entries[0];
+    if (entry === undefined) {
       throw new HttpError(500, "Trashed subtree produced no trash entry");
     }
-    return { trashed: true, sourceId: PAGES_TRASH_SOURCE, entryId };
+    return { trashed: true, sourceId: entry.sourceId, entryId: entry.entryId };
   },
 );

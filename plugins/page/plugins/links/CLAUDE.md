@@ -25,6 +25,8 @@
     - `page/editor.BlockRestoreHook`
     - `page/editor.blocksChanged`
     - `page/editor.BlockTrashHook`
+    - `page/editor.DeletedBlockRow`
+    - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
   - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
   - Exports (types): `PageLinkExtractor`

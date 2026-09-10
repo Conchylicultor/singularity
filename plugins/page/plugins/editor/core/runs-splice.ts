@@ -14,15 +14,13 @@ import {
   type InlineTokenExtension,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import {
-  $appendRuns,
   coalesce,
-  colorCssValue,
   MARK_ORDER,
-  runsToLexical,
   type ColorToken,
   type RichText,
   type TextRun,
-} from "@plugins/page/plugins/editor/core";
+} from "./rich-text";
+import { $appendRuns, colorCssValue, runsToLexical } from "./runs-lexical";
 
 /**
  * The content-doc SPLICE: bring a block's Lexical content to `newRuns` while
@@ -34,9 +32,8 @@ import {
  *
  * A block's text lives in a `Y.Doc`. Rebuilding it (`runsToLexical`, which
  * clears the root) makes every character a NEW CRDT item, so a concurrent
- * editor's overlapping edit duplicates instead of merging and the block's
- * `Y.UndoManager` history is severed. An agent changing one word must not cost
- * the document that.
+ * editor's overlapping edit duplicates instead of merging. An agent changing
+ * one word must not cost the document that.
  *
  * ---------------------------------------------------------------------------
  * The two-level trim, and who does each level
@@ -75,9 +72,10 @@ import {
  * A token is an ALIGNMENT UNIT, not an unmatchable one
  * ---------------------------------------------------------------------------
  *
- * The caller passes the server's registered token extensions (see
- * `block-doc-text.ts`), and every unit walk on both sides is stated in terms of
- * them. That is not a refinement — it is what makes the feature work at all.
+ * The caller passes its registered token extensions (the server's, from
+ * `page/markdown-apply/server/internal/block-doc-text.ts`), and every unit walk
+ * on both sides is stated in terms of them. That is not a refinement — it is
+ * what makes the feature work at all.
  *
  * A decorator used to be keyed on its own node KEY, deliberately unmatchable,
  * because hydrating such a doc threw before this module could ever see one. Now

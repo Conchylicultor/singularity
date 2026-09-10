@@ -14,6 +14,7 @@
     - `infra/jobs.defineJob`
     - `page/editor._blocks`
     - `page/editor.blocksChanged`
+    - `page/editor.liveBlocks`
   - DB schema: `plugins/page/plugins/attachment-block/server/internal/tables.ts`
   - Exports (types): `BlockAttachmentCollector`
   - Exports (values): `AttachmentBlock`

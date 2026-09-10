@@ -25,12 +25,13 @@
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
-    - `page/editor._blocks`
     - `page/editor.BlockDeleteHook`
     - `page/editor.BlockLifecycle`
     - `page/editor.BlockRestoreHook`
     - `page/editor.blocksChanged`
     - `page/editor.BlockTrashHook`
+    - `page/editor.DeletedBlockRow`
+    - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.pageData`
     - `search/engine.deleteSearchDocs`

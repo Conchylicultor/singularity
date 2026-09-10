@@ -3,8 +3,8 @@
 Applying an edited markdown document onto an existing block forest **without
 re-minting block ids**. `replacePageContent` is the other whole-page write and it is
 correct for its one caller (history restore, where fresh ids are load-bearing);
-as an *editing* path it detaches every block's content `Y.Doc`, its
-`Y.UndoManager` history, its `page_links` edges, its `tasks_ext_prompt_block`
+as an *editing* path it detaches every block's content `Y.Doc` (and with it
+the run tracker's history), its `page_links` edges, its `tasks_ext_prompt_block`
 link and every entity-extension row keyed on block id. Design:
 [`research/2026-08-03-page-markdown-apply-to-existing-forest.md`](../../../../research/2026-08-03-page-markdown-apply-to-existing-forest.md).
 
@@ -329,7 +329,8 @@ state, so a loser adopts the winner's bytes instead of merging its own.
 
 ## The character-level trim is the binding's own diff
 
-`server/internal/runs-splice.ts` aligns the paragraph's leaf units (text /
+`$spliceRunsInto` (`page/editor/core/runs-splice.ts`, called here from
+`server/internal/block-doc-text.ts`) aligns the paragraph's leaf units (text /
 line-break / link) and leaves the common prefix and suffix as the SAME nodes.
 The motivating edit — one word in one paragraph — leaves one text unit on each
 side, applied with a single `setTextContent`; `@lexical/yjs` then splices only
@@ -356,7 +357,7 @@ token. Both are read at call time, like `blockTextProtectedSpans()`.
   stores as a `Y.XmlElement`). The refusal narrowed; it did not soften. **Do not
   "fix" the remainder with a stub class** — a node with no `getTextContent`
   serializes to `""` and the splice silently deletes the token.
-- **`runs-splice.ts` keys a registered token on its token TEXT**, and
+- **`$spliceRunsInto` keys a registered token on its token TEXT**, and
   `newUnitsOf` mirrors `lineNodes`' split through the same `matchTokens`. An
   unchanged chip therefore aligns into the common prefix/suffix and keeps its
   CRDT item; one inside a changed middle re-materializes, because the rebuild
@@ -432,12 +433,12 @@ annotation in the key would make every status change look like a new block.
     - `page/editor-collab.initBlockDoc`
     - `page/editor-collab.loadBlockDoc`
     - `page/editor-collab.mergeBlockDocUpdate`
-    - `page/editor._blocks`
     - `page/editor.applyPageBlockPatch`
     - `page/editor.blockTextProtectedSpans`
     - `page/editor.blockTextServerExtensions`
     - `page/editor.blockTextServerNodes`
     - `page/editor.Editor`
+    - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.resolveBlockAnnotations`
     - `page/editor.serializePageContent`

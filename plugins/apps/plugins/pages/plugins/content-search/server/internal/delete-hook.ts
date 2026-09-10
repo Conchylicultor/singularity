@@ -1,36 +1,26 @@
-import { db } from "@plugins/database/server";
 import {
-  _blocks,
   PAGE_BLOCK_TYPE,
   type BlockDeleteHook,
   type BlockTrashHook,
   type BlockRestoreHook,
+  type DeletedBlockRow,
 } from "@plugins/page/plugins/editor/server";
-import { inArray, and, eq } from "drizzle-orm";
 import { deleteSearchDocs } from "@plugins/search/plugins/engine/server";
 import { reindexPageSearch } from "./reindex-page";
 
-// Which of a set of block ids are `type="page"` rows. Read BEFORE / regardless of
-// the delete flag — trashed rows still exist, so the query finds them either way.
-async function pageIdsAmong(blockIds: string[]): Promise<string[]> {
-  if (blockIds.length === 0) return [];
-  const pages = await db
-    .select({ id: _blocks.id })
-    .from(_blocks)
-    .where(and(inArray(_blocks.id, blockIds), eq(_blocks.type, PAGE_BLOCK_TYPE)));
-  return pages.map((p) => p.id);
-}
+// Which of the handed rows are `type="page"` rows. Every hook is handed ROWS,
+// so this is answered in memory — no DB round-trip, nothing held while a page
+// lock is up. Trashed rows still exist, but nothing here needs to read them.
+const pageIdsAmong = (rows: readonly DeletedBlockRow[]): string[] =>
+  rows.filter((r) => r.type === PAGE_BLOCK_TYPE).map((r) => r.id);
 
 // Purge / hard delete: a page's blocks FK-cascade-wipe without firing the
 // reindexer for the page itself. Drop its stale search doc AFTER the rows vanish.
-// The hook is handed ROWS, so "which of these were pages" is answered in memory —
-// no DB round-trip, and nothing held while the page lock is up. The deindex
-// itself is heavy re-derivation, so it rides the after-commit callback.
+// The deindex itself is heavy re-derivation, so it rides the after-commit
+// callback.
 export const deletePagesSearchHook: BlockDeleteHook = {
   onDelete: (rows) => {
-    const pageIds = rows
-      .filter((r) => r.type === PAGE_BLOCK_TYPE)
-      .map((r) => r.id);
+    const pageIds = pageIdsAmong(rows);
     if (pageIds.length === 0) return;
     return async () => {
       await deleteSearchDocs("pages", pageIds);
@@ -41,17 +31,18 @@ export const deletePagesSearchHook: BlockDeleteHook = {
 // Trash (soft delete): the rows still exist but must vanish from search. The
 // single-delete path never emits `blocksChanged` for the trashed page's own id,
 // so this synchronous deindex is what keeps a trashed page out of search results.
+// A trashed CONTENT row (every block delete is a trash) needs nothing here: its
+// page's `blocksChanged` re-derives that page's search doc over live rows only.
 export const trashPagesSearchHook: BlockTrashHook = {
-  onTrash: async (blockIds) => {
-    const pageIds = await pageIdsAmong(blockIds);
+  onTrash: async (rows) => {
+    const pageIds = pageIdsAmong(rows);
     if (pageIds.length > 0) await deleteSearchDocs("pages", pageIds);
   },
 };
 
 // Restore: re-derive each restored page's search doc from its (survived) content.
 export const restorePagesSearchHook: BlockRestoreHook = {
-  onRestore: async (blockIds) => {
-    const pageIds = await pageIdsAmong(blockIds);
-    for (const pageId of pageIds) await reindexPageSearch(pageId);
+  onRestore: async (rows) => {
+    for (const pageId of pageIdsAmong(rows)) await reindexPageSearch(pageId);
   },
 };

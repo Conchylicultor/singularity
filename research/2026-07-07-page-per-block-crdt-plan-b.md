@@ -160,6 +160,14 @@ focused caret.
 
 ## Undo/redo
 
+> **Superseded (2026-09-09)** by
+> [`2026-09-09-page-data-based-text-undo-entries-v2.md`](./2026-09-09-page-data-based-text-undo-entries-v2.md).
+> The per-block `Y.UndoManager` + mirrored-thunk model below shipped and was
+> then deleted: a thunk popping a manager is a pointer that silently no-ops once
+> the block's doc is destroyed (a deleted block came back from Ctrl+Z without
+> its text). Text entries are now DATA — the block's runs before and after a
+> typing run — replayed onto whichever host holds the block. Kept for history.
+
 Keep the single chronological document-level stack (`primitives/undo-redo`).
 Structural ops push their existing `{undo, redo}` thunks. Each block content doc
 gets a `Y.UndoManager` (local origin); a coalesced typing run pushes a thunk

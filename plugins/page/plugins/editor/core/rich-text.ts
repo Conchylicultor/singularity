@@ -39,7 +39,9 @@ const MARK_RANK = new Map<Mark, number>(MARK_ORDER.map((m, i) => [m, i]));
 export function sortMarks(marks: readonly Mark[]): Mark[] {
   const seen = new Set<Mark>();
   for (const m of marks) seen.add(m);
-  return [...seen].sort((a, b) => (MARK_RANK.get(a) ?? 0) - (MARK_RANK.get(b) ?? 0));
+  return [...seen].sort(
+    (a, b) => (MARK_RANK.get(a) ?? 0) - (MARK_RANK.get(b) ?? 0),
+  );
 }
 
 /** Closed text-color palette (theme tokens, no ad-hoc hex). */
@@ -82,7 +84,13 @@ export interface TextRun {
 
 export type RichText = TextRun[];
 
-const MarkSchema = z.enum(["bold", "italic", "underline", "strikethrough", "code"]);
+const MarkSchema = z.enum([
+  "bold",
+  "italic",
+  "underline",
+  "strikethrough",
+  "code",
+]);
 const ColorTokenSchema = z.enum([
   "default",
   "gray",
@@ -202,7 +210,10 @@ export function coalesce(runs: RichText): RichText {
  * marks/color/link. A run straddling the offset is divided into two runs with the
  * same attributes. The offset is clamped to `[0, runsLength]`.
  */
-export function splitRuns(runs: RichText, offset: number): [RichText, RichText] {
+export function splitRuns(
+  runs: RichText,
+  offset: number,
+): [RichText, RichText] {
   const at = Math.max(0, Math.min(offset, runsLength(runs)));
   const before: RichText = [];
   const after: RichText = [];
@@ -228,4 +239,20 @@ export function splitRuns(runs: RichText, offset: number): [RichText, RichText] 
 /** Concatenate two runs lists and coalesce the seam. */
 export function mergeRuns(a: RichText, b: RichText): RichText {
   return coalesce([...a, ...b]);
+}
+
+// ---------------------------------------------------------------------------
+// Equality
+// ---------------------------------------------------------------------------
+
+/**
+ * Do two runs lists denote the same rich text? Compared in CANONICAL form —
+ * both sides are {@link coalesce}d first — so run boundaries, mark order, an
+ * explicit `"default"` color and empty runs never make equal text unequal.
+ * The comparison a text undo entry makes between what it recorded and what the
+ * block holds at replay: a false "unequal" there files a conflict report for a
+ * block nobody else touched.
+ */
+export function runsEqual(a: RichText, b: RichText): boolean {
+  return JSON.stringify(coalesce(a)) === JSON.stringify(coalesce(b));
 }

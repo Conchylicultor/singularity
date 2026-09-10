@@ -1,25 +1,19 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
-  _blocks,
   PAGE_BLOCK_TYPE,
   type BlockDeleteHook,
   type BlockTrashHook,
   type BlockRestoreHook,
+  type DeletedBlockRow,
 } from "@plugins/page/plugins/editor/server";
 import { _pageLinks } from "./tables";
 import { reindexPage } from "./reindex";
 
-// The `type="page"` ids among a set of block ids (trashed rows still exist, so
-// this finds them either way).
-async function pageIdsAmong(blockIds: string[]): Promise<string[]> {
-  if (blockIds.length === 0) return [];
-  const pages = await db
-    .select({ id: _blocks.id })
-    .from(_blocks)
-    .where(and(inArray(_blocks.id, blockIds), eq(_blocks.type, PAGE_BLOCK_TYPE)));
-  return pages.map((p) => p.id);
-}
+// The `type="page"` ids among the handed rows — answered in memory, since every
+// hook is handed ROWS (trashed rows still exist, but nothing here reads them).
+const pageIdsAmong = (rows: readonly DeletedBlockRow[]): string[] =>
+  rows.filter((r) => r.type === PAGE_BLOCK_TYPE).map((r) => r.id);
 
 // HARD delete / purge: the FK cascade wipes a deleted subtree's `page_links`
 // edges, and the L4 change-feed fans out to every dependent backlinksResource. No
@@ -32,20 +26,23 @@ export const backlinksDeleteHook: BlockDeleteHook = {
 // edges linger — every page it linked to would still show it as a backlink.
 // Delete those edges; the change-feed refreshes the affected targets' panels.
 // (Incoming edges self-heal: the target validation excludes trashed pages, so a
-// source page drops its link on its next reindex.)
+// source page drops its link on its next reindex. A trashed CONTENT row's own
+// links drop the same way — its page's `blocksChanged` reindex reads live rows
+// only.)
 export const backlinksTrashHook: BlockTrashHook = {
-  onTrash: async (blockIds) => {
-    const pageIds = await pageIdsAmong(blockIds);
+  onTrash: async (rows) => {
+    const pageIds = pageIdsAmong(rows);
     if (pageIds.length === 0) return;
-    await db.delete(_pageLinks).where(inArray(_pageLinks.sourcePageId, pageIds));
+    await db
+      .delete(_pageLinks)
+      .where(inArray(_pageLinks.sourcePageId, pageIds));
   },
 };
 
 // Restore: rebuild each restored page's outgoing edges from its (survived)
 // content.
 export const backlinksRestoreHook: BlockRestoreHook = {
-  onRestore: async (blockIds) => {
-    const pageIds = await pageIdsAmong(blockIds);
-    for (const pageId of pageIds) await reindexPage(pageId);
+  onRestore: async (rows) => {
+    for (const pageId of pageIdsAmong(rows)) await reindexPage(pageId);
   },
 };

@@ -1,13 +1,17 @@
 import { applyUpdate, encodeStateAsUpdate, mergeUpdates, type Doc } from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import type { Provider, ProviderAwareness } from "@lexical/yjs";
-import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  EndpointError,
+  fetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { liveStateSocketKind } from "@plugins/primitives/plugins/live-state/web";
 import {
   blockDocInit,
   blockDocUpdate,
 } from "@plugins/page/plugins/editor-collab/core";
+import type { RowTruth } from "./row-truth";
 
 /**
  * `@lexical/yjs` {@link Provider} whose "network" is the app's existing
@@ -35,21 +39,28 @@ import {
  * to the live doc. Seeds are DETERMINISTIC (content-hashed fixed clientID in
  * `use-collab-block-doc.ts`), so two clients seeding the same text produce
  * byte-identical updates and converge by no-op merge; different texts get
- * different clientIDs and can at worst duplicate, never corrupt. For a
- * client-minted block (row unconfirmed ⇒ no stored doc can exist) the seed is
+ * different clientIDs and can at worst duplicate, never corrupt. For a block
+ * that CANNOT have a stored doc — one this client has never seen in server
+ * truth (`RowTruth === "unseen"`, see `row-truth.ts`) — the seed is
  * additionally pre-applied LOCALLY at connect() — instant hydration, legacy
  * parity (see connect()).
  *
- * The pre-seed discriminator is RENDER-ACCURATE, not effect-timed: the
- * constructor takes the row-confirmed state observed at the owning consumer's
- * render (an existing block only renders because it is in the authoritative
- * rows, so it constructs with `blockRowConfirmed = true` and can NEVER
- * pre-seed; a freshly split/inserted block constructs unconfirmed and still
- * hydrates instantly). Relying on the later `markBlockRowConfirmed` parent
- * effect instead would make correctness depend on `CollaborationPlugin`
- * happening to defer `connect()` past that effect — nothing in the provider
- * contract guarantees that order, and a connect-first interleave would merge
- * the `data.text`-derived seed into the stored doc as DUPLICATED text.
+ * The pre-seed discriminator is {@link mayHaveStoredDoc}, DERIVED from what
+ * this client has observed, never inferred from the row's confirmation. It used
+ * to be "row unconfirmed ⇒ no `page_block_docs` row can exist (FK)", which was
+ * true only while a block delete hard-deleted the doc with the row. Every
+ * block delete is now a TRASH: the doc survives on the server, so a row
+ * re-created optimistically (undo of a delete) is unconfirmed AND has a stored
+ * doc — a seed pre-applied for it would merge with the surviving doc as a
+ * second paragraph. Such a row is `"removed"`: it waits for the subscription's
+ * answer like any existing block, and a positive `null` ("no doc") answer
+ * pre-applies the seed at that moment (see {@link ingestServerState}) so a
+ * restored never-opened block still renders after one round trip. Only
+ * `"unseen"` — an id this client has never seen in server truth — pre-seeds at
+ * connect(). Both facts are RENDER-ACCURATE (taken at the owning consumer's
+ * render, threaded in at construction), so correctness never depends on
+ * `CollaborationPlugin` happening to defer `connect()` past the owning hook's
+ * effects — nothing in the provider contract orders them.
  *
  * Seed ordering (the doc-init FK race, Stage 4a): a freshly created / split
  * block mounts its editor from the OPTIMISTIC overlay before the structural
@@ -78,11 +89,13 @@ import {
  * already moved with the merge.
  *
  * Doc-row loss (`doc-update` 409 after sync): never assume which of the two
- * causes it was. A doc-init probe arbitrates: 404 (block genuinely deleted —
- * merge/delete FK cascade) is a quiet terminal stop; success (block alive,
- * row unexpectedly gone) recovers by re-creating the row from the FULL local
- * doc state and resuming flushes, with a loud console.error — a 409 can
- * therefore never silently stop a live block from saving.
+ * causes it was. A doc-init probe arbitrates: 404 (block genuinely gone — a
+ * trashed block was PURGED; a mere delete keeps the row and its doc, so a flush
+ * racing a delete succeeds into the trashed doc, which is what undo restores)
+ * is a quiet terminal stop; success (block alive, row unexpectedly gone)
+ * recovers by re-creating the row from the FULL local doc state and resuming
+ * flushes, with a loud console.error — a 409 can therefore never silently stop
+ * a live block from saving.
  *
  * Teardown safety: the session's deferred end only finalizes the block's owner
  * when {@link readyForTeardown}; while buffered edits remain flushable the owner
@@ -158,14 +171,32 @@ export class LiveStateYjsProvider implements Provider {
    */
   private seedState: Uint8Array | null = null;
   /**
+   * Did {@link preApplySeed} put the seed bytes into the live doc? Decides
+   * what `doc-init` proposes when the doc already holds content: the cached
+   * seed when it is what the doc holds (its echo is a no-op), else the doc
+   * itself — see {@link initDoc}.
+   */
+  private seedPreApplied = false;
+  /**
    * True once the block's row is known to exist in server truth — the doc-init
-   * FK precondition AND the pre-seed discriminator. Initialized from the
-   * owning consumer's RENDER-TIME view (accurate at first render: existing
+   * FK precondition (and ONLY that: the pre-seed discriminator is
+   * {@link mayHaveStoredDoc}). Initialized from the owning consumer's
+   * RENDER-TIME `RowTruth` (`"present"` — accurate at first render: existing
    * blocks only render because they are in the authoritative rows), then a
    * one-way latch lifted by {@link markBlockRowConfirmed} from the
    * authoritative blocks subscription (see the module comment).
    */
   private blockRowConfirmed: boolean;
+  /**
+   * Could a stored doc exist behind this block on the server? False only for
+   * `RowTruth === "unseen"` — an id this client has never seen in server truth,
+   * so nothing can have been stored for it. Immutable: the fact is about what
+   * this client had observed when the owner was minted, and the pre-seed it
+   * licenses happens once, at the first connect(). A `"removed"` row (its doc
+   * may have survived a trash) and a `"present"` one both read true and wait
+   * for the subscription (see the module comment).
+   */
+  readonly mayHaveStoredDoc: boolean;
   /**
    * Server-confirmed "the block row no longer exists" (doc-init 404):
    * terminal quiet stop — the content moved with a merge or went with the
@@ -245,21 +276,25 @@ export class LiveStateYjsProvider implements Provider {
   private teardownReadyListener: (() => void) | null = null;
 
   private readonly syncListeners = new Set<(isSynced: boolean) => void>();
-  private readonly statusListeners = new Set<(arg: { status: string }) => void>();
+  private readonly statusListeners = new Set<
+    (arg: { status: string }) => void
+  >();
   private readonly updateListeners = new Set<(arg: unknown) => void>();
   private readonly reloadListeners = new Set<(doc: Doc) => void>();
   private readonly saveStateListeners = new Set<() => void>();
+  private readonly blockGoneListeners = new Set<() => void>();
 
   constructor(
     doc: Doc,
     blockId: string,
     buildSeedState: () => Uint8Array,
-    blockRowConfirmed: boolean,
+    rowTruth: RowTruth,
   ) {
     this.doc = doc;
     this.blockId = blockId;
     this.buildSeedState = buildSeedState;
-    this.blockRowConfirmed = blockRowConfirmed;
+    this.blockRowConfirmed = rowTruth === "present";
+    this.mayHaveStoredDoc = rowTruth !== "unseen";
     this._awareness = new Awareness(doc);
     doc.on("update", this.onDocUpdate);
     // Reconnect signals (push-based, no polling): resume whatever an outage
@@ -271,7 +306,8 @@ export class LiveStateYjsProvider implements Provider {
     //  - the browser's `online` event (covers actual connectivity loss, where
     //    an idle WS may not surface a close promptly).
     this.unsubscribeWsStatus = subscribeWsStatus((ev) => {
-      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== "worktree") return;
+      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== "worktree")
+        return;
       this.onTransportReconnected();
     });
     window.addEventListener("online", this.onBrowserOnline);
@@ -301,23 +337,30 @@ export class LiveStateYjsProvider implements Provider {
       this.emitSync(true);
       return;
     }
-    // INSTANT local hydration for a client-minted block (Stage 4a): while the
-    // block's row is unconfirmed, no `page_block_docs` row can exist (FK), so
-    // pre-applying the seed cannot collide with any stored state — the editor
-    // shows the split tail / empty paragraph IMMEDIATELY, exactly like the
-    // legacy synchronous hydration, instead of staying empty for the
-    // confirm-push + doc-init round trips (during which typing/Enter would
-    // interact with a half-hydrated doc). The seed is DETERMINISTIC
-    // (content-hashed fixed clientID — see `use-collab-block-doc.ts`), so the
-    // eventual authoritative state (our own doc-init echo, or a racing tab's
-    // byte-identical seed) merges as a no-op. `blockRowConfirmed` here is the
-    // construction-time (render-accurate) value — an existing block is
-    // confirmed from its very first render, so this branch is structurally
-    // unreachable for it regardless of when CollaborationPlugin calls
-    // connect() relative to the owning hook's effects. connect() runs right
-    // after the binding attaches and before the user can type, so the
-    // store-empty guard holds in practice; it is checked anyway.
-    if (!this.blockRowConfirmed && this.serverState == null && this.doc.store.clients.size === 0) {
+    // INSTANT local hydration for a client-minted block (Stage 4a): this
+    // client has never seen the block id in server truth (`!mayHaveStoredDoc`),
+    // so nothing can be stored for it and pre-applying the seed cannot collide
+    // with any stored state — the editor shows the split tail / empty
+    // paragraph IMMEDIATELY, exactly like the legacy synchronous hydration,
+    // instead of staying empty for the confirm-push + doc-init round trips
+    // (during which typing/Enter would interact with a half-hydrated doc). The
+    // seed is DETERMINISTIC (content-hashed fixed clientID — see
+    // `use-collab-block-doc.ts`), so the eventual authoritative state (our own
+    // doc-init echo, or a racing tab's byte-identical seed) merges as a no-op.
+    // `mayHaveStoredDoc` is immutable and render-accurate — an existing block
+    // is `"present"` and a re-created one `"removed"` from their very first
+    // render, so this branch is structurally unreachable for both regardless
+    // of when CollaborationPlugin calls connect() relative to the owning hook's
+    // effects. A subscription that already answered (`serverState` defined,
+    // even `null`) is handled by `ingestServerState` below, which owns the
+    // "positive absent answer" pre-seed. connect() runs right after the binding
+    // attaches and before the user can type, so the store-empty guard holds in
+    // practice; it is checked anyway.
+    if (
+      !this.mayHaveStoredDoc &&
+      this.serverState === undefined &&
+      this.doc.store.clients.size === 0
+    ) {
       this.preApplySeed();
     }
     // First value not in yet — onServerState completes the handshake when the
@@ -331,6 +374,7 @@ export class LiveStateYjsProvider implements Provider {
   private preApplySeed(): void {
     this.seedState ??= this.buildSeedState();
     applyUpdate(this.doc, this.seedState, this);
+    this.seedPreApplied = true;
   }
 
   disconnect(): void {
@@ -358,9 +402,12 @@ export class LiveStateYjsProvider implements Provider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.add(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.add(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.add(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.add(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.add(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.add(cb as (arg: unknown) => void);
     else this.reloadListeners.add(cb as (doc: Doc) => void);
   }
 
@@ -376,9 +423,12 @@ export class LiveStateYjsProvider implements Provider {
       | ((arg: unknown) => void)
       | ((doc: Doc) => void),
   ): void {
-    if (type === "sync") this.syncListeners.delete(cb as (isSynced: boolean) => void);
-    else if (type === "status") this.statusListeners.delete(cb as (arg: { status: string }) => void);
-    else if (type === "update") this.updateListeners.delete(cb as (arg: unknown) => void);
+    if (type === "sync")
+      this.syncListeners.delete(cb as (isSynced: boolean) => void);
+    else if (type === "status")
+      this.statusListeners.delete(cb as (arg: { status: string }) => void);
+    else if (type === "update")
+      this.updateListeners.delete(cb as (arg: unknown) => void);
     else this.reloadListeners.delete(cb as (doc: Doc) => void);
   }
 
@@ -413,7 +463,8 @@ export class LiveStateYjsProvider implements Provider {
       this.maybeInit();
       return;
     }
-    if (this.pendingUpdates.length > 0 && !this.flushInFlight) void this.flushLoop();
+    if (this.pendingUpdates.length > 0 && !this.flushInFlight)
+      void this.flushLoop();
   };
 
   /**
@@ -424,7 +475,11 @@ export class LiveStateYjsProvider implements Provider {
   private computeSavePhase(): CollabSavePhase {
     if (this.blockGone) return "idle";
     if (this.lastError !== null) return "error";
-    if (this.pendingUpdates.length > 0 || this.flushInFlight || this.flushTimer !== null) {
+    if (
+      this.pendingUpdates.length > 0 ||
+      this.flushInFlight ||
+      this.flushTimer !== null
+    ) {
       return "syncing";
     }
     return "idle";
@@ -438,10 +493,16 @@ export class LiveStateYjsProvider implements Provider {
    */
   private emitSaveState(): void {
     const phase = this.computeSavePhase();
-    if (this.saveState.phase === phase && this.saveState.lastFlushedAt === this.lastFlushedAt) {
+    if (
+      this.saveState.phase === phase &&
+      this.saveState.lastFlushedAt === this.lastFlushedAt
+    ) {
       return;
     }
-    this.saveState = Object.freeze({ phase, lastFlushedAt: this.lastFlushedAt });
+    this.saveState = Object.freeze({
+      phase,
+      lastFlushedAt: this.lastFlushedAt,
+    });
     for (const cb of [...this.saveStateListeners]) cb();
   }
 
@@ -496,11 +557,23 @@ export class LiveStateYjsProvider implements Provider {
     const state = this.serverState;
     if (state === undefined) return; // first value not in yet
     if (state === null) {
-      // No stored doc. Seed exactly once (first-writer-wins server-side).
-      // After a successful init this is normally unreachable (doc-init is the
-      // only row creator and rows die with the block, whose editor unmounts)
-      // — except the post-409 recovery state, where `synced` was reset and
-      // maybeInit re-runs the init in from-local-doc mode.
+      // No stored doc — a POSITIVE answer, not a pending one. For a block whose
+      // row is not yet confirmed (a re-created `"removed"` row whose doc did
+      // not survive — purged, or never opened — or an `"unseen"` block whose
+      // subscription answered before connect()) the seed cannot be posted yet
+      // (FK gate), but it CAN be shown: nothing is stored, so pre-applying the
+      // deterministic seed collides with nothing, and the doc-init that the
+      // confirmation push later triggers carries these exact bytes and merges
+      // back as a no-op. Without this a restored never-opened block would sit
+      // empty for the confirmation AND the doc-init round trips.
+      if (!this.blockRowConfirmed && this.doc.store.clients.size === 0) {
+        this.preApplySeed();
+      }
+      // Seed exactly once (first-writer-wins server-side). After a successful
+      // init this is normally unreachable (doc-init is the only row creator,
+      // and a doc row dies only at purge — a delete keeps it) — except the
+      // post-409 recovery state, where `synced` was reset and maybeInit re-runs
+      // the init in from-local-doc mode.
       this.maybeInit();
       return;
     }
@@ -520,7 +593,8 @@ export class LiveStateYjsProvider implements Provider {
   markBlockRowConfirmed(): void {
     if (this.blockRowConfirmed || this.destroyed) return;
     this.blockRowConfirmed = true;
-    if (this.connected && !this.synced && this.serverState === null) this.maybeInit();
+    if (this.connected && !this.synced && this.serverState === null)
+      this.maybeInit();
   }
 
   // --- Local → server --------------------------------------------------------
@@ -530,7 +604,10 @@ export class LiveStateYjsProvider implements Provider {
    * `@lexical/yjs` binding's transactions) to the debounced flush queue.
    * Server-applied updates carry `origin === this` and are never echoed back.
    */
-  private readonly onDocUpdate = (update: Uint8Array, origin: unknown): void => {
+  private readonly onDocUpdate = (
+    update: Uint8Array,
+    origin: unknown,
+  ): void => {
     if (origin === this) return;
     this.everEdited = true;
     this.pendingUpdates.push(update);
@@ -545,6 +622,18 @@ export class LiveStateYjsProvider implements Provider {
   /** Has the server's authoritative answer landed? (the sessions' sync gate) */
   get isSynced(): boolean {
     return this.synced;
+  }
+
+  /** Server-confirmed "the block no longer exists" — terminal (see the field). */
+  get isBlockGone(): boolean {
+    return this.blockGone;
+  }
+
+  onBlockGone(cb: () => void): () => void {
+    this.blockGoneListeners.add(cb);
+    return () => {
+      this.blockGoneListeners.delete(cb);
+    };
   }
 
   acquireFlushHold(): void {
@@ -562,7 +651,8 @@ export class LiveStateYjsProvider implements Provider {
     this.flushHolds -= 1;
     if (this.flushHolds > 0 || this.destroyed || !this.synced) return;
     // Push-based resume: whatever the gate deferred drains now, no timer.
-    if (this.pendingUpdates.length > 0 && !this.flushInFlight) void this.flushLoop();
+    if (this.pendingUpdates.length > 0 && !this.flushInFlight)
+      void this.flushLoop();
   }
 
   private get flushHeld(): boolean {
@@ -615,10 +705,12 @@ export class LiveStateYjsProvider implements Provider {
           // 409 = "no doc row". We only flush AFTER a successful init/sync, so
           // the row existed — it vanished under us. Two causes with OPPOSITE
           // handling share this status, so never guess here:
-          //  - the BLOCK was deleted (merge/delete FK-cascaded the doc row
-          //    while a flush was pending: e.g. Backspace-merge captures the
-          //    live runs, appends them to the target, then structurally
-          //    deletes this block). The content already moved — quiet stop.
+          //  - the BLOCK is gone for good: a trashed block was PURGED, which
+          //    cascades its doc row. (A mere delete is a trash and keeps the
+          //    doc, so a flush racing a delete — e.g. Backspace-merge captures
+          //    the live runs, appends them to the target, then structurally
+          //    deletes this block — succeeds into the trashed doc, which is
+          //    exactly what undo restores.) Nothing left to save — quiet stop.
           //  - the doc row vanished while the block still LIVES (unexpected):
           //    stopping would silently buffer this block's edits forever.
           // Re-arm the init path in from-local-doc mode and let doc-init
@@ -665,7 +757,8 @@ export class LiveStateYjsProvider implements Provider {
       // "Saved" means the server acked every byte we owed it. Stamped only when
       // a POST actually landed AND the queue emptied — a 409 re-init, a
       // requeued offline batch, or a thrown rejection all leave bytes owed.
-      if (posted && this.pendingUpdates.length === 0) this.lastFlushedAt = Date.now();
+      if (posted && this.pendingUpdates.length === 0)
+        this.lastFlushedAt = Date.now();
       // A drained queue may unblock a deferred destroy (see readyForTeardown).
       this.notifyTeardownReady();
       // Runs on every exit — drain, early `return`, and the rethrown rejection.
@@ -680,7 +773,8 @@ export class LiveStateYjsProvider implements Provider {
     // is server-confirmed — a premature seed would FK-fail. The confirmation
     // push lifts the gate via markBlockRowConfirmed.
     if (!this.blockRowConfirmed) return;
-    if (this.initStarted || this.synced || this.destroyed || this.blockGone) return;
+    if (this.initStarted || this.synced || this.destroyed || this.blockGone)
+      return;
     this.initStarted = true;
     void this.initDoc();
   }
@@ -720,11 +814,22 @@ export class LiveStateYjsProvider implements Provider {
     const recovering = this.reinitFromLocalDoc;
     const rowVanished = this.docRowVanished;
     let seed: Uint8Array;
-    if (recovering && this.doc.store.clients.size > 0) {
-      // Post-409 recovery: the LOCAL doc is the best-known content (the
-      // stored state it already merged + any unflushed edits). Seeding from
-      // `data.text` here would be an INDEPENDENT encoding of content the doc
-      // already holds and would merge back as duplicated text.
+    if (
+      this.doc.store.clients.size > 0 &&
+      (recovering || !this.seedPreApplied)
+    ) {
+      // The LOCAL doc is the content, so it is the proposal. Two ways here:
+      //  - post-409 recovery: the doc holds the stored state it already merged
+      //    plus any unflushed edits;
+      //  - the doc holds content that is NOT the seed — the user typed into a
+      //    block whose subscription had not answered yet (a restored,
+      //    never-opened `"removed"` row: `ingestServerState` skips the
+      //    pre-seed once the doc has clients, precisely so the seed cannot
+      //    land beside what they typed).
+      // Seeding from `data.text` in either case would be an INDEPENDENT
+      // encoding of content — the server would create the doc from it, and
+      // its authoritative response would merge that paragraph in BESIDE the
+      // doc's own, i.e. duplicated text.
       seed = encodeStateAsUpdate(this.doc);
     } else {
       // Seed bytes from the block's `data.text` — built once and cached (see
@@ -750,15 +855,17 @@ export class LiveStateYjsProvider implements Provider {
       // push, socket reopen — retries the seed.
       this.initStarted = false;
       if (err instanceof EndpointError && err.status === 404) {
-        // Block row deleted — SERVER-CONFIRMED absence (doc-init's "block
-        // does not exist"): nothing to sync, the editor is unmounting (or
-        // already unmounted). Terminal quiet stop: drop the buffered bytes
-        // deliberately (their content moved with the merge / went with the
-        // delete) and let a deferred destroy finalize.
+        // Block row gone — SERVER-CONFIRMED absence (doc-init's "block does
+        // not exist": purged, since a delete is a trash and keeps the row
+        // addressable to doc-init): nothing to sync, the editor is unmounting
+        // (or already unmounted). Terminal quiet stop: drop the buffered bytes
+        // deliberately (nothing exists to receive them) and let a deferred
+        // destroy finalize.
         this.blockGone = true;
         this.pendingUpdates = [];
         this.notifyTeardownReady();
         this.emitSaveState(); // → idle: the dropped bytes are not at risk
+        this.emitBlockGone(); // a replay waiting on `sync` stops waiting
         return;
       }
       if (err instanceof EndpointError) {
@@ -784,7 +891,7 @@ export class LiveStateYjsProvider implements Provider {
     if (rowVanished) {
       this.docRowVanished = false;
       // The block is ALIVE yet its doc row had vanished — no sanctioned path
-      // does that (doc rows only die with their block). We recovered (row
+      // does that (a doc row dies only at purge, with its block). We recovered (row
       // re-created from the full local state, queue resumes below), but the
       // interleave itself is a bug somewhere — surface it loudly.
       console.error(
@@ -808,10 +915,12 @@ export class LiveStateYjsProvider implements Provider {
     // reconnect, or the retained bytes would never flush.
     if (this.destroyed) return;
     if (!this.synced) {
-      if (this.serverState === null || this.reinitFromLocalDoc) this.maybeInit();
+      if (this.serverState === null || this.reinitFromLocalDoc)
+        this.maybeInit();
       return;
     }
-    if (this.pendingUpdates.length > 0 && !this.flushInFlight) void this.flushLoop();
+    if (this.pendingUpdates.length > 0 && !this.flushInFlight)
+      void this.flushLoop();
   }
 
   private markSynced(): void {
@@ -879,10 +988,15 @@ export class LiveStateYjsProvider implements Provider {
     this.updateListeners.clear();
     this.reloadListeners.clear();
     this.saveStateListeners.clear();
+    this.blockGoneListeners.clear();
   }
 
   private emitSync(isSynced: boolean): void {
     for (const cb of [...this.syncListeners]) cb(isSynced);
+  }
+
+  private emitBlockGone(): void {
+    for (const cb of [...this.blockGoneListeners]) cb();
   }
 
   private emitStatus(status: string): void {

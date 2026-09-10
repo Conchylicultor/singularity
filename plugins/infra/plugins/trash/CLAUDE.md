@@ -19,7 +19,15 @@ sub-page cascade wipe — see
   mirroring `defineHistorySource` (module-level `Map` + `Registration` consumed
   in the plugin's `register: [...]`). The primitive never names a source.
   `restore(entry)` clears the domain's flags; `purge(entries)` runs the
-  domain's destroy hooks then hard-deletes the roots.
+  domain's destroy hooks then hard-deletes the roots. **A source may consume
+  its own entry inside `restore`** — delete the ledger row in the same
+  transaction that clears the flags (the page editor does). The lifecycle's
+  delete-after-action then finds nothing, which is fine: the two are one fact,
+  and a source that keeps them in one transaction keeps the invariant below by
+  construction. One domain may register SEVERAL sources over one ledger
+  mechanism when only the LISTING differs (the page editor's `pages` for what
+  the Pages Trash shows, `page-blocks` for content-row entries that are undo +
+  purge only).
 - **`recordTrashEntry(tx, …)`** — MUST be called inside the same transaction as
   the domain's `deleted_at` UPDATE, so the ledger and the flags cannot
   disagree. Returns the entry id for the domain to stamp onto its flagged rows
@@ -59,9 +67,14 @@ await trashWithUndo({
   `{trashed, entryId?}` — a nullable id is an absorbable failure. A trashing
   endpoint declares `response: TrashOutcomeSchema` and returns
   `{ trashed: true, sourceId, entryId }` or `{ trashed: false }`.
-- **`trashed: false` records nothing.** The domain decided this was a genuine hard
-  delete (e.g. a page-free block subtree); there is nothing to restore and the
-  seam does not pretend otherwise.
+- **`trashed: false` records nothing.** It means NOTHING EXISTED to trash (the
+  id was unknown or already trashed) — never "the domain hard-deleted instead":
+  user content is never hard-deleted by a user action, so a delete of a live
+  row always hands back a handle. There is nothing to restore and the seam does
+  not pretend otherwise.
+- **The seam is source-agnostic.** It restores against whatever `sourceId` the
+  mutation answered — a page delete comes back as `pages`, a paragraph delete
+  as `page-blocks` — so a consumer never assumes the source.
 - **Plain `useUndoRedo()`, not the scoped variant.** The thunks are pure server
   calls keyed by a ledger id — valid anywhere in the tab — so the entry rightly
   outlives the pane that recorded it (delete, navigate away, Cmd+Z still
@@ -75,6 +88,16 @@ await trashWithUndo({
 
 ## Invariants
 
+- **An entry exists ⇔ at least one domain row carries its id** — the
+  recommended rule for a source. Both halves are transactional: the flags are
+  set in the same transaction as `recordTrashEntry`, and cleared in the same
+  transaction that deletes the entry (restore consumes its entry). Back it in
+  the domain's own schema where you can — the page editor's
+  `CHECK ((deleted_at IS NULL) = (trash_entry_id IS NULL))` on `page_blocks`
+  rejects a row that is flagged but names no entry. The one reachable
+  exception is a purge that crashed between the row delete and the ledger
+  sweep, which is why `purge` must be idempotent and a restore of an entry
+  with no rows must consume it rather than fail.
 - A source's `purge` must be **idempotent** (the entry sweep can retry after a
   mid-flight failure) and must itself run whatever destroy hooks a direct hard
   delete would have run — purge IS the deferred hard delete.

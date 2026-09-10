@@ -1,4 +1,4 @@
-import { Doc, UndoManager } from "yjs";
+import { Doc } from "yjs";
 import type { Provider } from "@lexical/yjs";
 import { yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
 import { xmlTextContentLength } from "../../core";
@@ -8,6 +8,9 @@ import {
   type CollabSaveState,
 } from "./live-state-yjs-provider";
 import { LocalYjsProvider } from "./local-yjs-provider";
+import { projectableRunsOf, type DocSourcedRuns } from "./doc-sourced-runs";
+import type { RowTruth } from "./row-truth";
+import { BlockRunTracker, type BlockRunsEdit } from "./block-run-tracker";
 
 /**
  * The block-content **owner** and the per-binding **session** that holds it —
@@ -21,12 +24,27 @@ import { LocalYjsProvider } from "./local-yjs-provider";
  * three overlapping lifetimes layered under React mount ordering:
  *
  * - **{@link BlockDocOwner}** — one per BLOCK id, in the module registry. It
- *   owns the canonical `Y.Doc`, the transport provider, the per-block
- *   `Y.UndoManager` and its dynamic tracked-origin learning, and the
- *   undo-mirror. Four consumers need the union across every mounted binding of
- *   the block (undo history, `captureBlockDocEdit`, the projection observer,
+ *   owns the canonical `Y.Doc`, the transport provider and the run tracker
+ *   that turns local transactions into DATA undo entries
+ *   (`block-run-tracker.ts`). Three consumers need the union across every
+ *   mounted binding of the block (the run tracker, the projection observer,
  *   one transport/queue/save-state), which is exactly what "one canonical doc
  *   per block" buys — so the owner STAYS, deliberately.
+ *
+ * ## Undo entries are data, and this module holds no history
+ *
+ * The owner used to carry a per-block Yjs undo manager whose stack items the
+ * app's undo stack pointed at through thunks — pointers that became a SILENT
+ * no-op the moment the doc was destroyed (a deleted block's editor unmounts,
+ * its owner finalizes), which is how a to-do came back from Ctrl+Z without
+ * its text. That machinery is gone
+ * (`research/2026-09-09-page-data-based-text-undo-entries-v2.md` §2.7).
+ * What remains is the run tracker: each closed typing run is emitted as a
+ * {@link BlockRunsEdit} — the block's runs before and after — and the editor
+ * context records it as a self-contained entry whose replay is "make this
+ * block read these runs", on whichever host holds the block at that moment
+ * (`block-text-write.ts` for an open doc, `block-text-write-stored.ts` for a
+ * stored one). Nothing here can no-op: an entry either replays or throws.
  * - **{@link CollabSession}** — one per (block, BINDING): one hook instance's
  *   hold on the owner plus the {@link BindingReplica} it hands
  *   `CollaborationPlugin`. It owns both lifetimes and the ONE retention policy.
@@ -109,18 +127,22 @@ import { LocalYjsProvider } from "./local-yjs-provider";
  *
  * Two arms, chosen at {@link CollabSession.start}:
  *
- * - **Locally authoritative** (`!rowConfirmed`, and the whole in-memory
- *   transport). The content is this client's own deterministic seed, applied
- *   into the replica at `connect()` AFTER the binding attached — there is no
- *   remote answer that could be missing, so there is nothing to prove and
+ * - **Locally authoritative** (`rowTruth === "unseen"` — a block this client
+ *   has never seen in server truth, see `row-truth.ts` — and the whole
+ *   in-memory transport). The content is this client's own deterministic seed,
+ *   applied into the replica at `connect()` AFTER the binding attached — there
+ *   is no remote answer that could be missing, so there is nothing to prove and
  *   nothing to wait for: `attaching → hydrated` inside one synchronous
  *   `connect()`, no network. This is what keeps the instant-split path instant
  *   (`maybeInit()` returns immediately while the row is unconfirmed, so
  *   anything waiting on the server here would cost a freshly-split block a full
  *   round trip), and it makes `stalled` structurally unreachable in memory mode.
- * - **Server authoritative** (an existing block — `rowConfirmed` at its very
- *   first render). The replica is EMPTY by construction at attach, so agreement
- *   is only interesting once the server's answer is in:
+ * - **Server authoritative** (`"present"` — an existing block, confirmed at
+ *   its very first render — or `"removed"` — a row this client once saw in
+ *   server truth and re-created optimistically, whose stored doc SURVIVES the
+ *   delete because every delete is a trash). The replica is EMPTY by
+ *   construction at attach, so agreement is only interesting once the server's
+ *   answer is in:
  *   - replica holds content at `connect()` (a held warm-nav push, a second
  *     editor joining, a restart over a populated owner) ⇒ `hydrating` until the
  *     first `COLLABORATION_TAG` commit proves it;
@@ -239,18 +261,6 @@ export const ATTACHING_STATE: SessionState = Object.freeze({
 });
 
 /**
- * One reversible content-doc edit, shaped like the app's `HistoryEntry`
- * thunks. Bound to the {@link BlockDocOwner} that captured it: if the block's
- * doc was destroyed (block deleted / editor released) — and possibly
- * re-created — the thunks no-op rather than popping a fresh manager's
- * unrelated items.
- */
-export interface CapturedBlockDocEdit {
-  undo: () => void | Promise<void>;
-  redo: () => void | Promise<void>;
-}
-
-/**
  * The provider contract the owner + the two doc hooks depend on: the
  * `@lexical/yjs` {@link Provider} surface plus the seam-specific lifecycle
  * (`destroy`, teardown-readiness) and the server-sync entry points
@@ -274,6 +284,15 @@ export interface BlockDocProvider extends Provider {
   /** Has any local edit ever entered this doc? (starvation discriminator) */
   readonly hasLocalEdits: boolean;
   /**
+   * Could a stored doc exist behind this block on the server? False only when
+   * this client has never seen the block id in server truth (`"unseen"`, see
+   * `row-truth.ts`) — nothing can have been stored for a block the server has
+   * never acknowledged — and permanently false on the local transport, which
+   * stores nothing. The pre-seed discriminator, and half of
+   * {@link BlockDocOwner.docAuthoritative}.
+   */
+  readonly mayHaveStoredDoc: boolean;
+  /**
    * Has the transport's authoritative answer landed? The push-based exit from
    * `hydrating` for a block the server holds nothing renderable for — paired
    * with the provider's own `sync` event, which announces the transition (see
@@ -281,6 +300,21 @@ export interface BlockDocProvider extends Provider {
    * local transport: with no server there is never an answer to wait for.
    */
   readonly isSynced: boolean;
+  /**
+   * Has the transport learned, from the server, that the block no longer
+   * exists (doc-init 404 — purged, since a delete is a trash and keeps the row
+   * addressable)? TERMINAL: the doc will never sync and never flush, so a
+   * replay waiting on this owner's `sync` must stop waiting. Permanently false
+   * on the local transport, which has no server to lose a block to.
+   */
+  readonly isBlockGone: boolean;
+  /**
+   * Subscribe to the `isBlockGone` flip (fires at most once per provider).
+   * Returns the unsubscribe. The push-based exit `ownerSynced` takes beside
+   * the `sync` event and the owner's finalization — every wait a replay can
+   * enter has a terminal answer.
+   */
+  onBlockGone(cb: () => void): () => void;
   /**
    * Hold the transport's OUTBOUND flush while some session's hydration is
    * unproven (see the module comment). Refcounted, because one block's owner is
@@ -301,14 +335,6 @@ export interface BlockDocProvider extends Provider {
 }
 
 /**
- * `Y.UndoManager` captureTimeout — the text-coalescing window. Matches the
- * shared stack's intent (a typing run = one undo step) at the same 500ms the
- * app's coalescing uses; grouping happens HERE (one stack item per run), never
- * via the shared stack's `coalesceKey` (see `recordTextEdit`).
- */
-const UNDO_CAPTURE_TIMEOUT_MS = 500;
-
-/**
  * THE block → owner map. Private to this module: the only id-keyed reads are
  * {@link CollabSession.start} (which acquires) and {@link blockDocOwnerOf}
  * (for the editor context's mutation chokepoints, which know a block id and
@@ -317,15 +343,27 @@ const UNDO_CAPTURE_TIMEOUT_MS = 500;
 const registry = new Map<string, BlockDocOwner>();
 
 /**
- * A block's content owner: ONE canonical `Y.Doc` + transport provider +
- * `Y.UndoManager` per block id, shared by every mounted binding of that block
- * (two docs for one block would fork the CRDT).
+ * A block's content owner: ONE canonical `Y.Doc` + transport provider + run
+ * tracker per block id, shared by every mounted binding of that block (two
+ * docs for one block would fork the CRDT).
  *
- * Its mutable state — the session refcount and the undo-capture suppression —
- * is `private`, so no consumer can reach for it. Suppression in particular is
- * now the SCOPE of {@link captureEdit} rather than a public field a listener
- * registered somewhere else reads: raising it is the capture, and the capture
+ * Its mutable state — the session refcount — is `private`, so no consumer can
+ * reach for it. The run tracker's suppression is the SCOPE of
+ * {@link untracked} rather than a public field a listener registered
+ * somewhere else reads: entering the scope is the suppression, and the scope
  * is the only thing that can raise it.
+ *
+ * ## The run tracker (the data entries' recorder)
+ *
+ * Every local transaction on the canonical doc — typing, surgery, anything
+ * relayed from a binding — is folded by {@link BlockRunTracker} into runs
+ * closed by a 500 ms idle window, each emitted as a {@link BlockRunsEdit}
+ * (`before`/`after` runs, read through {@link runsNow}) to {@link onRunsEdit}
+ * subscribers. Origins are classified by the STATED three-origin rule (the
+ * provider, `TEXT_REPLAY_ORIGIN`, the relayed binding — see the tracker's
+ * module comment), never learned. {@link untracked} is the suppression scope
+ * for callers recording their own entry around a surgery; {@link closeTextRun}
+ * and {@link closeAllOpenTextRuns} seal open runs before an undo pops.
  */
 export class BlockDocOwner {
   readonly blockId: string;
@@ -337,7 +375,8 @@ export class BlockDocOwner {
    * disconnects (eager flush) with the last (see `binding-replica.ts`).
    */
   readonly replicaConnection: CanonicalConnection;
-  readonly um: UndoManager;
+  /** The data-entry recorder over this doc (see the class doc). */
+  private readonly tracker: BlockRunTracker;
   /**
    * Does this block's content sync with a server at all? Read by
    * {@link CollabSession.restart} to pick the successor's hydration arm: a
@@ -346,21 +385,30 @@ export class BlockDocOwner {
    */
   readonly serverSync: boolean;
 
-  private readonly undoCaptureListeners = new Set<
-    (edit: CapturedBlockDocEdit) => void
-  >();
+  /**
+   * Content generation: bumped on every integrating canonical-doc transaction
+   * (`doc.on("update")` fires once per transaction that changed something, for
+   * local AND server-applied changes alike). The memo key of {@link runsNow}.
+   */
+  private gen = 0;
+  /** What {@link runsNow} last read, and at which generation. */
+  private runsMemo: {
+    readonly gen: number;
+    readonly runs: DocSourcedRuns;
+  } | null = null;
+
   /** How many {@link CollabSession}s hold this owner. Never touched by id. */
   private sessions = 0;
-  /** Raised ONLY for the duration of {@link captureEdit} (see the class doc). */
-  private capturing = false;
   /** Monotonic "this block's text has been on screen" — see the module comment. */
   private rendered = false;
   private readonly renderedListeners = new Set<() => void>();
+  /** Fired once, from {@link finalize}, when this owner's doc is destroyed. */
+  private readonly destroyedListeners = new Set<() => void>();
 
   constructor(
     blockId: string,
     buildSeedState: () => Uint8Array,
-    rowConfirmed: boolean,
+    rowTruth: RowTruth,
     serverSync: boolean,
   ) {
     this.blockId = blockId;
@@ -369,60 +417,65 @@ export class BlockDocOwner {
     // Transport seam: a server-synced editor gets the live-state provider
     // (blockContentResource in, doc-init/doc-update out); the in-memory editor
     // (`persist={false}`) gets a purely local provider that seeds from
-    // `data.text` and never networks. `rowConfirmed` is the consumer's
-    // RENDER-TIME view (see useCollabBlockDoc) — construction-accurate, so the
-    // server provider's pre-seed discriminator never depends on the later
-    // `markBlockRowConfirmed` parent effect having run (irrelevant for local).
+    // `data.text` and never networks. `rowTruth` is the consumer's RENDER-TIME
+    // view (see useCollabBlockDoc and `row-truth.ts`) — construction-accurate,
+    // so the server provider's pre-seed discriminator never depends on the
+    // later `markBlockRowConfirmed` parent effect having run (irrelevant for
+    // local, which ignores it).
     this.provider = serverSync
-      ? new LiveStateYjsProvider(
-          this.doc,
-          blockId,
-          buildSeedState,
-          rowConfirmed,
-        )
-      : new LocalYjsProvider(this.doc, buildSeedState);
+      ? new LiveStateYjsProvider(this.doc, blockId, buildSeedState, rowTruth)
+      : new LocalYjsProvider(this.doc, buildSeedState, rowTruth);
     this.replicaConnection = new CanonicalConnection(this.provider);
-    this.um = new UndoManager(yDocContent(this.doc), {
-      captureTimeout: UNDO_CAPTURE_TIMEOUT_MS,
-      // Local-edit origins are learned below; yjs adds the manager itself so
-      // its own replays capture onto the opposite stack (undo ⇄ redo).
-      trackedOrigins: new Set(),
+    // The content generation behind `runsNow()`'s memo. `update` fires only for
+    // a transaction that integrated something, so a redundant re-apply of state
+    // the doc already holds keeps the memo valid.
+    this.doc.on("update", () => {
+      this.gen += 1;
     });
-    // Learn local-edit origins dynamically (the `@lexical/yjs` binding is not
-    // reachable from here — CollaborationPlugin keeps it private). Everything
-    // that is not the transport (provider origin = server-applied state) and
-    // not an undo-manager replay is by construction a local editing source.
-    // `beforeTransaction` fires before the manager's afterTransaction capture,
-    // so even the first-ever local edit is tracked.
-    this.doc.on("beforeTransaction", (tr) => {
-      const origin: unknown = tr.origin;
-      if (
-        origin != null &&
-        origin !== this.provider &&
-        !(origin instanceof UndoManager)
-      ) {
-        this.um.addTrackedOrigin(origin);
-      }
-    });
-    // Mirror each NEW undo stack item (= one coalesced local editing run) to
-    // the mounted consumer. Filters: `type !== "undo"` is the manager pushing
-    // a redo item during its own undo(); `origin === um` is the manager
-    // re-pushing an undo item during its own redo() — neither is a fresh edit.
-    // Merges into an existing item (within captureTimeout) fire
-    // `stack-item-updated`, not this event, so a typing run surfaces once.
-    this.um.on("stack-item-added", (event) => {
-      if (event.type !== "undo" || event.origin === this.um) return;
-      // Inside a captureEdit() scope the item belongs to the caller's combined
-      // entry, which records it itself — mirroring it would double-record.
-      if (this.capturing) return;
-      const edit = this.docEditThunks(1);
-      for (const cb of [...this.undoCaptureListeners]) cb(edit);
+    // The run tracker subscribes AFTER the generation bump above, so a run
+    // boundary it closes from an `update` reads a fresh `runsNow()`.
+    this.tracker = new BlockRunTracker({
+      blockId,
+      doc: this.doc,
+      providerOrigin: this.provider,
+      runsNow: () => this.runsNow(),
     });
   }
 
   /** Is this still the registry's live owner for its block? */
   get isLive(): boolean {
     return registry.get(this.blockId) === this;
+  }
+
+  /**
+   * The canonical doc's content as runs, RIGHT NOW — memoized on the content
+   * generation, so every reader landing on the same generation (the projection
+   * flush, a structural entry pinning a deleted row's text, a run boundary)
+   * shares one headless read instead of each performing its own.
+   *
+   * The brand is preserved by construction: the memo stores exactly what
+   * {@link projectableRunsOf} — the sole `DocSourcedRuns` producer — produced,
+   * so a value read through here is still provably read from the doc.
+   */
+  runsNow(): DocSourcedRuns {
+    const memo = this.runsMemo;
+    if (memo && memo.gen === this.gen) return memo.runs;
+    const runs = projectableRunsOf(this.doc);
+    this.runsMemo = { gen: this.gen, runs };
+    return runs;
+  }
+
+  /**
+   * Is what this doc holds the AUTHORITY for the block's text right now? True
+   * once the transport's authoritative answer landed, and for a doc that can
+   * have nothing stored behind it (a client-minted block's pre-applied seed,
+   * the whole in-memory transport). False for an existing or restored block
+   * whose subscription has not answered yet: its doc is empty because nothing
+   * ARRIVED, and reading that emptiness as "the text is empty" would turn a
+   * not-known-yet into a claim about the user's data.
+   */
+  get docAuthoritative(): boolean {
+    return this.provider.isSynced || !this.provider.mayHaveStoredDoc;
   }
 
   // --- "Was shown" (see the module comment) ----------------------------------
@@ -461,60 +514,45 @@ export class BlockDocOwner {
     };
   }
 
+  // --- The run tracker (see the class doc and `block-run-tracker.ts`) --------
+
   /**
-   * Subscribe to every NEW coalesced local editing run in this block's content
-   * doc (one fresh `Y.UndoManager` stack item; remote applies, undo/redo
-   * replays and {@link captureEdit}-folded edits excluded), for mirroring 1:1
-   * onto the app's unified undo stack.
+   * Subscribe to every closed, non-empty local editing run as DATA: the
+   * block's runs before and after it. THE channel a text undo entry is
+   * recorded from.
    */
-  onUndoableEdit(cb: (edit: CapturedBlockDocEdit) => void): () => void {
-    this.undoCaptureListeners.add(cb);
+  onRunsEdit(cb: (edit: BlockRunsEdit) => void): () => void {
+    return this.tracker.onRunsEdit(cb);
+  }
+
+  /**
+   * Seal the open typing run, if any, emitting it to {@link onRunsEdit}. The
+   * pending flush an undo runs first, so a ⌘Z mid-run undoes that run.
+   */
+  closeTextRun(): void {
+    this.tracker.closeRun();
+  }
+
+  /**
+   * Run `edit` with the tracker ignoring every local transaction it lands (see
+   * `block-run-tracker.ts`): for a caller recording its OWN data entry around
+   * a binding-origin surgery. Closes any open run first. The transaction must
+   * land synchronously inside the scope (`discrete: true`).
+   */
+  untracked<T>(edit: () => T): T {
+    return this.tracker.untracked(edit);
+  }
+
+  /**
+   * Subscribe to this owner's finalization (its doc is destroyed). A replay
+   * waiting on this owner's transport resolves the block again instead of
+   * hanging on a doc nothing will hydrate.
+   */
+  onDestroyed(cb: () => void): () => void {
+    this.destroyedListeners.add(cb);
     return () => {
-      this.undoCaptureListeners.delete(cb);
+      this.destroyedListeners.delete(cb);
     };
-  }
-
-  /**
-   * Run `edit` (which must drive its Lexical/Yjs changes SYNCHRONOUSLY — the
-   * live-editor surgery helpers pass `discrete: true` for exactly this) as an
-   * explicit capture boundary on this block's undo manager, WITHOUT surfacing
-   * it through {@link onUndoableEdit}. Returns thunks reversing/re-applying
-   * exactly the captured item(s), or `null` when the edit changed nothing —
-   * the split/merge building block that folds a content-doc edit into ONE
-   * combined stack entry with its structural patch.
-   *
-   * `stopCapturing` on both sides pins the boundary: the edit can't merge into
-   * a preceding typing run's item, and subsequent typing can't merge into the
-   * captured item (which the combined entry now owns).
-   */
-  captureEdit(edit: () => void): CapturedBlockDocEdit | null {
-    this.um.stopCapturing();
-    const before = this.um.undoStack.length;
-    this.capturing = true;
-    try {
-      edit();
-    } finally {
-      this.capturing = false;
-      this.um.stopCapturing();
-    }
-    const count = this.um.undoStack.length - before;
-    return count > 0 ? this.docEditThunks(count) : null;
-  }
-
-  /**
-   * Thunks popping `count` items off this owner's undo manager (LIFO — the
-   * shared stack is LIFO too, so when an entry is reached, every later entry
-   * for this block was popped first and the manager's top item IS this
-   * entry's). Generation-guarded on OWNER IDENTITY: a destroyed (or
-   * destroyed-and-recreated) owner makes them a deliberate no-op — the
-   * recreated doc's manager is empty or holds OTHER edits, never this one.
-   */
-  private docEditThunks(count: number): CapturedBlockDocEdit {
-    const pop = (replay: "undo" | "redo") => (): void => {
-      if (!this.isLive) return;
-      for (let i = 0; i < count; i++) this.um[replay]();
-    };
-    return { undo: pop("undo"), redo: pop("redo") };
   }
 
   // --- Lifetime (session-driven; see CollabSession) --------------------------
@@ -561,41 +599,35 @@ export class BlockDocOwner {
       return;
     }
     registry.delete(this.blockId);
+    this.tracker.dispose();
     this.provider.destroy();
     this.doc.destroy();
+    for (const cb of [...this.destroyedListeners]) cb();
+    this.destroyedListeners.clear();
   }
+}
+
+/**
+ * Seal every block's open typing run — the page editor's pending flush
+ * (`usePendingFlush`), run by the undo-redo primitive at the start of every
+ * undo/redo turn so the run the user is in the middle of is the entry popped,
+ * not the one below it.
+ */
+export function closeAllOpenTextRuns(): void {
+  for (const owner of registry.values()) owner.closeTextRun();
 }
 
 /**
  * The block's live content owner, or `null` when no editor holds one. THE only
  * id-keyed read of the registry left, for callers that legitimately know a
- * block id and nothing else — the editor context's mutation chokepoints, which
- * pair it with {@link captureBlockDocEdit}.
+ * block id and nothing else: the editor context's mutation chokepoints (which
+ * read `runsNow()` and run their surgery inside `untracked`) and the replay
+ * host selection (`block-text-write-stored.ts`). A read at RECORD time is a
+ * capture of the doc's runs, never a reference an entry holds — an entry
+ * outlives any owner.
  */
 export function blockDocOwnerOf(blockId: string): BlockDocOwner | null {
   return registry.get(blockId) ?? null;
-}
-
-/**
- * {@link BlockDocOwner.captureEdit} for a caller holding a possibly-absent
- * owner (`blockDocOwnerOf` returned null — the block has no mounted editor, so
- * there is no undo manager to capture onto). The edit still runs; the caller's
- * structural entry then stands alone.
- *
- * A free function rather than a method precisely so the null case is the
- * CALLER's explicit dependency rather than a registry lookup hidden inside:
- * the capture no longer reaches for module state, and its suppression is the
- * owner-private scope of the call.
- */
-export function captureBlockDocEdit(
-  owner: BlockDocOwner | null,
-  edit: () => void,
-): CapturedBlockDocEdit | null {
-  if (!owner) {
-    edit();
-    return null;
-  }
-  return owner.captureEdit(edit);
 }
 
 /**
@@ -610,11 +642,13 @@ export class CollabSession {
 
   /**
    * Is this session's authoritative content its OWN deterministic seed rather
-   * than the server's answer? True for a client-minted block (`!rowConfirmed`
-   * — no `page_block_docs` row can exist behind an unconfirmed `_blocks` row)
-   * and for the whole in-memory transport. See the module comment's two arms;
-   * it is what keeps the instant-split path instant and `stalled` unreachable
-   * in memory mode.
+   * than the server's answer? True for a client-minted block (`rowTruth ===
+   * "unseen"` — this client has never seen the id in server truth, so nothing
+   * can have been stored for it) and for the whole in-memory transport. NOT
+   * true for a re-created row (`"removed"`): the server soft-deletes every
+   * block, so its stored doc survives the delete and is the authority. See the
+   * module comment's two arms; it is what keeps the instant-split path instant
+   * and `stalled` unreachable in memory mode.
    */
   readonly locallyAuthoritative: boolean;
 
@@ -655,28 +689,24 @@ export class CollabSession {
    * Start a session over `blockId`, creating the block's owner on the first
    * one. Every start must be paired with exactly one {@link end}.
    *
-   * `rowConfirmed` is the consumer's RENDER-TIME view, and it picks this
-   * session's hydration arm as well as (on the first session) the provider's
-   * pre-seed discriminator — an existing block is confirmed from its very first
-   * render, a client-minted one is not.
+   * `rowTruth` is the consumer's RENDER-TIME view of the block id in server
+   * truth (`row-truth.ts`), and it picks this session's hydration arm as well
+   * as (on the first session) the provider's pre-seed discriminator — an
+   * existing block is `"present"` from its very first render, a client-minted
+   * one `"unseen"`, a re-created one `"removed"`.
    */
   static start(
     blockId: string,
     buildSeedState: () => Uint8Array,
-    rowConfirmed: boolean,
+    rowTruth: RowTruth,
     serverSync: boolean,
   ): CollabSession {
     let owner = registry.get(blockId);
     if (!owner) {
-      owner = new BlockDocOwner(
-        blockId,
-        buildSeedState,
-        rowConfirmed,
-        serverSync,
-      );
+      owner = new BlockDocOwner(blockId, buildSeedState, rowTruth, serverSync);
       registry.set(blockId, owner);
     }
-    return new CollabSession(owner, !serverSync || !rowConfirmed);
+    return new CollabSession(owner, !serverSync || rowTruth === "unseen");
   }
 
   get blockId(): string {

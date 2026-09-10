@@ -120,9 +120,10 @@ afterEach(() => {
 
 test("a client-minted block reaches hydrated synchronously inside connect(), with no network", () => {
   const id = blockId();
-  // `rowConfirmed: false` — a freshly split/inserted block, rendering from the
-  // optimistic overlay before its `_blocks` row exists server-side.
-  const session = CollabSession.start(id, buildSeedState, false, true);
+  // `"unseen"` — a freshly split/inserted block, rendering from the optimistic
+  // overlay before its `_blocks` row exists server-side; this client has never
+  // seen the id in server truth, so nothing can be stored for it.
+  const session = CollabSession.start(id, buildSeedState, "unseen", true);
   expect(session.locallyAuthoritative).toBe(true);
   expect(session.state.kind).toBe("attaching");
 
@@ -145,9 +146,34 @@ test("a client-minted block reaches hydrated synchronously inside connect(), wit
   vi.advanceTimersByTime(1);
 });
 
+test("a re-created row (removed) is server-authoritative: hydrating until its surviving doc syncs", () => {
+  const id = blockId();
+  // `"removed"` — undo of a delete re-created the row optimistically. It is
+  // unconfirmed like a split tail, but its stored doc SURVIVED the delete
+  // (every delete is a trash), so the seed must NOT be applied and the arm is
+  // the server's: wait for the subscription, exactly like an existing block.
+  const session = CollabSession.start(id, buildSeedState, "removed", true);
+  expect(session.locallyAuthoritative).toBe(false);
+  const replica = session.replicaForBinding();
+  replica.connect();
+  expect(session.state.kind).toBe("hydrating");
+  expect(session.writeAllowed).toBe(false);
+  expect(fetchEndpointMock).not.toHaveBeenCalled();
+
+  // The surviving doc arrives; here it renders nothing, so the transport's own
+  // sync announcement is the exit.
+  session.owner.provider.onServerState(EMPTY_DOC_STATE);
+  expect(session.state.kind).toBe("hydrated");
+  expect(session.writeAllowed).toBe(true);
+  expect(fetchEndpointMock).not.toHaveBeenCalled();
+
+  session.end();
+  vi.advanceTimersByTime(1);
+});
+
 test("the in-memory transport is locally authoritative for its whole life", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, false);
+  const session = CollabSession.start(id, buildSeedState, "present", false);
   expect(session.locallyAuthoritative).toBe(true);
   session.replicaForBinding().connect();
   expect(session.state.kind).toBe("hydrated");
@@ -164,7 +190,7 @@ test("the in-memory transport is locally authoritative for its whole life", () =
 
 test("an empty catch-up is trivially hydrated rather than waiting for a commit that never comes", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
 
   // Nothing delivered yet: the server's answer is still coming.
@@ -186,7 +212,7 @@ test("an empty catch-up is trivially hydrated rather than waiting for a commit t
 
 test("an answer that DOES carry content stays hydrating until a commit proves it", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
   replica.connect();
 
@@ -211,7 +237,7 @@ test("an answer that DOES carry content stays hydrating until a commit proves it
 
 test("a verification mismatch yields stalled, and a late probe may not conclude one", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
   session.owner.provider.onServerState(
     toBase64(docStateFor([{ text: "hello" }])),
@@ -246,7 +272,7 @@ test("a verification mismatch yields stalled, and a late probe may not conclude 
 
 test("hydrating holds the transport flush, and ending it releases the bytes", async () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
   replica.connect();
   // Sync WITH content, so the session stays hydrating (no commit can arrive:
@@ -278,7 +304,12 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
   const id = blockId();
   const projectText = vi.fn();
   const { result, unmount } = renderHook(() =>
-    useCollabBlockDoc(id, [], true, projectText as unknown as ProjectTextFn),
+    useCollabBlockDoc(
+      id,
+      [],
+      "present",
+      projectText as unknown as ProjectTextFn,
+    ),
   );
 
   // Mount the binding the way `CollaborationPlugin` does.
@@ -334,7 +365,7 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
 
 test("a genuinely empty block never latches everRendered", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   session.replicaForBinding().connect();
   session.owner.provider.onServerState(EMPTY_DOC_STATE);
 
@@ -353,7 +384,7 @@ test("a genuinely empty block never latches everRendered", () => {
 
 test("the first commit carrying text latches it, and every later window inherits it", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
   replica.connect();
   session.owner.provider.onServerState(
@@ -387,7 +418,7 @@ test("the first commit carrying text latches it, and every later window inherits
 
 test("even a probe that may not conclude agreement still latches what it saw", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   const replica = session.replicaForBinding();
   session.owner.provider.onServerState(
     toBase64(docStateFor([{ text: "hello" }])),
@@ -407,7 +438,7 @@ test("even a probe that may not conclude agreement still latches what it saw", (
 
 test("the flip reaches the session's own state listeners", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, true, true);
+  const session = CollabSession.start(id, buildSeedState, "present", true);
   session.replicaForBinding().connect();
   session.owner.provider.onServerState(EMPTY_DOC_STATE);
 
@@ -436,7 +467,12 @@ test("refetch() re-reads the server without dropping the session or re-attaching
   const id = blockId();
   const projectText = vi.fn();
   const { result, rerender, unmount } = renderHook(() =>
-    useCollabBlockDoc(id, [], true, projectText as unknown as ProjectTextFn),
+    useCollabBlockDoc(
+      id,
+      [],
+      "present",
+      projectText as unknown as ProjectTextFn,
+    ),
   );
 
   let replica!: BindingReplica;
@@ -494,7 +530,12 @@ test("rehydrate() DOES re-attach — and the everRendered latch survives it", as
   const id = blockId();
   const projectText = vi.fn();
   const { result, rerender, unmount } = renderHook(() =>
-    useCollabBlockDoc(id, [], true, projectText as unknown as ProjectTextFn),
+    useCollabBlockDoc(
+      id,
+      [],
+      "present",
+      projectText as unknown as ProjectTextFn,
+    ),
   );
 
   let replica!: BindingReplica;

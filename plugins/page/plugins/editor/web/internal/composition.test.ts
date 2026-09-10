@@ -517,6 +517,7 @@ describe("translateOpForStore", () => {
   });
 
   test("patch tag delegates to the patch translation (cumulative anchors win)", () => {
+    const restoreIds: ReadonlySet<string> = new Set(["p-top"]);
     const patch: BlockOverlayOp = {
       tag: "patch",
       patch: {
@@ -524,6 +525,7 @@ describe("translateOpForStore", () => {
         updates: [],
         deleteIds: [],
       },
+      restoreIds,
     };
     // `old-link` is no longer a mounted anchor; the cumulative map resolves it.
     const out = translateOpForStore(
@@ -534,6 +536,9 @@ describe("translateOpForStore", () => {
     expect(out.tag === "patch" && out.patch.creates[0]!.parentId).toBe(
       "page-p",
     );
+    // Translation rewrites parent anchors, never row ids — so the restore set,
+    // keyed by row id, rides through untouched.
+    expect(out.tag === "patch" && out.restoreIds).toBe(restoreIds);
   });
 
   test("identity — the same reference — when no translated anchor is named", () => {
