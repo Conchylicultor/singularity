@@ -598,6 +598,16 @@ export const tmuxRuntime: ConversationRuntime = {
     // worktree slug Claude's .mcp.json dials back to over HTTP — it must be a
     // host the gateway actually routes, so we read it straight from the
     // server's own worktree env rather than from a caller-supplied label.
+    //
+    // CLAUDE_CODE_DISABLE_AGENT_VIEW pins the session to this pane. Claude
+    // Code's agent view can otherwise move a live session into its per-machine
+    // background daemon (`←` on an empty prompt, `/background`, the exit
+    // dialog), and the daemon hands every session it hosts ITS OWN environment
+    // — the one of whichever pane first spawned it. A session moved that way
+    // keeps working through a stub in this pane, so the app cannot tell, but
+    // its commits, pushes and MCP calls then carry another conversation's id
+    // (the Sep 9 misattributed push). The app never uses background sessions,
+    // so the pane is the only place a session may run.
     const hasPrompt =
       typeof opts?.prompt === "string" && opts.prompt.length > 0;
     const parentHost = Bun.env.SINGULARITY_WORKTREE;
@@ -668,6 +678,8 @@ export const tmuxRuntime: ConversationRuntime = {
         `SINGULARITY_CONVERSATION_ID=${conversationId}`,
         "-e",
         `SINGULARITY_PARENT_HOST=${parentHost}`,
+        "-e",
+        "CLAUDE_CODE_DISABLE_AGENT_VIEW=1",
         "zsh",
         "-l",
         "-c",
