@@ -71,6 +71,19 @@ The mock half renders in **every** arm: the mock is known the moment the pane
 opens, and making it wait on the counterpart would be a second unknown standing
 in for a known thing.
 
+## Zoom: fit the pair on screen without reflowing it
+
+The **Zoom** control (`Fit` by default, or `100%`) paints both halves smaller by
+ONE factor without changing the width they are laid out at: each half's content
+sits in a `ScaledBox` exactly the shared width wide, `transform: scale()`d. So
+the zoomed pair is the 100% pair shrunk, every proportion kept.
+
+The factor is read off the mock half's box, which under Fit is the shared width
+capped to the room its half has. Both halves have the same flex basis (same
+width, same card chrome; labels kept out by `contain: inline-size`), so the row
+shrinks them equally — that symmetry is what lets one measured box stand for
+both. Fit never zooms in.
+
 ## Why the mock frame is not `ScaledIframe`
 
 `ScaledIframe` mounts a prototype at its declared viewport and `scale()`s it to
@@ -80,7 +93,9 @@ genuinely reflows at 320px, that compares nothing.
 So `MockFrame` mounts a plain iframe **at** the chosen width, and the prototype's
 own media queries run. A prototype authored at one fixed width then crops and
 scrolls instead of rearranging — that *is* the answer ("the mock has nothing to
-say about this width"), not a defect to paper over with a scale factor. Height
+say about this width"), not a defect to paper over with a scale factor. (Zoom
+is different: it lays both halves out at the chosen width first and only then
+paints them smaller, so it never changes what either half says.) Height
 is the prototype's declared viewport height, since an iframe never sizes to its
 content. Sandbox posture is unchanged from every other prototype frame:
 `allow-scripts allow-same-origin`.
@@ -110,6 +125,8 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineDispatchSlot`

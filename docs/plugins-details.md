@@ -2770,6 +2770,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/loading.Loading`
               - `primitives/slot-render.defineDispatchSlot`
@@ -26076,6 +26078,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/sonata/notation`
               - `apps/sonata/piano-roll`

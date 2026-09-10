@@ -1,4 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from "react";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -15,6 +16,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import type { CounterpartResolution, WidthChoices } from "../types";
 import { MockFrame } from "./mock-frame";
+import { ScaledBox, boxStyle } from "./scaled-box";
 
 /**
  * Widths to offer while the counterpart has none to offer — it is still
@@ -22,6 +24,13 @@ import { MockFrame } from "./mock-frame";
  * width in those states, so there is always a list to pick from.
  */
 const PLACEHOLDER_WIDTHS: WidthChoices = [360, 640, 960];
+
+/**
+ * How the pair is painted. `fit` zooms both halves out by one factor until the
+ * pair fits the pane's width (never zooming in); `actual` paints them at 100%
+ * and lets the stage scroll. Zoom never changes the width they are LAID OUT at.
+ */
+type Zoom = "fit" | "actual";
 
 /**
  * The stage's chrome: both halves, at ONE width.
@@ -58,6 +67,16 @@ export function CounterpartStage({
       ? picked
       : defaultWidth(widths, meta);
 
+  const [zoom, setZoom] = useState<Zoom>("fit");
+  const fit = zoom === "fit";
+  // ONE scale for both halves, read off the mock half's box — it renders in
+  // every arm, so there is always a box to read. Under Fit that box is the
+  // shared width capped to the room its half has, so the ratio is the zoom that
+  // fits; before the first measure (same commit, before paint) it is 1.
+  const [mockBoxRef, { width: mockBoxWidth }] =
+    useElementSize<HTMLDivElement>();
+  const scale = fit && mockBoxWidth > 0 ? Math.min(1, mockBoxWidth / width) : 1;
+
   return (
     <Column
       className="h-full"
@@ -78,6 +97,23 @@ export function CounterpartStage({
             ) : (
               <Text variant="caption" tone="muted">{`${String(width)}px`}</Text>
             )}
+            <Text variant="label">Zoom</Text>
+            <SegmentedControl<Zoom>
+              options={[
+                {
+                  id: "fit",
+                  label:
+                    fit && scale < 1
+                      ? `Fit · ${String(Math.round(scale * 100))}%`
+                      : "Fit",
+                  title:
+                    "Zoom both halves out together until the pair fits the pane",
+                },
+                { id: "actual", label: "100%", title: "Actual size" },
+              ]}
+              value={zoom}
+              onChange={setZoom}
+            />
             {/* The ref is an identifier, which is what Badge's `mono` is for. */}
             {resolution.status === "found" && resolution.badge !== undefined ? (
               <Badge mono>{resolution.badge}</Badge>
@@ -95,16 +131,29 @@ export function CounterpartStage({
         <Scroll axis="both" className="h-full">
           <Inset pad="lg">
             <Stack direction="row" gap="lg" align="start">
-              <Half title="Prototype mock" subtitle={meta.title} width={width}>
-                {/* The prototype's declared viewport height: the frame is as tall
-                    as the mock says it means to be, and as wide as the stage says. */}
-                <MockFrame
-                  meta={meta}
-                  version={version}
-                  height={meta.viewport.h}
-                />
+              <Half title="Prototype mock" subtitle={meta.title}>
+                <ScaledBox
+                  width={width}
+                  scale={scale}
+                  fit={fit}
+                  boxRef={mockBoxRef}
+                >
+                  {/* The prototype's declared viewport height: the frame is as
+                      tall as the mock says it means to be, and as wide as the
+                      stage says. */}
+                  <MockFrame
+                    meta={meta}
+                    version={version}
+                    height={meta.viewport.h}
+                  />
+                </ScaledBox>
               </Half>
-              <CounterpartHalf resolution={resolution} width={width} />
+              <CounterpartHalf
+                resolution={resolution}
+                width={width}
+                scale={scale}
+                fit={fit}
+              />
             </Stack>
           </Inset>
         </Scroll>
@@ -118,23 +167,29 @@ export function CounterpartStage({
 function CounterpartHalf({
   resolution,
   width,
+  scale,
+  fit,
 }: {
   resolution: CounterpartResolution;
   width: number;
+  scale: number;
+  fit: boolean;
 }): ReactElement {
+  // A notice is prose, not a rendering to compare: it takes the half's box so
+  // the two halves stay the same size, but reflows inside it instead of zooming.
   switch (resolution.status) {
     case "loading":
       return (
-        <Half title="Counterpart" width={width}>
-          <Inset pad="lg">
+        <Half title="Counterpart">
+          <Inset pad="lg" style={boxStyle(width, fit)}>
             <Loading label={resolution.label ?? "Loading the counterpart…"} />
           </Inset>
         </Half>
       );
     case "unresolved":
       return (
-        <Half title="Counterpart" width={width}>
-          <Inset pad="lg">
+        <Half title="Counterpart">
+          <Inset pad="lg" style={boxStyle(width, fit)}>
             <Stack gap="sm">
               <Text variant="body">{resolution.title}</Text>
               {typeof resolution.detail === "string" ? (
@@ -150,11 +205,7 @@ function CounterpartHalf({
       );
     case "found":
       return (
-        <Half
-          title={resolution.title}
-          subtitle={resolution.subtitle}
-          width={width}
-        >
+        <Half title={resolution.title} subtitle={resolution.subtitle}>
           {/*
             One crashing counterpart must cost its own half, not the pane. A kind
             renders arbitrary code from an arbitrary plugin — a fixture, a whole
@@ -165,28 +216,42 @@ function CounterpartHalf({
             slot="prototype-compare"
             label={`${resolution.badge ?? resolution.title} @ ${String(width)}px`}
           >
-            {resolution.render(width)}
+            <ScaledBox width={width} scale={scale} fit={fit}>
+              {resolution.render(width)}
+            </ScaledBox>
           </PluginErrorBoundary>
         </Half>
       );
   }
 }
 
-/** One labelled half, sized to the shared width. */
+/**
+ * One labelled half. Its content (a `ScaledBox`, or a notice in `boxStyle`)
+ * carries the shared width; the card only wraps it.
+ */
 function Half({
   title,
   subtitle,
-  width,
   children,
 }: {
   title: string;
   subtitle?: string;
-  width: number;
   children: ReactNode;
 }): ReactElement {
   return (
-    <Stack gap="2xs">
-      <Stack direction="row" gap="sm" align="baseline" wrap>
+    // `minWidth: 0` lets Fit shrink the half below its content's width. Both
+    // halves have the same flex basis (the shared width plus the same card
+    // chrome), so they shrink by the same amount and keep one box size.
+    <Stack gap="2xs" style={{ minWidth: 0 }}>
+      {/* `contain: inline-size` keeps the label out of the half's basis: a long
+          caption must wrap, not widen one half and break the symmetry. */}
+      <Stack
+        direction="row"
+        gap="sm"
+        align="baseline"
+        wrap
+        style={{ contain: "inline-size" }}
+      >
         <Text variant="label">{title}</Text>
         {subtitle !== undefined ? (
           <Text variant="caption" tone="muted">
@@ -194,9 +259,7 @@ function Half({
           </Text>
         ) : null}
       </Stack>
-      {/* Fixed-px width is the point here — both halves are handed the SAME box,
-          which is the only way the two renderings are comparable at all. */}
-      <Card style={{ width }}>{children}</Card>
+      <Card>{children}</Card>
     </Stack>
   );
 }

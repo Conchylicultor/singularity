@@ -56,6 +56,7 @@ different need, extend the primitive rather than allowlisting a copy.
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface/floating`
+    - `apps/prototypes/compare`
     - `apps/prototypes/gallery`
     - `apps/sonata/notation`
     - `apps/sonata/piano-roll`
