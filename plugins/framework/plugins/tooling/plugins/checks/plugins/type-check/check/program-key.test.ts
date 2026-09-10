@@ -179,7 +179,9 @@ test("a .ts in a GITIGNORED directory does not change the key", async () => {
   const before = await keyNow();
   write(".cache/scratch.ts", "export const scratch = 1;\n");
   expect(await keyNow()).toBe(before);
-  expect((await readTreeListing(root)).files).not.toContain(".cache/scratch.ts");
+  expect((await readTreeListing(root)).files).not.toContain(
+    ".cache/scratch.ts",
+  );
 });
 
 test("no buildinfo means no key — a cold run, never a skip", async () => {
