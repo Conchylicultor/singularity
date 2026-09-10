@@ -15802,6 +15802,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`migrations-in-sync`**
             - **`no-db-backed-notify`**
             - **`no-disabled-flag`**
+            - **`no-gitlinks`**
             - **`no-hand-built-link-to`**
             - **`no-hardcoded-colors`**
             - **`no-plugin-imports-in-core`**

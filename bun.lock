@@ -2784,6 +2784,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-no-disabled-flag",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-gitlinks": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-gitlinks",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to": {
       "name": "@singularity/plugin-framework-tooling-checks-no-hand-built-link-to",
       "version": "0.0.1",
@@ -7258,6 +7262,8 @@
     "@singularity/plugin-framework-tooling-checks-no-db-backed-notify": ["@singularity/plugin-framework-tooling-checks-no-db-backed-notify@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify"],
 
     "@singularity/plugin-framework-tooling-checks-no-disabled-flag": ["@singularity/plugin-framework-tooling-checks-no-disabled-flag@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-disabled-flag"],
+
+    "@singularity/plugin-framework-tooling-checks-no-gitlinks": ["@singularity/plugin-framework-tooling-checks-no-gitlinks@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-gitlinks"],
 
     "@singularity/plugin-framework-tooling-checks-no-hand-built-link-to": ["@singularity/plugin-framework-tooling-checks-no-hand-built-link-to@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to"],
 

@@ -257,6 +257,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`migrations-in-sync`**
   - **`no-db-backed-notify`**
   - **`no-disabled-flag`**
+  - **`no-gitlinks`**
   - **`no-hand-built-link-to`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**
