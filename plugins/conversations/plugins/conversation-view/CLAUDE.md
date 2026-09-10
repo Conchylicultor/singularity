@@ -50,6 +50,7 @@
     - `usePromptInsert`
 - Cross-plugin:
   - Imported by:
+    - `active-data/attempt`
     - `active-data/conv`
     - `active-data/plugin-link`
     - `active-data/task`

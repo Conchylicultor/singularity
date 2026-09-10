@@ -5,12 +5,18 @@ clickable chips. Agents write the bare id in their text — no tag wrapping
 needed — and the active-data linkify primitive replaces matches at render
 time.
 
-Clicking opens the referenced attempt in `attemptPane` (`/a/:attemptId`)
-as a regular push to the right of the host pane. Only the conversation
-toolbar's attempt-switch toggle opens the attempt pane on the left.
-The chip resolves the attempt's status and conversation count via
-`attemptsResource`; falls back to the raw id if the attempt isn't in the
-index yet.
+The chip is labelled with the attempt's first (earliest) conversation
+title, falling back to its task's title, and shows the attempt's status
+dot plus a conversation count when there is more than one. The raw id
+stays in the tooltip, and is the label itself while loading or when the
+attempt isn't in the index.
+
+Clicking opens that first conversation (toggling it like a conv chip),
+since most attempts hold exactly one — skipping the attempt pane's
+one-item list. Only an attempt with no conversations (or an unknown id)
+opens `attemptPane` (`/a/:attemptId`). Both are a regular push to the
+right of the host pane; only the conversation toolbar's attempt-switch
+toggle opens the attempt pane on the left.
 
 The id pattern matches attempt ids derived from the worktree basename
 (`att-<unix-seconds>-<4 base36 chars>`).
@@ -19,15 +25,17 @@ The id pattern matches attempt ids derived from the worktree basename
 
 ## Plugin reference
 
-- Description: Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+- Description: Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
 - Web:
   - Contributes: `ActiveData.Tag` "attempt" → `AttemptChip`
   - Uses:
     - `active-data.ActiveData`
     - `active-data.inlineChip`
+    - `conversations/conversation-view.useConversationOpener`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/live-state.matchResource`
+    - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
     - `tasks/attempt-status.ATTEMPT_STATUS_META`

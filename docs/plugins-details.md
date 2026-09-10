@@ -106,15 +106,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/jsonl-viewer/assistant-text`
       - `improve/element-picker`
   - Plugins:
-    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
       - Web:
         - Contributes: `ActiveData.Tag` "attempt" → `AttemptChip`
         - Uses:
           - `active-data.ActiveData`
           - `active-data.inlineChip`
+          - `conversations/conversation-view.useConversationOpener`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/live-state.matchResource`
+          - `primitives/live-state.useCombinedResources`
           - `primitives/live-state.useResource`
           - `primitives/pane.useOpenPane`
           - `tasks/attempt-status.ATTEMPT_STATUS_META`
@@ -8945,6 +8947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `usePromptInsert`
       - Cross-plugin:
         - Imported by:
+          - `active-data/attempt`
           - `active-data/conv`
           - `active-data/plugin-link`
           - `active-data/task`

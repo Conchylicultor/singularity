@@ -7,7 +7,7 @@ export { AttemptChip };
 
 export default {
   description:
-    "Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.",
+    "Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed.",
   contributions: [
     ActiveData.Tag(
       inlineChip({
