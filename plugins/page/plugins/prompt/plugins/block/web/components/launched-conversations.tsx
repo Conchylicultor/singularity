@@ -1,10 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { ConversationChip } from "@plugins/conversations/plugins/conversation-ui/plugins/chip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/web";
 
 /**
@@ -17,6 +14,9 @@ import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/w
  * so the row is correct after a reload and updates live as an agent's status
  * changes.
  *
+ * The chip itself is `ConversationChip` — the shared "a conversation, clickable,
+ * opening its run" widget. This component owns only the join and the order.
+ *
  * Transient chrome (a handful of status chips beside a launch button), not a
  * homogeneous domain-record collection — hence `Cluster` + chips rather than a
  * DataView.
@@ -24,11 +24,6 @@ import { useBlockPromptTasks } from "@plugins/page/plugins/prompt/plugins/link/w
 export function LaunchedConversations({ blockId }: { blockId: string }) {
   const links = useBlockPromptTasks(blockId);
   const attemptsQ = useResource(attemptsResource);
-  const openPane = useOpenPane();
-  // The conversation column this block opened, if one is currently in the route.
-  // Pages mounts Miller columns, so a conversation pane in the chain is by
-  // definition one opened from a page — take the last (rightmost) one.
-  const activeConvId = conversationPane.useRouteEntries().at(-1)?.params.convId;
 
   if (attemptsQ.pending || links.length === 0) return null;
 
@@ -43,17 +38,7 @@ export function LaunchedConversations({ blockId }: { blockId: string }) {
   return (
     <Cluster gap="xs">
       {convs.map((conv) => (
-        <ToggleChip
-          key={conv.id}
-          variant="ghost"
-          active={activeConvId === conv.id}
-          title={conv.title ?? "Starting…"}
-          onClick={() =>
-            openPane(conversationPane, { convId: conv.id }, { mode: "push" })
-          }
-        >
-          <ConversationItem conv={conv} layout="inline" />
-        </ToggleChip>
+        <ConversationChip key={conv.id} conv={conv} />
       ))}
     </Cluster>
   );

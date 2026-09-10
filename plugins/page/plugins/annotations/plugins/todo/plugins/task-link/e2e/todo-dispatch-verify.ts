@@ -13,9 +13,12 @@
 //  3. **One task, many attempts.** A second dispatch from the same card returns
 //     the SAME task id — the extension table's primary key IS the block id, so
 //     this is a fact of the schema and not a check the endpoint remembers.
-//  4. The card then reports the task: its glyph becomes the task's status icon
-//     and the panel leads with the task's title.
-//  5. A non-TODO block is refused with a 400 naming the type it actually is.
+//  4. The card then reports the task: the panel leads with the task's title, and
+//     the card's name goes on saying `Todo` — a dispatched card no longer spells
+//     the status in its corner, because its FOOT carries the runs instead.
+//  5. A card with a task but no run yet has NO foot: the seam costs a card
+//     nothing until there is something to put in it.
+//  6. A non-TODO block is refused with a 400 naming the type it actually is.
 //
 // **Nothing here presses Launch**, deliberately: `LaunchControl` would create a
 // conversation, and a conversation is a real agent in a real worktree. The
@@ -23,6 +26,10 @@
 // itself is `createConversation`'s existing `taskId`-without-`attemptId` branch,
 // pinned by `page/prompt/block`'s own spec. So this script proves everything up
 // to the model call and stops.
+//
+// That is also why the foot's CHIPS are not asserted here — there is no run to
+// chip. What is asserted is the half that does not need one: that the foot is
+// empty until a run exists, and that the corner name no longer stands in for it.
 //
 // What it deliberately does NOT cover, because they are not browser facts:
 // the `<todo task_id="…" status="…">` attributes (read with `read_page` against
@@ -51,6 +58,18 @@ interface StoredRow {
   parentId: string | null;
 }
 
+/**
+ * The document's one container box: its painted fill and its painted height.
+ *
+ * The height is how "the card grew a foot" is asked without naming the foot's
+ * markup — a foot is FLOW content inside the box, so anything it renders makes
+ * the box taller and anything it does not render costs the box nothing.
+ */
+interface CardBox {
+  tint: string;
+  height: number;
+}
+
 interface DispatchResult {
   status: number;
   taskId?: string;
@@ -69,10 +88,10 @@ async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
 }
 
 /**
- * The resolved background colour of the document's one container box — the TODO
- * card's frame. A card is a TINT and nothing else now (the family's dashed
- * border went with the redesign), and this scratch page holds exactly one
- * annotation and no other framed block, so the box needs no other
+ * The document's one container box — the TODO card's frame — as its resolved
+ * fill and its measured height. A card is a TINT and nothing else now (the
+ * family's dashed border went with the redesign), and this scratch page holds
+ * exactly one annotation and no other framed block, so the box needs no other
  * identification: it is the only absolutely-positioned element painting a fill.
  *
  * The positioning is what keeps it apart from ordinary chrome. A frame is a
@@ -82,7 +101,7 @@ async function storedRows(page: Page, pageId: string): Promise<StoredRow[]> {
  * `undefined` when no box is painted, which is itself a failure the caller
  * reports rather than an absorbed empty answer.
  */
-async function cardTint(page: Page): Promise<string | undefined> {
+async function cardBox(page: Page): Promise<CardBox | undefined> {
   return page.evaluate(() => {
     for (const el of document.querySelectorAll("div")) {
       const style = getComputedStyle(el);
@@ -94,10 +113,15 @@ async function cardTint(page: Page): Promise<string | undefined> {
         bg.startsWith("rgba(0, 0, 0, 0)")
       )
         continue;
-      return bg;
+      return { tint: bg, height: el.getBoundingClientRect().height };
     }
     return undefined;
   });
+}
+
+/** Just the tint, for the polling helper below. */
+async function cardTint(page: Page): Promise<string | undefined> {
+  return (await cardBox(page))?.tint;
 }
 
 /**
@@ -190,6 +214,10 @@ await withBrowser(async (h) => {
   }
 
   // --- 3. the dispatch itself ------------------------------------------------
+  // Measured BEFORE anything is dispatched, so §5's "the foot costs a card
+  // nothing until there is a run" has an honest baseline to compare against.
+  const boxBefore = (await cardBox(page))?.height;
+
   const first = await dispatch(page, cardId, "prefer a table-driven decoder");
   r.ok(
     "POST /api/todo-blocks/:blockId/task returns a task id and a prompt",
@@ -230,9 +258,9 @@ await withBrowser(async (h) => {
   );
 
   // --- 5. the card now reports its task ---------------------------------------
-  // The link is a live resource, so the glyph re-renders without a reload: a
-  // fresh task is `new`, whose `STATUS_META` icon replaces the pending-actions
-  // mark and whose trigger label changes with it.
+  // The link is a live resource, so the decoration re-renders without a reload.
+  // What changes is the TRIGGER LABEL and the panel behind it — not the name,
+  // which stays `Todo`: the status moved to the card's foot.
   await page.waitForTimeout(1500);
   const dispatchedTrigger = page.getByRole("button", {
     name: "TODO card's agent run",
@@ -258,7 +286,33 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(300);
   }
 
-  // --- 6. a settled task repaints the card ------------------------------------
+  // The corner name is the card's NAME again, dispatched or not. It used to
+  // become the task's status here (`NEW`, `RUNNING`) and stop hiding with it;
+  // the foot's chips say that now, so the name went back to being worth nothing
+  // at rest. Asserted as "no status word anywhere on the card", since the name
+  // itself is hover-revealed and absent from the accessible tree at rest.
+  r.ok(
+    "a dispatched card does NOT spell the task's status in its corner",
+    (await page.getByText("New", { exact: true }).count()) === 0,
+    "the status lives at the card's foot, not in its name",
+  );
+
+  // --- 6. the foot costs the card nothing until there is a run ----------------
+  // The card is dispatched but nothing has been launched, so `TodoRuns` has no
+  // conversation to chip and renders nothing — and a foot that renders nothing
+  // must reserve no space at all, or every TODO card on every page would pay a
+  // row for an act most of them never perform. A foot is flow content inside the
+  // box, so the box's own height is the whole assertion.
+  const boxAfter = (await cardBox(page))?.height;
+  r.ok(
+    "a dispatched card with no run yet is exactly as tall as before — an empty foot reserves nothing",
+    boxBefore !== undefined &&
+      boxAfter !== undefined &&
+      Math.abs(boxAfter - boxBefore) < 1,
+    JSON.stringify({ boxBefore, boxAfter }),
+  );
+
+  // --- 7. a settled task repaints the card ------------------------------------
   // The box is the one thing a reader sees WITHOUT opening anything, so it is
   // the assertion that matters most: dropping the task must fade the card from
   // the family's `warning` hue. Read as a computed colour rather than a class
@@ -288,7 +342,7 @@ await withBrowser(async (h) => {
     JSON.stringify({ beforeDrop, afterDrop }),
   );
 
-  // --- 7. only a TODO card can dispatch ---------------------------------------
+  // --- 8. only a TODO card can dispatch ---------------------------------------
   // The card's own first child is a plain text block — a real id of the right
   // shape that is simply the wrong type, which is the mistake worth refusing.
   const childId = rows.find((b) => b.parentId === cardId)?.id;

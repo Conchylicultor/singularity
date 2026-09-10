@@ -11,6 +11,7 @@ import type {
   BlockAnchorProps,
   BlockChrome,
   BlockEditorAPI,
+  BlockFootProps,
   BlockFrameProps,
   BlockRendererProps,
 } from "./types";
@@ -236,6 +237,26 @@ export type BlockFrameMeta = BlockFrameDecoration & {
     api: BlockEditorAPI;
     close: () => void;
   }>;
+  /**
+   * A strip of this container's own chrome at the BOTTOM of its box — below the
+   * last visible child, inside the card's padding. See `BlockFootProps`.
+   *
+   * Deliberately NOT a third arm of `BlockFrameDecoration`, and the distinction
+   * is the whole reason it is a separate field. A decoration answers *what is
+   * this box*: it is appearance only and reserves no space, which is why a
+   * container may have exactly one and why the union makes "two of them"
+   * unspellable. A foot is chrome the box MAKES ROOM FOR — its height is its
+   * own, the rows around it move for it, and the card's bottom pad is pushed
+   * below it (`internal/frame-foot.ts`). Two different questions; folding the
+   * second into the first would force a container to choose between having a
+   * name and having a foot.
+   *
+   * Keeping it off the union is also what keeps `./singularity check
+   * page-editor:anchor-has-decoration` meaning what it means today: a container
+   * still owes exactly ONE decoration, and a foot is never one — a card with a
+   * foot and no decoration is still an invisible card.
+   */
+  foot?: ComponentType<BlockFootProps>;
 };
 
 /**
@@ -474,6 +495,40 @@ export function useBlockFrameMenus(): ReadonlyMap<
     >();
     for (const c of contributions) {
       if (typeof c.match === "string" && c.menu) out.set(c.match, c.menu);
+    }
+    return out;
+  }, [contributions]);
+}
+
+/**
+ * Block type → the FOOT it renders at the bottom of its box, derived from the
+ * same `Editor.BlockFrame` registrations `useFramedBlockTypes()` /
+ * `useFrameGeometry()` / `useBlockDecorations()` / `useBlockFrameMenus()` read.
+ * Fourth twin on that one source of truth, for the same reason as the other
+ * three: who has a foot cannot drift from who actually paints the box the foot
+ * sits inside.
+ *
+ * Membership is load-bearing beyond dispatch, which is what makes the shared
+ * source matter here. A footed frame's own bottom pad moves BELOW its foot
+ * (`internal/frame-foot.ts`), so the surface asks this map before it can place a
+ * single card's padding — a second registry answering "does this type have a
+ * foot" differently from the one that renders it would mis-pad every box on the
+ * page, silently.
+ *
+ * Like `anchor` and `menu`, a foot is UNSEALED: only a field literally named
+ * `component` goes through the framework's error-boundary middleware, so a crash
+ * inside a foot is not contained to the slot. Documented, not discovered — same
+ * as its two neighbours.
+ */
+export function useBlockFeet(): ReadonlyMap<
+  string,
+  ComponentType<BlockFootProps>
+> {
+  const contributions = Editor.BlockFrame.useContributions();
+  return useMemo(() => {
+    const out = new Map<string, ComponentType<BlockFootProps>>();
+    for (const c of contributions) {
+      if (typeof c.match === "string" && c.foot) out.set(c.match, c.foot);
     }
     return out;
   }, [contributions]);

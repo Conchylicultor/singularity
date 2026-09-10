@@ -5,10 +5,9 @@ import type {
   BlockEditorAPI,
 } from "@plugins/page/plugins/editor/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import {
   TodoDispatch,
-  useTodoTaskState,
+  useTodoTask,
 } from "@plugins/page/plugins/annotations/plugins/todo/plugins/task-link/web";
 
 /**
@@ -29,18 +28,23 @@ import {
  * container convention — the rail is where a user looks for block actions, the
  * decoration is where they look for the decoration.
  *
- * ## A dispatched card keeps its name at rest
+ * ## The name is the card's NAME again, dispatched or not
  *
- * `persist` is the one exception to hiding the name, and it is a rule about what
- * the name is SAYING. Normally it repeats what the tint already carries, so it is
- * worth nothing at rest. Once an agent is running on the card, the name carries
- * the task's live status instead — `RUNNING`, `DONE` — which the tint cannot
- * spell (an open card and a card with an agent working on it are both `warning`)
- * and which the reader would otherwise have to open a popover to learn.
+ * It used to make one exception: a dispatched card stopped hiding its name and
+ * spelled the task's live status there instead (`RUNNING`, `DONE`), because the
+ * tint cannot say it — an open card and a card with an agent working on it are
+ * both `warning` — and nothing else on the card could.
  *
- * The word and its tint come from `STATUS_META`, the ONE table mapping a
- * `TaskStatus` to how it looks — never a second mapping here. The card must say
- * exactly what the task list says, or the two disagree the day a status is added.
+ * Something else can now. The card's FOOT carries a chip per run
+ * (`BlockFrameMeta.foot` → `TodoFoot`), which says the same thing on something
+ * you can click to go and look. So the exception is gone: the name is worth
+ * nothing at rest whatever the task is doing, and a card that spelled the status
+ * in two places would be a card whose two answers can drift apart the day a
+ * status is added.
+ *
+ * The link is still read here for one thing only — whether launching again is
+ * *again* — which is a fact about this control's own wording, not a second
+ * rendering of the task's state.
  *
  * ## Three states, and the two degradations are the same one
  *
@@ -75,16 +79,14 @@ function DispatchableTodoAnchor({
   blockId: string;
   editor: BlockEditorAPI;
 }) {
-  const dispatched = useTodoTaskState(blockId);
-  const status = dispatched ? STATUS_META[dispatched.status] : null;
+  const dispatched = useTodoTask(blockId) !== null;
 
   return (
     <ContainerCornerLabel
       blockId={blockId}
       editor={editor}
-      name={status ? status.label : "Todo"}
-      className={status ? status.iconClassName : "text-warning/80"}
-      persist={status !== null}
+      name="Todo"
+      className="text-warning/80"
       action={
         <Row gap="2xs" align="center">
           <MdPlayArrow className="size-3" />

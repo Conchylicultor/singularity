@@ -57,6 +57,7 @@
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
+    - `conversations/conversation-ui/chip`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/branch`
     - `conversations/conversation-view/code/docs-button`
@@ -97,7 +98,6 @@
     - `debug/profiling/ops`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
-    - `page/prompt/block`
     - `primitives/launch`
     - `review`
     - `stats/cost`

@@ -70,10 +70,16 @@ import {
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
-import { Editor, useFramedBlockTypes, useFrameGeometry } from "../slots";
+import {
+  Editor,
+  useBlockFeet,
+  useFramedBlockTypes,
+  useFrameGeometry,
+} from "../slots";
 import { computeFrameSpans, type FlatBlock } from "../internal/block-frames";
 import { flattenVisible } from "../internal/flatten-blocks";
 import { resolveFramePadInsets, resolveRailSeats } from "../internal/rail-seat";
+import { resolveFrameFeet, type FootSeat } from "../internal/frame-foot";
 import { resolveSelectionBands } from "../internal/selection-bands";
 import {
   blockContentScope,
@@ -88,6 +94,7 @@ import {
   type BlockSelectionActions,
 } from "../internal/use-block-selection";
 import { BlockRow } from "./block-row";
+import { FrameFoot } from "./frame-foot";
 import { SelectionBands } from "./selection-bands";
 import {
   BLOCK_GUTTER,
@@ -228,14 +235,22 @@ function isInsideEditingHost(target: EventTarget | null): boolean {
  * downward crosses rows that report no frames; one leaving sideways leaves the
  * last row's answer standing, which costs a stale name on a card the pointer has
  * left and nothing else.
+ *
+ * It also hosts the FEET of the container frames that END on this row, after the
+ * row itself. A foot is chrome at the bottom of a card's box, and putting it in
+ * the last covered row's cell is what lets the card's wash cover it with no
+ * change to any `gridRow` arithmetic — see `components/frame-foot.tsx`.
  */
 function RowCell({
   row,
   frames,
+  feet,
   children,
 }: {
   row: number;
   frames: readonly string[];
+  /** The container feet ending on this row, innermost first. Usually empty. */
+  feet: readonly FootSeat[];
   children: ReactNode;
 }) {
   const setFrameHover = useSetFrameHover();
@@ -247,6 +262,9 @@ function RowCell({
       onPointerEnter={() => setFrameHover(frames)}
     >
       {children}
+      {feet.map((seat) => (
+        <FrameFoot key={`foot:${seat.block.id}`} seat={seat} />
+      ))}
     </div>
   );
 }
@@ -1581,6 +1599,13 @@ function SelectionLayer({
     (type: string) => handleMap.get(type),
     [handleMap],
   );
+  // Which container types render a FOOT — a strip of their own chrome at the
+  // bottom of the box. Load-bearing beyond dispatch: a footed frame reserves its
+  // bottom pad BELOW its foot rather than on its last row, so the three
+  // resolutions here all take the same membership predicate and cannot disagree
+  // about where a card's padding went (`internal/frame-foot.ts`).
+  const blockFeet = useBlockFeet();
+  const hasFoot = useCallback((t: string) => blockFeet.has(t), [blockFeet]);
   const railSeats = useMemo(
     () =>
       resolveRailSeats(
@@ -1589,8 +1614,9 @@ function SelectionLayer({
         handleOf,
         (t) => frameGeometry.get(t)?.pads === true,
         (t) => frameGeometry.get(t)?.absorbs === true,
+        hasFoot,
       ),
-    [flat, frameSpans, handleOf, frameGeometry],
+    [flat, frameSpans, handleOf, frameGeometry, hasFoot],
   );
   // Each frame's OWN box insets. Per-FRAME, where the seats are per-row, and
   // deliberately not derived from a seat: a vertical side depends on whether an
@@ -1603,9 +1629,26 @@ function SelectionLayer({
         frameSpans,
         handleOf,
         (t) => frameGeometry.get(t)?.pads === true,
+        hasFoot,
       ),
-    [flat, frameSpans, handleOf, frameGeometry],
+    [flat, frameSpans, handleOf, frameGeometry, hasFoot],
   );
+  // Each footed container's foot, placed. Per-FRAME like the insets (a foot
+  // belongs to a card, at whatever row that card's box ends), then grouped by
+  // row for the cells that host them — innermost first within a row, which is
+  // the order their pads stack in below them.
+  const feetByRow = useMemo(() => {
+    const out: FootSeat[][] = flat.map(() => []);
+    for (const seat of resolveFrameFeet(
+      flat,
+      frameSpans,
+      (t) => frameGeometry.get(t)?.pads === true,
+      (t) => frameGeometry.get(t)?.absorbs === true,
+      hasFoot,
+    ))
+      out[seat.row]!.push(seat);
+    return out;
+  }, [flat, frameSpans, frameGeometry, hasFoot]);
 
   // Which container frames cover each row, outermost first. It is what a row
   // hands the hover store on the way in, so a card's corner name can reveal
@@ -1817,7 +1860,12 @@ function SelectionLayer({
                   anchor row's box. */}
                 <SelectionBands bands={selectionBands} />
                 {flat.map((f, i) => (
-                  <RowCell key={f.block.id} row={i} frames={frameIdsByRow[i]!}>
+                  <RowCell
+                    key={f.block.id}
+                    row={i}
+                    frames={frameIdsByRow[i]!}
+                    feet={feetByRow[i]!}
+                  >
                     <BlockRow
                       block={f.block}
                       depth={f.depth}

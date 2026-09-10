@@ -2,7 +2,9 @@
 
 Visual primitive for rendering a `Conversation` as a row or inline chip.
 Pure presentation — no click handler, no router awareness, no chrome.
-Surfaces wrap their own button/link around it.
+Surfaces wrap their own button/link around it. For the chip case that wrapper
+already exists — the sibling `chip` plugin — so reach for `ConversationChip`
+before hand-rolling a seventh clickable pill.
 
 `<ConversationItem conv layout? active?>` ships two layouts:
 
@@ -63,6 +65,7 @@ directly — it is no longer re-exported here.)
     - `conversations/conversation-category`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`
+    - `conversations/conversation-ui/chip`
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/op-status`
@@ -70,7 +73,6 @@ directly — it is no longer re-exported here.)
     - `conversations/conversations-view/data-view/queue`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
-    - `page/prompt/block`
     - `tasks/attempt-view`
     - `tasks/task-events`
 

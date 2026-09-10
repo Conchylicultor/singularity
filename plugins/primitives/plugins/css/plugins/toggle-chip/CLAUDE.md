@@ -60,6 +60,7 @@ anonymous index signature. See
     - `build/serve-composition`
     - `config_v2/fields`
     - `config_v2/settings`
+    - `conversations/conversation-ui/chip`
     - `conversations/conversation-view/code/file-pane`
     - `debug/broadcasts`
     - `debug/queue`
@@ -68,7 +69,6 @@ anonymous index signature. See
     - `fields/tags/inline`
     - `page/inline-date`
     - `page/place`
-    - `page/prompt/block`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
     - `primitives/filter-chips`

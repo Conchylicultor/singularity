@@ -45,6 +45,21 @@ The anchor contribution is dispatched with **no `editor` prop** — that absence
 the read-only signal (`BlockAnchorProps.editor` is optional), and a contribution
 is expected to degrade to a static glyph rather than render a dead control.
 
+A container's FOOT — the strip of its own chrome at the bottom of its box —
+renders here too, from the same registry, after the children wrapper. It falls
+out for free for the same reason the anchor does: nesting here is a real wrapper
+div, so the card's pads are already spent inside it and there is no closing-slot
+arithmetic to redo. The foot's own div carries the card's child indent on the
+left and the wrapper's own right and bottom pads, which leaves the wrapper's
+`padding-bottom` standing as the gap between the card's last line and its foot —
+the one the editable surface has to reserve explicitly.
+
+It too is dispatched with **no `editor`**, and here that absence is load-bearing
+rather than cosmetic: a foot whose content is LIVE state renders nothing on this
+surface, which is the correct answer. A version-history preview of last Tuesday
+must not show this morning's runs, and no snapshot can tell that it is being
+lied to.
+
 ## Inline tokens are matched GENERICALLY too
 
 `RunsRenderer` names no token family. It splits a run with `matchTokens` — the
@@ -86,6 +101,7 @@ declares the token. This plugin renders chips; it owns none.
     - `page/editor.BLOCK_INDENT`
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockDecoration`
+    - `page/editor.BlockFootProps`
     - `page/editor.blockTextRenderableExtensions`
     - `page/editor.colorCssValue`
     - `page/editor.Editor`
@@ -96,6 +112,7 @@ declares the token. This plugin renders chips; it owns none.
     - `page/editor.PageIcon`
     - `page/editor.TextBlockLayout`
     - `page/editor.useBlockDecorations`
+    - `page/editor.useBlockFeet`
     - `page/editor.useFramedBlockTypes`
     - `page/editor.useFrameGeometry`
     - `primitives/css/inline.Inline`

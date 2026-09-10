@@ -952,6 +952,7 @@ See "Open questions" in the design doc.
     - `conversations`
     - `conversations/agents`
     - `conversations/all-conversations`
+    - `conversations/conversation-ui/chip`
     - `conversations/conversation-view`
     - `conversations/conversation-view/code/docs-button`
     - `conversations/conversation-view/code/file-pane`
@@ -1002,7 +1003,6 @@ See "Open questions" in the design doc.
     - `layouts/route-fallback`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
-    - `page/prompt/block`
     - `plugin-meta/contributions-table`
     - `plugin-meta/plugin-view`
     - `plugin-meta/plugin-view/dependencies`

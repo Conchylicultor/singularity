@@ -18,11 +18,12 @@ import {
 const ANCHOR = "container";
 const RULE = "rule-container"; // a container that paints a bar, not a filled box
 const GLYPH = "glyph-container"; // a filled box whose gutter glyph holds the column
+const FOOTED = "footed-container"; // an ANCHOR that also renders a FOOT
 const TOGGLE = "toggle"; // a `collapsible: "always"` type, whose chevron is its own
 const HEADING = "heading"; // a type whose first line is taller than the body default
 
 function handleOf(type: string): BlockHandle<unknown> | undefined {
-  if (type === ANCHOR || type === RULE || type === GLYPH)
+  if (type === ANCHOR || type === RULE || type === GLYPH || type === FOOTED)
     return { type, anchor: true } as unknown as BlockHandle<unknown>;
   if (type === TOGGLE)
     return { type, collapsible: "always" } as unknown as BlockHandle<unknown>;
@@ -31,16 +32,24 @@ function handleOf(type: string): BlockHandle<unknown> | undefined {
   return { type } as unknown as BlockHandle<unknown>;
 }
 
-const anchorTypes = new Set([ANCHOR, RULE, GLYPH]);
+const anchorTypes = new Set([ANCHOR, RULE, GLYPH, FOOTED]);
 /** A container is a container because it contributes a FRAME — same set here. */
-const framedTypes = new Set([ANCHOR, RULE, GLYPH]);
-/** `RULE` paints a bar, so it clears nothing; the other two paint filled boxes. */
-const padsBox = (type: string) => type === ANCHOR || type === GLYPH;
+const framedTypes = new Set([ANCHOR, RULE, GLYPH, FOOTED]);
+/** `RULE` paints a bar, so it clears nothing; the others paint filled boxes. */
+const padsBox = (type: string) =>
+  type === ANCHOR || type === GLYPH || type === FOOTED;
 /**
- * …but only `ANCHOR` may reclaim its children's indent step. `GLYPH` draws in
- * exactly that column (the callout's icon), so it pads without absorbing.
+ * …but only the two card-shaped ones may reclaim their children's indent step.
+ * `GLYPH` draws in exactly that column (the callout's icon), so it pads without
+ * absorbing.
  */
-const absorbsIndent = (type: string) => type === ANCHOR;
+const absorbsIndent = (type: string) => type === ANCHOR || type === FOOTED;
+/**
+ * Only `FOOTED` renders a strip of its own chrome at the bottom of its box — so
+ * every fixture NOT using that type must answer exactly as it did before feet
+ * existed, which is what the untouched expectations below assert.
+ */
+const hasFoot = (type: string) => type === FOOTED;
 
 /** The vertical seat a row with no `gutterFirstLineCenter` override resolves to. */
 const bodyCenter = "calc(var(--space-xs) + var(--doc-lh-body) / 2)";
@@ -88,6 +97,7 @@ function seats(rows: Block[]): RailSeat[] {
     handleOf,
     padsBox,
     absorbsIndent,
+    hasFoot,
   );
 }
 
@@ -427,6 +437,55 @@ describe("resolveRailSeats — pad counts: the card's own padding", () => {
       [1, 1, 1, 1],
     ]);
   });
+
+  test("a FOOTED card's bottom pad leaves its last row — the foot is below it", () => {
+    // The foot renders after the row, inside the box. Leaving the pad on the row
+    // would put it between the card's last line and its chrome, and the card
+    // would have no bottom edge at all.
+    const rows = forest(
+      row("F", null, { type: FOOTED }),
+      row("C1", "F"),
+      row("C2", "F"),
+    );
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 1],
+      [1, 1, 0, 1],
+      [1, 0, 0, 0], // …0, where an unfooted card would reserve 1 here
+    ]);
+  });
+
+  test("a card ENDING with a footed one hands its pad to that foot too", () => {
+    // Both boxes end on `G`, and the foot is the last slot inside both — so the
+    // reading order is [content][gap][chips][inner pad][outer pad].
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("K", "A"),
+      row("F", "A", { type: FOOTED }),
+      row("G", "F"),
+    );
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 1],
+      [1, 1, 0, 1],
+      [2, 0, 0, 1],
+      [2, 1, 0, 1], // neither pad is here: both are below the foot
+    ]);
+  });
+
+  test("a card ENCLOSED by a footed one keeps its pad on the row", () => {
+    // The mirror, and the one case where "the same row" stops meaning "the same
+    // place": the outer card's foot renders after the row, so it is outside the
+    // inner box entirely and only the outer pad goes below it.
+    const rows = forest(
+      row("F", null, { type: FOOTED }),
+      row("B", "F", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    expect(pads(rows)).toEqual([
+      [1, 0, 0, 2],
+      [2, 0, 0, 2],
+      [2, 2, 1, 2], // B's pad only; F's is below its foot
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -442,6 +501,7 @@ describe("resolveFramePadInsets — a box's three sides do not share a count", (
       computeFrameSpans(flat, framedTypes),
       handleOf,
       padsBox,
+      hasFoot,
     );
     return Object.fromEntries(
       [...out].map(([id, i]) => [id, [i.right, i.top, i.bottom]]),
@@ -496,6 +556,30 @@ describe("resolveFramePadInsets — a box's three sides do not share a count", (
       row("C", "A"),
     );
     expect(insets(rows)).toEqual({ Q: [0, 0, 0], A: [0, 0, 0] });
+  });
+
+  test("a stacked card that is FOOTED still clears its parent on all three", () => {
+    // Both pads land on the inner card's foot, so the parent's is still below
+    // this box — the slot comparison agrees with the old row comparison here.
+    const rows = forest(
+      row("A", null, { type: ANCHOR }),
+      row("B", "A", { type: FOOTED }),
+      row("G", "B"),
+    );
+    expect(insets(rows)).toEqual({ A: [0, 0, 0], B: [1, 1, 1] });
+  });
+
+  test("a card inside a FOOTED parent clears it horizontally only", () => {
+    // …and here they disagree, which is why `bottom` compares slots and not
+    // rows. The parent's pad sits below its FOOT, which renders after this box's
+    // last row — so it is not above this box's bottom edge at all, and pulling
+    // in for it would cancel the pad this box's own row reserves.
+    const rows = forest(
+      row("F", null, { type: FOOTED }),
+      row("B", "F", { type: ANCHOR }),
+      row("G", "B"),
+    );
+    expect(insets(rows)).toEqual({ F: [0, 0, 0], B: [1, 1, 0] });
   });
 });
 

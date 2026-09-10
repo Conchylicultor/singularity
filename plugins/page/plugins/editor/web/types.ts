@@ -347,3 +347,55 @@ export interface BlockAnchorProps {
   /** The block API, on editable surfaces only. Absent ⇒ render a static glyph. */
   editor?: BlockEditorAPI;
 }
+
+/**
+ * Props for a container's FOOT — a full-box-width strip of the container's own
+ * chrome at the BOTTOM of the box it paints: below its last visible child,
+ * inside the card's padding, aligned under the card's text rather than with the
+ * box's edge. A TODO card's chips for the runs it has launched are the one
+ * today. A container declares one with `BlockFrameMeta.foot`; the editor never
+ * learns what is in it.
+ *
+ * ## Why a foot is not a decoration
+ *
+ * A container's two decoration SEATS (`BlockAnchorProps`) both float over the
+ * content and reserve no space — a glyph in the indent column, a name in the
+ * corner. A foot is the opposite: it is chrome the box MAKES ROOM FOR. Its
+ * height is its own, so a chip row that wraps to two lines grows the card
+ * instead of overlapping its last line, and the card's bottom pad moves below
+ * it (`internal/frame-foot.ts`). That is why it is a field of its own rather
+ * than a third arm of `BlockFrameDecoration`.
+ *
+ * ## The SURFACE owns the geometry; this renders content
+ *
+ * The surface pads the strip on all four sides — the card's own left content
+ * edge, its right and bottom pads, and one pad of gap above — and places it in
+ * the ROW layer, after the frame in DOM order, so unlike the frame it CAN carry
+ * controls (the frame is `pointer-events-none` and hit-tested under the rows).
+ * A contribution therefore positions nothing and adds no padding of its own; it
+ * fills the width it is given and is as tall as its content.
+ *
+ * Both optionals degrade exactly as an anchor's do. `blockId` is absent wherever
+ * the surface renders a detached snapshot (`read-only-view`'s nodes may carry no
+ * id at all), and `editor` is absent on every read-only surface. A foot whose
+ * content is LIVE STATE — the runs a card launched, not something the document
+ * says — must render `null` there rather than dressing today's state up as the
+ * snapshot's: a version-history preview of last Tuesday showing this morning's
+ * runs is a lie the surface cannot detect. Same rule `PromptFooter` already
+ * states for its `chrome.regions.footer`.
+ */
+export interface BlockFootProps {
+  /** The container block's type — the dispatch key. */
+  type: string;
+  /** The container block's `data`; the foot reads whatever it needs off it. */
+  data: unknown;
+  /**
+   * The container block's row id, for a foot whose content is keyed by it — a
+   * side table of the runs this card dispatched, say. OPTIONAL: a read-only
+   * surface may render a node with no id, and a foot that needs one renders
+   * nothing there.
+   */
+  blockId?: string;
+  /** The block API, on editable surfaces only. Absent ⇒ read-only. */
+  editor?: BlockEditorAPI;
+}

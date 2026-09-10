@@ -152,6 +152,41 @@ parent, which remounts its Lexical instance. It fires only on that transition
 deferred session end — see *One owner per block*) so text survives;
 `e2e/indent-caret-verify.ts` is the caret spec.
 
+A container may also declare a **foot** (`BlockFrameMeta.foot`): a strip of its
+own chrome at the bottom of the box, below the last visible child and inside the
+card's padding — the TODO card's chips for the runs it launched. It is the one
+thing on a container that is neither the box nor a decoration, and the reason it
+is a field of its own rather than a third `BlockFrameDecoration` seat is that the
+two answer different questions. A decoration answers *what is this box*: it
+floats over the content and reserves no space, which is why a container may have
+exactly one. A foot is chrome the box MAKES ROOM FOR — its height is its own, so
+a chip row that wraps to two lines grows the card instead of overlapping its last
+line, and the card's bottom pad moves below it (*A card's padding is declared*,
+below). Folding it into the decoration union would also force a card to choose
+between having a name and having a foot, and would quietly change what
+`page-editor:anchor-has-decoration` pins.
+
+It renders as a sibling AFTER `<BlockRow>` inside the grid cell of the frame's
+LAST covered row, which is the placement that needs no new geometry vocabulary:
+the frame already spans that row's grid line, so the card's wash covers the foot
+with no change to `computeFrameSpans` and no change to any `gridRow` arithmetic
+anywhere. It is in the ROW layer and after the frame in DOM order, so unlike the
+frame it can carry controls. And it carries **no `data-block-id`** — `blockRowsIn`
+/ `rowAtPointer`, the marquee and every drop target find rows by that attribute,
+and a foot is chrome ABOUT a card rather than a line IN it.
+
+Two consequences are accepted rather than solved. A selected card highlights its
+foot too (the band spans the same grid line), as does selecting only the card's
+last child; the alternative is a per-foot grid line and a remap of every explicit
+grid placement, which is a large blast radius for a highlight one line tall. And
+a card whose LAST CHILD is another card ends on the same grid row, so the inner
+card's box — which spans that row's whole cell — paints over the outer card's
+foot. A backdrop spanning a grid line cannot end above flow content inside that
+line, so this is a property of the placement, not a bug in the pad arithmetic
+(which does put the outer card's pad below its own foot, and leaves the inner
+card's on the row). The nesting that occurs in practice is the other orientation
+— a footed TODO inside an agent-note — and that one lands correctly.
+
 `read-only-view` renders the forest recursively, so it dispatches the same slot
 with `inset: 0` (no hover rail there) — one contribution, both surfaces.
 
@@ -187,6 +222,35 @@ the pull and both landed on one x. One count where two are needed.
   (`padFramesOpening` / `padFramesClosing`). The frame's `topInset`/`bottomInset`
   are only its NESTING share — without them every box in a nest would share one
   top edge, since every anchor row is zero-height.
+- **A frame closes on a SLOT, not on a row.** A container that declares a FOOT
+  renders it after that last row, still inside the box — so the card's bottom pad
+  has to move past it, or the pad lands between the card's last line and its
+  chrome and the card has no bottom edge at all. At flat row `i` the slots are,
+  in order: the row itself, then the feet of the footed frames ending at `i`,
+  innermost first (`F₁ ⊂ F₂ ⊂ … ⊂ F_k`, which is also the order they render in).
+
+  > A frame `P` ending at row `i` reserves its bottom pad on the LAST slot
+  > CONTAINED in `P` — the outermost `F_m` with `F_m.start ≥ P.start`, or the row
+  > when there is none.
+
+  Spans nest and never partially overlap, so `F.start ≥ P.start` is exactly
+  `F ⊆ P`; a footed frame is a candidate for its own pad, since its foot is the
+  last thing inside it. With nothing declaring a foot the rule degenerates, byte
+  for byte, to "the last row closes it". A TODO ending an agent-note, both padded,
+  gives `[content][gap][chips][todo pad][note pad]` — both pads below the one
+  foot. The reverse nesting is not symmetric and must not be made so: a card
+  INSIDE a footed card keeps its pad on the row, because the outer foot renders
+  after that row and is outside the inner box entirely.
+
+  Three readers must agree about this, so it is resolved once, the way
+  `frameOpenRow` already is (`internal/frame-foot.ts`): the row's
+  `padding-bottom` (`resolveRailSeats`), which enclosing frames' pads sit BELOW a
+  box (`resolveFramePadInsets`, which therefore compares SLOT KEYS and not
+  `end` indices), and the foot's own `padding-bottom`. The foot's other three
+  sides are the surface's too: it aligns with the card's CHILDREN rather than
+  with the box edge, clears the box's right edge by the same count an enclosed
+  row does, and reserves one pad of `padding-top` as the gap between the card's
+  last line and its chrome.
 - **The reserve is never on the anchor row.** It is zero-height by design; the
   resolver walks past the run of anchors a span opens with and lands the pad on
   the first row that renders a line. A CHILDLESS container is the exception and
@@ -238,6 +302,13 @@ Four rules, each closing a failure the naive version has:
   - **`cornerAnchor`** — the card's NAME, one pad inside the box's top-right
     corner (so it lines up with the text under it on both edges), hidden until
     the pointer is inside the card. The annotation family's.
+
+  **The union is still closed at two, and a FOOT is not a third seat.** Both
+  seats float over the content and reserve no space, which is what makes "exactly
+  one" the right rule for them and what `page-editor:anchor-has-decoration` pins.
+  A foot reserves space and moves the card's padding, so it is a separate field a
+  container may declare *as well as* its one decoration — see *Container frames*
+  above.
 
   The corner seat needs a hover signal a frame cannot give: the frame is a grid
   SIBLING of its rows, so no ancestor holds both and `group-hover` has nothing to
@@ -3350,6 +3421,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockDecorationSeat`
     - `BlockEditorAPI`
     - `BlockEditorHandle`
+    - `BlockFootProps`
     - `BlockFrameMeta`
     - `BlockFrameProps`
     - `BlockPasteHandler`
@@ -3423,6 +3495,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `useBlockActivate`
     - `useBlockDecorations`
     - `useBlockEditor`
+    - `useBlockFeet`
     - `useBlockPlainText`
     - `useCaretEscape`
     - `useFormatToolbar`

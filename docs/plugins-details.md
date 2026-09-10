@@ -8695,6 +8695,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `conversation-progress` (keyed, point)
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
+        - **`chip`** — A conversation as a clickable chip that opens its run: a ghost ToggleChip around an inline ConversationItem, active while that run is the open column.
+          - Web:
+            - Uses:
+              - `conversations/conversation-ui/item.ConversationItem`
+              - `conversations/conversation-ui/item.ConversationItemConv`
+              - `conversations/conversation-view.conversationPane`
+              - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/pane.useOpenPane`
+            - Exports (types): `ConversationChipProps`
+            - Exports (values): `ConversationChip`
+          - Cross-plugin:
+            - Imported by:
+              - `page/annotations/todo/task-link`
+              - `page/prompt/block`
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
           - Web:
             - Slots:
@@ -8736,6 +8750,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-category`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
+              - `conversations/conversation-ui/chip`
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/op-status`
@@ -8743,7 +8758,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversations-view/data-view/queue`
               - `page/annotations/agent-notes/authorship`
               - `page/annotations/todo/task-link`
-              - `page/prompt/block`
               - `tasks/attempt-view`
               - `tasks/task-events`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
@@ -8799,6 +8813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-category`
           - `conversations/conversation-preprompt`
           - `conversations/conversation-progress`
+          - `conversations/conversation-ui/chip`
           - `conversations/conversation-view/allow-monitor`
           - `conversations/conversation-view/branch`
           - `conversations/conversation-view/code/docs-button`
@@ -8839,7 +8854,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/ops`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/todo/task-link`
-          - `page/prompt/block`
           - `primitives/launch`
           - `review`
           - `stats/cost`
@@ -18902,20 +18916,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `privateNotesBlock`
               - `privateNotesDataSchema`
-        - **`todo`** — TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+        - **`todo`** — TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, its box follows the dispatched task's live status, and its foot carries a chip per run the card has launched. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
               - `Editor.Block` "todo" → `ContainerNoRow`
               - `Editor.BlockFrame` "todo" → `TodoFrame`
             - Uses:
               - `page/annotations/todo/task-link.TodoDispatch`
+              - `page/annotations/todo/task-link.TodoRuns`
+              - `page/annotations/todo/task-link.useTodoTask`
               - `page/annotations/todo/task-link.useTodoTaskState`
               - `page/container.ContainerBackdrop`
               - `page/container.ContainerCornerLabel`
               - `page/container.ContainerNoRow`
               - `page/editor.Editor`
               - `primitives/css/row.Row`
-              - `tasks/task-status.STATUS_META`
             - Exports (values): `todoBlock`
           - Server:
             - Contributes: `page.block-data` "todo"
@@ -18926,7 +18941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `todoBlock`
               - `todoDataSchema`
           - Plugins:
-            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource) and renders the card's dispatch panel — the launch form, and once dispatched the task's title, status and newest run. Contributes no slot of its own; the todo card's anchor and rail menu host it. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+            - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState / useTodoTaskConversations, joined live to the tasks and attempts resources) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
               - Server:
                 - Contributes:
                   - `resource.declare` "todo-block-task"
@@ -18959,15 +18974,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Routes: `POST /api/todo-blocks/:blockId/task`
               - Web:
                 - Uses:
+                  - `conversations/conversation-ui/chip.ConversationChip`
                   - `conversations/conversation-ui/item.ConversationItem`
                   - `conversations/conversation-view.conversationPane`
                   - `infra/endpoints.fetchEndpoint`
+                  - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
                   - `primitives/css/row.Row`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/launch.LaunchAgentForm`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
                   - `primitives/pane.useOpenPane`
                   - `tasks/task-status.StatusBadge`
@@ -18976,7 +18994,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `TodoTaskState`
                 - Exports (values):
                   - `TodoDispatch`
+                  - `TodoRuns`
                   - `useTodoTask`
+                  - `useTodoTaskConversations`
                   - `useTodoTaskState`
               - Cross-plugin:
                 - Imported by: `page/annotations/todo`
@@ -19328,6 +19348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockDecorationSeat`
           - `BlockEditorAPI`
           - `BlockEditorHandle`
+          - `BlockFootProps`
           - `BlockFrameMeta`
           - `BlockFrameProps`
           - `BlockPasteHandler`
@@ -19401,6 +19422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useBlockActivate`
           - `useBlockDecorations`
           - `useBlockEditor`
+          - `useBlockFeet`
           - `useBlockPlainText`
           - `useCaretEscape`
           - `useFormatToolbar`
@@ -20410,8 +20432,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Editor.Block` "prompt" → `BlockTextRenderer`
             - Uses:
-              - `conversations/conversation-ui/item.ConversationItem`
-              - `conversations/conversation-view.conversationPane`
+              - `conversations/conversation-ui/chip.ConversationChip`
               - `page/editor.BLOCK_INSET`
               - `page/editor.Editor`
               - `page/prompt/link.createPromptTask`
@@ -20421,11 +20442,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/line.Line`
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
-              - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/launch.LaunchControl`
               - `primitives/live-state.useResource`
-              - `primitives/pane.useOpenPane`
             - Exports (values): `promptBlock`
           - Server:
             - Contributes: `page.block-data` "prompt"
@@ -20519,6 +20538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.BLOCK_INDENT`
           - `page/editor.BLOCK_INSET`
           - `page/editor.BlockDecoration`
+          - `page/editor.BlockFootProps`
           - `page/editor.blockTextRenderableExtensions`
           - `page/editor.colorCssValue`
           - `page/editor.Editor`
@@ -20529,6 +20549,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.PageIcon`
           - `page/editor.TextBlockLayout`
           - `page/editor.useBlockDecorations`
+          - `page/editor.useBlockFeet`
           - `page/editor.useFramedBlockTypes`
           - `page/editor.useFrameGeometry`
           - `primitives/css/inline.Inline`
@@ -22396,6 +22417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/contention`
               - `debug/trace/gates`
               - `fields/tags/inline`
+              - `page/annotations/todo/task-link`
               - `page/place`
               - `page/prompt/block`
               - `plugin-meta/facets/cross-refs/render-detail`
@@ -24424,6 +24446,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/serve-composition`
               - `config_v2/fields`
               - `config_v2/settings`
+              - `conversations/conversation-ui/chip`
               - `conversations/conversation-view/code/file-pane`
               - `debug/broadcasts`
               - `debug/queue`
@@ -24432,7 +24455,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/inline`
               - `page/inline-date`
               - `page/place`
-              - `page/prompt/block`
               - `primitives/data-view`
               - `primitives/data-view/view-core`
               - `primitives/filter-chips`
@@ -27731,6 +27753,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations`
           - `conversations/agents`
           - `conversations/all-conversations`
+          - `conversations/conversation-ui/chip`
           - `conversations/conversation-view`
           - `conversations/conversation-view/code/docs-button`
           - `conversations/conversation-view/code/file-pane`
@@ -27781,7 +27804,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/route-fallback`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/todo/task-link`
-          - `page/prompt/block`
           - `plugin-meta/contributions-table`
           - `plugin-meta/plugin-view`
           - `plugin-meta/plugin-view/dependencies`
@@ -31261,7 +31283,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/task-link`
           - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
           - `conversations/conversation-view/tasks-panel`
-          - `page/annotations/todo`
           - `page/annotations/todo/task-link`
           - `tasks/task-deps-tree`
           - `tasks/task-graph`

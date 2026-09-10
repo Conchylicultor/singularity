@@ -220,6 +220,34 @@ are the two users today.
   listeners — so the shell must not position or size itself, nor establish flow
   height.
 
+### A third thing a container may declare: a FOOT
+
+Beside its one decoration and its rail-menu sections, a container's frame
+registration may carry a **foot** (`BlockFrameMeta.foot`): a strip of the
+container's own chrome at the bottom of the box, below the last visible child and
+inside the card's padding. The TODO card's chips for the runs it has launched are
+the one today.
+
+It is not a third decoration seat, and the difference is what makes it a separate
+field. A decoration answers *what is this box* — it floats over the content and
+reserves no space, which is why a container has exactly one and why
+`page-editor:anchor-has-decoration` can pin that. A foot is chrome the box makes
+room for: its height is its own, the rows around it move for it, and the card's
+bottom pad is pushed BELOW it. A card with a foot still owes its one decoration,
+and a card with a name may have a foot as well.
+
+The surface owns all four of its sides, exactly as it owns the anchor's column: a
+foot aligns with the card's CHILDREN (so the chips line up under the text above
+them, not with the box's edge), clears the box's right and bottom edges, and gets
+one pad of gap above it. A contribution positions nothing, pads nothing, and is
+as tall as its content. `editor` and `blockId` are optional and degrade the way
+the anchor's do — a foot whose content is LIVE state renders nothing on a
+read-only surface, rather than dressing today's state up as the snapshot's.
+
+The geometry is `page/editor`'s `internal/frame-foot.ts`; the rule it exists for
+(a frame closes on a SLOT, and a foot is one) is stated in the editor's *A card's
+padding is declared, not left over*.
+
 ## The glyph is appearance; the rail is structure
 
 Collapse / **Remove `<name>`** / Delete used to live in the glyph's popover, for

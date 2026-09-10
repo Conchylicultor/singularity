@@ -6,6 +6,7 @@ export {
   useFramedBlockTypes,
   useFrameGeometry,
   useBlockDecorations,
+  useBlockFeet,
 } from "./slots";
 export type {
   BlockContribution,
@@ -30,6 +31,7 @@ export type {
   BlockAnchorProps,
   BlockChrome,
   BlockEditorAPI,
+  BlockFootProps,
   BlockFrameProps,
   BlockRegion,
   BlockRegionProps,

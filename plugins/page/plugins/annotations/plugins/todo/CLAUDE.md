@@ -12,17 +12,36 @@ A void container (`z.object({})`, content IS its children), built on
 
 An umbrella, over one sub-plugin:
 [`task-link`](plugins/task-link/CLAUDE.md), which owns the card↔task link, the
-launch, the dispatch panel, and the `task_id` / `status` attributes `read_page`
-emits on a dispatched `<todo>`. Read it before touching any of that.
+launch, the dispatch panel, the chips at the card's foot, and the `task_id` /
+`status` attributes `read_page` emits on a dispatched `<todo>`. Read it before
+touching any of that.
 
 What stays here is only what a block type owns: the tag declaration (`identified`
 — the card is addressable AND pinned, since every void card's content key is
 `type ␀ {}`, so without a pin an edit can hand one card's row and task link to
 another; `annotated: ["task_id", "status"]` reserves those two names both ways),
-the glyph — which becomes the linked task's own `STATUS_META` icon, never a
-second status mapping — the box's tint (`warning`, `success` when the task is
-done, `muted` when it is dropped), and the two registrations of `task-link`'s
-panel as the anchor's `sections` and as `BlockFrameMeta.menu`.
+the box's tint (`warning`, `success` when the task is done, `muted` when it is
+dropped), and the three seats it registers `task-link`'s components into: the
+panel as the anchor's `sections` and as `BlockFrameMeta.menu`, and the runs as
+`BlockFrameMeta.foot`.
+
+### The status is said ONCE, and the foot is where
+
+The only container declaring a **foot** — the strip at the bottom of a container's
+box, below its last child ([`page/container`](../../../container/CLAUDE.md)) — and
+the reason that seam exists. A dispatched card has something to say that is
+neither its identity nor its contents: the runs it started. No decoration seat can
+carry it (both float over the content and reserve no space), and the frame is an
+inert backdrop that hosts no control.
+
+The corner name used to carry it — a dispatched card stopped hiding and spelled
+the task's status there, because the tint cannot (an open card and one being
+worked on are both `warning`). **Don't put it back.** The foot says it on
+something clickable, one chip per run; a card spelling the status in both places
+has two answers that drift the day a status is added.
+
+The tint answers the other question — *is there work left here* — which is why
+`done` repaints the box and `dropped` fades it.
 
 The `data` payload is still `z.object({})` and must stay so: everything above
 lives beside the row, keyed by block id.
@@ -51,20 +70,21 @@ reachable.
 
 ## Plugin reference
 
-- Description: TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+- Description: TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, its box follows the dispatched task's live status, and its foot carries a chip per run the card has launched. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 - Web:
   - Contributes:
     - `Editor.Block` "todo" → `ContainerNoRow`
     - `Editor.BlockFrame` "todo" → `TodoFrame`
   - Uses:
     - `page/annotations/todo/task-link.TodoDispatch`
+    - `page/annotations/todo/task-link.TodoRuns`
+    - `page/annotations/todo/task-link.useTodoTask`
     - `page/annotations/todo/task-link.useTodoTaskState`
     - `page/container.ContainerBackdrop`
     - `page/container.ContainerCornerLabel`
     - `page/container.ContainerNoRow`
     - `page/editor.Editor`
     - `primitives/css/row.Row`
-    - `tasks/task-status.STATUS_META`
   - Exports (values): `todoBlock`
 - Server:
   - Contributes: `page.block-data` "todo"
@@ -75,6 +95,6 @@ reachable.
     - `todoBlock`
     - `todoDataSchema`
 - Sub-plugins:
-  - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState, joined live to the tasks resource) and renders the card's dispatch panel — the launch form, and once dispatched the task's title, status and newest run. Contributes no slot of its own; the todo card's anchor and rail menu host it. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
+  - **`task-link`** — Reads the task a TODO card was dispatched onto (useTodoTask / useTodoTaskState / useTodoTaskConversations, joined live to the tasks and attempts resources) and renders the card's two dispatched surfaces — the dispatch panel behind its name, and the chips at its foot, one per run. Contributes no slot of its own; the todo card's anchor, rail menu and foot host them. Owns page_blocks_ext_todo_task: the ONE task a TODO card dispatches agents onto. The block-keyed link table (its primary key IS the one-task-per-card rule), the per-card live read, the idempotent dispatch endpoint that composes the agent's prompt, and the markdown provider that emits the card's task_id/status to read_page.
 
 <!-- AUTOGENERATED:END -->

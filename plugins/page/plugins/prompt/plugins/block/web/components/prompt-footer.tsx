@@ -23,9 +23,10 @@ import { LaunchedConversations } from "./launched-conversations";
  * 1. Its content is **live agent state, not document content.** A
  *    version-history preview of last Tuesday showing today's conversation chips
  *    would be a lie about the snapshot.
- * 2. It would **crash, not degrade.** `LaunchedConversations` calls
- *    `useOpenPane` / `conversationPane.useRouteEntries()`, neither of which
- *    exists on the public-site surface.
+ * 2. It would **crash, not degrade.** Each chip `LaunchedConversations` renders
+ *    is a `ConversationChip`, which calls `useOpenPane` /
+ *    `conversationPane.useRouteEntries()` — neither of which exists on the
+ *    public-site surface.
  *
  * The marker (`chrome.regions.start`) does render there — so a prompt still
  * looks like a prompt in a snapshot, it just cannot be launched from one.

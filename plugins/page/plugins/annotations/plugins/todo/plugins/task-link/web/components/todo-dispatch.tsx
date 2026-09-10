@@ -1,20 +1,18 @@
-import { useMemo } from "react";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  attemptsResource,
-  type ConversationSummary,
-} from "@plugins/tasks/plugins/tasks-core/core";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
-import { useTodoTaskState, type TodoTaskState } from "../hooks";
+import {
+  useTodoTaskConversations,
+  useTodoTaskState,
+  type TodoTaskState,
+} from "../hooks";
 import { dispatchTodoAgent } from "../internal/api";
 
 /**
@@ -66,9 +64,9 @@ export function TodoDispatch({
 
 /**
  * The task this card is bound to: its live title and status, and a row opening
- * the newest conversation of its newest attempt.
+ * the newest run.
  *
- * Split into its own component so the `attempts` subscription is a hook on
+ * Split into its own component so the `tasks` subscription is a hook on
  * something that only mounts once there IS a task — the panel's un-dispatched
  * state must not pay for it, and a hook cannot be called conditionally.
  */
@@ -80,24 +78,6 @@ function DispatchedTask({
   /** Called once the row navigates, so the shell can dismiss its popover. */
   onOpen: () => void;
 }) {
-  const attempts = useResource(attemptsResource);
-  const openPane = useOpenPane();
-
-  // The task's newest conversation, across every attempt — the run a user
-  // clicking "open" means. Joined off the already boot-critical global attempts
-  // resource, the same read `page/prompt/block`'s chips make, so nothing about
-  // the run is stored on the card and it stays right after a reload.
-  const latest = useMemo<ConversationSummary | null>(() => {
-    if (attempts.pending) return null;
-    const convs = attempts.data
-      .filter((attempt) => attempt.taskId === task.taskId)
-      .flatMap((attempt) => attempt.conversations);
-    if (convs.length === 0) return null;
-    return convs.reduce((newest, conv) =>
-      +new Date(conv.createdAt) > +new Date(newest.createdAt) ? conv : newest,
-    );
-  }, [attempts, task.taskId]);
-
   return (
     <Stack gap="2xs">
       <Text variant="eyebrow" tone="muted">
@@ -109,21 +89,44 @@ function DispatchedTask({
         </Fill>
         <StatusBadge status={task.status} />
       </Line>
-      {latest ? (
-        <Row
-          size="sm"
-          hover="muted"
-          title={latest.title ?? "Starting…"}
-          onClick={() => {
-            openPane(conversationPane, { convId: latest.id }, { mode: "push" });
-            onOpen();
-          }}
-        >
-          <Fill>
-            <ConversationItem conv={latest} layout="inline" />
-          </Fill>
-        </Row>
-      ) : null}
+      <LatestRun taskId={task.taskId} onOpen={onOpen} />
     </Stack>
+  );
+}
+
+/**
+ * The newest run, as a row that opens it.
+ *
+ * Its own component so that "the runs have not loaded yet" is an early return
+ * HERE rather than a hole in the header above it: the task's title and status
+ * come off a different resource and are ready first, and gating the whole
+ * section on the runs would blink them.
+ *
+ * The run it offers comes from the ONE join the card's surfaces share, so it is
+ * by construction the last of the chips at the card's foot rather than a second
+ * answer computed here.
+ */
+function LatestRun({ taskId, onOpen }: { taskId: string; onOpen: () => void }) {
+  const openPane = useOpenPane();
+  const runs = useTodoTaskConversations(taskId);
+  if (runs.pending) return null;
+
+  const latest = runs.data.at(-1);
+  if (!latest) return null;
+
+  return (
+    <Row
+      size="sm"
+      hover="muted"
+      title={latest.title ?? "Starting…"}
+      onClick={() => {
+        openPane(conversationPane, { convId: latest.id }, { mode: "push" });
+        onOpen();
+      }}
+    >
+      <Fill>
+        <ConversationItem conv={latest} layout="inline" />
+      </Fill>
+    </Row>
   );
 }

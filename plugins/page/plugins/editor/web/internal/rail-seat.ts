@@ -1,3 +1,5 @@
+import { computeFrameCounts } from "./block-frames";
+import { resolveClosingSlots } from "./frame-foot";
 import { blockContentLeft } from "./page-column";
 import type { Block, BlockHandle, BlockTextVariant } from "../../core";
 import type { FlatBlock, FrameSpan } from "./block-frames";
@@ -61,7 +63,18 @@ export interface RailSeat {
    * renders a line. Nested cards all open on that same row, hence a count.
    */
   padFramesOpening: number;
-  /** The same, for the frames whose BOTTOM edge sits at this row's bottom. */
+  /**
+   * The same, for the frames whose bottom pad is reserved on this ROW.
+   *
+   * Not simply "the frames ending here": a container may render a FOOT — a strip
+   * of its own chrome after this row, inside the box — and a frame whose foot
+   * follows the row must reserve its pad past it, or the pad lands between the
+   * card's last line and its chrome and the card has no bottom edge. So the
+   * question is which SLOT closes a frame, of which this row is the first;
+   * `internal/frame-foot.ts` states the rule and answers it once for the three
+   * readers that must agree. With nothing declaring a foot, every frame closes on
+   * its last row, exactly as it always did.
+   */
   padFramesClosing: number;
   /**
    * How many enclosing frames have ABSORBED this row's indent step — reclaimed
@@ -151,8 +164,9 @@ export function gutterFirstLineCenter(
  * Resolve every flat row's rail seat in one walk.
  *
  * `spans` must be `computeFrameSpans`' output over the same `flat`, `handleOf`
- * the editor's registered-handle lookup, and `padsBox` / `absorbsIndent` the two
- * halves of `useFrameGeometry()` — the facts a row cannot see from itself.
+ * the editor's registered-handle lookup, `padsBox` / `absorbsIndent` the two
+ * halves of `useFrameGeometry()`, and `hasFoot` `useBlockFeet()`'s membership —
+ * the facts a row cannot see from itself.
  */
 export function resolveRailSeats(
   flat: readonly FlatBlock[],
@@ -160,6 +174,7 @@ export function resolveRailSeats(
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
   padsBox: (type: string) => boolean,
   absorbsIndent: (type: string) => boolean,
+  hasFoot: (type: string) => boolean,
 ): RailSeat[] {
   const isAnchor = (i: number) =>
     handleOf(flat[i]!.block.type)?.anchor === true;
@@ -168,7 +183,11 @@ export function resolveRailSeats(
   // remember to skip.
   const padded = spans.filter((s) => padsBox(s.block.type));
   const padFrames = computeFrameCounts(flat, padded);
-  const { opening, closing } = computeFramePadEdges(flat, padded, isAnchor);
+  const opening = computeFrameOpenings(flat, padded, isAnchor);
+  // Which SLOT closes each frame — the row, or a foot rendered after it. Read
+  // rather than computed here, because `resolveFramePadInsets` and the feet
+  // themselves must get the same answer; see `internal/frame-foot.ts`.
+  const closing = resolveClosingSlots(flat, spans, padsBox, hasFoot);
   // Absorption is a strict subset of padding, and it moves CONTENT EDGES — so it
   // has to be resolved before the rail lefts, which are content edges.
   const absorbing = spans.filter((s) => absorbsIndent(s.block.type));
@@ -191,7 +210,7 @@ export function resolveRailSeats(
       absorbedIndent: absorbed[i]!,
       padFrames: padFrames[i]!,
       padFramesOpening: opening[i]!,
-      padFramesClosing: closing[i]!,
+      padFramesClosing: closing.row[i]!,
       firstLinePad: opening[borrowedLineRow(flat, i, isAnchor)]!,
       // The OUTERMOST container whose borrowed line this row is (the chain is
       // ordered outermost-first), else the row itself. An anchor row has an
@@ -334,31 +353,8 @@ function computeRailLefts(
 }
 
 /**
- * How many of the given frames cover each flat index — the count the box's right
- * edge and the enclosed rows' `padding-right` both read (one apart), which is
- * what keeps a card's text inside its own tint however deeply the cards nest.
- *
- * Unlike `computeRailLefts` this ACCUMULATES rather than taking the outermost:
- * the left edge is a single seat (controls sit outside the outermost box), while
- * the pad is a stack (each box closes one step further in, mirroring the
- * `BLOCK_INDENT` its children opened it by).
- *
- * `spans` is the PADDED subset, not every frame — see `resolveRailSeats`.
- */
-function computeFrameCounts(
-  flat: readonly FlatBlock[],
-  spans: readonly FrameSpan[],
-): number[] {
-  const out = flat.map(() => 0);
-  for (const span of spans) {
-    for (let i = span.start; i <= span.end; i += 1) out[i] = out[i]! + 1;
-  }
-  return out;
-}
-
-/**
- * Which row's TOP each padded frame's pad is reserved on, and which row's BOTTOM
- * — as a count per flat index, since nested cards open and close together.
+ * Which row's TOP each padded frame's pad is reserved on — as a count per flat
+ * index, since nested cards all open together.
  *
  * A frame's top pad cannot be reserved on its own anchor row: that row is
  * deliberately ZERO HEIGHT while it has visible children (the decoration and the
@@ -367,22 +363,21 @@ function computeFrameCounts(
  * actually renders something — which for a CHILDLESS container is its own row,
  * the one carrying the surface's one-empty-line fallback.
  *
- * The bottom is simply `span.end`: a span ends on a row that renders a line by
- * construction (an anchor's span always extends past it to its last descendant).
+ * The bottom used to be the mirror of this and is no longer a per-ROW question
+ * at all: a frame's pad is reserved on the last SLOT inside it, which is a foot
+ * when the row is followed by one. `resolveClosingSlots` answers that half.
  */
-function computeFramePadEdges(
+function computeFrameOpenings(
   flat: readonly FlatBlock[],
   spans: readonly FrameSpan[],
   isAnchor: (i: number) => boolean,
-): { opening: number[]; closing: number[] } {
+): number[] {
   const opening = flat.map(() => 0);
-  const closing = flat.map(() => 0);
   for (const span of spans) {
     const first = frameOpenRow(span, isAnchor);
     opening[first] = opening[first]! + 1;
-    closing[span.end] = closing[span.end]! + 1;
   }
-  return { opening, closing };
+  return opening;
 }
 
 /**
@@ -409,9 +404,10 @@ function frameOpenRow(
  * The three sides do NOT share a count, and that is the whole content of this
  * type. The RIGHT inset is positional-independent — every row inside a frame
  * reserves `padding-right` for it, so "how many padded frames enclose me" is the
- * complete answer. The VERTICAL insets are not: a frame's pad is reserved on
- * ONE row (the row it opens on, and the row it closes on), so an enclosing
- * frame's pad sits above this box only when the two frames open on the SAME row.
+ * complete answer. The VERTICAL insets are not: a frame's pad is reserved in ONE
+ * place (the row it opens on, and the SLOT it closes on), so an enclosing
+ * frame's pad sits above this box only when the two frames open on the SAME row,
+ * and below it only when they close on the same slot.
  *
  * Using the horizontal count for all three is what left a card nested as a
  * later child of another card with zero top padding: its own row reserved one
@@ -423,7 +419,16 @@ export interface FramePadInsets {
   right: number;
   /** …of those, the ones OPENING on the same row, whose pad sits above this box. */
   top: number;
-  /** …and the ones CLOSING on the same row, whose pad sits below it. */
+  /**
+   * …and the ones closing on the same SLOT, whose pad sits below it.
+   *
+   * The slot, not merely the row: a container may render a FOOT after its last
+   * row, and a frame closing on that foot has its pad below the foot while one
+   * closing on the row has it above. Two frames ending on the same row can
+   * therefore have their pads in different places, so they are compared by the
+   * slot key `resolveClosingSlots` gives them. With no feet on the page a shared
+   * slot is exactly a shared last row, which is what this counted before.
+   */
   bottom: number;
 }
 
@@ -431,24 +436,27 @@ export interface FramePadInsets {
  * Each frame's own box insets, keyed by the container block's id.
  *
  * Separate from `resolveRailSeats` because it answers a per-FRAME question where
- * that answers a per-ROW one, and it shares the two things they must agree on —
- * `frameOpenRow` and the padded-span filter — by calling them rather than by
- * restating them.
+ * that answers a per-ROW one, and it shares the three things they must agree on
+ * — `frameOpenRow`, the padded-span filter and `resolveClosingSlots` — by
+ * calling them rather than by restating them.
  */
 export function resolveFramePadInsets(
   flat: readonly FlatBlock[],
   spans: readonly FrameSpan[],
   handleOf: (type: string) => BlockHandle<unknown> | undefined,
   padsBox: (type: string) => boolean,
+  hasFoot: (type: string) => boolean,
 ): ReadonlyMap<string, FramePadInsets> {
   const isAnchor = (i: number) =>
     handleOf(flat[i]!.block.type)?.anchor === true;
   const padded = spans.filter((s) => padsBox(s.block.type));
   const covering = computeFrameCounts(flat, padded);
+  const { slotKeyOf } = resolveClosingSlots(flat, spans, padsBox, hasFoot);
   const out = new Map<string, FramePadInsets>();
 
   for (const span of spans) {
     const openRow = frameOpenRow(span, isAnchor);
+    const closeSlot = slotKeyOf.get(span.block.id);
     let top = 0;
     let bottom = 0;
     for (const other of padded) {
@@ -457,7 +465,7 @@ export function resolveFramePadInsets(
       if (other.start === span.start) continue;
       if (other.start > span.start || other.end < span.end) continue;
       if (frameOpenRow(other, isAnchor) === openRow) top += 1;
-      if (other.end === span.end) bottom += 1;
+      if (slotKeyOf.get(other.block.id) === closeSlot) bottom += 1;
     }
     out.set(span.block.id, {
       // Its own frame does not clear itself, so it comes out of the count.

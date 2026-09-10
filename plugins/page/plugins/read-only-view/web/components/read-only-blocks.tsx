@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 import {
   MdImage,
   MdLink as MdLinkIcon,
@@ -29,6 +29,7 @@ import {
   PageIcon,
   TextBlockLayout,
   useBlockDecorations,
+  useBlockFeet,
   FrameHoverProvider,
   useFramedBlockTypes,
   BLOCK_INDENT,
@@ -38,6 +39,7 @@ import {
   useFrameGeometry,
   type FrameGeometry,
   type BlockDecoration,
+  type BlockFootProps,
 } from "@plugins/page/plugins/editor/web";
 import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type {
@@ -330,6 +332,30 @@ function hasText(data: Record<string, unknown>): boolean {
   return "text" in data;
 }
 
+/**
+ * Renders whichever FOOT the container's frame registration supplied — the strip
+ * of the card's own chrome at the bottom of its box.
+ *
+ * It takes the component as a PROP, the same shape `AnchorDecoration` uses on the
+ * editable surface, because a component ARRIVING as a prop is not a component
+ * created during render — where a local binding off a registry lookup reads as
+ * one. `Foot` is a lookup into the memoized `useBlockFeet()` map, whose values
+ * are module-level slot contributions, so its identity is stable across renders.
+ * (The decoration above says the same thing with a member expression,
+ * `decoration.component`, because its map stores a seat beside the component.)
+ *
+ * No `editor` prop: that absence is this surface's read-only signal.
+ */
+function ContainerFoot({
+  component: Foot,
+  node,
+}: {
+  component: ComponentType<BlockFootProps>;
+  node: ReadOnlyNode;
+}) {
+  return <Foot type={node.type} data={node.data} blockId={node.id} />;
+}
+
 function NodeView({
   node,
   ordinal,
@@ -337,6 +363,7 @@ function NodeView({
   framedTypes,
   frameGeometry,
   decorations,
+  feet,
   diff,
 }: {
   node: ReadOnlyNode;
@@ -357,6 +384,8 @@ function NodeView({
   frameGeometry: ReadonlyMap<string, FrameGeometry>;
   /** Container-anchor decorations, from the same `Editor.BlockFrame` registry. */
   decorations: ReadonlyMap<string, BlockDecoration>;
+  /** Container FEET, from that same registry — the strip at a card's bottom. */
+  feet: ReadonlyMap<string, ComponentType<BlockFootProps>>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const contribution = contributions.find((c) => c.block.type === node.type);
@@ -401,6 +430,7 @@ function NodeView({
           framedTypes={framedTypes}
           frameGeometry={frameGeometry}
           decorations={decorations}
+          feet={feet}
           diff={diff}
         />
       </div>
@@ -441,6 +471,7 @@ function NodeView({
     // glyph in exactly the column the editor puts it in — with none of the
     // control-collision the editable surface has to resolve.
     const decoration = decorations.get(node.type);
+    const foot = feet.get(node.type);
     body = (
       <>
         {/* Zero height: an absolutely-pinned child contributes none, so the
@@ -487,6 +518,31 @@ function NodeView({
             </Inset>
           </div>
         )}
+        {/* The container's FOOT: its own chrome at the bottom of the box, below
+            the last child and inside the card's padding. It lines up with the
+            card's CHILDREN (`childIndent`), not with the box's edge, and clears
+            the box's right and bottom exactly as the children wrapper does — so
+            the wrapper's own `padding-bottom` becomes the gap between the card's
+            last line and its foot, which is what the editable surface reserves
+            explicitly. Nesting is a real wrapper here rather than a shared grid,
+            so there is no closing-slot arithmetic to do: each card's pads are
+            already spent inside its own wrapper.
+
+            NO `editor` prop — that absence IS the read-only signal, the same one
+            the decoration above degrades on. A foot whose content is LIVE state
+            (the runs a card has launched) renders nothing here, correctly: a
+            version-history preview of last Tuesday must not show today's runs. */}
+        {foot ? (
+          <div
+            style={{
+              paddingLeft: childIndent,
+              paddingRight: framePad.paddingRight,
+              paddingBottom: framePad.paddingBottom,
+            }}
+          >
+            <ContainerFoot component={foot} node={node} />
+          </div>
+        ) : null}
       </>
     );
   } else if (isTextLike(contribution) && hasText(data)) {
@@ -569,6 +625,7 @@ function ForestView({
   framedTypes,
   frameGeometry,
   decorations,
+  feet,
   diff,
 }: {
   forest: ReadOnlyNode[];
@@ -576,6 +633,7 @@ function ForestView({
   framedTypes: ReadonlySet<string>;
   frameGeometry: ReadonlyMap<string, FrameGeometry>;
   decorations: ReadonlyMap<string, BlockDecoration>;
+  feet: ReadonlyMap<string, ComponentType<BlockFootProps>>;
   diff?: Map<string, BlockDiffKind>;
 }) {
   const ordinals: number[] = [];
@@ -597,6 +655,7 @@ function ForestView({
           framedTypes={framedTypes}
           frameGeometry={frameGeometry}
           decorations={decorations}
+          feet={feet}
           diff={diff}
         />
       ))}
@@ -631,6 +690,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
   const framedTypes = useFramedBlockTypes();
   const frameGeometry = useFrameGeometry();
   const decorations = useBlockDecorations();
+  const feet = useBlockFeet();
   return (
     // A corner decoration asks the editor's hover store whether the pointer is
     // inside its card. This surface never writes to it — it reveals by the CSS
@@ -644,6 +704,7 @@ export function ReadOnlyBlocks({ forest, diff }: ReadOnlyBlocksProps) {
         framedTypes={framedTypes}
         frameGeometry={frameGeometry}
         decorations={decorations}
+        feet={feet}
         diff={diff}
       />
     </FrameHoverProvider>

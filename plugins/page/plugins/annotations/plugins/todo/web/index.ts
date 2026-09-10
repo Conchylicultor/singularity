@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/web";
 import { ContainerNoRow } from "@plugins/page/plugins/container/web";
 import { todoBlock } from "../core";
 import { TodoAnchor } from "./components/todo-anchor";
+import { TodoFoot } from "./components/todo-foot";
 import { TodoFrame } from "./components/todo-frame";
 import { TodoMenu } from "./components/todo-menu";
 
@@ -10,7 +11,7 @@ export { todoBlock } from "../core";
 
 export default {
   description:
-    "TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, and the box and that name follow the dispatched task's live status.",
+    "TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, its box follows the dispatched task's live status, and its foot carries a chip per run the card has launched.",
   contributions: [
     // The card renders NO row of its own — `BlockRow`'s anchored branch never
     // dispatches `Editor.Block` for an `anchor` type, so the container
@@ -43,6 +44,14 @@ export default {
       // A wash is a filled box: its content clears every edge.
       pad: "box",
       menu: TodoMenu,
+      // The one container in the repo that declares a FOOT, and the reason the
+      // seam exists: a dispatched card has something to say that is neither its
+      // identity (the corner name) nor its contents (its children) — the runs it
+      // started — and a decoration seat cannot carry it, because both seats float
+      // over the content and reserve no space. The foot is the strip the box
+      // makes room for. It stays empty, and costs the card no height at all,
+      // until an agent is dispatched.
+      foot: TodoFoot,
     }),
   ],
 } satisfies PluginDefinition;

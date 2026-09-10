@@ -82,3 +82,31 @@ export function computeFrameSpans(
   }
   return spans;
 }
+
+/**
+ * How many of the given frames cover each flat index — the count the box's right
+ * edge and the enclosed rows' `padding-right` both read (one apart), which is
+ * what keeps a card's text inside its own tint however deeply the cards nest.
+ *
+ * Unlike a rail's `left` this ACCUMULATES rather than taking the outermost: the
+ * left edge is a single seat (the controls sit outside the outermost box), while
+ * the pad is a stack (each box closes one step further in, mirroring the
+ * `BLOCK_INDENT` its children opened it by).
+ *
+ * `spans` is always a SUBSET of `computeFrameSpans`' output — the padded frames,
+ * or the absorbing ones — never all of them; which subset is the caller's whole
+ * question. It lives here, beside the spans it counts, because both readers
+ * (`internal/rail-seat.ts` for the rows, `internal/frame-foot.ts` for the feet)
+ * are asking one fact about frame spans over a flatten, which is this module's
+ * subject.
+ */
+export function computeFrameCounts(
+  flat: readonly FlatBlock[],
+  spans: readonly FrameSpan[],
+): number[] {
+  const out = flat.map(() => 0);
+  for (const span of spans) {
+    for (let i = span.start; i <= span.end; i += 1) out[i] = out[i]! + 1;
+  }
+  return out;
+}
