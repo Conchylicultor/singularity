@@ -1,20 +1,26 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "fs";
-import { join, relative, sep } from "path";
+import { existsSync, readFileSync, statSync } from "fs";
+import { join } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import type {
+  Check,
+  CheckResult,
+} from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap } from "./resolve";
-import { checkRuntime, detectCycle, evaluateEdges, isRuntimeException } from "./evaluate";
+import {
+  checkRuntime,
+  detectCycle,
+  evaluateEdges,
+  isRuntimeException,
+} from "./evaluate";
 
 const PUSH_BACK_HINT =
   "Do NOT work around boundary violations by editing the boundary check or config " +
   "without understanding the architectural intent. If a rule blocks a legitimate case, " +
   "STOP and report it — we'll iterate on the design together.";
-
-const SOURCE_ROOTS = ["plugins", "web/src", "cli/src"];
-const IGNORED_DIRS = new Set(["node_modules", "dist", "build", ".git"]);
 
 interface Violation {
   file: string;
@@ -22,32 +28,18 @@ interface Violation {
   fix?: string;
 }
 
-function findSourceFiles(root: string): string[] {
-  const out: string[] = [];
-  for (const rootDir of SOURCE_ROOTS) {
-    const abs = join(root, rootDir);
-    if (!existsSync(abs)) continue;
-    walkSourceFiles(abs, out);
-  }
-  return out;
-}
-
-function walkSourceFiles(dir: string, out: string[]) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null) throw err;
-    return;
-  }
-  for (const e of entries) {
-    if (e.isDirectory()) {
-      if (IGNORED_DIRS.has(e.name)) continue;
-      walkSourceFiles(join(dir, e.name), out);
-    } else if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))) {
-      out.push(join(dir, e.name));
-    }
-  }
+// The candidate set is every `.ts`/`.tsx` git lists — tracked + untracked-not-
+// ignored, the universe the check cache key is built from — and the zone config
+// alone decides which of them are in scope (`zoneMap.resolveFile`). Neither half
+// has a second statement here. This used to walk `SOURCE_ROOTS` pruning an
+// `IGNORED_DIRS` deny-list, which was wrong both ways: its `build` entry hid
+// three tracked plugins named `build` from every rule, while it still scanned
+// gitignored content (`.cache/`, `dist.*`) no commit contains. See
+// research/2026-09-10-tooling-boundary-rules-file-enumeration-from-git.md.
+async function listCandidateFiles(root: string): Promise<string[]> {
+  return (await listRepoFiles(root)).filter(
+    (p) => p.endsWith(".ts") || p.endsWith(".tsx"),
+  );
 }
 
 function safeRead(path: string): string | null {
@@ -55,7 +47,11 @@ function safeRead(path: string): string | null {
     if (!statSync(path).isFile()) return null;
     return readFileSync(path, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null) throw err;
+    // Every path is git-listed and present at listing time, so a read failure
+    // is a race with a delete (or a dangling symlink). Anything else is a real
+    // fault and stays loud.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
     return null;
   }
 }
@@ -90,10 +86,15 @@ function formatViolations(vs: Violation[]): string {
   return lines.join("\n");
 }
 
-function parseRuntimeException(expr: string): { source: string; target: string } {
+function parseRuntimeException(expr: string): {
+  source: string;
+  target: string;
+} {
   const parts = expr.split("->").map((s) => s.trim());
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    throw new Error(`invalid runtime exception: "${expr}" — expected "source.runtime -> target.runtime"`);
+    throw new Error(
+      `invalid runtime exception: "${expr}" — expected "source.runtime -> target.runtime"`,
+    );
   }
   return { source: parts[0], target: parts[1] };
 }
@@ -107,7 +108,9 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const root = await getWorktreeRoot();
       const pluginsRoot = join(root, "plugins");
 
-      const pluginTree = existsSync(pluginsRoot) ? await buildPluginTree(pluginsRoot, { skipBarrelImport: true }) : null;
+      const pluginTree = existsSync(pluginsRoot)
+        ? await buildPluginTree(pluginsRoot, { skipBarrelImport: true })
+        : null;
       const zoneMap = buildZoneMap(
         root,
         config.zones,
@@ -130,17 +133,13 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       // widened view that checkRuntime() uses for its lookups.
       const runtimeMap: Record<string, string[]> = config.runtimes;
 
-      const sourceFiles = findSourceFiles(root);
-
-      for (const absFile of sourceFiles) {
-        const relFile = relative(root, absFile).split(sep).join("/");
-
+      for (const relFile of await listCandidateFiles(root)) {
         if (excludeSet.has(relFile)) continue;
 
         const source = zoneMap.resolveFile(relFile);
         if (!source) continue;
 
-        const src = safeRead(absFile);
+        const src = safeRead(join(root, relFile));
         if (!src) continue;
 
         const imports = extractCrossZoneImports(src);
@@ -159,9 +158,16 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
             target.runtime,
           );
 
-          if (!rtExempt && !checkRuntime(config.runtimes, source.runtime, target.runtime)) {
-            const srcLabel = source.runtime ? `${source.zone}.${source.runtime}` : source.zone;
-            const tgtLabel = target.runtime ? `${target.zone}.${target.runtime}` : target.zone;
+          if (
+            !rtExempt &&
+            !checkRuntime(config.runtimes, source.runtime, target.runtime)
+          ) {
+            const srcLabel = source.runtime
+              ? `${source.zone}.${source.runtime}`
+              : source.zone;
+            const tgtLabel = target.runtime
+              ? `${target.zone}.${target.runtime}`
+              : target.zone;
             violations.push({
               file: relFile,
               message: `runtime isolation: ${source.runtime} cannot import ${target.runtime} (${srcLabel} → ${tgtLabel}, import "${specifier}")`,
@@ -173,14 +179,20 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
           const result = evaluateEdges(config.edges, source.zone, target.zone);
 
           if (result === "allow") {
-            const srcKey = source.runtime ? `${source.zone}.${source.runtime}` : source.zone;
-            const tgtKey = target.runtime ? `${target.zone}.${target.runtime}` : target.zone;
+            const srcKey = source.runtime
+              ? `${source.zone}.${source.runtime}`
+              : source.zone;
+            const tgtKey = target.runtime
+              ? `${target.zone}.${target.runtime}`
+              : target.zone;
             realizedEdges.add(`${srcKey}\0${tgtKey}`);
             continue;
           }
 
           const reason =
-            result === "deny" ? "denied by boundary rule" : "no allow rule (default-deny)";
+            result === "deny"
+              ? "denied by boundary rule"
+              : "no allow rule (default-deny)";
 
           violations.push({
             file: relFile,

@@ -15688,6 +15688,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
             - Uses:
+              - `framework/tooling/checks.listRepoFiles`
               - `infra/spawn.getWorktreeRoot`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/plugin-tree.buildPluginTree`
@@ -15771,6 +15772,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `scopeOf`
               - `tsBuildInfoPath`
               - `validate`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/boundaries`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**

@@ -227,6 +227,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `scopeOf`
     - `tsBuildInfoPath`
     - `validate`
+- Cross-plugin:
+  - Imported by: `framework/tooling/boundaries`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**

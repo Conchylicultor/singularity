@@ -18,14 +18,9 @@ export default {
       // `global-css` collects each plugin's own stylesheet from the plugin tree.
       "plugins/framework/plugins/tooling/plugins/web-artifacts/core/internal/global-css.ts",
 
-      // ── A known instance of the very bug this rule exists to stop, left in
-      // place deliberately rather than swept under an unexplained exemption.
-      // The older standalone boundary checker; converting it is its own change
-      // with its own review. (Its sibling `plugin-boundaries` was converted in
-      // cbf79336e.) Tracked as a separate task.
-      "plugins/framework/plugins/tooling/plugins/boundaries/core/check.ts",
-      // A one-off migration script that already ran; it walks the same way its
-      // contemporaries did.
+      // ── A one-off migration script that already ran. It walks the way every
+      // check did before they moved to `listRepoFiles`; nothing runs it, so its
+      // file set decides no verdict.
       "plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts",
     ],
   },
