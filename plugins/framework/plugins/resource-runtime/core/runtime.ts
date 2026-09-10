@@ -42,11 +42,11 @@ import {
 // `notificationsWsHandler` is structurally assignable to each facade's WsHandler.
 
 // Local, cycle-free copy of the WS types (see server-core/central-core types.ts).
-interface WsData {
+export interface WsData {
   path: string;
 }
 
-interface WsHandler {
+export interface WsHandler {
   open(ws: ServerWebSocket<WsData>): void;
   message(ws: ServerWebSocket<WsData>, msg: string | Buffer): void;
   close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;

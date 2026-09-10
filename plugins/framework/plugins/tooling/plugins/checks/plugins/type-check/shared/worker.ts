@@ -72,11 +72,30 @@ async function run(job: Job): Promise<Result> {
 
   // 2. Build ONE incremental program; gather diagnostics through the builder so
   //    its state (and the persisted .tsbuildinfo) reflects what was checked.
+  //
+  //    Declarations are EMITTED, to a writer that keeps nothing but the
+  //    buildinfo. Not for the .d.ts files — nothing reads them — but for what
+  //    computing them puts INTO the buildinfo: a real per-file signature, the
+  //    hash of each file's public shape. Under `noEmit` tsc stores a placeholder
+  //    (signature = version) for every file, so it cannot tell a body edit from
+  //    an API change and re-checks a hub's entire importer closure either way:
+  //    measured on web-core, a one-line body edit in a file with a thousand
+  //    importers cost 168 CPU-s and 7.8 GB, the same as cold. With real
+  //    signatures the same edit costs the identical-tree floor, 38 CPU-s and
+  //    2.5 GB; an edit that changes an API still re-checks its importers, as it
+  //    must. `rootDir` is the repo root so every file has a well-defined output
+  //    path (without it tsc reports TS6059 for anything outside the tsconfig's
+  //    own directory); `outDir` is named but never written. See
+  //    research/2026-09-09-global-type-check-zone-cut.md, Finding 5.
   const builder = ts.createIncrementalProgram({
     rootNames: parsed.fileNames,
     options: {
       ...parsed.options,
-      noEmit: true,
+      noEmit: false,
+      declaration: true,
+      emitDeclarationOnly: true,
+      rootDir: job.root,
+      outDir: `${job.buildInfoPath}.decl-out`,
       incremental: true,
       tsBuildInfoFile: job.buildInfoPath,
     },
@@ -87,9 +106,26 @@ async function run(job: Job): Promise<Result> {
     ...builder.getGlobalDiagnostics(),
     ...builder.getSyntacticDiagnostics(),
     ...builder.getSemanticDiagnostics(),
+    // Declaration diagnostics are their own channel: an exported value whose
+    // inferred type cannot be written down (TS2883 / TS4023) is only reported
+    // here, and a program that cannot emit declarations cannot have real
+    // signatures — so it is a real error, fixed with an annotation.
+    ...builder.getDeclarationDiagnostics(),
   ];
-  // Persist the .tsbuildinfo (noEmit still writes it via the builder's emit).
-  builder.emit(undefined, undefined, undefined, undefined, undefined);
+  // Emit through a writer that persists ONLY the .tsbuildinfo. The .d.ts text
+  // is computed (that is what fills in the signatures) and dropped.
+  const emitResult = builder.emit(
+    undefined,
+    (fileName, text, writeByteOrderMark) => {
+      if (fileName.endsWith(".tsbuildinfo")) {
+        ts.sys.writeFile(fileName, text, writeByteOrderMark);
+      }
+    },
+    undefined,
+    undefined,
+    undefined,
+  );
+  diags.push(...emitResult.diagnostics);
   const tscErrors = diags
     .map((d) => formatTscDiagnostic(job.root, d))
     .join("\n");

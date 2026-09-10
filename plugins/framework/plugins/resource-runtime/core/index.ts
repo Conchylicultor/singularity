@@ -15,6 +15,8 @@ export type {
   DependsOnEntry,
   RecomputeIntent,
   KeyedMembership,
+  WsData,
+  WsHandler,
 } from "./runtime";
 export {
   buildSnapshot,

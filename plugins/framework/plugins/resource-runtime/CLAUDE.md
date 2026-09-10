@@ -552,6 +552,8 @@ and those plugins' `CLAUDE.md`.
     - `ServerResourceOptions`
     - `SnapEncoder`
     - `SnapEntry`
+    - `WsData`
+    - `WsHandler`
   - Exports (values):
     - `buildSnapshot`
     - `createResourceRuntime`

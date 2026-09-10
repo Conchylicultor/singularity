@@ -12,10 +12,18 @@
  * loads this config via jiti, which does not resolve the tsconfig path alias.
  */
 
+import type { Linter } from "eslint";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { buildLintConfig } from "./plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-export default await buildLintConfig({ root: here, typeSource: { projectService: true } });
+// Annotated so the declaration emitter can name the export through eslint's
+// public types rather than a non-portable path into `@eslint/core` (TS2883).
+const config: Linter.Config[] = await buildLintConfig({
+  root: here,
+  typeSource: { projectService: true },
+});
+
+export default config;

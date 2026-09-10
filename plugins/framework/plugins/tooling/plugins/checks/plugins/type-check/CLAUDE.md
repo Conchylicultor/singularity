@@ -223,7 +223,15 @@ parallel check pass measures the queue, so any per-check cost claim needs
 - The flat config comes from the shared builder
   `@plugins/framework/plugins/tooling/plugins/lint/core` (`buildLintConfig`),
   the same one the root `eslint.config.ts` uses — editor and check can't drift.
-- Warm paths: tsc is incremental via `.cache/tsbuildinfo/<target>.tsbuildinfo`;
+- Warm paths: tsc is incremental via `.cache/tsbuildinfo/<target>.tsbuildinfo`,
+  and the worker EMITS declarations to a writer that keeps only the buildinfo,
+  so every file in it carries a real signature (the hash of its public shape).
+  That is what lets tsc skip the importers of a file whose body changed but
+  whose API did not — under `noEmit` the signature is a placeholder and a
+  body edit in a hub re-checks its whole importer closure (measured 4.4× the
+  CPU and 3× the RAM of the same edit with real signatures). The price is that
+  every exported value must have a nameable type: a `TS2883` / `TS4023`
+  declaration diagnostic is a real error here, fixed by an annotation;
   lint reuses the global closure cache (only closure-changed files re-lint); and
   a target whose whole PROGRAM is unchanged runs no worker at all (below). A
   worker that crashes records no PASSes (re-lints next run).

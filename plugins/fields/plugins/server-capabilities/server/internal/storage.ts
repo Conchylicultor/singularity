@@ -74,7 +74,7 @@ const storageToken = defineServerContribution<FieldStorageContribution>(
 
 /** The `Fields.Storage` token. Generic in `B` so the value type is inferred from
  *  the `type` token and both arms are checked against it. */
-interface FieldStorageToken {
+export interface FieldStorageToken {
   <B>(props: FieldStorageContribution<B>): ServerContribution;
   getContributions(): (FieldStorageContribution & {
     _pluginId?: string;

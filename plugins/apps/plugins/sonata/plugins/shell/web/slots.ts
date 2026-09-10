@@ -36,7 +36,7 @@ type SonataSectionProps = Record<string, never>;
  * not partition reorder (the persisted layout is keyed by the base slot id).
  * Defaults to the player zone when omitted.
  */
-interface SonataSectionArea {
+export interface SonataSectionArea {
   area?: "editor" | "player";
 }
 
