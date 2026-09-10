@@ -134,10 +134,12 @@ export const NAMESPACE_RE =
  * (`@plugins/infra/plugins/worktree/server`), which refuses whichever side tries
  * to claim an already-occupied name.
  *
- * There is deliberately no inverse. Decomposing a namespace back into its pair
- * would need the composition set at every call site, so instead the pair is
- * RECORDED where it is minted (`composition.json`'s `composition` + `checkout`).
- * Provenance on disk cannot be ambiguous; a name can.
+ * There is deliberately no FULL inverse. Decomposing a single label back into
+ * its pair would need the composition set at every call site, so instead the
+ * pair is RECORDED where it is minted (`composition.json`'s `composition` +
+ * `checkout`). Provenance on disk cannot be ambiguous; a name can. The one part
+ * a name does fix — a two-label name names both halves — is read back by
+ * `namespaceParts`, which hands a single label back undecided.
  */
 export function namespaceFor(
   composition: string,
@@ -180,6 +182,42 @@ export function namespaceFor(
     );
   }
   return ns as Namespace;
+}
+
+/**
+ * What a namespace's NAME alone says about its (composition, checkout) pair.
+ *
+ * | namespace      | parts                                                   |
+ * |----------------|---------------------------------------------------------|
+ * | `sonata.att-X` | `{ kind: "pair", composition: "sonata", checkout: "att-X" }` |
+ * | `att-X`        | `{ kind: "label", label: "att-X" }`                     |
+ * | `sonata`       | `{ kind: "label", label: "sonata" }`                    |
+ *
+ * Only the two-label form decodes: `namespaceFor` joins with a dot exactly when
+ * neither half elided, so a dot means both halves are present. A single label
+ * stays a `label` — the main composition on checkout `label`, or composition
+ * `label` on the main checkout; see `namespaceFor` for why the name cannot say
+ * which. A union rather than a nullable checkout so a caller cannot read that
+ * ambiguity as "no checkout": it has to decide, with whatever context it has,
+ * what a lone label means to it.
+ */
+export type NamespaceParts =
+  | {
+      readonly kind: "pair";
+      readonly composition: string;
+      readonly checkout: string;
+    }
+  | { readonly kind: "label"; readonly label: string };
+
+/** Split a namespace into what its name fixes. See `NamespaceParts`. */
+export function namespaceParts(ns: Namespace): NamespaceParts {
+  const dot = ns.indexOf(".");
+  if (dot < 0) return { kind: "label", label: ns };
+  return {
+    kind: "pair",
+    composition: ns.slice(0, dot),
+    checkout: ns.slice(dot + 1),
+  };
 }
 
 /**

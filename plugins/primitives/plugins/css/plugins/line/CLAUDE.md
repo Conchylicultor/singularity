@@ -35,7 +35,6 @@ attribute type carries.
   - Imported by:
     - `apps-core/tab-bar`
     - `apps/agent-manager/shell`
-    - `apps/agent-manager/worktree-switcher`
     - `apps/browser/shell`
     - `apps/events/event-list`
     - `apps/events/sources`
@@ -90,6 +89,7 @@ attribute type carries.
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
+    - `shell/health-report`
     - `shell/notifications`
     - `tasks/attempt-view`
     - `tasks/task-events`

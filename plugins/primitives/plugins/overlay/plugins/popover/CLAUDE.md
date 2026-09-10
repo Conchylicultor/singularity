@@ -37,6 +37,7 @@
     - `primitives/launch`
     - `reorder`
     - `reorder/editor`
+    - `shell/health-report`
     - `shell/notifications`
     - `tasks/task-draft-form`
 

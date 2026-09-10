@@ -681,6 +681,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `screenshot/draw-on-app`
     - `search/quick-find`
     - `shell/global-action-bar`
+    - `shell/health-report`
     - `shell/notifications`
     - `shell/toast`
     - `stats/commits`

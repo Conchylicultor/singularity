@@ -126,6 +126,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `review/plugin-changes`
     - `review/plugin-changes/api-changes`
     - `review/plugin-changes/file-changes`
+    - `shell/health-report`
     - `shell/notifications`
     - `stats/commits`
     - `tasks/attempt-view`

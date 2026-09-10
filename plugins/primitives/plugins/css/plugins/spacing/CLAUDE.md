@@ -366,6 +366,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `screenshot/draw-on-app`
     - `search/quick-find`
     - `shell/global-action-bar`
+    - `shell/health-report`
     - `shell/notifications`
     - `stats`
     - `stats/commits`

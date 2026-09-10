@@ -13,31 +13,35 @@ describe("isDeferredPluginPath (against the generated tier set)", () => {
   });
 
   test("an app's shell subtree is eager (structural)", () => {
-    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/shell")).toBe(false);
+    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/shell")).toBe(
+      false,
+    );
   });
 
   test("ordinary app content defers", () => {
-    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/notation")).toBe(true);
+    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/notation")).toBe(
+      true,
+    );
   });
 
   test("sonata/voicing is pinned eager via the dependsOn closure from the shell", () => {
-    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/voicing")).toBe(false);
+    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/voicing")).toBe(
+      false,
+    );
   });
 
   test("studio content defers now that every app is deferrable", () => {
-    expect(isDeferredPluginPath("apps/plugins/studio/plugins/explorer")).toBe(true);
-  });
-
-  test("worktree-switcher is pinned eager via its ActionBar.Item contribution", () => {
-    expect(isDeferredPluginPath("apps/plugins/agent-manager/plugins/worktree-switcher")).toBe(
-      false,
+    expect(isDeferredPluginPath("apps/plugins/studio/plugins/explorer")).toBe(
+      true,
     );
   });
 
   test("mail auto-resume is pinned eager via its Core.Root contribution", () => {
-    expect(isDeferredPluginPath("apps/plugins/mail/plugins/sync/plugins/auto-resume")).toBe(
-      false,
-    );
+    expect(
+      isDeferredPluginPath(
+        "apps/plugins/mail/plugins/sync/plugins/auto-resume",
+      ),
+    ).toBe(false);
   });
 });
 

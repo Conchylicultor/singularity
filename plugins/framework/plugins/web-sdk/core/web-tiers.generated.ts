@@ -14,7 +14,6 @@
 // The `eager-tier-in-sync` check fails on drift.
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
-//   - apps/plugins/agent-manager/plugins/worktree-switcher: watched boot slot ActionBar.Item
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)

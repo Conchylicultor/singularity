@@ -51,9 +51,9 @@ count.
 Open, the dash stack clips to zero height — Notion's behaviour, and the reason
 the outline's first row sits at the panel's top edge rather than under a dead
 band. It is **clipped, never unmounted**: the dashes carry the position contract
-below (read while the panel is open), and they are also the footprint
-`FloatingAction` froze its hover hitbox to, so removing them from the layout
-would leave the pointer over nothing and flicker the panel shut.
+below (read while the panel is open). Clipping them does not shrink
+`FloatingAction`'s hover hitbox — it follows the trigger's size only while the
+panel is closed, so it holds still under the pointer while the panel morphs.
 
 ## The `footer` slot is a full-width, centered row
 
@@ -114,12 +114,10 @@ closed panel `inert` and fades it out rather than unmounting it.
 
 ## Known edges
 
-- `FloatingAction` freezes its hover hitbox to the panel's collapsed footprint
-  once, at mount. The rail therefore waits for the first host measurement before
-  mounting it, so the frozen box matches the real dash count — but a later pane
-  **resize** changes the count without re-freezing, leaving the hitbox slightly
-  stale. Cosmetic only: the panel is a DOM descendant of the wrapper, so pointer
-  events still reach it.
+- The rail waits for the first host measurement before mounting
+  `FloatingAction`, so it never mounts as an empty stack. A later pane
+  **resize** changes the dash count, and `FloatingAction` re-sizes its hover
+  hitbox to the new stack (it tracks its trigger's size while closed).
 - The open panel is `max-h-80` growing down from the stack's top. In a pane
   shorter than ~350px it can reach past the bottom edge and be clipped.
 

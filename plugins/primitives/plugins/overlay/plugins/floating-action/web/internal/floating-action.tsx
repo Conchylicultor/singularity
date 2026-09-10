@@ -9,12 +9,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  type ComponentProps,
-  type ReactNode,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { type ComponentProps, type ReactNode, useRef } from "react";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
 export type FloatingAnchor =
@@ -114,6 +110,13 @@ export function FloatingAction({
 }: FloatingActionProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  // How much bigger the collapsed panel is than its trigger, per axis: the
+  // panel's padding + border, plus whatever the collapsed `children` and the
+  // gap add along the flow. Read once, the first time the panel has a box while
+  // closed — the one moment it is guaranteed to be at rest (nothing has opened
+  // it yet, so no morph can be in flight).
+  const chromeRef = useRef<{ width: number; height: number } | null>(null);
   const { open, rootProps } = useDisclosureIntent(wrapperRef, closeDelay);
 
   // The morphing panel is `position: absolute`, so it contributes no intrinsic
@@ -126,14 +129,48 @@ export function FloatingAction({
   // stays glued to — and clipped by — its parent. No portal, no viewport
   // tracking: native layout repositions it on every reflow, including a sibling
   // pane opening alongside it.
-  useLayoutEffect(() => {
-    const wrapper = wrapperRef.current;
-    const panel = panelRef.current;
-    if (!wrapper || !panel) return;
-    const { width, height } = panel.getBoundingClientRect();
-    wrapper.style.width = `${width}px`;
-    wrapper.style.height = `${height}px`;
-  }, []);
+  //
+  // "Stable" means it never follows the OPEN panel — not that it is frozen. The
+  // trigger is live content (a status dot that grows into a pill with a count),
+  // and while closed the panel is `inert`, so the wrapper is the only way in: a
+  // hitbox left at the trigger's old size would leave the grown part of it
+  // neither hoverable nor clickable. So the footprint is derived, never re-read
+  // off the panel (which may be mid-morph): trigger size + the chrome measured
+  // at rest. The derivation is size-only, so it holds for every `anchor`,
+  // `direction` and `triggerAt` — the collapsed panel sits exactly on the
+  // wrapper from whichever corner it is anchored at.
+  //
+  // While open, nothing is written: the hitbox holds still under the morph, and
+  // a trigger that reshapes itself on open (the outline rail clips its dashes
+  // away) cannot shrink it. `open` is a dep, so closing re-derives the footprint
+  // at once from whatever the trigger became in the meantime.
+  useResizeObserver(
+    triggerRef,
+    () => {
+      if (open) return;
+      const wrapper = wrapperRef.current;
+      const panel = panelRef.current;
+      const triggerBox = triggerRef.current;
+      if (!wrapper || !panel || !triggerBox) return;
+      const trig = triggerBox.getBoundingClientRect();
+      let chrome = chromeRef.current;
+      if (!chrome) {
+        const rest = panel.getBoundingClientRect();
+        // No box yet (mounted under a `display: none` ancestor, e.g. a
+        // background tab): there is nothing to measure. The trigger's first
+        // resize once it is shown brings us back here.
+        if (rest.width === 0 && rest.height === 0) return;
+        chrome = {
+          width: rest.width - trig.width,
+          height: rest.height - trig.height,
+        };
+        chromeRef.current = chrome;
+      }
+      wrapper.style.width = `${trig.width + chrome.width}px`;
+      wrapper.style.height = `${trig.height + chrome.height}px`;
+    },
+    { deps: [open] },
+  );
 
   return (
     <div
@@ -179,8 +216,11 @@ export function FloatingAction({
           {/* The trigger's rigid wrapper: this `shrink-0` is the load-bearing
               collapsed-footprint guarantee — the whole point of the slot. It
               keeps the always-visible trigger from flex-shrinking to 0 next to
-              a tall/wide `children` sibling under a clamped panel. */}
-          <div className="shrink-0">{trigger}</div>
+              a tall/wide `children` sibling under a clamped panel. It is also
+              the box whose resizes re-size the hover hitbox above. */}
+          <div ref={triggerRef} className="shrink-0">
+            {trigger}
+          </div>
           {children}
         </div>
       </div>

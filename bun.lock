@@ -190,10 +190,6 @@
       "name": "@singularity/plugin-apps-agent-manager-welcome",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/agent-manager/plugins/worktree-switcher": {
-      "name": "@singularity/plugin-apps-agent-manager-worktree-switcher",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/browser": {
       "name": "@singularity/plugin-apps-browser",
       "version": "0.0.1",
@@ -4726,6 +4722,10 @@
       "name": "@singularity/plugin-shell-global-action-bar",
       "version": "0.0.1",
     },
+    "plugins/shell/plugins/health-report": {
+      "name": "@singularity/plugin-shell-health-report",
+      "version": "0.0.1",
+    },
     "plugins/shell/plugins/notifications": {
       "name": "@singularity/plugin-shell-notifications",
       "version": "0.0.1",
@@ -4857,6 +4857,10 @@
     },
     "plugins/tasks/plugins/tasks-core": {
       "name": "@singularity/plugin-tasks-tasks-core",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/worktree-identity": {
+      "name": "@singularity/plugin-tasks-worktree-identity",
       "version": "0.0.1",
     },
     "plugins/ui": {
@@ -5885,8 +5889,6 @@
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 
     "@singularity/plugin-apps-agent-manager-welcome": ["@singularity/plugin-apps-agent-manager-welcome@workspace:plugins/apps/plugins/agent-manager/plugins/welcome"],
-
-    "@singularity/plugin-apps-agent-manager-worktree-switcher": ["@singularity/plugin-apps-agent-manager-worktree-switcher@workspace:plugins/apps/plugins/agent-manager/plugins/worktree-switcher"],
 
     "@singularity/plugin-apps-browser": ["@singularity/plugin-apps-browser@workspace:plugins/apps/plugins/browser"],
 
@@ -8064,6 +8066,8 @@
 
     "@singularity/plugin-shell-global-action-bar": ["@singularity/plugin-shell-global-action-bar@workspace:plugins/shell/plugins/global-action-bar"],
 
+    "@singularity/plugin-shell-health-report": ["@singularity/plugin-shell-health-report@workspace:plugins/shell/plugins/health-report"],
+
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
     "@singularity/plugin-shell-toast": ["@singularity/plugin-shell-toast@workspace:plugins/shell/plugins/toast"],
@@ -8125,6 +8129,8 @@
     "@singularity/plugin-tasks-task-title": ["@singularity/plugin-tasks-task-title@workspace:plugins/tasks/plugins/task-title"],
 
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
+
+    "@singularity/plugin-tasks-worktree-identity": ["@singularity/plugin-tasks-worktree-identity@workspace:plugins/tasks/plugins/worktree-identity"],
 
     "@singularity/plugin-ui": ["@singularity/plugin-ui@workspace:plugins/ui"],
 

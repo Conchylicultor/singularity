@@ -1,6 +1,7 @@
-export type { Namespace, CheckoutRef } from "./namespace";
+export type { Namespace, CheckoutRef, NamespaceParts } from "./namespace";
 export {
   namespaceFor,
+  namespaceParts,
   asNamespace,
   isNamespace,
   namespaceHost,

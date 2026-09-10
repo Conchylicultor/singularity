@@ -46,6 +46,7 @@ written there is a lint error, not a silent override.
     - `primitives/css/spacing.StackAlign`
     - `primitives/css/spacing.StackDirection`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/element-size.useResizeObserver`
   - Exports (types):
     - `FloatingActionFadeInProps`
     - `FloatingActionProps`

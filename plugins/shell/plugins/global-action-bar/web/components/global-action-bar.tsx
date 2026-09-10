@@ -1,14 +1,10 @@
 import { useEffect } from "react";
-import { MdAutoAwesome, MdPushPin, MdOutlinePushPin } from "react-icons/md";
+import { MdPushPin, MdOutlinePushPin } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
-import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -20,44 +16,22 @@ import {
   useSurfaceMode,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
+import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
-import {
-  useActionBarStatus,
-  type ActionBarStatus,
-  type StatusTone,
-} from "../internal/use-action-bar-status";
-
-const TONE_CLASS: Record<StatusTone, string> = {
-  ok: "bg-success",
-  warning: "bg-warning",
-  destructive: "bg-destructive",
-};
 
 // Effectively permanent: the pin is a deliberate UI preference, not a transient
 // draft, so it must outlive the persistent-draft primitive's default 7-day TTL.
 const PIN_TTL = 10 * 365 * 24 * 60 * 60 * 1000;
 
 /**
- * The always-visible collapsed glyph: an icon plus a status dot aggregating the
- * "needs attention" signals (WS connectivity, stale tab, unread notifications).
+ * The always-visible leading item: the health report's dot, at the bar's `sm`
+ * density (the density `ActionBar.Item` gives every other button in the bar).
  */
-function StatusGlyph({ status }: { status: ActionBarStatus }) {
+function HealthItem() {
   return (
-    <WithTooltip content={status.pending ? "Loading…" : status.tooltip}>
-      <Center className="pointer-events-auto relative size-8">
-        <MdAutoAwesome className="size-4 text-muted-foreground" />
-        <Pin
-          to="top-right"
-          outset
-          style={{ top: "-0.125rem", right: "-0.125rem" }}
-        >
-          <StatusDot
-            colorClass={`${TONE_CLASS[status.pending ? "ok" : status.tone]}${!status.pending && status.pulse ? " animate-pulse" : ""}`}
-            className="ring-2 ring-background"
-          />
-        </Pin>
-      </Center>
-    </WithTooltip>
+    <ControlSizeProvider size="sm">
+      <HealthReportButton />
+    </ControlSizeProvider>
   );
 }
 
@@ -110,7 +84,8 @@ function useActionBarPin() {
 /**
  * Floating overlay host (mounted at `Core.Root`, outside any transformed
  * ancestor). Renders only when **unpinned**: a top-right `z-popover` overlay
- * collapsed to the status glyph that hover-expands the action row leftward.
+ * collapsed to the health dot that hover-expands the action row leftward;
+ * clicking the dot opens the health report.
  * Mounting in the root stacking context, one band above the solo placement's
  * `z-overlay` container, keeps it visible in every placement mode, including
  * solo (the headline fix).
@@ -118,7 +93,6 @@ function useActionBarPin() {
 export function FloatingActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
   const { pinned, togglePin } = useActionBarPin();
-  const status = useActionBarStatus();
 
   // An embedded document (`?embed=1`, see `primitives/embed`) has no chrome
   // at all, so the floating overlay stays out too. (The docked host needs no
@@ -131,10 +105,10 @@ export function FloatingActionBarHost() {
       className="fixed top-2 right-3 z-popover"
       anchor="top-right"
       variant="ghost"
-      // The trigger glyph and the action row are different heights; centering
-      // them keeps the glyph on the row's centre line as the panel widens.
+      // The health dot and the action row are different heights; centering
+      // them keeps the dot on the row's centre line as the panel widens.
       align="center"
-      trigger={<StatusGlyph status={status} />}
+      trigger={<HealthItem />}
     >
       {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
       <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
@@ -154,7 +128,6 @@ export function FloatingActionBarHost() {
 export function DockedActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
   const { pinned, togglePin } = useActionBarPin();
-  const status = useActionBarStatus();
   const mode = useSurfaceMode();
 
   useEffect(() => {
@@ -166,7 +139,7 @@ export function DockedActionBarHost() {
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of the tab bar's flex (must not compress as tabs scroll under it)
     <Stack direction="row" gap="sm" align="center" className="shrink-0 pl-sm">
-      <StatusGlyph status={status} />
+      <HealthItem />
       <ActionRow pinned onTogglePin={togglePin} />
     </Stack>
   );

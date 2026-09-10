@@ -169,7 +169,6 @@ fixed raw size escapes per-site via
     - `apps-core/surface/floating/wallpaper/upload`
     - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
-    - `apps/agent-manager/worktree-switcher`
     - `apps/browser/bookmarks`
     - `apps/browser/start-page`
     - `apps/browser/tabs`
@@ -435,6 +434,7 @@ fixed raw size escapes per-site via
     - `screenshot`
     - `screenshot/draw-on-app`
     - `search/quick-find`
+    - `shell/health-report`
     - `shell/notifications`
     - `stats`
     - `stats/commits`

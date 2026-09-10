@@ -97,7 +97,6 @@
     - `reports/mutation-errors`
     - `screenshot`
     - `screenshot/draw-on-app`
-    - `shell/global-action-bar`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`

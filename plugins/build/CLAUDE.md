@@ -303,7 +303,6 @@ The two other edges of the same argument:
     - `build/build-profiling`
     - `build/runs-arm`
     - `debug/reports`
-    - `shell/global-action-bar`
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):

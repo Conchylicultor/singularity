@@ -15,6 +15,7 @@
 import { test, expect } from "bun:test";
 import {
   namespaceFor,
+  namespaceParts,
   asNamespace,
   isNamespace,
   namespaceFromHost,
@@ -171,4 +172,25 @@ test("namespaceUrl builds an origin, and refuses a path that would double the sl
     "http://sonata.att-x.localhost:9000/api/health",
   );
   expect(() => namespaceUrl(ns, "api/health")).toThrow('must start with "/"');
+});
+
+test("namespaceParts reads back the pair only where the name fixes it", () => {
+  // Two labels: neither half elided, so both are named.
+  expect(namespaceParts(namespaceFor("sonata", WT("att-x")))).toEqual({
+    kind: "pair",
+    composition: "sonata",
+    checkout: "att-x",
+  });
+  // One label: either half may have elided — handed back undecided.
+  expect(
+    namespaceParts(namespaceFor(MAIN_COMPOSITION_ID, WT("att-x"))),
+  ).toEqual({ kind: "label", label: "att-x" });
+  expect(namespaceParts(namespaceFor("sonata", MAIN))).toEqual({
+    kind: "label",
+    label: "sonata",
+  });
+  expect(namespaceParts(namespaceFor(MAIN_COMPOSITION_ID, MAIN))).toEqual({
+    kind: "label",
+    label: MAIN_COMPOSITION_ID,
+  });
 });

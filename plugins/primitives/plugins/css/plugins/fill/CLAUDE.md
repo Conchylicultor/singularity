@@ -83,7 +83,6 @@ primitive exists to name.
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/agent-manager/welcome`
-    - `apps/agent-manager/worktree-switcher`
     - `apps/browser/shell`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
@@ -174,6 +173,7 @@ primitive exists to name.
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
+    - `shell/health-report`
     - `shell/notifications`
     - `tasks/attempt-view`
     - `tasks/task-draft-form`

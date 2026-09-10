@@ -200,6 +200,7 @@ genuine transient-chrome list escapes with
     - `primitives/section-card`
     - `reorder/editor`
     - `search/quick-find`
+    - `shell/health-report`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-events`

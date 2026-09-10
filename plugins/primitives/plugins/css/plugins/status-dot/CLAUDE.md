@@ -28,7 +28,6 @@ no-provider default is `md`.
     - `active-data/conv`
     - `active-data/task-link`
     - `apps/agent-manager/welcome`
-    - `apps/agent-manager/worktree-switcher`
     - `apps/deploy/deploy-history`
     - `apps/deploy/health`
     - `apps/deploy/remote-deploy`
@@ -49,9 +48,8 @@ no-provider default is `md`.
     - `debug/profiling/ops/op-gantt`
     - `debug/timeline`
     - `debug/trace/pane`
-    - `infra/health`
     - `runs/run-outcome`
-    - `shell/global-action-bar`
+    - `shell/health-report`
     - `tasks/attempt-view`
     - `tasks/task-status`
 

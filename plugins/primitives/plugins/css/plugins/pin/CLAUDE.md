@@ -152,7 +152,6 @@ offsets expressible on the semantic ramp.
     - `primitives/tree`
     - `reorder/editor`
     - `screenshot/draw-on-app`
-    - `shell/global-action-bar`
     - `shell/notifications`
     - `tasks/task-description`
     - `tasks/task-draft-form`

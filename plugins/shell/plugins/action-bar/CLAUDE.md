@@ -6,18 +6,16 @@
 
 - Description: Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
 - Web:
-  - Slots: `ActionBar.Item` ← `apps-core.surface`, `apps.agent-manager.worktree-switcher`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `infra.health`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
+  - Slots: `ActionBar.Item` ← `apps-core.surface`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `ActionBar`
 - Cross-plugin:
   - Imported by:
     - `apps-core/surface`
-    - `apps/agent-manager/worktree-switcher`
     - `build`
     - `fullscreen`
     - `improve`
     - `improve/element-picker`
-    - `infra/health`
     - `reorder/edit-mode`
     - `screenshot`
     - `screenshot/draw-on-app`

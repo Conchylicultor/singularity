@@ -663,7 +663,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `active-data/prototype`
     - `active-data/task`
     - `active-data/task-link`
-    - `apps/agent-manager/worktree-switcher`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
     - `apps/browser/start-page`
@@ -785,7 +784,6 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `review/code-review`
     - `review/plugin-changes`
     - `runs`
-    - `shell/global-action-bar`
     - `shell/notifications`
     - `tasks`
     - `tasks/attempt-view`
@@ -803,6 +801,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `tasks/task-list`
     - `tasks/task-preprompt`
     - `tasks/tasks-core`
+    - `tasks/worktree-identity`
     - `ui/tweakcn`
 - Core:
   - Exports (types):

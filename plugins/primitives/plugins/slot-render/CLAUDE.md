@@ -315,6 +315,7 @@ the outcome too, with no separate code path.
     - `runs`
     - `shell`
     - `shell/action-bar`
+    - `shell/health-report`
     - `stats`
     - `tasks/launch-options`
     - `tasks/task-draft-form`

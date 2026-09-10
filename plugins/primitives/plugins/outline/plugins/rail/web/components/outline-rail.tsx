@@ -113,9 +113,10 @@ function OutlineRailBody({
       data-outline-rail=""
       aria-label={label ?? "Outline"}
     >
-      {/* Held back until the host has been measured, so `FloatingAction` — which
-          freezes its hover hitbox to the panel's collapsed footprint once, at
-          mount — measures a stack that already has its real dash count. */}
+      {/* Held back until the host has been measured: before that the capacity
+          is 0 and the rail would mount as an empty stack. (`FloatingAction`
+          re-sizes its hover hitbox as the dash count changes, so nothing here
+          has to arrive at its final size.) */}
       {capacity > 0 ? (
         <FloatingAction
           // Ghost, not the default outlined: at rest this is a row of tick
@@ -136,10 +137,10 @@ function OutlineRailBody({
             // they sit as a dead band across the open panel's top and push the
             // outline down. Clipped to zero height, never unmounted: a dash's
             // `data-active` is the rail's published answer to "where am I",
-            // read while the panel is open, and the stack is also what
-            // `FloatingAction` froze its hover hitbox to at mount — so the
-            // pointer keeps landing on a live box and the panel cannot flicker
-            // itself shut.
+            // read while the panel is open. (Clipping it does not shrink
+            // `FloatingAction`'s hover hitbox: the hitbox follows the trigger
+            // only while the panel is closed, so it holds still under the
+            // pointer while the panel morphs.)
             <Clip className="group-data-open/fa:max-h-0">
               <DashStack
                 entries={entries}

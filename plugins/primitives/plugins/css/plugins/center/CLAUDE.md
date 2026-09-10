@@ -81,7 +81,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `debug/trace/pane`
     - `fields/avatar/config`
     - `fields/bool/inline`
-    - `infra/health`
     - `layouts/route-fallback`
     - `page/audio`
     - `page/bookmark`
@@ -117,7 +116,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/tree`
     - `reorder/node-types/header`
     - `screenshot`
-    - `shell/global-action-bar`
+    - `shell/health-report`
     - `shell/notifications`
     - `tasks/task-draft-form`
     - `tasks/task-graph`

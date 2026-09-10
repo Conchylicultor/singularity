@@ -1,4 +1,4 @@
-// @hash 56d361792e84
+// @hash 804d94c96cfd
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,12 +7,10 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps-core.surface:placement-control",
-    "apps.agent-manager.worktree-switcher:worktree-switcher",
     "build:build",
     "fullscreen:fullscreen-toggle",
     "improve:improve",
     "improve.element-picker:element-picker",
-    "infra.health:health-dot",
     "reorder.edit-mode:reorder-pen",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
