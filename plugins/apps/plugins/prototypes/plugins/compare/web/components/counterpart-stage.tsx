@@ -14,6 +14,12 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import {
+  COMPARE_HALF_ATTR,
+  COMPARE_STATUS_ATTR,
+  type CompareHalf,
+  type CompareStatus,
+} from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 import type { CounterpartResolution, WidthChoices } from "../types";
 import { MockFrame } from "./mock-frame";
 import { ScaledBox } from "./scaled-box";
@@ -157,6 +163,7 @@ export function CounterpartStage({
                 className="m-auto"
               >
                 <Half
+                  half="mock"
                   title="Prototype mock"
                   subtitle={meta.title}
                   halfRef={halfRef}
@@ -204,7 +211,7 @@ function CounterpartHalf({
   switch (resolution.status) {
     case "loading":
       return (
-        <Half title="Counterpart">
+        <Half half="counterpart" status={resolution.status} title="Counterpart">
           <Inset pad="lg" style={noticeWidth}>
             <Loading label={resolution.label ?? "Loading the counterpart…"} />
           </Inset>
@@ -212,7 +219,7 @@ function CounterpartHalf({
       );
     case "unresolved":
       return (
-        <Half title="Counterpart">
+        <Half half="counterpart" status={resolution.status} title="Counterpart">
           <Inset pad="lg" style={noticeWidth}>
             <Stack gap="sm">
               <Text variant="body">{resolution.title}</Text>
@@ -229,7 +236,12 @@ function CounterpartHalf({
       );
     case "found":
       return (
-        <Half title={resolution.title} subtitle={resolution.subtitle}>
+        <Half
+          half="counterpart"
+          status={resolution.status}
+          title={resolution.title}
+          subtitle={resolution.subtitle}
+        >
           {/*
             One crashing counterpart must cost its own half, not the pane. A kind
             renders arbitrary code from an arbitrary plugin — a fixture, a whole
@@ -260,12 +272,17 @@ function CounterpartHalf({
  * outside the box and takes no layout, so the rendering's edge is the frame's.
  */
 function Half({
+  half,
+  status,
   title,
   subtitle,
   halfRef,
   frameRef,
   children,
 }: {
+  half: CompareHalf;
+  /** The counterpart half's resolution status; the mock half is always shown. */
+  status?: CompareStatus;
   title: string;
   subtitle?: string;
   /** The stage measures the mock half's label band off these two. */
@@ -287,7 +304,18 @@ function Half({
           ) : null}
         </Stack>
       </Line>
-      <Clip ref={frameRef} className="rounded-md ring-1 ring-border">
+      {/* The frame is the box a driver outside the app photographs
+          (`data-compare-half`, with the counterpart's status beside it — the
+          compare-diff e2e script). The ring paints outside it, so at 100% the
+          frame IS the rendering, edge to edge. Names from this plugin's `core`. */}
+      <Clip
+        ref={frameRef}
+        className="rounded-md ring-1 ring-border"
+        {...{
+          [COMPARE_HALF_ATTR]: half,
+          ...(status === undefined ? {} : { [COMPARE_STATUS_ATTR]: status }),
+        }}
+      >
         {children}
       </Clip>
     </Stack>

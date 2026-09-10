@@ -33,6 +33,16 @@ export { snap, DEFAULT_SNAP_TIMEOUT_MS } from "./shots";
 export type { SnapResult } from "./shots";
 export { samplePixels, colorDistance } from "./pixels";
 export type { PixelGrid, Rgba, Rect } from "./pixels";
+export { diffImages, heatmapText } from "./image-diff";
+export type { ImageDiff, ImageDiffOptions, ImageSize } from "./image-diff";
+export { colorReport, colorReportText } from "./color-report";
+export type {
+  ColorReport,
+  ColorReportOptions,
+  PaletteMatch,
+  CellMean,
+  Swatch,
+} from "./color-report";
 export { pushDiagnostic } from "./diagnostics";
 export { detectOsColorScheme } from "./color-scheme";
 export type { ColorScheme } from "./color-scheme";

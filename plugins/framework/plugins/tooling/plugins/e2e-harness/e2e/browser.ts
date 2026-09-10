@@ -15,7 +15,11 @@ import {
   type BrowserContext,
   type Page,
 } from "playwright";
-import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
+import {
+  agentOriginHeaders,
+  ORIGIN_HEADER,
+  ORIGIN_SOURCE_HEADER,
+} from "@plugins/infra/plugins/request-origin/core";
 import { flag } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
@@ -25,7 +29,7 @@ import {
   settleAgentConfigWrites,
 } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
-import { unconsumedPage } from "./target";
+import { isTargetOrigin, unconsumedPage } from "./target";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;
 
@@ -181,6 +185,34 @@ function assertPageWasConsumed(): void {
 }
 
 /**
+ * The agent-origin headers reach the app and nothing else.
+ *
+ * `extraHTTPHeaders` is context-wide: Chromium stamps the two headers on EVERY
+ * request the page makes, third parties included. A custom header makes a
+ * cross-origin fetch non-simple, so the browser preflights it — and Google
+ * Fonts, unpkg, any CDN a prototype loads from, answers the preflight without
+ * `x-singularity-origin` in `Access-Control-Allow-Headers`. The font never
+ * loads, the page renders in a fallback face, and a picture of it compares
+ * against nothing real. Nothing off the target deploy reads these headers, so
+ * they are stripped from every request that leaves it. Same-origin requests
+ * are untouched — including ones a script stalls with `stallRoute`, whose
+ * page-level handler runs first and never reaches this route.
+ */
+async function keepOriginHeadersOnTarget(
+  context: BrowserContext,
+): Promise<void> {
+  await context.route(
+    (url) => !isTargetOrigin(url.toString()),
+    async (route) => {
+      const headers = { ...route.request().headers() };
+      delete headers[ORIGIN_HEADER];
+      delete headers[ORIGIN_SOURCE_HEADER];
+      await route.continue({ headers });
+    },
+  );
+}
+
+/**
  * Launch chromium, run `fn`, and always close the browser. `--headed` on the
  * command line opens a visible window, which is the one thing every script
  * author reaches for when a flow misbehaves.
@@ -257,6 +289,7 @@ export async function withBrowser<T>(
           // research/2026-08-30-global-agent-config-write-revert-ledger.md
           extraHTTPHeaders: agentOriginHeaders(originSource()),
         });
+        await keepOriginHeadersOnTarget(context);
         const page = await context.newPage();
         const label = opts.label ?? "";
         return {

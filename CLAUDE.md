@@ -198,6 +198,19 @@ composition this checkout built. `--url http://<namespace>.localhost:9000` is
 the escape hatch for a deploy it did not build — and the one form that skips the
 check that the app answering is the build you just made.
 
+To **compare a prototype mock against the real app** it declares it mocks
+(`<meta name="mocks">`), run
+[`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts).
+It photographs both halves of the Compare stage at one width and writes the
+two captures, a red-on-grey diff and a side-by-side sheet, logging the
+differing-pixel ratio and a per-cell heatmap — plus a colour report that names
+the dominant colours, region means and luminance profiles of each half:
+
+```bash
+./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
+  --name <proto-id> [--width 1280] [--out /tmp/compare] [--fail-above 5]
+```
+
 For a repeatable flow, write a standalone E2E script in the plugin it verifies,
 at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner
 would pick up. These are manual only; nothing runs them automatically.

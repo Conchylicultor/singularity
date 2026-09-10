@@ -360,6 +360,16 @@ function describeTarget(t: Target): string {
   return `target: ${t.origin}  (this checkout's ${t.deploy.composition} deploy, ${build})`;
 }
 
+/**
+ * Is this URL on the target deploy? A predicate rather than the origin
+ * itself, on purpose: it answers the one question the browser lifecycle needs
+ * (does this request go to the app, or to a third party) without handing
+ * anyone an origin string to navigate to or concatenate onto.
+ */
+export function isTargetOrigin(url: string): boolean {
+  return new URL(url).origin === target().origin;
+}
+
 let parsed: Target | undefined;
 
 /**

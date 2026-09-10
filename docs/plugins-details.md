@@ -2789,6 +2789,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
+          - Core:
+            - Exports (types):
+              - `CompareHalf`
+              - `CompareStatus`
+            - Exports (values):
+              - `COMPARE_HALF_ATTR`
+              - `COMPARE_STATUS_ATTR`
+              - `compareHalfSelector`
           - Plugins:
             - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
               - Web:
@@ -16117,6 +16125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-outline`
               - `apps/pages/page-tree`
               - `apps/pages/starred`
+              - `apps/prototypes/compare`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`

@@ -155,9 +155,61 @@ never touch the JSONC layer; and a script's own **Node-side `fetch`**, which the
 browser context's headers cannot reach — use `agentFetch` for those
 (`agent-origin-safety/no-unmarked-app-fetch` enforces it).
 
+The provenance headers go on the app's requests **only**. Playwright's
+`extraHTTPHeaders` is context-wide, and a custom header turns a cross-origin
+fetch into a preflighted one that Google Fonts, unpkg and every other CDN
+refuse — so a prototype's web font silently fell back to the system face in
+every capture. `withBrowser` strips the two headers from any request leaving
+the target origin (`keepOriginHeadersOnTarget`, gated on `isTargetOrigin`, a
+predicate the harness keeps internal so no script gains an origin string).
+
 **Do not run two e2e scripts concurrently.** Revert-all is what lets a run repair
 one it did not launch; the price is that one script's end-revert would restore
 another's in-flight writes.
+
+## `diffImages` — two captures in, a number and a picture out
+
+`diffImages(page, aPng, bPng, { threshold, grid, labels })` compares two PNG
+buffers and answers with the differing-pixel ratio, a row-major grid of
+per-cell ratios (`heatmapText(grid)` prints it), a diff PNG (A in faint grey,
+every differing pixel red) and a side-by-side sheet (A, B, diff under
+captions — the one image to open). Size mismatch is reported (`sameSize`,
+both sizes) and the top-left intersection is compared, never silently
+cropped-and-passed.
+
+The work happens INSIDE the page, on a canvas, the way `samplePixels` decodes
+its band: Chromium already owns a PNG codec, so the harness carries no image
+dependency and parses no format. The distance metric is pixelmatch's YIQ
+formula under the same default threshold (0.1); its anti-aliasing detector is
+deliberately not ported, since the callers here compare whole regions and the
+grid averages edge halos away.
+
+Meaningful only between captures from the SAME renderer at the SAME width —
+a mock beside the app, a before beside an after. Against a design tool's
+export, text rasterisation alone differs everywhere, and the number means
+nothing. `prototypes/compare/e2e/compare-diff.ts` is the worked example.
+
+## `colorReport` — the colours, named
+
+The pixel diff is salient by construction: a surface one shade off passes its
+threshold, and a wrong background comes back as "31% differs" with no colour
+in the transcript. `colorReport(page, aPng, bPng, { deltaE, grid, paletteSize,
+bands, labels })` answers the colour questions separately, in the same in-page
+canvas pass:
+
+- **palette** — each picture's dominant colours by coverage (5-bit quantised,
+  near-duplicates folded, the bucket's MEAN reported), A's top entries each
+  matched to B's nearest, with the CIE76 ΔE between them. The first pair is
+  the background.
+- **region means** — the mean colour of each grid cell in both pictures and
+  its ΔE; averaging cancels glyph edges, so this sees a tint shift the pixel
+  diff waves through without being fooled by anti-aliasing.
+- **luminance profiles** — L* per row band and per column band, so a gradient
+  one side painted flat, or a lighter overall tone, is a visible curve.
+
+`colorReportText` prints it; `sheetPng` draws swatches, the two region
+mosaics and the profile curves. ΔE ~2 is just noticeable, 5 is plainly a
+different shade, 10+ a different colour.
 
 ## `finish()` is the teardown chokepoint, so `await` it
 
@@ -195,6 +247,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
+    - `apps/prototypes/compare`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `apps/prototypes/thumbnails`

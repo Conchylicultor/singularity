@@ -25,7 +25,7 @@ every URL it writes in an embedded document (`embedUrl`), so the address stays
 honest and a reload of the frame after in-frame navigation comes back
 chromeless. That is durability; the boot-time read is what makes it correct.
 
-## The four readers
+## The five readers
 
 | Reader | Branch |
 | --- | --- |
@@ -33,6 +33,7 @@ chromeless. That is durability; the boot-time read is what makes it correct.
 | `shell/global-action-bar` | the floating host renders nothing (the docked host lives in the tab bar, already gone) |
 | `primitives/scope/app-instance` | mints a fresh generation and never touches the instance registry |
 | `apps-core/tabs` (tabs-store) | loads and saves no persisted tab set; boots one tab from the URL at the default placement |
+| the build's experimental-deploy stamp (`cli/build/internal/experimental-marker.ts`) | draws no red worktree frame: the host page on this same deploy already wears it, and the band would land in every capture of the embedded app |
 
 The last two are a **hazard guard**, not tidiness. A same-origin iframe shares
 the host browser tab's `sessionStorage`, so an embedded document would

@@ -15,12 +15,25 @@
 // The stamp is an inline head script that adds the `.experimental` class to
 // <html> — the same JS-sets / CSS-styles split as `.dark`. The rule itself
 // lives in ui-kit's `theme/app.css`.
+//
+// Except in a chromeless document. `?embed=1` (primitives/embed) opens one
+// route with no app chrome because something else supplies the frame around
+// it — and that something is a page on this same deploy, which already wears
+// the experimental frame. Drawing it again inside the embed says nothing new
+// to a person, and puts a 3px red band into every picture of the embedded app
+// (the prototype Compare stage's diff of a mock against the real screen). The
+// stamp reads the same flag the app does, spelled once in embed's core.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  EMBED_PARAM,
+  EMBED_VALUE,
+} from "@plugins/primitives/plugins/embed/core";
 
 const STAMP =
-  '<script>document.documentElement.classList.add("experimental");</script>';
+  `<script>if(new URLSearchParams(location.search).get(${JSON.stringify(EMBED_PARAM)})!==${JSON.stringify(EMBED_VALUE)})` +
+  'document.documentElement.classList.add("experimental");</script>';
 
 /**
  * Mark a staged dist as an experimental (agent-worktree) deploy. Runs on the
