@@ -1,6 +1,8 @@
 import { existsSync, statSync } from "fs";
 import { join, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -59,14 +61,17 @@ async function enumerateTests(
 
 // Run one runner to completion, its output inherited (interleaving two runners'
 // output would be unreadable, so the caller keeps these sequential). The banner
-// is what makes a concatenated transcript attributable to a runner.
+// is what makes a concatenated transcript attributable to a runner. `env`
+// carries the host grant, so a runner that spawns workers of its own spends
+// the units this op holds rather than acquiring host-wide again.
 async function runRunner(
   name: string,
   argv: string[],
   root: string,
+  env: Record<string, string | undefined>,
 ): Promise<number> {
   console.log(`\n── ${name} ──`);
-  const { exitCode } = await spawnPassthrough(argv, { cwd: root });
+  const { exitCode } = await spawnPassthrough(argv, { cwd: root, env });
   return exitCode;
 }
 
@@ -91,60 +96,23 @@ const run: CliAction<[string[]], object> = async (paths) => {
   }
   const { bun, dom, orphan } = partitionTestPaths([...found]);
 
-  const bunExit =
-    bun.length > 0
-      ? await runRunner(
-          "bun:test",
-          [process.execPath, "test", ...runnerArgs],
-          root,
-        )
-      : null;
-  // `bun x vitest` resolves the repo's own vitest and honors its
-  // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
-  // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
-  const domExit =
-    dom.length > 0
-      ? await runRunner(
-          "vitest",
-          [process.execPath, "x", "vitest", "run", ...runnerArgs],
-          root,
-        )
-      : null;
-
-  // The summary names BOTH buckets, always — an empty one is stated, never
-  // implied by silence. That line is the whole reason this command exists:
-  // `bun test <plugin-dir>` is green and partial in exactly the case where
-  // this prints "no jsdom tests under this path".
-  const where = targets.length > 1 ? "these paths" : "this path";
-  const report = (
-    label: string,
-    exit: number | null,
-    count: number,
-    empty: string,
-  ) =>
-    console.log(
-      exit === null
-        ? `${label.padEnd(10)}${empty} under ${where}`
-        : `${label.padEnd(10)}${count} ${count === 1 ? "file " : "files"}   exit ${exit}`,
-    );
-  console.log("");
-  report("bun:test", bunExit, bun.length, "no bun:test files");
-  report("vitest", domExit, dom.length, "no jsdom tests");
-
   // A path in NEITHER runner's scope. `test-layout:runner-split` rule (c)
   // rejects these repo-wide, so this can only fire on a file the check has
   // not seen yet — and it must be loud, because such a file looks tested
-  // and never runs.
+  // and never runs. Refused HERE, before the op below: this is a
+  // classification failure, not a test outcome, and it must not queue for a
+  // host CPU slot (minutes, under load) just to be told the path was wrong.
+  // Same for an empty selection.
   if (orphan.length > 0) {
     console.error(
-      `\nIn neither runner's scope (these tests did NOT run):\n  ${orphan.join("\n  ")}\n` +
+      `\nIn neither runner's scope (these tests would NOT run):\n  ${orphan.join("\n  ")}\n` +
         "Run `./singularity check test-layout:runner-split` for the rule.",
     );
     process.exit(1);
   }
 
-  // Nothing ran at all. Reporting that as success would be the same lie the
-  // command exists to prevent — a green result for tests that never ran —
+  // Nothing to run at all. Reporting that as success would be the same lie
+  // the command exists to prevent — a green result for tests that never ran —
   // so it is an explicit failure naming the paths (vitest's own default for
   // "no test files found" is likewise non-zero).
   if (found.size === 0) {
@@ -152,14 +120,84 @@ const run: CliAction<[string[]], object> = async (paths) => {
     process.exit(1);
   }
 
-  const failed = [
-    bunExit !== null && bunExit !== 0 ? "bun:test" : null,
-    domExit !== null && domExit !== 0 ? "vitest" : null,
-  ].filter((name): name is string => name !== null);
-  if (failed.length > 0) {
-    console.error(`\nFAILED: ${failed.join(", ")}`);
-    process.exit(1);
-  }
+  // A test run is an OP, like a direct check: it takes a host CPU grant (its
+  // queue time visible as a `host-grant` wait), plants the worktree op marker
+  // (the conversation reads "working", the banner reads "Test in progress")
+  // and lands an op-log record. The lifecycle is shared with `check` and the
+  // e2e branch of `run` — see op-runtime/cli/direct-op.ts; what is this
+  // command's own is which runners to spawn and what their exits mean.
+  //
+  // The grant is the elastic share (`cpuBudget().B` is a ceiling; the acquire
+  // hands back what it could get, `>= 1`), and it is spent by exactly ONE of
+  // the runners. `bun test` runs its files in one process (`--parallel` is
+  // opt-in, so there is nothing to bound); vitest's default `forks` pool is
+  // sized to the core count, so `--maxWorkers=<units>` is what makes the
+  // grant real. This asymmetry is deliberate — do not "fix" it into symmetry
+  // by capping bun, which would cap nothing.
+  const outcome = await withDirectOp(
+    "test",
+    { max: cpuBudget().B },
+    async (grant) => {
+      const env = { ...process.env, ...grant.env() };
+      const bunExit =
+        bun.length > 0
+          ? await runRunner(
+              "bun:test",
+              [process.execPath, "test", ...runnerArgs],
+              root,
+              env,
+            )
+          : null;
+      // `bun x vitest` resolves the repo's own vitest and honors its
+      // `#!/usr/bin/env node` shebang — the same runtime `bun run test:dom`
+      // gives it. `vitest run` picks up the root `vitest.config.ts` from `cwd`.
+      const domExit =
+        dom.length > 0
+          ? await runRunner(
+              "vitest",
+              [
+                process.execPath,
+                "x",
+                "vitest",
+                "run",
+                `--maxWorkers=${grant.units}`,
+                ...runnerArgs,
+              ],
+              root,
+              env,
+            )
+          : null;
+
+      // The summary names BOTH buckets, always — an empty one is stated, never
+      // implied by silence. That line is the whole reason this command exists:
+      // `bun test <plugin-dir>` is green and partial in exactly the case where
+      // this prints "no jsdom tests under this path".
+      const where = targets.length > 1 ? "these paths" : "this path";
+      const report = (
+        label: string,
+        exit: number | null,
+        count: number,
+        empty: string,
+      ) =>
+        console.log(
+          exit === null
+            ? `${label.padEnd(10)}${empty} under ${where}`
+            : `${label.padEnd(10)}${count} ${count === 1 ? "file " : "files"}   exit ${exit}`,
+        );
+      console.log("");
+      report("bun:test", bunExit, bun.length, "no bun:test files");
+      report("vitest", domExit, dom.length, "no jsdom tests");
+
+      const failed = [
+        bunExit !== null && bunExit !== 0 ? "bun:test" : null,
+        domExit !== null && domExit !== 0 ? "vitest" : null,
+      ].filter((name): name is string => name !== null);
+      if (failed.length === 0) return "success";
+      console.error(`\nFAILED: ${failed.join(", ")}`);
+      return "failed";
+    },
+  );
+  if (outcome !== "success") process.exit(1);
 };
 
 export default run;

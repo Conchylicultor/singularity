@@ -1,8 +1,6 @@
 import { z } from "zod";
-import type {
-  OpKind,
-  WaitKind,
-} from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type { WaitKind } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
+import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
@@ -10,8 +8,9 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  * A `z.enum` over the canonical union `T`, proving at compile time that the wire
  * enum lists EVERY member of `T` and nothing else.
  *
- * The mapped-type argument does both directions: a member added to `OpKind` /
- * `WaitKind` in op-log's `core` and not listed here is a missing-property error,
+ * The mapped-type argument does both directions: a member added to `OpKind`
+ * (worktree's `core`) / `WaitKind` (op-log's `core`) and not listed here is a
+ * missing-property error,
  * and a member listed here that the union dropped is an excess-property error.
  * Hand-writing the string union a second time is exactly how the three copies of
  * `PushContentionRecord` drifted; the enums are derived instead.
@@ -30,6 +29,8 @@ const OpKindSchema = exhaustiveEnum<OpKind>({
   build: "build",
   push: "push",
   check: "check",
+  test: "test",
+  e2e: "e2e",
 });
 
 const LaneSchema = exhaustiveEnum<Lane>({
@@ -57,7 +58,7 @@ const OpStepSchema = z.object({
 export type OpStepWire = z.infer<typeof OpStepSchema>;
 
 /**
- * One op on the Gantt — a `build`, a `push`, or a `check`.
+ * One op on the Gantt — a `build`, a `push`, a `check`, a `test` or an `e2e`.
  *
  * THE RENDER MODEL: an op is **one bar** spanning `startMs → startMs + totalMs`,
  * colored by `kind`, with each entry of `waits[]` painted as an overlay segment

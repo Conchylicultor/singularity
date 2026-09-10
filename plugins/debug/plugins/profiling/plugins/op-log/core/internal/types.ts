@@ -1,4 +1,5 @@
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 
 // The one durable record for every op that competes for a host resource. Before
 // this, `push`, `build`, and `check` each hand-rolled their own lifecycle
@@ -7,14 +8,12 @@ import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/co
 // near-identical orphan reconcilers. See
 // research/2026-07-17-global-op-log-unified-wait-profiling.md.
 
-/**
- * What kind of op this is. Deliberately IDENTICAL to `WorktreeOp`
- * (`infra/worktree/server`, `worktree-op.ts:26`), which already models exactly
- * this vocabulary. That plugin's markers are ephemeral by design (one file per
- * op, overwritten, no history) so they cannot BE the durable store — but the
- * durable store speaks their vocabulary rather than inventing a second one.
- */
-export type OpKind = "build" | "push" | "check";
+// What kind of op a record is: the `OpKind` vocabulary declared ONCE, as data,
+// in `infra/worktree/core` — the same type the worktree op marker carries. That
+// plugin's markers are ephemeral by design (one file per op, overwritten, no
+// history) so they cannot BE the durable store — but the durable store speaks
+// their vocabulary rather than inventing a second one. Import it from there;
+// this barrel deliberately does not re-export it.
 
 /**
  * The distinct resources an op can block on. Which one an op is parked in IS the
@@ -55,6 +54,8 @@ export interface OutcomeByKind {
   build: "success" | "failed" | "error";
   push: "success" | "failed_rebase" | "failed_checks" | "failed_push" | "error";
   check: "success" | "failed" | "error";
+  test: "success" | "failed" | "error";
+  e2e: "success" | "failed" | "error";
 }
 
 /** Any outcome a writer may stamp on a terminal record. */

@@ -1,9 +1,10 @@
 /**
- * The machinery an OP command runs on — the shared half of `build`, `check` and
- * `push`: broadcasts, the deploy receipt, fatal-signal exits, signal-origin
- * attribution, lane classification, the op profiler and durable progress log,
- * the duress admission valve, the nested-check subprocess, build output
- * rendering, and crash recording.
+ * The machinery an OP command runs on — the shared half of `build`, `check`,
+ * `test`, `push` and the e2e branch of `run`: broadcasts, the deploy receipt,
+ * fatal-signal exits, signal-origin attribution, lane classification, the op
+ * profiler and durable progress log, the duress admission valve, the
+ * nested-check subprocess, build output rendering, crash recording, and the
+ * whole lifecycle of a DIRECT op (`withDirectOp`, ./direct-op.ts).
  *
  * Why a plugin rather than loose files beside the commands: once each command
  * is its own sub-plugin, a sibling cannot reach the host's `bin/`, and `shared/`
@@ -60,6 +61,13 @@ export { signalOriginTap } from "./signal-origin-tap";
 export type { SignalOriginTapOptions } from "./signal-origin-tap";
 
 export { LANE_ENV, laneFor, publishLane } from "./lane";
+
+export { withDirectOp } from "./direct-op";
+export type {
+  DirectOpContext,
+  DirectOpDeps,
+  DirectOpOptions,
+} from "./direct-op";
 
 export {
   buildProfilerStart,

@@ -12,9 +12,11 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
-import { stripAttemptBranchPrefix } from "@plugins/infra/plugins/worktree/core";
+import {
+  stripAttemptBranchPrefix,
+  type OpKind,
+} from "@plugins/infra/plugins/worktree/core";
 import type {
-  OpKind,
   OpWait,
   WaitKind,
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
@@ -35,8 +37,9 @@ import {
  * One op on the Gantt — structurally the wire's `OpEntry`
  * (`debug/profiling/ops`'s `shared/endpoints.ts`), restated here because
  * `shared/` is plugin-private and a Gantt must stay renderable from any source.
- * The two enums are IMPORTED from op-log's `core` rather than re-typed, so the
- * fill maps below are exhaustive by construction.
+ * The two enums are IMPORTED (`OpKind` from worktree's `core`, `WaitKind` from
+ * op-log's) rather than re-typed, so the fill maps below are exhaustive by
+ * construction.
  */
 export interface OpEntry {
   opId: string;
@@ -124,6 +127,10 @@ const TYPE_FILL: Record<OpKind, string> = {
   // a wait — so a check takes the one strongly-saturated cool hue neither the
   // other kinds nor any wait uses.
   check: "bg-categorical-5",
+  // The two ops that only ever contend for the host grant: the next two unused
+  // categorical hues (3/4/8/9 are the waits).
+  test: "bg-categorical-6",
+  e2e: "bg-categorical-7",
 };
 
 // A warm severity ramp: benign self-inflicted queueing (amber → orange), then

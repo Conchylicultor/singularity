@@ -202,6 +202,11 @@ For a repeatable flow, write a standalone E2E script in the plugin it verifies,
 at `plugins/<path>/e2e/<name>.ts` — never `*.test.ts`, which the test runner
 would pick up. These are manual only; nothing runs them automatically.
 
+Running an `e2e/` script is itself an op: it takes a host CPU grant and shows in
+the conversation's op-status banner ("E2E in progress"), the same way a direct
+`./singularity check` does. Any other script run through `./singularity run` is
+not an op.
+
 ```bash
 ./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --headed  # watch it run
 ```
@@ -277,7 +282,9 @@ Bad:  spawnCaptured/spawnPassthrough only ever surfaced maxRssBytes; Bun's
 
 ### Testing
 
-Optional and manual — nothing runs them automatically.
+Optional and manual — nothing runs them automatically. A test run is an op like
+a direct `./singularity check`: it takes a host CPU grant and shows in the
+conversation's op-status banner ("Test in progress") while it runs.
 
 **`./singularity test` is the ONLY way to run tests.** Paths only, no flags. It
 needs no setup: like every `./singularity` command it installs dependencies first

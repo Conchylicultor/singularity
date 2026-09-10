@@ -26,7 +26,9 @@ const requested = (over: Partial<RawOpRecord> = {}): RawOpRecord => ({
 describe("foldOpRecords — terminal wins", () => {
   test("a completed record wins over its own requested/granted lines", () => {
     const raw: RawOpRecord[] = [
-      requested({ openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) } }),
+      requested({
+        openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
+      }),
       { phase: "granted", opId: "op-1", grantedAt: at(5_000), waits: [] },
       {
         ...requested(),
@@ -77,7 +79,12 @@ describe("foldOpRecords — terminal wins", () => {
     // frozen record.
     const raw: RawOpRecord[] = [
       requested(),
-      { phase: "granted", opId: "op-1", grantedAt: at(1_000), waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }] },
+      {
+        phase: "granted",
+        opId: "op-1",
+        grantedAt: at(1_000),
+        waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }],
+      },
       {
         ...requested(),
         phase: "completed",
@@ -96,7 +103,11 @@ describe("foldOpRecords — terminal wins", () => {
     const [rec] = foldOpRecords(raw, T0 + 999_999);
     expect(rec!.waits).toHaveLength(3);
     expect(rec!.waitMs).toBe(271_000);
-    expect(rec!.waits.map((w) => w.kind)).toEqual(["build-lock", "duress-valve", "host-grant"]);
+    expect(rec!.waits.map((w) => w.kind)).toEqual([
+      "build-lock",
+      "duress-valve",
+      "host-grant",
+    ]);
   });
 
   test("a terminal missing an up-front field falls back to the requested line", () => {
@@ -121,11 +132,17 @@ describe("foldOpRecords — terminal wins", () => {
 
 describe("foldOpRecords — waiting synth", () => {
   test("requested with an open wait grows against `now` and names the resource", () => {
-    const raw = [requested({ openWait: { kind: "host-grant", startMs: 0, startedAt: at(0) } })];
+    const raw = [
+      requested({
+        openWait: { kind: "host-grant", startMs: 0, startedAt: at(0) },
+      }),
+    ];
 
     const [rec] = foldOpRecords(raw, T0 + 30_000);
     expect(rec!.outcome).toBe("waiting");
-    expect(rec!.waits).toEqual([{ kind: "host-grant", startMs: 0, durationMs: 30_000 }]);
+    expect(rec!.waits).toEqual([
+      { kind: "host-grant", startMs: 0, durationMs: 30_000 },
+    ]);
     expect(rec!.waitMs).toBe(30_000);
     expect(rec!.holdMs).toBe(0);
     expect(rec!.totalMs).toBe(30_000);
@@ -138,7 +155,11 @@ describe("foldOpRecords — waiting synth", () => {
     const raw = [
       requested({
         waits: [{ kind: "build-lock", startMs: 0, durationMs: 2_000 }],
-        openWait: { kind: "duress-valve", startMs: 2_000, startedAt: at(2_000) },
+        openWait: {
+          kind: "duress-valve",
+          startMs: 2_000,
+          startedAt: at(2_000),
+        },
       }),
     ];
 
@@ -176,7 +197,12 @@ describe("foldOpRecords — running synth", () => {
     ];
     const raw: RawOpRecord[] = [
       requested({ waits: grantWaits }),
-      { phase: "granted", opId: "op-1", grantedAt: at(10_000), waits: grantWaits },
+      {
+        phase: "granted",
+        opId: "op-1",
+        grantedAt: at(10_000),
+        waits: grantWaits,
+      },
     ];
 
     const [rec] = foldOpRecords(raw, T0 + 70_000);
@@ -217,7 +243,12 @@ describe("foldOpRecords — running synth", () => {
   test("a post-granted CLOSED wait (re-stamped requested) survives the fold", () => {
     const raw: RawOpRecord[] = [
       requested(),
-      { phase: "granted", opId: "op-1", grantedAt: at(1_000), waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }] },
+      {
+        phase: "granted",
+        opId: "op-1",
+        grantedAt: at(1_000),
+        waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }],
+      },
       // ...minutes of work, then a valve wait opened AND closed — re-stamped.
       requested({
         waits: [
@@ -230,7 +261,11 @@ describe("foldOpRecords — running synth", () => {
     expect(rec!.outcome).toBe("running");
     // The re-stamped `requested` is a superset of granted's snapshot and wins.
     expect(rec!.waits).toHaveLength(2);
-    expect(rec!.waits[1]).toEqual({ kind: "duress-valve", startMs: 60_000, durationMs: 30_000 });
+    expect(rec!.waits[1]).toEqual({
+      kind: "duress-valve",
+      startMs: 60_000,
+      durationMs: 30_000,
+    });
     expect(rec!.waitMs).toBe(31_000);
   });
 
@@ -239,10 +274,19 @@ describe("foldOpRecords — running synth", () => {
     // case that used to render as a motionless bar.
     const raw: RawOpRecord[] = [
       requested(),
-      { phase: "granted", opId: "op-1", grantedAt: at(1_000), waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }] },
+      {
+        phase: "granted",
+        opId: "op-1",
+        grantedAt: at(1_000),
+        waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }],
+      },
       requested({
         waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }],
-        openWait: { kind: "host-grant", startMs: 60_000, startedAt: at(60_000) },
+        openWait: {
+          kind: "host-grant",
+          startMs: 60_000,
+          startedAt: at(60_000),
+        },
       }),
     ];
 
@@ -262,15 +306,30 @@ describe("foldOpRecords — running synth", () => {
 
   test("granted.waits is the fallback when requested was never re-stamped", () => {
     const raw: RawOpRecord[] = [
-      { phase: "requested", opId: "op-1", kind: "build", branch: "b", requestedAt: at(0) },
-      { phase: "granted", opId: "op-1", grantedAt: at(1_000), waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }] },
+      {
+        phase: "requested",
+        opId: "op-1",
+        kind: "build",
+        branch: "b",
+        requestedAt: at(0),
+      },
+      {
+        phase: "granted",
+        opId: "op-1",
+        grantedAt: at(1_000),
+        waits: [{ kind: "build-lock", startMs: 0, durationMs: 1_000 }],
+      },
     ];
     const [rec] = foldOpRecords(raw, T0 + 2_000);
-    expect(rec!.waits).toEqual([{ kind: "build-lock", startMs: 0, durationMs: 1_000 }]);
+    expect(rec!.waits).toEqual([
+      { kind: "build-lock", startMs: 0, durationMs: 1_000 },
+    ]);
   });
 
   test("a stray granted with no requested carries no identity and is skipped", () => {
-    const raw: RawOpRecord[] = [{ phase: "granted", opId: "ghost", grantedAt: at(1) }];
+    const raw: RawOpRecord[] = [
+      { phase: "granted", opId: "ghost", grantedAt: at(1) },
+    ];
     expect(foldOpRecords(raw, T0)).toEqual([]);
   });
 });
@@ -299,16 +358,29 @@ describe("foldOpRecords — interleaved concurrent writers", () => {
     });
 
     const raw: RawOpRecord[] = [
-      requested({ openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) } }),
+      requested({
+        openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
+      }),
       push({ openWait: { kind: "push-mutex", startMs: 0, startedAt: at(0) } }),
       check({}),
       { phase: "granted", opId: "push-1", grantedAt: at(1_000), waits: [] },
-      requested({ openWait: { kind: "host-grant", startMs: 500, startedAt: at(500) } }),
+      requested({
+        openWait: { kind: "host-grant", startMs: 500, startedAt: at(500) },
+      }),
       { phase: "granted", opId: "check-1", grantedAt: at(2_000), waits: [] },
-      { ...push({}), phase: "completed", completedAt: at(9_000), outcome: "success", totalMs: 9_000, holdMs: 8_000 },
+      {
+        ...push({}),
+        phase: "completed",
+        completedAt: at(9_000),
+        outcome: "success",
+        totalMs: 9_000,
+        holdMs: 8_000,
+      },
     ];
 
-    const byId = new Map(foldOpRecords(raw, T0 + 10_000).map((r) => [r.opId, r]));
+    const byId = new Map(
+      foldOpRecords(raw, T0 + 10_000).map((r) => [r.opId, r]),
+    );
     expect(byId.size).toBe(3);
     // push: terminal → frozen success
     expect(byId.get("push-1")!.outcome).toBe("success");
@@ -382,9 +454,16 @@ describe("a build-shaped sequence end-to-end", () => {
   ];
 
   const raw: RawOpRecord[] = [
-    requested({ openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) } }),
+    requested({
+      openWait: { kind: "build-lock", startMs: 0, startedAt: at(0) },
+    }),
     requested({ waits: [buildWaits[0]!] }),
-    { phase: "granted", opId: "op-1", grantedAt: at(2_000), waits: [buildWaits[0]!] },
+    {
+      phase: "granted",
+      opId: "op-1",
+      grantedAt: at(2_000),
+      waits: [buildWaits[0]!],
+    },
     requested({ waits: buildWaits.slice(0, 2) }),
     requested({ waits: buildWaits.slice(0, 3) }),
     requested({ waits: buildWaits.slice(0, 4) }),
@@ -433,13 +512,21 @@ describe("a build-shaped sequence end-to-end", () => {
       ...raw.slice(0, 6),
       requested({
         waits: buildWaits.slice(0, 4),
-        openWait: { kind: "host-grant", startMs: 122_000, startedAt: at(122_000) },
+        openWait: {
+          kind: "host-grant",
+          startMs: 122_000,
+          startedAt: at(122_000),
+        },
       }),
     ];
     const [rec] = foldOpRecords(midFlight, T0 + 422_000); // 5 min into the grant
     expect(rec!.outcome).toBe("running");
     expect(rec!.waits).toHaveLength(5);
-    expect(rec!.waits[4]).toEqual({ kind: "host-grant", startMs: 122_000, durationMs: 300_000 });
+    expect(rec!.waits[4]).toEqual({
+      kind: "host-grant",
+      startMs: 122_000,
+      durationMs: 300_000,
+    });
     expect(rec!.waitMs).toBe(362_000);
   });
 });
@@ -472,7 +559,10 @@ describe("foldOpRecords — steps", () => {
   });
 
   test("per-check steps survive the fold verbatim, offset from grantedAt", () => {
-    const [rec] = foldOpRecords([requested({ kind: "check" }), completedCheck()], T0 + 999_999);
+    const [rec] = foldOpRecords(
+      [requested({ kind: "check" }), completedCheck()],
+      T0 + 999_999,
+    );
     expect(rec!.kind).toBe("check");
     expect(rec!.steps).toEqual(checkSteps);
     // The pre-grant wait does not displace the steps: the first check starts at
@@ -484,7 +574,9 @@ describe("foldOpRecords — steps", () => {
     const last = rec!.steps.at(-1)!;
     expect(last.startMs + last.durationMs).toBeLessThanOrEqual(rec!.holdMs);
     for (let i = 1; i < rec!.steps.length; i++) {
-      expect(rec!.steps[i]!.startMs).toBeGreaterThanOrEqual(rec!.steps[i - 1]!.startMs);
+      expect(rec!.steps[i]!.startMs).toBeGreaterThanOrEqual(
+        rec!.steps[i - 1]!.startMs,
+      );
     }
   });
 
@@ -504,7 +596,10 @@ describe("foldOpRecords — steps", () => {
     expect(waiting!.steps).toEqual([]);
 
     const [running] = foldOpRecords(
-      [requested({ kind: "check" }), { phase: "granted", opId: "op-1", grantedAt: at(20_000), waits: [] }],
+      [
+        requested({ kind: "check" }),
+        { phase: "granted", opId: "op-1", grantedAt: at(20_000), waits: [] },
+      ],
       T0 + 30_000,
     );
     expect(running!.outcome).toBe("running");
@@ -527,5 +622,50 @@ describe("sumWaits", () => {
         { kind: "host-grant", startMs: 200, durationMs: 50 },
       ]),
     ).toBe(150);
+  });
+});
+
+describe("foldOpRecords — the op-kind vocabulary", () => {
+  // The kind list is `OP_KINDS` in worktree/core; the fold must accept every
+  // member as itself and fall back only for a kind it has never heard of.
+  test("test and e2e records keep their kind, in flight and terminal", () => {
+    const inFlight = foldOpRecords(
+      [
+        requested({ opId: "t-1", kind: "test" }),
+        requested({ opId: "e-1", kind: "e2e" }),
+      ],
+      T0 + 1_000,
+    );
+    expect(inFlight.find((r) => r.opId === "t-1")?.kind).toBe("test");
+    expect(inFlight.find((r) => r.opId === "e-1")?.kind).toBe("e2e");
+    expect(inFlight.find((r) => r.opId === "t-1")?.outcome).toBe("waiting");
+
+    const terminal = foldOpRecords(
+      [
+        requested({ opId: "t-2", kind: "test" }),
+        { phase: "granted", opId: "t-2", grantedAt: at(500), waits: [] },
+        {
+          phase: "completed",
+          opId: "t-2",
+          kind: "test",
+          requestedAt: at(0),
+          grantedAt: at(500),
+          completedAt: at(9_000),
+          waits: [{ kind: "host-grant", startMs: 0, durationMs: 500 }],
+          outcome: "failed",
+        },
+      ],
+      T0 + 20_000,
+    );
+    expect(terminal[0]?.kind).toBe("test");
+    expect(terminal[0]?.outcome).toBe("failed");
+  });
+
+  test("an unknown kind from an older or garbage writer falls back to build", () => {
+    const out = foldOpRecords(
+      [requested({ opId: "x", kind: "deploy" as unknown as "build" })],
+      T0,
+    );
+    expect(out[0]?.kind).toBe("build");
   });
 });

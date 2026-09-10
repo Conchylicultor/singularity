@@ -1,29 +1,38 @@
 # op-status
 
 Surfaces the worktree's in-flight long-running operation — `Build in progress`,
-`Push in progress`, `Push queued — waiting for lock`, or `Check in progress` —
-in two places:
+`Push in progress`, `Push queued — waiting for lock`, `Check in progress`, `Test
+in progress`, `E2E in progress` — in two places:
 
 - a **banner** above the prompt input (with a live-ticking elapsed timer), and
-- a compact **sidebar row chip** (`Building` / `Pushing` / `Waiting` /
-  `Checking`) so a build/push/check is visible from the conversation list
-  without opening the conversation.
+- a compact **sidebar row chip** (one icon per kind, an hourglass while queued)
+  so an op is visible from the conversation list without opening the
+  conversation.
 
-Fills the gap where a build/push/check (or a push stuck behind the global push
-lock) was indistinguishable from the agent merely "working".
+Fills the gap where a build/push/check/test/e2e run (or a push stuck behind the
+global push lock) was indistinguishable from the agent merely "working".
+
+The kinds, their nouns ("Build") and busy verbs ("Building") are `OP_KINDS` in
+`infra/worktree/core` — one declaration the marker, the op-log, the wire schema
+here (`z.enum(OP_KIND_IDS)`), the banner's sentences and the chip's icon map all
+read. Adding a kind there is the whole edit on the wire and in the sentences;
+the chip's `Record<OpKind, IconType>` and the server's rank table are type
+errors until they have an entry.
 
 ## How it works
 
-- The build/push/check CLI write a per-worktree op marker at
-  `~/.singularity/worktrees/<slug>/ops/{build,push,check}.json` (owned by the
-  `worktree` primitive). Every marker carries a `phase`: `waiting-for-lock`
-  while it queues for its lock, flipped to `running` the instant the lock is
-  granted (a push waits on the global push lock; a build on the per-worktree
-  `.build.lock`; a direct check on the host build slot). On the flip the marker
-  stamps its own `runningAt` (except pushes, whose `runningAt` is derived from
-  the authoritative holder file). The `check` marker is written **only by a
-  direct `./singularity check`** — a check nested inside build/push is already
-  covered by that op's marker, so it writes none. Clearing a marker is
+- The op CLI commands write a per-worktree op marker at
+  `~/.singularity/worktrees/<slug>/ops/<kind>.json` (owned by the `worktree`
+  primitive). Every marker carries a `phase`: `waiting-for-lock` while it
+  queues for its lock, flipped to `running` the instant the lock is granted (a
+  push waits on the global push lock; a build on the per-worktree
+  `.build.lock`; a check, a test or an e2e run on the host CPU grant). On the
+  flip the marker stamps its own `runningAt` (except pushes, whose `runningAt`
+  is derived from the authoritative holder file). A direct op's marker
+  (`check` / `test` / `e2e`, via `withDirectOp` in op-runtime) is written
+  **only by a top-level run** — one nested inside another op (a build's or a
+  push's check) is already covered by that op's marker, so it writes none.
+  Clearing a marker is
   **ownership-guarded**: a finishing op only deletes the file while it still
   names its own pid, so a build queued behind another (which overwrote the
   single `build.json` with its own pid) is not clobbered when the earlier build
@@ -41,15 +50,17 @@ lock) was indistinguishable from the agent merely "working".
   conversation → `worktreePath` → slug (the shared `slugOf` helper) and reads
   the same `worktree-ops` resource. It renders nothing for idle worktrees and a
   single **muted icon** otherwise — no chip, no label: the distinct icon (wrench
-  = building, up-arrow = pushing, flask = checking, hourglass = any op
-  waiting for its lock — push, build, or check), not color or text, carries the
-  state, with a tooltip for the full phrasing. Keeps the dense list row quiet.
+  = building, up-arrow = pushing, flask = checking, checklist = testing,
+  open-in-browser = e2e, hourglass = any op waiting for its lock), not color or
+  text, carries the state, with a tooltip for the full phrasing. Keeps the
+  dense list row quiet.
 - The banner is a toggle: clicking it expands a list of **every** in-flight op
   across all worktrees (the resource already carries the full `{ slug → op }`
   map). The list reconstructs the global push-lock queue — the running push that
   holds the lock is `#1`, the `waiting-for-lock` pushes follow in request order
-  (`startedAt`) — then lists builds and checks, which serialize per-worktree and
-  don't contend on the global lock so they carry no queue position. The current
+  (`startedAt`) — then lists every other kind (builds, checks, tests, e2e
+  runs), which serialize per-worktree or on the host grant and don't contend on
+  the global lock so they carry no queue position. The current
   worktree's row is highlighted. Each row resolves its worktree slug (the
   attempt id) to a human conversation title via the live `conversations`
   resource — in the agent-manager that's the full main-DB set, so this stays a

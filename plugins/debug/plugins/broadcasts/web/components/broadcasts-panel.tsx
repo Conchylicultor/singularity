@@ -20,6 +20,7 @@ import {
   fetchEndpoint,
   useEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
+import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 import {
   getBroadcasts,
   writeBroadcasts,
@@ -27,7 +28,7 @@ import {
 } from "../../shared/endpoints";
 
 type BroadcastSeverity = BroadcastEntry["severity"];
-type BroadcastCommand = "build" | "push" | "check";
+type BroadcastCommand = OpKind;
 
 const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
   error: "bg-destructive/10 text-destructive",
@@ -35,7 +36,7 @@ const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
   info: "bg-info/10 text-info",
 };
 
-const ALL_COMMANDS: BroadcastCommand[] = ["build", "push", "check"];
+const ALL_COMMANDS: readonly BroadcastCommand[] = OP_KIND_IDS;
 
 function defaultForm() {
   return {

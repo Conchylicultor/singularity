@@ -1,4 +1,5 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take, so only a wedged child trips it. A CLI
@@ -7,7 +8,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // fleet-level op-wedge watchdog was retired 2026-07-28).
 const GIT_TIMEOUT_MS = 60_000;
 
-type BroadcastCommand = "build" | "push" | "check";
+type BroadcastCommand = OpKind;
 
 interface Broadcast {
   since?: string;

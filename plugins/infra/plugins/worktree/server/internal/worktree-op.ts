@@ -26,23 +26,29 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push,
-// check) that will eventually finish and resume the agent. The conversation
+// check, test, e2e — the `OpKind` vocabulary declared once in this plugin's
+// core) that will eventually finish and resume the agent. The conversation
 // status poller treats a tmux pane in the CLI "shell" state as `working` ONLY
 // while one of these markers is live for its worktree — every other never-ending
 // background shell (dev server, `tail -f`, a build whose completion marker never
 // matched) falls through to the idle/waiting reading instead of looking busy
 // forever. Markers are keyed on the worktree directory basename, which the
-// writers (`./singularity build` / `push` / `check`, via
+// writers (`./singularity build` / `push` / `check` / `test` / `run <e2e>`, via
 // `basename(getWorktreeRoot())`) and the reader (runtime-tmux, via
 // `basename(worktreePath)`) all agree on.
-export type WorktreeOp = "build" | "push" | "check";
+//
+// The marker's op IS the op kind: one vocabulary, declared as data in
+// `worktree/core` (`OP_KINDS`), which op-log, the op-status banner and the Gantt
+// all read. Adding a kind is one edit there; this module has nothing to add.
+export type WorktreeOp = OpKind;
 
 // The closed set of known op types, for validating a marker's self-reported op
 // when reading it back (a marker written by an older/garbage writer that names
 // an unknown op falls back to "build").
-const KNOWN_OPS: readonly WorktreeOp[] = ["build", "push", "check"];
+const KNOWN_OPS: readonly WorktreeOp[] = OP_KIND_IDS;
 
 // Every op is written up-front in the "waiting-for-lock" phase (before it
 // requests its lock) and flipped to "running" the moment the lock is granted, so

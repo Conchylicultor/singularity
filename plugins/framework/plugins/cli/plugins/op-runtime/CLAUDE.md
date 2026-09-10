@@ -1,12 +1,43 @@
 # op-runtime
 
-The machinery an **op command** runs on — the shared half of `build`, `check`
-and `push`.
+The machinery an **op command** runs on — the shared half of `build`, `check`,
+`test`, `push`, and the e2e branch of `run`.
 
 Broadcasts, the deploy receipt, fatal-signal exits, signal-origin attribution,
 lane classification, the op profiler and its durable progress log, the duress
-admission valve, the nested-check subprocess, build-output rendering, and crash
-recording.
+admission valve, the nested-check subprocess, build-output rendering, crash
+recording — and the whole lifecycle of a **direct op**.
+
+## `withDirectOp` — one lifecycle for the ops whose only ticket is the host grant
+
+`check`, `test` and an `e2e` script run (`./singularity run plugins/…/e2e/x.ts`)
+are the same op shape: nothing to lock but the host CPU grant. Before
+`direct-op.ts` the check command hand-rolled the sequence — identity, the
+broadcast banner, the interrupted-predecessor warning, the lane, the worktree op
+marker (`waiting-for-lock` → `running`), the op-log profiler (`requested` →
+`granted` → `completed`), a graceful exit on a catchable fatal signal with
+signal-origin attribution, and the grant — and `test` / `e2e` would have been
+the second and third copies. It is one function:
+
+```ts
+const outcome = await withDirectOp("test", { max: cpuBudget().B }, async (grant, ctx) => {
+  // run the work under `grant`; `ctx` carries slug / branch / lane / opId /
+  // nested / profiler
+  return ok ? "success" : "failed";
+});
+if (outcome !== "success") process.exit(1);
+```
+
+The command owns only what is genuinely its own: what to run under the grant,
+what the outcome means, and its own exit code (the primitive never calls
+`process.exit`). Nesting is handled once, inside: a parent's grant in the
+environment (`inheritedGrant()`) means no marker, no record, no handlers — the
+parent owns all three — and the body spends the inherited units.
+
+`build` and `push` are **not** direct ops (build lock + duress valve + host grant;
+the push mutex) and keep their own lifecycles. Every seam is injectable
+(`DirectOpDeps`), which is how `direct-op.test.ts` asserts the order and the
+nested gating without a flock or a marker file.
 
 ## Direction of the dependency
 
@@ -65,7 +96,7 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
 
 ## Plugin reference
 
-- Description: Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+- Description: Shared machinery of the op commands (build / check / test / push / run <e2e>): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
 - Core:
   - Uses:
     - `infra/paths.worktreeArtifacts`
@@ -85,6 +116,8 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
     - `framework/cli/build`
     - `framework/cli/check`
     - `framework/cli/push`
+    - `framework/cli/run`
+    - `framework/cli/test`
 - Cli:
   - Exports (types):
     - `BuildLogs`
@@ -97,6 +130,9 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
     - `BuildStepLog`
     - `CheckSubprocessOptions`
     - `CheckSubprocessResult`
+    - `DirectOpContext`
+    - `DirectOpDeps`
+    - `DirectOpOptions`
     - `FatalSignal`
     - `FatalSignalExitOptions`
     - `HoldOutcome`
@@ -135,6 +171,7 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
     - `shouldRequeue`
     - `signalOriginTap`
     - `valveGates`
+    - `withDirectOp`
     - `writeBuildLogs`
     - `writeBuildProfile`
     - `writeBuildReceipt`

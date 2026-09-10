@@ -97,6 +97,7 @@ the shape that would absorb it into "the setup succeeded".
     - `conversations/runtime-tmux`
     - `debug/broadcasts`
     - `debug/memory`
+    - `debug/profiling/op-log`
     - `debug/profiling/ops`
     - `debug/worktree-cleanup`
     - `infra/git/git-watcher`
@@ -110,9 +111,15 @@ the shape that would absorb it into "the setup succeeded".
     - `tasks/attempt-work`
     - `tasks/tasks-core`
 - Core:
+  - Exports (types):
+    - `OpKind`
+    - `OpKindMeta`
   - Exports (values):
     - `attemptBranchName`
     - `attemptBranchRef`
+    - `isOpKind`
+    - `OP_KIND_IDS`
+    - `OP_KINDS`
     - `stripAttemptBranchPrefix`
 - Sub-plugins:
   - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.

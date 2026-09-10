@@ -370,3 +370,34 @@ test("derivePushPhases overrides a push marker's stored runningAt from the holde
     "2026-06-07T00:00:00.000Z",
   );
 });
+
+// --- marker read path: the op-kind vocabulary -----------------------------
+
+test("listActiveWorktreeOps reads a test and an e2e marker back as themselves", async () => {
+  await withTempSlugAsync(async (slug) => {
+    for (const op of ["test", "e2e"] as const) {
+      writeRawMarker(slug, op, {
+        op,
+        pid: process.pid,
+        startedAt: "2026-06-07T00:00:00.000Z",
+        phase: "waiting-for-lock",
+      });
+    }
+    const mine = (await listActiveWorktreeOps()).filter((m) => m.slug === slug);
+    expect(mine.map((m) => m.op).sort()).toEqual(["e2e", "test"]);
+    expect(mine.every((m) => m.phase === "waiting-for-lock")).toBe(true);
+  });
+});
+
+test("a marker naming an unknown op still falls back to build", async () => {
+  await withTempSlugAsync(async (slug) => {
+    writeRawMarker(slug, "build", {
+      op: "deploy",
+      pid: process.pid,
+      startedAt: "2026-06-07T00:00:00.000Z",
+      phase: "running",
+    });
+    const mine = (await listActiveWorktreeOps()).find((m) => m.slug === slug);
+    expect(mine?.op).toBe("build");
+  });
+});

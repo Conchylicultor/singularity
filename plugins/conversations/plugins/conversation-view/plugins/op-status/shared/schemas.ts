@@ -1,9 +1,12 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { OP_KIND_IDS } from "@plugins/infra/plugins/worktree/core";
 
 export const WorktreeOpSchema = z.object({
   slug: z.string(),
-  op: z.enum(["build", "push", "check"]),
+  // The marker's kind — the one `OP_KINDS` vocabulary, so a kind added there is
+  // accepted on the wire here with no second list to update.
+  op: z.enum(OP_KIND_IDS),
   startedAt: z.string(),
   phase: z.enum(["waiting-for-lock", "running"]),
   // The instant this op's running phase began (its lock was granted). null while

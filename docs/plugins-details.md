@@ -12675,24 +12675,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Shared:
             - Exports (values): `getBuildProfiling`
         - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, the merged reader, and the single orphan reconciler.
-          - Cross-plugin:
-            - Imported by:
-              - `debug/profiling/ops`
-              - `stats/pushes`
-          - Server:
-            - Exports (types):
-              - `OpProfiler`
-              - `OpProfilerOptions`
-            - Exports (values):
-              - `createOpProfiler`
-              - `finalizeOrphanedOps`
-              - `OP_LOG_FILE`
-              - `readOpRecords`
           - Core:
+            - Uses:
+              - `infra/worktree.OP_KIND_IDS`
+              - `infra/worktree.OpKind`
             - Exports (types):
               - `OpenWait`
               - `OpGroup`
-              - `OpKind`
               - `OpOutcome`
               - `OpRecord`
               - `OpStep`
@@ -12706,6 +12695,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `groupByOpId`
               - `orphanedOps`
               - `sumWaits`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/profiling/ops`
+              - `stats/pushes`
+          - Server:
+            - Exports (types):
+              - `OpProfiler`
+              - `OpProfilerOptions`
+            - Exports (values):
+              - `createOpProfiler`
+              - `finalizeOrphanedOps`
+              - `OP_LOG_FILE`
+              - `readOpRecords`
         - **`ops`** — Op contention profiling for the Gantt debug pane: the ops/op-detail endpoints and the Profiling section hosting the unified build/push/check Gantt. Op contention profiling data endpoint (build / push / check).
           - Web:
             - Slots: `opDetailPane.Actions` ← `primitives.pane`
@@ -15286,12 +15288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/op-runtime.writeBuildReceipt`
         - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
-            - Uses:
-              - `framework/cli/op-runtime.checkBroadcasts`
-              - `framework/cli/op-runtime.installFatalSignalExit`
-              - `framework/cli/op-runtime.publishLane`
-              - `framework/cli/op-runtime.reportInterruptedPredecessor`
-              - `framework/cli/op-runtime.signalOriginTap`
+            - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`db`** — `./singularity db` — worktree database operations; today just `db fork`, which gives a hand-made `git worktree add` checkout the DB fork it never got.
         - **`deploy`** — `./singularity deploy converge|ship` — converge a host to serve a composition (run user, dirs, env, Caddy, systemd, firewall) and ship release bundles to it behind a health gate.
         - **`format`** — `./singularity format` — prettier over the .ts/.tsx changed on this branch; the same pass `build` runs, without paying for a build.
@@ -15341,7 +15338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`normalize-generated`** — `./singularity normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point.
           - Cli:
             - Uses: `framework/cli/git-artifacts.normalizeGeneratedArtifacts`
-        - **`op-runtime`** — Shared machinery of the op commands (build / check / push): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output.
+        - **`op-runtime`** — Shared machinery of the op commands (build / check / test / push / run <e2e>): broadcasts, deploy receipt, fatal-signal exits, lane, op profiler, progress log, admission valve, nested check, build output, and the direct-op lifecycle (withDirectOp).
           - Core:
             - Uses:
               - `infra/paths.worktreeArtifacts`
@@ -15361,6 +15358,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/build`
               - `framework/cli/check`
               - `framework/cli/push`
+              - `framework/cli/run`
+              - `framework/cli/test`
           - Cli:
             - Exports (types):
               - `BuildLogs`
@@ -15373,6 +15372,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `BuildStepLog`
               - `CheckSubprocessOptions`
               - `CheckSubprocessResult`
+              - `DirectOpContext`
+              - `DirectOpDeps`
+              - `DirectOpOptions`
               - `FatalSignal`
               - `FatalSignalExitOptions`
               - `HoldOutcome`
@@ -15411,6 +15413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `shouldRequeue`
               - `signalOriginTap`
               - `valveGates`
+              - `withDirectOp`
               - `writeBuildLogs`
               - `writeBuildProfile`
               - `writeBuildReceipt`
@@ -15434,9 +15437,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/migrations.resolveMainRef`
         - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
         - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
+          - Cli:
+            - Uses: `framework/cli/op-runtime.withDirectOp`
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
         - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
+          - Cli:
+            - Uses: `framework/cli/op-runtime.withDirectOp`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
         - Imported by:
@@ -15940,6 +15947,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `isCollectedDirDef`
               - `loadCollectedDir`
         - **`e2e-harness`** — Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+          - Core:
+            - Uses: `framework/tooling/guards.MODULE_EXTENSION`
+            - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
             - Imported by:
               - `active-data/page-link`
@@ -16083,6 +16093,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `watchSubjects`
               - `WINDOW_MS`
               - `WINDOW_SIZE`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/e2e-harness`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Exports (types):
@@ -18439,6 +18451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/runtime-tmux`
           - `debug/broadcasts`
           - `debug/memory`
+          - `debug/profiling/op-log`
           - `debug/profiling/ops`
           - `debug/worktree-cleanup`
           - `infra/git/git-watcher`
@@ -18452,9 +18465,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/attempt-work`
           - `tasks/tasks-core`
       - Core:
+        - Exports (types):
+          - `OpKind`
+          - `OpKindMeta`
         - Exports (values):
           - `attemptBranchName`
           - `attemptBranchRef`
+          - `isOpKind`
+          - `OP_KIND_IDS`
+          - `OP_KINDS`
           - `stripAttemptBranchPrefix`
       - Plugins:
         - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.

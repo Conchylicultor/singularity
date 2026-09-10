@@ -173,6 +173,9 @@ skipped for those scripts, leaking a Chromium process per run.
 ## Plugin reference
 
 - Description: Shared Playwright harness for the per-plugin e2e/ scripts: argv parsing, worktree-derived target URL, browser/session lifecycle, error capture, pass/fail reporting, screenshots. Also owns the chromium install-time provisioning and the two generic tools (screenshot, perf).
+- Core:
+  - Uses: `framework/tooling/guards.MODULE_EXTENSION`
+  - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
   - Imported by:
     - `active-data/page-link`

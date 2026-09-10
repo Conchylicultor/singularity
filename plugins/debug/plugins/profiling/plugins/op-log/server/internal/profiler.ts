@@ -2,9 +2,9 @@ import type {
   GrantHooks,
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { OpKind } from "@plugins/infra/plugins/worktree/core";
 import type {
   OpenWait,
-  OpKind,
   OpStep,
   OpWait,
   OutcomeByKind,

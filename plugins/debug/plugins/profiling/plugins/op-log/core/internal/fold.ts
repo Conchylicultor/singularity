@@ -1,4 +1,5 @@
-import type { OpKind, OpRecord, OpWait, RawOpRecord } from "./types";
+import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
+import type { OpRecord, OpWait, RawOpRecord } from "./types";
 
 // The fold: many append-only raw lines → one record per op. Pure and
 // `now`-injected, so the live-bar synthesis is testable without a clock.
@@ -10,7 +11,7 @@ const EPOCH = new Date(0).toISOString();
 // possibly an older CLI — so a kind outside this set must not be cast through to
 // `OpRecord.kind` where the type would then be lying. Falls back to "build",
 // mirroring `markerInfoFromParsed`'s identical guard in worktree-op.ts.
-const KNOWN_KINDS: readonly OpKind[] = ["build", "push", "check"];
+const KNOWN_KINDS: readonly OpKind[] = OP_KIND_IDS;
 
 function coerceKind(raw: OpKind | undefined): OpKind {
   return raw !== undefined && KNOWN_KINDS.includes(raw) ? raw : "build";
@@ -55,7 +56,9 @@ export function groupByOpId(raw: RawOpRecord[]): Map<string, OpGroup> {
 
 // Identity fields live on the `requested` record (written up-front) and are
 // repeated on the terminal. Resolve them from whichever record we have.
-function identityOf(base: RawOpRecord): Omit<
+function identityOf(
+  base: RawOpRecord,
+): Omit<
   OpRecord,
   | "requestedAt"
   | "grantedAt"
@@ -81,7 +84,10 @@ function identityOf(base: RawOpRecord): Omit<
   };
 }
 
-function normalizeTerminal(r: RawOpRecord, requested: RawOpRecord | undefined): OpRecord {
+function normalizeTerminal(
+  r: RawOpRecord,
+  requested: RawOpRecord | undefined,
+): OpRecord {
   // A terminal record carries its own identity, but a field the writer only
   // learned up-front (lane, conversationId) may be absent on an older/leaner
   // terminal — fall back to the `requested` line rather than nulling it out.
@@ -135,7 +141,9 @@ function liveWaitsOf(
   const fromRequested = requested.waits ?? [];
   const fromGranted = granted?.waits ?? [];
   const waits = [
-    ...(fromRequested.length >= fromGranted.length ? fromRequested : fromGranted),
+    ...(fromRequested.length >= fromGranted.length
+      ? fromRequested
+      : fromGranted),
   ];
   if (requested.openWait) {
     const openedMs = parseMs(requested.openWait.startedAt, requestedMs);

@@ -1,7 +1,9 @@
 # op-gantt
 
 The reusable Gantt over the ops [`op-log`](../../op-log/CLAUDE.md) records —
-`build`, `push`, and `check`, in **one** `group.ops.map`.
+every kind in `OP_KINDS` (`build`, `push`, `check`, `test`, `e2e`), in **one**
+`group.ops.map`. `TYPE_FILL` is a `Record<OpKind, …>`, so a kind added to the
+vocabulary without a fill here is a type error.
 
 ## The render model
 
@@ -28,7 +30,7 @@ channel and never bleed into one another:
 
 | Channel | Answers | Keyed on | Palette |
 |---|---|---|---|
-| `TYPE_FILL` | *what is this?* — the base bar | `OpKind` | cool: `bg-info` (build), `bg-success` (push), `bg-categorical-5` (check) |
+| `TYPE_FILL` | *what is this?* — the base bar | `OpKind` | cool: `bg-info` (build), `bg-success` (push), `bg-categorical-5` (check), `bg-categorical-6` (test), `bg-categorical-7` (e2e) |
 | `WAIT_FILL` | *what is it blocked on?* — the overlays | `WaitKind` | warm ramp: `categorical-3` amber (push-mutex) → `-9` orange (build-lock) → `-4` red (host-grant) → `-8` magenta (duress-valve) |
 | `STATUS_TREATMENT` | *how did it go?* | derived status | `animate-pulse` (in flight), `ring-destructive` (failed/interrupted), nothing (ok) |
 

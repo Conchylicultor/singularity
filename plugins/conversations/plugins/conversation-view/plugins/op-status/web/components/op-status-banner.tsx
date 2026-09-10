@@ -17,6 +17,7 @@ import {
   conversationsSystemResource,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import { OP_KINDS } from "@plugins/infra/plugins/worktree/core";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
 // The op markers are keyed on the worktree directory basename, exactly how the
@@ -87,8 +88,8 @@ function formatElapsed(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-// The instant the op's CURRENT phase began. A running op (push, build, or check)
-// clocks its work time from when its lock was granted (`runningAt`); a waiting op
+// The instant the op's CURRENT phase began. A running op (of any kind) clocks
+// its work time from when its lock was granted (`runningAt`); a waiting op
 // clocks from `startedAt`. So the live timer always measures the phase shown,
 // never wait + work lumped together.
 function phaseStartedAt(op: WorktreeOp): number {
@@ -97,8 +98,9 @@ function phaseStartedAt(op: WorktreeOp): number {
 
 // How long a now-running op spent queued for its lock before work started
 // (startedAt → runningAt). null when the op isn't running or never actually
-// waited. Applies to any op: a push waits on the global push lock, a build/check
-// on its per-worktree/host slot — all stamp `runningAt` on the grant.
+// waited. Applies to any op: a push waits on the global push lock, a build on
+// its per-worktree lock, a check/test/e2e on the host grant — all stamp
+// `runningAt` on the grant.
 function waitedMs(op: WorktreeOp): number | null {
   if (op.phase !== "running" || !op.runningAt) return null;
   const ms =
@@ -106,21 +108,22 @@ function waitedMs(op: WorktreeOp): number | null {
   return ms > 1000 ? ms : null;
 }
 
+// The sentence is one template over the kind's noun, so every kind phrases the
+// same way and a kind added to `OP_KINDS` reads correctly here with no edit.
 function summaryLabel(op: WorktreeOp): string {
-  const waiting = op.phase === "waiting-for-lock";
-  if (op.op === "build")
-    return waiting ? "Build queued — waiting for lock" : "Build in progress";
-  if (op.op === "check")
-    return waiting ? "Check queued — waiting for lock" : "Check in progress";
-  return waiting ? "Push queued — waiting for lock" : "Push in progress";
+  const { label } = OP_KINDS[op.op];
+  return op.phase === "waiting-for-lock"
+    ? `${label} queued — waiting for lock`
+    : `${label} in progress`;
 }
 
 const byStartedAt = (a: WorktreeOp, b: WorktreeOp): number =>
   new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime();
 
 // One row in the expanded list. `queuePos` is the 1-based position in the global
-// push lock queue (the running push that holds the lock is #1); null for builds,
-// which serialize per-worktree and never contend on the global lock.
+// push lock queue (the running push that holds the lock is #1); null for every
+// other kind, which serializes per-worktree or on the host grant and never
+// contends on the global lock.
 interface OpRow {
   op: WorktreeOp;
   queuePos: number | null;
@@ -128,17 +131,17 @@ interface OpRow {
 }
 
 // Build the ordered view: the global push queue first (lock holder, then the
-// waiting pushes in request order), then the independent builds and checks,
-// which serialize per-worktree and don't contend on the global push lock.
+// waiting pushes in request order), then every other op (builds, checks, tests,
+// e2e runs), which serialize per-worktree or on the host grant and don't
+// contend on the global push lock. Push is the ONLY kind on a global queue, so
+// "not a push" is the whole definition of the second group.
 function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
   const pushes = ops.filter((o) => o.op === "push");
   const running = pushes.filter((o) => o.phase === "running").sort(byStartedAt);
   const waiting = pushes
     .filter((o) => o.phase === "waiting-for-lock")
     .sort(byStartedAt);
-  const unqueued = ops
-    .filter((o) => o.op === "build" || o.op === "check")
-    .sort(byStartedAt);
+  const unqueued = ops.filter((o) => o.op !== "push").sort(byStartedAt);
 
   const queue = [...running, ...waiting];
   const pushRows: OpRow[] = queue.map((op, i) => ({
@@ -167,13 +170,7 @@ function OpRowView({
   const waiting = op.phase === "waiting-for-lock";
   const elapsed = formatElapsed(now - phaseStartedAt(op));
   const waited = waitedMs(op);
-  const phaseText = waiting
-    ? "Waiting for lock"
-    : op.op === "build"
-      ? "Building"
-      : op.op === "check"
-        ? "Checking"
-        : "Pushing";
+  const phaseText = waiting ? "Waiting for lock" : OP_KINDS[op.op].progressive;
 
   return (
     <Text

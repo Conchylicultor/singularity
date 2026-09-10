@@ -3,8 +3,9 @@
 Op contention profiling sub-plugin for Debug > Profiling. It owns the **endpoints
 and the Gantt** over the ops the [`op-log`](../op-log/CLAUDE.md) plugin records —
 it no longer reads any file itself. `readOpRecords()` merges `op-log.jsonl` with
-the two frozen legacy files and returns one `OpRecord[]` covering all three kinds
-(`build`, `push`, `check`); this plugin windows, groups, and projects it onto the
+the two frozen legacy files and returns one `OpRecord[]` covering every kind
+(`build`, `push`, `check`, `test`, `e2e` — the `OP_KINDS` vocabulary in
+`infra/worktree/core`); this plugin windows, groups, and projects it onto the
 wire.
 
 ## The render model

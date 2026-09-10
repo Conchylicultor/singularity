@@ -9,6 +9,8 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 // see its docblock. The import sits here, in the deferred implementation, and
 // never in `./index.ts`, which `cli:command-declarations-light` measures.
 import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
+import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -62,10 +64,46 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // `stdin: "inherit"` because the child must be indistinguishable from the
   // script the caller would have run by hand; the default `"ignore"` would be a
   // behavior change hiding in a fd, invisible until a script prompts.
-  const { exitCode, signalCode } = await spawnPassthrough(
-    [process.execPath, abs, ...args],
-    { cwd: root, stdin: "inherit" },
-  );
+  const spawnScript = (env?: Record<string, string | undefined>) =>
+    spawnPassthrough([process.execPath, abs, ...args], {
+      cwd: root,
+      stdin: "inherit",
+      ...(env ? { env } : {}),
+    });
+
+  // An e2e script — one under a plugin's `e2e/` dir, the convention the
+  // harness owns — is an OP: it drives the deployed app with a browser, so it
+  // takes a host CPU grant like a direct check (one unit: one script, one
+  // Chromium, no fan-out), plants the worktree op marker (the conversation
+  // reads "working", the banner "E2E in progress") and lands an op-log record.
+  // The lifecycle is shared with `check` and `test`, see
+  // op-runtime/cli/direct-op.ts. EVERY OTHER SCRIPT takes the plain path
+  // below, byte-for-byte as before: no grant, no marker, no record — a
+  // one-off data script is not an op, and must not queue behind builds to
+  // run.
+  if (isE2eScriptPath(rel)) {
+    const outcome = await withDirectOp("e2e", { max: 1 }, async (grant) => {
+      const { exitCode, signalCode } = await spawnScript({
+        ...process.env,
+        ...grant.env(),
+      });
+      if (signalCode !== null) {
+        console.error(`\n${rel} was killed by ${signalCode}.`);
+        return "failed";
+      }
+      // Preserve the script's own code (the harness exits 2 for a usage
+      // refusal, 1 for failed checks); the exit below reads it back.
+      if (exitCode !== 0) {
+        process.exitCode = exitCode;
+        return "failed";
+      }
+      return "success";
+    });
+    if (outcome !== "success") process.exit(process.exitCode ?? 1);
+    return;
+  }
+
+  const { exitCode, signalCode } = await spawnScript();
 
   // A signalled child can still report exit 0. Reporting that as success is the
   // absorbed failure this repo bans — the script did not finish, it was killed.

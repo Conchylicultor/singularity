@@ -99,3 +99,33 @@ describe("recordStep — grantedAt-relative offset via the perf pairing", () => 
     ]);
   });
 });
+
+describe("createOpProfiler — every op kind", () => {
+  // `OutcomeByKind` keys `complete()` per kind: the two grant-only kinds share
+  // check's three-way vocabulary, and a push-shaped outcome is a type error.
+  test("test and e2e run the full cycle with their own outcome vocabulary", () => {
+    for (const kind of ["test", "e2e"] as const) {
+      const records: RawOpRecord[] = [];
+      const p = createOpProfiler(kind, {
+        ...baseOpts,
+        sink: (r) => records.push(r),
+      });
+      p.markRequested();
+      p.grantHooks().onWaitStart?.();
+      p.grantHooks().onAcquired?.(0);
+      p.markGranted();
+      p.complete("failed");
+      p.write();
+      const completed = records.find((r) => r.phase === "completed");
+      expect(completed?.kind).toBe(kind);
+      expect(completed?.outcome).toBe("failed");
+      expect(completed?.waits?.map((w) => w.kind)).toEqual(["host-grant"]);
+    }
+  });
+
+  test("a push-only outcome is rejected on a test op at the type level", () => {
+    const p = createOpProfiler("test", { ...baseOpts, sink: () => {} });
+    // @ts-expect-error — "failed_rebase" belongs to OutcomeByKind["push"] only.
+    p.complete("failed_rebase");
+  });
+});
