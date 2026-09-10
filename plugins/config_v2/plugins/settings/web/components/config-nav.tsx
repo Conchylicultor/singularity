@@ -6,10 +6,8 @@ import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
-import {
-  configV2ConflictPathsResource,
-  configV2ModifiedCountsResource,
-} from "@plugins/config_v2/core";
+import { configV2ModifiedCountsResource } from "@plugins/config_v2/core";
+import type { ConfigV2ConflictLocations } from "@plugins/config_v2/core";
 import {
   DataView,
   defineDataView,
@@ -23,6 +21,7 @@ import {
   flattenConfigTree,
   type ConfigNavRow,
 } from "../internal/flatten-config-tree";
+import { useConflictLocationsOf } from "../internal/use-conflicts";
 import { ConfigRowBadge } from "./config-row-badge";
 
 const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
@@ -47,7 +46,7 @@ export function ConfigNav() {
   // While a resource is still loading we report "not modified / no conflict" —
   // the badge simply doesn't paint yet, exactly as the per-row hook behaved.
   const modifiedRes = useResource(configV2ModifiedCountsResource, {});
-  const conflictRes = useResource(configV2ConflictPathsResource, {});
+  const conflictLocationsOf = useConflictLocationsOf();
 
   // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
   // equals `PluginNode.id`, so no slash→dot bridging is needed.
@@ -107,12 +106,12 @@ export function ConfigNav() {
     },
     [modifiedRes],
   );
-  const hasConflictOf = useCallback(
-    (row: ConfigNavRow) => {
-      if (conflictRes.pending || !row.registration) return false;
-      return conflictRes.data.includes(row.registration.storePath);
-    },
-    [conflictRes],
+  const conflictOf = useCallback(
+    (row: ConfigNavRow): ConfigV2ConflictLocations | undefined =>
+      row.registration
+        ? conflictLocationsOf(row.registration.storePath)
+        : undefined,
+    [conflictLocationsOf],
   );
 
   const selectedPath = configDetailPane.useRouteEntry()?.params.configPath;
@@ -158,7 +157,7 @@ export function ConfigNav() {
         label: "Conflict",
         type: "bool",
         filterable: false,
-        value: (r) => hasConflictOf(r),
+        value: (r) => conflictOf(r) !== undefined,
       },
       {
         id: "source",
@@ -173,7 +172,7 @@ export function ConfigNav() {
         value: (r) => r.registration?.descriptor.source ?? undefined,
       },
     ],
-    [modifiedCountOf, hasConflictOf],
+    [modifiedCountOf, conflictOf],
   );
 
   const treeOptions = useMemo<TreeViewOptions<ConfigNavRow>>(
@@ -187,12 +186,12 @@ export function ConfigNav() {
       trailing: (r) => (
         <ConfigRowBadge
           modifiedCount={modifiedCountOf(r)}
-          hasConflict={hasConflictOf(r)}
+          conflict={conflictOf(r)}
           source={r.registration?.descriptor.source}
         />
       ),
     }),
-    [modifiedCountOf, hasConflictOf],
+    [modifiedCountOf, conflictOf],
   );
 
   return (

@@ -30,6 +30,7 @@
     - `apps/sonata/primitives/toolbar-control`
     - `apps/workflows/editor`
     - `build`
+    - `config_v2/settings`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-view/allow-monitor`
     - `conversations/conversation-view/dependencies`

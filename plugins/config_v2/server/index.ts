@@ -18,7 +18,7 @@ import {
   configV2ServerResource,
   configV2ConflictServerResource,
   configV2ScopesServerResource,
-  configV2ConflictPathsServerResource,
+  configV2ConflictMapServerResource,
   configV2ModifiedCountsServerResource,
   configV2TiersServerResource,
 } from "./internal/resource";
@@ -70,7 +70,7 @@ export default {
     Resource.Declare(configV2ServerResource),
     Resource.Declare(configV2ConflictServerResource),
     Resource.Declare(configV2ScopesServerResource),
-    Resource.Declare(configV2ConflictPathsServerResource),
+    Resource.Declare(configV2ConflictMapServerResource),
     Resource.Declare(configV2ModifiedCountsServerResource),
     Resource.Declare(configV2TiersServerResource),
   ],

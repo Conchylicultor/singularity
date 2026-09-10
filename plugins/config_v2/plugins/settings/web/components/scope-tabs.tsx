@@ -1,54 +1,44 @@
 import { useCallback, useMemo, type ReactNode } from "react";
-import { MdAdd, MdLayers } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import {
   scopeAppId,
   configV2ScopesResource,
-  configV2ConflictResource,
   forkDescriptorScope,
 } from "@plugins/config_v2/core";
-import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
+import type {
+  ConfigV2ConflictLocations,
+  ConfigV2ScopesMap,
+} from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useScopeDisplay } from "../internal/scope-label";
 
 type AppContribution = ReturnType<typeof Apps.App.useContributions>[number];
-
-// Resolves an `app:<id>` scopeId to its app's display label + icon (falls back
-// to the raw id when no app matches — e.g. a committed scope for an app that
-// isn't installed in this build).
-function resolveScope(
-  scopeId: string,
-  apps: AppContribution[],
-): {
-  label: string;
-  icon: ReactNode;
-} {
-  const rawId = scopeAppId(scopeId);
-  const entry = apps.find((a) => a.id === rawId);
-  if (entry) {
-    return { label: entry.app.name, icon: <AppIconView icon={entry.icon} /> };
-  }
-  return { label: rawId ?? scopeId, icon: <MdLayers /> };
-}
 
 export function ScopeTabs({
   storePath,
   scopeId,
+  conflict,
   onSelect,
 }: {
   storePath: string;
   scopeId: string | undefined;
+  /** Where this descriptor conflicts, or undefined for nowhere. */
+  conflict: ConfigV2ConflictLocations | undefined;
   onSelect: (scopeId: string | undefined) => void;
 }) {
   const apps = Apps.App.useContributions();
+  const scopeDisplay = useScopeDisplay();
   // One global scopes-map subscription, `select`ed to this descriptor's list.
   const selectScopes = useCallback(
     (map: ConfigV2ScopesMap) => map[storePath] ?? [],
@@ -67,22 +57,22 @@ export function ScopeTabs({
   return (
     <Stack direction="row" gap="2xs" align="center" wrap>
       <ScopeTab
-        label="Base"
+        label={scopeDisplay(undefined).label}
         scopeId={undefined}
-        storePath={storePath}
         active={scopeId === undefined}
+        hasConflict={conflict?.base ?? false}
         onSelect={onSelect}
       />
       {scopes.map((sid) => {
-        const { label, icon } = resolveScope(sid, apps);
+        const { label, icon } = scopeDisplay(sid);
         return (
           <ScopeTab
             key={sid}
             label={label}
             icon={icon}
             scopeId={sid}
-            storePath={storePath}
             active={scopeId === sid}
+            hasConflict={conflict?.scopeIds.includes(sid) ?? false}
             onSelect={onSelect}
           />
         );
@@ -97,30 +87,25 @@ export function ScopeTabs({
   );
 }
 
-// One tab. Subscribes this descriptor's per-path conflict for the tab's scope so
-// it can show a warning dot when THIS descriptor is in conflict for that scope. N
-// is small (one sub per customized app), so per-tab subscriptions are fine.
+// One tab. Its warning dot comes from the descriptor's slice of the ONE aggregate
+// conflict map the nav badge also reads, rather than from a per-tab subscription:
+// the tab a badge points at and the badge itself then cannot disagree, and the
+// tab strip costs one subscription instead of one per customized app.
 function ScopeTab({
   label,
   icon,
   scopeId,
-  storePath,
   active,
+  hasConflict,
   onSelect,
 }: {
   label: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   scopeId: string | undefined;
-  storePath: string;
   active: boolean;
+  hasConflict: boolean;
   onSelect: (scopeId: string | undefined) => void;
 }) {
-  const conflictRes = useResource(configV2ConflictResource, {
-    path: storePath,
-    ...(scopeId ? { scopeId } : {}),
-  });
-  const hasConflict = !conflictRes.pending && conflictRes.data !== null;
-
   return (
     <ToggleChip
       active={active}
@@ -128,8 +113,18 @@ function ScopeTab({
       icon={icon}
       onClick={() => onSelect(scopeId)}
     >
-      {label}
-      {hasConflict && <StatusDot colorClass="bg-warning" />}
+      {hasConflict ? (
+        // A chip's children sit in the badge's own text span, so the dot needs a
+        // row of its own to be spaced from the label. Only the conflicting tab
+        // takes it — a plain label keeps ellipsizing the way every other chip's
+        // does.
+        <Inline as="span" gap="2xs">
+          {label}
+          <StatusDot colorClass="bg-warning" />
+        </Inline>
+      ) : (
+        label
+      )}
     </ToggleChip>
   );
 }

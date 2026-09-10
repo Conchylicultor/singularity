@@ -19,8 +19,9 @@ export {
   configV2ScopesSchema,
   configV2ScopesMapSchema,
   configV2ScopesResource,
-  configV2ConflictPathsSchema,
-  configV2ConflictPathsResource,
+  configV2ConflictLocationsSchema,
+  configV2ConflictMapSchema,
+  configV2ConflictMapResource,
   configV2ModifiedCountsSchema,
   configV2ModifiedCountsResource,
 } from "./internal/resource";
@@ -32,7 +33,8 @@ export type {
   ConfigV2Tiers,
   ConfigV2Scopes,
   ConfigV2ScopesMap,
-  ConfigV2ConflictPaths,
+  ConfigV2ConflictLocations,
+  ConfigV2ConflictMap,
   ConfigV2ModifiedCounts,
 } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";

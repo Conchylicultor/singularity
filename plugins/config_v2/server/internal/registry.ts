@@ -27,7 +27,7 @@ import {
   getDescriptorByStorePath,
   getHierarchyPath,
   markRegistryReady,
-  refreshConflictPaths,
+  refreshConflictLocations,
   refreshModifiedCount,
   refreshScopeMembers,
   registerDescriptorPath,
@@ -367,8 +367,8 @@ function notifyTiers(storePath: string, scopeId: string): void {
 // The conflicts loader is keyed by `{ path, scopeId? }`, so notify only this
 // descriptor's path. A scoped change re-notifies only that scope; a BASE change
 // also re-notifies every known un-forked scope of THIS path, which resolves base
-// live (mirrors notifyValues/notifyTiers). refreshConflictPaths then pushes the
-// aggregate conflict-paths set if THIS path's membership flipped — a latency
+// live (mirrors notifyValues/notifyTiers). refreshConflictLocations then pushes the
+// aggregate conflict-locations set if THIS path's membership flipped — a latency
 // optimization only; that resource re-derives from disk on every load.
 function notifyConflicts(storePath: string, scopeId: string): void {
   if (scopeId) {
@@ -381,7 +381,7 @@ function notifyConflicts(storePath: string, scopeId: string): void {
       configV2ConflictServerResource.notify({ path: storePath, scopeId: sid });
     }
   }
-  refreshConflictPaths(storePath);
+  refreshConflictLocations(storePath);
 }
 
 // Fan out every read-resource notify for a (storePath, scopeId) change in one
@@ -480,14 +480,14 @@ export async function initRegistry(): Promise<void> {
 
     // Warm the derived state behind the aggregate resources: the scopes and
     // modified-counts maps their loaders read (so a first load is a memory read,
-    // not a filesystem walk), and — for conflict-paths, whose loader re-derives
+    // not a filesystem walk), and — for conflict-locations, whose loader re-derives
     // from disk — the fingerprint memo plus the published-set snapshot, so the
     // first load is stat-only and the first real change doesn't emit a spurious
     // notify.
     for (const { descriptor, hierarchyPath } of registered) {
       const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
       refreshScopeMembers(storePath);
-      refreshConflictPaths(storePath);
+      refreshConflictLocations(storePath);
       refreshModifiedCount(storePath);
     }
   } finally {

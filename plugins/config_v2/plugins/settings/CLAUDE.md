@@ -91,6 +91,7 @@ contributor that hands a conflict to an agent.
     - `primitives/css/clip.Clip`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
@@ -115,6 +116,7 @@ contributor that hands a conflict to an agent.
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
     - `primitives/overlay/popover.InlinePopover`
+    - `primitives/overlay/tooltip.WithTooltip`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`

@@ -101,18 +101,34 @@ export const configV2ScopesResource = resourceDescriptor<ConfigV2ScopesMap, {}>(
   { resident: true },
 );
 
-// storePaths with a conflict in the base scope OR any app scope. Keyed by `{}`
-// (the whole list). Powers the nav-row warning badge and the rail/sidebar
-// attention dots so a scoped-only conflict is discoverable without opening each
-// descriptor — distinct from configV2ConflictResource, which carries a single
-// descriptor's conflict entry for one scope.
-export const configV2ConflictPathsSchema = z.array(z.string());
-export type ConfigV2ConflictPaths = z.infer<typeof configV2ConflictPathsSchema>;
+// WHERE one descriptor conflicts: its base document, and/or the named app scopes
+// it is customized for. Never a bare boolean — a warning badge that cannot say
+// which scope it is about sends the user to a detail pane that opens on Base and
+// shows nothing, which is exactly the dead end this shape exists to prevent.
+// `base: false` with a non-empty `scopeIds` is the scoped-only case.
+export const configV2ConflictLocationsSchema = z.object({
+  base: z.boolean(),
+  scopeIds: z.array(z.string()),
+});
+export type ConfigV2ConflictLocations = z.infer<
+  typeof configV2ConflictLocationsSchema
+>;
 
-export const configV2ConflictPathsResource = resourceDescriptor<
-  ConfigV2ConflictPaths,
+// storePath → where it conflicts. Only conflicting paths are present, so
+// membership answers "does this row warn?" and the value answers "about what?".
+// Keyed by `{}` (the whole map). Powers the nav-row warning badge, the scope-tab
+// dots and the rail/sidebar attention dots — distinct from
+// configV2ConflictResource, which carries ONE descriptor's conflict entry (the
+// full origin/override documents) for ONE scope.
+export const configV2ConflictMapSchema = z.record(
+  configV2ConflictLocationsSchema,
+);
+export type ConfigV2ConflictMap = z.infer<typeof configV2ConflictMapSchema>;
+
+export const configV2ConflictMapResource = resourceDescriptor<
+  ConfigV2ConflictMap,
   {}
->("config-v2.conflict-paths", configV2ConflictPathsSchema, []);
+>("config-v2.conflict-locations", configV2ConflictMapSchema, {});
 
 // storePaths whose BASE config the USER LAYER has changed, mapped to the count of
 // such fields (only paths with ≥1 are present). Keyed by `{}` (the whole map).

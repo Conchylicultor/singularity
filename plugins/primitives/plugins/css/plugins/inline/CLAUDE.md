@@ -71,6 +71,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `build/build-info`
     - `build/build-status`
     - `build/deployment`
+    - `config_v2/settings`
     - `conversations/all-conversations`
     - `conversations/conversation-preprompt`
     - `conversations/conversation-progress`

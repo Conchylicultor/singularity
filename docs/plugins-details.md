@@ -7605,7 +7605,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `resource.declare` "config-v2.values"
       - `resource.declare` "config-v2.conflicts"
       - `resource.declare` "config-v2.scopes"
-      - `resource.declare` "config-v2.conflict-paths"
+      - `resource.declare` "config-v2.conflict-locations"
       - `resource.declare` "config-v2.modified-counts"
       - `resource.declare` "config-v2.tiers"
     - Uses:
@@ -7641,7 +7641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `setConfigByPath`
       - `watchConfig`
     - Resources:
-      - `config-v2.conflict-paths` (push)
+      - `config-v2.conflict-locations` (push)
       - `config-v2.conflicts` (push)
       - `config-v2.modified-counts` (push)
       - `config-v2.scopes` (push)
@@ -7661,7 +7661,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigProxy`
       - `ConfigSource`
       - `ConfigV2ConflictEntry`
-      - `ConfigV2ConflictPaths`
+      - `ConfigV2ConflictLocations`
+      - `ConfigV2ConflictMap`
       - `ConfigV2Conflicts`
       - `ConfigV2ModifiedCounts`
       - `ConfigV2Scopes`
@@ -7691,8 +7692,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `configFileOwner`
       - `configSnapshot`
       - `configV2ConflictEntrySchema`
-      - `configV2ConflictPathsResource`
-      - `configV2ConflictPathsSchema`
+      - `configV2ConflictLocationsSchema`
+      - `configV2ConflictMapResource`
+      - `configV2ConflictMapSchema`
       - `configV2ConflictResource`
       - `configV2ConflictsSchema`
       - `configV2ModifiedCountsResource`
@@ -7949,6 +7951,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/clip.Clip`
           - `primitives/css/control-panel.ControlPanelPane`
           - `primitives/css/fill.Fill`
+          - `primitives/css/inline.Inline`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -7973,6 +7976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
           - `primitives/overlay/popover.InlinePopover`
+          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/pane.defineRoute`
           - `primitives/pane.Pane`
           - `primitives/pane.PaneChrome`
@@ -22804,6 +22808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `build/build-info`
               - `build/build-status`
               - `build/deployment`
+              - `config_v2/settings`
               - `conversations/all-conversations`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-progress`
@@ -23903,7 +23908,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/loading`
               - `primitives/sync-status`
-        - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
+        - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded inline-block span with a caller-supplied Tailwind color class, so an empty dot keeps its size in running text as well as in a flex row. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
@@ -27439,6 +27444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/primitives/toolbar-control`
               - `apps/workflows/editor`
               - `build`
+              - `config_v2/settings`
               - `conversations/conversation-preprompt`
               - `conversations/conversation-view/allow-monitor`
               - `conversations/conversation-view/dependencies`

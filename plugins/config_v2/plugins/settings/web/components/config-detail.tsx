@@ -28,6 +28,7 @@ import {
 } from "@plugins/config_v2/core";
 import type {
   ConfigV2ConflictEntry,
+  ConfigV2ConflictLocations,
   ConfigV2Tiers,
   ConfigV2Values,
 } from "@plugins/config_v2/core";
@@ -44,7 +45,9 @@ import {
 } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { buildConflictContext } from "../internal/conflict-context";
-import { useConflict } from "../internal/use-conflicts";
+import { conflictScopes } from "../internal/conflict-locations";
+import { useScopeDisplay } from "../internal/scope-label";
+import { useConflict, useConflictLocationsOf } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
 import { ConfigDetailSlots } from "../slots";
 import type { ConfigConflictContext } from "../slots";
@@ -125,6 +128,13 @@ function ConfigDetailInner({
 }) {
   const [scopeId, setScopeId] = useState<string | undefined>(undefined);
 
+  // WHERE this descriptor conflicts — read alongside the selected scope's own
+  // conflict, because the two answer different questions. The banner below the
+  // tabs is the selected scope's; this is every scope's, and it is what turns a
+  // row the nav flagged into a tab the user can actually get to.
+  const conflictLocationsOf = useConflictLocationsOf();
+  const locations = conflictLocationsOf(registration.storePath);
+
   const valuesRes = useResource(configV2Resource, {
     path: registration.storePath,
     ...(scopeId ? { scopeId } : {}),
@@ -142,7 +152,13 @@ function ConfigDetailInner({
       <ScopeTabs
         storePath={registration.storePath}
         scopeId={scopeId}
+        conflict={locations}
         onSelect={setScopeId}
+      />
+      <ConflictElsewhereBanner
+        locations={locations}
+        scopeId={scopeId}
+        onSelectScope={setScopeId}
       />
       {gated.pending ? (
         <Loading />
@@ -160,6 +176,57 @@ function ConfigDetailInner({
         />
       )}
     </Stack>
+  );
+}
+
+// The half of a conflict warning that used to have nowhere to go.
+//
+// A descriptor can conflict under an app scope while its base document is clean.
+// The nav row flags it, the user clicks through — and the detail pane opens on
+// Base, whose banner correctly says nothing. So this says where the conflict
+// actually is, and takes them there. It renders only for scopes OTHER than the
+// selected one: the selected scope's own conflict already has a banner below.
+function ConflictElsewhereBanner({
+  locations,
+  scopeId,
+  onSelectScope,
+}: {
+  locations: ConfigV2ConflictLocations | undefined;
+  scopeId: string | undefined;
+  onSelectScope: (scopeId: string | undefined) => void;
+}) {
+  const scopeDisplay = useScopeDisplay();
+  const elsewhere = locations
+    ? conflictScopes(locations).filter((sid) => sid !== scopeId)
+    : [];
+  if (elsewhere.length === 0) return null;
+
+  return (
+    <Text
+      as="div"
+      variant="body"
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the pointer banner from the fields below (no named margin utility)
+      className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning"
+    >
+      <Stack direction="row" gap="sm" align="center" wrap>
+        <MdWarning className={cn("size-4", rigidClass())} />
+        <Fill as="span">
+          {elsewhere.length === 1
+            ? "This config has an unresolved conflict under another tab"
+            : "This config has unresolved conflicts under other tabs"}
+        </Fill>
+        {elsewhere.map((sid) => (
+          <Button
+            key={sid ?? ""}
+            variant="ghost"
+            onClick={() => onSelectScope(sid)}
+            className={WARNING_ACTION_CLASS}
+          >
+            Go to {scopeDisplay(sid).label}
+          </Button>
+        ))}
+      </Stack>
+    </Text>
   );
 }
 

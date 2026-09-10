@@ -246,19 +246,19 @@ the JSONC layer at all — an agent write there is not revertible by a bytes
 ledger.
 [`research/2026-08-30-global-agent-config-write-revert-ledger.md`](../../research/2026-08-30-global-agent-config-write-revert-ledger.md)
 
-### Derived aggregates (conflict-paths / scopes / modified-counts)
+### Derived aggregates (conflict-locations / scopes / modified-counts)
 
 Three aggregate live resources summarize all ~180 descriptors at once. They are cheap because none of them re-reads every config file per load — but they arrive at that in two *different* ways, and the difference is load-bearing.
 
-**`config-v2.conflict-paths` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives the union over base + every on-disk app scope through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge and the detail banner can't disagree. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `statSync`s, not 3 read+parse+hash. `inode` is what makes it airtight — `jsoncConfigProxy.write` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
+**`config-v2.conflict-locations` — derived from disk, memoized on a file fingerprint.** Its loader is the authority: it re-derives, for every descriptor, WHICH scopes conflict (base and/or each on-disk app scope) through the *same* `derivedDescriptorConflict` memo the per-descriptor `config-v2.conflicts` resource uses, so the nav ⚠ badge, its tooltip, the scope-tab dots and the detail banner can't disagree. It reports scope ids rather than a boolean on purpose: a badge that only knows "somewhere" sends the user to a detail pane that opens on a clean Base and shows nothing. The memo keys `(storePath, scopeId)` on `(inode, mtime-ns, size)` of the file trio (origin / override / ancestor), so an unchanged descriptor costs 3 `statSync`s, not 3 read+parse+hash. `inode` is what makes it airtight — `jsoncConfigProxy.write` renames a temp file into place, so even a byte-length-identical hash restamp changes it.
 
-The memo key comes from **the filesystem, not an event** — deliberately. `refreshConflictPaths` still runs from the watcher path, but only as a *push-latency* optimization (it diffs a "last published" snapshot and notifies on a flip); it is never the value the loader reads, so a missed watcher event can delay a push but can't produce a wrong answer.
+The memo key comes from **the filesystem, not an event** — deliberately. `refreshConflictLocations` still runs from the watcher path, but only as a *push-latency* optimization (it diffs a "last published" snapshot and notifies on a flip); it is never the value the loader reads, so a missed watcher event can delay a push but can't produce a wrong answer.
 
 **`config-v2.modified-counts` — derived from disk, through the same memo.** Its loader sweeps every registered descriptor and counts the BASE fields whose tier is `"user"` (below), so the nav badge and the detail pane can never disagree about what "modified" means. `refreshModifiedCount` survives only as the push path — it diffs a "last published" count and notifies on a flip — and is never the value the loader reads.
 
-**`config-v2.scopes` (storePath→scopeIds) — still an event-fed in-memory map** in `resource.ts`, recomputed per changed descriptor by `refreshScopeMembers` (boot warm-up + `registry.ts`'s notify path). It reads nothing from disk per load — and so **does** go stale on a missed watcher event. Applying the fingerprint-memo treatment above is the intended fix; conflict-paths and modified-counts have had it, this one hasn't.
+**`config-v2.scopes` (storePath→scopeIds) — still an event-fed in-memory map** in `resource.ts`, recomputed per changed descriptor by `refreshScopeMembers` (boot warm-up + `registry.ts`'s notify path). It reads nothing from disk per load — and so **does** go stale on a missed watcher event. Applying the fingerprint-memo treatment above is the intended fix; conflict-locations and modified-counts have had it, this one hasn't.
 
-`config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map. `config-v2.tiers` is keyed the same way and rides the same memo record — as a **lazily computed slot**, because the conflict-paths sweep reads every descriptor's conflict entry and must not start paying to normalize and diff two documents it never looks at.
+`config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map. `config-v2.tiers` is keyed the same way and rides the same memo record — as a **lazily computed slot**, because the conflict-locations sweep reads every descriptor's conflict entry and must not start paying to normalize and diff two documents it never looks at.
 
 ### What "modified" means
 
@@ -298,7 +298,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `resource.declare` "config-v2.values"
     - `resource.declare` "config-v2.conflicts"
     - `resource.declare` "config-v2.scopes"
-    - `resource.declare` "config-v2.conflict-paths"
+    - `resource.declare` "config-v2.conflict-locations"
     - `resource.declare` "config-v2.modified-counts"
     - `resource.declare` "config-v2.tiers"
   - Uses:
@@ -334,7 +334,7 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `setConfigByPath`
     - `watchConfig`
   - Resources:
-    - `config-v2.conflict-paths` (push)
+    - `config-v2.conflict-locations` (push)
     - `config-v2.conflicts` (push)
     - `config-v2.modified-counts` (push)
     - `config-v2.scopes` (push)
@@ -354,7 +354,8 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ConfigProxy`
     - `ConfigSource`
     - `ConfigV2ConflictEntry`
-    - `ConfigV2ConflictPaths`
+    - `ConfigV2ConflictLocations`
+    - `ConfigV2ConflictMap`
     - `ConfigV2Conflicts`
     - `ConfigV2ModifiedCounts`
     - `ConfigV2Scopes`
@@ -384,8 +385,9 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `configFileOwner`
     - `configSnapshot`
     - `configV2ConflictEntrySchema`
-    - `configV2ConflictPathsResource`
-    - `configV2ConflictPathsSchema`
+    - `configV2ConflictLocationsSchema`
+    - `configV2ConflictMapResource`
+    - `configV2ConflictMapSchema`
     - `configV2ConflictResource`
     - `configV2ConflictsSchema`
     - `configV2ModifiedCountsResource`

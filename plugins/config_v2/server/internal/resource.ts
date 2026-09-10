@@ -6,7 +6,7 @@ import {
   configV2ConflictEntrySchema,
   configV2TiersSchema,
   configV2ScopesMapSchema,
-  configV2ConflictPathsSchema,
+  configV2ConflictMapSchema,
   configV2ModifiedCountsSchema,
   hasConflict,
   validationIssues,
@@ -19,7 +19,8 @@ import type {
   ConfigV2ConflictEntry,
   ConfigV2Tiers,
   ConfigV2ScopesMap,
-  ConfigV2ConflictPaths,
+  ConfigV2ConflictLocations,
+  ConfigV2ConflictMap,
   ConfigV2ModifiedCounts,
 } from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
@@ -48,7 +49,7 @@ let configGetter: ConfigGetter | null = null;
 //
 // Being event-fed, it is only as fresh as the events: a config file that changes
 // without producing a watcher callback leaves it stale until the next restart.
-// conflict-paths and modified-counts used to be maintained this way too and no
+// conflict-locations and modified-counts used to be maintained this way too and no
 // longer are — see the fingerprint-memoized derivation below, which is where this
 // one should end up as well.
 
@@ -281,7 +282,7 @@ function fileStamp(path: string): string {
 //
 // `tiers` is a LAZY slot, not a field computed beside `entry`:
 // descriptorHasAnyConflict sweeps every descriptor × scope on every
-// conflict-paths load and reads only `entry`, so it must not start paying to
+// conflict-locations load and reads only `entry`, so it must not start paying to
 // normalize and diff two documents it never looks at.
 interface DerivedTrioState {
   fingerprint: string;
@@ -296,7 +297,7 @@ const conflictMemo = new Map<string, DerivedTrioState>();
 // filesystem.
 //
 // The load-bearing property is WHERE THE KEY COMES FROM: the disk, not an event.
-// The aggregate conflict-paths set used to be maintained purely from watcher
+// The aggregate conflict-locations set used to be maintained purely from watcher
 // callbacks, so any change that produced no CALLBACK left the nav badge wrong
 // until the next restart while the detail pane — which re-derives from disk —
 // said the opposite. config-watcher only calls back for paths some CacheEntry
@@ -388,9 +389,14 @@ export function refreshScopeMembers(storePath: string): void {
   if (changed) configV2ScopesServerResource.notify({});
 }
 
-// Whether a descriptor conflicts in base OR any app scope. Bounded to that one
+// WHERE a descriptor conflicts — its base document and/or the app scopes it is
+// customized for — or null when it conflicts nowhere. Bounded to that one
 // descriptor's files, so it is cheap enough to run both per-change and inside the
 // aggregate sweep.
+//
+// It reports the scope ids rather than a boolean because every surface that
+// paints the warning has to be able to say what it is about: a badge that only
+// knows "somewhere" sends the user to a detail pane opening on a clean Base.
 //
 // Scopes are enumerated straight from the filesystem (discoverScopeIds), NOT from
 // the event-fed scopeMembers map: a derivation founded on the disk must not
@@ -399,57 +405,73 @@ export function refreshScopeMembers(storePath: string): void {
 // the (usually absent) @app dir, and an absent file trio computes to null — so
 // listing a scope that has no files for THIS descriptor costs three stats and
 // answers "no conflict".
-function descriptorHasAnyConflict(storePath: string): boolean {
-  if (derivedDescriptorConflict(storePath) !== null) return true;
+function descriptorConflictLocations(
+  storePath: string,
+): ConfigV2ConflictLocations | null {
+  const base = derivedDescriptorConflict(storePath) !== null;
+  const scopeIds: string[] = [];
   const descriptor = descriptorByPath.get(storePath);
   const hierarchyPath = descriptor && hierarchyByDescriptor.get(descriptor);
-  if (!hierarchyPath) return false;
-  for (const sid of discoverScopeIds(hierarchyPath)) {
-    if (derivedDescriptorConflict(storePath, sid) !== null) return true;
+  if (hierarchyPath) {
+    for (const sid of discoverScopeIds(hierarchyPath)) {
+      if (derivedDescriptorConflict(storePath, sid) !== null)
+        scopeIds.push(sid);
+    }
   }
-  return false;
+  if (!base && scopeIds.length === 0) return null;
+  return { base, scopeIds };
 }
 
-// Union of conflicting storePaths across base + every app scope. Backs the
-// nav-row warning badge and rail/sidebar dots.
+// Every conflicting storePath mapped to where it conflicts (base + app scopes).
+// Backs the nav-row warning badge and its tooltip, the detail pane's
+// conflict-is-in-another-scope banner, the scope-tab dots, and the rail/sidebar
+// attention dots.
 //
 // THE AUTHORITY: derived on every load from the same computeDescriptorConflict
 // (through the same memo) that the per-descriptor `config-v2.conflicts` resource
 // answers the detail-pane banner with, so the badge and the banner cannot
 // disagree by construction. It is a filesystem sweep, but a stat-only one for
 // every descriptor whose files haven't moved since the last derivation.
-export const configV2ConflictPathsServerResource = defineExternalResource<
-  ConfigV2ConflictPaths,
+export const configV2ConflictMapServerResource = defineExternalResource<
+  ConfigV2ConflictMap,
   {}
 >({
-  key: "config-v2.conflict-paths",
+  key: "config-v2.conflict-locations",
   mode: "push",
-  schema: configV2ConflictPathsSchema,
-  loader: whenRegistryReady(() =>
-    [...descriptorByPath.keys()].filter((p) => descriptorHasAnyConflict(p)),
-  ),
+  schema: configV2ConflictMapSchema,
+  loader: whenRegistryReady(() => {
+    const out: ConfigV2ConflictMap = {};
+    for (const storePath of descriptorByPath.keys()) {
+      const locations = descriptorConflictLocations(storePath);
+      if (locations) out[storePath] = locations;
+    }
+    return out;
+  }),
 });
 
-// Set last PUBLISHED to subscribers — change detection for the push path ONLY,
-// never the value any loader reads. (It used to be the value, which is exactly
-// how the badge could get stuck disagreeing with the detail pane.)
-const publishedConflictPaths = new Set<string>();
+// Locations last PUBLISHED to subscribers, serialized — change detection for the
+// push path ONLY, never the value any loader reads. (It used to be the value,
+// which is exactly how the badge could get stuck disagreeing with the detail
+// pane.) Serialized rather than held structurally so "the same conflict moved to
+// another scope" counts as a change the way it reads to the user.
+const publishedConflictLocations = new Map<string, string>();
 
 // Push path: on a watcher callback or an in-process resolution, re-derive THIS
-// descriptor and notify subscribers immediately if its membership flipped, so
+// descriptor and notify subscribers immediately if its locations moved, so
 // fixing a conflict clears the badge without waiting for anything to re-read.
 // Purely a latency optimization now — the loader re-derives from disk on every
 // load regardless, so failing to call this can delay a push but can never leave a
 // wrong value behind. Also called at boot to seed both the memo and this snapshot
 // (so the first real change doesn't emit a spurious notify).
-export function refreshConflictPaths(storePath: string): void {
+export function refreshConflictLocations(storePath: string): void {
   if (!descriptorByPath.has(storePath)) return;
-  const had = publishedConflictPaths.has(storePath);
-  const has = descriptorHasAnyConflict(storePath);
-  if (has === had) return;
-  if (has) publishedConflictPaths.add(storePath);
-  else publishedConflictPaths.delete(storePath);
-  configV2ConflictPathsServerResource.notify({});
+  const locations = descriptorConflictLocations(storePath);
+  const next = locations ? JSON.stringify(locations) : "";
+  const prev = publishedConflictLocations.get(storePath) ?? "";
+  if (next === prev) return;
+  if (next) publishedConflictLocations.set(storePath, next);
+  else publishedConflictLocations.delete(storePath);
+  configV2ConflictMapServerResource.notify({});
 }
 
 // Per-descriptor count of BASE fields the USER LAYER supplied — the fields whose
@@ -475,13 +497,13 @@ function computeModifiedCount(storePath: string): number {
 }
 
 // The whole map, DERIVED ON EVERY LOAD from the fingerprint memo — the same
-// authority-on-disk treatment conflict-paths gets, and for the same reason: the
+// authority-on-disk treatment conflict-locations gets, and for the same reason: the
 // map used to be an event-fed in-memory cache, so a config file that changed
 // without producing a watcher callback left the badge wrong until the next
 // restart. With the memo key taken from the filesystem, a missed event can only
 // delay a push, never produce a wrong answer.
 //
-// Cost is the stat-only sweep conflict-paths already pays on this surface: a
+// Cost is the stat-only sweep conflict-locations already pays on this surface: a
 // descriptor whose files haven't moved is three statSyncs, and only the
 // descriptors that actually have a user override do the diff.
 export const configV2ModifiedCountsServerResource = defineExternalResource<
@@ -502,7 +524,7 @@ export const configV2ModifiedCountsServerResource = defineExternalResource<
 });
 
 // Count last PUBLISHED per path — change detection for the push path ONLY, never
-// the value the loader reads. (Mirrors publishedConflictPaths; it is what stops a
+// the value the loader reads. (Mirrors publishedConflictLocations; it is what stops a
 // write that leaves the count unchanged from pushing the whole map to every
 // subscriber.)
 const publishedModifiedCounts = new Map<string, number>();
