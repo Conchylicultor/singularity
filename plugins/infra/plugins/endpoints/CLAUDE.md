@@ -89,6 +89,7 @@ void fetchEndpoint(submitReport, {}, { body, keepalive: true, report: false });
 
 - `keepalive: true` — RequestInit passthrough so the request survives page unload (crash/analytics beacons).
 - `report: false` — skips endpoint error reporting for that call. Required for the crash beacon so a failing report can't recurse back into the crash pipeline. Defaults to `true`.
+- `retry: { retries, backoffMs, retryOn? }` — opt-in: sends through `fetchWithRetry` (networking primitive), retrying a network error or a 502/503/504 — what a backend restart answers — with exponential backoff; a 4xx is never retried, and the last attempt's response goes through the normal non-2xx handling. Off by default: a retried request can land twice, so use it only for an idempotent call or one the server dedupes (the report beacon — reports dedupe by fingerprint).
 
 ## Global error handling
 
@@ -169,6 +170,19 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 - Description: Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
 - Load-bearing: yes
+- Web:
+  - Uses:
+    - `primitives/networking.fetchWithRetry`
+    - `primitives/networking.FetchWithRetryOptions`
+  - Exports (types): `EndpointErrorInfo`
+  - Exports (values):
+    - `EndpointError`
+    - `endpointErrorSink`
+    - `endpointQueryKey`
+    - `fetchEndpoint`
+    - `getEndpointErrorMessage`
+    - `useEndpoint`
+    - `useEndpointMutation`
 - Core:
   - Uses:
     - `infra/runtime-profiler.chargeWait`
@@ -391,16 +405,6 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `ui/theme-engine/theme-customizer`
     - `ui/tweakcn`
     - `ui/tweakcn/community-browser`
-- Web:
-  - Exports (types): `EndpointErrorInfo`
-  - Exports (values):
-    - `EndpointError`
-    - `endpointErrorSink`
-    - `endpointQueryKey`
-    - `fetchEndpoint`
-    - `getEndpointErrorMessage`
-    - `useEndpoint`
-    - `useEndpointMutation`
 - Server:
   - Exports (values):
     - `HttpError`

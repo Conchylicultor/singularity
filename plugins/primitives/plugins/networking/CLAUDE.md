@@ -81,6 +81,7 @@ in `web/__tests__/` (election + shared-websocket halves of H6) and live-state's
     - `build`
     - `build/build-logs`
     - `debug/logs`
+    - `infra/endpoints`
     - `infra/health`
     - `page/editor`
     - `primitives/live-state`

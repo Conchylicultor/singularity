@@ -2,7 +2,7 @@ import {
   useNotificationsChannelStatuses,
   useWindowResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useStaleFrontend } from "@plugins/build/web";
+import { useReloadAdvice } from "@plugins/build/web";
 import { notificationsResource } from "@plugins/shell/plugins/notifications/web";
 
 export type StatusTone = "ok" | "warning" | "destructive";
@@ -19,6 +19,7 @@ export interface ActionBarStatus {
  * Aggregates the existing "needs attention" signals into a single tone +
  * tooltip for the action bar's collapsed status dot:
  *  - server/central WS disconnected → destructive
+ *  - a plugin failed to load        → destructive (part of the app is missing)
  *  - reconnecting/connecting        → warning (pulsing)
  *  - frontend rebuilt since load    → warning (stale tab)
  *  - unread error/warning notifs    → warning
@@ -26,12 +27,16 @@ export interface ActionBarStatus {
 export function useActionBarStatus(): ActionBarStatus {
   const { worktree, central } = useNotificationsChannelStatuses();
 
-  // Stale-tab detection — the served bundle is no longer the one this tab is
-  // running. The SAME hook the Build button uses: this used to keep its own
-  // weaker detector (remember the first hash seen, warn when it drifts), which
-  // could only ever notice a change that happened while the tab was open — a tab
-  // that loaded an already-stale index.html was invisible to it forever.
-  const { stale: staleTab } = useStaleFrontend();
+  // Does this tab need a reload — the served bundle is no longer the one it is
+  // running, or a plugin failed to load? The SAME hook the Build button's Reload
+  // chip uses, so the dot and the chip cannot disagree. (This used to keep its
+  // own weaker stale detector — remember the first hash seen, warn when it
+  // drifts — which could only ever notice a change that happened while the tab
+  // was open: a tab that loaded an already-stale index.html was invisible to it
+  // forever.)
+  const advice = useReloadAdvice();
+  const staleTab =
+    advice.kind === "stale" || (advice.kind === "broken" && advice.stale);
 
   // Unread error/warning notifications (same filter as the bell button).
   // No hook calls after this point, so we can gate with an early return
@@ -56,6 +61,11 @@ export function useActionBarStatus(): ActionBarStatus {
     tone = "warning";
     pulse = true;
     reasons.push("Reconnecting…");
+  }
+
+  if (advice.kind === "broken") {
+    tone = "destructive";
+    reasons.push("Part of the app didn't load — reload to fix");
   }
 
   if (staleTab) {

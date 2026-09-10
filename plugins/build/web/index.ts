@@ -13,6 +13,8 @@ import { BuildDetail } from "./slots";
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
 export { useStaleFrontend } from "./hooks/use-stale-frontend";
+export { useReloadAdvice } from "./hooks/use-reload-advice";
+export type { ReloadAdvice } from "./hooks/use-reload-advice";
 
 export default {
   collapsed: true,

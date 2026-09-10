@@ -230,7 +230,7 @@ export interface ViewportEscapeFault {
 /**
  * Where a viewport-escape fault goes in production. A domain plugin
  * (`reports/viewport-escape`) registers the mapping to a filed report; with
- * nothing registered `emit` is a no-op, which is what keeps this primitive
+ * nothing registered `emit` only holds a bounded backlog, which is what keeps this primitive
  * usable in a test harness — and is exactly why the app composition MUST carry
  * a collector.
  */

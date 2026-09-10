@@ -9,8 +9,8 @@ import type { ViewportEscapePayload } from "@plugins/reports/plugins/viewport-es
 // mapping from that body to a `kind: "viewport-escape"` report — the same
 // inversion crash uses for error-boundary's boundaryReportSink. Renders nothing.
 //
-// Until this existed the sink had NO consumer, and `defineReportSink` is a
-// silent no-op until something registers. The auditor throws in dev, so during
+// Until this existed the sink had NO consumer, and a `defineReportSink` that
+// nothing registers never delivers (it only holds its first reports). The auditor throws in dev, so during
 // development it is loud; in production every fault it found was emitted into
 // nothing. That is precisely backwards — a clipped fullscreen or a rail painting
 // over the app is exactly the kind of "it looks almost right" bug that only ever

@@ -27,7 +27,8 @@ primitive may never import `reports`, so `ViewportEscapeCollector` (mounted via
 uses for `error-boundary`'s `boundaryReportSink`.
 
 **Until this plugin existed, nothing registered the sink at all**, and
-`defineReportSink` is a silent no-op until something does. The auditor throws
+a `defineReportSink` that nothing registers never delivers — it only holds
+its first reports for a handler that never comes. The auditor throws
 under `import.meta.env.DEV`, so the fault was loud in development and dropped on
 the floor everywhere else — precisely backwards for a bug whose whole character
 is that it only shows up on someone else's machine

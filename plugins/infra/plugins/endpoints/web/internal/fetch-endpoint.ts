@@ -1,3 +1,7 @@
+import {
+  fetchWithRetry,
+  type FetchWithRetryOptions,
+} from "@plugins/primitives/plugins/networking/web";
 import type { EndpointDef } from "../../core/define-endpoint";
 import { extractMethod, interpolatePath } from "../../core/route-params";
 import { endpointErrorSink } from "./error-reporter";
@@ -38,6 +42,15 @@ type FetchOpts<TBody, TQuery> = {
   keepalive?: boolean;
   /** Default true. `false` skips endpointErrorSink.emit (e.g. the crash beacon). */
   report?: boolean;
+  /**
+   * Opt-in: send through `fetchWithRetry` — bounded exponential backoff over a
+   * network error or a `retryOn` status (default 502/503/504, what a backend
+   * restart answers; a 4xx is never retried by default). The final attempt's
+   * response goes through the usual non-2xx handling below. Off by
+   * default: a retried request can land twice, so only an idempotent call (or
+   * one the server dedupes) should ask for it.
+   */
+  retry?: FetchWithRetryOptions;
   // `[T] extends [void]` (tuple-wrapped) keeps the conditional non-distributive
   // so a union body type (e.g. a discriminated `BlockOp`) stays one `body: TBody`
   // requirement instead of distributing into `{body: A} | {body: B} | …`, which
@@ -95,13 +108,16 @@ export async function fetchEndpoint<
     if (enc.contentType) headers["Content-Type"] = enc.contentType;
   }
 
-  const res = await fetch(url, {
+  const init: RequestInit = {
     method,
     headers,
     body,
     signal: opts?.signal,
     keepalive: opts?.keepalive,
-  });
+  };
+  const res = opts?.retry
+    ? await fetchWithRetry(url, init, opts.retry)
+    : await fetch(url, init);
 
   if (!res.ok) {
     // Read the body ONCE, as text, then upgrade to JSON if it parses.
@@ -122,7 +138,11 @@ export async function fetchEndpoint<
       }
     }
     if (opts?.report !== false) {
-      endpointErrorSink.emit({ route: endpoint.route, status: res.status, body: errorBody });
+      endpointErrorSink.emit({
+        route: endpoint.route,
+        status: res.status,
+        body: errorBody,
+      });
     }
     throw new EndpointError(res.status, errorBody);
   }

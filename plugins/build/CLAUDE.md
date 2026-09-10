@@ -207,6 +207,7 @@ The two other edges of the same argument:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
+    - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
@@ -235,10 +236,12 @@ The two other edges of the same argument:
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`
+  - Exports (types): `ReloadAdvice`
   - Exports (values):
     - `buildDetailPane`
     - `BuildDetailSlots`
     - `buildPane`
+    - `useReloadAdvice`
     - `useStaleFrontend`
 - Server:
   - Contributes:

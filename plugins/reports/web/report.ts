@@ -33,11 +33,21 @@ export interface ReportContext {
   taskId: string | null;
 }
 
+// Retry budget for one report: 6 retries sleeping 0.5, 1, 2, 4, 8, 16 s
+// (backoffMs * 2^attempt, ±15% jitter) — about 31.5 s across 7 attempts, enough
+// to outlast a backend hot restart or a host-overload stall. Only a network
+// error or a 502/503/504 is retried; a 4xx is the server rejecting the report
+// and is final. A retry after a lost response cannot duplicate a row: reports
+// dedupe by fingerprint, so a second landing only bumps the existing row's count.
+const REPORT_RETRY = { retries: 6, backoffMs: 500 };
+
 // POST to /api/reports via the typed endpoint. Never throws: we're in an error
 // path already. `keepalive: true` lets the request survive page unload.
 // `report: false` stops fetchEndpoint from invoking the error-reporter, which
 // would recurse (a failing report beacon must not file a report about itself).
-// Returns null if the request fails or was discarded during unload.
+// Returns null if every attempt failed (warned to the console, so a report the
+// server never received still leaves a trace) or the request was discarded
+// during unload.
 export async function report(
   body: ClientReportBody,
 ): Promise<ReportResult | null> {
@@ -56,10 +66,14 @@ export async function report(
     return await fetchEndpoint(
       submitReport,
       {},
-      { body: stamped, keepalive: true, report: false },
+      { body: stamped, keepalive: true, report: false, retry: REPORT_RETRY },
     );
-    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself
-  } catch {
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself. The failure is not silent: it is warned below, after the retries above ran out
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    console.warn(
+      `[reports] report not delivered (${body.kind}/${body.source}): ${body.message ?? "(no message)"} — ${cause}`,
+    );
     return null;
   }
 }

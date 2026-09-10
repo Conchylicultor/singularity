@@ -69,7 +69,7 @@ fixed box — a `position: fixed` element is its own stacking context, so an
 inclusive walk would report every overlay against itself.
 
 Both faults report to `viewportEscapeReportSink` and then throw under
-`import.meta.env.DEV`. The sink is a no-op until something registers it;
+`import.meta.env.DEV`. The sink holds its first reports until something registers it;
 `plugins/reports/plugins/viewport-escape` is the consumer that files them as
 reports, and an app composition without it drops every production fault.
 

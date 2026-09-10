@@ -1,4 +1,4 @@
-import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import type { HoldClass } from "../../core/hold";
 
 /**
@@ -84,4 +84,4 @@ export interface JobDeadlineEvent {
  * (`false`) from "a consumer owns it". The first two both fall back to
  * `reportServerError`, so the abort can never be silent.
  */
-export const jobDeadlineSink = defineReportSink<JobDeadlineEvent, boolean>();
+export const jobDeadlineSink = defineRequestSink<JobDeadlineEvent, boolean>();

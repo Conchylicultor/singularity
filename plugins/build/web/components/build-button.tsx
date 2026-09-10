@@ -8,9 +8,8 @@ import {
   useResource,
   useNotificationsChannelStatuses,
 } from "@plugins/primitives/plugins/live-state/web";
-import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
+import { MdOpenInFull, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
-import { WithTooltip } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
@@ -22,7 +21,8 @@ import {
   isMainCompositionBuild,
   type BuildRun,
 } from "../../shared";
-import { useStaleFrontend } from "../hooks/use-stale-frontend";
+import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
+import { ReloadChip } from "./reload-chip";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -31,13 +31,13 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 function BuildButtonInner({
   open,
   setOpen,
-  staleTab,
+  advice,
   wsStatus,
   historyData,
 }: {
   open: boolean;
   setOpen: (v: boolean) => void;
-  staleTab: boolean;
+  advice: ReloadAdvice;
   wsStatus: string;
   historyData: BuildRun[];
 }) {
@@ -46,7 +46,14 @@ function BuildButtonInner({
   // Only a real verdict turns the toolbar red: a superseded / interrupted /
   // externally-killed run reports no defect, so it must not read "Build failed".
   const failed = latestRun != null && buildStatusOf(latestRun) === "failed";
+  const staleTab =
+    advice.kind === "stale" || (advice.kind === "broken" && advice.stale);
 
+  // The label and the Reload chip answer different questions. The label is
+  // about the SERVER (what the build is doing); the chip is about THIS TAB
+  // (whether it needs a reload), so a plugin that failed to load mid-build still
+  // shows the red chip beside "Building…".
+  //
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.
   const status: "idle" | "building" | "restarting" | "updated" | "failed" =
@@ -88,6 +95,7 @@ function BuildButtonInner({
         building,
         wsStatus,
         staleTab,
+        advice: advice.kind,
         targets: targetsLabel,
         finishedAt: latestRun?.finishedAt,
       }),
@@ -97,6 +105,7 @@ function BuildButtonInner({
     building,
     wsStatus,
     staleTab,
+    advice.kind,
     targetsLabel,
     latestRun?.finishedAt,
   ]);
@@ -113,23 +122,7 @@ function BuildButtonInner({
           {spinning && <Spinner spinning className="size-4" />}
           {status === "idle" && <MdBuild className="size-4" />}
           {label}
-          {status === "updated" && (
-            <WithTooltip content="Server was rebuilt — click to reload this tab">
-              <span
-                role="button"
-                tabIndex={0}
-                // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- nested interactive chip inside the build trigger button (a real button can't nest inside the Button trigger); inline-flex row + ml-0.5 inline offset from preceding button label, no flex parent to own a gap
-                className="ml-0.5 inline-flex items-center gap-2xs rounded-md bg-info/15 px-xs py-2xs text-label text-info hover:bg-info/25"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.reload();
-                }}
-              >
-                <MdRefresh className="size-3" />
-                Reload
-              </span>
-            </WithTooltip>
-          )}
+          <ReloadChip advice={advice} />
         </Button>
       }
       align="end"
@@ -173,8 +166,8 @@ function BuildButtonInner({
 export function BuildButton() {
   const [open, setOpen] = useState(false);
 
-  // --- Stale-tab detection (baked build id vs server's current build id) ---
-  const { stale: staleTab } = useStaleFrontend();
+  // --- Does this tab need a reload? (stale bundle, or a plugin failed to load) ---
+  const advice = useReloadAdvice();
 
   // --- Worktree live-state channel status (backend liveness) ---
   // During a build the `./singularity build` process restarts this very backend,
@@ -187,11 +180,13 @@ export function BuildButton() {
 
   // Render a neutral "Builds" button while the history resource is still loading —
   // no fake "idle" status and no misleading useEffect trace before data arrives.
+  // The Reload chip does not wait for it: it is about this tab, not the builds.
   if (historyResult.pending) {
     return (
       <Button variant="outline">
         <MdBuild className="size-4" />
         Builds
+        <ReloadChip advice={advice} />
       </Button>
     );
   }
@@ -200,7 +195,7 @@ export function BuildButton() {
     <BuildButtonInner
       open={open}
       setOpen={setOpen}
-      staleTab={staleTab}
+      advice={advice}
       wsStatus={wsStatus}
       historyData={historyResult.data}
     />

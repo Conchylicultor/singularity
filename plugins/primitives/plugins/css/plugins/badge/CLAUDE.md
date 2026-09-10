@@ -78,6 +78,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `backup/runs-arm`
+    - `build`
     - `build/build-info`
     - `build/build-status`
     - `build/deployment`

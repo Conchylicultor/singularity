@@ -27,6 +27,7 @@ import {
   compositionFleetSource,
   runWebArtifactsPipeline,
 } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
+import { carryForwardServedEntries } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/cli";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   flattenManifest,
@@ -1114,6 +1115,22 @@ export async function buildAndPublishWebDist(
   // by the browser, which cannot tell a worktree namespace from a composition
   // or a release preview.
   if (opts.experimental) stampExperimentalMarker(stagingPath);
+
+  // A tab loaded from an earlier build still fetches THAT build's addresses
+  // (lazily — the deferred plugin tier, fonts), so a served dist keeps every
+  // address the live one serves while the shared cache still holds it. Must run
+  // before the swap: `livePath` still resolves to the previous release here. A
+  // release is served by nobody and never carries.
+  if (opts.target.kind === "served") {
+    const carried = carryForwardServedEntries({
+      liveDir: livePath,
+      stagingDir: stagingPath,
+    });
+    hooks.log(
+      `Carried forward from the previous dist: ${carried.artifactsCarried.length} artifacts, ` +
+        `${carried.assetsCarried.length} assets (${carried.artifactsDropped.length} dropped, pruned from the cache)`,
+    );
+  }
 
   // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap — see
   // ./dist-publish.ts for the mechanics (this supersedes the earlier

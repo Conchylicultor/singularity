@@ -1,4 +1,4 @@
-import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
+import { defineRequestSink } from "@plugins/primitives/plugins/report-sink/core";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 
 export interface BoundaryErrorReport {
@@ -22,7 +22,7 @@ export interface BoundaryErrorReport {
 // shape — that's the contract between the reporter-owner and action contributors.
 // emit() returns the handler's Promise (or sync value) so the boundary can await
 // the resolved context; it swallows a throw since it runs on the error path.
-export const boundaryReportSink = defineReportSink<
+export const boundaryReportSink = defineRequestSink<
   BoundaryErrorReport,
   Promise<unknown> | unknown | void
 >();

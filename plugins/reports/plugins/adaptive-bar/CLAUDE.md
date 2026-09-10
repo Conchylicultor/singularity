@@ -92,7 +92,8 @@ primitive may never import `reports`, so `AdaptiveBarCollector` (mounted via
 for `error-boundary`'s `boundaryReportSink`.
 
 **Until this plugin existed, nothing registered the sink at all**, and
-`defineReportSink` is a silent no-op until something does. Every adaptive-bar
+a `defineReportSink` that nothing registers never delivers — it only holds
+its first reports for a handler that never comes. Every adaptive-bar
 fault in production was dropped while the primitive's docs promised a filed
 report — which is how a fit-vs-layout disagreement took the whole Debug → Layout
 Lab pane down without one row appearing anywhere

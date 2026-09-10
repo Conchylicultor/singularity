@@ -32,27 +32,59 @@ export interface PluginLoadReport {
 }
 
 // Soft-reporter slot mapping a plugin-load failure to a filed report. The reports
-// plugin registers the handler; emit() is a no-op until then and never throws
-// (it runs on the boot error path). Kept here — not wired to the `report-sink`
-// primitive — on purpose: web-sdk is the base framework layer and must not depend
-// on a `primitives/` plugin, and `report-sink`'s own web barrel imports web-sdk,
-// so importing its core would form a plugin-level import cycle. This is the same
-// tiny never-throw contract, single-sourced for this one base-layer sink.
+// plugin registers the handler; emit() never throws (it runs on the boot error
+// path). Kept here — not wired to the `report-sink` primitive — on purpose:
+// web-sdk is the base framework layer and must not depend on a `primitives/`
+// plugin, and `report-sink`'s own web barrel imports web-sdk, so importing its
+// core would form a plugin-level import cycle. This is the same contract as
+// `defineReportSink`, restated for this one base-layer sink — keep the two alike.
+//
+// A failure emitted before the handler registers is HELD, not dropped: App.tsx
+// emits the core-stage failures right after its first setState, before the
+// reporter's mount effect has run. The next register(fn) replays them in order.
+// register(null) discards what is held. Bounded to the FIRST 100 (the first
+// failures are the cause, the rest their cascade); later ones are dropped with
+// one warning per overflow.
+const PLUGIN_LOAD_HOLD_CAP = 100;
+
 export const pluginLoadReportSink: {
   register(fn: ((body: PluginLoadReport) => void) | null): void;
   emit(body: PluginLoadReport): void;
 } = (() => {
   let handler: ((body: PluginLoadReport) => void) | null = null;
+  let held: PluginLoadReport[] = [];
+  let overflowWarned = false;
+
+  function deliver(
+    fn: (body: PluginLoadReport) => void,
+    body: PluginLoadReport,
+  ): void {
+    try {
+      fn(body);
+      // eslint-disable-next-line promise-safety/no-bare-catch -- reporting must never throw on the boot error path; a throw from the registered handler is swallowed here
+    } catch {
+      // ignore
+    }
+  }
+
   return {
     register(fn) {
       handler = fn;
+      const pending = held;
+      held = [];
+      overflowWarned = false;
+      if (fn) for (const body of pending) deliver(fn, body);
     },
     emit(body) {
-      try {
-        handler?.(body);
-        // eslint-disable-next-line promise-safety/no-bare-catch -- reporting must never throw on the boot error path; a throw from the registered handler is swallowed here
-      } catch {
-        // ignore
+      if (handler) {
+        deliver(handler, body);
+      } else if (held.length < PLUGIN_LOAD_HOLD_CAP) {
+        held.push(body);
+      } else if (!overflowWarned) {
+        overflowWarned = true;
+        console.warn(
+          `[plugin-load] ${PLUGIN_LOAD_HOLD_CAP} load failures held with no reporter registered; dropping newer ones until one registers`,
+        );
       }
     },
   };
@@ -74,8 +106,13 @@ let failedPluginPaths: Set<string> = new Set();
 // A fresh snapshot object is minted on every change so `useSyncExternalStore`'s
 // referential comparison detects it; between changes the SAME reference is
 // returned (required — a new object each getSnapshot would loop forever).
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the plugin registry loads ONCE per page at the App root (the single writer), so which deferred plugins have loaded is a page-wide fact shared identically by every keep-alive/desktop surface mount — a per-surface scoped store would be semantically wrong (each surface would track its own load state for the one shared registry).
-let snapshot: DeferredLoadState = { loadedPluginIds, deferredComplete, failedPluginPaths };
+/* eslint-disable scoped-store/no-module-mutable-store -- page-global by design: the plugin registry loads ONCE per page at the App root (the single writer), so which deferred plugins have loaded is a page-wide fact shared identically by every keep-alive/desktop surface mount — a per-surface scoped store would be semantically wrong (each surface would track its own load state for the one shared registry). */
+let snapshot: DeferredLoadState = {
+  loadedPluginIds,
+  deferredComplete,
+  failedPluginPaths,
+};
+/* eslint-enable scoped-store/no-module-mutable-store */
 
 const listeners = new Set<() => void>();
 

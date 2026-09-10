@@ -104,7 +104,7 @@ export interface AdaptiveBarFault {
 
 /**
  * Where a fault goes in production. `reports/adaptive-bar` registers the mapping
- * to a filed report; with nothing registered, `emit` is a no-op — which is
+ * to a filed report; with nothing registered, `emit` only holds a bounded backlog — which is
  * correct for a primitive that must stay usable in a test harness, a fixture
  * page and a standalone story, and is exactly why the app composition MUST
  * carry a collector. It did not, so every fault below was silently dropped in

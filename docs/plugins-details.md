@@ -6542,6 +6542,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/app-shell.sidebarNavItem`
+      - `primitives/css/badge.Badge`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
@@ -6570,10 +6571,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
+    - Exports (types): `ReloadAdvice`
     - Exports (values):
       - `buildDetailPane`
       - `BuildDetailSlots`
       - `buildPane`
+      - `useReloadAdvice`
       - `useStaleFrontend`
   - Server:
     - Contributes:
@@ -14865,6 +14868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/op-runtime.writeBuildLogs`
               - `framework/cli/op-runtime.writeBuildProfile`
               - `framework/cli/op-runtime.writeBuildReceipt`
+              - `framework/tooling/web-artifacts.carryForwardServedEntries`
         - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
@@ -15823,6 +15827,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `runWebArtifactsPipeline`
               - `sha256Hex`
               - `SHARED_ROOT`
+          - Cross-plugin:
+            - Imported by: `framework/cli/build`
+          - Cli:
+            - Exports (types): `CarryForwardResult`
+            - Exports (values): `carryForwardServedEntries`
     - **`web-core`**
       - Web:
         - Uses:
@@ -16226,6 +16235,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/sources/midi/folders`
           - `stats/cost`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+      - Web:
+        - Uses:
+          - `primitives/networking.fetchWithRetry`
+          - `primitives/networking.FetchWithRetryOptions`
+        - Exports (types): `EndpointErrorInfo`
+        - Exports (values):
+          - `EndpointError`
+          - `endpointErrorSink`
+          - `endpointQueryKey`
+          - `fetchEndpoint`
+          - `getEndpointErrorMessage`
+          - `useEndpoint`
+          - `useEndpointMutation`
       - Core:
         - Uses:
           - `infra/runtime-profiler.chargeWait`
@@ -16448,16 +16470,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine/theme-customizer`
           - `ui/tweakcn`
           - `ui/tweakcn/community-browser`
-      - Web:
-        - Exports (types): `EndpointErrorInfo`
-        - Exports (values):
-          - `EndpointError`
-          - `endpointErrorSink`
-          - `endpointQueryKey`
-          - `fetchEndpoint`
-          - `getEndpointErrorMessage`
-          - `useEndpoint`
-          - `useEndpointMutation`
       - Server:
         - Exports (values):
           - `HttpError`
@@ -21670,6 +21682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup/runs-arm`
+              - `build`
               - `build/build-info`
               - `build/build-status`
               - `build/deployment`
@@ -26716,6 +26729,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `build/build-logs`
           - `debug/logs`
+          - `infra/endpoints`
           - `infra/health`
           - `page/editor`
           - `primitives/live-state`
@@ -27574,10 +27588,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `formatRelativeTime`
           - `RelativeTime`
-    - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic defineReportSink() factory lives in ./core so both web and server can import it. emit() never throws — it is called on error paths. The single-sourced idiom behind the boundary/endpoint/wedge reporters.
+    - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Core:
-        - Exports (types): `ReportSink`
-        - Exports (values): `defineReportSink`
+        - Exports (types):
+          - `ReportSink`
+          - `RequestSink`
+        - Exports (values):
+          - `defineReportSink`
+          - `defineRequestSink`
     - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
       - Web:
         - Uses:
@@ -29613,7 +29631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.getSurfaceMode`
           - `apps-core/tabs.setSurfaceMode`
           - `apps-core/tabs.useSurfaceMode`
-          - `build.useStaleFrontend`
+          - `build.useReloadAdvice`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `primitives/css/center.Center`

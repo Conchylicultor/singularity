@@ -9,8 +9,8 @@ import type { AdaptiveBarPayload } from "@plugins/reports/plugins/adaptive-bar/c
 // `kind: "adaptive-bar"` report — exactly the inversion crash uses for
 // error-boundary's boundaryReportSink. Renders nothing.
 //
-// Until this existed the sink had NO consumer, and `defineReportSink` is a
-// silent no-op until something registers: every adaptive-bar layout fault in
+// Until this existed the sink had NO consumer, and a `defineReportSink` that
+// nothing registers never delivers (it only holds its first reports): every adaptive-bar layout fault in
 // production was dropped on the floor, while the primitive's own docs promised a
 // filed report. That is how a fit-vs-layout disagreement was able to take the
 // whole Debug → Layout Lab pane down without a single row appearing anywhere.

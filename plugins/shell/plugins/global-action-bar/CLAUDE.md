@@ -2,7 +2,8 @@
 
 Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
-app. Collapsed it's a status glyph (aggregating WS connectivity, stale-tab, and
+app. Collapsed it's a status glyph (aggregating WS connectivity, reload-needed
+— stale tab or failed plugin load, via `useReloadAdvice` — and
 unread-notification signals) that expands on hover; a pin button sticks it
 expanded inline, persisted in localStorage. Pinned is the default, so a fresh
 origin (every new worktree's `<wt>.localhost:9000`) shows the docked strip
@@ -30,7 +31,7 @@ tab bar, which an embed does not paint.
     - `apps-core/tabs.getSurfaceMode`
     - `apps-core/tabs.setSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
-    - `build.useStaleFrontend`
+    - `build.useReloadAdvice`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `primitives/css/center.Center`

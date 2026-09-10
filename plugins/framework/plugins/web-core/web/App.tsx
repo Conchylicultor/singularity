@@ -113,8 +113,11 @@ function resolveActiveAppPrefix(
 }
 
 // Publish a batch's load failures on the deferred-load signal (so consumers can
-// distinguish "plugin chunk failed" from "not resolvable yet") and fire one
-// report per failure (the reports plugin files a crash task). No-op on success.
+// distinguish "plugin chunk failed" from "not resolvable yet", and the Build
+// button's Reload chip can turn red) and fire one report per failure (the
+// reports plugin files a crash task). Called for BOTH stages — whether a failure
+// also gets the boot banner is decided by which state it lands in, not here.
+// No-op on success.
 function recordErrors(errors: PluginLoadError[]): void {
   if (errors.length === 0) return;
   markDeferredPluginsFailed(errors.map((e) => e.pluginPath));
@@ -145,7 +148,12 @@ function RootRenderer() {
 
 interface LoadedState {
   plugins: LoadedPlugin[];
-  errors: PluginLoadError[];
+  // Core-stage (eager) load errors ONLY — set once from the eager result and
+  // never appended. Those broke something that painted before the user could do
+  // anything, so they get the explicit banner. A deferred failure never lands
+  // here: it is published by `recordErrors` alone, where the Build button's
+  // Reload chip and the app's own "Couldn't load" pane pick it up.
+  coreErrors: PluginLoadError[];
 }
 
 export default function App() {
@@ -157,21 +165,16 @@ export default function App() {
     // Append a freshly-loaded batch to the live state with a NEW array reference
     // so PluginProvider's useMemo re-derives and registers only the newcomers
     // (runRegisterPhase is idempotent via its `registered` WeakSet), then publish
-    // the loaded ids on the deferred-load signal for the layout host.
-    const appendPlugins = (
-      plugins: LoadedPlugin[],
-      errors: PluginLoadError[],
-    ) => {
+    // the loaded ids on the deferred-load signal for the layout host. Takes no
+    // errors on purpose: a deferred batch's failures have no way into the
+    // banner's state.
+    const appendPlugins = (plugins: LoadedPlugin[]) => {
       setState((prev) =>
         prev
-          ? {
-              plugins: [...prev.plugins, ...plugins],
-              errors: [...prev.errors, ...errors],
-            }
-          : { plugins, errors },
+          ? { ...prev, plugins: [...prev.plugins, ...plugins] }
+          : { plugins, coreErrors: [] },
       );
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
-      recordErrors(errors);
     };
 
     const loadDeferredBatch = async (batch: WebEntry[]): Promise<void> => {
@@ -185,7 +188,8 @@ export default function App() {
       // path so hydration lands before the slot re-render.
       await runBootTasks(plugins);
       if (cancelled) return;
-      appendPlugins(plugins, errors);
+      appendPlugins(plugins);
+      recordErrors(errors);
     };
 
     void (async () => {
@@ -217,7 +221,10 @@ export default function App() {
       endBoot();
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
-      setState({ plugins: eagerResult.plugins, errors: eagerResult.errors });
+      setState({
+        plugins: eagerResult.plugins,
+        coreErrors: eagerResult.errors,
+      });
       recordErrors(eagerResult.errors);
 
       // Layer 3 — deferred tier, AFTER first paint (never blocks chrome).
@@ -252,7 +259,9 @@ export default function App() {
 
   return (
     <>
-      {state.errors.length > 0 && <PluginLoadErrors errors={state.errors} />}
+      {state.coreErrors.length > 0 && (
+        <PluginLoadErrors errors={state.coreErrors} />
+      )}
       <NotificationsProvider>
         <PluginProvider plugins={state.plugins}>
           <RootRenderer />
