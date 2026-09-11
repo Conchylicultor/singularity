@@ -3354,6 +3354,15 @@
       "name": "@singularity/plugin-page-audio",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/block-text-write": {
+      "name": "@singularity/plugin-page-block-text-write",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/link": "^0.44.0",
+        "lexical": "^0.44.0",
+        "yjs": "^13.6.20",
+      },
+    },
     "plugins/page/plugins/bookmark": {
       "name": "@singularity/plugin-page-bookmark",
       "version": "0.0.1",
@@ -3494,11 +3503,6 @@
     "plugins/page/plugins/markdown-apply": {
       "name": "@singularity/plugin-page-markdown-apply",
       "version": "0.0.1",
-      "dependencies": {
-        "@lexical/link": "^0.44.0",
-        "lexical": "^0.44.0",
-        "yjs": "^13.6.20",
-      },
     },
     "plugins/page/plugins/math": {
       "name": "@singularity/plugin-page-math",
@@ -7473,6 +7477,8 @@
     "@singularity/plugin-page-attachment-block": ["@singularity/plugin-page-attachment-block@workspace:plugins/page/plugins/attachment-block"],
 
     "@singularity/plugin-page-audio": ["@singularity/plugin-page-audio@workspace:plugins/page/plugins/audio"],
+
+    "@singularity/plugin-page-block-text-write": ["@singularity/plugin-page-block-text-write@workspace:plugins/page/plugins/block-text-write"],
 
     "@singularity/plugin-page-bookmark": ["@singularity/plugin-page-bookmark@workspace:plugins/page/plugins/bookmark"],
 

@@ -8,9 +8,8 @@ import {
   parseMarkdownToForest,
   plainOf,
   runsOfNode,
-  type Block,
-  type BlockUpdate,
 } from "@plugins/page/plugins/editor/core";
+import { writeBlockTexts } from "@plugins/page/plugins/block-text-write/server";
 import {
   documentOrderRows,
   pageTitleBanner,
@@ -22,7 +21,6 @@ import {
 } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
 import { loadBlockScope } from "./read";
-import { writeBlockText } from "./block-doc-text";
 
 /**
  * Apply an edited markdown document onto an existing block's subtree — the write
@@ -47,24 +45,13 @@ import { writeBlockText } from "./block-doc-text";
  *     over the page's forest (which also fires `notifyStructuralChange`). It is
  *     atomic, and it is THE sanctioned forest write; there is no second route
  *     into `page_blocks`.
- *  2. **Text** — per surviving block, AFTER that commit. After, not before:
+ *  2. **Text** — the plan's `textEdits`, AFTER that commit, through
+ *     `writeBlockTexts` (`page/block-text-write`): every doc first, then the
+ *     rows' `data.text` projection as one patch. After, not before:
  *     `page_block_docs.block_id` is an FK onto `page_blocks.id`, so a created
- *     block has no row to hang a doc off until the patch lands, and a deleted
- *     block's doc has already FK-cascaded away by then. Within a block, the DOC
- *     is written before the ROW, because `page_blocks.data.text` is a
- *     PROJECTION of the doc — a row write is downstream of it, never the other
- *     way round.
- *
- * The row projections are then batched into ONE final patch. Every doc write
- * still precedes every row write, so the ordering above holds; batching only
- * collapses N transactions into one.
- *
- * **The projection is not optional.** `useTextProjection` is client-side and
- * needs a MOUNTED editor. Write a doc for a page nobody has open and `data.text`
- * would stay stale forever — and search, backlinks, version history and
- * `read-only-view` all read that column. The applier knows the exact new runs,
- * so it writes the same value a mounted client eventually would; a later client
- * flush is then an empty diff rather than a fight.
+ *     block has no row to hang a doc off until the patch lands. The ordering
+ *     inside the text step, and why the projection is not optional, are that
+ *     plugin's to state — see its CLAUDE.md.
  *
  * ---------------------------------------------------------------------------
  * Failure: idempotence IS the recovery story
@@ -75,7 +62,8 @@ import { writeBlockText } from "./block-doc-text";
  * recoverable rather than corrupt because **the plan is a pure function of the
  * CURRENT stored state**: re-running the same apply converges — a block whose
  * text already landed matches on the way in and emits nothing, and
- * `writeBlockText` no-ops on a doc that already reads as the target runs.
+ * `writeBlockTexts` leaves a doc and a row that already read as the target
+ * runs alone.
  *
  * So there is deliberately no retry loop and no compensating rollback here.
  * Adding one would replace a loud, convergent partial state with a silent
@@ -202,14 +190,6 @@ export interface ApplyReport {
    * number is how anyone notices the projection has become lossier.
    */
   absorbedWrites: number;
-}
-
-/** The `data` blob a text projection writes: the row's own, `text` replaced. */
-function projectedData(row: Block, text: unknown): unknown {
-  const base = row.data;
-  return base !== null && typeof base === "object" && !Array.isArray(base)
-    ? { ...(base as Record<string, unknown>), text }
-    : { text };
 }
 
 /** How much of a row's stored text a refusal quotes. */
@@ -460,37 +440,9 @@ async function applyToScope(scope: {
 
   // --- 1. Structure, atomically --------------------------------------------
   const { blocks } = await applyPageBlockPatch(pageId, patch);
-  const byId = new Map(blocks.map((b) => [b.id, b] as const));
 
-  // --- 2a. Text: the doc, per block ----------------------------------------
-  for (const edit of textEdits) {
-    await writeBlockText(edit.blockId, edit.runs).catch((err: unknown) => {
-      throw new Error(
-        `markdown apply: could not write the content doc of block ${edit.blockId} ` +
-          `on page ${pageId}. Structure is already committed; re-running the same ` +
-          `apply converges (the plan is a pure function of current state).`,
-        { cause: err },
-      );
-    });
-  }
-
-  // --- 2b. Text: the row projection, batched into one patch -----------------
-  const updates: BlockUpdate[] = textEdits.map((edit) => {
-    const row = byId.get(edit.blockId);
-    if (!row) {
-      // A survivor the patch above just wrote is gone: something deleted it
-      // between the two statements. Loud rather than skipped — a re-run will
-      // simply not name it, so this is self-healing but worth knowing about.
-      throw new Error(
-        `markdown apply: block ${edit.blockId} vanished between the structural ` +
-          `commit and its text projection (concurrent delete on page ${pageId}).`,
-      );
-    }
-    return { id: row.id, changes: { data: projectedData(row, edit.runs) } };
-  });
-  if (updates.length > 0) {
-    await applyPageBlockPatch(pageId, { creates: [], updates, deleteIds: [] });
-  }
+  // --- 2. Text: every doc, then the row projections as one patch -----------
+  await writeBlockTexts(pageId, textEdits);
 
   const createdIds = patch.creates.map((b) => b.id);
   const createdSet = new Set(createdIds);

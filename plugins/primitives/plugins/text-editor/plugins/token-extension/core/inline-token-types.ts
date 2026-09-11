@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
  * `createNodeFromMatch` building the node, and a `getTextContent` decision. The
  * first and the last two could disagree with each other silently, and a stub
  * class lacking `getTextContent` made hydration SUCCEED while deleting the token
- * (the hazard `page/markdown-apply/server/internal/block-doc-text.ts` warns
+ * (the hazard `page/block-text-write/server/internal/block-doc-text.ts` warns
  * about).
  *
  * Here the family declares only what is irreducible — its type string, its field

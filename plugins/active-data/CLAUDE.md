@@ -124,7 +124,7 @@ Two hosts ask: the prompt editor for `"transcript"`, the page editor for
 `./singularity check active-data:document-chip-has-server-token` collects on it.
 A page block's content doc can now hold that chip's decorator node, and the
 server REFUSES to read a block holding a decorator type it has no registered
-node for (`markdown-apply`'s `readStateRuns`) — so a chip with no
+node for (`block-text-write`'s `readStateRuns`) — so a chip with no
 `Editor.InlineToken` contribution renders perfectly and then breaks an agent's
 first `edit_page` on any block containing it, somewhere else entirely. The check
 enumerates the chips and the server contributions generically and joins them on

@@ -33,6 +33,7 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -520,6 +521,85 @@ describe("purgeTrashedBlocks", () => {
     onDeleteCalls.length = 0;
     await purgeTrashedBlocks([entry], t.db);
     expect(onDeleteCalls).toHaveLength(0);
+  });
+});
+
+describe("applyPageBlockPatch — the delete set follows the forest as written", () => {
+  test("a child the patch re-parents OUT of a deleted parent stays live", async () => {
+    await seedPage();
+
+    // The redo of an unwrap: c1a leaves c1 for c1's slot, and c1 goes.
+    await patch({
+      updates: [
+        {
+          id: "c1a",
+          changes: { parentId: "P", rank: Rank.from("a0V") },
+        },
+      ],
+      deleteIds: ["c1"],
+    });
+
+    expect(await liveChildren("P")).toEqual(["c1a", "c2"]);
+    const c1a = await row("c1a");
+    expect(c1a?.deletedAt).toBeNull();
+    expect(c1a?.parentId).toBe("P");
+    expect(await docHex("c1a")).toBe("c1a0");
+    // Only c1 was trashed, under one entry naming it alone.
+    const entry = await onlyEntry();
+    expect(entry.meta).toEqual({ pageId: "P", rootIds: ["c1"], count: 1 });
+    expect((await row("c1"))?.trashEntryId).toBe(entry.id);
+    expect(trashCalls).toEqual([["c1"]]);
+  });
+
+  test("a row may take the exact (parent, rank) slot of a row the same patch deletes", async () => {
+    await seedPage();
+
+    // c1 holds (P, a0); c2 moves onto exactly that pair as c1 goes. The live
+    // unique index is partial on `deleted_at IS NULL`, so the trash has to land
+    // first for the slot to be free.
+    await patch({
+      updates: [{ id: "c2", changes: { rank: Rank.from("a0") } }],
+      deleteIds: ["c1"],
+    });
+
+    expect(await liveChildren("P")).toEqual(["c2"]);
+    expect((await row("c2"))?.rank).toBe("a0");
+    const entry = await onlyEntry();
+    expect(entry.meta).toEqual({ pageId: "P", rootIds: ["c1"], count: 2 });
+    for (const id of ["c1", "c1a"]) {
+      expect((await row(id))?.trashEntryId).toBe(entry.id);
+    }
+  });
+
+  test("a patch naming one id both as a write and as a delete is a 400, and writes nothing", async () => {
+    await seedPage();
+
+    const viaUpdate = await patch({
+      updates: [{ id: "c2", changes: { expanded: false } }],
+      deleteIds: ["c2"],
+    }).catch((e: unknown) => e);
+    expect(viaUpdate).toBeInstanceOf(HttpError);
+    expect((viaUpdate as HttpError).status).toBe(400);
+
+    const viaCreate = await patch({
+      creates: [
+        blockOf({
+          id: "c3",
+          parentId: "P",
+          pageId: "P",
+          type: "text",
+          rank: "a2",
+        }),
+      ],
+      deleteIds: ["c3"],
+    }).catch((e: unknown) => e);
+    expect(viaCreate).toBeInstanceOf(HttpError);
+    expect((viaCreate as HttpError).status).toBe(400);
+
+    expect(await liveChildren("P")).toEqual(["c1", "c2"]);
+    expect((await row("c2"))?.expanded).toBe(true);
+    expect(await row("c3")).toBeUndefined();
+    expect(await entries()).toHaveLength(0);
   });
 });
 

@@ -2494,12 +2494,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `history/engine.recordVersion`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
+              - `page/block-text-write.writeBlockTexts`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.blocksChanged`
               - `page/editor.PAGE_BLOCK_TYPE`
               - `page/editor.PageContentSnapshot`
-              - `page/editor.replacePageContent`
+              - `page/editor.restorePageContent`
               - `page/editor.serializePageContent`
             - Register:
               - `defineHistorySource('pages')`
@@ -11020,6 +11021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/annotations/agent-notes/authorship`
       - `page/annotations/todo/task-link`
       - `page/attachment-block`
+      - `page/block-text-write`
       - `page/editor`
       - `page/editor-collab`
       - `page/inline-date`
@@ -18835,6 +18837,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `AUDIO_TYPE`
           - `audioBlock`
+    - **`block-text-write`** — Server-side text writes for a block's content doc — read a stored doc's true runs, splice it to target runs (or seed it first-writer-wins), then write the row's data.text projection: the one text channel every server-side content writer goes through.
+      - Server:
+        - Uses:
+          - `database.db`
+          - `page/editor-collab.initBlockDoc`
+          - `page/editor-collab.loadBlockDocs`
+          - `page/editor-collab.mergeBlockDocUpdate`
+          - `page/editor.applyPageBlockPatch`
+          - `page/editor.blockTextServerExtensions`
+          - `page/editor.blockTextServerNodes`
+          - `page/editor.liveBlocks`
+        - Exports (types): `BlockTextEdit`
+        - Exports (values): `writeBlockTexts`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/pages/history`
+          - `page/markdown-apply`
     - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also registers the bookmark `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
@@ -19234,6 +19253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockDeleteHook`
           - `BlockRestoreHook`
           - `BlocksChangedPayload`
+          - `BlockTextWriter`
           - `BlockTrashHook`
           - `DeletedBlockRow`
           - `PageContentSnapshot`
@@ -19257,8 +19277,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageData`
           - `PageDataSchema`
           - `pagesLiveResource`
-          - `replacePageContent`
           - `resolveBlockAnnotations`
+          - `restorePageContent`
           - `serializePageContent`
           - `untrashBlocks`
         - Register:
@@ -19465,6 +19485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `page/attachment-block`
           - `page/audio`
+          - `page/block-text-write`
           - `page/bookmark`
           - `page/bulleted-list`
           - `page/callout`
@@ -19528,6 +19549,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `blockContentServerResource`
           - `initBlockDoc`
           - `loadBlockDoc`
+          - `loadBlockDocs`
           - `mergeBlockDocUpdate`
         - Resources: `page-block-doc` (keyed)
         - Routes:
@@ -19548,7 +19570,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/history`
           - `page/annotations/agent-access`
-          - `page/markdown-apply`
+          - `page/block-text-write`
     - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "embed" → `EmbedBlock`
@@ -19891,18 +19913,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `page/inline-page-link`
           - `page/page-link`
-    - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block content-doc splice. Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
+    - **`markdown-apply`** — Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block text edits (written through page/block-text-write). Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
       - Server:
         - Uses:
           - `database.db`
           - `infra/endpoints.HttpError`
-          - `page/editor-collab.initBlockDoc`
-          - `page/editor-collab.loadBlockDoc`
-          - `page/editor-collab.mergeBlockDocUpdate`
+          - `page/block-text-write.writeBlockTexts`
           - `page/editor.applyPageBlockPatch`
           - `page/editor.blockTextProtectedSpans`
-          - `page/editor.blockTextServerExtensions`
-          - `page/editor.blockTextServerNodes`
           - `page/editor.Editor`
           - `page/editor.liveBlocks`
           - `page/editor.PAGE_BLOCK_TYPE`

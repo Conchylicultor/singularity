@@ -315,6 +315,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
+    - `page/block-text-write`
     - `page/editor`
     - `page/editor-collab`
     - `page/inline-date`

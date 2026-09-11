@@ -73,7 +73,7 @@ import { $appendRuns, colorCssValue, runsToLexical } from "./runs-lexical";
  * ---------------------------------------------------------------------------
  *
  * The caller passes its registered token extensions (the server's, from
- * `page/markdown-apply/server/internal/block-doc-text.ts`), and every unit walk
+ * `page/block-text-write/server/internal/block-doc-text.ts`), and every unit walk
  * on both sides is stated in terms of them. That is not a refinement — it is
  * what makes the feature work at all.
  *

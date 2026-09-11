@@ -193,7 +193,7 @@ export const pageBlockMarkdown: BlockMarkdown<PageData> = {
 
 // The block handle for the reserved `type="page"` node. Owned by `editor/core` —
 // NOT by the `sub-page` renderer plugin — because `handle-turn-into-page` and
-// `replacePageContent` write page rows directly, so page creation must not depend
+// `restorePageContent` write page rows directly, so page creation must not depend
 // on the sub-page plugin being enabled. `editor/server` contributes THIS handle to
 // the server `Editor.BlockData` registry; the `sub-page` web renderer declares its
 // own handle for the same type, sharing `pageBlockMarkdown` above.

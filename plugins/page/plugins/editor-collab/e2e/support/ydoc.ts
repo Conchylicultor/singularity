@@ -33,6 +33,32 @@ export function blockDocText(stateB64: string): string {
 }
 
 /**
+ * How many items each Yjs client has contributed to a stored doc state, by
+ * client id. A doc that was EDITED keeps every entry of an earlier vector (a
+ * delete is a tombstone, never a removal); a doc that was REPLACED by a fresh
+ * one does not — which is how a script tells the two apart.
+ */
+export function blockDocStateVector(stateB64: string): Map<number, number> {
+  const bytes = Uint8Array.from(Buffer.from(stateB64, "base64"));
+  return Y.decodeStateVector(Y.encodeStateVectorFromUpdate(bytes));
+}
+
+/**
+ * True when `later` holds every item `earlier` does: each client of `earlier`
+ * is present in `later` with at least the same clock. A doc edited in place
+ * satisfies it; a doc thrown away and re-seeded does not.
+ */
+export function stateVectorCovers(
+  later: ReadonlyMap<number, number>,
+  earlier: ReadonlyMap<number, number>,
+): boolean {
+  for (const [client, clock] of earlier) {
+    if ((later.get(client) ?? 0) < clock) return false;
+  }
+  return true;
+}
+
+/**
  * Server truth for one block's CRDT doc, read through the live-state resource
  * endpoint. Returns undefined when no `page_block_docs` row exists yet — a
  * legitimate state (the block was just created and doc-init has not landed), so

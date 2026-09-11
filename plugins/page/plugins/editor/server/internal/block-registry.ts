@@ -47,7 +47,7 @@ export const Editor = {
    * `node` is OPTIONAL: a pure text token with no decorator is legitimate, and
    * every contribution was pattern-only before the node half existed. A family
    * that contributes none keeps being refused by
-   * `markdown-apply`'s `readStateRuns` — the refusal narrows to the types that
+   * `block-text-write`'s `readStateRuns` — the refusal narrows to the types that
    * still have no server node, it does not soften.
    *
    * `pattern` is REQUIRED even alongside a `node`, and that is the shape rather

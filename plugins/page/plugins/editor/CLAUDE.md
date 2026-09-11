@@ -461,9 +461,10 @@ producer of a `PageForestTx`, and every export of
   it, so ops that permute nothing pay nothing.
 - **A delete set is never hard-deleted by the writer** — see *Every block delete
   is a trash* below. `BlockLifecycle.OnTrash(rows)` runs after commit over the
-  AUTHORITATIVE set the writer flagged (closed under descendants under the lock);
-  `BlockLifecycle.OnDelete(rows, tx)` fires inside the lock only from purge and
-  from history restore's content wipe, the two paths that really hard-delete.
+  AUTHORITATIVE set the writer flagged (closed under descendants over the forest
+  AS WRITTEN, under the lock, and flagged before anything is placed);
+  `BlockLifecycle.OnDelete(rows, tx)` fires inside the lock only from purge,
+  the one path that really hard-deletes.
   `rows` is authoritative in both, so a hook answers "which of these were pages"
   with `row.type` — no DB round-trip, nothing predicted. Anything an `OnDelete`
   hook needs pre-delete it reads on `tx`.
@@ -1008,7 +1009,7 @@ that exists but isn't painted); a position that does not exist. Design:
   no code of ours in the path; and (b) it is a character in the plain-text offset
   basis, which reaches a SERVER consumer —
   `$spliceRunsInto` (`core/runs-splice.ts`, called by
-  `page/markdown-apply/server/internal/block-doc-text.ts`) splices a block's
+  `page/block-text-write/server/internal/block-doc-text.ts`) splices a block's
   `Y.Doc` from seam-free runs, so every agent write would delete every seam and
   every client re-mint them. A Lexical-only seam excluded from the Y doc is not
   available either: `CollabElementNode.syncChildrenFromYjs`
@@ -1898,10 +1899,12 @@ structure — no per-block Lexical history.
   ABSENT and keeps a present row as it is. A client-minted id (`"unseen"`) is
   never in the set: a genuine create keeps its full field comparison. Pinned by
   `optimistic-block-ops.test.ts`'s *restore creates are presence-only*.
-- **A patch's delete cascade reads POST-patch parentage.** `handlePatchBlocks`
-  UPDATEs before it DELETEs, so a row the same patch re-parents out of the deleted
-  subtree has already left; `applyPatch` must agree or the overlay drops rows the
-  server keeps (redoing an `unwrap` lost every promoted child).
+- **A patch's delete cascade reads POST-patch parentage.** The writer closes the
+  delete set over the forest as the patch leaves it (each update's NAMED
+  `parentId` applied), so a row the same patch re-parents out of the deleted
+  subtree stays live; `applyPatch` must agree or the overlay drops rows the
+  server keeps (redoing an `unwrap` lost every promoted child). A patch naming
+  one id both as a write and in `deleteIds` is a 400.
 
 **What is recorded:** all `dispatchOp` ops — which is now every structural
 mutation, `paste` / `duplicate` / `move` / `delete` / `bulkMove` included —
@@ -2197,10 +2200,9 @@ Ids ride the node rather than a parallel `ids: string[]` **because a positional
 array breaks silently**: reorder a traversal on one side and the two sides insert
 *different blocks*, so the op can never confirm.
 
-- **`insertForest` is the HISTORY-RESTORE path only** — its one caller is
-  `replacePageContent`, which mints server-side because a restore has no client
-  prediction to agree with. Both the `/blocks/paste` and `/blocks/bulk-duplicate`
-  endpoints are deleted: one write path for a forest insert.
+- **One write path for a forest insert.** Both the `/blocks/paste` and
+  `/blocks/bulk-duplicate` endpoints are deleted, and nothing on the server
+  mints a forest's ids any more.
 - **Anchorless paste inserts at the START of `parentId`**, where anchorless
   `insert` appends. Inherited from the old endpoint's contract; only reachable on
   an empty page, since real callers resolve an anchor via `pasteAnchorId`.
@@ -2307,7 +2309,7 @@ Consequences worth knowing:
 
 > No write shape ever `DELETE`s a row the user can see. A delete flags its rows
 > under ONE ledger entry per gesture; the real `DELETE` runs only at purge
-> (30 days, or "Delete permanently") and in history restore's content wipe.
+> (30 days, or "Delete permanently").
 > `research/2026-09-09-page-data-based-text-undo-entries-v2.md` §3.
 
 Until 2026-09-09 a page-free delete was a hard delete, and the row's content doc
@@ -2330,6 +2332,15 @@ a to-do came back without its text. Now:
   Either way the set is CLOSED under descendants under the lock — a trash flags
   exactly the ids it is handed, and a descendant left live under a trashed
   parent is unreachable by any read.
+- **Closed over the forest AS WRITTEN, and trashed before placing.** The
+  closure takes each surviving row at the NEW parent this write gives it, so a
+  child the same write re-homes out of a deleted block (`unwrap`, a merge's
+  adoption, the redo of either) stays live, while an orphan a buggy write leaves
+  under a deleted row is still trashed. The inline trash runs before `parkRanks`
+  / insert / update: the live unique indexes are partial on `deleted_at IS
+  NULL`, so a flagged row vacates its `(parent_id, rank)` slot for a row landing
+  exactly there. The deferred branch trashes after commit, so it keeps that
+  collision (no caller hits it).
 - **The ledger invariant: an entry exists ⇔ at least one row carries its id.**
   Flags are set only by `trashBlockRoots` in the same transaction as
   `recordTrashEntry`, and cleared only by `untrashBlocks`, which deletes its
@@ -3196,11 +3207,48 @@ restore.
   history restore (or another tab's delete) resurrects the deleted row with
   pre-delete text. The patch's SHAPE is the guarantee — there is no flag to set,
   or forget.
-- **History restore.** `replacePageContent` mints fresh block ids, so a restore is
-  automatically doc-consistent (the wipe FK-cascades every old `page_block_docs`
-  row; pending flushes 409 → doc-init probe 404s → quiet terminal drop; the restored
-  rows seed fresh docs from the restored `data.text`). Read the invariant note on
-  `replacePageContent` before ever preserving ids there.
+- **History restore keeps block identity** (`restorePageContent`,
+  `server/internal/page-content.ts`; design:
+  [`research/2026-09-11-page-history-restore-preserves-block-identity.md`](../../../../research/2026-09-11-page-history-restore-preserves-block-identity.md)).
+  It makes the page equal to the version by matching blocks BY ID, and hard-deletes
+  nothing:
+  - a block in both keeps its id and its content doc, and the doc is EDITED to the
+    version's text;
+  - a block deleted since comes back as itself, its surviving doc byte-exact;
+  - a block created since is trashed, so restoring "Before restore" brings it back
+    the same way.
+
+  Three phases, in the same order every server-side content writer follows
+  (structure, then the doc, then the `data.text` projection):
+  1. **Revive** (before the lock): each `page-blocks` trash entry holding a
+     version block trashed from this page is restored whole. A row such an entry
+     holds that the version does not is trashed again in phase 2.
+  2. **Structure** (under the lock): compute the target forest and write it with
+     `writeForestTarget`, the op handler's own write. A version block whose id is
+     free everywhere (purged) comes back under that id; one whose id is taken
+     (live on another page, still in the trash, or turned into a sub-page) comes
+     back as a fresh-id copy of its text. The write never changes a surviving
+     row's `data.text` — that is phase 3's.
+  3. **Text**: the caller's `writeTexts` (the history source passes
+     `page/block-text-write`'s `writeBlockTexts`) splices each surviving block's
+     doc to the version's runs, then projects `data.text`. It is a REQUIRED
+     parameter because the editor cannot import the writer (a cycle), and a
+     returned list of edits would be a step a caller could forget.
+
+  **Sub-pages are never touched**: a restore never creates, revives, deletes or
+  renames one. A live sub-page's row may only move — to its version position, or
+  it stays put, or (its slot taken, or its parent trashed) it goes to the end of
+  the page's top level. Its title is always its current one.
+
+  Open editors need no special path. Surviving blocks keep their ids, so they stay
+  mounted: structure arrives through the blocks push, and text arrives as a
+  content-doc push the provider merges like any remote edit. Revived ids reach a
+  tab that saw them as `RowTruth === "removed"`, which binds to the surviving doc
+  (the undo-of-delete path). A typing run open on a rewritten block is aborted
+  (`run-aborted`), and older undo entries on it replay as `stale-entry` — the
+  documented concurrency policy. Known bound: a fresh-id copy is re-minted by
+  every restore of that version (the previous copy is trashed), since nothing
+  records which copy stands for which version block.
 - **The offscreen-merge undo is a splice, not a positional cut.** Undoing a
   merge whose target had no editor brings the target's stored doc back to the
   recorded `before` runs through `$spliceRunsInto`, whose prefix alignment
@@ -3751,6 +3799,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockDeleteHook`
     - `BlockRestoreHook`
     - `BlocksChangedPayload`
+    - `BlockTextWriter`
     - `BlockTrashHook`
     - `DeletedBlockRow`
     - `PageContentSnapshot`
@@ -3774,8 +3823,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `pageData`
     - `PageDataSchema`
     - `pagesLiveResource`
-    - `replacePageContent`
     - `resolveBlockAnnotations`
+    - `restorePageContent`
     - `serializePageContent`
     - `untrashBlocks`
   - Register:
@@ -3982,6 +4031,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
     - `page/audio`
+    - `page/block-text-write`
     - `page/bookmark`
     - `page/bulleted-list`
     - `page/callout`

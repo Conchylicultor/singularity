@@ -1,12 +1,17 @@
 # markdown-apply
 
 Applying an edited markdown document onto an existing block forest **without
-re-minting block ids**. `replacePageContent` is the other whole-page write and it is
-correct for its one caller (history restore, where fresh ids are load-bearing);
-as an *editing* path it detaches every block's content `Y.Doc` (and with it
-the run tracker's history), its `page_links` edges, its `tasks_ext_prompt_block`
-link and every entity-extension row keyed on block id. Design:
-[`research/2026-08-03-page-markdown-apply-to-existing-forest.md`](../../../../research/2026-08-03-page-markdown-apply-to-existing-forest.md).
+re-minting block ids**, so every block keeps its content `Y.Doc` (and with it the
+run tracker's history), its `page_links` edges, its `tasks_ext_prompt_block` link
+and every entity-extension row keyed on block id. The editor's
+`restorePageContent` is the other whole-page write (history restore), and it holds
+the same contract: it matches the version's blocks to the page's BY ID and edits
+the survivors' docs rather than replacing them. Both write text through the same
+channel, `page/block-text-write`'s `writeBlockTexts`, after their structural
+write. Design:
+[`research/2026-08-03-page-markdown-apply-to-existing-forest.md`](../../../../research/2026-08-03-page-markdown-apply-to-existing-forest.md);
+restore's:
+[`research/2026-09-11-page-history-restore-preserves-block-identity.md`](../../../../research/2026-09-11-page-history-restore-preserves-block-identity.md).
 
 ## The root is the scope; the page is the transaction
 
@@ -148,8 +153,8 @@ never by naming a block type or a `data` field. The tag is the contract; the
 serializer is the only thing that knows how a type encodes its identity into one.
 
 - A shell **absent** from the incoming markdown is preserved, re-homed to the top
-  level after everything the document did place (the `replacePageContent`
-  rank-floor idiom). It stays exactly put only when it already sits above that
+  level after everything the document did place (a rank floor above the highest
+  placed rank; history restore re-homes a displaced sub-page the same way). It stays exactly put only when it already sits above that
   floor. Anywhere else it moves, because its own sibling list was re-ranked
   without it and the only interval provably free of a `(parent_id, rank)`
   collision is above the floor. Under a **nested root** this is
@@ -297,77 +302,12 @@ Design: [`research/2026-09-03-page-edit-judged-on-what-it-changed.md`](../../../
 
 ## The write order (`server/internal/apply.ts`)
 
-Structure first (one `applyPageBlockPatch` = one locked transaction), then text
-— because `page_block_docs.block_id` FKs onto `page_blocks.id`, so a created
-block has no row to hang a doc off until the patch lands. Within a block, the
-DOC before the ROW: `data.text` is a projection, so a row write is downstream.
-The row projections batch into one final patch; every doc write still precedes
-every row write.
-
-**The projection is not optional.** `useTextProjection` needs a *mounted*
-editor, so a doc written for a page nobody has open would leave `data.text`
-stale forever — and search, backlinks, history and `read-only-view` all read it.
-The applier writes the value a mounted client eventually would, so a later
-client flush is an empty diff rather than a fight.
-
-## The seed race is closed by a return value
-
-`initBlockDoc` is first-writer-wins **and returns the authoritative state**, so
-the applier compares the bytes back with the bytes sent: same ⇒ it won and the
-doc is correct; different ⇒ a browser seeded first, so continue down the edit
-path against the winner's state. Nothing is merged blind.
-
-The server's seed `clientID` mirrors `use-collab-block-doc.ts`'s FNV-1a
-derivation over its OWN extension-set fingerprint — the token families that
-contributed a server node, ids taken from the contributing plugin. Those ids are
-not the web registrations' ids, so the fingerprint deliberately differs from a
-browser's for the same runs, and that is the determinism contract working rather
-than a gap: two seeds may share a clientID only when they are provably
-byte-identical, and two independently-derived id sets are not a proof. The cost
-is nil — `initBlockDoc` is first-writer-wins and hands back the authoritative
-state, so a loser adopts the winner's bytes instead of merging its own.
-
-## The character-level trim is the binding's own diff
-
-`$spliceRunsInto` (`page/editor/core/runs-splice.ts`, called here from
-`server/internal/block-doc-text.ts`) aligns the paragraph's leaf units (text /
-line-break / link) and leaves the common prefix and suffix as the SAME nodes.
-The motivating edit — one word in one paragraph — leaves one text unit on each
-side, applied with a single `setTextContent`; `@lexical/yjs` then splices only
-the changed span via its own `simpleDiffWithCursor`, i.e. the delta a human
-typing it would have produced. A second character diff here would only give the
-binding something to disagree with.
-
-Everything else rebuilds just the middle through the SHARED `$appendRuns` walk.
-A doc that is not a single paragraph — a shape nothing in this system produces —
-is rebuilt wholesale: correct, not identity-preserving, stated not hidden.
-
-## A doc holding an inline decorator node
-
-`[[page:…]]` / `\(latex\)` / a bare `att-…` chip are plain characters in
-`TextRun.text` — but in a doc a BROWSER wrote they are decorator NODES. The
-server reads and rewrites them: a family declares its node once in its own
-`core/` and contributes THAT object as `Editor.InlineToken`'s `node`, so
-`blockTextServerNodes()` registers the headless twin of the class the browser
-wrote the doc with and `blockTextServerExtensions()` serializes it back to its
-token. Both are read at call time, like `blockTextProtectedSpans()`.
-
-- **`readStateRuns` still refuses a decorator type with NO server node**, naming
-  it (detected without hydrating: a decorator is the only thing `@lexical/yjs`
-  stores as a `Y.XmlElement`). The refusal narrowed; it did not soften. **Do not
-  "fix" the remainder with a stub class** — a node with no `getTextContent`
-  serializes to `""` and the splice silently deletes the token.
-- **`$spliceRunsInto` keys a registered token on its token TEXT**, and
-  `newUnitsOf` mirrors `lineNodes`' split through the same `matchTokens`. An
-  unchanged chip therefore aligns into the common prefix/suffix and keeps its
-  CRDT item; one inside a changed middle re-materializes, because the rebuild
-  gets the same extensions. The old unmatchable `opaque␀<nodeKey>` arm remains
-  for an unregistered decorator and is unreachable — `readStateRuns` refuses
-  first. Do not re-key a registered token on identity: every chip in an edited
-  block would fall into the middle, survive as characters, and lose its node
-  permanently (nothing re-scans an existing doc).
-- Free consequence: any `edit_page` that rebuilds a block's middle materializes
-  the chips in it — the migration path for legacy blocks, instead of a sweep.
+Structure first (one `applyPageBlockPatch` = one locked transaction), then the
+plan's `textEdits` through `writeBlockTexts`
+([`page/block-text-write`](../block-text-write/CLAUDE.md)) — the one
+server-side text channel: every doc, then the `data.text` projections as one
+patch. The doc-before-row order, why the projection is not optional, the seed
+race, the character-level splice and decorator handling are all stated there.
 
 ## No MCP tools here: this plugin is the ENGINE
 
@@ -425,18 +365,14 @@ annotation in the key would make every status change look like a new block.
 
 ## Plugin reference
 
-- Description: Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block content-doc splice. Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
+- Description: Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block text edits (written through page/block-text-write). Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.
 - Server:
   - Uses:
     - `database.db`
     - `infra/endpoints.HttpError`
-    - `page/editor-collab.initBlockDoc`
-    - `page/editor-collab.loadBlockDoc`
-    - `page/editor-collab.mergeBlockDocUpdate`
+    - `page/block-text-write.writeBlockTexts`
     - `page/editor.applyPageBlockPatch`
     - `page/editor.blockTextProtectedSpans`
-    - `page/editor.blockTextServerExtensions`
-    - `page/editor.blockTextServerNodes`
     - `page/editor.Editor`
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`

@@ -32,12 +32,13 @@
     - `history/engine.recordVersion`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
+    - `page/block-text-write.writeBlockTexts`
     - `page/editor.BlockDeleteHook`
     - `page/editor.BlockLifecycle`
     - `page/editor.blocksChanged`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.PageContentSnapshot`
-    - `page/editor.replacePageContent`
+    - `page/editor.restorePageContent`
     - `page/editor.serializePageContent`
   - Register:
     - `defineHistorySource('pages')`

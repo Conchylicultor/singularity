@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -16,6 +16,7 @@ import {
 } from "@plugins/infra/plugins/trash/core";
 import {
   PAGE_BLOCK_TYPE,
+  PAGE_BLOCKS_TRASH_SOURCE,
   PAGES_TRASH_SOURCE,
   pageData,
 } from "../../core/schemas";
@@ -462,6 +463,53 @@ export async function restoreEntryById(
     );
   }
   return untrashBlocks(TrashEntrySchema.parse(row), executor);
+}
+
+/**
+ * The `page-blocks` ledger entries history restore may revive for page
+ * `pageId`: the distinct entries carrying one of `ids` as a row TRASHED FROM
+ * THIS PAGE (`page_id = pageId`), restricted to entries whose every row is on
+ * this page. Restore then brings each back whole through
+ * {@link restoreEntryById} — the ledger allows nothing smaller.
+ *
+ * Two kinds of entry are deliberately never returned:
+ *  - **`pages` entries.** Reviving one would revive a sub-page, and a restore
+ *    never changes whether a sub-page exists. A content row trashed together
+ *    with a sub-page is left in the trash; restore copies it instead.
+ *  - **An entry holding a row of ANOTHER page.** Reviving it would bring rows
+ *    back on a page this restore does not hold the lock of and will not write —
+ *    they would stay revived there. No write shape mints such a `page-blocks`
+ *    entry today (the op and patch handlers trash one page's forest, and the
+ *    composite splits a multi-page delete per page), but the id-addressed
+ *    chokepoint could be handed roots on two pages; restore copies those rows
+ *    rather than touch the other page.
+ *
+ * Raw because it reads trashed rows, which is why it lives in this file.
+ */
+export async function pageBlocksEntriesAmong(
+  executor: BlockExecutor,
+  pageId: string,
+  ids: readonly string[],
+): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await executor
+    .selectDistinct({ entryId: _trashEntries.id })
+    .from(_blocks)
+    .innerJoin(_trashEntries, eq(_trashEntries.id, _blocks.trashEntryId))
+    .where(
+      and(
+        inArray(_blocks.id, [...ids]),
+        eq(_blocks.pageId, pageId),
+        isNotNull(_blocks.deletedAt),
+        eq(_trashEntries.sourceId, PAGE_BLOCKS_TRASH_SOURCE),
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${_blocks} AS other
+          WHERE other.trash_entry_id = ${_trashEntries.id}
+            AND other.page_id IS DISTINCT FROM ${pageId}
+        )`,
+      ),
+    );
+  return rows.map((r) => r.entryId).sort();
 }
 
 /**

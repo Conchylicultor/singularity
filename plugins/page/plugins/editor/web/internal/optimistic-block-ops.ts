@@ -423,9 +423,9 @@ export function applyPatch(
   // FK cascade), so an undo that re-deletes a subtree-root clears the subtree.
   //
   // The cascade reads the POST-patch parentage, which is what the server does
-  // and is not a detail: `handlePatchBlocks` applies its updates BEFORE its
-  // `DELETE`, so a row this patch re-parents OUT of the deleted subtree has
-  // already left by the time the cascade runs. Reading pre-patch parentage here
+  // and is not a detail: `writeBlockPatch` closes its delete set over the
+  // forest AS THE PATCH LEAVES IT, so a row this patch re-parents OUT of the
+  // deleted subtree is not in the cascade. Reading pre-patch parentage here
   // instead would silently swallow exactly that shape — redoing an `unwrap`
   // (promote the children, delete the container) dropped every promoted child.
   // `namesField`, not `?? b.parentId`: a promotion to the TOP level writes

@@ -63,6 +63,23 @@ export async function applyPageBlockPatch(
   patch: BlockPatch,
   executor: BlockExecutor = db,
 ): Promise<{ blocks: Block[]; watermark: string }> {
+  // One id may not be both written and deleted. `diffBlocks` never emits that
+  // shape, and the writer trashes the delete set BEFORE it writes anything, so
+  // the write would land on a row it had just flagged. Refused here, ahead of
+  // the un-trash prelude below, which commits a transaction of its own.
+  const deleting = new Set(patch.deleteIds);
+  const both = new Set(
+    [...patch.creates, ...patch.updates]
+      .map((w) => w.id)
+      .filter((id) => deleting.has(id)),
+  );
+  if (both.size > 0) {
+    throw new HttpError(
+      400,
+      `A patch cannot both write and delete a block: ${[...both].join(", ")}`,
+    );
+  }
+
   // Which of this patch's creates land on a TRASHED row. Resolvable without the
   // page read (a live row is never `deleted_at IS NOT NULL`), which is what lets
   // the restore below run BEFORE the write transaction opens — it is its own

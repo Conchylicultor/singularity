@@ -64,7 +64,7 @@ that knows what it is made of.
 this system except through `defineInlineTokenNode`, which REQUIRES `token`;
 every extension's serializer derives from that same `token`. A class that
 hydrates successfully and serializes to `""` — silently deleting the token, the
-failure `page/markdown-apply/server/internal/block-doc-text.ts` warns about —
+failure `page/block-text-write/server/internal/block-doc-text.ts` warns about —
 cannot be written.
 
 **`exportDOM`/`importDOM` are not optional decoration** — see

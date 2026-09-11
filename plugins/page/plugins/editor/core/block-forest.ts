@@ -76,7 +76,8 @@ export function positionalRank(
   // the sibling the row lands immediately after, or null for the list's start.
   let afterId: string | null;
   if (targetId === null) {
-    afterId = zone === "after" ? (siblings[siblings.length - 1]?.id ?? null) : null;
+    afterId =
+      zone === "after" ? (siblings[siblings.length - 1]?.id ?? null) : null;
   } else if (zone === "after") {
     afterId = targetId;
   } else {
@@ -89,8 +90,8 @@ export function positionalRank(
 
 /**
  * Plan the insertion of an already-identified forest under `parentId`, minting
- * child ranks (`Rank.nBetween`). The pure core of the server's `insertForest`:
- * returns new `BlockNode` descriptors (parent-before-descendant order, a valid
+ * child ranks (`Rank.nBetween`). The pure core of a forest insert (`paste`,
+ * `duplicate`): returns new `BlockNode` descriptors (parent-before-descendant order, a valid
  * topological insert order) instead of persisting them, plus the new top-level
  * ids in order.
  *

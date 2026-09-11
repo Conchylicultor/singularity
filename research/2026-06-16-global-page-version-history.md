@@ -2,6 +2,14 @@
 
 > Plan — 2026-06-16. Category: `global` (new top-level `history` plugin + a `page` read-only renderer + a Pages consumer).
 
+> **Superseded in part (2026-09-11).** The restore described below — delete the
+> page's content, then re-insert the version with fresh ids (`insertForest`) —
+> is gone. Restore now matches blocks by id: shared blocks keep their id and
+> have their content doc edited, deleted ones come back from the trash, new ones
+> are trashed, and nothing is hard-deleted. See
+> [`2026-09-11-page-history-restore-preserves-block-identity.md`](2026-09-11-page-history-restore-preserves-block-identity.md).
+> The rest of this plan (the engine, snapshots, the preview) still stands.
+
 ## Context
 
 The Pages app has no edit history: there is no way to view or restore a previous

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as Y from "yjs";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
@@ -127,4 +127,26 @@ export async function loadBlockDoc(
     state: stateToBase64(row.state),
     updatedAt: row.updatedAt,
   }));
+}
+
+/**
+ * Many blocks' stored doc states in ONE query, as raw bytes keyed by block id —
+ * the batched read a server-side text writer takes before touching N blocks,
+ * instead of one {@link loadBlockDoc} round trip per block. Bytes out, not the
+ * resource's base64 wire shape: the caller decodes the state, it never ships it.
+ *
+ * A block with no stored doc is ABSENT from the map. That is a real state (a
+ * block nobody ever opened, whose `data.text` is the only text it has), not a
+ * failure, so there is nothing for an absent key to hide.
+ */
+export async function loadBlockDocs(
+  db: NodePgDatabase,
+  blockIds: readonly string[],
+): Promise<Map<string, Uint8Array>> {
+  if (blockIds.length === 0) return new Map();
+  const rows = await db
+    .select({ blockId: _pageBlockDocs.blockId, state: _pageBlockDocs.state })
+    .from(_pageBlockDocs)
+    .where(inArray(_pageBlockDocs.blockId, [...blockIds]));
+  return new Map(rows.map((row) => [row.blockId, row.state] as const));
 }

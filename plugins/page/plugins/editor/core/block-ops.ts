@@ -1227,11 +1227,10 @@ function applyMerge(
   // In the `intoParent` case the lower bound is `block`'s OWN rank, not `null`.
   // `block` is being deleted, so its slot `(block.rank, nextSibling)` is vacated
   // and the adopted children land in it — visually first, since `block` was the
-  // first child. Crucially this also avoids a TRANSIENT unique-constraint
-  // violation on the server: the write applies UPDATEs (the reparented children)
-  // BEFORE the DELETE (of `block`), so an adopted rank of `null..next` could mint
-  // `block`'s own still-live rank and collide on `(parent_id, rank)`. Minting
-  // strictly ABOVE `block.rank` can never equal a live sibling's rank.
+  // first child. (It once also kept the server off a TRANSIENT unique violation,
+  // when its write placed the children while `block` was still live; the writer
+  // now trashes `block` first and parks every mover, so that no longer rests on
+  // this window.)
   const adopted = childrenOf(blocks, block.id);
   const intoParent = prev.id === block.parentId;
   const existingPrevKids = childrenOf(blocks, prev.id);
@@ -1632,8 +1631,8 @@ function insertScopePageId(
 
 /**
  * Insert ONE identified forest as a contiguous sibling run, after `afterId`
- * (inheriting its parent) or under `parentId`. Same id/rank algebra the
- * server's `insertForest` runs — literally the same `planForestInsert` — so the
+ * (inheriting its parent) or under `parentId`. The server's op handler runs
+ * this same reducer arm — literally the same `planForestInsert` — so the
  * optimistic overlay and the persisted rows differ only in the ranks each side
  * minted against the sibling set it can see.
  *
@@ -1801,14 +1800,12 @@ function applyDelete(
  * A childless block is simply deleted.
  *
  * The rank window mirrors `applyMerge`'s `intoParent` adoption branch byte for
- * byte, and for its reason: the lower bound is the block's OWN rank, not its
- * previous sibling's. The server write applies the UPDATEs (the promoted
- * children) BEFORE the DELETE (of the container), so the container's rank is
- * still live under the shared parent while the children are re-ranked — and a
- * window of `(prevSibling, next)` provably CAN mint exactly it (`nBetween("a0",
- * "a2", 1)` is `"a1"`), violating the `(parent_id, rank)` live-unique index.
- * Minting strictly ABOVE the container's rank cannot collide, and lands in the
- * same visual slot since the container is going away.
+ * byte: the lower bound is the block's OWN rank, not its previous sibling's,
+ * which lands the children in the same visual slot since the container is going
+ * away. (A window of `(prevSibling, next)` can mint exactly the container's
+ * rank — `nBetween("a0", "a2", 1)` is `"a1"` — which once collided on the
+ * server, when its write placed the children while the container was still
+ * live. The writer now trashes the container first, vacating its slot.)
  */
 function applyUnwrap(
   blocks: BlockNode[],

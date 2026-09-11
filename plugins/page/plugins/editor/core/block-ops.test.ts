@@ -1383,7 +1383,7 @@ describe("insert", () => {
   test("append under an in-forest sub-page node → pageId is that sub-page's id", () => {
     // A sub-page (type="page") nested inside this page IS in the forest; its
     // children are scoped to the sub-page itself (parent.id), mirroring
-    // computePageId / insertForest.
+    // computePageId / planForestInsert.
     const blocks = [mk("SUB", null, a, { type: "page", pageId: "PAGE" })];
     const out = run(blocks, {
       kind: "insert",

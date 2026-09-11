@@ -6,4 +6,10 @@
  * test reads server-side block docs through it, so it needs no yjs dependency of
  * its own.
  */
-export { blockDocText, fetchBlockDoc, fetchBlockDocText } from "./support/ydoc";
+export {
+  blockDocStateVector,
+  blockDocText,
+  fetchBlockDoc,
+  fetchBlockDocText,
+  stateVectorCovers,
+} from "./support/ydoc";

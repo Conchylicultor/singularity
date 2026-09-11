@@ -1,21 +1,33 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { PAGE_BLOCK_TYPE, pageData } from "../../core/schemas";
 import type { PageData } from "../../core/schemas";
-import type { SerializedBlock } from "../../core/serialized-block";
+import type { BlockNode } from "../../core/block-ops";
+import { newBlockId } from "../../core/block-id";
+import { hasTextKey } from "../../core/row-data";
+import { runsOf, type RichText } from "../../core/rich-text";
+import { dataEqual } from "../../core/block-diff";
 import { liveBlocks } from "./live-blocks";
 import { loadPageBlocks } from "./forest";
-import { withPageForest, pageScopesOf } from "./page-forest";
 import {
-  deletePageContentRows,
-  insertForest,
+  withPageForest,
+  pageScopesOf,
+  type ForestExecutor,
+} from "./page-forest";
+import {
+  existingBlockIdsAmong,
   updateBlockFields,
+  writeForestTarget,
 } from "./forest-writer";
-import { pageData } from "../../core/schemas";
+import { rowToNode } from "./reconcile";
 import { notifyBlockChange } from "./notify";
+import { notifyStructuralChange } from "./notify-structural-change";
 import { parseBlockData } from "./parse-block-data";
+import type { BlockReadExecutor } from "./page-id";
+import { pageBlocksEntriesAmong, restoreEntryById } from "./trash-blocks";
 
 /**
  * A single stored content block, flattened to a portable row. Carries the
@@ -75,108 +87,352 @@ export async function serializePageContent(
   };
 }
 
-/**
- * Rebuild a `SerializedBlock[]` forest from flat stored rows, rooted at the
- * blocks whose `parentId` is the page itself (content top level). Siblings are
- * ordered by rank. Rows that don't connect to the page root are dropped (they
- * cannot be reached and would otherwise orphan).
- */
-function rowsToForest(
-  blocks: StoredBlock[],
-  pageId: string,
-): SerializedBlock[] {
-  const childrenByParent = new Map<string | null, StoredBlock[]>();
-  // Sub-page SHELL rows (`type="page"`) are preserved in place by
-  // `replacePageContent` (their own content is a different `page_id` the snapshot
-  // never captured), so they must NOT be re-inserted here — drop them from the
-  // rebuild. They are always leaves of this page's forest.
-  for (const b of blocks) {
-    if (b.type === PAGE_BLOCK_TYPE) continue;
-    const key = b.parentId;
-    const list = childrenByParent.get(key);
-    if (list) list.push(b);
-    else childrenByParent.set(key, [b]);
-  }
-  const build = (parentId: string | null): SerializedBlock[] => {
-    const kids = childrenByParent.get(parentId) ?? [];
-    return kids
-      .slice()
-      .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)))
-      .map((k) => ({
-        type: k.type,
-        data: k.data,
-        expanded: k.expanded,
-        children: build(k.id),
-      }));
-  };
-  // Content top-level blocks are physically parented to the page block itself.
-  return build(pageId);
+/** One block whose content doc the restore's text phase brings to `runs`. */
+interface BlockTextEdit {
+  blockId: string;
+  runs: RichText;
 }
 
 /**
- * Transactionally REPLACE a page's full content from a {@link PageContentSnapshot}:
- * wipe current content blocks, restore the page-level metadata, and rebuild the
- * block forest under the page (minting fresh ids — matches the paste/duplicate
- * precedent). Emits the post-commit `blocksChanged` push so open editors and
- * downstream subscribers re-hydrate. Reverse of {@link serializePageContent}.
- *
- * General-purpose (history restore, page duplication, template apply). Does NOT
- * change any existing editor behavior — purely additive.
- *
- * **Content-doc invariant (per-block CRDT).** The fresh-id mint is
- * load-bearing: deleting every old content row FK-cascades
- * its `page_block_docs` state away, and the restored rows — being NEW ids with
- * no stored doc — re-seed their content docs client-side from the restored
- * `data.text` on next mount (the first-writer-wins doc-init path). Open
- * editors re-bind automatically: the `blocksChanged`/live push unmounts the
- * old ids' editors (their pending doc flushes 409-drop against the cascaded
- * rows; their `data.text` projections are field-scoped UPDATES, which never
- * create, so they can never resurrect a wiped row) and mounts the restored
- * ones. If this function ever
- * changes to PRESERVE block ids, it must explicitly delete the affected
- * `page_block_docs` rows and push a rebind signal instead — otherwise a bound
- * `Y.Doc` would remain authoritative over the pre-restore text.
+ * Writes blocks' text — their content docs first, then each row's `data.text`
+ * projection — after a structural write has committed. The editor cannot
+ * implement this itself (the server-side text writer imports the editor, so
+ * the editor importing it back would be a cycle); the caller hands it in.
+ * `page/block-text-write`'s `writeBlockTexts` is the one implementation.
  */
-export async function replacePageContent(
+export type BlockTextWriter = (
+  pageId: string,
+  edits: readonly { blockId: string; runs: RichText }[],
+) => Promise<void>;
+
+/**
+ * Make page `pageId` read like `snapshot` again — the history-restore write.
+ * Reverse of {@link serializePageContent}.
+ *
+ * **Blocks are matched by id.** Nothing the user can see is hard-deleted:
+ *  - a block in both the page and the version KEEPS its id, its `created_at`
+ *    and its content doc; the doc is edited to the version's text, never
+ *    replaced, so an open editor stays mounted and only sees a CRDT merge;
+ *  - a block deleted since the version comes back as ITSELF (its trash entry is
+ *    restored), with its surviving doc byte-exact;
+ *  - a block created since the version is TRASHED, under one `page-blocks`
+ *    entry, so restoring the "Before restore" version brings it back the same
+ *    way.
+ *
+ * **Three phases**, the two-channel order every server-side content writer
+ * follows (structure, then docs, then the text projection):
+ *
+ *  0. The page must be live — a missing or trashed page is a 404.
+ *  1. **Revive**, before the lock (the patch handler's un-trash prelude does
+ *     the same): each `page-blocks` entry holding a version block trashed from
+ *     this page is restored whole. A row the entry holds that the version does
+ *     not is trashed again by phase 2, under the restore's own entry.
+ *  2. **Structure**, under the page lock: compute the target forest from the
+ *     version and what is live now ({@link planRestoreTarget}), then write it
+ *     with the op handler's own shape, {@link writeForestTarget}. The page row's
+ *     own `data` (title, icon, cover) is set from `snapshot.page`.
+ *  3. **Text**: `io.writeTexts` edits every text-bearing surviving block's doc
+ *     to the version's runs, then projects `data.text`. Required rather than
+ *     returned for the caller to apply: forgetting it would restore structure
+ *     but not text, silently, and a required parameter makes that a tsc error.
+ *
+ * **Sub-pages are never touched.** A restore never creates, revives, deletes or
+ * renames a sub-page. A live sub-page's row may only MOVE: back to its version
+ * position when it has one, else it stays where it is, else it goes to the end
+ * of the page's top level. Its `data` (title, icon) is always its current row's.
+ *
+ * **Re-running converges.** Every phase is a function of the version and the
+ * current state, so a restore interrupted after phase 2 (a text-phase failure)
+ * finishes when run again. A second run over a page the first run completed
+ * writes no structure and mints no trash entry — except for fresh-id COPIES
+ * (below), which a second run re-mints, trashing the first run's copies.
+ *
+ * `executor` is the global handle in production and a throwaway DB in tests;
+ * it is not a transaction — each phase opens its own.
+ */
+export async function restorePageContent(
   pageId: string,
   snapshot: PageContentSnapshot,
+  io: { writeTexts: BlockTextWriter },
+  executor: ForestExecutor = db,
 ): Promise<void> {
-  const forest = rowsToForest(snapshot.blocks, pageId);
-  // Two forests change: this page's content, and the one its own shell row sits
-  // in (the restore rewrites the shell's `data`, i.e. the page title the sidebar
-  // renders). `pageScopesOf` resolves the second.
-  const scopes = [pageId, ...(await pageScopesOf(db, [pageId]))];
-  await withPageForest(scopes, async (ctx) => {
-    // Wipe only LIVE, NON-page content (FK cascade clears their descendants).
-    // Excluding `type="page"` preserves each sub-page SHELL and — because a soft
-    // delete never cascades — the sub-page's own content, which the snapshot
-    // never captured (the 2026-07-10-class bug for history restore). Excluding
-    // trashed rows leaves the trash intact. The page block row itself is
-    // preserved (its data is overwritten below).
-    await deletePageContentRows(ctx.tx, pageId);
-    await updateBlockFields(ctx.tx, pageId, {
-      data: parseBlockData(PAGE_BLOCK_TYPE, snapshot.page),
-      updatedAt: new Date(),
-    });
-    if (forest.length > 0) {
-      // Surviving sub-page shells keep their ranks under `pageId`; place the
-      // rebuilt content strictly after the highest surviving rank so the
-      // `(parent_id, rank)` live unique index can never collide.
-      const [maxRow] = await ctx.tx
-        .select({ rank: liveBlocks.rank })
-        .from(liveBlocks)
-        .where(eq(liveBlocks.parentId, pageId))
-        .orderBy(desc(liveBlocks.rank))
-        .limit(1);
-      const floor = maxRow ? Rank.from(maxRow.rank) : null;
-      const rootRanks = Rank.nBetween(floor, null, forest.length);
-      await insertForest(ctx.tx, {
+  // --- Phase 0: the page must be live --------------------------------------
+  await requireLivePage(executor, pageId);
+
+  // --- Phase 1: revive the version's blocks trashed from this page ---------
+  // Sub-page shells are excluded here: a shell is only ever trashed in a
+  // `pages` entry, which a restore never revives anyway.
+  const versionContentIds = snapshot.blocks
+    .filter((b) => b.type !== PAGE_BLOCK_TYPE)
+    .map((b) => b.id);
+  const entryIds = await pageBlocksEntriesAmong(
+    executor,
+    pageId,
+    versionContentIds,
+  );
+  for (const entryId of entryIds) {
+    await restoreEntryById(entryId, executor);
+  }
+
+  // --- Phase 2: the target forest, written under the lock -------------------
+  // Two forests are locked: this page's content, and the one its own row sits
+  // in (the write sets that row's `data` — the title the parent and sidebar
+  // render). `pageScopesOf` resolves the second.
+  const scopes = [pageId, ...(await pageScopesOf(executor, [pageId]))];
+  const { value } = await withPageForest(
+    scopes,
+    async (ctx) => {
+      const pageRow = await requireLivePage(ctx.tx, pageId);
+      // `forest()` spans every locked scope; the parent page's rows are not
+      // this restore's to write, so only this page's partition is `before`.
+      const before = (await ctx.forest())
+        .filter((r) => r.pageId === pageId)
+        .map(rowToNode);
+      const beforeIds = new Set(before.map((n) => n.id));
+      const taken = await existingBlockIdsAmong(
+        ctx.tx,
+        snapshot.blocks.filter((b) => !beforeIds.has(b.id)).map((b) => b.id),
+      );
+      const plan = planRestoreTarget({
         pageId,
-        parentId: pageId,
-        rootRanks,
-        forest,
+        version: snapshot.blocks,
+        before,
+        taken,
       });
+
+      const write = await writeForestTarget(ctx, before, plan.after);
+      if (write.deferredToChokepoint) {
+        // Unreachable by construction: the target keeps every live sub-page
+        // shell, so the delete set holds no page row, and a page-free set is
+        // always trashed inline.
+        throw new Error(
+          `[page-editor] restore of page ${pageId}: the delete set holds a sub-page (${write.deleteRootIds.join(", ")}) — the target must keep every live shell`,
+        );
+      }
+
+      const data = parseBlockData(PAGE_BLOCK_TYPE, snapshot.page);
+      if (!dataEqual(pageRow.data, data)) {
+        await updateBlockFields(ctx.tx, pageId, {
+          data,
+          updatedAt: new Date(),
+        });
+      }
+
+      return {
+        deletedRows: write.deletedRows,
+        textEdits: plan.textEdits,
+        pageScope: pageRow.pageId,
+      };
+    },
+    executor,
+  );
+
+  await notifyStructuralChange(
+    { pageId, deletedRows: value.deletedRows },
+    executor,
+  );
+  // The page row's own data (title, cover): its cover links are scoped to its
+  // own id, and its title renders in the forest it sits in.
+  await notifyBlockChange(
+    { pageId: value.pageScope, type: PAGE_BLOCK_TYPE, blockId: pageId },
+    executor,
+  );
+
+  // --- Phase 3: text --------------------------------------------------------
+  try {
+    await io.writeTexts(pageId, value.textEdits);
+  } catch (err) {
+    throw new Error(
+      `[page-editor] restore of page ${pageId}: the text phase failed after ` +
+        `the structure was committed. Re-running the restore converges.`,
+      { cause: err },
+    );
+  }
+}
+
+/** The page row a restore writes, read live — or a 404. */
+async function requireLivePage(
+  executor: BlockReadExecutor,
+  pageId: string,
+): Promise<{ pageId: string | null; data: unknown }> {
+  const [row] = await executor
+    .select({ pageId: liveBlocks.pageId, data: liveBlocks.data })
+    .from(liveBlocks)
+    .where(and(eq(liveBlocks.id, pageId), eq(liveBlocks.type, PAGE_BLOCK_TYPE)))
+    .limit(1);
+  if (!row) {
+    throw new HttpError(
+      404,
+      `Cannot restore page ${pageId}: it does not exist or is in the trash`,
+    );
+  }
+  return row;
+}
+
+/** What {@link planRestoreTarget} decided. */
+interface RestoreTarget {
+  /** The page's forest as the restore leaves it — `writeForestTarget`'s `after`. */
+  after: BlockNode[];
+  /** One per text-bearing survivor: the version's runs, for the text phase. */
+  textEdits: BlockTextEdit[];
+}
+
+const pairKey = (parentId: string | null, rank: string): string =>
+  `${parentId ?? ""}\u0000${rank}`;
+
+/**
+ * The target forest of a restore, as a pure function of the version, the
+ * page's live rows (`before`) and which ids exist anywhere at all (`taken`,
+ * asked only about version ids that are not live on the page).
+ *
+ * **Content rows**, walked top-down from the page so every row's parent is in
+ * the target first (a version row no walk reaches is dropped):
+ *
+ * | version row | state now | target |
+ * |---|---|---|
+ * | content | live here, content type | SURVIVOR — same id |
+ * | content | no row with that id anywhere (purged) | re-inserted with its ORIGINAL id |
+ * | content | taken: live on another page, trashed and not revived, or live here as a sub-page (turned into a page since) | a fresh-id COPY |
+ *
+ * `parentId` (through the copies' id map), `type`, `rank` and `expanded` always
+ * come from the version. A survivor's `data` is the version's too, except its
+ * TEXT: when both carry `text`, the current one is kept, because the structural
+ * write never changes a projection — the text phase edits the doc and projects
+ * it. A block that turned from void back into text-bearing carries the
+ * version's text (a text-bearing row needs one). Every text-bearing survivor
+ * gets a text edit. A re-inserted or copied row carries the version's text as
+ * its seed and gets no edit: it has no doc to edit.
+ *
+ * **Live sub-page shells** are all kept — a restore never removes one — and
+ * keep their CURRENT `data`: writing the version's back would rename a live
+ * sub-page. Only their place can change:
+ *  1. a shell in the version goes to its version position (its parent is in
+ *     the target, or the walk would not have reached it);
+ *  2. else it keeps its current place, if that parent is in the target (or is
+ *     the page) and no target row claims the same `(parent, rank)`;
+ *  3. else it goes to the page's top level, above every target rank there.
+ * A version shell that is not live here is dropped: a restore never mints a
+ * sub-page.
+ *
+ * Every other live row of the page is left out of the target — the write
+ * trashes it.
+ *
+ * The target's `(parent, rank)` pairs are unique: content pairs come from one
+ * valid version, and rules 2 and 3 only ever take a free pair.
+ */
+function planRestoreTarget(args: {
+  pageId: string;
+  version: readonly StoredBlock[];
+  before: readonly BlockNode[];
+  taken: ReadonlySet<string>;
+}): RestoreTarget {
+  const { pageId, version, before, taken } = args;
+  const beforeById = new Map(before.map((n) => [n.id, n]));
+  const childrenOf = new Map<string | null, StoredBlock[]>();
+  for (const v of version) {
+    const list = childrenOf.get(v.parentId);
+    if (list) list.push(v);
+    else childrenOf.set(v.parentId, [v]);
+  }
+
+  const after: BlockNode[] = [];
+  const textEdits: BlockTextEdit[] = [];
+  const contentIds = new Set<string>();
+  /** Where each version shell sits in the target, by shell id. */
+  const shellPositions = new Map<string, { parentId: string; rank: string }>();
+
+  const visit = (v: StoredBlock, parentId: string): void => {
+    if (v.type === PAGE_BLOCK_TYPE) {
+      // Its own content is another page's partition, so it has no children
+      // here to walk.
+      shellPositions.set(v.id, { parentId, rank: v.rank });
+      return;
     }
+    const current = beforeById.get(v.id);
+    let id: string;
+    let data: unknown;
+    if (current && current.type !== PAGE_BLOCK_TYPE) {
+      id = v.id;
+      const keepText = hasTextKey(v.data) && hasTextKey(current.data);
+      data = keepText
+        ? {
+            ...(v.data as Record<string, unknown>),
+            text: (current.data as { text: unknown }).text,
+          }
+        : v.data;
+      if (hasTextKey(v.data)) {
+        textEdits.push({
+          blockId: id,
+          runs: runsOf((v.data as { text: unknown }).text),
+        });
+      }
+    } else if (!current && !taken.has(v.id)) {
+      id = v.id;
+      data = v.data;
+    } else {
+      id = newBlockId();
+      data = v.data;
+    }
+    after.push({
+      id,
+      pageId,
+      parentId,
+      type: v.type,
+      // Validated here rather than at the write so a version the schema no
+      // longer accepts fails before anything is written, and so an unchanged
+      // survivor compares equal to its stored (already validated) data.
+      data: parseBlockData(v.type, data),
+      rank: v.rank,
+      expanded: v.expanded,
+    });
+    contentIds.add(id);
+    for (const child of childrenOf.get(v.id) ?? []) visit(child, id);
+  };
+  for (const top of childrenOf.get(pageId) ?? []) visit(top, pageId);
+
+  // --- Live sub-page shells: every one is kept; only its place may change --
+  const claimed = new Set(after.map((n) => pairKey(n.parentId, n.rank)));
+  const shells = before
+    .filter((n) => n.type === PAGE_BLOCK_TYPE)
+    .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)));
+  const placed: BlockNode[] = [];
+  const unplaced: BlockNode[] = [];
+  // Rule 1 first, so a shell keeping its current place (rule 2) can never take
+  // a pair a shell returning to its version position needs.
+  for (const shell of shells) {
+    const position = shellPositions.get(shell.id);
+    if (position) {
+      placed.push({ ...shell, ...position });
+      claimed.add(pairKey(position.parentId, position.rank));
+    } else {
+      unplaced.push(shell);
+    }
+  }
+  const rehomed: BlockNode[] = [];
+  for (const shell of unplaced) {
+    const parentKept =
+      shell.parentId === pageId ||
+      (shell.parentId !== null && contentIds.has(shell.parentId));
+    const key = pairKey(shell.parentId, shell.rank);
+    if (parentKept && !claimed.has(key)) {
+      placed.push(shell);
+      claimed.add(key);
+    } else {
+      rehomed.push(shell);
+    }
+  }
+  // Rule 3: above the highest rank the target has at the page's top level.
+  const topRanks = [...after, ...placed]
+    .filter((n) => n.parentId === pageId)
+    .map((n) => Rank.from(n.rank));
+  const highest = topRanks.reduce<Rank | null>(
+    (max, r) => (max === null || Rank.compare(r, max) > 0 ? r : max),
+    null,
+  );
+  const ranks = Rank.nBetween(highest, null, rehomed.length);
+  rehomed.forEach((shell, i) => {
+    placed.push({ ...shell, parentId: pageId, rank: ranks[i]!.toJSON() });
   });
-  await notifyBlockChange({ pageId, type: PAGE_BLOCK_TYPE, blockId: pageId });
+
+  return { after: [...after, ...placed], textEdits };
 }

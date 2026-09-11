@@ -25,7 +25,7 @@ import {
   beforeEach,
 } from "bun:test";
 import { z } from "zod";
-import { eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
@@ -35,7 +35,13 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
-import { applyBlockOp, defineBlock, type BlockOp } from "../../core";
+import {
+  applyBlockOp,
+  blockOpContextOf,
+  defineBlock,
+  textBlockSchema,
+  type BlockOp,
+} from "../../core";
 import { pageBlockHandle, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor } from "./block-registry";
@@ -57,6 +63,21 @@ const textBlockStub = defineBlock({
   type: "text",
   schema: z.object({ label: z.string().optional() }),
   empty: () => ({}),
+});
+
+// A TEXT-BEARING stand-in, for the ops that write `data.text` (a merge joins two
+// blocks' runs into the target), and a void container ANCHOR standing in for
+// `page/callout` — its content IS its children, which is what `unwrap` dissolves.
+const paraBlockStub = defineBlock({
+  type: "para",
+  schema: textBlockSchema({}),
+  empty: () => ({ text: [] }),
+});
+const calloutBlockStub = defineBlock({
+  type: "callout",
+  schema: z.object({}),
+  empty: () => ({}),
+  anchor: true,
 });
 
 let t: TestDb;
@@ -85,6 +106,8 @@ beforeAll(async () => {
       contributions: [
         Editor.BlockData(pageBlockHandle),
         Editor.BlockData(textBlockStub),
+        Editor.BlockData(paraBlockStub),
+        Editor.BlockData(calloutBlockStub),
         BlockLifecycle.OnDelete({
           onDelete: (rows) => {
             handedDeletes.push([...rows]);
@@ -131,13 +154,21 @@ async function seedBlock(args: {
     pageId: args.pageId,
     type: args.type,
     rank: args.rank,
-    data: parseBlockData(
-      args.type,
-      args.type === "page"
-        ? { title: args.id, icon: null }
-        : { label: args.label ?? "" },
-    ),
+    data: parseBlockData(args.type, seedData(args.type, args.id, args.label)),
   });
+}
+
+function seedData(type: string, id: string, label = ""): unknown {
+  switch (type) {
+    case "page":
+      return { title: id, icon: null };
+    case "para":
+      return { text: label };
+    case "callout":
+      return {};
+    default:
+      return { label };
+  }
 }
 
 async function row(id: string) {
@@ -468,6 +499,37 @@ describe("withPageForest — multi-page locking", () => {
 // ── 4. The Stage-4a op kinds, through the one write shape ──────────────────
 
 /**
+ * Apply an op the way `handleApplyBlockOp` does — with the reducer context
+ * minted from the registry, so the anchor and text-bearing facts are the
+ * server's own — and return the write.
+ */
+async function commitOp(pageId: string, op: BlockOp) {
+  const { value } = await withPageForest(
+    pageId,
+    async (ctx) => {
+      const before = (await ctx.forest()).map(rowToNode);
+      const after = applyBlockOp(
+        before,
+        op,
+        blockOpContextOf(Editor.BlockData.getContributions()),
+      );
+      return writeForestTarget(ctx, before, after);
+    },
+    t.db,
+  );
+  return value;
+}
+
+/** The live child ids under `parentId`, in rank order. */
+async function childIds(parentId: string): Promise<string[]> {
+  const rows = await t.db
+    .select({ id: _blocks.id, rank: _blocks.rank })
+    .from(_blocks)
+    .where(and(eq(_blocks.parentId, parentId), isNull(_blocks.deletedAt)));
+  return rows.sort((x, y) => (x.rank < y.rank ? -1 : 1)).map((r) => r.id);
+}
+
+/**
  * `move` / `bulkMove` / `delete` stopped being bespoke endpoints and became
  * `BlockOp`s, so they now commit through `writeForestTarget` like every other
  * op. Two things that used to be each handler's own business are now the write
@@ -482,29 +544,6 @@ describe("withPageForest — multi-page locking", () => {
  *    `OnDelete` hooks see exactly it.
  */
 describe("writeForestTarget — the drag/selection ops", () => {
-  /** Apply an op the way `handleApplyBlockOp` does, and return the write. */
-  async function commitOp(pageId: string, op: BlockOp) {
-    const { value } = await withPageForest(
-      pageId,
-      async (ctx) => {
-        const before = (await ctx.forest()).map(rowToNode);
-        const after = applyBlockOp(before, op);
-        return writeForestTarget(ctx, before, after);
-      },
-      t.db,
-    );
-    return value;
-  }
-
-  /** The live child ids under `parentId`, in rank order. */
-  async function childIds(parentId: string): Promise<string[]> {
-    const rows = await t.db
-      .select({ id: _blocks.id, rank: _blocks.rank })
-      .from(_blocks)
-      .where(eq(_blocks.parentId, parentId));
-    return rows.sort((x, y) => (x.rank < y.rank ? -1 : 1)).map((r) => r.id);
-  }
-
   /** P ▸ [A, B, C, D] — four siblings sharing one ordering space. */
   async function seedRun(): Promise<void> {
     await seedBlock({
@@ -656,5 +695,128 @@ describe("writeForestTarget — the drag/selection ops", () => {
     expect(await liveIds()).toEqual(["A", "B", "C", "D", "P", "SUB"]);
     expect(await t.db.select().from(_trashEntries)).toHaveLength(0);
     expect(write.deleteRootIds.sort()).toEqual(["A", "SUB"]);
+  });
+});
+
+// ── 5. The delete closure follows the forest AS WRITTEN ────────────────────
+
+/**
+ * Two ops remove a block AND move its children out of it in the same write:
+ * `unwrap` promotes a container's children into its slot, and a merge adopts the
+ * merged block's children under the target. A trash flags exactly the ids it is
+ * handed, so the writer closes the delete set under descendants itself — and it
+ * must close it over the parentage this write LEAVES, not the parentage it read.
+ * Closed over the pre-write forest, the re-homed children still count as the
+ * removed block's descendants and are trashed right after their own update: the
+ * client keeps them, the op never confirms, and a reload shows them gone.
+ * research/2026-09-11-page-history-restore-preserves-block-identity.md §3.
+ */
+describe("writeForestTarget — a row the op re-homes out of a removed block stays live", () => {
+  test("unwrap: a two-child callout keeps both children live and trashes only the anchor", async () => {
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "A",
+      parentId: "P",
+      pageId: "P",
+      type: "para",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "C",
+      parentId: "P",
+      pageId: "P",
+      type: "callout",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "C1",
+      parentId: "C",
+      pageId: "P",
+      type: "para",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "C2",
+      parentId: "C",
+      pageId: "P",
+      type: "para",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "D",
+      parentId: "P",
+      pageId: "P",
+      type: "para",
+      rank: "a2",
+    });
+
+    const write = await commitOp("P", { kind: "unwrap", blockId: "C" });
+
+    // The promoted children sit in the container's slot, live.
+    expect(await childIds("P")).toEqual(["A", "C1", "C2", "D"]);
+    expect(await liveIds()).toEqual(["A", "C1", "C2", "D", "P"]);
+    // Only the anchor is trashed — one row, one entry, one hook call.
+    expect(write.deletedRows.map((r) => r.id)).toEqual(["C"]);
+    expect(write.deleteRootIds).toEqual(["C"]);
+    const entries = await t.db.select().from(_trashEntries);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.meta).toEqual({ pageId: "P", rootIds: ["C"], count: 1 });
+    expect((await row("C"))?.trashEntryId).toBe(write.trashedEntryId!);
+    expect(handedTrashes.map((rows) => rows.map((r) => r.id))).toEqual([["C"]]);
+  });
+
+  test("merge: a Backspace-merge that adopts the source's children leaves them live", async () => {
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "A",
+      parentId: "P",
+      pageId: "P",
+      type: "para",
+      rank: "a0",
+      label: "a",
+    });
+    await seedBlock({
+      id: "B",
+      parentId: "P",
+      pageId: "P",
+      type: "para",
+      rank: "a1",
+      label: "b",
+    });
+    await seedBlock({
+      id: "B1",
+      parentId: "B",
+      pageId: "P",
+      type: "para",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "B2",
+      parentId: "B",
+      pageId: "P",
+      type: "para",
+      rank: "a1",
+    });
+
+    // Backspace at the start of B: its text joins A's, and A adopts B's children.
+    const write = await commitOp("P", { kind: "merge", blockId: "B" });
+
+    expect(await childIds("P")).toEqual(["A"]);
+    expect(await childIds("A")).toEqual(["B1", "B2"]);
+    expect(await liveIds()).toEqual(["A", "B1", "B2", "P"]);
+    expect(write.deletedRows.map((r) => r.id)).toEqual(["B"]);
+    expect(handedTrashes.map((rows) => rows.map((r) => r.id))).toEqual([["B"]]);
   });
 });

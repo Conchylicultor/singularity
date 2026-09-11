@@ -71,7 +71,7 @@ const check: Check = {
  * `inlineChip({ surfaces: [… "document"] })` is a promise about PAGES: the chip
  * appears in a page block, which means a page block's content doc can now hold
  * that chip's decorator node. On the server, `readStateRuns`
- * (`markdown-apply/server/internal/block-doc-text.ts`) REFUSES any block whose
+ * (`block-text-write/server/internal/block-doc-text.ts`) REFUSES any block whose
  * doc holds a decorator type it has no registered node for — so the block stops
  * being agent-readable and agent-editable. The chip renders perfectly; the
  * failure surfaces later and somewhere else, as an agent's `edit_page` /

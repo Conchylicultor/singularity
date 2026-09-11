@@ -64,14 +64,20 @@ export {
   pageData,
 } from "../core/schemas";
 export type { Block, PageData } from "../core/schemas";
+// History restore's read and write. The write keeps block identity and edits
+// text through a writer the caller hands in (`page/block-text-write`).
 export {
   serializePageContent,
-  replacePageContent,
+  restorePageContent,
 } from "./internal/page-content";
 // The one sanctioned forest write for a caller holding a computed `BlockPatch`
 // (`page-editor/no-adhoc-forest-write` forbids every other route into `_blocks`).
 export { applyPageBlockPatch } from "./internal/handle-patch-blocks";
-export type { PageContentSnapshot, StoredBlock } from "./internal/page-content";
+export type {
+  BlockTextWriter,
+  PageContentSnapshot,
+  StoredBlock,
+} from "./internal/page-content";
 export {
   Editor,
   blockTextProtectedSpans,
@@ -118,7 +124,7 @@ export default {
     Resource.Declare(pagesLiveResource),
     Resource.Declare(blocksLiveResource),
     // `page` is owned here, not by the `sub-page` renderer: page rows are written
-    // directly by turn-into-page / replacePageContent, so their validation must not
+    // directly by turn-into-page / restorePageContent, so their validation must not
     // depend on the sub-page plugin being enabled. sub-page contributes only its web
     // renderer — a second `Editor.BlockData("page")` would be a duplicate → throw.
     Editor.BlockData(pageBlockHandle),

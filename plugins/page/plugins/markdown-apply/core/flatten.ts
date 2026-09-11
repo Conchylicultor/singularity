@@ -21,9 +21,10 @@ import type { StoredRow } from "./stored-row";
 
 /**
  * Children of each parent, rank-ascending. Rows that do not connect to the
- * walk's root are simply never reached — the same call `rowsToForest` makes for
- * the same reason: an unreachable row cannot be placed, and a planner that
- * cannot place a row must not claim authority to delete it either.
+ * walk's root are simply never reached — the same call history restore's
+ * top-down walk over a version makes, for the same reason: an unreachable row
+ * cannot be placed, and a planner that cannot place a row must not claim
+ * authority to delete it either.
  */
 function childrenByParent(
   rows: readonly StoredRow[],

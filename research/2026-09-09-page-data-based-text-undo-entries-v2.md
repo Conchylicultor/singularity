@@ -523,9 +523,11 @@ Acceptance grep from §2.7.
 
 ## 11. Follow-ups (filed as tasks, not in scope)
 
-- History restore (`deletePageContentRows`) still hard-deletes content rows and
+- ~~History restore (`deletePageContentRows`) still hard-deletes content rows and
   re-seeds from the snapshot's `data.text` — same class of bug; its net is the
-  pinned "Before restore" version.
+  pinned "Before restore" version.~~ Done 2026-09-11: restore keeps block
+  identity and trashes instead of deleting —
+  [`2026-09-11-page-history-restore-preserves-block-identity.md`](2026-09-11-page-history-restore-preserves-block-identity.md).
 - Per-source trash TTL (`defineTrashSource({ttlDays})`, one sweep looping sources).
 - A "Deleted blocks" trash UI over the `page-blocks` source (must be windowed).
 - Mount-free undo entries (route patches through `enqueueResourceWrite`) so

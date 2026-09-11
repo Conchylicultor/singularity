@@ -6,14 +6,13 @@ import {
   XmlElement,
   XmlText,
 } from "yjs";
-import { db } from "@plugins/database/server";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   editYDocState,
   yDocContent,
 } from "@plugins/primitives/plugins/collab-doc/core";
 import {
   initBlockDoc,
-  loadBlockDoc,
   mergeBlockDocUpdate,
 } from "@plugins/page/plugins/editor-collab/server";
 import {
@@ -32,9 +31,9 @@ import {
  * Writing a block's TEXT from the server, with no mounted editor.
  *
  * Text has exactly one owner — the block's per-block `Y.Doc` — so this is the
- * only channel a markdown apply may use for a surviving block. The row's
- * `data.text` is a projection written afterwards by the caller, downstream of
- * what happens here.
+ * only channel a server-side writer may use for a surviving block's text. The
+ * row's `data.text` is a projection written afterwards (by `writeBlockTexts`,
+ * `write-block-texts.ts`), downstream of what happens here.
  *
  * ---------------------------------------------------------------------------
  * A decorator node is read and rewritten, not refused
@@ -207,12 +206,20 @@ function canonicalRuns(runs: RichText): string {
   );
 }
 
-function runsEqual(a: RichText, b: RichText): boolean {
+/**
+ * Whether two runs lists hold the same text — THE equality this channel uses,
+ * for a doc's runs and for a row's `data.text` alike. Not editor core's
+ * `runsEqual`, which stringifies whole objects and so reports a false
+ * difference on key order alone (see {@link canonicalRuns}).
+ */
+export function sameRuns(a: RichText, b: RichText): boolean {
   return canonicalRuns(a) === canonicalRuns(b);
 }
 
 /**
- * Bring block `blockId`'s content doc to `runs`.
+ * Bring block `blockId`'s content doc to `runs`, starting from `stored` — the
+ * doc state the caller's batched read found for it (`loadBlockDocs`, one query
+ * for every block of the write), or `undefined` when it has none.
  *
  * Two entry states, one exit:
  *
@@ -226,28 +233,33 @@ function runsEqual(a: RichText, b: RichText): boolean {
  *  - **Stored doc** → read the TRUE current runs out of the doc (never the
  *    row's `data.text`, which trails it by ~1s) and splice in only what changed.
  *
+ * `stored` may trail the table by the writes that ran since the batched read (a
+ * browser flushing into this block meanwhile). That costs nothing: the splice
+ * is a Yjs delta over `stored`'s items, and `mergeBlockDocUpdate` MERGES it into
+ * whatever the row holds now — a concurrent edit survives beside it, exactly
+ * as it would beside a second tab's.
+ *
  * Idempotent: a doc that already reads as `runs` is left completely alone — no
- * update, no push. That is what makes re-running a partially-applied markdown
- * apply converge instead of double-writing.
+ * update, no push. That is what makes re-running a partially-applied write
+ * converge instead of double-writing.
  */
 export async function writeBlockText(
+  executor: NodePgDatabase,
   blockId: string,
   runs: RichText,
+  stored: Uint8Array | undefined,
 ): Promise<void> {
-  const rows = await loadBlockDoc(db, blockId);
-  const stored = rows[0];
-
   let state: Uint8Array;
   if (stored === undefined) {
     const seed = buildSeedState(runs);
-    const authoritative = await initBlockDoc(db, blockId, seed);
+    const authoritative = await initBlockDoc(executor, blockId, seed);
     if (bytesEqual(authoritative, seed)) return; // we seeded it; already correct
     state = authoritative; // we lost the race — edit the winner's doc instead
   } else {
-    state = Uint8Array.from(Buffer.from(stored.state, "base64"));
+    state = stored;
   }
 
-  if (runsEqual(readStateRuns(state, blockId), runs)) return;
+  if (sameRuns(readStateRuns(state, blockId), runs)) return;
 
   // The extension set the splice aligns and rebuilds with, and the node classes
   // the replica must be able to hydrate — the same pair `readStateRuns` just
@@ -256,5 +268,5 @@ export async function writeBlockText(
   const update = editYDocState(state, () => $spliceRunsInto(runs, extensions), {
     nodes: [LinkNode, ...blockTextServerNodes()],
   });
-  await mergeBlockDocUpdate(db, blockId, update);
+  await mergeBlockDocUpdate(executor, blockId, update);
 }

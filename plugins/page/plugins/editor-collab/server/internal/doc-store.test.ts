@@ -30,6 +30,7 @@ import { _pageBlockDocs } from "./tables";
 import {
   initBlockDoc,
   loadBlockDoc,
+  loadBlockDocs,
   mergeBlockDocUpdate,
   stateToBase64,
 } from "./doc-store";
@@ -148,7 +149,10 @@ describe("mergeBlockDocUpdate", () => {
     const replica = new Y.Doc();
     Y.applyUpdate(replica, originState);
     appendText(replica, " world");
-    const incremental = Y.encodeStateAsUpdate(replica, Y.encodeStateVector(origin));
+    const incremental = Y.encodeStateAsUpdate(
+      replica,
+      Y.encodeStateVector(origin),
+    );
 
     await mergeBlockDocUpdate(t.db, blockId, incremental);
 
@@ -164,7 +168,10 @@ describe("mergeBlockDocUpdate", () => {
     const replica = new Y.Doc();
     Y.applyUpdate(replica, originState);
     appendText(replica, "def");
-    const incremental = Y.encodeStateAsUpdate(replica, Y.encodeStateVector(origin));
+    const incremental = Y.encodeStateAsUpdate(
+      replica,
+      Y.encodeStateVector(origin),
+    );
 
     await mergeBlockDocUpdate(t.db, blockId, incremental);
     await mergeBlockDocUpdate(t.db, blockId, incremental);
@@ -210,6 +217,27 @@ describe("loadBlockDoc (blockContentResource loader)", () => {
   test("uninitialized block → empty array (0-element keyed payload)", async () => {
     const blockId = await createBlock();
     expect(await loadBlockDoc(t.db, blockId)).toEqual([]);
+  });
+});
+
+describe("loadBlockDocs (batched raw-bytes read)", () => {
+  test("returns each stored state byte-exact, keyed by block id; a doc-less block is absent", async () => {
+    const a = await createBlock();
+    const b = await createBlock();
+    const bare = await createBlock();
+    await initBlockDoc(t.db, a, Y.encodeStateAsUpdate(docOf("alpha")));
+    await initBlockDoc(t.db, b, Y.encodeStateAsUpdate(docOf("bravo")));
+
+    const states = await loadBlockDocs(t.db, [a, b, bare]);
+
+    expect([...states.keys()].sort()).toEqual([a, b].sort());
+    expect(states.get(a)).toEqual(await storedState(a));
+    expect(textOfState(states.get(b)!)).toBe("bravo");
+    expect(states.has(bare)).toBe(false);
+  });
+
+  test("no ids → an empty map", async () => {
+    expect((await loadBlockDocs(t.db, [])).size).toBe(0);
   });
 });
 

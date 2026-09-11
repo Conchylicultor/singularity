@@ -25,8 +25,8 @@ export interface BlockCreateHook {
 }
 
 /**
- * A row a delete removes from a page's LIVE content — trashed (the common case:
- * every user delete) or hard-deleted (purge, history restore) — as the writer
+ * A row a delete removes from a page's LIVE content — trashed (every delete a
+ * user or a history restore makes) or hard-deleted (purge) — as the writer
  * reconciled it. `type` is the fact every contributor actually wants ("which of
  * these were page rows"), so it is answered in memory rather than by a DB
  * round-trip per hook. The same shape is handed back on restore.
@@ -90,9 +90,9 @@ export const BlockLifecycle = {
   AfterCreate: defineServerContribution<BlockCreateHook>(
     "page.editor.block.afterCreate",
   ),
-  // Fires on PURGE and on history restore's content wipe only — the two paths
-  // that really hard-delete (the row + its cascade subtree vanish). A user
-  // delete is always a trash and never reaches this. Version history stays
+  // Fires on PURGE only — the one path that really hard-deletes (the row + its
+  // cascade subtree vanish). A user delete and a history restore always trash,
+  // and never reach this. Version history stays
   // bound here — deleted only at purge — which is the core of the trash fix:
   // trashing a page no longer destroys its versions.
   OnDelete: defineServerContribution<BlockDeleteHook>(
