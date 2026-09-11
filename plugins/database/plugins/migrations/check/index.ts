@@ -1,16 +1,7 @@
 import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { join, resolve } from "path";
-import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-// Connect via the database CORE barrel, not admin/server: the admin pool module
-// throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
-// tooling/check subprocess. The core barrel exposes exactly the config→connstring
-// helpers for non-backend consumers and is import-safe by design.
-import {
-  buildConnectionString,
-  readDatabaseConfig,
-} from "@plugins/database/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
 import {
   getWorktreeRoot,
@@ -22,6 +13,7 @@ import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 import forkSchemaDriftCheck from "./fork-schema-drift";
 import drizzleConfigSchemaGlobsCheck from "./drizzle-config-schema-globs";
 import dataMigrationResetStableCheck from "./data-migration-reset-stable";
+import { withDirectDb } from "./internal/direct-db";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -56,6 +48,16 @@ async function git(
     timeoutMs: GIT_TIMEOUT_MS,
   });
   return { code: result.exitCode, out: result.stdout };
+}
+
+// Could not reach main's DB, so the pending migrations were never tried:
+// fail loudly rather than pass unverified.
+function cannotVerify(cause: string): CheckResult {
+  return {
+    ok: false,
+    message: `cannot verify migration: main DB ("${MAIN_DB_NAME}") not reachable: ${cause}`,
+    hint: "The main Postgres cluster must be up to dry-run pending migrations. Start it and re-run the check.",
+  };
 }
 
 const check: Check = {
@@ -105,38 +107,34 @@ const check: Check = {
     if (diff.code === 0) return { ok: true };
 
     // SLOW PATH: a migration differs from main → replay the pending delta against
-    // main's live DB inside a transaction that always rolls back. Build a direct
-    // (non-pgbouncer) connection from the core config helpers so the multi-
-    // statement dry-run transaction stays on one backend.
-    const cfg = readDatabaseConfig();
-    const pool = new Pool({
-      connectionString: buildConnectionString(cfg.connection, MAIN_DB_NAME),
-      max: 1,
-      idleTimeoutMillis: 1_000,
-    });
-    try {
-      // Separate connectivity failure (cannot verify → fail loudly) from a real
-      // apply failure (the migration is broken). Probe the connection first.
-      try {
-        const client = await pool.connect();
-        client.release();
-      } catch (e) {
-        return {
-          ok: false,
-          message: `cannot verify migration: main DB ("${MAIN_DB_NAME}") not reachable: ${(e as Error).message}`,
-          hint: "The main Postgres cluster must be up to dry-run pending migrations. Start it and re-run the check.",
-        };
-      }
-      await dryRunPendingMigrations(drizzle(pool));
-      return { ok: true };
-    } catch (e) {
-      return {
-        ok: false,
-        message: (e as Error).message,
-        hint: "This migration would fail to apply and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/.",
-      };
-    } finally {
-      await pool.end();
+    // main's live DB inside a transaction that always rolls back, over a direct
+    // (non-pgbouncer) connection so the multi-statement dry-run transaction
+    // stays on one backend. withDirectDb separates a connectivity failure
+    // (cannot verify → fail loudly) from a real apply failure (the migration is
+    // broken), which is reported from inside the callback.
+    const result = await withDirectDb(
+      MAIN_DB_NAME,
+      async (pool): Promise<CheckResult> => {
+        try {
+          await dryRunPendingMigrations(drizzle(pool));
+          return { ok: true };
+        } catch (e) {
+          return {
+            ok: false,
+            message: (e as Error).message,
+            hint: "This migration would fail to apply and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/.",
+          };
+        }
+      },
+    );
+    switch (result.kind) {
+      case "ok":
+        return result.value;
+      case "unreachable":
+        return cannotVerify(result.cause);
+      case "no-database":
+        // A missing main DB is no more verifiable than an unreachable cluster.
+        return cannotVerify(`database "${MAIN_DB_NAME}" does not exist`);
     }
   },
 };

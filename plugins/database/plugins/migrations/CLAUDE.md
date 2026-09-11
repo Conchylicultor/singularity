@@ -142,6 +142,16 @@ permanently: checks abort it before the restart that would make them pass.
 `orphaned-db-tables` does this; `fork-schema-drift` asks an order-independent
 question and needs no such gate.
 
+Every direct (non-pgbouncer) DB connection a check opens goes through
+`withDirectDb` (`check/internal/direct-db.ts`) — never a hand-built `Pool`. It
+owns the one connect timeout (60 s): the timer counts wall-clock on the check
+process's own thread, which a full pass keeps busy for 8–16 s, so a shorter
+bound fails against a healthy Postgres. And it returns "could not connect" as a
+typed arm (`unreachable` / `no-database`, decided by a probe connect before the
+callback runs, so the callback's own errors are never reclassified) — each check
+must decide explicitly what "cannot look" means for its verdict. See
+`research/2026-09-11-global-check-db-connect-timeout-aborts-run.md`.
+
 ## Schema files must be synchronously loadable
 
 Schema-glob files (`server/**/internal/{tables,tables-*,schema,schema-*}.ts`) must

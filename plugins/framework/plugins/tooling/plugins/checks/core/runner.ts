@@ -23,6 +23,11 @@ import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
 import { openCheckTranscript } from "./transcript";
 import { isBuildProcess } from "./run-context";
+import {
+  thrownOutcome,
+  type CheckObservation,
+  type CheckOutcome,
+} from "./thrown-outcome";
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -437,21 +442,17 @@ export async function runChecks(
   // live on every run, so this is the one part that is genuinely opt-in.
   const shadow = process.env.SINGULARITY_CHECK_SHADOW === "1";
 
-  interface CheckOutcome {
-    check: Check;
-    result: CheckResult;
-    durationMs: number;
-    wallStart: number;
-    cached: boolean;
-    observations: { line: string; stream: "stdout" | "stderr" }[];
-  }
-
   // One check, start to settle. Extracted from the `Promise.all` callback ONLY
   // so the progress log can wrap it in a try/finally — a `finally` cannot see a
   // return value, and the callback has four return sites.
+  //
+  // `observations` is the caller's buffer, not one made here: if the check
+  // throws, the caller builds its failed outcome from the same buffer, so the
+  // lines it logged before throwing survive.
   const runOne = async (
     check: Check,
     wallStart: number,
+    observations: CheckObservation[],
   ): Promise<CheckOutcome> => {
     // A check opts out of caching by returning null from cacheSignature();
     // absent → "" (keyed on tree hash alone). The runner never names checks.
@@ -465,13 +466,12 @@ export async function runChecks(
       }
     }
 
-    // Non-fatal observations (measurements, capacity notes) a check emits via
-    // `ctx.log`. Buffered rather than written straight through: checks run
-    // under Promise.all, so a live write would interleave lines from every
-    // in-flight check. They are flushed through the runner's own `emit()`
+    // `observations` holds the non-fatal lines (measurements, capacity notes) a
+    // check emits via `ctx.log`. Buffered rather than written straight through:
+    // checks run under Promise.all, so a live write would interleave lines from
+    // every in-flight check. They are flushed through the runner's own `emit()`
     // below, attributed under the emitting check's result line — so the
     // transcript stays deterministic and diffable across runs.
-    const observations: { line: string; stream: "stdout" | "stderr" }[] = [];
 
     // Scan the SAME tree the cache key (treeHash) is computed from, so a
     // recorded PASS always reflects content the check actually inspected. The
@@ -658,13 +658,34 @@ export async function runChecks(
             // (`CheckRunProgress.queued`).
             const wallStart = performance.now();
             progress.checkStarted(check.id);
+            const observations: CheckObservation[] = [];
             let outcome: CheckOutcome | undefined;
             try {
-              outcome = await runOne(check, wallStart);
+              outcome = await runOne(check, wallStart, observations);
+              return outcome;
+            } catch (err) {
+              // A check that throws FAILS ITSELF; it does not abort the run.
+              // Its throw used to reject this `Promise.all`, and the outer catch
+              // then ended the whole run with only `run aborted: Error: …` — the
+              // check was never named, and every other check's verdict was lost.
+              // On 2026-09-10, `fork-schema-drift`'s Postgres connect timeout did
+              // exactly that to whole runs. Converted here, the throw is a fatal
+              // FAIL that keeps the stack: it reaches the progress `end` record
+              // and the transcript through the `finally` below, and the console
+              // through the ordinary print loop, like any other failure. Nothing
+              // is swallowed — the run still fails, just with a name on it. (This
+              // also catches the per-check cache bookkeeping around the body; the
+              // stack says which threw.)
+              outcome = thrownOutcome(check, err, {
+                wallStart,
+                durationMs: Math.round(performance.now() - wallStart),
+                observations,
+              });
               return outcome;
             } finally {
-              // In a `finally` so a THROWING check still records its end — otherwise
-              // a crash would masquerade as the hang we are hunting.
+              // In a `finally` so the end is recorded on every path, a thrown
+              // check included — a check that never records its end would
+              // masquerade as the hang we are hunting.
               progress.checkEnded(
                 check.id,
                 Math.round(performance.now() - wallStart),
@@ -674,8 +695,9 @@ export async function runChecks(
               );
               // The transcript is written as each check SETTLES, not from the print
               // loop below — the loop runs after `Promise.all`, which a hung or
-              // killed run reaches never. A check that threw has no outcome to
-              // render; its `end` record above is what says so.
+              // killed run reaches never. A check that threw has an outcome too
+              // (the catch above built it); `outcome` is unset only if the runner
+              // itself failed, and the outer catch reports that.
               if (outcome) {
                 transcript?.record({
                   checkId: check.id,
@@ -693,6 +715,11 @@ export async function runChecks(
       }),
     );
   } catch (err) {
+    // RUNNER-INTERNAL failures only (the gate, the progress log, the transcript
+    // write in the `finally`): anything `runOne` throws — the check's own body
+    // above all — is already that check's FAIL outcome, built inside the gate
+    // callback, so it never reaches here.
+    //
     // The run is over either way: stop the heartbeat so it can never outlive the
     // run, and close the records. Rethrown untouched — this changes no semantics.
     transcript?.finish([`run aborted: ${String(err)}`], false);

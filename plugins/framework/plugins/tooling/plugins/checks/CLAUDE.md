@@ -79,6 +79,16 @@ for. Spawning makes build's ✓ and push's ✓ the same claim by construction. H
 by the `check-runner-safety` lint rule (bans the `runChecks` value import
 elsewhere) plus a throw in `runChecks` when `isBuildProcess()`.
 
+## A check that throws fails itself, never the run
+
+If a check's `run()` throws, that check FAILs: it is named, its full stack is in
+the transcript, and the result is fatal and never cached. Every other check in
+the run still reports its own verdict. The conversion is
+[`core/thrown-outcome.ts`](core/thrown-outcome.ts). Still, return `{ ok: false }`
+(or `inconclusive`) for any failure you can name — a throw is reported as a bug
+in the check. The runner's outer catch, which aborts the whole run, is for
+runner-internal failures only — don't route check failures back to it.
+
 ## `inputKeyed` carries an extra rule
 
 Live, not a dormant scaffold — nine checks set it: `type-check`,

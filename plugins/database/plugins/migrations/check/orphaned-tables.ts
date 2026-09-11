@@ -1,14 +1,5 @@
 import { readdirSync, readFileSync } from "fs";
 import { basename, join } from "path";
-import { Pool } from "pg";
-// Connect via the database CORE barrel, not admin/server: the admin pool module
-// throws at import time if SINGULARITY_WORKTREE is unset, which is the norm in a
-// tooling/check subprocess. The core barrel exposes the import-safe config→
-// connstring helpers by design.
-import {
-  buildConnectionString,
-  readDatabaseConfig,
-} from "@plugins/database/core";
 // The imperative-public-table allowlist lives in the derived-views core leaf
 // (the shared sink) — see that module for why it is NOT in @plugins/database/core.
 import {
@@ -18,6 +9,7 @@ import {
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { z } from "zod";
+import { withDirectDb } from "./internal/direct-db";
 
 // Inlined minimal Check shape (mirrors the sibling migration-applies-clean check)
 // to avoid a cross-plugin import of the framework Check type from a check file.
@@ -122,107 +114,98 @@ const check: Check = {
     const declared = loadDeclaredTables();
     const worktreeName = await getWorktreeName();
 
-    const cfg = readDatabaseConfig();
-    const pool = new Pool({
-      connectionString: buildConnectionString(cfg.connection, worktreeName),
-      max: 1,
-      idleTimeoutMillis: 1_000,
-    });
-    try {
-      // The check needs the live worktree DB to read its table set. But the DB
-      // being reachable is an environmental PRECONDITION, not the check's
-      // subject — "cannot connect" is never evidence of dead schema, so we must
-      // not turn it into a push-blocking failure. Two cases where the DB is
-      // legitimately absent: during `./singularity push` the embedded Postgres
-      // cluster may not be running in the checks subprocess (push doesn't bring
-      // the app up — this is exactly why migration-applies-clean fast-paths out
-      // without connecting), and a not-yet-provisioned worktree fork (3D000) has
-      // no tables at all. In both, decline to assert (clean pass). This is not a
-      // silenced error: the check still fires loudly with a real orphan finding
-      // whenever the DB IS reachable (build, manual `check`, healthy push). It
-      // detects orphans, not cluster downtime.
-      try {
-        const client = await pool.connect();
-        client.release();
-        // eslint-disable-next-line promise-safety/no-bare-catch -- intentional: DB reachability is an environmental precondition, not the check's subject. Any connect failure (cluster down in the push checks subprocess; a 3D000 not-yet-provisioned fork) means "cannot look", which must never block push. The check still fails loudly on a real orphan finding whenever the DB IS reachable.
-      } catch {
-        return { ok: true };
-      }
-
-      // SECOND PRECONDITION — the live DB must be caught up with the migration
-      // chain. This check compares the live table set against the HEAD drizzle
-      // snapshot, and that comparison is only well-formed once every migration
-      // on disk has been applied: with a migration still pending, the live
-      // schema is a PAST state of the chain, so anything a pending migration
-      // drops is live-but-undeclared by construction — not dead schema.
-      //
-      // This is not hypothetical, and getting it wrong DEADLOCKS the build:
-      // `./singularity build` runs checks BEFORE the server restart that applies
-      // migrations, so a freshly-authored `DROP TABLE` migration fails this
-      // check on every build, and the build never reaches the step that would
-      // apply it and make the check pass. (It did: `staged_config_default`,
-      // dropped by 20260801_152825_266d6b7e, wedged main's build.)
-      //
-      // So: decline to assert while the DB is behind, exactly as with the
-      // connect precondition above. Nothing is silenced — the same build applies
-      // the pending migrations on restart, so the very next run asserts against
-      // a caught-up DB and reports any real orphan then.
-      let appliedHashes: Set<string>;
-      try {
-        const ledger = await queryRows(pool, {
-          sql: `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
-          row: z.object({ hash: z.string() }),
-        });
-        appliedHashes = new Set(ledger.map((r) => r.hash));
-      } catch (e) {
-        // No ledger table (42P01) = a DB that has never run the migration
-        // runner: it is behind by the WHOLE chain, so there is nothing to
-        // assert against. Any other error is a real fault and propagates.
-        if ((e as { code?: string }).code === "42P01") return { ok: true };
-        throw e;
-      }
-      const pending = pendingMigrationFiles(
-        readdirSync(DATA_DIR),
-        appliedHashes,
-      );
-      if (pending.length > 0) {
-        ctx.log?.(
-          `orphaned-db-tables: not asserting — worktree DB "${worktreeName}" is behind ` +
-            `by ${pending.length} unapplied migration(s) (${pending.join(", ")}), so its ` +
-            `schema is not expected to match the head snapshot yet. Re-asserts once ` +
-            `the server restart applies them.`,
-          "stdout",
+    const result = await withDirectDb(
+      worktreeName,
+      async (pool): Promise<CheckResult> => {
+        // SECOND PRECONDITION — the live DB must be caught up with the migration
+        // chain. This check compares the live table set against the HEAD drizzle
+        // snapshot, and that comparison is only well-formed once every migration
+        // on disk has been applied: with a migration still pending, the live
+        // schema is a PAST state of the chain, so anything a pending migration
+        // drops is live-but-undeclared by construction — not dead schema.
+        //
+        // This is not hypothetical, and getting it wrong DEADLOCKS the build:
+        // `./singularity build` runs checks BEFORE the server restart that applies
+        // migrations, so a freshly-authored `DROP TABLE` migration fails this
+        // check on every build, and the build never reaches the step that would
+        // apply it and make the check pass. (It did: `staged_config_default`,
+        // dropped by 20260801_152825_266d6b7e, wedged main's build.)
+        //
+        // So: decline to assert while the DB is behind, exactly as with the
+        // connect precondition (the non-ok arms below). Nothing is silenced — the
+        // same build applies the pending migrations on restart, so the very next
+        // run asserts against a caught-up DB and reports any real orphan then.
+        let appliedHashes: Set<string>;
+        try {
+          const ledger = await queryRows(pool, {
+            sql: `SELECT hash FROM ${MIGRATIONS_TABLE_NAME}`,
+            row: z.object({ hash: z.string() }),
+          });
+          appliedHashes = new Set(ledger.map((r) => r.hash));
+        } catch (e) {
+          // No ledger table (42P01) = a DB that has never run the migration
+          // runner: it is behind by the WHOLE chain, so there is nothing to
+          // assert against. Any other error is a real fault and propagates.
+          if ((e as { code?: string }).code === "42P01") return { ok: true };
+          throw e;
+        }
+        const pending = pendingMigrationFiles(
+          readdirSync(DATA_DIR),
+          appliedHashes,
         );
-        return { ok: true };
-      }
+        if (pending.length > 0) {
+          ctx.log?.(
+            `orphaned-db-tables: not asserting — worktree DB "${worktreeName}" is behind ` +
+              `by ${pending.length} unapplied migration(s) (${pending.join(", ")}), so its ` +
+              `schema is not expected to match the head snapshot yet. Re-asserts once ` +
+              `the server restart applies them.`,
+            "stdout",
+          );
+          return { ok: true };
+        }
 
-      const liveRows = await queryRows(pool, {
-        // `relname` is a `name`, cast so the column decodes as the `text` the
-        // schema declares.
-        sql: `SELECT relname::text AS relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
-        row: z.object({ relname: z.string() }),
-      });
-      const live = liveRows.map((r) => r.relname);
-      const orphans = computeOrphans(
-        live,
-        declared,
-        IMPERATIVE_PUBLIC_TABLE_NAMES,
-      );
-      if (orphans.length === 0) return { ok: true };
-      return {
-        ok: false,
-        message:
-          `Orphaned public table(s) in worktree DB "${worktreeName}" — present in the live DB but ` +
-          `not declared by any plugin's drizzle schema nor in the imperative allowlist:\n` +
-          orphans.map((t) => `  - ${t}`).join("\n"),
-        hint:
-          "These are likely dead schema left behind by an imperative DROP/rename. " +
-          "If the drop was intended, author a proper schema migration that drops them " +
-          "(`./singularity build --migration-name drop_<table>`). " +
-          "If the drop was unintended, restore the table's declaration in its plugin's tables.ts.",
-      };
-    } finally {
-      await pool.end();
+        const liveRows = await queryRows(pool, {
+          // `relname` is a `name`, cast so the column decodes as the `text` the
+          // schema declares.
+          sql: `SELECT relname::text AS relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
+          row: z.object({ relname: z.string() }),
+        });
+        const live = liveRows.map((r) => r.relname);
+        const orphans = computeOrphans(
+          live,
+          declared,
+          IMPERATIVE_PUBLIC_TABLE_NAMES,
+        );
+        if (orphans.length === 0) return { ok: true };
+        return {
+          ok: false,
+          message:
+            `Orphaned public table(s) in worktree DB "${worktreeName}" — present in the live DB but ` +
+            `not declared by any plugin's drizzle schema nor in the imperative allowlist:\n` +
+            orphans.map((t) => `  - ${t}`).join("\n"),
+          hint:
+            "These are likely dead schema left behind by an imperative DROP/rename. " +
+            "If the drop was intended, author a proper schema migration that drops them " +
+            "(`./singularity build --migration-name drop_<table>`). " +
+            "If the drop was unintended, restore the table's declaration in its plugin's tables.ts.",
+        };
+      },
+    );
+    switch (result.kind) {
+      case "ok":
+        return result.value;
+      case "unreachable":
+      case "no-database":
+        // The live DB being reachable is an environmental PRECONDITION, not
+        // this check's subject — "cannot look" is never evidence of dead
+        // schema, so it must never block push. The cluster may legitimately be
+        // down in the push checks subprocess (push doesn't bring the app up —
+        // the reason migration-applies-clean fast-paths out without
+        // connecting), and a not-yet-provisioned worktree fork (3D000) has no
+        // tables at all. Decline to assert (clean pass). Nothing is silenced:
+        // whenever the DB IS reachable (build, manual `check`, healthy push) a
+        // real orphan still fails loudly.
+        return { ok: true };
     }
   },
 };
