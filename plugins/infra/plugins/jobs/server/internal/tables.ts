@@ -97,5 +97,12 @@ export const _deadJobs = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("dead_jobs_archived_at_idx").on(t.archivedAt)],
+  (t) => [
+    index("dead_jobs_archived_at_idx").on(t.archivedAt),
+    // `queryRecentDeadJobs` reads the last day of deaths on every queue change
+    // (the health row's pulse). Each row carries its job's input inline — one
+    // heap page per row on main — so without this a 2000-row archive is a
+    // 2000-page scan to find a handful of recent ones.
+    index("dead_jobs_died_at_idx").on(t.diedAt),
+  ],
 );

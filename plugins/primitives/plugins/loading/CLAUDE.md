@@ -130,6 +130,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `debug/live-state-health`
     - `debug/memory`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/read-set`
     - `debug/reports`
     - `debug/slow-ops/pane`

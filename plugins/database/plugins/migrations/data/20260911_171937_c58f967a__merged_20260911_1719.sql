@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "dead_jobs_died_at_idx" ON "dead_jobs" USING btree ("died_at");

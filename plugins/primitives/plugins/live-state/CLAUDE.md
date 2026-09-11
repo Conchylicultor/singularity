@@ -759,6 +759,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `debug/claude-cli-calls`
     - `debug/live-state-health`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/reports`
     - `debug/slow-ops`
     - `debug/slow-ops/pane`

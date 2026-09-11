@@ -80,5 +80,16 @@ export const queueHealthConfig = defineConfig({
       description:
         "File a queue-wedged report when every worker slot has been held by the same set of live jobs, with ready work waiting behind them, continuously for this many minutes. Also the floor of the queue-class-starved window (a class's own window is the longer of this and its work ceiling).",
     }),
+    // Read by the health report's Job queue row (`core/verdict.ts`), not by the
+    // watchdog. A dead job stays listed in the row's detail for a day either
+    // way; this only decides how long it colours the dot. The bell and
+    // Debug → Reports keep it after that.
+    deadJobAttentionMinutes: intField({
+      default: 60,
+      min: 0,
+      label: "Dead job attention window (minutes)",
+      description:
+        "The health report's Job queue row turns amber for this many minutes after a job dies. 0 means dead jobs never colour the row; they are still listed in its detail for 24 hours.",
+    }),
   },
 });

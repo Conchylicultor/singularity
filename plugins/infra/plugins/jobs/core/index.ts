@@ -27,6 +27,7 @@ export {
   priorityFor,
   ceilingMsFor,
   deadlineMsFor,
+  pickupTargetMsFor,
   reachableSlots,
   holdForTask,
 } from "./hold";

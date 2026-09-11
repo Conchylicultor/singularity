@@ -1,4 +1,4 @@
-// @hash 01974192c298
+// @hash 8dc88298b283
 {
   // When off, the watchdog tick returns early and files no queue-health reports.
   "enabled": true,
@@ -11,5 +11,7 @@
   // File a queue-slot-blocked report when a job's average run spends at least this many seconds waiting on an admission gate AND more than half its slot hold is that wait — i.e. it is holding a worker slot to wait, not to work.
   "slotBlockedWaitSeconds": 5,
   // File a queue-wedged report when every worker slot has been held by the same set of live jobs, with ready work waiting behind them, continuously for this many minutes. Also the floor of the queue-class-starved window (a class's own window is the longer of this and its work ceiling).
-  "wedgeMinutes": 3
+  "wedgeMinutes": 3,
+  // The health report's Job queue row turns amber for this many minutes after a job dies. 0 means dead jobs never colour the row; they are still listed in its detail for 24 hours.
+  "deadJobAttentionMinutes": 60
 }

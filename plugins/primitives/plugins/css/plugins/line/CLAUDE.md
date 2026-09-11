@@ -65,6 +65,7 @@ attribute type carries.
     - `debug/broadcasts`
     - `debug/memory`
     - `debug/profiling`
+    - `debug/queue-health`
     - `debug/timeline`
     - `page/annotations/todo/task-link`
     - `page/inline-date`

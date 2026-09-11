@@ -534,6 +534,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `debug/profiling/ops/op-gantt`
     - `debug/profiling/runtime`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/render-profiler`
     - `debug/reports`
     - `debug/slow-ops/cluster`

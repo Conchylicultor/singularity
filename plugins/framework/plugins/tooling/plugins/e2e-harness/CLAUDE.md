@@ -273,6 +273,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `conversations/conversations-view/data-view/queue`
     - `database/admin`
     - `debug/live-state-churn/emit`
+    - `debug/queue-health`
     - `debug/render-profiler`
     - `improve/element-picker`
     - `infra/events-test`

@@ -255,6 +255,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `debug/profiling/ops/op-gantt`
     - `debug/profiling/runtime`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/reports`

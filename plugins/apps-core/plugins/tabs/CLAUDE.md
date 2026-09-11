@@ -230,6 +230,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `build`
     - `config_v2/config-link`
     - `debug/op-rate`
+    - `debug/queue-health`
     - `debug/reports`
     - `debug/slow-ops`
     - `debug/slow-ops/pane`

@@ -17,7 +17,7 @@
  *     flush's frames (the guard serializes; it never overlaps two flushes).
  */
 
-import { test, expect, describe, mock } from "bun:test";
+import { test, expect, describe, mock, spyOn } from "bun:test";
 import { z } from "zod";
 import { type ResourceParams } from "./runtime";
 // The harness / controllable-loader / tick helpers live in the shared
@@ -939,5 +939,58 @@ describe("sub-error frames — reason + params echo (Fix D)", () => {
         String(ctx).includes("loader failed for r"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("read-set-gap warning", () => {
+  // The warning says "a hand-notify arrived that the change-feed did not cover,
+  // so a table this resource reads may be missing from its read-set". That is a
+  // real signal for a DB-backed resource, and always false for an external one,
+  // whose hand-notify is by design its only source.
+  const gapWarnings = (spy: { mock: { calls: unknown[][] } }) =>
+    spy.mock.calls.filter((args) =>
+      String(args[0]).includes("read-set-gap candidate"),
+    );
+
+  test("an external resource's hand-notify never warns", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const h = createHarness();
+      const r = h.runtime.defineExternalResource({
+        key: "ext",
+        mode: "invalidate",
+        schema: z.number(),
+        loader: async () => 1,
+      });
+      await h.subscribe("ext");
+      r.notify();
+      r.notify();
+      await tick();
+      expect(gapWarnings(warn)).toHaveLength(0);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test("a DB-backed resource's uncovered hand-notify still warns", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const h = createHarness();
+      const r = h.runtime.defineResource({
+        key: "db",
+        mode: "invalidate",
+        schema: z.number(),
+        loader: async () => 1,
+      });
+      await h.subscribe("db");
+      // `notify` exists on every runtime object; the `Resource` type hides it
+      // precisely so this path is not reachable from real code.
+      (r as unknown as { notify: () => void }).notify();
+      await tick();
+      expect(gapWarnings(warn)).toHaveLength(1);
+      expect(String(gapWarnings(warn)[0]![0])).toContain('"db"');
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

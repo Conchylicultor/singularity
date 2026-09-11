@@ -30,12 +30,19 @@ number that had drifted from the runtime would be worse than no number. (The
 figures in this document are prose, and prose is allowed to name them; the
 runtime never reads them.)
 
-Two questions the data deliberately cannot answer, and one it can:
+What the data can and cannot answer:
 
-- **Which runner holds a locked row** — unanswerable. The three runners share one
-  `_private_jobs` table and graphile records no runner id per row. So every
-  `lockedCount` in this plugin counts locked ROWS of a class, never slots held by
-  a tier, and "is the seconds tier saturated" is a question with no answer here.
+- **Which runner holds a locked row** — not from the database, but exactly from
+  memory, for this backend. The three runners share one `_private_jobs` table
+  and graphile records no runner id per row, so every `lockedCount` (and every
+  watchdog detector, which reads only the database) still counts locked ROWS of
+  a class, never slots held by a tier. The jobs plugin's **slot ledger**
+  (`getOccupiedSlots`) answers the tier question: we create each runner, each has
+  its own event emitter, so a `job:start` heard on it names the runner whose
+  slot took the job. The Job queue row's bars are built on it (see
+  [Health row and pulse](#health-row-and-pulse)). What the ledger cannot see is a
+  row locked by a worker that died — that one is in the database and not in the
+  ledger, which is exactly how the pulse counts `orphanLocked`.
 - **Why a slot is held** — not visible from the queue. `locked_at` gives HOLD,
   which includes time the handler spent blocked on an admission gate entered
   after graphile handed it the slot. The wait/work split lives in the runtime
@@ -160,8 +167,10 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   per (class, worktree)** (fingerprint `queue-class-starved:<hold>`).
 
   Note what this is NOT: counting the slots a class occupies and comparing
-  against `reachableSlots`. That is the obvious test and it is unanswerable (see
-  above). "Did anything in this class drain" is answerable, exact, and free.
+  against `reachableSlots`. The watchdog reads only the database, where that is
+  unanswerable (see above); the slot ledger now answers it for the health row,
+  but "did anything in this class drain" stays the better test here — it is
+  exact, free, and true of the class rather than of this instant's occupancy.
 - **`queue-dead-job`** (variant `error`) — terminally-failed jobs
   (`attempts >= max_attempts AND locked_at IS NULL`, the same predicate
   `reconcileDeadJobs` uses), grouped by `payload->>'jobName'`. **One report per
@@ -263,6 +272,39 @@ the two came from different snapshots. Reports fire only when a threshold trips:
   reads that description to know which question to ask about a stalled queue, so
   it earning its length matters more than it being short.
 
+## Health row and pulse
+
+The health report's **Job queue** row (`HealthReport.Row`, id `job-queue`) is
+this plugin's too: it owns the queue thresholds. Design:
+[`research/2026-09-11-global-job-queue-health-row.md`](../../../../research/2026-09-11-global-job-queue-health-row.md).
+
+- **`queue-health.pulse`** (`core/pulse.ts`, loader `server/internal/pulse.ts`)
+  — an external push resource: slot ledger + forfeit registry (memory) and three
+  bounded jobs queries (`queryQueuePulse`, `queryOldestWaiting`,
+  `queryRecentDeadJobs` over 24 h). Every array in the schema is `.max()`-bounded.
+  Not boot-critical. The joins live in the pure `assemble-pulse.ts`.
+- **No poll.** Notified by `onQueueActivity` (start / complete / insert / the jobs
+  plugin's own mutations), debounced to one load per second, plus ONE timer armed
+  at the verdict's `nextChangeAt`. A wedged queue emits no events, so without the
+  timer it would stay green forever; the timer fires at the instant the answer
+  changes, not to check whether it did. Armed only while subscribed.
+- **The verdict** (`core/verdict.ts`, pure, bun-tested) — per class, on the
+  class's OLDEST waiting row: amber at `10 × pickupTargetMsFor(c)`, red at
+  `deadlineMsFor(c)`. Also amber: a running job past the slot-hog line
+  (`slotHogDeadlineFraction × deadline`, the same line `queue-slot-hog` files
+  at, so dot and bell agree; a forfeited slot is always stuck), and a death within
+  `deadJobAttentionMinutes`. Summary: worst cause first, at most two, ages
+  phrased by the threshold crossed ("10m+") so the text stays true between
+  pushes.
+- **Serial-lane rows never colour.** A row queued behind a held `serial` lane
+  waits by design; counting it would turn correct serialization into an alarm.
+  `queryQueuePulse` excludes them from `waitingForSlot`; the detail lists the
+  count separately.
+- **Bars measure reach**: a class's `busy` counts every slot on a runner that
+  serves it, whatever it is running, so the three numerators can sum past the
+  pool. Pickup stats (`getPickupStats`) describe the past and never colour the
+  dot.
+
 ## All six kinds are `duressExempt`
 
 A queue in trouble and a host under duress are overwhelmingly the same event, so
@@ -278,7 +320,8 @@ only evidence there was one.
 `enabled = true`, `backlogDepthThreshold = 200`, `oldestOverdueMinutes = 10`,
 `slotHogDeadlineFraction = 0.5` (× the class's deadline),
 `slotBlockedWaitSeconds = 5`, `wedgeMinutes = 3` (also the floor of each class's
-starvation window). Read live each tick via `getConfig`, editable in
+starvation window), `deadJobAttentionMinutes = 60` (health row only; 0 = dead
+jobs never colour it). Read live via `getConfig`, editable in
 Settings → Config. The 30s tick interval is **not** here — see above.
 
 `slotHogDeadlineFraction` is a fraction rather than a duration, so the alarm
@@ -304,7 +347,7 @@ them to include 1, which would put the warning on the same instant as the abort.
 
 ## Plugin reference
 
-- Description: Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool.
+- Description: Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration, and the health report's Job queue row: per-class slot bars, the jobs that explain its colour, pickup-time stats, and an Open queue action. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool, and the push-based queue-health.pulse resource behind the health report's Job queue row (slot-ledger occupancy, waiting/stuck/dead jobs, pickup stats and a verdict whose next threshold crossing arms one timer).
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "queue-health"
@@ -314,14 +357,29 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `Reports.KindView` → `SlotBlockedSummary`
     - `Reports.KindView` → `ClassStarvedSummary`
     - `Reports.KindView` → `WedgedSummary`
+    - `HealthReport.Row` "Job queue" → `QueueDetail`
   - Uses:
+    - `apps-core/tabs.navigate`
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/icon-button.IconButton`
+    - `primitives/live-state.useNotificationsChannelStatuses`
+    - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
     - `reports.Reports`
+    - `shell/health-report.HealthReport`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "queue-health"
+    - `resource.declare` "queue-health.pulse"
     - `report-kind` "queue-dead-job"
     - `report-kind` "queue-backlog"
     - `report-kind` "queue-slot-hog"
@@ -334,13 +392,21 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `infra/endpoints.implement`
     - `infra/jobs.ceilingMsFor`
     - `infra/jobs.deadlineMsFor`
+    - `infra/jobs.getForfeitedSlots`
+    - `infra/jobs.getOccupiedSlots`
+    - `infra/jobs.getPickupStats`
     - `infra/jobs.HOLD_CLASSES`
     - `infra/jobs.HOLD_SPECS`
     - `infra/jobs.HoldClass`
     - `infra/jobs.LEGACY_JOB_TASK`
+    - `infra/jobs.onQueueActivity`
+    - `infra/jobs.PICKUP_WINDOW_MS`
     - `infra/jobs.queryBacklogByJobName`
     - `infra/jobs.queryDeadJobStats`
+    - `infra/jobs.queryOldestWaiting`
     - `infra/jobs.queryQueueBacklog`
+    - `infra/jobs.queryQueuePulse`
+    - `infra/jobs.queryRecentDeadJobs`
     - `infra/jobs.queryRunningJobs`
     - `infra/jobs.QueueBacklogStat`
     - `infra/jobs.QueueClassBacklogStat`
@@ -354,6 +420,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `tasks/tasks-core.getConversation`
   - Exports (values): `queueHealthTickOnce`
   - Register: `mcpTool('get_queue_health')`
+  - Resources: `queue-health.pulse` (push)
   - Routes: `GET /api/debug/queue-health/summary`
 - Core:
   - Uses:
@@ -362,24 +429,63 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/jobs.deadlineMsFor`
+    - `infra/jobs.HOLD_CLASSES`
+    - `infra/jobs.HOLD_SPECS`
+    - `infra/jobs.HoldClass`
     - `infra/jobs.HoldClassSchema`
+    - `infra/jobs.pickupTargetMsFor`
+    - `infra/jobs.TOTAL_JOB_SLOTS`
+    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `QueueBacklogPayload`
+    - `QueueClassPulse`
     - `QueueClassStarvedPayload`
+    - `QueueDeadGroup`
     - `QueueDeadJobPayload`
+    - `QueueFacts`
     - `QueueHealthSummary`
+    - `QueuePulse`
+    - `QueueRunningJob`
     - `QueueSlotBlockedPayload`
     - `QueueSlotHogPayload`
+    - `QueueTone`
+    - `QueueVerdict`
+    - `QueueVerdictConfig`
+    - `QueueVerdictResult`
+    - `QueueWaitingJob`
     - `QueueWedgedPayload`
   - Exports (values):
+    - `ATTENTION_WAIT_MULTIPLE`
+    - `attentionWaitMs`
+    - `criticalWaitMs`
+    - `formatThresholdMs`
+    - `isRecentDeath`
+    - `isStuck`
+    - `PickupStatsSchema`
+    - `PULSE_DEAD_LIMIT`
+    - `PULSE_DEAD_WINDOW_MS`
+    - `PULSE_WAITING_LIMIT`
+    - `QUEUE_TONES`
     - `QueueBacklogPayloadSchema`
+    - `QueueClassPulseSchema`
     - `QueueClassStarvedPayloadSchema`
+    - `QueueDeadGroupSchema`
     - `QueueDeadJobPayloadSchema`
     - `queueHealthConfig`
     - `queueHealthSummaryEndpoint`
     - `QueueHealthSummarySchema`
+    - `queuePulseResource`
+    - `QueuePulseSchema`
+    - `QueueRunningJobSchema`
     - `QueueSlotBlockedPayloadSchema`
     - `QueueSlotHogPayloadSchema`
+    - `QueueToneSchema`
+    - `queueVerdict`
+    - `QueueVerdictSchema`
+    - `QueueWaitingJobSchema`
     - `QueueWedgedPayloadSchema`
+    - `stuckHoldMs`
+    - `waitTone`
 
 <!-- AUTOGENERATED:END -->

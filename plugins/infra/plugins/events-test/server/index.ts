@@ -2,6 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleCrashRecovery } from "./internal/crash-recovery";
 import { cronDedupProbe, handleCronDedup } from "./internal/cron-dedup";
 import { handleQueueLockNoSteal } from "./internal/queue-lock-no-steal";
+import {
+  abortSaturationSleepers,
+  deadLetterProbe,
+  handleQueueSaturate,
+  saturateSleeper,
+} from "./internal/queue-saturate";
 import { handleSerialQueue } from "./internal/serial-queue";
 import { serialProbe } from "./internal/serial-job";
 import {
@@ -31,6 +37,7 @@ import {
   serialQueueEventsTest,
   queueLockNoStealEventsTest,
   cronDedupEventsTest,
+  queueSaturateEventsTest,
 } from "../shared/endpoints";
 
 export default {
@@ -49,6 +56,15 @@ export default {
     [serialQueueEventsTest.route]: handleSerialQueue,
     [queueLockNoStealEventsTest.route]: handleQueueLockNoSteal,
     [cronDedupEventsTest.route]: handleCronDedup,
+    [queueSaturateEventsTest.route]: handleQueueSaturate,
   },
-  register: [logPing, serialProbe, cronDedupProbe, pinged],
+  register: [
+    logPing,
+    serialProbe,
+    cronDedupProbe,
+    saturateSleeper,
+    deadLetterProbe,
+    pinged,
+  ],
+  onShutdown: abortSaturationSleepers,
 } satisfies ServerPluginDefinition;

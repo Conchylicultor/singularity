@@ -236,8 +236,12 @@ Then delete `plugins/apps/plugins/agent-manager/plugins/worktree-switcher`.
 
 1. **Job queue row** — `task-1789057838725-i6393i`, already filed. Uses `glance`
    (per-class fill bars), `component` (jobs explaining the colour) and `actions`
-   ("Open queue" → Debug → Queue). Its data is push-based already
-   (`jobsListResource`, `deadJobsResource` in `debug/queue`).
+   ("Open queue" → Debug → Queue). ~~Its data is push-based already
+   (`jobsListResource`, `deadJobsResource` in `debug/queue`).~~ Correction: it
+   was not — `jobsListResource` re-read up to 500 rows every 3 s while observed.
+   The row's design adds a push signal (the jobs slot ledger) and its own
+   bounded resource instead:
+   [`2026-09-11-global-job-queue-health-row.md`](2026-09-11-global-job-queue-health-row.md).
 2. **Host row** — file as a follow-up task at implementation start. Needs a push
    source: the host sampler is main-only and writes a log channel, the Debug
    Health pane polls, and the duress latch / contention snapshot are server-only.

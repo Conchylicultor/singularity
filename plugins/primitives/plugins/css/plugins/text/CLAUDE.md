@@ -341,6 +341,7 @@ fixed raw size escapes per-site via
     - `debug/profiling/ops/op-gantt`
     - `debug/profiling/runtime`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/reports`

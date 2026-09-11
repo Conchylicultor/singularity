@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { EventEmitter } from "node:events";
 import {
   makeWorkerUtils,
   parseCronItem,
@@ -7,6 +8,7 @@ import {
   type ParsedCronItem,
   type Runner,
   type TaskList,
+  type WorkerEvents,
   type WorkerUtils,
 } from "graphile-worker";
 import { Pool } from "pg";
@@ -44,11 +46,15 @@ import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
 import { markJobPermanentlyFailed } from "./introspection";
 import { classifyFailure, discardWorkflowLog } from "./workflow-log";
+import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
 
 const log = Log.channel("jobs");
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
+
+// One slot-ledger detach per runner, undone by `stopWorkers`.
+let ledgerDetaches: (() => void)[] = [];
 
 // The ONE connection pool behind every runner. graphile only `.end()`s a pool it
 // created itself (`dist/lib.js:180-200` — the `releasers.push(() => pgPool.end())`
@@ -291,6 +297,20 @@ export async function startWorkers(): Promise<Runner[]> {
     // backend — still runs, in the most conservative tier.
     if (spec.legacy) taskList[LEGACY_JOB_TASK] = handleJobTask;
 
+    // This runner's own emitter, so every event on it is known to come from
+    // THIS runner's slots — the one piece of identity graphile never records.
+    // Attached before `run()`, which can already start jobs: a `job:start`
+    // nobody heard is a slot the ledger would never count. `jobs:insert` is
+    // heard on the legacy runner only, because each runner has its own LISTEN
+    // client and every insert would otherwise be announced three times. See
+    // slot-ledger.ts.
+    const events: WorkerEvents = new EventEmitter();
+    ledgerDetaches.push(
+      attachSlotLedger(spec.id, events, {
+        listenInserts: spec.legacy === true,
+      }),
+    );
+
     started.push(
       await run(
         {
@@ -298,6 +318,7 @@ export async function startWorkers(): Promise<Runner[]> {
           // exclusive, and the shared pool is the whole point.
           pgPool,
           concurrency: spec.concurrency,
+          events,
           // `onShutdown` stops every runner explicitly. Three runners each
           // installing their own process signal handlers would be three
           // independent shutdown paths racing one another.
@@ -344,6 +365,13 @@ export async function stopWorkers(): Promise<void> {
     await Promise.all(runners.map((r) => r.stop()));
     runners = null;
   }
+  // After the stop, not before: in-flight jobs still emit `job:complete` while
+  // `stop()` drains them. What it does not drain — jobs a timed-out graceful
+  // shutdown releases with `failJobs`, no `job:complete` — is why the ledger
+  // is then cleared outright rather than trusted to have emptied itself.
+  for (const detach of ledgerDetaches) detach();
+  ledgerDetaches = [];
+  clearSlotLedger();
   if (workerUtilsPromise) {
     const utils = await workerUtilsPromise;
     await utils.release();

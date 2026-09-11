@@ -5912,6 +5912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `config_v2/config-link`
           - `debug/op-rate`
+          - `debug/queue-health`
           - `debug/reports`
           - `debug/slow-ops`
           - `debug/slow-ops/pane`
@@ -12511,12 +12512,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/live-state.ResourceView`
           - `primitives/live-state.useResource`
           - `primitives/loading.Loading`
-          - `primitives/pane.defineRoute`
           - `primitives/pane.openPane`
           - `primitives/pane.Pane`
           - `shell/notifications.toast`
         - Exports (values): `queuePane`
-    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool.
+      - Core:
+        - Uses: `primitives/pane.defineRoute`
+        - Exports (values): `queueRoute`
+    - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-wedged, queue-class-starved, queue-dead-job, queue-backlog, queue-slot-hog, and queue-slot-blocked kinds, plus the threshold config registration, and the health report's Job queue row: per-class slot bars, the jobs that explain its colour, pickup-time stats, and an Open queue action. Queue-health watchdog: a 30s interval on the backend's own event loop — deliberately NOT a scheduled job, which would queue behind the wedge it exists to detect — that samples the graphile queue and files deduped reports for a wedged queue (every slot on every runner held by the same live jobs while ready work starves), a starved hold class (one tier of the runner ladder whose head has not moved for its own window, which is how the reserved-slot ladder is verified in production), a job holding a slot to WAIT on an admission gate rather than to work (read off the runtime profiler's job spans, which carry the wait/work split a graphile row cannot), backlog/stall, per-class slot-hogging, and terminally-dead jobs, through the existing reports engine. All six kinds are duressExempt. Also exposes a per-class queue-health summary endpoint + the get_queue_health MCP tool, and the push-based queue-health.pulse resource behind the health report's Job queue row (slot-ledger occupancy, waiting/stuck/dead jobs, pickup stats and a verdict whose next threshold crossing arms one timer).
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "queue-health"
@@ -12526,14 +12529,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Reports.KindView` → `SlotBlockedSummary`
           - `Reports.KindView` → `ClassStarvedSummary`
           - `Reports.KindView` → `WedgedSummary`
+          - `HealthReport.Row` "Job queue" → `QueueDetail`
         - Uses:
+          - `apps-core/tabs.navigate`
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/icon-button.IconButton`
+          - `primitives/live-state.useNotificationsChannelStatuses`
+          - `primitives/live-state.useResource`
+          - `primitives/loading.Loading`
           - `reports.Reports`
+          - `shell/health-report.HealthReport`
       - Server:
         - Contributes:
           - `ConfigV2.Register` "queue-health"
+          - `resource.declare` "queue-health.pulse"
           - `report-kind` "queue-dead-job"
           - `report-kind` "queue-backlog"
           - `report-kind` "queue-slot-hog"
@@ -12546,13 +12564,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/jobs.ceilingMsFor`
           - `infra/jobs.deadlineMsFor`
+          - `infra/jobs.getForfeitedSlots`
+          - `infra/jobs.getOccupiedSlots`
+          - `infra/jobs.getPickupStats`
           - `infra/jobs.HOLD_CLASSES`
           - `infra/jobs.HOLD_SPECS`
           - `infra/jobs.HoldClass`
           - `infra/jobs.LEGACY_JOB_TASK`
+          - `infra/jobs.onQueueActivity`
+          - `infra/jobs.PICKUP_WINDOW_MS`
           - `infra/jobs.queryBacklogByJobName`
           - `infra/jobs.queryDeadJobStats`
+          - `infra/jobs.queryOldestWaiting`
           - `infra/jobs.queryQueueBacklog`
+          - `infra/jobs.queryQueuePulse`
+          - `infra/jobs.queryRecentDeadJobs`
           - `infra/jobs.queryRunningJobs`
           - `infra/jobs.QueueBacklogStat`
           - `infra/jobs.QueueClassBacklogStat`
@@ -12566,6 +12592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.getConversation`
         - Exports (values): `queueHealthTickOnce`
         - Register: `mcpTool('get_queue_health')`
+        - Resources: `queue-health.pulse` (push)
         - Routes: `GET /api/debug/queue-health/summary`
       - Core:
         - Uses:
@@ -12574,25 +12601,64 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
           - `infra/endpoints.defineEndpoint`
+          - `infra/jobs.deadlineMsFor`
+          - `infra/jobs.HOLD_CLASSES`
+          - `infra/jobs.HOLD_SPECS`
+          - `infra/jobs.HoldClass`
           - `infra/jobs.HoldClassSchema`
+          - `infra/jobs.pickupTargetMsFor`
+          - `infra/jobs.TOTAL_JOB_SLOTS`
+          - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `QueueBacklogPayload`
+          - `QueueClassPulse`
           - `QueueClassStarvedPayload`
+          - `QueueDeadGroup`
           - `QueueDeadJobPayload`
+          - `QueueFacts`
           - `QueueHealthSummary`
+          - `QueuePulse`
+          - `QueueRunningJob`
           - `QueueSlotBlockedPayload`
           - `QueueSlotHogPayload`
+          - `QueueTone`
+          - `QueueVerdict`
+          - `QueueVerdictConfig`
+          - `QueueVerdictResult`
+          - `QueueWaitingJob`
           - `QueueWedgedPayload`
         - Exports (values):
+          - `ATTENTION_WAIT_MULTIPLE`
+          - `attentionWaitMs`
+          - `criticalWaitMs`
+          - `formatThresholdMs`
+          - `isRecentDeath`
+          - `isStuck`
+          - `PickupStatsSchema`
+          - `PULSE_DEAD_LIMIT`
+          - `PULSE_DEAD_WINDOW_MS`
+          - `PULSE_WAITING_LIMIT`
+          - `QUEUE_TONES`
           - `QueueBacklogPayloadSchema`
+          - `QueueClassPulseSchema`
           - `QueueClassStarvedPayloadSchema`
+          - `QueueDeadGroupSchema`
           - `QueueDeadJobPayloadSchema`
           - `queueHealthConfig`
           - `queueHealthSummaryEndpoint`
           - `QueueHealthSummarySchema`
+          - `queuePulseResource`
+          - `QueuePulseSchema`
+          - `QueueRunningJobSchema`
           - `QueueSlotBlockedPayloadSchema`
           - `QueueSlotHogPayloadSchema`
+          - `QueueToneSchema`
+          - `queueVerdict`
+          - `QueueVerdictSchema`
+          - `QueueWaitingJobSchema`
           - `QueueWedgedPayloadSchema`
+          - `stuckHoldMs`
+          - `waitTone`
     - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
       - Web:
         - Slots: `readSetPane.Actions` ← `primitives.pane`
@@ -15655,6 +15721,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversations-view/data-view/queue`
               - `database/admin`
               - `debug/live-state-churn/emit`
+              - `debug/queue-health`
               - `debug/render-profiler`
               - `improve/element-picker`
               - `infra/events-test`
@@ -16771,13 +16838,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.ALL_JOB_TASKS`
           - `infra/jobs.defineJob`
           - `infra/jobs.LEGACY_JOB_TASK`
+          - `infra/jobs.NonRetryableError`
           - `infra/jobs.queryRunningJobs`
+          - `infra/jobs.reachableSlots`
           - `infra/jobs.UNSAFE_sweepStuckLocks`
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
         - Register:
           - `defineJob('events_test.log')`
           - `defineJob('events_test.serial')`
           - `defineJob('events_test.cron-dedup')`
+          - `defineJob('events_test.saturate-sleeper')`
+          - `defineJob('events_test.dead-letter')`
           - `defineTriggerEvent('events_test.pinged')`
         - Routes:
           - `POST /api/events-test/subscribe`
@@ -16793,11 +16864,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/events-test/serial-queue`
           - `POST /api/events-test/queue-lock-no-steal`
           - `POST /api/events-test/cron-dedup`
+          - `POST /api/events-test/queue-saturate`
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
           - `DirectEnqueueBody`
           - `EmitBody`
+          - `QueueSaturateBody`
           - `SubscribeBody`
         - Exports (values):
           - `crashRecoveryEventsTest`
@@ -16812,6 +16885,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getEventsTestLog`
           - `listEventsTestTriggers`
           - `queueLockNoStealEventsTest`
+          - `QueueSaturateBodySchema`
+          - `queueSaturateEventsTest`
           - `resetEventsTest`
           - `serialQueueEventsTest`
           - `SubscribeBodySchema`
@@ -17106,6 +17181,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugins/infra/plugins/jobs/server/internal/tables.ts`
         - Exports (types):
           - `BacklogJobStat`
+          - `DeadJobGroupStat`
           - `DeadJobStat`
           - `DefineJobSpec`
           - `DurableHooks`
@@ -17118,17 +17194,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `JobDeadlineEvent`
           - `JobFactory`
           - `JobSlotFloorReport`
+          - `OccupiedSlot`
+          - `PickupStats`
           - `QueueBacklogStat`
           - `QueueClassBacklogStat`
+          - `QueueClassPulse`
           - `RegisteredJob`
           - `RunnerSpec`
           - `RunningJobStat`
           - `ScheduleSpec`
           - `SerialSpec`
+          - `WaitingJobStat`
         - Exports (values):
           - `abortDurableRun`
           - `ALL_JOB_TASKS`
           - `ceilingMsFor`
+          - `DEAD_ERROR_PREVIEW_CHARS`
           - `deadJobsResource`
           - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
@@ -17137,6 +17218,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getForfeitedSlots`
           - `getJobHold`
           - `getJobSlowThresholdMs`
+          - `getOccupiedSlots`
+          - `getPickupStats`
           - `HOLD_CLASSES`
           - `HOLD_SPECS`
           - `HoldClassSchema`
@@ -17150,10 +17233,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `jobsListResource`
           - `LEGACY_JOB_TASK`
           - `NonRetryableError`
+          - `onQueueActivity`
+          - `PICKUP_WINDOW_MS`
+          - `pickupTargetMsFor`
           - `priorityFor`
           - `queryBacklogByJobName`
           - `queryDeadJobStats`
+          - `queryOldestWaiting`
           - `queryQueueBacklog`
+          - `queryQueuePulse`
+          - `queryRecentDeadJobs`
           - `queryRunningJobs`
           - `QueueSchemaMissingError`
           - `reachableSlots`
@@ -17207,6 +17296,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LEGACY_JOB_TASK`
           - `listDeadJobs`
           - `listJobs`
+          - `pickupTargetMsFor`
           - `priorityFor`
           - `reachableSlots`
           - `retryJob`
@@ -22367,6 +22457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/logs`
               - `debug/profiling`
               - `debug/queue`
+              - `debug/queue-health`
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `debug/trace/pane`
@@ -22684,6 +22775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/broadcasts`
               - `debug/memory`
               - `debug/profiling`
+              - `debug/queue-health`
               - `debug/timeline`
               - `page/annotations/todo/task-link`
               - `page/inline-date`
@@ -23008,6 +23100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/live-state-health`
               - `debug/memory`
               - `debug/profiling`
+              - `debug/queue-health`
               - `debug/timeline`
               - `debug/worktree-cleanup`
               - `improve/element-picker`
@@ -23432,6 +23525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt`
               - `debug/profiling/runtime`
               - `debug/queue`
+              - `debug/queue-health`
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/reports`
@@ -23633,6 +23727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/health-monitor`
               - `debug/live-state-health`
               - `debug/profiling/ops/op-gantt`
+              - `debug/queue-health`
               - `debug/timeline`
               - `debug/trace/pane`
               - `runs/run-outcome`
@@ -23931,6 +24026,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt`
               - `debug/profiling/runtime`
               - `debug/queue`
+              - `debug/queue-health`
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/reports`
@@ -24399,6 +24495,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt`
               - `debug/profiling/runtime`
               - `debug/queue`
+              - `debug/queue-health`
               - `debug/render-profiler`
               - `debug/reports`
               - `debug/slow-ops/cluster`
@@ -26016,6 +26113,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/broadcasts`
           - `debug/memory`
           - `debug/queue`
+          - `debug/queue-health`
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `fields/enum/column-config`
@@ -26454,6 +26552,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/claude-cli-calls`
           - `debug/live-state-health`
           - `debug/queue`
+          - `debug/queue-health`
           - `debug/reports`
           - `debug/slow-ops`
           - `debug/slow-ops/pane`
@@ -26611,6 +26710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/live-state-health`
           - `debug/memory`
           - `debug/queue`
+          - `debug/queue-health`
           - `debug/read-set`
           - `debug/reports`
           - `debug/slow-ops/pane`
@@ -29901,7 +30001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
-        - Slots: `HealthReport.Row` ← `database.query-deadline`, `infra.health`, `tasks.worktree-identity`
+        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `infra.health`, `tasks.worktree-identity`
         - Uses:
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -29937,6 +30037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `database/query-deadline`
+          - `debug/queue-health`
           - `infra/health`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`

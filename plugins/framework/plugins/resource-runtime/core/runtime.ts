@@ -2450,7 +2450,13 @@ export function createResourceRuntime(
         // capture is missing a table this resource reads. That is exactly the bug
         // class L4 eliminates, so surface it (loud, but not an error — the parallel
         // run is expected to find these during the migration).
-        if (!hasRecentFeedIntent(entry.key, pk, now)) {
+        //
+        // Never for an external-source entry (`defineExternalResource`): its truth
+        // lives outside Postgres, so a hand-notify is by design its ONLY source and
+        // the feed never has anything to match. The warning was always false for
+        // them — and, for a resource notified on every change, it was most of the
+        // log (main held ~269k lines for `config-v2.values` alone).
+        if (!entry.externalSource && !hasRecentFeedIntent(entry.key, pk, now)) {
           console.warn(
             `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
           );

@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { emitQueueActivity } from "./slot-ledger";
 import { _jobWaits } from "./tables";
 
 /**
@@ -44,4 +45,8 @@ export async function abortDurableRun(workflowRunId: string): Promise<void> {
   await db.execute(
     sql`DELETE FROM graphile_worker._private_jobs WHERE key = ${workflowRunId} AND locked_at IS NULL`,
   );
+
+  // Deleting graphile rows sends no notification, and graphile_worker is
+  // outside the change-feed → announce it to the queue readers.
+  emitQueueActivity();
 }

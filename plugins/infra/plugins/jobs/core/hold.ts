@@ -95,6 +95,27 @@ export interface HoldClassSpec {
    * than a coincidence of two independently-chosen numbers.
    */
   readonly deadlineMs: number;
+  /**
+   * How long a due row of this class should wait for a worker slot before it is
+   * picked up — a QUEUEING target, measured from `run_at` to `locked_at`. It says
+   * nothing about how long the run then takes; that is `ceilingMs`.
+   *
+   * The prior art is GitLab's Sidekiq urgency SLOs, already the model for the
+   * classes themselves: `urgency :high` gets a 10 s queueing target and
+   * `urgency :low` 1 min, which are `seconds` and `minutes` here. `instant` is
+   * stricter than anything GitLab states (1 s), because it has slots nothing
+   * slower can reach and its measured expected wait is about 17 ms
+   * (research/2026-08-19-global-job-hold-class-reserved-slots.md, the
+   * Pollaczek–Khinchine table) — so a 1 s wait is already ~60× what the ladder
+   * was built to give it.
+   *
+   * Read by `debug/queue-health`, which derives its attention line from it
+   * (10×) and takes the critical line from `deadlineMs`. The ratio
+   * `deadlineMs / pickupTargetMs` is 60 for every class, so "how far past its
+   * own target" orders waits by severity across classes — which is how
+   * `queryOldestWaiting` ranks them, the only other reader.
+   */
+  readonly pickupTargetMs: number;
 }
 
 export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
@@ -105,6 +126,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     priority: 2,
     ceilingMs: 10_000,
     deadlineMs: 60_000,
+    pickupTargetMs: 1_000,
   },
   seconds: {
     hold: "seconds",
@@ -113,6 +135,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     priority: 1,
     ceilingMs: 120_000,
     deadlineMs: 600_000,
+    pickupTargetMs: 10_000,
   },
   minutes: {
     hold: "minutes",
@@ -121,6 +144,7 @@ export const HOLD_SPECS: Readonly<Record<HoldClass, HoldClassSpec>> = {
     priority: 0,
     ceilingMs: 1_800_000,
     deadlineMs: 3_600_000,
+    pickupTargetMs: 60_000,
   },
 };
 
@@ -193,6 +217,11 @@ export function ceilingMsFor(hold: HoldClass): number {
  * wants to say something about the deadline must read rather than restate. */
 export function deadlineMsFor(hold: HoldClass): number {
   return HOLD_SPECS[hold].deadlineMs;
+}
+
+/** The class's queueing target — see {@link HoldClassSpec.pickupTargetMs}. */
+export function pickupTargetMsFor(hold: HoldClass): number {
+  return HOLD_SPECS[hold].pickupTargetMs;
 }
 
 /** How many worker slots a row of this class can ever reach, summed over every

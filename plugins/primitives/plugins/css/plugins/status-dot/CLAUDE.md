@@ -46,6 +46,7 @@ no-provider default is `md`.
     - `debug/health-monitor`
     - `debug/live-state-health`
     - `debug/profiling/ops/op-gantt`
+    - `debug/queue-health`
     - `debug/timeline`
     - `debug/trace/pane`
     - `runs/run-outcome`

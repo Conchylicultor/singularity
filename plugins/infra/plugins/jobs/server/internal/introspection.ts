@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
@@ -7,6 +7,7 @@ import {
   HOLD_CLASSES,
   HoldClassSchema,
   holdForTask,
+  pickupTargetMsFor,
   type HoldClass,
 } from "../../core/hold";
 import { isSlotForfeited } from "./forfeit";
@@ -63,6 +64,45 @@ export const deadJobPredicate = sql`${jobTaskScope}
 // and still within its retry budget. The single home for the ready predicate,
 // shared by the aggregate backlog snapshot and the per-jobName attribution.
 export const readyPredicate = sql`j.run_at <= now() AND j.locked_at IS NULL AND j.attempts < j.max_attempts`;
+
+// "Queued behind a held serial lane": the row sits in a named queue
+// (`defineJob({ serial })`) whose lock is taken, so graphile's `get_job` will
+// not fetch it however many slots are free — it waits for its lane, by design,
+// not for a slot. Correlated on `j` like every other fragment here, so a reader
+// composes it without changing its FROM clause.
+const behindHeldLaneExpr = sql`(j.job_queue_id IS NOT NULL AND EXISTS (
+    SELECT 1
+      FROM graphile_worker._private_job_queues q
+     WHERE q.id = j.job_queue_id
+       AND q.locked_at IS NOT NULL
+  ))`;
+
+// "Waiting for a worker slot": ready, and NOT held back by its lane. The one
+// definition of a row the pool is failing to serve — what a queue-health verdict
+// may colour on. Rows behind a lane are counted separately and never coloured:
+// counting them would turn a correctly-serialized lane into an alarm.
+const waitingForSlotPredicate = sql`${readyPredicate} AND NOT ${behindHeldLaneExpr}`;
+
+// A row's class pickup target (`pickupTargetMsFor`), read off its task the same
+// way `jobHoldExpr` reads the class — mapped over the class table, never
+// restated.
+const jobPickupTargetMsExpr = sql`CASE ${sql.join(
+  ALL_JOB_TASKS.map(
+    (task) =>
+      sql`WHEN t.identifier = ${task} THEN ${pickupTargetMsFor(holdForTask(task))}::float8`,
+  ),
+  sql` `,
+)} END`;
+
+// A timestamptz as epoch milliseconds, NULL-preserving. `::bigint` comes back
+// from pg as a string (see `toEpochMs`).
+function epochMsExpr(expr: SQL): SQL {
+  return sql`(extract(epoch FROM ${expr}) * 1000)::bigint`;
+}
+
+function toEpochMs(value: string | null): number | null {
+  return value === null ? null : Number(value);
+}
 
 // "A worker is provably still running this row": a granted, session-scoped
 // advisory lock keyed on the graphile job id exists in THIS database. That lock
@@ -375,5 +415,219 @@ export async function queryRunningJobs(): Promise<RunningJobStat[]> {
     lockedBy: r.locked_by,
     alive: r.alive,
     forfeited: isSlotForfeited(r.job_id),
+  }));
+}
+
+// ─── The health-row reads ─────────────────────────────────────────────────
+//
+// What `debug/queue-health`'s pulse is built from, besides the slot ledger
+// (which answers "which slot holds what" from memory, with no query). All three
+// are bounded: one aggregate row per class, and two top-N lists. Timestamps come
+// back as epoch ms (database clock) or `null` when there is no such row — never
+// `0`, which would read as "1970".
+
+/** One hold class's queue state, as the database sees it. */
+export interface QueueClassPulse {
+  hold: HoldClass;
+  /** Rows waiting for a worker slot: due, unlocked, retry-eligible, and not
+   * held back by their serial lane (`waitingForSlotPredicate`). */
+  waitingForSlot: number;
+  /** `run_at` of the oldest such row; `null` when `waitingForSlot` is 0. */
+  oldestWaitingRunAt: number | null;
+  /** Ready rows queued behind a held serial lane. They wait by design. */
+  behindLanes: number;
+  /** Rows graphile has locked, whoever holds them — this backend's workers or a
+   * dead one's (the stuck-lock sweeper's work). */
+  lockedCount: number;
+  /** Earliest FUTURE `run_at` among unlocked, retry-eligible rows — the next
+   * moment new work becomes due (a retry backoff, a scheduled run); `null` if
+   * nothing is scheduled. */
+  nextDueAt: number | null;
+}
+
+const QueuePulseRowSchema = z.object({
+  hold: HoldClassSchema,
+  waiting_for_slot: z.number(),
+  oldest_waiting_run_at: z.string().nullable(),
+  behind_lanes: z.number(),
+  locked_count: z.number(),
+  next_due_at: z.string().nullable(),
+});
+
+/**
+ * One aggregate over the live queue, one entry per class in `HOLD_CLASSES`
+ * order (zeroed when a class has no rows). The table is normally near-empty, so
+ * this is cheap enough to run on every queue change.
+ */
+export async function queryQueuePulse(): Promise<QueueClassPulse[]> {
+  const rows = await executeRows(db, {
+    label: "queryQueuePulse",
+    row: QueuePulseRowSchema,
+    query: sql`
+    SELECT ${jobHoldExpr}                                                         AS hold,
+           count(*) FILTER (WHERE ${waitingForSlotPredicate})::int                AS waiting_for_slot,
+           ${epochMsExpr(sql`min(j.run_at) FILTER (WHERE ${waitingForSlotPredicate})`)}::text
+                                                                                  AS oldest_waiting_run_at,
+           count(*) FILTER (WHERE ${readyPredicate} AND ${behindHeldLaneExpr})::int AS behind_lanes,
+           count(*) FILTER (WHERE j.locked_at IS NOT NULL)::int                   AS locked_count,
+           ${epochMsExpr(
+             sql`min(j.run_at) FILTER (WHERE j.run_at > now() AND j.locked_at IS NULL AND j.attempts < j.max_attempts)`,
+           )}::text                                                               AS next_due_at
+      FROM ${queueJobsFrom}
+     WHERE ${jobTaskScope}
+     GROUP BY 1
+  `,
+  });
+
+  const byHold = new Map(rows.map((r) => [r.hold, r]));
+  return HOLD_CLASSES.map((hold) => {
+    const r = byHold.get(hold);
+    if (!r) {
+      return {
+        hold,
+        waitingForSlot: 0,
+        oldestWaitingRunAt: null,
+        behindLanes: 0,
+        lockedCount: 0,
+        nextDueAt: null,
+      };
+    }
+    return {
+      hold,
+      waitingForSlot: r.waiting_for_slot,
+      oldestWaitingRunAt: toEpochMs(r.oldest_waiting_run_at),
+      behindLanes: r.behind_lanes,
+      lockedCount: r.locked_count,
+      nextDueAt: toEpochMs(r.next_due_at),
+    };
+  });
+}
+
+/** One row waiting for a worker slot. */
+export interface WaitingJobStat {
+  jobId: string;
+  jobName: string;
+  hold: HoldClass;
+  /** When it became due (epoch ms). Its wait is `now - runAt`. */
+  runAt: number;
+  /** Attempts already spent — `> 0` means this is a retry waiting. */
+  attempts: number;
+}
+
+const WaitingJobRowSchema = z.object({
+  job_id: z.string(),
+  job_name: z.string(),
+  hold: HoldClassSchema,
+  run_at: z.string(),
+  attempts: z.number(),
+});
+
+/**
+ * The rows waiting for a slot that most need a human's eye, most severe first.
+ *
+ * "Most severe" is the wait measured against the row's OWN class's pickup
+ * target, not the raw wait: a `minutes` job waiting 4 min is inside its target,
+ * an `instant` job waiting 2 min is at its deadline, and ordering by `run_at`
+ * alone would list the first and hide the second. Because every class's
+ * deadline is the same multiple of its target (`core/hold.ts`), this ratio
+ * orders by severity without this file knowing any threshold.
+ */
+export async function queryOldestWaiting(limit = 5): Promise<WaitingJobStat[]> {
+  const rows = await executeRows(db, {
+    label: "queryOldestWaiting",
+    row: WaitingJobRowSchema,
+    query: sql`
+    SELECT j.id::text                               AS job_id,
+           ${jobNameExpr}                           AS job_name,
+           ${jobHoldExpr}                           AS hold,
+           ${epochMsExpr(sql`j.run_at`)}::text      AS run_at,
+           j.attempts                               AS attempts
+      FROM ${queueJobsFrom}
+     WHERE ${jobTaskScope} AND ${waitingForSlotPredicate}
+     ORDER BY extract(epoch FROM (now() - j.run_at)) * 1000 / ${jobPickupTargetMsExpr} DESC,
+              j.run_at ASC,
+              j.id ASC
+     LIMIT ${limit}
+  `,
+  });
+  return rows.map((r) => ({
+    jobId: r.job_id,
+    jobName: r.job_name,
+    hold: r.hold,
+    runAt: Number(r.run_at),
+    attempts: r.attempts,
+  }));
+}
+
+/** Longest `lastError` a {@link DeadJobGroupStat} carries. The full text stays
+ * in Debug → Queue → Dead; this is a preview that keeps the pulse small. */
+export const DEAD_ERROR_PREVIEW_CHARS = 200;
+
+/** Every death of one job name since some instant. */
+export interface DeadJobGroupStat {
+  jobName: string;
+  /** Deaths in the window — live dead rows plus archived ones. */
+  count: number;
+  /** When the most recent one died (epoch ms). */
+  lastDiedAt: number;
+  /** The most recent death's error, cut to {@link DEAD_ERROR_PREVIEW_CHARS};
+   * `null` when graphile recorded none. */
+  lastError: string | null;
+}
+
+const DeadJobGroupRowSchema = z.object({
+  job_name: z.string(),
+  count: z.number(),
+  last_died_at: z.string(),
+  last_error: z.string().nullable(),
+});
+
+/**
+ * Jobs that died since `since` (epoch ms), grouped by name, most recent first.
+ *
+ * A dead job lives in one of two places, and this reads both: still in
+ * graphile's table (`deadJobPredicate`, died at its `updated_at`), or already
+ * moved to the `dead_jobs` archive by the hourly GC. `reconcileDeadJobs` moves a
+ * row in one transaction, so no death is counted twice.
+ *
+ * The archive read is on `died_at`, which is indexed for exactly this: the
+ * archive is capped at 2000 rows but each carries its job's input inline, so a
+ * scan reads one heap page per row.
+ */
+export async function queryRecentDeadJobs(opts: {
+  since: number;
+  limit?: number;
+}): Promise<DeadJobGroupStat[]> {
+  const limit = opts.limit ?? 5;
+  const since = sql`to_timestamp(${opts.since}::float8 / 1000)`;
+  const rows = await executeRows(db, {
+    label: "queryRecentDeadJobs",
+    row: DeadJobGroupRowSchema,
+    query: sql`
+    WITH deaths AS (
+      SELECT ${jobNameExpr} AS job_name, j.updated_at AS died_at, j.last_error
+        FROM ${queueJobsFrom}
+       WHERE ${deadJobPredicate} AND j.updated_at >= ${since}
+      UNION ALL
+      SELECT d.job_name, d.died_at, d.last_error
+        FROM dead_jobs d
+       WHERE d.died_at >= ${since}
+    )
+    SELECT job_name,
+           count(*)::int                                                   AS count,
+           ${epochMsExpr(sql`max(died_at)`)}::text                         AS last_died_at,
+           left((array_agg(last_error ORDER BY died_at DESC))[1], ${DEAD_ERROR_PREVIEW_CHARS}::int)
+                                                                           AS last_error
+      FROM deaths
+     GROUP BY job_name
+     ORDER BY max(died_at) DESC
+     LIMIT ${limit}
+  `,
+  });
+  return rows.map((r) => ({
+    jobName: r.job_name,
+    count: r.count,
+    lastDiedAt: Number(r.last_died_at),
+    lastError: r.last_error,
   }));
 }

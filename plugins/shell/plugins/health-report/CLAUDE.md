@@ -104,7 +104,7 @@ detail is rendered through `renderIsolated`.
 
 - Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
 - Web:
-  - Slots: `HealthReport.Row` ← `database.query-deadline`, `infra.health`, `tasks.worktree-identity`
+  - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `infra.health`, `tasks.worktree-identity`
   - Uses:
     - `primitives/collapsible.Collapsible`
     - `primitives/collapsible.CollapsibleChevron`
@@ -140,6 +140,7 @@ detail is rendered through `renderIsolated`.
 - Cross-plugin:
   - Imported by:
     - `database/query-deadline`
+    - `debug/queue-health`
     - `infra/health`
     - `shell/global-action-bar`
     - `tasks/worktree-identity`

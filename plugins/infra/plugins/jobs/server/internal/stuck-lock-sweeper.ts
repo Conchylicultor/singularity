@@ -5,6 +5,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { jobLockHeldExpr, jobNameExpr } from "./introspection";
+import { emitQueueActivity } from "./slot-ledger";
 
 // Recovery floor for jobs that were mid-execution when their worker died
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
@@ -179,4 +180,11 @@ export async function sweepOnce(): Promise<void> {
     console.warn(message);
     reportServerError({ message, stack: null });
   }
+
+  // A reclaim turns a locked row back into a ready one, and a reclaimed queue
+  // turns every row behind it from "queued behind a lane" into "waiting for a
+  // slot". Neither UPDATE sends a notification → announce it. Only when
+  // something moved: the sweeper ticks every minute and an empty sweep changed
+  // nothing a reader could see.
+  if (reclaimed.length > 0 || reclaimedQueues.length > 0) emitQueueActivity();
 }

@@ -16,6 +16,7 @@ import {
 import { HoldClassSchema } from "../../core/hold";
 import { jobHoldExpr, jobLockHeldExpr, jobTaskScope } from "./introspection";
 import { isSlotForfeited } from "./forfeit";
+import { onQueueActivity } from "./slot-ledger";
 import { _deadJobs } from "./tables";
 
 // One row of `graphile_worker._private_jobs`, as it actually arrives.
@@ -162,33 +163,37 @@ export const deadJobsResource = defineResource({
   loader: async (): Promise<DeadJobsPayload> => loadDeadJobsList(2000),
 });
 
-let pollTimer: ReturnType<typeof setInterval> | undefined;
+let stopListening: (() => void) | undefined;
 
 // `jobs-list` reads the `graphile_worker.*` job tables, which live OUTSIDE the
 // public schema the L4 DB change-feed triggers cover (the feed deliberately
 // excludes the graphile_worker schema) — so the feed can NEVER invalidate this
 // resource. It is therefore an explicit-source resource (`defineExternalResource`,
-// the only factory that exposes `notify`): graphile-worker lifecycle transitions
-// (pick up, complete, fail) happen inside the runner we can't hook, so we poll
-// while observed to keep the debug pane reasonably fresh; explicit mutations
-// (retry/cancel/dead-gc) notify immediately. Follow-up: graphile-worker's own
-// LISTEN channel could replace the poll, or the feed could be extended to the
-// graphile_worker schema.
+// the only factory that exposes `notify`), driven by the slot ledger's queue
+// activity signal (slot-ledger.ts): graphile's own `job:start` / `job:complete`
+// events on every runner, its `jobs:insert` notification, and this plugin's own
+// mutations that send none (retry, cancel, dead-job GC, the stuck-lock reclaim).
+//
+// It used to re-read up to 500 rows every 3 s while observed, because those
+// lifecycle transitions happened "inside a runner we can't hook". We can: we
+// create the runners, and each has its own event emitter.
+//
+// `debounceMs` is the runtime's fixed-window debounce: a burst of activity (a
+// fan-out enqueue, a queue draining) costs one reload per second, not one per
+// event. Inserts are heard from any process (they arrive over LISTEN); what
+// this cannot see is a job started or finished by runners in ANOTHER process
+// against the same database.
 export const jobsListResource = defineExternalResource({
   key: "jobs-list",
   mode: "invalidate",
   schema: JobsPayloadSchema,
   loader: async (): Promise<JobsPayload> => loadJobsList(500),
+  debounceMs: 1000,
   onFirstSubscribe: () => {
-    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- cheap resource-refresh tick: only calls notify(); the recompute it schedules is separately spanned as a loader
-    pollTimer = setInterval(() => {
-      jobsListResource.notify();
-    }, 3000);
+    stopListening = onQueueActivity(() => jobsListResource.notify());
   },
   onLastUnsubscribe: () => {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = undefined;
-    }
+    stopListening?.();
+    stopListening = undefined;
   },
 });

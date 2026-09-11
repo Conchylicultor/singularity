@@ -1,7 +1,13 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listJobs, listDeadJobs, retryJob, cancelJob } from "../../core/endpoints";
+import {
+  listJobs,
+  listDeadJobs,
+  retryJob,
+  cancelJob,
+} from "../../core/endpoints";
 import { getWorkerUtils } from "./worker";
-import { loadJobsList, loadDeadJobsList, jobsListResource } from "./resources";
+import { loadJobsList, loadDeadJobsList } from "./resources";
+import { emitQueueActivity } from "./slot-ledger";
 
 export const handleListJobs = implement(listJobs, async ({ req }) => {
   const url = new URL(req.url);
@@ -28,14 +34,17 @@ export const handleRetryJob = implement(retryJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
   await utils.rescheduleJobs([params.id], { attempts: 0, runAt: new Date() });
-  // graphile_worker is outside the public-schema change-feed → notify explicitly.
-  jobsListResource.notify();
+  // graphile_worker is outside the public-schema change-feed, and a reschedule
+  // sends no `jobs:insert` → announce it (jobs-list and every other queue
+  // reader listen on this one signal).
+  emitQueueActivity();
 });
 
 export const handleCancelJob = implement(cancelJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
   await utils.completeJobs([params.id]);
-  // graphile_worker is outside the public-schema change-feed → notify explicitly.
-  jobsListResource.notify();
+  // graphile_worker is outside the public-schema change-feed, and a delete
+  // sends no notification → announce it.
+  emitQueueActivity();
 });

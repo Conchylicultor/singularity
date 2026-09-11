@@ -115,6 +115,7 @@ icon+count button it stands in for — carries a per-site
     - `debug/broadcasts`
     - `debug/memory`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `fields/enum/column-config`

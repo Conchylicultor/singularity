@@ -80,6 +80,10 @@ export {
   queryQueueBacklog,
   queryBacklogByJobName,
   queryRunningJobs,
+  queryQueuePulse,
+  queryOldestWaiting,
+  queryRecentDeadJobs,
+  DEAD_ERROR_PREVIEW_CHARS,
 } from "./internal/introspection";
 export type {
   DeadJobStat,
@@ -87,7 +91,17 @@ export type {
   QueueClassBacklogStat,
   BacklogJobStat,
   RunningJobStat,
+  QueueClassPulse,
+  WaitingJobStat,
+  DeadJobGroupStat,
 } from "./internal/introspection";
+export {
+  getOccupiedSlots,
+  getPickupStats,
+  onQueueActivity,
+  PICKUP_WINDOW_MS,
+} from "./internal/slot-ledger";
+export type { OccupiedSlot, PickupStats } from "./internal/slot-ledger";
 export {
   HOLD_CLASSES,
   HoldClassSchema,
@@ -100,6 +114,7 @@ export {
   priorityFor,
   ceilingMsFor,
   deadlineMsFor,
+  pickupTargetMsFor,
   reachableSlots,
   holdForTask,
 } from "../core/hold";

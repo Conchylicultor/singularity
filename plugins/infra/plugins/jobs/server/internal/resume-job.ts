@@ -8,6 +8,7 @@ import {
   type JobTaskPayload,
 } from "./registry";
 import { RESUME_KEYS, ResumeInputSchema } from "./resume-contract";
+import { emitQueueActivity } from "./slot-ledger";
 import { _jobWaits } from "./tables";
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
@@ -126,6 +127,9 @@ export const jobsResumeJob = defineJob({
       await db.execute(
         sql`DELETE FROM graphile_worker._private_jobs WHERE key = ${timeoutKey} AND locked_at IS NULL`,
       );
+      // The re-enqueue above announced itself (`jobs:insert`); this delete
+      // sends nothing, and graphile_worker is outside the change-feed.
+      emitQueueActivity();
     }
   },
 });

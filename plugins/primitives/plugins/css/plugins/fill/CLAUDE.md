@@ -137,6 +137,7 @@ primitive exists to name.
     - `debug/logs`
     - `debug/profiling`
     - `debug/queue`
+    - `debug/queue-health`
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/trace/pane`

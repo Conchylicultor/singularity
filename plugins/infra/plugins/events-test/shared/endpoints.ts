@@ -95,3 +95,58 @@ export const queueLockNoStealEventsTest = defineEndpoint({
 export const cronDedupEventsTest = defineEndpoint({
   route: "POST /api/events-test/cron-dedup",
 });
+
+// Drives the job queue into a saturated, dead-lettered state on a dev deploy,
+// so queue observability (the health report's Job queue row, Debug → Queue)
+// can be looked at in its amber/red states. Not a regression harness: it
+// asserts nothing and returns as soon as the rows are durable.
+//
+// Every field is `.optional()` rather than `.default()`: `defineEndpoint` types
+// the client-side body from the schema's OUTPUT type, so a default would make
+// each field required for every caller. The server resolves the defaults — and
+// `count`'s default is derived from the jobs plugin's slot table, which this
+// runtime-neutral file does not import.
+export const QueueSaturateBodySchema = z.object({
+  /** How many `minutes`-class sleepers to enqueue. Default: the class's
+   * reachable slots + 1, so exactly one waits when nothing else is running. */
+  count: z.number().int().min(1).max(20).optional(),
+  /** How long each sleeper holds its slot. Default 90 s. Capped at 20 min —
+   * under the `minutes` work ceiling (30 min), so the harness never files a
+   * slow-op or slot-hog report of its own. */
+  sleepMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(20 * 60_000)
+    .optional(),
+  /** Back-date every sleeper's `run_at` by this much, so the one left waiting
+   * already looks old enough to cross a waiting threshold. Default 0 (due
+   * now). Capped at 24 h. */
+  backdateMs: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60 * 60_000)
+    .optional(),
+  /** Also enqueue one job that throws `NonRetryableError`, so it dead-letters
+   * after a single attempt. Default true. */
+  dead: z.boolean().optional(),
+});
+export type QueueSaturateBody = z.infer<typeof QueueSaturateBodySchema>;
+
+export const queueSaturateEventsTest = defineEndpoint({
+  route: "POST /api/events-test/queue-saturate",
+  body: QueueSaturateBodySchema,
+  response: z.object({
+    /** Graphile job ids of the sleepers, in enqueue order. */
+    sleeperJobIds: z.array(z.string()),
+    /** The dead-letter job's id, or null when `dead: false`. */
+    deadJobId: z.string().nullable(),
+    /** Slots a `minutes` row can reach; sleepers beyond it wait (more, if
+     * other long jobs already hold some). */
+    minutesSlots: z.number(),
+    sleepMs: z.number(),
+    /** The back-dated `run_at` every sleeper carries, or null when due now. */
+    runAt: z.string().nullable(),
+  }),
+});

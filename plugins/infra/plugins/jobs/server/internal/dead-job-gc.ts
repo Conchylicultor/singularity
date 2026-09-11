@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
 import { defineJob } from "./registry";
-import { jobsListResource } from "./resources";
+import { emitQueueActivity } from "./slot-ledger";
 
 // Bound on the durable archive so it can't itself accumulate unbounded.
 // Every reconcile enforces BOTH: rows older than the TTL are dropped, and the
@@ -65,8 +65,8 @@ export async function reconcileDeadJobs(): Promise<void> {
 
   // dead_jobs is public (the change-feed invalidates deadJobsResource on the
   // insert/delete above), but the purge from graphile_worker._private_jobs is
-  // outside the feed → notify jobs-list explicitly.
-  jobsListResource.notify();
+  // outside the feed and sends no notification → announce it.
+  emitQueueActivity();
 }
 
 // Scheduled dead-job GC. `perWorktree: true` is REQUIRED here and is the inverse
