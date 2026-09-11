@@ -103,6 +103,7 @@ primitive exists to name.
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/contributors`
     - `apps/studio/compositions/release/release-logs`
+    - `apps/website/improve`
     - `apps/website/shell`
     - `auth`
     - `auth/apple-signing/setup-wizard`

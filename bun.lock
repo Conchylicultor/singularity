@@ -969,6 +969,10 @@
       "name": "@singularity/plugin-apps-website",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/improve": {
+      "name": "@singularity/plugin-apps-website-improve",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/landing": {
       "name": "@singularity/plugin-apps-website-landing",
       "version": "0.0.1",
@@ -6321,6 +6325,8 @@
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-website": ["@singularity/plugin-apps-website@workspace:plugins/apps/plugins/website"],
+
+    "@singularity/plugin-apps-website-improve": ["@singularity/plugin-apps-website-improve@workspace:plugins/apps/plugins/website/plugins/improve"],
 
     "@singularity/plugin-apps-website-landing": ["@singularity/plugin-apps-website-landing@workspace:plugins/apps/plugins/website/plugins/landing"],
 

@@ -18,7 +18,7 @@ itself will drift out of line with the rest of the site.
 
 - Description: Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
 - Sub-plugins:
-  - **`contact`** — Getting in touch: the homepage's closing band (two reasons to write, plus the GitHub and email links) and the 'Get in touch' call to action in the shared site header. Owns the one address the site publishes.
+  - **`contact`** — Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
   - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
   - **`hero`** — Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.
   - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.

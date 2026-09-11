@@ -49,7 +49,7 @@ attribute type carries.
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/studio/compositions/release/release-logs`
-    - `apps/website/shell`
+    - `apps/website/improve`
     - `build/deployment`
     - `code-explorer/commit-detail`
     - `conversations/conversation-ui/item`

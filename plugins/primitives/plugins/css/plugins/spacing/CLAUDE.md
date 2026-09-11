@@ -164,6 +164,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps/studio/contributions/tables/foreign-keys`
     - `apps/studio/explorer`
     - `apps/studio/graph`
+    - `apps/website/improve`
     - `apps/website/landing/contact`
     - `apps/website/landing/fork`
     - `apps/website/landing/hero`

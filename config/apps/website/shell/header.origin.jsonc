@@ -1,4 +1,4 @@
-// @hash 60e6d07437e3
+// @hash 9ca2122347d2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,7 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "apps.website.landing.contact:contact",
+    "apps.website.improve:improve",
     "apps.website.questions.apps:apps",
     "apps.website.questions.harness:harness",
     "apps.website.shell:wordmark",

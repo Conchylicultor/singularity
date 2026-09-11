@@ -236,6 +236,7 @@ fixed raw size escapes per-site via
     - `apps/studio/contributions/tables/row-count`
     - `apps/studio/explorer`
     - `apps/studio/graph`
+    - `apps/website/improve`
     - `apps/website/landing/contact`
     - `apps/website/landing/fork`
     - `apps/website/landing/hero`

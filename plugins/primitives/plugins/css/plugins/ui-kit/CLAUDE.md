@@ -457,6 +457,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/studio/compositions/release/release-logs`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
+    - `apps/website/improve`
     - `apps/website/landing/contact`
     - `apps/website/landing/story-link`
     - `apps/website/shell`

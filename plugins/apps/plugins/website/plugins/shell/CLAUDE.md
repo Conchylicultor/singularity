@@ -13,7 +13,9 @@ and the three chrome pieces a page is built out of.
   writes a number.
 - **`WebsiteChrome`** — what a pane renders instead of `PaneChrome`: the header,
   the page's bands, then the footer. Going through it is what makes "one footer
-  per page" structural rather than remembered.
+  per page" structural rather than remembered. The footer carries the wordmark, the
+  email and the GitHub link; both are site-level facts in `core/site.ts` (the
+  contact band's cards read the same address), so neither is declared twice.
 - **`WebsiteHeader`** — ONE pane-header slot, borrowed by all four panes via
   `Pane.define({ actions: WebsiteHeader })`. Declared here and only here; the
   borrowing panes must stay out of their own `slots:` records. Nav order lives in
@@ -45,7 +47,7 @@ hover.
 - Web:
   - Slots:
     - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
-    - `WebsiteHeader` ← `apps.website.landing.contact`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `primitives.pane`
+    - `WebsiteHeader` ← `apps.website.improve`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `primitives.pane`
   - Contributes:
     - `Apps.App` "equin" → `WebsiteLayout`
     - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -55,9 +57,11 @@ hover.
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
     - `layouts/full-pane.FullPane`
+    - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
+    - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/text.TextVariant`
@@ -83,10 +87,13 @@ hover.
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports (values):
+    - `CONTACT_EMAIL`
+    - `CONTACT_MAILTO`
     - `SOURCE_URL`
     - `websiteApp`
 - Cross-plugin:
   - Imported by:
+    - `apps/website/improve`
     - `apps/website/landing/contact`
     - `apps/website/landing/fork`
     - `apps/website/landing/hero`

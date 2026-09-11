@@ -1,6 +1,14 @@
 /**
  * Where the code behind this site lives. A site-level fact, not a component's:
- * the footer signs off with it and the contact band offers it as the other half
- * of "get in touch", and one address declared twice is one address that drifts.
+ * the footer signs off with it on every page, and one address declared twice is
+ * one address that drifts.
  */
 export const SOURCE_URL = "https://github.com/Conchylicultor/singularity";
+
+/**
+ * The one address the site publishes. Every reach-out on the site goes here —
+ * the contact band's two cards and the footer's email link — so it is declared
+ * beside the source link rather than inside either of them.
+ */
+export const CONTACT_EMAIL = "hello@equin.ai";
+export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;

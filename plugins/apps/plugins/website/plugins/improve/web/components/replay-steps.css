@@ -1,0 +1,28 @@
+/* The active replay step's progress: a hairline that fills left to right over
+ * the step's own duration (set inline, from the script) and then stops.
+ *
+ * It is also the replay's clock. The step list advances on this animation's
+ * `animationend`, so the pacing lives in one place — the CSS the reader is
+ * watching — rather than in a chain of timers that could drift from it, and a
+ * closed popover (which unmounts the bar) simply stops the replay.
+ *
+ * Transform, not width: a scale is composited, so the fill stays smooth while
+ * the spinner beside it turns. There is no reduced-motion rule here on purpose:
+ * under `prefers-reduced-motion` the replay renders every step done and never
+ * mounts this bar, so nothing depends on an animation that might not run. */
+.website-improve-progress {
+  transform-origin: left center;
+  animation-name: website-improve-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes website-improve-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}

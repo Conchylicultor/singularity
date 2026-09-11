@@ -5146,27 +5146,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
       - Plugins:
+        - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
+          - Web:
+            - Contributes: `WebsiteHeader` "improve" → `ImproveNavItem`
+            - Uses:
+              - `apps/website/shell.WebsiteHeader`
+              - `apps/website/shell.WebsiteNavLink`
+              - `primitives/action-presentation.useActionForm`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/spinner.Spinner`
+              - `primitives/css/switch.Switch`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/overlay/popover.InlinePopover`
+              - `primitives/text-editor.TextEditor`
+          - Core:
+            - Exports (types): `IssueDraft`
+            - Exports (values):
+              - `buildIssueUrl`
+              - `issueTitle`
+              - `MAX_ISSUE_URL_LENGTH`
         - **`landing`** — Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
           - Plugins:
-            - **`contact`** — Getting in touch: the homepage's closing band (two reasons to write, plus the GitHub and email links) and the 'Get in touch' call to action in the shared site header. Owns the one address the site publishes.
+            - **`contact`** — Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
               - Web:
-                - Contributes:
-                  - `Website.Section` "Contact" → `ContactSection`
-                  - `WebsiteHeader` "contact" → `ContactNavItem`
+                - Contributes: `Website.Section` "Contact" → `ContactSection`
                 - Uses:
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteArrow`
                   - `apps/website/shell.WebsiteBand`
-                  - `apps/website/shell.WebsiteHeader`
-                  - `apps/website/shell.WebsiteNavLink`
                   - `primitives/css/card.Card`
                   - `primitives/css/grid.Grid`
-                  - `primitives/css/inline.Inline`
-                  - `primitives/css/spacing.insetClass`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
-                  - `primitives/css/ui-kit.cn`
             - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
               - Web:
                 - Contributes: `Website.Section` "Fork" → `ForkSection`
@@ -5253,7 +5274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
-              - `WebsiteHeader` ← `apps.website.landing.contact`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `primitives.pane`
+              - `WebsiteHeader` ← `apps.website.improve`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
@@ -5263,9 +5284,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
               - `layouts/full-pane.FullPane`
+              - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
+              - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Inset`
+              - `primitives/css/spacing.insetClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/text.TextVariant`
@@ -5291,10 +5314,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values):
+              - `CONTACT_EMAIL`
+              - `CONTACT_MAILTO`
               - `SOURCE_URL`
               - `websiteApp`
           - Cross-plugin:
             - Imported by:
+              - `apps/website/improve`
               - `apps/website/landing/contact`
               - `apps/website/landing/fork`
               - `apps/website/landing/hero`
@@ -15612,6 +15638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/pitch-layout`
               - `apps/sonata/track-mixer`
               - `apps/sonata/view-options`
+              - `apps/website/improve`
               - `apps/website/shell`
               - `build`
               - `code-explorer`
@@ -21227,6 +21254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tab-bar`
+          - `apps/website/improve`
           - `primitives/adaptive-bar`
           - `primitives/icon-button`
     - **`adaptive-bar`** — Overflow as relocation, not transformation: a bar that asks each widget for a smaller form of itself and moves the rest — as themselves, ONE live instance each, never rendered twice — into an always-mounted panel. Each occupant owns one stable portal container the bar re-parents imperatively, so a relocated slider is still the same slider mid-drag; measurement reads the real nodes, and every policy (which forms exist, how eagerly to yield) comes from the widget through action-presentation rather than from the host.
@@ -21730,6 +21758,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release`
               - `apps/studio/compositions/release/release-info`
               - `apps/studio/contributions`
+              - `apps/website/improve`
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup/runs-arm`
@@ -21917,6 +21946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/transport-bar`
               - `apps/studio/contributions`
               - `apps/studio/explorer`
+              - `apps/website/improve`
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
@@ -22060,6 +22090,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-artifact`
               - `apps/studio/explorer/membership`
               - `apps/studio/graph`
+              - `apps/website/improve`
+              - `apps/website/shell`
               - `config_v2/fields`
               - `conversations/conversation-view/jsonl-viewer/attachment/prompt-snapshot`
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
@@ -22300,6 +22332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
+              - `apps/website/improve`
               - `apps/website/shell`
               - `auth`
               - `auth/apple-signing/setup-wizard`
@@ -22457,8 +22490,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
-              - `apps/website/landing/contact`
               - `apps/website/landing/fork`
+              - `apps/website/shell`
               - `backup/runs-arm`
               - `build/build-info`
               - `build/build-status`
@@ -22634,7 +22667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/release/release-logs`
-              - `apps/website/shell`
+              - `apps/website/improve`
               - `build/deployment`
               - `code-explorer/commit-detail`
               - `conversations/conversation-ui/item`
@@ -23307,6 +23340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/foreign-keys`
               - `apps/studio/explorer`
               - `apps/studio/graph`
+              - `apps/website/improve`
               - `apps/website/landing/contact`
               - `apps/website/landing/fork`
               - `apps/website/landing/hero`
@@ -23558,6 +23592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/pages/page-tree`
               - `apps/sonata/sources/ultimate-guitar`
+              - `apps/website/improve`
               - `build`
               - `conversations/conversation-view/op-status`
               - `debug/worktree-cleanup`
@@ -23691,6 +23726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/events/sources`
+              - `apps/website/improve`
               - `config_v2/fields`
               - `primitives/css/control-panel`
         - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
@@ -23789,6 +23825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
               - `apps/studio/graph`
+              - `apps/website/improve`
               - `apps/website/landing/contact`
               - `apps/website/landing/fork`
               - `apps/website/landing/hero`
@@ -24284,6 +24321,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-logs`
               - `apps/studio/explorer/membership`
               - `apps/studio/graph`
+              - `apps/website/improve`
               - `apps/website/landing/contact`
               - `apps/website/landing/story-link`
               - `apps/website/shell`
@@ -27105,6 +27143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/entry-points`
+              - `apps/website/improve`
               - `build`
               - `config_v2/settings`
               - `conversations/conversation-preprompt`
@@ -28270,6 +28309,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `active-data`
           - `active-data/task`
+          - `apps/website/improve`
           - `conversations/agents`
           - `conversations/conversation-view/branch`
           - `primitives/launch`

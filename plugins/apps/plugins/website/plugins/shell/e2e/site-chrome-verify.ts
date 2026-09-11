@@ -189,10 +189,7 @@ await withBrowser(async (h) => {
     ],
     [
       "the contact call to action",
-      // The header's pill says the same words; the card's carries the arrow.
-      page
-        .getByRole("link", { name: "Get in touch" })
-        .filter({ has: page.locator("svg") }),
+      page.getByRole("link", { name: "Get in touch" }),
     ],
   ] as const) {
     await control.scrollIntoViewIfNeeded();

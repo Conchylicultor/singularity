@@ -63,6 +63,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/sonata/transport-bar`
     - `apps/studio/contributions`
     - `apps/studio/explorer`
+    - `apps/website/improve`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`

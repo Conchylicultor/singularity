@@ -15,6 +15,9 @@ way:
   answer gets written into.
 - [`story`](plugins/story/CLAUDE.md) — `/website/story`: where equin came from.
   Also unwritten, on purpose.
+- [`improve`](plugins/improve/CLAUDE.md) — the header's Improve button: the
+  visitor describes a change, watches a scripted replay of what an agent would
+  do with it, and can file it as a prefilled GitHub issue. No agent runs here.
 - [`shell`](plugins/shell/CLAUDE.md) — the app entry, the shared site header
   every page wears, and the band / page / footer chrome (`WebsiteBand`,
   `WebsiteChrome`).
@@ -59,9 +62,10 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
 
 - Description: Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
 - Sub-plugins:
+  - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
   - **`landing`** — Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
     - Plugins:
-      - **`contact`** — Getting in touch: the homepage's closing band (two reasons to write, plus the GitHub and email links) and the 'Get in touch' call to action in the shared site header. Owns the one address the site publishes.
+      - **`contact`** — Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
       - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
       - **`hero`** — Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.
       - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.

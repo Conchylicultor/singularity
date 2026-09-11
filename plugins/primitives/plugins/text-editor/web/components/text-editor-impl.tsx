@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -7,6 +7,7 @@ import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
@@ -183,10 +184,9 @@ function EditorShell({
     editor.setEditable(!disabled);
   }, [editor, disabled]);
 
-  useEffect(() => {
-    if (autoFocus && !disabled) editor.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: focus once on initial render
-  }, []);
+  // Frozen at mount: `autoFocus` means "take focus when the editor appears",
+  // not "take it whenever this prop turns true".
+  const [focusOnMount] = useState(autoFocus && !disabled);
 
   const minHeight = `${Math.max(minRows, 1) * 1.5}rem`;
 
@@ -235,6 +235,13 @@ function EditorShell({
           }
           ErrorBoundary={LexicalErrorBoundary}
         />
+        {/* Lexical's own plugin, not a bare `editor.focus()`: that only moves
+            the selection, and in a just-mounted editor whose root is still
+            empty there is none to move, so DOM focus is never taken. This is
+            what a lazily loaded editor landing inside an already-open popover
+            hits — the popover has focused its first control by then. The
+            plugin's callback focuses the root when selection did not. */}
+        {focusOnMount && <AutoFocusPlugin />}
       </div>
       {bottomSlot}
     </div>
