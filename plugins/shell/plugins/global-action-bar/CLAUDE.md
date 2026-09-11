@@ -2,17 +2,6 @@
 
 Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
-<<<<<<< .merge_file_QpPdMc
-app. Collapsed it's a status glyph (aggregating WS connectivity, reload-needed
-— stale tab or failed plugin load, via `useReloadAdvice` — and
-unread-notification signals) that expands on hover; a pin button sticks it
-expanded inline, persisted in localStorage. Pinned is the default, so a fresh
-origin (every new worktree's `<wt>.localhost:9000`) shows the docked strip
-until the user unpins it there. Owns the `enabled` config and the
-status hook — kept out of `action-bar` (the slot owner) because the status hook
-imports `build` + `notifications`, which themselves contribute to
-`ActionBar.Item`; housing the renderer here keeps the import graph acyclic.
-=======
 app. Its leading item, in both hosts, is the health report's dot
 (`HealthReportButton` from `shell/health-report`): collapsed, the bar is just that
 dot, which expands the bar on hover and opens the report on click; a pin button
@@ -22,7 +11,6 @@ until the user unpins it there. Owns the `enabled` config.
 
 The two hosts are mutually exclusive (the pin), which is what keeps exactly one
 `HealthReportButton` — and so one set of health probes — mounted at a time.
->>>>>>> .merge_file_rGH5GA
 
 In an embedded document (`?embed=1`, see `primitives/embed`) neither host
 renders: the floating one checks the flag itself, the docked one lives in the
@@ -43,10 +31,6 @@ tab bar, which an embed does not paint.
     - `apps-core/tabs.getSurfaceMode`
     - `apps-core/tabs.setSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
-<<<<<<< .merge_file_QpPdMc
-    - `build.useReloadAdvice`
-=======
->>>>>>> .merge_file_rGH5GA
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `primitives/css/spacing.Stack`

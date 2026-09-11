@@ -324,17 +324,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
             - Exports (values): `welcomePane`
-        - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
-          - Web:
-            - Contributes: `ActionBar.Item` → `WorktreeDropdown`
-            - Uses:
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/status-dot.StatusDot`
-              - `primitives/css/text.Text`
-              - `primitives/live-state.useResource`
-              - `primitives/overlay/tooltip.WithTooltip`
-              - `shell/action-bar.ActionBar`
     - **`browser`** — Minimal iframe-based web browser app.
       - Plugins:
         - **`bookmarks`** — Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live resource, and add/delete endpoints backing the star toggle and bookmarks bar.
@@ -5912,6 +5901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/stall-monitor`
           - `shell/global-action-bar`
           - `shell/notifications`
+          - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, shared by the cross-app chrome (rail, tab bar, toaster) and the :root token layer.
       - Web:
@@ -6638,7 +6628,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/build-profiling`
       - `build/runs-arm`
       - `debug/reports`
-      - `shell/global-action-bar`
   - Shared:
     - Exports (types): `BuildRun`
     - Exports (values):
@@ -16836,22 +16825,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `tasks/attempt-work`
               - `tasks/tasks-core`
-    - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
+    - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
           - `Core.Root` → `ReconnectWatcher`
           - `Core.Root` → `WedgeWatchdog`
-          - `ActionBar.Item` → `HealthDot`
+          - `HealthReport.Row` "Connection"
         - Uses:
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/css/center.Center`
-          - `primitives/css/status-dot.StatusDot`
           - `primitives/live-state.getNotificationsClient`
           - `primitives/live-state.liveStateSocketKind`
           - `primitives/live-state.useNotificationsChannelStatuses`
           - `primitives/networking.subscribeWsStatus`
-          - `primitives/overlay/tooltip.WithTooltip`
-          - `shell/action-bar.ActionBar`
+          - `shell/health-report.HealthReport`
           - `shell/toast.showToast`
         - Exports (types): `WedgeReport`
         - Exports (values):
@@ -17395,6 +17381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `CheckoutRef`
           - `Namespace`
+          - `NamespaceParts`
         - Exports (values):
           - `asNamespace`
           - `BASE_EXCLUSIONS_ID`
@@ -17407,6 +17394,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `namespaceFor`
           - `namespaceFromHost`
           - `namespaceHost`
+          - `namespaceParts`
           - `namespaceUrl`
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
       - Web:
@@ -21526,6 +21514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/code-review`
           - `review/plugin-changes`
           - `review/plugin-changes/file-changes`
+          - `shell/health-report`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
@@ -21633,6 +21622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/setup-steps`
           - `review/code-review`
           - `review/plugin-changes/file-changes`
+          - `tasks/worktree-identity`
     - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
       - Plugins:
         - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. The label is the chip's baseline, so a chip dropped in a sentence sits on the same line as the words beside it instead of on its icon's bottom edge. LinkChip and ToggleChip compose it.
@@ -21880,7 +21870,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/trace/pane`
               - `fields/avatar/config`
               - `fields/bool/inline`
-              - `infra/health`
               - `layouts/route-fallback`
               - `page/audio`
               - `page/bookmark`
@@ -21916,7 +21905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree`
               - `reorder/node-types/header`
               - `screenshot`
-              - `shell/global-action-bar`
+              - `shell/health-report`
               - `shell/notifications`
               - `tasks/task-draft-form`
               - `tasks/task-graph`
@@ -22224,7 +22213,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
-              - `apps/agent-manager/worktree-switcher`
               - `apps/browser/shell`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
@@ -22315,6 +22303,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
+              - `shell/health-report`
               - `shell/notifications`
               - `tasks/attempt-view`
               - `tasks/task-draft-form`
@@ -22558,7 +22547,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `apps-core/tab-bar`
               - `apps/agent-manager/shell`
-              - `apps/agent-manager/worktree-switcher`
               - `apps/browser/shell`
               - `apps/events/event-list`
               - `apps/events/sources`
@@ -22613,6 +22601,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
               - `review/plugin-changes/file-changes`
+              - `shell/health-report`
               - `shell/notifications`
               - `tasks/attempt-view`
               - `tasks/task-events`
@@ -22748,7 +22737,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/tree`
               - `reorder/editor`
               - `screenshot/draw-on-app`
-              - `shell/global-action-bar`
               - `shell/notifications`
               - `tasks/task-description`
               - `tasks/task-draft-form`
@@ -22933,6 +22921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/plugin-changes`
               - `review/plugin-changes/api-changes`
               - `review/plugin-changes/file-changes`
+              - `shell/health-report`
               - `shell/notifications`
               - `stats/commits`
               - `tasks/attempt-view`
@@ -23005,6 +22994,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/section-card`
               - `reorder/editor`
               - `search/quick-find`
+              - `shell/health-report`
               - `tasks/task-attachments`
               - `tasks/task-dependencies`
               - `tasks/task-events`
@@ -23443,6 +23433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot/draw-on-app`
               - `search/quick-find`
               - `shell/global-action-bar`
+              - `shell/health-report`
               - `shell/notifications`
               - `stats`
               - `stats/commits`
@@ -23510,7 +23501,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `active-data/conv`
               - `active-data/task-link`
               - `apps/agent-manager/welcome`
-              - `apps/agent-manager/worktree-switcher`
               - `apps/deploy/deploy-history`
               - `apps/deploy/health`
               - `apps/deploy/remote-deploy`
@@ -23531,9 +23521,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/ops/op-gantt`
               - `debug/timeline`
               - `debug/trace/pane`
-              - `infra/health`
               - `runs/run-outcome`
-              - `shell/global-action-bar`
+              - `shell/health-report`
               - `tasks/attempt-view`
               - `tasks/task-status`
         - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
@@ -23655,7 +23644,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface/floating/wallpaper/upload`
               - `apps/agent-manager/shell`
               - `apps/agent-manager/welcome`
-              - `apps/agent-manager/worktree-switcher`
               - `apps/browser/bookmarks`
               - `apps/browser/start-page`
               - `apps/browser/tabs`
@@ -23921,6 +23909,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot`
               - `screenshot/draw-on-app`
               - `search/quick-find`
+              - `shell/health-report`
               - `shell/notifications`
               - `stats`
               - `stats/commits`
@@ -24447,6 +24436,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `screenshot/draw-on-app`
               - `search/quick-find`
               - `shell/global-action-bar`
+              - `shell/health-report`
               - `shell/notifications`
               - `shell/toast`
               - `stats/commits`
@@ -25564,6 +25554,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/expandable`
               - `primitives/graph-canvas`
               - `primitives/outline/rail`
+              - `primitives/overlay/floating-action`
               - `primitives/terminal`
               - `reorder`
               - `screenshot`
@@ -25684,6 +25675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/layout-harness`
           - `reports/crash`
           - `reports/launch-fix`
+          - `shell/health-report`
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
       - Web:
         - Uses:
@@ -25938,6 +25930,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-description`
           - `tasks/task-events`
           - `tasks/task-list`
+          - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
@@ -26250,7 +26243,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `active-data/prototype`
           - `active-data/task`
           - `active-data/task-link`
-          - `apps/agent-manager/worktree-switcher`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
@@ -26372,7 +26364,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `review/code-review`
           - `review/plugin-changes`
           - `runs`
-          - `shell/global-action-bar`
           - `shell/notifications`
           - `tasks`
           - `tasks/attempt-view`
@@ -26390,6 +26381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list`
           - `tasks/task-preprompt`
           - `tasks/tasks-core`
+          - `tasks/worktree-identity`
           - `ui/tweakcn`
       - Core:
         - Exports (types):
@@ -26833,6 +26825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.StackAlign`
               - `primitives/css/spacing.StackDirection`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/element-size.useResizeObserver`
             - Exports (types):
               - `FloatingActionFadeInProps`
               - `FloatingActionProps`
@@ -26938,6 +26931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch`
               - `reorder`
               - `reorder/editor`
+              - `shell/health-report`
               - `shell/notifications`
               - `tasks/task-draft-form`
         - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
@@ -26985,7 +26979,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-rail`
               - `apps-core/surface/floating`
               - `apps-core/tab-bar`
-              - `apps/agent-manager/worktree-switcher`
               - `apps/events/sources`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/primitives/toolbar-control`
@@ -26996,7 +26989,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/fork-conversation`
               - `conversations/conversation-view/op-status`
-              - `infra/health`
               - `page/formatting/bold`
               - `page/formatting/code`
               - `page/formatting/italic`
@@ -27011,7 +27003,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/popover`
               - `primitives/pane`
               - `primitives/sync-status`
-              - `shell/global-action-bar`
               - `ui/segmented-progress-bar/dots`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
@@ -27622,6 +27613,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view`
           - `primitives/data-view/gallery`
           - `primitives/tree`
+          - `shell/health-report`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
       - Plugins:
         - **`app-instance`** — Per-app-instance generation id: which running SPA state a document belongs to, and the storage-key grammar scoped to it.
@@ -27688,6 +27680,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/scope/dom-scope`
               - `primitives/sync-status`
               - `primitives/undo-redo`
+              - `shell/health-report`
         - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
           - Cross-plugin:
             - Imported by:
@@ -27943,6 +27936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runs`
           - `shell`
           - `shell/action-bar`
+          - `shell/health-report`
           - `stats`
           - `tasks/launch-options`
           - `tasks/task-draft-form`
@@ -29602,18 +29596,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
       - Web:
-        - Slots: `ActionBar.Item` ← `apps-core.surface`, `apps.agent-manager.worktree-switcher`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `infra.health`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
+        - Slots: `ActionBar.Item` ← `apps-core.surface`, `build`, `fullscreen`, `improve`, `improve.element-picker`, `reorder.edit-mode`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
         - Uses: `primitives/slot-render.defineRenderSlot`
         - Exports (values): `ActionBar`
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface`
-          - `apps/agent-manager/worktree-switcher`
           - `build`
           - `fullscreen`
           - `improve`
           - `improve/element-picker`
-          - `infra/health`
           - `reorder/edit-mode`
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -29631,27 +29623,79 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.getSurfaceMode`
           - `apps-core/tabs.setSurfaceMode`
           - `apps-core/tabs.useSurfaceMode`
-          - `build.useReloadAdvice`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
-          - `primitives/css/center.Center`
-          - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
-          - `primitives/css/status-dot.StatusDot`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/embed.isEmbeddedDocument`
           - `primitives/icon-button.IconButton`
-          - `primitives/live-state.useNotificationsChannelStatuses`
-          - `primitives/live-state.useWindowResource`
           - `primitives/overlay/floating-action.FloatingAction`
           - `primitives/overlay/floating-action.FloatingActionFadeIn`
-          - `primitives/overlay/tooltip.WithTooltip`
           - `primitives/persistent-draft.useDraft`
           - `shell/action-bar.ActionBar`
-          - `shell/notifications.notificationsResource`
+          - `shell/health-report.HealthReportButton`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
+    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
+      - Web:
+        - Slots: `HealthReport.Row` ← `infra.health`, `tasks.worktree-identity`
+        - Uses:
+          - `primitives/collapsible.Collapsible`
+          - `primitives/collapsible.CollapsibleChevron`
+          - `primitives/collapsible.CollapsibleContent`
+          - `primitives/collapsible.useCollapsibleContext`
+          - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/error-boundary.boundaryReportSink`
+          - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/row-actions.RowActions`
+          - `primitives/scope/scoped-store.defineScopedStore`
+          - `primitives/slot-render.renderIsolated`
+        - Exports (types):
+          - `HealthInfo`
+          - `HealthReportRow`
+          - `HealthState`
+          - `HealthStatus`
+          - `InfoRow`
+          - `StatusRow`
+        - Exports (values):
+          - `HealthReport`
+          - `HealthReportButton`
+      - Cross-plugin:
+        - Imported by:
+          - `infra/health`
+          - `shell/global-action-bar`
+          - `tasks/worktree-identity`
+      - Core:
+        - Exports (types):
+          - `HealthInfo`
+          - `HealthLevel`
+          - `HealthMerge`
+          - `HealthReportRow`
+          - `HealthState`
+          - `HealthStatus`
+          - `InfoRow`
+          - `ReportedStatus`
+          - `SortableRow`
+          - `StatusRow`
+        - Exports (values):
+          - `isPending`
+          - `isPulsing`
+          - `levelOf`
+          - `mergeHealth`
+          - `sortRows`
+          - `verdictOf`
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
       - Web:
         - Contributes: `ActionBar.Item` → `BellButton`
@@ -29745,7 +29789,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/mutation-errors`
           - `screenshot`
           - `screenshot/draw-on-app`
-          - `shell/global-action-bar`
           - `tasks/task-draft-form`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
@@ -31195,6 +31238,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-health` (table `tasks_ext_health_review`)
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
+    - **`worktree-identity`** — Which checkout and task this page is served from, as the health report's first (informational) row: the linked task's title or the namespace, the kind of place it names, a copy button, and Open task.
+      - Web:
+        - Contributes: `HealthReport.Row` "worktree"
+        - Uses:
+          - `apps-core/tabs.navigate`
+          - `primitives/copy-to-clipboard.CopyButton`
+          - `primitives/icon-button.IconButton`
+          - `primitives/live-state.useResource`
+          - `shell/health-report.HealthReport`
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
