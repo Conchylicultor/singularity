@@ -587,6 +587,23 @@ export function scopeHasOwnConfig(
   );
 }
 
+// Every scope with its OWN document for `descriptor` (a committed git scope, a
+// runtime fork, or a plain scoped write) — read from disk through the same
+// `scopeHasOwnConfig` predicate as the scopes resource, not from its event-fed
+// map, so a server consumer asking "which scopes chose X?" can't see a stale
+// answer. The base scope is not listed; read it with `getConfig(descriptor)`.
+export function getConfigScopeIds(descriptor: ConfigDescriptor): string[] {
+  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+  if (!hierarchyPath) {
+    throw new Error(
+      `[config-v2] getConfigScopeIds: descriptor "${descriptor.name}" is not registered.`,
+    );
+  }
+  return discoverScopeIds(hierarchyPath).filter((sid) =>
+    scopeHasOwnConfig(descriptor, sid),
+  );
+}
+
 // All registered descriptors tagged with the given scope kind, plus their
 // hierarchyPath and storePath. Used by fork/unfork to act on the whole scoped set.
 export function getScopedDescriptors(scope: "app"): {

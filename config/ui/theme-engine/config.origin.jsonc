@@ -1,6 +1,0 @@
-// @hash 9087e09470bf
-{
-  "globalPreset": "default",
-  // Allowed values: "light", "dark", "system"
-  "colorMode": "system"
-}

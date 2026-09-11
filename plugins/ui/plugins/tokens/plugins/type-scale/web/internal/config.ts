@@ -1,1 +1,0 @@
-export { typeScaleConfig } from "../../shared";

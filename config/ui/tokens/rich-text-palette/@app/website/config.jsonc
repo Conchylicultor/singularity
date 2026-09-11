@@ -1,9 +1,0 @@
-// @hash 9e6ead24f7d6
-{
-  // The site has no rich-text editor; the default inline colours.
-  //
-  // Pinned explicitly even though it is the default: the site owns its theme
-  // whole. A group left unpinned follows the desktop's runtime theme, which git
-  // cannot show (enforced by the tokens:app-theme-pins-total check).
-  "preset": "default"
-}

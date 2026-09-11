@@ -5,7 +5,7 @@ import { handleApply } from "./internal/handle-apply";
 
 export default {
   description:
-    "Community theme catalog and apply endpoints for tweakcn.",
+    "The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.",
   httpRoutes: {
     [getCatalog.route]: handleGetCatalog,
     [applyCatalogTheme.route]: handleApply,

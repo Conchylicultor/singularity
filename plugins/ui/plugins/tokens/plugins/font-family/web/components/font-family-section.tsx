@@ -1,142 +1,36 @@
-import { useContext } from "react";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  TokenRow,
-  TokenModeContext,
+  TokenRows,
+  useTokenGroupEditor,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
-import { fontFamilyGroup } from "../../shared";
-import { fontFamilyConfig } from "../internal/config";
-import { FontFamily } from "../slots";
+import { fontFamilyGroup } from "../../core";
 
+const KEYS = Object.keys(fontFamilyGroup.schema);
+
+// Every token row filters itself by `search`; whether this section appears at
+// all is the contribution's `useAvailable` (`tokenGroupMatchesSearch`).
 export function FontFamilySection({ search }: { search: string }) {
-  const scopeId = useThemeScopeId();
-  const config = useConfig(fontFamilyConfig, { scopeId }) as {
-    preset: string;
-    overrides: { light: Record<string, string>; dark: Record<string, string> };
-  };
-  const setConfig = useSetConfig(fontFamilyConfig, { scopeId });
-  const presets = FontFamily.Preset.useContributions();
-  const tokenMode = useContext(TokenModeContext);
-
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = config.overrides;
-  const activeValues: Record<string, string> = active
-    ? {
-        ...(tokenMode === "dark" ? active.dark : active.light),
-        ...Object.fromEntries(
-          Object.entries(
-            tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
-          ).filter(([, v]) => v !== ""),
-        ),
-      }
-    : {};
-  const activeOverrideKeys = new Set(
-    Object.entries(
-      tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
-    )
-      .filter(([, v]) => v !== "")
-      .map(([k]) => k),
-  );
-
-  const modeKey = tokenMode === "dark" ? "dark" : "light";
-
-  const schema = fontFamilyGroup.schema;
-  const vars = fontFamilyGroup.vars;
-
-  type FontFamilyKey = keyof typeof schema;
-  const allKeys = Object.keys(schema) as FontFamilyKey[];
-
-  // Filter tokens by search
-  const visibleKeys = allKeys.filter((key) => {
-    const label = schema[key]?.label ?? (key as string);
-    const cssVar = vars[key] ?? "";
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q);
-  });
-
-  // The empty-result case is the contribution's `useAvailable`
-  // (`tokenGroupMatchesSearch`), so this body never has to return null:
-  // a filtered-to-empty group paints no card at all.
+  const editor = useTokenGroupEditor(fontFamilyGroup);
+  if (editor.pending) return <Loading variant="rows" count={KEYS.length} />;
 
   return (
     <Stack gap="xs">
-      {/* Preset picker */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the token rows below */}
-      <Stack direction="row" gap="xs" wrap className="mb-3">
-        {presets.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
-              p.id === config.preset
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-            onClick={() => setConfig("preset", p.id)}
-          >
-            <Stack direction="row" align="center" gap="xs">
-              <span
-                className="text-caption font-medium"
-                style={{ fontFamily: p.light.fontSans }}
-              >
-                Aa
-              </span>
-              {p.label}
-            </Stack>
-          </button>
-        ))}
-      </Stack>
-
-      {/* Token rows */}
       <Collapsible defaultOpen>
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
         <CollapsibleContent className="ml-2">
-          {visibleKeys.map((key) => {
-            const label = schema[key]?.label ?? (key as string);
-            const cssVar = vars[key] ?? `--${key as string}`;
-            const value =
-              activeValues[key as string] ??
-              schema[key]?.default ??
-              "";
-            const isOverridden = activeOverrideKeys.has(key as string);
-
-            return (
-              <TokenRow
-                key={key as string}
-                label={label}
-                cssVar={cssVar}
-                value={value}
-                isOverridden={isOverridden}
-                search={search}
-                onValueChange={(newValue) => {
-                  const newLight =
-                    tokenMode === "both" || tokenMode === "light"
-                      ? { ...overrides.light, [key as string]: newValue }
-                      : overrides.light;
-                  const newDark =
-                    tokenMode === "both" || tokenMode === "dark"
-                      ? { ...overrides.dark, [key as string]: newValue }
-                      : overrides.dark;
-                  setConfig("overrides", { light: newLight, dark: newDark });
-                }}
-                onReset={() =>
-                  setConfig("overrides", {
-                    ...overrides,
-                    [modeKey]: { ...overrides[modeKey], [key as string]: "" },
-                  })
-                }
-              />
-            );
-          })}
+          <TokenRows
+            editor={editor}
+            group={fontFamilyGroup}
+            keys={KEYS}
+            search={search}
+          />
         </CollapsibleContent>
       </Collapsible>
     </Stack>

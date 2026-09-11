@@ -1,23 +1,15 @@
-import { useContext } from "react";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  ColorAdjustContext,
-  transformValues,
-  useThemeScopeId,
-} from "@plugins/ui/plugins/theme-engine/web";
-import {
-  TokenRow,
-  TokenModeContext,
+  TokenRows,
+  useTokenGroupEditor,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { sidebarPaletteGroup } from "../../shared";
-import { sidebarPaletteConfig } from "../internal/config";
-import { SidebarPalette } from "../slots";
+import { sidebarPaletteGroup } from "../../core";
 
 interface GroupDef {
   label: string;
@@ -32,156 +24,57 @@ const GROUPS: GroupDef[] = [
 ];
 
 export function SidebarPaletteSection({ search }: { search: string }) {
-  const scopeId = useThemeScopeId();
-  const config = useConfig(sidebarPaletteConfig, { scopeId }) as {
-    preset: string;
-    overrides: { light: Record<string, string>; dark: Record<string, string> };
-  };
-  const setConfig = useSetConfig(sidebarPaletteConfig, { scopeId });
-  const presets = SidebarPalette.Preset.useContributions();
-  const adjustment = useContext(ColorAdjustContext);
-  const tokenMode = useContext(TokenModeContext);
+  const editor = useTokenGroupEditor(sidebarPaletteGroup);
+  if (editor.pending) {
+    return <Loading variant="rows" count={GROUPS.length} />;
+  }
 
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = config.overrides;
-  const activeOverrides = tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {});
-  const lightOverrideFiltered = Object.fromEntries(
-    Object.entries(overrides.light ?? {}).filter(([, v]) => v !== ""),
-  );
-  const darkOverrideFiltered = Object.fromEntries(
-    Object.entries(overrides.dark ?? {}).filter(([, v]) => v !== ""),
-  );
-  const lightValues = active
-    ? transformValues(
-        { ...active.light, ...lightOverrideFiltered },
-        adjustment,
-      )
-    : {};
-  const darkValues = active
-    ? transformValues(
-        { ...active.dark, ...darkOverrideFiltered },
-        adjustment,
-      )
-    : {};
-  const activeValues = tokenMode === "dark" ? darkValues : lightValues;
-  const activeOverrideKeys = new Set(
-    Object.entries(activeOverrides)
-      .filter(([, v]) => v !== "")
-      .map(([k]) => k),
-  );
-
-  const modeKey = tokenMode === "dark" ? "dark" : "light";
-
+  const shown =
+    editor.mode === "dark" ? editor.values.dark : editor.values.light;
   const schema = sidebarPaletteGroup.schema;
   const vars = sidebarPaletteGroup.vars;
+  const q = search.toLowerCase();
 
   return (
-    <Stack gap="xs">
-      {/* Preset picker */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the token groups below */}
-      <Stack direction="row" gap="xs" wrap className="mb-3">
-        {presets.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
-              p.id === config.preset
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-            onClick={() => setConfig("preset", p.id)}
-          >
-            <Stack direction="row" align="center" gap="xs">
-              <span
-                className="size-2.5 rounded-full border border-border/50"
-                style={{ backgroundColor: p.light.sidebar }}
-              />
-              {p.label}
-            </Stack>
-          </button>
-        ))}
-      </Stack>
-
-      {/* Token groups */}
-      <Stack gap="2xs">
-        {GROUPS.map((group) => {
-          const visibleKeys = group.keys.filter((key) => {
-            const label = schema[key]?.label ?? key;
-            const cssVar = vars[key] ?? "";
-            if (!search) return true;
-            const q = search.toLowerCase();
-            return (
-              label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q)
-            );
-          });
-          if (visibleKeys.length === 0) return null;
-
+    <Stack gap="2xs">
+      {GROUPS.map((group) => {
+        // A sub-group none of whose tokens answers the search box disappears.
+        const visibleKeys = group.keys.filter((key) => {
+          if (!q) return true;
+          const label = schema[key]?.label ?? key;
+          const cssVar = vars[key] ?? "";
           return (
-            <Collapsible key={group.label}>
-              <SectionHeaderRow
-                variant="eyebrow"
-                actions={group.keys.map((key) => (
-                  <span
-                    key={key as string}
-                    className="size-2 rounded-full border border-border/30"
-                    style={{
-                      backgroundColor:
-                        activeValues[key] ?? schema[key]?.default ?? "",
-                    }}
-                  />
-                ))}
-              >
-                {group.label}
-              </SectionHeaderRow>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
-              <CollapsibleContent className="ml-2">
-                {visibleKeys.map((key) => {
-                  const label = schema[key]?.label ?? key;
-                  const cssVar = vars[key] ?? `--${key}`;
-                  const value = activeValues[key] ?? schema[key]?.default ?? "";
-                  const isOverridden = activeOverrideKeys.has(key as string);
-                  const lightVal = overrides.light?.[key as string];
-                  const darkVal = overrides.dark?.[key as string];
-                  const isSplit =
-                    lightVal !== darkVal &&
-                    (lightVal !== undefined || darkVal !== undefined) &&
-                    (lightVal !== "" || darkVal !== "");
-
-                  return (
-                    <TokenRow
-                      key={key as string}
-                      label={label}
-                      cssVar={cssVar}
-                      value={value}
-                      isOverridden={isOverridden}
-                      isSplit={isSplit}
-                      search={search}
-                      onValueChange={(newValue) => {
-                        const newLight =
-                          tokenMode === "both" || tokenMode === "light"
-                            ? { ...overrides.light, [key as string]: newValue }
-                            : overrides.light;
-                        const newDark =
-                          tokenMode === "both" || tokenMode === "dark"
-                            ? { ...overrides.dark, [key as string]: newValue }
-                            : overrides.dark;
-                        setConfig("overrides", { light: newLight, dark: newDark });
-                      }}
-                      onReset={() =>
-                        setConfig("overrides", {
-                          ...overrides,
-                          [modeKey]: { ...overrides[modeKey], [key as string]: "" },
-                        })
-                      }
-                    />
-                  );
-                })}
-              </CollapsibleContent>
-            </Collapsible>
+            label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q)
           );
-        })}
-      </Stack>
+        });
+        if (visibleKeys.length === 0) return null;
+
+        return (
+          <Collapsible key={group.label}>
+            <SectionHeaderRow
+              variant="eyebrow"
+              actions={group.keys.map((key) => (
+                <span
+                  key={key}
+                  className="size-2 rounded-full border border-border/30"
+                  style={{ backgroundColor: shown[key] }}
+                />
+              ))}
+            >
+              {group.label}
+            </SectionHeaderRow>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
+            <CollapsibleContent className="ml-2">
+              <TokenRows
+                editor={editor}
+                group={sidebarPaletteGroup}
+                keys={visibleKeys}
+                search={search}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </Stack>
   );
 }
-

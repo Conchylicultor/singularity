@@ -1,24 +1,15 @@
-import { useContext } from "react";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  ColorAdjustContext,
-  transformValues,
-  useThemeScopeId,
-} from "@plugins/ui/plugins/theme-engine/web";
-import {
-  TokenRow,
-  TokenModeContext,
-  type TokenMode,
+  TokenRows,
+  useTokenGroupEditor,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { colorPaletteGroup } from "../../shared";
-import { colorPaletteConfig } from "../internal/config";
-import { ColorPalette } from "../slots";
+import { colorPaletteGroup } from "../../core";
 
 interface GroupDef {
   label: string;
@@ -41,160 +32,57 @@ const GROUPS: GroupDef[] = [
 ];
 
 export function ColorPaletteSection({ search }: { search: string }) {
-  const scopeId = useThemeScopeId();
-  const config = useConfig(colorPaletteConfig, { scopeId });
-  const setConfig = useSetConfig(colorPaletteConfig, { scopeId });
-  const presets = ColorPalette.Preset.useContributions();
-  const adjustment = useContext(ColorAdjustContext);
-  const tokenMode = useContext(TokenModeContext);
+  const editor = useTokenGroupEditor(colorPaletteGroup);
+  if (editor.pending) {
+    return <Loading variant="rows" count={GROUPS.length} />;
+  }
 
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = config.overrides as {
-    light: Record<string, string>;
-    dark: Record<string, string>;
-  };
-  const lightOverrides = Object.fromEntries(
-    Object.entries(overrides.light).filter(([, v]) => v !== ""),
-  );
-  const darkOverrides = Object.fromEntries(
-    Object.entries(overrides.dark).filter(([, v]) => v !== ""),
-  );
-  const lightValues = active
-    ? transformValues({ ...active.light, ...lightOverrides }, adjustment)
-    : {};
-  const darkValues = active
-    ? transformValues({ ...active.dark, ...darkOverrides }, adjustment)
-    : {};
-  const activeValues = tokenMode === "dark" ? darkValues : lightValues;
-  const activeOverrideKeys = new Set(
-    Object.keys(tokenMode === "dark" ? darkOverrides : lightOverrides),
-  );
-
+  const shown =
+    editor.mode === "dark" ? editor.values.dark : editor.values.light;
   const schema = colorPaletteGroup.schema;
   const vars = colorPaletteGroup.vars;
-
-  function setOverride(key: string, value: string, mode: TokenMode) {
-    const newOverrides = {
-      light: { ...overrides.light },
-      dark: { ...overrides.dark },
-    };
-    if (mode === "both" || mode === "light") {
-      newOverrides.light[key] = value;
-    }
-    if (mode === "both" || mode === "dark") {
-      newOverrides.dark[key] = value;
-    }
-    setConfig("overrides", newOverrides);
-  }
-
-  function resetOverride(key: string, mode: TokenMode) {
-    const newOverrides = {
-      light: { ...overrides.light },
-      dark: { ...overrides.dark },
-    };
-    if (mode === "both" || mode === "light") {
-      newOverrides.light[key] = "";
-    }
-    if (mode === "both" || mode === "dark") {
-      newOverrides.dark[key] = "";
-    }
-    setConfig("overrides", newOverrides);
-  }
+  const q = search.toLowerCase();
 
   return (
-    <Stack gap="xs">
-      {/* Preset picker */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the token groups below */}
-      <Stack direction="row" gap="xs" wrap className="mb-3">
-        {presets.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
-              p.id === config.preset
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-            onClick={() => setConfig("preset", p.id)}
-          >
-            <Stack direction="row" align="center" gap="xs">
-              <span
-                className="size-2.5 rounded-full border border-border/50"
-                style={{ backgroundColor: p.light.primary }}
-              />
-              {p.label}
-            </Stack>
-          </button>
-        ))}
-      </Stack>
-
-      {/* Token groups */}
-      <Stack gap="2xs">
-        {GROUPS.map((group) => {
-          // Filter tokens by search
-          const visibleKeys = group.keys.filter((key) => {
-            const label = schema[key]?.label ?? key;
-            const cssVar = vars[key] ?? "";
-            if (!search) return true;
-            const q = search.toLowerCase();
-            return (
-              label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q)
-            );
-          });
-          if (visibleKeys.length === 0) return null;
-
+    <Stack gap="2xs">
+      {GROUPS.map((group) => {
+        // A sub-group none of whose tokens answers the search box disappears.
+        const visibleKeys = group.keys.filter((key) => {
+          if (!q) return true;
+          const label = schema[key]?.label ?? key;
+          const cssVar = vars[key] ?? "";
           return (
-            <Collapsible key={group.label}>
-              <SectionHeaderRow
-                variant="eyebrow"
-                actions={group.keys.map((key) => (
-                  <span
-                    key={key as string}
-                    className="size-2 rounded-full border border-border/30"
-                    style={{
-                      backgroundColor:
-                        activeValues[key] ?? schema[key]?.default ?? "",
-                    }}
-                  />
-                ))}
-              >
-                {group.label}
-              </SectionHeaderRow>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
-              <CollapsibleContent className="ml-2">
-                {visibleKeys.map((key) => {
-                  const label = schema[key]?.label ?? key;
-                  const cssVar = vars[key] ?? `--${key}`;
-                  const value = activeValues[key] ?? schema[key]?.default ?? "";
-                  const isOverridden = activeOverrideKeys.has(key as string);
-                  const isSplit =
-                    overrides.light[key as string] !==
-                      overrides.dark[key as string] &&
-                    (overrides.light[key as string] !== "" ||
-                      overrides.dark[key as string] !== "");
-
-                  return (
-                    <TokenRow
-                      key={key as string}
-                      label={label}
-                      cssVar={cssVar}
-                      value={value}
-                      isOverridden={isOverridden}
-                      isSplit={isSplit}
-                      search={search}
-                      onValueChange={(newValue) =>
-                        setOverride(key as string, newValue, tokenMode)
-                      }
-                      onReset={() => resetOverride(key as string, tokenMode)}
-                    />
-                  );
-                })}
-              </CollapsibleContent>
-            </Collapsible>
+            label.toLowerCase().includes(q) || cssVar.toLowerCase().includes(q)
           );
-        })}
-      </Stack>
+        });
+        if (visibleKeys.length === 0) return null;
+
+        return (
+          <Collapsible key={group.label}>
+            <SectionHeaderRow
+              variant="eyebrow"
+              actions={group.keys.map((key) => (
+                <span
+                  key={key}
+                  className="size-2 rounded-full border border-border/30"
+                  style={{ backgroundColor: shown[key] }}
+                />
+              ))}
+            >
+              {group.label}
+            </SectionHeaderRow>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
+            <CollapsibleContent className="ml-2">
+              <TokenRows
+                editor={editor}
+                group={colorPaletteGroup}
+                keys={visibleKeys}
+                search={search}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
     </Stack>
   );
 }
-

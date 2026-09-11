@@ -4641,6 +4641,10 @@
       "name": "@singularity/plugin-reports-render-loop",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/theme-resolution": {
+      "name": "@singularity/plugin-reports-theme-resolution",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/turn-unconfirmed": {
       "name": "@singularity/plugin-reports-turn-unconfirmed",
       "version": "0.0.1",
@@ -4935,8 +4939,16 @@
       "name": "@singularity/plugin-ui-theme-engine-quick-theme",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/theme-engine/plugins/saved-themes": {
+      "name": "@singularity/plugin-ui-theme-engine-saved-themes",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/theme-engine/plugins/theme-customizer": {
       "name": "@singularity/plugin-ui-theme-engine-theme-customizer",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/theme-engine/plugins/theme-gallery": {
+      "name": "@singularity/plugin-ui-theme-engine-theme-gallery",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/theme-toggle": {
@@ -8030,6 +8042,8 @@
 
     "@singularity/plugin-reports-render-loop": ["@singularity/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 
+    "@singularity/plugin-reports-theme-resolution": ["@singularity/plugin-reports-theme-resolution@workspace:plugins/reports/plugins/theme-resolution"],
+
     "@singularity/plugin-reports-turn-unconfirmed": ["@singularity/plugin-reports-turn-unconfirmed@workspace:plugins/reports/plugins/turn-unconfirmed"],
 
     "@singularity/plugin-reports-viewport-escape": ["@singularity/plugin-reports-viewport-escape@workspace:plugins/reports/plugins/viewport-escape"],
@@ -8168,7 +8182,11 @@
 
     "@singularity/plugin-ui-theme-engine-quick-theme": ["@singularity/plugin-ui-theme-engine-quick-theme@workspace:plugins/ui/plugins/theme-engine/plugins/quick-theme"],
 
+    "@singularity/plugin-ui-theme-engine-saved-themes": ["@singularity/plugin-ui-theme-engine-saved-themes@workspace:plugins/ui/plugins/theme-engine/plugins/saved-themes"],
+
     "@singularity/plugin-ui-theme-engine-theme-customizer": ["@singularity/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
+
+    "@singularity/plugin-ui-theme-engine-theme-gallery": ["@singularity/plugin-ui-theme-engine-theme-gallery@workspace:plugins/ui/plugins/theme-engine/plugins/theme-gallery"],
 
     "@singularity/plugin-ui-theme-toggle": ["@singularity/plugin-ui-theme-toggle@workspace:plugins/ui/plugins/theme-toggle"],
 

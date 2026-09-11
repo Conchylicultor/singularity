@@ -219,5 +219,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "ui.theme-engine.quick-theme.section", pluginId: "ui.theme-engine.quick-theme", configName: "section" },
   { slotId: "ui.theme-engine.theme-customizer.section", pluginId: "ui.theme-engine.theme-customizer", configName: "section" },
   { slotId: "ui.theme-engine.theme-customizer.theme-customizer.actions", pluginId: "ui.theme-engine.theme-customizer", configName: "theme-customizer.actions" },
+  { slotId: "ui.theme-engine.theme-gallery.item-actions", pluginId: "ui.theme-engine.theme-gallery", configName: "item-actions" },
   { slotId: "ui.theme-engine.variant-group", pluginId: "ui.theme-engine", configName: "variant-group" },
 ];

@@ -4,7 +4,6 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useRef, useState } from "react";
 import { MdUndo } from "react-icons/md";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleContent,
@@ -23,33 +22,19 @@ import {
   Color,
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
-import type { ShadowParams } from "../../shared";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  buildShadowTiers,
-  shadowGroup,
+  FillFromMenu,
+  useTokenGroupEditor,
+} from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import {
   DEFAULT_SHADOW_PARAMS,
-} from "../../shared";
-import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
-import { shadowConfig } from "../internal/config";
-import { Shadow } from "../slots";
-
-type ShadowOverrides = {
-  color: string;
-  opacity: string;
-  blur: string;
-  spread: string;
-  offsetX: string;
-  offsetY: string;
-};
-
-const EMPTY_OVERRIDES: ShadowOverrides = {
-  color: "",
-  opacity: "",
-  blur: "",
-  spread: "",
-  offsetX: "",
-  offsetY: "",
-};
+  shadowFragment,
+  shadowGroup,
+  shadowParamsOf,
+  type ShadowParams,
+} from "../../core";
+import { shadowShortcuts } from "../shortcuts";
 
 function channelsToOklch(channels: string): string {
   return `oklch(${channels})`;
@@ -64,48 +49,57 @@ function oklchToChannels(oklchCss: string): string | null {
   return `${l} ${c} ${h}`;
 }
 
-function mergeParams(
-  base: ShadowParams,
-  overrides: ShadowOverrides,
-): ShadowParams {
-  const merged = { ...base };
-  for (const [key, value] of Object.entries(overrides)) {
-    if (value !== "") {
-      (merged as Record<string, unknown>)[key] =
-        key === "opacity" ? parseFloat(value) : value;
-    }
-  }
-  return merged;
-}
-
 type ParamKey = keyof ShadowParams;
 
 const PARAM_FIELDS: {
-  key: ParamKey;
+  key: Exclude<ParamKey, "color">;
   label: string;
-  type: "text" | "number";
 }[] = [
-  { key: "opacity", label: "Opacity", type: "number" },
-  { key: "blur", label: "Blur", type: "text" },
-  { key: "spread", label: "Spread", type: "text" },
-  { key: "offsetX", label: "Offset X", type: "text" },
-  { key: "offsetY", label: "Offset Y", type: "text" },
+  { key: "opacity", label: "Opacity" },
+  { key: "blur", label: "Blur" },
+  { key: "spread", label: "Spread" },
+  { key: "offsetX", label: "Offset X" },
+  { key: "offsetY", label: "Offset Y" },
 ];
+
+function ResetButton({
+  isOverridden,
+  onReset,
+}: {
+  isOverridden: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onReset}
+      title="Reset to the inherited value"
+      className={cn(
+        rigidClass(),
+        "text-muted-foreground hover:text-foreground transition-opacity",
+        isOverridden
+          ? "opacity-100"
+          : "opacity-0 group-hover:opacity-30 pointer-events-none",
+      )}
+      aria-hidden={!isOverridden}
+    >
+      <MdUndo size={14} />
+    </button>
+  );
+}
 
 function ParamInput({
   paramKey,
   value,
   isOverridden,
-  baseParams,
-  overrides,
-  setConfig,
+  onCommit,
+  onReset,
 }: {
-  paramKey: ParamKey;
+  paramKey: Exclude<ParamKey, "color">;
   value: string | number;
   isOverridden: boolean;
-  baseParams: ShadowParams;
-  overrides: ShadowOverrides;
-  setConfig: (key: "preset" | "overrides", value: unknown) => void;
+  onCommit: (value: string | number) => void;
+  onReset: () => void;
 }) {
   const [localValue, setLocalValue] = useState(String(value));
   const [focused, setFocused] = useState(false);
@@ -119,17 +113,18 @@ function ParamInput({
   }
 
   const commit = () => {
-    const newVal = paramKey === "opacity" ? parseFloat(localValue) : localValue;
-    if (String(newVal) === String(baseParams[paramKey])) {
-      setConfig("overrides", { ...overrides, [paramKey]: "" });
-    } else {
-      const stringValue = paramKey === "opacity" ? localValue : localValue;
-      setConfig("overrides", { ...overrides, [paramKey]: stringValue });
+    if (localValue === String(value)) return;
+    if (paramKey === "opacity") {
+      const opacity = Number(localValue);
+      // Not a number: nothing to write; the draft snaps back to the value.
+      if (Number.isNaN(opacity)) {
+        setLocalValue(String(value));
+        return;
+      }
+      onCommit(opacity);
+      return;
     }
-  };
-
-  const handleReset = () => {
-    setConfig("overrides", { ...overrides, [paramKey]: "" });
+    onCommit(localValue);
   };
 
   return (
@@ -152,84 +147,60 @@ function ParamInput({
           if (e.key === "Enter") inputRef.current?.blur();
         }}
       />
-      <button
-        type="button"
-        onClick={handleReset}
-        title="Reset to preset value"
-        className={cn(
-          rigidClass(),
-          "text-muted-foreground hover:text-foreground transition-opacity",
-          isOverridden
-            ? "opacity-100"
-            : "opacity-0 group-hover:opacity-30 pointer-events-none",
-        )}
-        aria-hidden={!isOverridden}
-      >
-        <MdUndo size={14} />
-      </button>
+      <ResetButton isOverridden={isOverridden} onReset={onReset} />
     </Line>
   );
 }
 
-// `search` is unused: whether this section appears at all is the
-// contribution's `useAvailable`, and the body lists every shadow token.
+function sameParams(a: ShadowParams, b: ShadowParams): boolean {
+  return (Object.keys(a) as ParamKey[]).every((k) => a[k] === b[k]);
+}
+
+/**
+ * The shadow group is edited through six params, never tier by tier: every
+ * tier is derived from them (`buildShadowTiers`), and a fragment the editor
+ * writes stores the params in its `meta` so they can be edited again. A theme
+ * whose shadow tiers came without params (a tweakcn import) shows the default
+ * params, and the first change replaces its tiers.
+ *
+ * `search` is unused: whether this section appears at all is the
+ * contribution's `useAvailable`, and the body lists every shadow token.
+ */
 export function ShadowSection() {
-  const scopeId = useThemeScopeId();
-  const config = useConfig(shadowConfig, { scopeId }) as {
-    preset: string;
-    overrides: ShadowOverrides;
+  const editor = useTokenGroupEditor(shadowGroup);
+  if (editor.pending) return <Loading variant="rows" count={6} />;
+
+  // The params the scope shows if its own shadow edit were cleared, and the
+  // params of that edit (undefined when the scope has none).
+  const inheritedParams =
+    shadowParamsOf(editor.inheritedMeta) ?? DEFAULT_SHADOW_PARAMS;
+  const ownParams = shadowParamsOf(editor.own?.meta);
+  const params = ownParams ?? inheritedParams;
+  const hasOwnShadow = editor.own !== undefined;
+
+  // Clears the scope's own shadow fragment, so the inherited tiers show again.
+  const resetAll = () =>
+    editor.fillFrom({ groupId: shadowGroup.id, light: {}, dark: {} });
+
+  const setParam = <K extends ParamKey>(key: K, value: ShadowParams[K]) => {
+    const next = { ...params, [key]: value };
+    if (sameParams(next, inheritedParams)) resetAll();
+    else editor.fillFrom(shadowFragment(next));
   };
-  const setConfig = useSetConfig(shadowConfig, { scopeId });
-  const presets = Shadow.Preset.useContributions();
 
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = config.overrides;
-  const baseParams: ShadowParams =
-    (active as { params?: ShadowParams } | undefined)?.params ??
-    DEFAULT_SHADOW_PARAMS;
-  const mergedParams = mergeParams(baseParams, overrides);
-  const hasOverrides = Object.values(overrides).some((v) => v !== "");
-
-  const tokens = hasOverrides
-    ? buildShadowTiers(mergedParams)
-    : (active?.light ?? buildShadowTiers(DEFAULT_SHADOW_PARAMS));
+  const isOverridden = (key: ParamKey) =>
+    ownParams !== undefined && ownParams[key] !== inheritedParams[key];
 
   const schema = shadowGroup.schema;
-  type ShadowKey = keyof typeof schema;
-  const allKeys = Object.keys(schema) as ShadowKey[];
-
-  const colorOklch = channelsToOklch(mergedParams.color);
-  const colorIsOverridden = overrides.color !== "";
+  const allKeys = Object.keys(schema) as (keyof typeof schema)[];
+  const tiers = editor.values.light;
 
   return (
     <Stack gap="xs">
-      {/* Preset picker */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the parameter editor below */}
-      <Stack direction="row" gap="xs" wrap className="mb-3">
-        {presets.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
-              p.id === config.preset
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
-            }`}
-            onClick={() => {
-              setConfig("preset", p.id);
-              setConfig("overrides", EMPTY_OVERRIDES);
-            }}
-          >
-            <Stack direction="row" align="center" gap="xs">
-              <span
-                className="size-5 rounded-sm bg-background border border-border"
-                style={{ boxShadow: p.light.shadow }}
-              />
-              {p.label}
-            </Stack>
-          </button>
-        ))}
-      </Stack>
+      <FillFromMenu
+        shortcuts={shadowShortcuts}
+        onFill={(shortcut) => editor.fillFrom(shortcut.fragment)}
+      />
 
       {/* Parameters editor */}
       <Collapsible defaultOpen>
@@ -253,15 +224,10 @@ export function ShadowSection() {
                 className={fillClasses("x")}
               >
                 <ColorPickerPopover
-                  value={colorOklch}
+                  value={channelsToOklch(params.color)}
                   onChange={(oklch) => {
-                    const param = oklchToChannels(oklch);
-                    if (!param) return;
-                    if (param === baseParams.color) {
-                      setConfig("overrides", { ...overrides, color: "" });
-                    } else {
-                      setConfig("overrides", { ...overrides, color: param });
-                    }
+                    const channels = oklchToChannels(oklch);
+                    if (channels) setParam("color", channels);
                   }}
                 />
                 <Text
@@ -269,54 +235,42 @@ export function ShadowSection() {
                   variant="caption"
                   className="font-mono text-muted-foreground"
                 >
-                  {mergedParams.color}
+                  {params.color}
                 </Text>
               </Stack>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfig("overrides", { ...overrides, color: "" });
-                }}
-                title="Reset to preset value"
-                className={cn(
-                  rigidClass(),
-                  "text-muted-foreground hover:text-foreground transition-opacity",
-                  colorIsOverridden
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-30 pointer-events-none",
-                )}
-                aria-hidden={!colorIsOverridden}
-              >
-                <MdUndo size={14} />
-              </button>
+              <ResetButton
+                isOverridden={isOverridden("color")}
+                onReset={() => setParam("color", inheritedParams.color)}
+              />
             </Row>
 
             {/* Numeric/text param rows */}
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- fixed token-editor param rows, not domain records */}
-            {PARAM_FIELDS.map(({ key, label }) => {
-              const isOverridden = overrides[key] !== "";
-              return (
-                <Row key={key} hover="muted" className="gap-sm">
-                  <Text
-                    as="span"
-                    variant="label"
-                    className={cn("w-16", rigidClass())}
-                  >
-                    {label}
-                  </Text>
-                  <ParamInput
-                    paramKey={key}
-                    value={mergedParams[key]}
-                    isOverridden={isOverridden}
-                    baseParams={baseParams}
-                    overrides={overrides}
-                    setConfig={setConfig}
-                  />
-                </Row>
-              );
-            })}
+            {PARAM_FIELDS.map(({ key, label }) => (
+              <Row key={key} hover="muted" className="gap-sm">
+                <Text
+                  as="span"
+                  variant="label"
+                  className={cn("w-16", rigidClass())}
+                >
+                  {label}
+                </Text>
+                <ParamInput
+                  paramKey={key}
+                  value={params[key]}
+                  isOverridden={isOverridden(key)}
+                  onCommit={(value) =>
+                    setParam(
+                      key,
+                      key === "opacity" ? Number(value) : String(value),
+                    )
+                  }
+                  onReset={() => setParam(key, inheritedParams[key])}
+                />
+              </Row>
+            ))}
 
-            {hasOverrides && (
+            {hasOwnShadow && (
               <Button
                 variant="ghost"
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset seating this lone reset button below the row list
@@ -324,7 +278,7 @@ export function ShadowSection() {
                   selfClass("start"),
                   "mt-1 border border-border text-muted-foreground",
                 )}
-                onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}
+                onClick={resetAll}
               >
                 Reset all
               </Button>
@@ -341,12 +295,11 @@ export function ShadowSection() {
           <Cluster gap="md" className="p-sm">
             {allKeys.map((key) => {
               const label = schema[key]?.label ?? (key as string);
-              const value = tokens[key] ?? "";
               return (
                 <Stack key={key as string} align="center" gap="xs">
                   <span
                     className="size-8 rounded-md bg-background border border-border"
-                    style={{ boxShadow: value }}
+                    style={{ boxShadow: tiers[key] }}
                   />
                   <span className="text-3xs text-muted-foreground text-center max-w-12">
                     {label.replace("Shadow ", "")}

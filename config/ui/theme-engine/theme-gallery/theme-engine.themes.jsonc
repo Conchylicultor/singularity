@@ -1,0 +1,87 @@
+// @hash 6ec84829688d
+{
+  // The customizer pane's theme picker. The quick-theme popover shows the SAME
+  // list (`theme-engine.themes.quick.jsonc`): the same three views with the
+  // same filters, so the two read as one list. Only the view type differs —
+  // cards here, where the pane has room for a real preview, compact rows there.
+  // Change a view in one file, change it in the other.
+  //
+  // `My themes` leads: the themes this machine can select right now (the code
+  // themes, tweakcn imports, custom themes). Picking a card in any view selects
+  // it for the scope the pane is editing.
+  //
+  // `Community` is the tweakcn catalog. It filters on `catalog` (the browse
+  // sources that list a theme), NOT on `source`: a catalog theme the user has
+  // picked is saved, so its `source` becomes `tweakcn` — but it is still in the
+  // catalog, and it keeps its card here instead of vanishing from under the
+  // click that saved it.
+  //
+  // `Curated` is tweakcn's own registry (tagged `curated`), the short list worth
+  // browsing first. Any other cut (`professional`, `minimal`, …) is one tag
+  // filter away.
+  "views": [
+    {
+      "id": "mine",
+      "name": "My themes",
+      "view": {
+        "type": "gallery",
+        "filter": {
+          "kind": "group",
+          "id": "f-mine",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-saved",
+              "fieldId": "saved",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "community",
+      "name": "Community",
+      "view": {
+        "type": "gallery",
+        "filter": {
+          "kind": "group",
+          "id": "f-community",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-community",
+              "fieldId": "catalog",
+              "operatorId": "contains",
+              "value": "community"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "curated",
+      "name": "Curated",
+      "view": {
+        "type": "gallery",
+        "filter": {
+          "kind": "group",
+          "id": "f-curated",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-curated",
+              "fieldId": "tags",
+              "operatorId": "contains",
+              "value": "curated"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,104 +1,133 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
-import type { TokenGroupDescriptor } from "../core";
-import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { Theme, ThemeId, TokenGroupDescriptor } from "../core";
 
 export interface VariantGroupContribution {
   id: string;
   componentLabel: string;
-  component: ComponentType;
   /**
-   * What this picker actually chooses — the axis a consumer needs to decide
-   * whether showing it alongside a theme switcher is informative or redundant:
-   *
-   * - `"component"` — a pluggable component's visual variant (sidebar framing,
-   *   tab bar, progress bar, window titlebar). An independent choice that
-   *   SURVIVES a theme swap, so it is worth offering next to one.
-   * - `"tokens"` — a token group's preset (palette, shape, density, fonts,
-   *   shadow, …). A global preset or an imported tweakcn theme rewrites these
-   *   wholesale, so a surface that already switches themes would be offering
-   *   the same choice twice, with the second one silently overwritten.
-   *
-   * Deliberately REQUIRED, not defaulted: a new token-group picker that
-   * silently inherited `"component"` would reappear in every compact surface,
-   * which is exactly the drift this field exists to prevent.
+   * A pluggable component's visual variant picker (sidebar framing, tab bar,
+   * progress bar, window titlebar) — a choice that survives a theme swap. Token
+   * values are never picked here: they belong to the theme a scope selects.
    */
-  selects: "component" | "tokens";
+  component: ComponentType;
 }
 
-export interface TokenGroupPreset {
-  id: string;
-  label: string;
-  light: Record<string, string>;
-  dark: Record<string, string>;
-}
-
+/**
+ * A token group: the CSS variables it declares and their schema defaults. Its
+ * VALUES come from the theme a scope selects (`useResolvedTheme`), never from a
+ * per-group setting.
+ */
 export interface TokenGroupContribution {
   id: string;
   label: string;
   descriptor: TokenGroupDescriptor;
-  usePresets: () => TokenGroupPreset[];
-  configDescriptor: ConfigDescriptor;
-  resolve?: (
-    preset: TokenGroupPreset,
-    overrides: Record<string, unknown>,
-  ) => { light: Record<string, string>; dark: Record<string, string> };
 }
 
-export interface GlobalPresetContribution {
+/** A catalog row a browse source offers before it is saved (a tweakcn community theme). */
+export interface ThemeSourceEntry {
   id: string;
   label: string;
-  groups: Partial<Record<string, string>>;
+  tags: string[];
+  /** The entry's color-palette token values (`primary`, `background`, …) per mode — enough to draw a swatch. */
+  preview: { light: Record<string, string>; dark: Record<string, string> };
+  /** Set when this entry is already saved — the resident theme it became. */
+  savedThemeId?: ThemeId;
 }
 
-export interface ColorAdjustment {
-  hueShift: number;
-  saturationScale: number;
-  lightnessScale: number;
-}
+/**
+ * Where themes beyond the code ones come from. Theme-engine names no source:
+ * each arrives through this slot.
+ *
+ * - `resident` — themes that exist now and can be selected and painted (the
+ *   saved-themes table). `useThemes` returns `undefined` while still loading,
+ *   which is distinct from "no themes": the painter injects nothing while any
+ *   resident source is pending, so a half-loaded list is never painted as final.
+ * - `browse` — a catalog to pick from. An entry becomes selectable only once
+ *   `adopt` has saved it, which resolves to the resident theme's id.
+ */
+export type ThemeSourceContribution =
+  | {
+      kind: "resident";
+      id: string;
+      useThemes: () => Theme[] | undefined;
+    }
+  | {
+      kind: "browse";
+      id: string;
+      useEntries: () => ThemeSourceEntry[] | undefined;
+      /**
+       * Save the entry and resolve to the resident theme it became — already
+       * in `useThemes()` when this settles, so the caller can select it
+       * straight away. Rejects with the endpoint's error; the caller surfaces it.
+       */
+      adopt: (entryId: string) => Promise<ThemeId>;
+    };
 
-export interface ColorTransformContribution {
-  useAdjustment: () => ColorAdjustment;
-}
+export type ThemesState =
+  | { pending: true }
+  | { pending: false; themesById: ReadonlyMap<ThemeId, Theme> };
 
-export interface PresetSourceContribution {
-  // undefined = the source is still loading — distinct from "no presets for
-  // this group". GroupStyle skips injection while any source is pending, so a
-  // dynamic source must never report a half-loaded list as final.
-  usePresets: (groupId: string) => TokenGroupPreset[] | undefined;
-}
-
-export type TokenGroupPresets =
-  { pending: true } | { pending: false; presets: TokenGroupPreset[] };
-
-export function useTokenGroupPresets(groupId: string): TokenGroupPresets {
-  const group = ThemeEngine.TokenGroup.useContributions().find(
-    (g) => g.id === groupId,
+/**
+ * Every theme that can be selected right now: the code themes
+ * (`ThemeEngine.Theme`) plus every resident source's. Pending while any
+ * resident source is still loading.
+ *
+ * Two themes claiming one id is a bug, not a precedence rule, so it throws.
+ *
+ * The state (and its map) is the SAME object for as long as its inputs are (the
+ * slot list and each source's list keep their identity until they change), so
+ * a consumer can memoize a resolution on it instead of redoing it every render.
+ */
+export function useThemes(): ThemesState {
+  const codeThemes = ThemeEngine.Theme.useContributions();
+  // ThemeSource contributions are static slot entries; the count never
+  // changes, so calling each resident source's hook here keeps hook order stable.
+  const resident = ThemeEngine.ThemeSource.useContributions().flatMap((s) =>
+    s.kind === "resident" ? [s.useThemes()] : [],
   );
-  const staticPresets = group?.usePresets() ?? [];
-  // PresetSource contributions are static slot entries; count never changes.
-  const dynamic = ThemeEngine.PresetSource.useContributions().map((s) =>
-    s.usePresets(groupId),
-  );
-  if (dynamic.some((d) => d === undefined)) return { pending: true };
-  return {
-    pending: false,
-    presets: [...staticPresets, ...dynamic.flatMap((d) => d!)],
-  };
+  const lists: (readonly Theme[])[] = [];
+  for (const themes of resident) {
+    if (themes === undefined) return THEMES_PENDING;
+    lists.push(themes);
+  }
+  return themesStateOf(codeThemes, lists);
 }
 
-// Options-shaped read for the token groups' DynamicEnum preset pickers. The
-// pending state (a dynamic source still loading) renders as an empty option
-// list and self-fills on resolve — that decision lives here once, not in each
-// token-group plugin. (In practice pending is never observed: dynamic sources
-// hydrate via Core.Boot before first render.)
-export function useTokenGroupPresetOptions(
-  groupId: string,
-): { value: string; label: string }[] {
-  const state = useTokenGroupPresets(groupId);
-  if (state.pending) return [];
-  return state.presets.map((p) => ({ value: p.id, label: p.label }));
+const THEMES_PENDING: ThemesState = { pending: true };
+
+// The last state built per code-theme list, with the resident lists it came
+// from: reused while every list is the same object.
+const builtStates = new WeakMap<
+  readonly Theme[],
+  { resident: readonly (readonly Theme[])[]; state: ThemesState }
+>();
+
+function themesStateOf(
+  codeThemes: readonly Theme[],
+  resident: readonly (readonly Theme[])[],
+): ThemesState {
+  const built = builtStates.get(codeThemes);
+  if (
+    built &&
+    built.resident.length === resident.length &&
+    built.resident.every((list, i) => list === resident[i])
+  ) {
+    return built.state;
+  }
+  const themesById = new Map<ThemeId, Theme>();
+  for (const theme of [...codeThemes, ...resident.flat()]) {
+    if (themesById.has(theme.id)) {
+      throw new Error(
+        `[theme-engine] two themes claim the id "${theme.id}" — theme ids must be unique across code themes and every ThemeSource.`,
+      );
+    }
+    themesById.set(theme.id, theme);
+  }
+  const state: ThemesState = { pending: false, themesById };
+  builtStates.set(codeThemes, { resident, state });
+  return state;
 }
 
 export const ThemeEngine = {
@@ -106,13 +135,6 @@ export const ThemeEngine = {
     docLabel: (p) => p.componentLabel,
   }),
   TokenGroup: defineSlot<TokenGroupContribution>({ docLabel: (p) => p.label }),
-  GlobalPreset: defineSlot<GlobalPresetContribution>({
-    docLabel: (p) => p.label,
-  }),
-  ColorTransform: defineSlot<ColorTransformContribution>({
-    docLabel: () => "Color Transform",
-  }),
-  PresetSource: defineSlot<PresetSourceContribution>({
-    docLabel: () => "Preset Source",
-  }),
+  Theme: defineSlot<Theme>({ docLabel: (p) => p.label }),
+  ThemeSource: defineSlot<ThemeSourceContribution>({ docLabel: (p) => p.id }),
 };

@@ -4,50 +4,40 @@
 
 ## Plugin reference
 
-- Description: Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
+- Description: The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.
 - Web:
   - Contributes:
-    - `ThemeCustomizer.Section` "Community Themes" → `CommunityBrowserSection`
-    - `QuickTheme.Section` "Theme" → `QuickThemeSection`
+    - `ThemeEngine.ThemeSource` "community"
+    - `ThemeCustomizer.Section` "Import from tweakcn" → `ImportByUrlSection`
   - Uses:
-    - `config_v2.useConfigRegistrations`
+    - `config_v2.useSetConfig`
+    - `infra/endpoints.EndpointError`
+    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/collapsible.Collapsible`
-    - `primitives/collapsible.CollapsibleChevron`
-    - `primitives/collapsible.CollapsibleContent`
-    - `primitives/collapsible.CollapsibleTrigger`
-    - `primitives/css/fill.Fill`
     - `primitives/css/fill.fillClasses`
-    - `primitives/css/grid.Grid`
-    - `primitives/css/line.Line`
-    - `primitives/css/rigid.rigidClass`
-    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
-    - `primitives/data-view.FieldDef`
-    - `primitives/syntax-highlight.useDarkMode`
     - `ui/theme-engine.ThemeEngine`
+    - `ui/theme-engine.ThemeSourceEntry`
+    - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeScopeId`
-    - `ui/theme-engine/quick-theme.QuickTheme`
+    - `ui/theme-engine/saved-themes.refreshSavedThemes`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
 - Server:
   - Uses:
-    - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `ui/tweakcn._tweakcnThemes`
+    - `ui/theme-engine/saved-themes.saveTheme`
   - Routes:
     - `GET /api/tweakcn/community/catalog`
     - `POST /api/tweakcn/community/apply`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
-    - `ui/tweakcn.TweakcnThemeSchema`
+    - `ui/theme-engine/saved-themes.SavedThemeSchema`
   - Exports (values):
     - `applyCatalogTheme`
     - `getCatalog`

@@ -387,6 +387,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `ui/tab-bar/customizer`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
     - `ui/tokens/color-adjust`

@@ -402,7 +402,9 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `tasks/task-graph`
     - `tasks/task-list`
     - `tasks/task-preprompt`
+    - `ui/theme-engine/saved-themes`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tweakcn`
     - `ui/tweakcn/community-browser`
 - Server:

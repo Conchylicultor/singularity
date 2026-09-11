@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { themeEngineConfig } from "../core";
+import { themeSelectionConfig } from "../core";
 
 export default {
-  contributions: [ConfigV2.Register({ descriptor: themeEngineConfig })],
+  contributions: [ConfigV2.Register({ descriptor: themeSelectionConfig })],
 } satisfies ServerPluginDefinition;

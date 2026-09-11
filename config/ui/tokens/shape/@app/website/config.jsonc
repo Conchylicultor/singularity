@@ -1,7 +1,0 @@
-// @hash 7685ff6883a5
-{
-  // The site's own radius token, sized so a card corner (`rounded-2xl`) lands on
-  // the design's 20px and a button's (`rounded-lg`) on 11px. Contributed by the
-  // website shell beside the palette; see that file.
-  "preset": "equin"
-}

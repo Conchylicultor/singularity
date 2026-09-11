@@ -287,7 +287,7 @@ hand-written jsonb columns, where the rule closes).
     - `shell/notifications`
     - `tasks/auto-start`
     - `tasks/task-effort`
-    - `ui/tweakcn`
+    - `ui/theme-engine/saved-themes`
 - Server:
   - Exports (types):
     - `SqlColumnDirection`

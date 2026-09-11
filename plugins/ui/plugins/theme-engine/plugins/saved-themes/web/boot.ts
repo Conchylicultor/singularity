@@ -1,0 +1,11 @@
+import { Core } from "@plugins/framework/plugins/web-sdk/core";
+import { refreshSavedThemes } from "./refresh-saved-themes";
+
+// Pre-paint hydration of the saved-theme list. The theme painter resolves each
+// scope's selected theme on the first frame; without this task the list
+// arrives only after mount, so the resident source reports pending and no theme
+// styles are injected until it resolves. Hydrating here makes the first
+// injection the correct one. Failure degrades gracefully: runBootTasks
+// allSettles, the source stays pending, and the pre-paint cached CSS (see
+// theme-engine's paint-cache) keeps painting until the endpoint resolves.
+export const savedThemesBootTask = Core.Boot({ run: refreshSavedThemes });

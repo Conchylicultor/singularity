@@ -1,4 +1,4 @@
-// @hash 253bca627fb8
+// @hash 109aa28a55e5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "ui.theme-engine.theme-gallery:themes",
     "ui.tokens.categorical:categorical",
     "ui.tokens.chart:chart",
     "ui.tokens.color-adjust:color-adjust",
@@ -16,6 +17,6 @@
     "ui.tokens.shape:shape",
     "ui.tokens.sidebar-palette:sidebar-palette",
     "ui.tokens.type-scale:type-scale",
-    "ui.tweakcn.community-browser:community-browser"
+    "ui.tweakcn.community-browser:import-by-url"
   ]
 }

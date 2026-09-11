@@ -5,15 +5,21 @@ import { ThemeCustomizer } from "./slots";
 
 export { ThemeCustomizer } from "./slots";
 export { themeCustomizerPane, themeCustomizerRoute } from "./panes";
-export { TokenRow, type TokenRowProps } from "./components/token-row";
+export { TokenRows } from "./components/token-rows";
+export type { ReadyTokenGroupEditor } from "./components/token-rows";
+export { FillFromMenu } from "./components/fill-from-menu";
 export {
-  TokenModeContext,
-  type TokenMode,
-} from "./internal/token-mode-context";
+  useTokenGroupEditor,
+  useColorAdjustEditor,
+} from "./internal/use-token-group-editor";
+export type {
+  TokenGroupEditor,
+  ColorAdjustEditor,
+} from "./internal/use-token-group-editor";
 
 export default {
   description:
-    "Extensible theme customization pane with global preset picker, search, and contributed sections.",
+    "Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.",
   // The toolbar entry point lives in the sibling `quick-theme` plugin: the
   // palette button opens the quick-switch popover, whose footer navigates here.
   contributions: [Pane.Register({ pane: themeCustomizerPane })],

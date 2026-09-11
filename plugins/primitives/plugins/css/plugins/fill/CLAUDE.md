@@ -183,6 +183,7 @@ primitive exists to name.
     - `ui/sidebar-framing/flush`
     - `ui/sidebar-framing/inset`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tokens/color-adjust`
     - `ui/tokens/shadow`
     - `ui/tweakcn/community-browser`

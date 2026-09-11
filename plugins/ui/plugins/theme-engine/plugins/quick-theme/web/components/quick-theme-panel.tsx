@@ -4,7 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import { useScopeMembership } from "@plugins/config_v2/web";
-import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
+import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
   ThemeScopeProvider,
@@ -12,33 +12,24 @@ import {
 import { QuickTheme } from "../slots";
 
 /**
- * The variant pickers worth showing NEXT TO a theme switcher: the ones whose
- * choice survives a theme swap (`selects: "component"`). Token-group pickers
- * (`selects: "tokens"` — palette, shape, density, fonts, …) are deliberately
- * absent: the section above rewrites every one of them wholesale, so offering
- * them here would show the user a control their next click silently overwrites.
- * The full customizer pane still renders both.
- *
- * The filter reads the contribution's own declared axis — no contributor is
- * named here, so a new token group is excluded the day it is written.
+ * Every component variant picker (sidebar framing, tab bar, progress bar, …).
+ * Each is a choice that survives a theme swap, so it is worth offering next to
+ * the theme picker above — token values are never picked here, only through the
+ * theme a scope selects.
  */
 function ComponentVariantSection() {
-  const hasAny = ThemeEngine.VariantGroup.useContributions().some(
-    (g) => g.selects === "component",
-  );
+  const hasAny = ThemeEngine.VariantGroup.useContributions().length > 0;
   if (!hasAny) return null;
   return (
     <ControlPanel.Section label="Variants">
       <Stack gap="md">
         <ThemeEngine.VariantGroup.Render>
-          {(g) =>
-            g.selects === "component" ? (
-              <Stack gap="2xs">
-                <Text variant="label">{g.componentLabel}</Text>
-                <g.component />
-              </Stack>
-            ) : null
-          }
+          {(g) => (
+            <Stack gap="2xs">
+              <Text variant="label">{g.componentLabel}</Text>
+              <g.component />
+            </Stack>
+          )}
         </ThemeEngine.VariantGroup.Render>
       </Stack>
     </ControlPanel.Section>
@@ -46,8 +37,8 @@ function ComponentVariantSection() {
 }
 
 /**
- * The quick-switch panel body: contributed quick sections on top (the community
- * theme picker, then the light/dark switch — this file names neither, and their
+ * The quick-switch panel body: contributed quick sections on top (the theme
+ * picker, then the light/dark switch — this file names neither, and their
  * order is reorder config's), every component variant picker below, and a footer
  * that hands off to the full customizer pane.
  *
@@ -75,7 +66,7 @@ export function QuickThemePanel({
 }) {
   const activeApp = useActiveApp();
   const scopeId = activeApp ? `app:${activeApp.id}` : undefined;
-  const forked = useScopeMembership(themeEngineConfig, scopeId);
+  const forked = useScopeMembership(themeSelectionConfig, scopeId);
   const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
   return (

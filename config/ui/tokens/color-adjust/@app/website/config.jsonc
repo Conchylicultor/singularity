@@ -1,9 +1,0 @@
-// @hash c798ec0b656c
-{
-  // No hue, saturation or lightness transform over the site's own palette.
-  //
-  // Pinned explicitly even though it is the default: the site owns its theme
-  // whole. A group left unpinned follows the desktop's runtime theme, which git
-  // cannot show (enforced by the tokens:app-theme-pins-total check).
-  "preset": "default"
-}

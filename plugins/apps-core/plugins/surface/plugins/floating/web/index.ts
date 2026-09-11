@@ -29,7 +29,6 @@ export default {
       id: "floating-titlebar",
       componentLabel: "Window titlebar",
       component: TitlebarStylePicker,
-      selects: "component",
     }),
     // Keyboard window management — eligible only while the focused tab is a
     // floating window (`when` self-references this placement's own id, owned

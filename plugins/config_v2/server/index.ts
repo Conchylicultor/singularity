@@ -49,7 +49,11 @@ export {
   revertAgentConfigWrites,
 } from "./internal/registry";
 export type { ConfigWriteOpts } from "./internal/registry";
-export { getAllDescriptors, getScopedDescriptors } from "./internal/resource";
+export {
+  getAllDescriptors,
+  getConfigScopeIds,
+  getScopedDescriptors,
+} from "./internal/resource";
 export { auditUserConfigOrphans } from "./internal/orphan-audit";
 export {
   forkScope,

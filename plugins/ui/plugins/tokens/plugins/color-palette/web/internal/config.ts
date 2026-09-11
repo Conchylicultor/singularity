@@ -1,1 +1,0 @@
-export { colorPaletteConfig } from "../../shared";

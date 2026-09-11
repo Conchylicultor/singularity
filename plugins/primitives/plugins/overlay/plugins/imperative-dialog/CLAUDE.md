@@ -68,6 +68,7 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/events/sources`
     - `apps/sonata/sources/ultimate-guitar`
     - `primitives/overlay/imperative-dialog/confirm`
+    - `ui/theme-engine/theme-gallery`
 - Sub-plugins:
   - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
 

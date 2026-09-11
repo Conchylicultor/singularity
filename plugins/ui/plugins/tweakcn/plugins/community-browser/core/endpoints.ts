@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { TweakcnThemeSchema } from "@plugins/ui/plugins/tweakcn/core";
+import { SavedThemeSchema } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
 
 const CatalogThemeSchema = z.object({
   id: z.string(),
@@ -21,8 +21,12 @@ export const getCatalog = defineEndpoint({
   response: z.object({ themes: z.array(CatalogThemeSchema) }),
 });
 
+/**
+ * Save one catalog theme as a `tweakcn` saved theme (idempotent: saving it again
+ * updates the same theme). Selecting it is the caller's move.
+ */
 export const applyCatalogTheme = defineEndpoint({
   route: "POST /api/tweakcn/community/apply",
   body: z.object({ themeId: z.string() }),
-  response: TweakcnThemeSchema,
+  response: SavedThemeSchema,
 });

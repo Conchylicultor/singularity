@@ -1,43 +1,18 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ConfigV2 } from "@plugins/config_v2/web";
-import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import {
-  ThemeEngine,
-  useTokenGroupPresetOptions,
-} from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { tokenGroupMatchesSearch } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { chartGroup } from "../shared";
-import { chartConfig } from "./internal/config";
-import { Chart } from "./slots";
-import { ChartPicker } from "./components/chart-picker";
+import { chartGroup } from "../core";
 import { ChartSection } from "./components/chart-section";
-import { builtInPresets } from "./presets";
-
-export { Chart } from "./slots";
-export type { ChartPresetContribution } from "./slots";
 
 export default {
-  description: "Chart color token group with switchable presets.",
+  description:
+    "Chart color token group: the chart-1…5 ramp and its customizer section.",
   contributions: [
-    ...builtInPresets.map((p) => Chart.Preset(p)),
-    ConfigV2.WebRegister({ descriptor: chartConfig }),
-    DynamicEnum.Options({
-      field: chartConfig.fields.preset,
-      useOptions: () => useTokenGroupPresetOptions("chart"),
-    }),
     ThemeEngine.TokenGroup({
       id: "chart",
       label: "Chart",
       descriptor: chartGroup,
-      usePresets: () => Chart.Preset.useContributions(),
-      configDescriptor: chartConfig,
-    }),
-    ThemeEngine.VariantGroup({
-      id: "chart",
-      componentLabel: "Chart",
-      component: ChartPicker,
-      selects: "tokens",
     }),
     ThemeCustomizer.Section({
       id: "chart",
@@ -49,5 +24,4 @@ export default {
       useAvailable: ({ search }) => tokenGroupMatchesSearch(chartGroup, search),
     }),
   ],
-  slots: Chart,
 } satisfies PluginDefinition;

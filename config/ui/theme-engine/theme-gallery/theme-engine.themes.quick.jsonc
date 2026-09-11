@@ -1,0 +1,77 @@
+// @hash 6ec84829688d
+{
+  // The quick-theme popover's theme picker: the SAME list as the customizer
+  // pane (`theme-engine.themes.jsonc`) — the same three views with the same
+  // filters, so the two read as one list; see that file for why each view
+  // filters the way it does. Change a view in one file, change it in the other.
+  //
+  // Only the view type differs: LIST rows here. The popover is 320px wide, so a
+  // card grid resolves to one column of mostly-chrome cards; a row of identity
+  // dots plus the name shows three times as many themes in the same bounded
+  // scroller.
+  "views": [
+    {
+      "id": "mine",
+      "name": "My themes",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-mine",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-saved",
+              "fieldId": "saved",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "community",
+      "name": "Community",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-community",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-community",
+              "fieldId": "catalog",
+              "operatorId": "contains",
+              "value": "community"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "curated",
+      "name": "Curated",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-curated",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-curated",
+              "fieldId": "tags",
+              "operatorId": "contains",
+              "value": "curated"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

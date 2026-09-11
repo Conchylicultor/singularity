@@ -115,7 +115,7 @@ export default function buildRule({
         arbitraryFontSize:
           "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use " +
           "text-3xs (10px), text-2xs (11px), or text-xs (12px). Add a token in " +
-          "plugins/ui/plugins/tokens/plugins/type-scale/shared/group.ts for a new step.",
+          "plugins/ui/plugins/tokens/plugins/type-scale/core/group.ts for a new step.",
       },
     },
     defaultOptions: [],

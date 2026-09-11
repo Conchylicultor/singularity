@@ -709,6 +709,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tab-bar/underline`
     - `ui/theme-engine`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tokens/shadow`
     - `ui/tree-disclosure/column`
     - `ui/tree-disclosure/dimmed-leaf`

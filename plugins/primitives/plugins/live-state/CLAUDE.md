@@ -802,7 +802,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `tasks/task-preprompt`
     - `tasks/tasks-core`
     - `tasks/worktree-identity`
-    - `ui/tweakcn`
+    - `ui/theme-engine/saved-themes`
 - Core:
   - Exports (types):
     - `PointParams`

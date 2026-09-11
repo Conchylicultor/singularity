@@ -372,7 +372,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`node-types`** [3 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 
-- **`reports`** [15 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
+- **`reports`** [16 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:
@@ -455,20 +455,22 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`connected`** — Folder tab; the active tab merges into the content surface.
         - **`customizer`** — Registers the tab-bar variant picker (chip / underline / connected) into the theme customizer.
         - **`underline`** — Flat tab; the active tab is underlined flush with the bar.
-    - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables.
       - Plugins:
-        - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (community themes), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
-        - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
+        - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
+        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints. A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+        - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
+        - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
     - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
-    - **`tokens`** [12 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
+    - **`tokens`** [12 sub-plugins] — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Plugins:
         - **`column`** — Column tree disclosure — a dedicated chevron column ahead of the icon, present only on rows with children (Finder / VS Code style).
         - **`dimmed-leaf`** — Dimmed-leaf tree disclosure — the merged box, with childless rows' icons desaturated so parents read stronger.
         - **`merged`** — Merged tree disclosure — icon and chevron share one box (icon at rest, chevron on hover), Notion style.
-    - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
+    - **`tweakcn`** — Imports tweakcn themes by id: fetches one from tweakcn.com, converts it into token-group fragments, and saves it as a saved theme.
       - Plugins:
-        - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
+        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.
     - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
 
 <!-- AUTOGENERATED:END -->

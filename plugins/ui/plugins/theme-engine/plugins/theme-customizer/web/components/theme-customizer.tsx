@@ -1,35 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import {
-  useConfig,
-  useSetConfig,
-  useConfigRegistrations,
-  useScopeMembership,
-} from "@plugins/config_v2/web";
-import {
-  fetchEndpoint,
-  useEndpointMutation,
-} from "@plugins/infra/plugins/endpoints/web";
-import {
-  setConfigField,
-  forkScope,
-  deleteScope,
-} from "@plugins/config_v2/core";
+import { useScopeMembership } from "@plugins/config_v2/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps-core/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
+import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
 import {
   ThemeEngine,
   ThemeScopeProvider,
-  useThemeScopeId,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
 import { ThemeCustomizer } from "../slots";
@@ -37,73 +22,6 @@ import {
   TokenModeContext,
   type TokenMode,
 } from "../internal/token-mode-context";
-
-function GlobalPresetPicker() {
-  const scopeId = useThemeScopeId();
-  const globalPresets = ThemeEngine.GlobalPreset.useContributions();
-  const tokenGroups = ThemeEngine.TokenGroup.useContributions();
-  const { globalPreset: activeId } = useConfig(themeEngineConfig, { scopeId });
-  const setThemeEngineConfig = useSetConfig(themeEngineConfig, { scopeId });
-  const registrations = useConfigRegistrations();
-
-  if (globalPresets.length === 0) return null;
-
-  const handleChange = (presetId: string) => {
-    setThemeEngineConfig("globalPreset", presetId);
-    const preset = globalPresets.find((p) => p.id === presetId);
-    if (!preset) return;
-    for (const [groupId, groupPresetId] of Object.entries(preset.groups)) {
-      const group = tokenGroups.find((g) => g.id === groupId);
-      if (group && groupPresetId) {
-        const reg = registrations.find(
-          (r) => r.descriptor === group.configDescriptor,
-        );
-        if (reg) {
-          // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: applies a preset per token group; config live resource refreshes, re-pick to retry.
-          void fetchEndpoint(
-            setConfigField,
-            {},
-            {
-              body: scopeId
-                ? {
-                    storePath: reg.storePath,
-                    key: "preset",
-                    value: groupPresetId,
-                    scopeId,
-                  }
-                : {
-                    storePath: reg.storePath,
-                    key: "preset",
-                    value: groupPresetId,
-                  },
-            },
-          );
-        }
-      }
-    }
-  };
-
-  return (
-    <Stack gap="md">
-      <Separator label="Theme" />
-      <Cluster gap="sm" justify="start">
-        {globalPresets.map((p) => (
-          <button
-            key={p.id}
-            className={`px-lg py-sm text-label rounded-lg transition-colors ${
-              p.id === activeId
-                ? "border-2 border-primary bg-primary/10 text-primary"
-                : "border border-border text-muted-foreground hover:border-primary/50 bg-muted/20"
-            }`}
-            onClick={() => handleChange(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </Cluster>
-    </Stack>
-  );
-}
 
 // Pickers for pluggable-component variants (sidebar framing, progress bar, …),
 // each registered via `ThemeEngine.VariantGroup`. Scope follows the surrounding
@@ -220,9 +138,9 @@ export function ThemeCustomizerBody() {
 
   const appId = useCurrentAppId();
   const scopeId = appId ? `app:${appId}` : undefined;
-  // "Has its own theme" = this app is a member of the theme-engine config's scope
-  // set (committed git scope OR runtime fork). The toggle now means membership.
-  const forked = useScopeMembership(themeEngineConfig, scopeId);
+  // "Has its own theme" = this app has its own theme selection document
+  // (committed git scope OR runtime fork). The toggle means that membership.
+  const forked = useScopeMembership(themeSelectionConfig, scopeId);
   // Edits route to the app scope only once it has its own theme; else they target base.
   const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
@@ -254,7 +172,6 @@ export function ThemeCustomizerBody() {
               />
             )}
             <VariantGroupSection />
-            <GlobalPresetPicker />
             <TokenModeSelector mode={tokenMode} onChange={setTokenMode} />
             <SearchInput
               placeholder="Filter sections..."

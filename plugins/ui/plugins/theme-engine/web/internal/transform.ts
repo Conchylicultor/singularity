@@ -1,4 +1,4 @@
-import type { ColorAdjustment } from "../slots";
+import type { ColorAdjustment } from "../../core";
 
 const OKLCH_RE =
   /oklch\(([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)((?:\s*\/\s*[^)]+)?)\)/g;

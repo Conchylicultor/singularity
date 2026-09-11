@@ -458,15 +458,8 @@ fixed raw size escapes per-site via
     - `ui/tab-bar/underline`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
-    - `ui/tokens/categorical`
-    - `ui/tokens/chart`
-    - `ui/tokens/color-palette`
-    - `ui/tokens/density`
-    - `ui/tokens/font-family`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tokens/shadow`
-    - `ui/tokens/shape`
-    - `ui/tokens/sidebar-palette`
-    - `ui/tokens/type-scale`
     - `ui/tweakcn/community-browser`
     - `ui/variant-region`
 

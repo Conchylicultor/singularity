@@ -2,22 +2,16 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import {
-  useEndpoint,
+  EndpointError,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
+import { useSetConfig } from "@plugins/config_v2/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
-import {
-  listTweakcnThemes,
-  importTweakcnTheme,
-  deleteTweakcnTheme,
-} from "@plugins/ui/plugins/tweakcn/core";
+import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
+import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
+import { refreshSavedThemes } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { importTweakcnTheme } from "@plugins/ui/plugins/tweakcn/core";
 
 /** Extract a bare theme ID from a tweakcn URL or raw ID string. */
 function parseThemeId(input: string): string {
@@ -31,148 +25,93 @@ function parseThemeId(input: string): string {
   return trimmed.replace(/\.json$/, "");
 }
 
-type ThemePresets = Record<
-  string,
-  { light: Record<string, string>; dark: Record<string, string> }
->;
+const SECTION_TERMS = ["import by url", "import", "tweakcn", "url"];
 
 /**
- * Secondary "Import by URL" affordance nested inside the community browser.
- * The catalog grid is the primary discovery path; this collapsed disclosure is
- * the escape hatch for any tweakcn theme not in the bundled snapshot (brand-new,
- * unlisted, or private) — pulled live by ID/URL. Imported themes register as
- * presets (via the parent plugin's PresetSource) and are listed here for
- * apply/delete. Applying reuses the section's shared `onApply`.
+ * Declared as the contribution's `useAvailable` rather than a `return null` in
+ * the body: the host paints the card before it reaches the body, so a null
+ * there would leave an "Import from tweakcn" bar over nothing on every
+ * non-matching query.
  */
-export function ImportByUrl({
+export function useImportByUrlMatchesSearch({
   search,
-  onApply,
 }: {
   search: string;
-  onApply: (tweakcnId: string, presets: ThemePresets) => void;
-}) {
+}): boolean {
+  const q = search.trim().toLowerCase();
+  return q.length === 0 || SECTION_TERMS.some((term) => term.includes(q));
+}
+
+/**
+ * Import any tweakcn theme by id or URL — including ones the bundled community
+ * catalog does not have (brand-new, unlisted, private), pulled live. The
+ * imported theme is saved like a catalog pick and selected for the scope the
+ * customizer is editing, so it shows at once.
+ */
+export function ImportByUrlSection() {
+  const scopeId = useThemeScopeId();
+  const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
   const [input, setInput] = useState("");
-  const [userOpen, setUserOpen] = useState(false);
-  const { data: themes } = useEndpoint(listTweakcnThemes, {});
 
-  const importMutation = useEndpointMutation(importTweakcnTheme, {
-    invalidates: [listTweakcnThemes],
-  });
-  const deleteMutation = useEndpointMutation(deleteTweakcnTheme, {
-    invalidates: [listTweakcnThemes],
-  });
+  const importMutation = useEndpointMutation(importTweakcnTheme);
 
-  const q = search.toLowerCase();
-  const visible =
-    q.length > 0
-      ? (themes ?? []).filter((t) => t.label.toLowerCase().includes(q))
-      : (themes ?? []);
-
-  // Surface the panel automatically when the user searches for it or for one of
-  // their saved imports, so search hits are never hidden behind a closed disclosure.
-  const forceOpen =
-    q.length > 0 && ("import by url".includes(q) || visible.length > 0);
-  const open = userOpen || forceOpen;
-
-  const handleImport = () => {
+  const handleImport = async () => {
     const themeId = parseThemeId(input);
     if (!themeId) return;
-    importMutation.mutate(
-      { body: { themeId } },
-      { onSuccess: () => setInput("") },
-    );
+    let saved;
+    try {
+      saved = await importMutation.mutateAsync({ body: { themeId } });
+    } catch (err) {
+      // Shown inline below (and by the global error toast).
+      if (err instanceof EndpointError) return;
+      throw err;
+    }
+    // The theme list must have the import before the scope selects it, or the
+    // painter would paint a missing theme for a frame.
+    await refreshSavedThemes();
+    selectTheme("theme", saved.id);
+    setInput("");
   };
 
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={setUserOpen}
-      className="rounded-lg border border-border/60"
-    >
-      <CollapsibleTrigger className="gap-xs px-md py-sm text-body text-muted-foreground hover:text-foreground">
-        <CollapsibleChevron />
-        <span className="font-medium">Import by URL</span>
-      </CollapsibleTrigger>
-
-      <CollapsibleContent className="border-t border-border/60 px-md py-md">
-        <Stack gap="md">
-          <Stack direction="row" gap="sm">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleImport();
-              }}
-              placeholder="Theme ID or tweakcn URL..."
-              // A raw <input> must itself be the flex cell, so it takes the class
-              // string rather than a <Fill> wrapper.
-              className={cn(
-                fillClasses("x"),
-                "rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none",
-              )}
-            />
-            <Button
-              variant="ghost"
-              onClick={handleImport}
-              loading={importMutation.isPending}
-              disabled={!input.trim()}
-              className="border border-border"
-            >
-              Import
-            </Button>
-          </Stack>
-
-          {importMutation.isError && (
-            <Text as="p" variant="body" tone="destructive">
-              {importMutation.error.message}
-            </Text>
+    <Stack gap="md">
+      <Stack direction="row" gap="sm">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void handleImport();
+          }}
+          placeholder="Theme ID or tweakcn URL..."
+          // A raw <input> must itself be the flex cell, so it takes the class
+          // string rather than a <Fill> wrapper.
+          className={cn(
+            fillClasses("x"),
+            "rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none",
           )}
+        />
+        <Button
+          variant="ghost"
+          onClick={handleImport}
+          loading={importMutation.isPending}
+          disabled={!input.trim()}
+          className="border border-border"
+        >
+          Import
+        </Button>
+      </Stack>
 
-          {visible.length > 0 ? (
-            <Stack gap="sm">
-              {visible.map((theme) => (
-                <Stack
-                  key={theme.id}
-                  direction="row"
-                  gap="none"
-                  align="center"
-                  justify="between"
-                  className="rounded-lg border border-border/60 px-md py-sm"
-                >
-                  <Text as="span" variant="label">
-                    {theme.label}
-                  </Text>
-                  <Stack direction="row" gap="xs">
-                    <Button
-                      variant="ghost"
-                      onClick={() => onApply(theme.tweakcnId, theme.presets)}
-                      className="text-primary hover:bg-primary/10"
-                    >
-                      Apply
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() =>
-                        deleteMutation.mutate({ params: { id: theme.id } })
-                      }
-                      loading={deleteMutation.isPending}
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      Delete
-                    </Button>
-                  </Stack>
-                </Stack>
-              ))}
-            </Stack>
-          ) : (
-            <Text as="p" variant="body" tone="muted">
-              Paste a tweakcn theme ID or URL to import any theme — including
-              ones not in the community catalog.
-            </Text>
-          )}
-        </Stack>
-      </CollapsibleContent>
-    </Collapsible>
+      {importMutation.isError ? (
+        <Text as="p" variant="body" tone="destructive">
+          {importMutation.error.message}
+        </Text>
+      ) : (
+        <Text as="p" variant="body" tone="muted">
+          Paste a tweakcn theme ID or URL to import any theme — including ones
+          not in the community catalog.
+        </Text>
+      )}
+    </Stack>
   );
 }

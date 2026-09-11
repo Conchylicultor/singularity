@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { themeEngineConfig } from "../core";
+import { themeSelectionConfig } from "../core";
 
 export type ColorMode = "light" | "dark";
 /** The CONFIGURED setting, before `system` is collapsed against the OS. */
@@ -38,7 +38,7 @@ const COLOR_MODE_SCOPE_ID: string | undefined = undefined;
  * on each load (an OS appearance flip between sessions still paints right).
  */
 export function useConfiguredColorMode(): ConfiguredColorMode {
-  const { colorMode } = useConfig(themeEngineConfig, {
+  const { colorMode } = useConfig(themeSelectionConfig, {
     scopeId: COLOR_MODE_SCOPE_ID,
   }) as { colorMode: ConfiguredColorMode };
   return colorMode;
@@ -86,7 +86,9 @@ export function useColorMode(): ColorMode {
  * exactly the bug this file exists to make unspellable.
  */
 export function useSetColorMode(): (mode: ConfiguredColorMode) => void {
-  const set = useSetConfig(themeEngineConfig, { scopeId: COLOR_MODE_SCOPE_ID });
+  const set = useSetConfig(themeSelectionConfig, {
+    scopeId: COLOR_MODE_SCOPE_ID,
+  });
   return useCallback(
     (mode: ConfiguredColorMode) => set("colorMode", mode),
     [set],

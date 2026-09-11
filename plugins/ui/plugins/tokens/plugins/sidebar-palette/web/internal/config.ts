@@ -1,1 +1,0 @@
-export { sidebarPaletteConfig } from "../../shared";

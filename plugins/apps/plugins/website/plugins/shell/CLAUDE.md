@@ -24,14 +24,13 @@ The wordmark's full stop is the only place the brand colour appears as identity
 rather than as an affordance. That is what lets a link, a button and the hero's
 gradient all read as things you can act on.
 
-**The site's theme lives here.** `web/internal/theme-presets.ts` contributes one
-preset per token group — palette, chart ramp, type scale, density, shape, font —
-and `config/ui/tokens/<group>/@app/website/config.jsonc` pins each. Pin EVERY
-group the design depends on, even one whose value equals the group's default: a
-per-app theme is per group, an unpinned group follows the desktop, and the
-desktop's choice is a runtime user override the checkout gives no hint of (the
-font was `ui-sans-serif` in production for exactly this reason). Two values in the
-density preset are the header's: `chromePaneH` is the 72px site header, and
+**The site's theme lives here.** `web/internal/theme.ts` declares `equinTheme`
+(one `<group>.fragment(…)` each for palette, chart ramp, type scale, density,
+shape and font) and the barrel contributes it through `ThemeEngine.Theme`.
+`config/ui/theme-engine/@app/website/theme.jsonc` selects it for the website
+app — the only per-app theme file. A group equin leaves out paints its schema
+defaults, not the desktop's runtime choice, so no group needs pinning. Two
+values in the density fragment are the header's: `chromePaneH` is the 72px site header, and
 `chromePadX` is a gutter computed from `--website-measure`, which is how the pane
 header's wordmark and nav land on the same edges as every band in the body. The
 site's filled control is the foreground inverted (a white pill with dark type),
@@ -42,7 +41,7 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme presets (palette, chart ramp, type scale, density, shape, font) that the per-app token configs pin.
+- Description: App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, type scale, density, shape, font), which the website app selects.
 - Web:
   - Slots:
     - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
@@ -51,12 +50,7 @@ hover.
     - `Apps.App` "equin" → `WebsiteLayout`
     - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
     - `Pane.Register` "website-landing"
-    - `ColorPalette.Preset` "equin"
-    - `Chart.Preset` "equin"
-    - `TypeScale.Preset` "equin"
-    - `Density.Preset` "equin"
-    - `Shape.Preset` "equin"
-    - `FontFamily.Preset` "equin"
+    - `ThemeEngine.Theme` "equin"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
@@ -76,12 +70,7 @@ hover.
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
     - `primitives/slot-render.defineRenderSlot`
-    - `ui/tokens/chart.Chart`
-    - `ui/tokens/color-palette.ColorPalette`
-    - `ui/tokens/density.Density`
-    - `ui/tokens/font-family.FontFamily`
-    - `ui/tokens/shape.Shape`
-    - `ui/tokens/type-scale.TypeScale`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types): `WebsiteBandRhythm`
   - Exports (values):
     - `landingPane`

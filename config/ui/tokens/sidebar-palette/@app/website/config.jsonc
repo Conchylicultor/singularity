@@ -1,9 +1,0 @@
-// @hash fba810640135
-{
-  // The site has no sidebar; the default sidebar palette.
-  //
-  // Pinned explicitly even though it is the default: the site owns its theme
-  // whole. A group left unpinned follows the desktop's runtime theme, which git
-  // cannot show (enforced by the tokens:app-theme-pins-total check).
-  "preset": "default"
-}

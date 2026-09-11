@@ -35,10 +35,7 @@ export function TokenRow({
   // Search filtering
   if (search) {
     const q = search.toLowerCase();
-    if (
-      !label.toLowerCase().includes(q) &&
-      !cssVar.toLowerCase().includes(q)
-    ) {
+    if (!label.toLowerCase().includes(q) && !cssVar.toLowerCase().includes(q)) {
       return null;
     }
   }
@@ -70,15 +67,14 @@ export function TokenRow({
   return (
     <Row hover="muted" className="gap-sm">
       {isColor ? (
-        <ColorPickerPopover
-          value={value}
-          onChange={handleColorChange}
-        />
+        <ColorPickerPopover value={value} onChange={handleColorChange} />
       ) : null}
 
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating leaf of Row's flex (label + cssVar column) */}
       <Stack gap="none" className="flex-1 min-w-0">
-        <Text as="span" variant="label" className="truncate">{label}</Text>
+        <Text as="span" variant="label" className="truncate">
+          {label}
+        </Text>
         <span className="text-3xs text-muted-foreground truncate font-mono">
           {cssVar}
         </span>
@@ -119,7 +115,7 @@ export function TokenRow({
       <button
         type="button"
         onClick={onReset}
-        title="Reset to preset value"
+        title="Reset to the inherited value"
         // eslint-disable-next-line layout/no-adhoc-layout -- rigid reset affordance; rigid leaf of Row's flex
         className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
           isOverridden

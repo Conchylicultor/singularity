@@ -1,8 +1,0 @@
-// @hash e073de78cf64
-{
-  // The site's rhythm and chrome metrics: the spacing ramp retuned to the page's
-  // component rhythm, 34px card insets, the two button heights the page has, the
-  // 72px site header, and the header gutter that centres the reading measure.
-  // Contributed by the website shell beside the palette; see that file.
-  "preset": "equin"
-}

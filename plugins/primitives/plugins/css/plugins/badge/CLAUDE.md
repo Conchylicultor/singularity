@@ -167,6 +167,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `reports/optimistic-divergence`
     - `reports/page-undo-conflict`
     - `reports/render-loop`
+    - `reports/theme-resolution`
     - `reports/viewport-escape`
     - `review/code-review`
     - `review/plugin-changes`

@@ -5249,7 +5249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `WebsiteHarness`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/fork`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme presets (palette, chart ramp, type scale, density, shape, font) that the per-app token configs pin.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, type scale, density, shape, font), which the website app selects.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
@@ -5258,12 +5258,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
               - `Pane.Register` "website-landing"
-              - `ColorPalette.Preset` "equin"
-              - `Chart.Preset` "equin"
-              - `TypeScale.Preset` "equin"
-              - `Density.Preset` "equin"
-              - `Shape.Preset` "equin"
-              - `FontFamily.Preset` "equin"
+              - `ThemeEngine.Theme` "equin"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
@@ -5283,12 +5278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/slot-render.defineRenderSlot`
-              - `ui/tokens/chart.Chart`
-              - `ui/tokens/color-palette.ColorPalette`
-              - `ui/tokens/density.Density`
-              - `ui/tokens/font-family.FontFamily`
-              - `ui/tokens/shape.Shape`
-              - `ui/tokens/type-scale.TypeScale`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (types): `WebsiteBandRhythm`
             - Exports (values):
               - `landingPane`
@@ -5402,6 +5392,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
       - `ui/theme-engine/theme-customizer`
+      - `ui/theme-engine/theme-gallery`
       - `ui/variant-region`
   - Core:
     - Exports (types):
@@ -7136,7 +7127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7179,6 +7170,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `forkScope`
       - `getAllDescriptors`
       - `getConfig`
+      - `getConfigScopeIds`
       - `getFieldStorageProvider`
       - `getRawFileContent`
       - `getScopedDescriptors`
@@ -7370,19 +7362,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ui/tab-bar/customizer`
       - `ui/theme-engine`
       - `ui/theme-engine/quick-theme`
+      - `ui/theme-engine/saved-themes`
       - `ui/theme-engine/theme-customizer`
-      - `ui/tokens/categorical`
-      - `ui/tokens/chart`
-      - `ui/tokens/color-adjust`
-      - `ui/tokens/color-palette`
-      - `ui/tokens/density`
-      - `ui/tokens/font-family`
-      - `ui/tokens/font-family/google-fonts`
-      - `ui/tokens/rich-text-palette`
-      - `ui/tokens/shadow`
-      - `ui/tokens/shape`
-      - `ui/tokens/sidebar-palette`
-      - `ui/tokens/type-scale`
+      - `ui/theme-engine/theme-gallery`
       - `ui/tweakcn/community-browser`
       - `ui/variant-region`
   - Plugins:
@@ -11019,8 +11001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-effort`
       - `tasks/task-preprompt`
       - `tasks/tasks-core`
-      - `ui/tweakcn`
-      - `ui/tweakcn/community-browser`
+      - `ui/theme-engine/saved-themes`
   - Core:
     - Exports (types):
       - `DatabaseConfig`
@@ -11349,7 +11330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/auto-start`
           - `tasks/task-effort`
-          - `ui/tweakcn`
+          - `ui/theme-engine/saved-themes`
       - Server:
         - Exports (types):
           - `SqlColumnDirection`
@@ -13819,7 +13800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
-            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+            - Slots: `DynamicEnum.Options` ← `apps-core.app-rail-framing`, `conversations.conversation-category`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
             - Contributes: `Fields.Renderer` "dynamic-enum" → `Rendered`
             - Uses:
               - `config_v2/fields.defineFieldShape`
@@ -13847,16 +13828,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar`
               - `ui/tab-bar`
               - `ui/theme-engine`
-              - `ui/tokens/categorical`
-              - `ui/tokens/chart`
-              - `ui/tokens/color-adjust`
-              - `ui/tokens/color-palette`
-              - `ui/tokens/density`
-              - `ui/tokens/font-family`
-              - `ui/tokens/shadow`
-              - `ui/tokens/shape`
-              - `ui/tokens/sidebar-palette`
-              - `ui/tokens/type-scale`
               - `ui/variant-region`
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
@@ -15847,8 +15818,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
       - Web:
         - Slots:
-          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
-          - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
+          - `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.announce`, `primitives.command-palette`, `primitives.dom.copy-source-text`, `primitives.dom.overscroll-hint`, `primitives.overlay.imperative-dialog`, `primitives.shortcuts`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.endpoint-errors`, `reports.live-state-stale-drop`, `reports.mutation-errors`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.plugin-load-errors`, `reports.render-loop`, `reports.theme-resolution`, `reports.viewport-escape`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`
+          - `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine.saved-themes`
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
@@ -16456,7 +16427,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-graph`
           - `tasks/task-list`
           - `tasks/task-preprompt`
+          - `ui/theme-engine/saved-themes`
           - `ui/theme-engine/theme-customizer`
+          - `ui/theme-engine/theme-gallery`
           - `ui/tweakcn`
           - `ui/tweakcn/community-browser`
       - Server:
@@ -21522,7 +21495,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/shape`
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
-          - `ui/tweakcn/community-browser`
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
       - Web:
         - Uses:
@@ -21761,6 +21733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/optimistic-divergence`
               - `reports/page-undo-conflict`
               - `reports/render-loop`
+              - `reports/theme-resolution`
               - `reports/viewport-escape`
               - `review/code-review`
               - `review/plugin-changes`
@@ -22023,7 +21996,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/date-picker`
               - `stats/commits`
               - `tasks/task-dependencies`
-              - `ui/theme-engine/theme-customizer`
               - `ui/tokens/shadow`
         - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
           - Web:
@@ -22313,6 +22285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/sidebar-framing/flush`
               - `ui/sidebar-framing/inset`
               - `ui/theme-engine/theme-customizer`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/color-adjust`
               - `ui/tokens/shadow`
               - `ui/tweakcn/community-browser`
@@ -22340,7 +22313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `stats/cost`
               - `ui/segmented-progress-bar/segmented`
               - `ui/theme-engine/theme-customizer`
-              - `ui/tweakcn/community-browser`
+              - `ui/theme-engine/theme-gallery`
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
             - Imported by:
@@ -22439,6 +22412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `reports/optimistic-divergence`
               - `reports/page-undo-conflict`
               - `reports/render-loop`
+              - `reports/theme-resolution`
               - `reports/turn-unconfirmed`
               - `reports/viewport-escape`
               - `runs/run-outcome`
@@ -22609,8 +22583,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/connected`
               - `ui/tab-bar/underline`
               - `ui/theme-engine/theme-customizer`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/shadow`
-              - `ui/tweakcn/community-browser`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
@@ -22930,7 +22904,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/breadcrumb-separator/chevron`
               - `ui/breadcrumb-separator/slash`
               - `ui/tokens/shadow`
-              - `ui/tweakcn/community-browser`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
           - Web:
             - Uses:
@@ -23095,7 +23068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `review/code-review`
               - `shell/notifications`
               - `stats/cost`
-              - `ui/tweakcn/community-browser`
+              - `ui/theme-engine/theme-gallery`
         - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -23454,6 +23427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/customizer`
               - `ui/theme-engine/quick-theme`
               - `ui/theme-engine/theme-customizer`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/categorical`
               - `ui/tokens/chart`
               - `ui/tokens/color-adjust`
@@ -23933,15 +23907,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/underline`
               - `ui/theme-engine/quick-theme`
               - `ui/theme-engine/theme-customizer`
-              - `ui/tokens/categorical`
-              - `ui/tokens/chart`
-              - `ui/tokens/color-palette`
-              - `ui/tokens/density`
-              - `ui/tokens/font-family`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/shadow`
-              - `ui/tokens/shape`
-              - `ui/tokens/sidebar-palette`
-              - `ui/tokens/type-scale`
               - `ui/tweakcn/community-browser`
               - `ui/variant-region`
         - **`theme-boundary`** — Theme-boundary primitive: <Theme name surface> is the one element that says 'everything below here wears theme X', complete — the data-theme-scope attribute, the PortalThemeScopeProvider that carries it across portals, and the canvas it paints, which no site can now forget because `surface` is required. Plus the no-adhoc-theme-scope lint rule that keeps the three halves from being hand-assembled apart again.
@@ -24464,6 +24431,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar/underline`
               - `ui/theme-engine`
               - `ui/theme-engine/theme-customizer`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/shadow`
               - `ui/tree-disclosure/column`
               - `ui/tree-disclosure/dimmed-leaf`
@@ -24630,7 +24598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme"
+          - `ConfigV2.WebRegister` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -24811,7 +24779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "tweakcn.community-browser", "tweakcn.quick-theme"
+        - Contributes: `ConfigV2.Register` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -24889,7 +24857,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runs`
           - `tasks/task-deps-tree`
           - `tasks/task-list`
-          - `ui/tweakcn/community-browser`
+          - `ui/theme-engine/theme-gallery`
       - Core:
         - Exports (types):
           - `CellEditorProps`
@@ -25932,6 +25900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
+          - `ui/theme-engine/theme-gallery`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses:
@@ -26382,7 +26351,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-preprompt`
           - `tasks/tasks-core`
           - `tasks/worktree-identity`
-          - `ui/tweakcn`
+          - `ui/theme-engine/saved-themes`
       - Core:
         - Exports (types):
           - `PointParams`
@@ -26525,6 +26494,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-list`
+          - `ui/tokens/categorical`
+          - `ui/tokens/chart`
+          - `ui/tokens/color-adjust`
+          - `ui/tokens/color-palette`
+          - `ui/tokens/density`
+          - `ui/tokens/font-family`
+          - `ui/tokens/shadow`
+          - `ui/tokens/shape`
+          - `ui/tokens/sidebar-palette`
+          - `ui/tokens/type-scale`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses:
@@ -26870,6 +26849,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources`
               - `apps/sonata/sources/ultimate-guitar`
               - `primitives/overlay/imperative-dialog/confirm`
+              - `ui/theme-engine/theme-gallery`
           - Plugins:
             - **`confirm`** — confirmDialog(opts) → Promise<boolean>: a destructive-confirm helper over openDialog. Renders a sm panel (title + description + optional children + inline error + Cancel/Confirm), keeps the dialog open and shows getEndpointErrorMessage on failure, and resolves true iff onConfirm completed.
               - Web:
@@ -26886,7 +26866,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (types): `ConfirmDialogOptions`
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
-                - Imported by: `build/serve-composition`
+                - Imported by:
+                  - `build/serve-composition`
+                  - `ui/theme-engine/theme-gallery`
         - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
           - Web:
             - Uses: `primitives/scope/install-sink.defineInstallSink`
@@ -28020,7 +28002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/read-only-view`
           - `primitives/diff-view`
           - `primitives/markdown`
-          - `ui/tweakcn/community-browser`
+          - `ui/theme-engine/theme-gallery`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
         - Uses:
@@ -28660,7 +28642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×202: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.WebRegister` ×203: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -28689,7 +28671,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×201: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.Register` ×202: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`
@@ -28797,7 +28779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -28914,6 +28896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/page-undo-conflict`
       - `reports/plugin-load-errors`
       - `reports/render-loop`
+      - `reports/theme-resolution`
       - `reports/turn-unconfirmed`
       - `reports/viewport-escape`
       - `stats/cost`
@@ -29112,6 +29095,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RENDER_LOOP`
           - `renderLoopFingerprint`
           - `RenderLoopPayloadSchema`
+    - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme carries values the token groups no longer declare), plus the Debug → Reports summary view. Theme-resolution report kind: validates the theme painter's fault payloads (a scope selecting a theme that does not exist, so it paints Default; a stored theme carrying values for an unregistered token group or unknown tokens, which are skipped), fingerprints each by what it is about, and renders a task naming the stored data to fix.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `ThemeResolutionCollector`
+          - `Reports.KindView` → `ThemeResolutionKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+          - `ui/theme-engine.themeResolutionReportSink`
+      - Server:
+        - Contributes: `report-kind` "theme-resolution"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports (types): `ThemeResolutionPayload`
+        - Exports (values):
+          - `themeResolutionFingerprint`
+          - `ThemeResolutionPayloadSchema`
     - **`turn-unconfirmed`** — Turn-unconfirmed report kind's Debug → Reports summary view: the one-line preview + elapsed + conversation id for a sent turn that was POSTed and acked but never confirmed in the transcript. The report itself is filed by the conversations pending-turn state machine via the reports web report() API — no collector needed here. Turn-unconfirmed report kind: validates unconfirmed-turn payloads (a sent turn POSTed and acked but never confirmed in the transcript within the confirmation window), fingerprints by conversation id (repeats on one conversation collapse onto one row), and renders an investigation task. Re-arms periodically (6h) since a conversation that keeps dropping turns is a recurring warning, not a one-shot crash.
       - Web:
         - Contributes: `Reports.KindView` → `TurnUnconfirmedKindView`
@@ -31489,25 +31491,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tab-bar.TabBarSlots`
               - `ui/tab-bar.TabCloseButton`
               - `ui/tab-bar.TabIcon`
-    - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables.
       - Web:
         - Slots:
-          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tree-disclosure`
+          - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-          - `ThemeEngine.GlobalPreset` ← `ui.tokens`
-          - `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`
-          - `ThemeEngine.PresetSource` ← `ui.tweakcn`
+          - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
         - Contributes:
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
-          - `ConfigV2.WebRegister` "config"
+          - `Core.Root` → `ThemeSelectionsCollector`
+          - `ConfigV2.WebRegister` "theme"
           - `DynamicEnum.Options` "Theme"
+          - `ThemeEngine.Theme` "Default"
         - Uses:
           - `apps-core.Apps`
           - `apps-core.useActiveApp`
           - `apps-core/theme-scope.useRootThemeScope`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
+          - `config_v2.useConfigResult`
           - `config_v2.useScopeMembership`
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
@@ -31515,31 +31519,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
-          - `ColorAdjustment`
           - `ColorMode`
-          - `ColorTransformContribution`
           - `ConfiguredColorMode`
-          - `GlobalPresetContribution`
-          - `PresetSourceContribution`
+          - `ResolvedThemeState`
+          - `ThemeResolutionFault`
+          - `ThemeSelection`
+          - `ThemeSelectionsState`
+          - `ThemeSourceContribution`
+          - `ThemeSourceEntry`
+          - `ThemesState`
           - `TokenGroupContribution`
-          - `TokenGroupPreset`
-          - `TokenGroupPresets`
           - `VariantGroupContribution`
         - Exports (values):
-          - `ColorAdjustContext`
           - `ScopedAppTheme`
           - `ThemeEngine`
+          - `themeResolutionReportSink`
           - `ThemeScope`
           - `ThemeScopeProvider`
           - `transformValues`
           - `useColorMode`
           - `useResolvedColorMode`
+          - `useResolvedTheme`
           - `useSetColorMode`
+          - `useThemes`
           - `useThemeScopeId`
-          - `useTokenGroupPresetOptions`
-          - `useTokenGroupPresets`
+          - `useThemeSelections`
+          - `whenNoScopeSelects`
       - Server:
-        - Contributes: `ConfigV2.Register` "config"
+        - Contributes: `ConfigV2.Register` "theme"
         - Uses: `config_v2.ConfigV2`
       - Core:
         - Uses:
@@ -31547,26 +31554,48 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/dynamic-enum/config.dynamicEnumField`
           - `fields/enum/config.enumField`
         - Exports (types):
+          - `ColorAdjustment`
+          - `GroupValues`
+          - `ResolvedTheme`
+          - `SkippedThemeValue`
+          - `Theme`
+          - `ThemeId`
+          - `ThemeResolution`
+          - `ThemeSource`
           - `TokenGroupDescriptor`
           - `TokenGroupField`
+          - `TokenGroupFragment`
           - `TokenGroupSchema`
+          - `TokenValues`
         - Exports (values):
+          - `both`
+          - `ColorAdjustmentSchema`
+          - `DEFAULT_THEME_ID`
+          - `defineTheme`
           - `defineTokenGroup`
-          - `themeEngineConfig`
+          - `isBuiltInThemeId`
+          - `mergeGroupValues`
+          - `NEUTRAL_COLOR_ADJUSTMENT`
+          - `resolveTheme`
+          - `themeSelectionConfig`
+          - `TokenGroupFragmentSchema`
+          - `TokenGroupFragmentsSchema`
           - `tokenGroupMatchesSearch`
       - Cross-plugin:
         - Imported by:
           - `apps-core/surface/floating`
+          - `apps/website/shell`
+          - `reports/theme-resolution`
           - `shell/toast`
           - `ui/segmented-progress-bar`
           - `ui/tab-bar/customizer`
           - `ui/theme-engine/quick-theme`
+          - `ui/theme-engine/saved-themes`
           - `ui/theme-engine/theme-customizer`
+          - `ui/theme-engine/theme-gallery`
           - `ui/theme-toggle`
-          - `ui/tokens`
           - `ui/tokens/categorical`
           - `ui/tokens/chart`
-          - `ui/tokens/color-adjust`
           - `ui/tokens/color-palette`
           - `ui/tokens/density`
           - `ui/tokens/font-family`
@@ -31576,13 +31605,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/tokens/shape`
           - `ui/tokens/sidebar-palette`
           - `ui/tokens/type-scale`
-          - `ui/tweakcn`
           - `ui/tweakcn/community-browser`
           - `ui/variant-region`
       - Plugins:
-        - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (community themes), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
+        - **`quick-theme`** — Quick-switch theme popover on the global action bar: contributed quick sections (the theme picker, the light/dark switch), every component variant picker, and a hand-off to the full customizer pane — so a theme change never costs the user their current context.
           - Web:
-            - Slots: `QuickTheme.Section` ← `ui.theme-toggle`, `ui.tweakcn.community-browser`
+            - Slots: `QuickTheme.Section` ← `ui.theme-engine.theme-gallery`, `ui.theme-toggle`
             - Contributes: `ActionBar.Item` → `QuickThemeButton`
             - Uses:
               - `apps-core.useActiveApp`
@@ -31602,23 +31630,97 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `QuickTheme`
           - Cross-plugin:
             - Imported by:
+              - `ui/theme-engine/theme-gallery`
               - `ui/theme-toggle`
+        - **`saved-themes`** — Saved themes (tweakcn imports and custom themes) as a resident theme source, hydrated before first paint, plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints. A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+          - Web:
+            - Contributes:
+              - `Core.Boot`
+              - `ThemeEngine.ThemeSource` "saved"
+            - Uses:
+              - `config_v2.useConfigResult`
+              - `config_v2.useSetConfig`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.endpointQueryKey`
+              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.useEndpoint`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/live-state.hydrateEndpoint`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine.useThemes`
+              - `ui/theme-engine.whenNoScopeSelects`
+            - Exports (types):
+              - `RemoveSavedThemeResult`
+              - `ThemeEdits`
+            - Exports (values):
+              - `refreshSavedThemes`
+              - `removeSavedTheme`
+              - `useEditTheme`
+          - Server:
+            - Uses:
+              - `config_v2.getConfig`
+              - `config_v2.getConfigScopeIds`
+              - `config_v2.setConfig`
+              - `database.db`
+              - `database/sql-column.parsedJson`
+              - `database/sql-column.parsedText`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+            - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
+            - Exports (values): `saveTheme`
+            - Routes:
+              - `GET /api/saved-themes`
+              - `POST /api/saved-themes`
+              - `PATCH /api/saved-themes/:id/fragment`
+              - `PATCH /api/saved-themes/:id/color-adjust`
+              - `PATCH /api/saved-themes/:id`
+              - `DELETE /api/saved-themes/:id`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `ui/theme-engine.ColorAdjustmentSchema`
+              - `ui/theme-engine.Theme`
+              - `ui/theme-engine.ThemeId`
+              - `ui/theme-engine.TokenGroupFragmentsSchema`
+            - Exports (types):
+              - `FragmentEdit`
+              - `SavedTheme`
+              - `SavedThemeInUse`
+              - `SavedThemeSource`
+              - `SaveThemeInput`
+              - `ThemeScopeRef`
+            - Exports (values):
+              - `applyFragmentEdit`
+              - `createSavedTheme`
+              - `deleteSavedTheme`
+              - `FragmentEditSchema`
+              - `importedThemeId`
+              - `listSavedThemes`
+              - `patchSavedThemeColorAdjust`
+              - `patchSavedThemeFragment`
+              - `renameSavedTheme`
+              - `SavedThemeInUseSchema`
+              - `SavedThemeSchema`
+              - `SavedThemeSourceSchema`
+              - `SaveThemeInputSchema`
+              - `ThemeScopeRefSchema`
+          - Cross-plugin:
+            - Imported by:
+              - `ui/theme-engine/theme-customizer`
+              - `ui/theme-engine/theme-gallery`
+              - `ui/tweakcn`
               - `ui/tweakcn/community-browser`
-        - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
+        - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
           - Web:
             - Slots:
-              - `ThemeCustomizer.Section` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+              - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
             - Uses:
               - `apps-core.useCurrentAppId`
-              - `config_v2.useConfig`
-              - `config_v2.useConfigRegistrations`
               - `config_v2.useScopeMembership`
-              - `config_v2.useSetConfig`
-              - `infra/endpoints.fetchEndpoint`
+              - `infra/endpoints.EndpointError`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/css/cluster.Cluster`
               - `primitives/css/color-picker.Color`
               - `primitives/css/color-picker.ColorPickerPopover`
               - `primitives/css/fill.Fill`
@@ -31626,9 +31728,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
               - `primitives/css/row.Row`
+              - `primitives/css/spacing.selfClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Separator`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.DropdownMenu`
+              - `primitives/css/ui-kit.DropdownMenuContent`
+              - `primitives/css/ui-kit.DropdownMenuItem`
+              - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -31636,20 +31743,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/search.SearchInput`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeScopeProvider`
+              - `ui/theme-engine.useResolvedTheme`
+              - `ui/theme-engine.useThemes`
               - `ui/theme-engine.useThemeScopeId`
+              - `ui/theme-engine/saved-themes.useEditTheme`
             - Exports (types):
-              - `TokenMode`
-              - `TokenRowProps`
+              - `ColorAdjustEditor`
+              - `ReadyTokenGroupEditor`
+              - `TokenGroupEditor`
             - Exports (values):
+              - `FillFromMenu`
               - `ThemeCustomizer`
               - `themeCustomizerPane`
               - `themeCustomizerRoute`
-              - `TokenModeContext`
-              - `TokenRow`
+              - `TokenRows`
+              - `useColorAdjustEditor`
+              - `useTokenGroupEditor`
           - Cross-plugin:
             - Imported by:
               - `apps/settings/appearance`
               - `ui/theme-engine/quick-theme`
+              - `ui/theme-engine/theme-gallery`
               - `ui/tokens/categorical`
               - `ui/tokens/chart`
               - `ui/tokens/color-adjust`
@@ -31661,6 +31775,53 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/tokens/sidebar-palette`
               - `ui/tokens/type-scale`
               - `ui/tweakcn/community-browser`
+        - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
+          - Web:
+            - Slots: `item-actions` ← `ui.theme-engine.theme-gallery`
+            - Contributes:
+              - `ThemeCustomizer.Section` "Theme" → `ThemeGalleryPicker`
+              - `QuickTheme.Section` "Theme" → `QuickThemePicker`
+              - `item-actions` "rename" → `RenameThemeAction`
+              - `item-actions` "delete" → `DeleteThemeAction`
+            - Uses:
+              - `apps-core.Apps`
+              - `config_v2.useConfigResult`
+              - `config_v2.useSetConfig`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.getEndpointErrorMessage`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/line.Line`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.appThemeScope`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.DialogTitle`
+              - `primitives/css/ui-kit.Input`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.DataViewDensity`
+              - `primitives/data-view.DataViewId`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
+              - `primitives/data-view.ItemActionProps`
+              - `primitives/data-view.ItemActionsDescriptor`
+              - `primitives/icon-button.IconButton`
+              - `primitives/overlay/imperative-dialog.openDialog`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/syntax-highlight.useDarkMode`
+              - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine.ThemeSourceContribution`
+              - `ui/theme-engine.ThemeSourceEntry`
+              - `ui/theme-engine.transformValues`
+              - `ui/theme-engine.useThemes`
+              - `ui/theme-engine.useThemeScopeId`
+              - `ui/theme-engine.useThemeSelections`
+              - `ui/theme-engine/quick-theme.QuickTheme`
+              - `ui/theme-engine/saved-themes.removeSavedTheme`
+              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - **`theme-toggle`** — Light/dark switch inside the quick-theme popover.
       - Web:
         - Contributes: `QuickTheme.Section` "Appearance" → `ThemeToggle`
@@ -31669,290 +31830,131 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ui/theme-engine.useResolvedColorMode`
           - `ui/theme-engine.useSetColorMode`
           - `ui/theme-engine/quick-theme.QuickTheme`
-    - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
-      - Web:
-        - Contributes:
-          - `ThemeEngine.GlobalPreset` "Default"
-          - `ThemeEngine.GlobalPreset` "Ocean"
-          - `ThemeEngine.GlobalPreset` "Warm"
-        - Uses: `ui/theme-engine.ThemeEngine`
+    - **`tokens`** — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
       - Plugins:
-        - **`categorical`** — Categorical color palette token group with switchable presets.
+        - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors and their customizer section.
           - Web:
-            - Slots: `Categorical.Preset` ← `ui.tokens.categorical`
             - Contributes:
-              - `Categorical.Preset` "Default"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Categorical preset"
               - `ThemeEngine.TokenGroup` "Categorical"
-              - `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`
               - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `ui/theme-engine.ColorAdjustContext`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.transformValues`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `CategoricalPresetContribution`
-            - Exports (values): `Categorical`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `CategoricalTokenValues`
-            - Exports (values):
-              - `categoricalConfig`
-              - `categoricalGroup`
-        - **`chart`** — Chart color token group with switchable presets.
+            - Exports (values): `categoricalGroup`
+        - **`chart`** — Chart color token group: the chart-1…5 ramp and its customizer section.
           - Web:
-            - Slots: `Chart.Preset` ← `apps.website.shell`, `ui.tokens.chart`
             - Contributes:
-              - `Chart.Preset` "Default"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Chart preset"
               - `ThemeEngine.TokenGroup` "Chart"
-              - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
               - `ThemeCustomizer.Section` "Chart" → `ChartSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `ui/theme-engine.ColorAdjustContext`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.transformValues`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `ChartPresetContribution`
-            - Exports (values): `Chart`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/website/shell`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChartTokenValues`
-            - Exports (values):
-              - `chartConfig`
-              - `chartGroup`
-        - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
+            - Exports (values): `chartGroup`
+        - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
           - Web:
-            - Slots: `ColorAdjust.Preset` ← `ui.tokens.color-adjust`
-            - Contributes:
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Color adjust preset"
-              - `ColorAdjust.Preset` "Default"
-              - `ColorAdjust.Preset` "Grayscale"
-              - `ColorAdjust.Preset` "Muted"
-              - `ColorAdjust.Preset` "Vibrant"
-              - `ColorAdjust.Preset` "Dimmer"
-              - `ColorAdjust.Preset` "Brighter"
-              - `ColorAdjust.Preset` "Warm Shift"
-              - `ColorAdjust.Preset` "Hue +60"
-              - `ColorAdjust.Preset` "Hue -60"
-              - `ColorAdjust.Preset` "Hue +120"
-              - `ColorAdjust.Preset` "Hue -120"
-              - `ColorAdjust.Preset` "Invert Hue"
-              - `ThemeEngine.ColorTransform` "Color Transform"
-              - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
-              - `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`
+            - Contributes: `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useThemeScopeId`
+              - `primitives/loading.Loading`
+              - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-            - Exports (types): `ColorAdjustPresetContribution`
-            - Exports (values): `ColorAdjust`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Shared:
-            - Exports (values): `colorAdjustConfig`
-        - **`color-palette`** — Color palette token group with switchable presets.
+              - `ui/theme-engine/theme-customizer.useColorAdjustEditor`
+        - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors) with its customizer section.
           - Web:
-            - Slots: `ColorPalette.Preset` ← `apps.website.shell`, `ui.tokens.color-palette`
             - Contributes:
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Color Palette preset"
-              - `ColorPalette.Preset` "Default"
-              - `ColorPalette.Preset` "Ocean"
-              - `ColorPalette.Preset` "Warm"
               - `ThemeEngine.TokenGroup` "Color Palette"
-              - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
               - `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `ui/theme-engine.ColorAdjustContext`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.transformValues`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenMode`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `ColorPalettePresetContribution`
-            - Exports (values): `ColorPalette`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/website/shell`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ColorPaletteTokenValues`
-            - Exports (values):
-              - `colorPaletteConfig`
-              - `colorPaletteGroup`
-        - **`density`** — Density token group (padding intents) with switchable presets.
+            - Exports (values): `colorPaletteGroup`
+        - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.
           - Web:
-            - Slots: `Density.Preset` ← `apps.website.shell`, `ui.tokens.density`
             - Contributes:
-              - `Density.Preset` "Comfortable"
-              - `Density.Preset` "Cozy"
-              - `Density.Preset` "Compact"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Density preset"
               - `ThemeEngine.TokenGroup` "Density"
-              - `ThemeEngine.VariantGroup` "Density" → `DensityPicker`
               - `ThemeCustomizer.Section` "Density" → `DensitySection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
+              - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `DensityPresetContribution`
-            - Exports (values): `Density`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/website/shell`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `DensityTokenValues`
-            - Exports (values):
-              - `densityConfig`
-              - `densityGroup`
-        - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.
+            - Exports (values): `densityGroup`
+        - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
           - Web:
-            - Slots: `FontFamily.Preset` ← `apps.website.shell`, `ui.tokens.font-family`
             - Contributes:
-              - `FontFamily.Preset` "Default"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Font preset"
               - `ThemeEngine.TokenGroup` "Fonts"
-              - `ThemeEngine.VariantGroup` "Fonts" → `FontFamilyPicker`
               - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `FontFamilyPresetContribution`
-            - Exports (values):
-              - `FontFamily`
-              - `fontFamilyConfig`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/website/shell`
-              - `ui/tokens/font-family/google-fonts`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `FontFamilyTokenValues`
-            - Exports (values):
-              - `fontFamilyConfig`
-              - `fontFamilyGroup`
+            - Exports (values): `fontFamilyGroup`
           - Plugins:
-            - **`google-fonts`** — Loads Google Fonts dynamically for font-family presets referencing custom web fonts.
+            - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
               - Web:
                 - Contributes: `Core.Root` → `GoogleFontsLoader`
                 - Uses:
-                  - `config_v2.useConfig`
-                  - `ui/theme-engine.useTokenGroupPresets`
-                  - `ui/tokens/font-family.fontFamilyConfig`
+                  - `ui/theme-engine.ThemeEngine`
+                  - `ui/theme-engine.useThemes`
+                  - `ui/theme-engine.useThemeSelections`
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
-            - Contributes:
-              - `ConfigV2.WebRegister` "config"
-              - `ThemeEngine.TokenGroup` "Rich-text palette"
-            - Uses:
-              - `config_v2.ConfigV2`
-              - `ui/theme-engine.ThemeEngine`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Shared:
+            - Contributes: `ThemeEngine.TokenGroup` "Rich-text palette"
+            - Uses: `ui/theme-engine.ThemeEngine`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `RichTextPaletteValues`
-            - Exports (values):
-              - `richTextPaletteConfig`
-              - `richTextPaletteGroup`
-        - **`shadow`** — Shadow token group with switchable presets.
+            - Exports (values): `richTextPaletteGroup`
+        - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
           - Web:
-            - Slots: `Shadow.Preset` ← `ui.tokens.shadow`
             - Contributes:
-              - `Shadow.Preset` "Default"
-              - `Shadow.Preset` "None"
-              - `Shadow.Preset` "Elevated"
-              - `Shadow.Preset` "Heavy"
-              - `DynamicEnum.Options` "Shadow preset"
-              - `ConfigV2.WebRegister` "config"
               - `ThemeEngine.TokenGroup` "Shadow"
-              - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
               - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/cluster.Cluster`
@@ -31968,142 +31970,85 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
+              - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-            - Exports (types): `ShadowPresetContribution`
-            - Exports (values): `Shadow`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses:
+              - `ui/theme-engine.both`
+              - `ui/theme-engine.defineTokenGroup`
+              - `ui/theme-engine.TokenGroupFragment`
             - Exports (types):
               - `ShadowParams`
               - `ShadowTokenValues`
             - Exports (values):
               - `buildShadowTiers`
               - `DEFAULT_SHADOW_PARAMS`
-              - `shadowConfig`
+              - `shadowFragment`
               - `shadowGroup`
-        - **`shape`** — Shape token group (border-radius) with switchable presets.
+              - `shadowParamsOf`
+              - `ShadowParamsSchema`
+        - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
           - Web:
-            - Slots: `Shape.Preset` ← `apps.website.shell`, `ui.tokens.shape`
             - Contributes:
-              - `Shape.Preset` "Default"
-              - `Shape.Preset` "Sharp"
-              - `Shape.Preset` "Rounded"
-              - `Shape.Preset` "Pill"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Shape preset"
               - `ThemeEngine.TokenGroup` "Shape"
-              - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
               - `ThemeCustomizer.Section` "Shape" → `ShapeSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
+              - `ui/theme-engine/theme-customizer.FillFromMenu`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `ShapePresetContribution`
-            - Exports (values): `Shape`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/website/shell`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ShapeTokenValues`
-            - Exports (values):
-              - `shapeConfig`
-              - `shapeGroup`
-        - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
+            - Exports (values): `shapeGroup`
+        - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
           - Web:
-            - Slots: `SidebarPalette.Preset` ← `ui.tokens.sidebar-palette`
             - Contributes:
-              - `SidebarPalette.Preset` "Default"
-              - `SidebarPalette.Preset` "Warm"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Sidebar Palette preset"
               - `ThemeEngine.TokenGroup` "Sidebar Palette"
-              - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
               - `ThemeCustomizer.Section` "Sidebar Palette" → `SidebarPaletteSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `ui/theme-engine.ColorAdjustContext`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.transformValues`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `SidebarPalettePresetContribution`
-            - Exports (values): `SidebarPalette`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `SidebarPaletteTokenValues`
-            - Exports (values):
-              - `sidebarPaletteConfig`
-              - `sidebarPaletteGroup`
-        - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with switchable presets.
+            - Exports (values): `sidebarPaletteGroup`
+        - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with its customizer section.
           - Web:
-            - Slots: `TypeScale.Preset` ← `apps.website.shell`, `ui.tokens.type-scale`
             - Contributes:
-              - `TypeScale.Preset` "Default"
-              - `ConfigV2.WebRegister` "config"
-              - `DynamicEnum.Options` "Type scale preset"
               - `ThemeEngine.TokenGroup` "Type Scale"
-              - `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`
               - `ThemeCustomizer.Section` "Type Scale" → `TypeScaleSection`
             - Uses:
-              - `config_v2.ConfigV2`
-              - `config_v2.useConfig`
-              - `config_v2.useSetConfig`
-              - `fields/dynamic-enum/config.DynamicEnum`
               - `primitives/collapsible.Collapsible`
               - `primitives/collapsible.CollapsibleContent`
               - `primitives/css/row.SectionHeaderRow`
               - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
               - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine.useTokenGroupPresetOptions`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenModeContext`
-              - `ui/theme-engine/theme-customizer.TokenRow`
-            - Exports (types): `TypeScalePresetContribution`
-            - Exports (values): `TypeScale`
-          - Server:
-            - Contributes: `ConfigV2.Register` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Cross-plugin:
-            - Imported by: `apps/website/shell`
-          - Shared:
+              - `ui/theme-engine/theme-customizer.TokenRows`
+              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+          - Core:
+            - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `TypeScaleTokenValues`
-            - Exports (values):
-              - `typeScaleConfig`
-              - `typeScaleGroup`
+            - Exports (values): `typeScaleGroup`
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Web:
         - Slots: `TreeDisclosure.Variant` ← `ui.tree-disclosure.column`, `ui.tree-disclosure.dimmed-leaf`, `ui.tree-disclosure.merged`
@@ -32153,85 +32098,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/tree.TreeDisclosureToggle`
               - `ui/tree-disclosure.TreeDisclosure`
-    - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
-      - Web:
-        - Contributes:
-          - `Core.Boot`
-          - `ThemeEngine.PresetSource` "Preset Source"
-        - Uses:
-          - `infra/endpoints.fetchEndpoint`
-          - `infra/endpoints.useEndpoint`
-          - `primitives/live-state.hydrateEndpoint`
-          - `ui/theme-engine.ThemeEngine`
+    - **`tweakcn`** — Imports tweakcn themes by id: fetches one from tweakcn.com, converts it into token-group fragments, and saves it as a saved theme.
       - Server:
         - Uses:
-          - `database.db`
-          - `database/sql-column.parsedJson`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
-        - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
-        - Exports (values): `_tweakcnThemes`
-        - Routes:
-          - `GET /api/tweakcn/themes`
-          - `POST /api/tweakcn/themes`
-          - `DELETE /api/tweakcn/themes/:id`
+          - `ui/theme-engine/saved-themes.saveTheme`
+        - Routes: `POST /api/tweakcn/themes`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports (types): `TweakcnTheme`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `ui/theme-engine/saved-themes.SavedThemeSchema`
+        - Exports (types):
+          - `TweakcnCssVars`
+          - `TweakcnFragment`
         - Exports (values):
           - `convertTweakcnTheme`
-          - `deleteTweakcnTheme`
           - `importTweakcnTheme`
-          - `listTweakcnThemes`
-          - `TweakcnPresetsSchema`
-          - `TweakcnThemeSchema`
-      - Cross-plugin:
-        - Imported by: `ui/tweakcn/community-browser`
+          - `tweakcnPalettePreview`
       - Plugins:
-        - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
+        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. The tweakcn community catalog, and the endpoint that saves one of its themes as a saved theme.
           - Web:
             - Contributes:
-              - `ThemeCustomizer.Section` "Community Themes" → `CommunityBrowserSection`
-              - `QuickTheme.Section` "Theme" → `QuickThemeSection`
+              - `ThemeEngine.ThemeSource` "community"
+              - `ThemeCustomizer.Section` "Import from tweakcn" → `ImportByUrlSection`
             - Uses:
-              - `config_v2.useConfigRegistrations`
+              - `config_v2.useSetConfig`
+              - `infra/endpoints.EndpointError`
+              - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleChevron`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/collapsible.CollapsibleTrigger`
-              - `primitives/css/fill.Fill`
               - `primitives/css/fill.fillClasses`
-              - `primitives/css/grid.Grid`
-              - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
-              - `primitives/data-view.DataView`
-              - `primitives/data-view.defineDataView`
-              - `primitives/data-view.FieldDef`
-              - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine.ThemeEngine`
+              - `ui/theme-engine.ThemeSourceEntry`
+              - `ui/theme-engine.useThemes`
               - `ui/theme-engine.useThemeScopeId`
-              - `ui/theme-engine/quick-theme.QuickTheme`
+              - `ui/theme-engine/saved-themes.refreshSavedThemes`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
           - Server:
             - Uses:
-              - `database.db`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `ui/tweakcn._tweakcnThemes`
+              - `ui/theme-engine/saved-themes.saveTheme`
             - Routes:
               - `GET /api/tweakcn/community/catalog`
               - `POST /api/tweakcn/community/apply`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
-              - `ui/tweakcn.TweakcnThemeSchema`
+              - `ui/theme-engine/saved-themes.SavedThemeSchema`
             - Exports (values):
               - `applyCatalogTheme`
               - `getCatalog`

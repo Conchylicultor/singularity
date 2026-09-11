@@ -1,13 +1,7 @@
-import { useContext } from "react";
-import { useConfig } from "@plugins/config_v2/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  ColorAdjustContext,
-  transformValues,
-} from "@plugins/ui/plugins/theme-engine/web";
-import { colorPaletteGroup } from "../../shared";
-import { colorPaletteConfig } from "../internal/config";
-import { ColorPalette } from "../slots";
+import { transformValues } from "@plugins/ui/plugins/theme-engine/web";
+import { useTokenGroupEditor } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { colorPaletteGroup } from "../../core";
 
 const REPRESENTATIVE_KEYS: (keyof typeof colorPaletteGroup.schema)[] = [
   "primary",
@@ -21,34 +15,23 @@ const REPRESENTATIVE_KEYS: (keyof typeof colorPaletteGroup.schema)[] = [
   "border",
 ];
 
+/**
+ * The section's collapsed-state preview: a few of the scope's light-mode
+ * colors, as painted (color adjustment applied). Decorative, so it simply shows
+ * nothing until the scope's theme is known.
+ */
 export function ColorPaletteHeaderDots() {
-  const config = useConfig(colorPaletteConfig);
-  const presets = ColorPalette.Preset.useContributions();
-  const adjustment = useContext(ColorAdjustContext);
-
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const ov = config.overrides as {
-    light: Record<string, string>;
-    dark: Record<string, string>;
-  };
-  const lightOverrides = Object.fromEntries(
-    Object.entries(ov.light).filter(([, v]) => v !== ""),
-  );
-  const lightValues = active
-    ? transformValues({ ...active.light, ...lightOverrides }, adjustment)
-    : {};
-
-  const schema = colorPaletteGroup.schema;
+  const editor = useTokenGroupEditor(colorPaletteGroup);
+  if (editor.pending) return null;
+  const painted = transformValues(editor.values.light, editor.colorAdjust);
 
   return (
     <Stack as="span" direction="row" align="center" gap="2xs">
       {REPRESENTATIVE_KEYS.map((key) => (
         <span
-          key={key as string}
+          key={key}
           className="size-2.5 rounded-full border border-border/30"
-          style={{
-            backgroundColor: lightValues[key] ?? schema[key]?.default ?? "",
-          }}
+          style={{ backgroundColor: painted[key] }}
         />
       ))}
     </Stack>

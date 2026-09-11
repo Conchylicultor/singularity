@@ -1,0 +1,12 @@
+// @hash 229102bb7c88
+{
+  // The public site paints its own designed theme, `equin`, contributed by the
+  // website shell (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`)
+  // — never the desktop's runtime choice. This one selection is the whole
+  // per-app theme: a group equin does not mention paints its schema defaults.
+  //
+  // `colorMode` is deliberately absent: light/dark is a single global setting
+  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
+  // value here would claim something that is not true.
+  "theme": "equin"
+}

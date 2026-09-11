@@ -10,7 +10,6 @@ export default {
       id: "tab-bar",
       componentLabel: "Tab bar",
       component: VariantPicker,
-      selects: "component",
     }),
   ],
 } satisfies PluginDefinition;

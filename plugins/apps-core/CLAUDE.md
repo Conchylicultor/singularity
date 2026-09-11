@@ -89,6 +89,7 @@ contribution id from `app.id`. Consumers read `entry.app.name` /
     - `ui/theme-engine`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-engine/theme-customizer`
+    - `ui/theme-engine/theme-gallery`
     - `ui/variant-region`
 - Core:
   - Exports (types):

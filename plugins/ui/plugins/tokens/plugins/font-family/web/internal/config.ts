@@ -1,1 +1,0 @@
-export { fontFamilyConfig } from "../../shared";

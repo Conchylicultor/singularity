@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { useConfig } from "@plugins/config_v2/web";
-import { useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
-import { fontFamilyConfig } from "@plugins/ui/plugins/tokens/plugins/font-family/web";
+import {
+  DEFAULT_THEME_ID,
+  resolveTheme,
+} from "@plugins/ui/plugins/theme-engine/core";
+import {
+  ThemeEngine,
+  useThemeSelections,
+  useThemes,
+} from "@plugins/ui/plugins/theme-engine/web";
+import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 import { loadGoogleFontFamilies } from "./google-font-catalog";
 import { preferredFontFamily } from "./preferred-font-family";
 
@@ -64,18 +71,16 @@ function ensurePreconnect(): void {
   }
 }
 
+/**
+ * Loads every Google font a painted theme asks for: the union of the font
+ * families of the theme each scope selects — the desktop's and every app's
+ * with its own theme — so an app's font is loaded whether or not it is the
+ * focused one. (Reading only the desktop's choice left per-app fonts unloaded.)
+ */
 export function GoogleFontsLoader() {
-  const state = useTokenGroupPresets("font-family");
-  const config = useConfig(fontFamilyConfig) as {
-    preset: string;
-    overrides: { light?: Record<string, string>; dark?: Record<string, string> };
-  };
-
-  // While a dynamic preset source is loading there is nothing to preload yet;
-  // fonts kick off as soon as the sources resolve.
-  const active = state.pending
-    ? null
-    : (state.presets.find((p) => p.id === config.preset) ?? state.presets[0] ?? null);
+  const selections = useThemeSelections();
+  const themes = useThemes();
+  const groups = ThemeEngine.TokenGroup.useContributions();
 
   // The catalog is a deferred import (it must not land in the boot bundle), so
   // it arrives a tick after mount. Resolving it into state — rather than
@@ -83,9 +88,8 @@ export function GoogleFontsLoader() {
   // on the *filtered* set: two themes differing only in their system fallbacks
   // then produce the same key, instead of tearing down and re-requesting every
   // font sheet.
-  const [googleFamilies, setGoogleFamilies] = useState<ReadonlySet<string> | null>(
-    null,
-  );
+  const [googleFamilies, setGoogleFamilies] =
+    useState<ReadonlySet<string> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,13 +102,22 @@ export function GoogleFontsLoader() {
   }, []);
 
   const fontsToLoad = useMemo(() => {
-    if (!active || !googleFamilies) return [];
+    // Nothing to preload until the selections, the themes they name and the
+    // catalog are all known; fonts kick off as soon as they are.
+    if (selections.pending || themes.pending || !googleFamilies) return [];
+    const { themesById } = themes;
+    const descriptors = groups.map((g) => g.descriptor);
 
-    const tokenSets: Record<string, string>[] = [active.light, active.dark];
-    const ovLight = config.overrides.light;
-    const ovDark = config.overrides.dark;
-    if (ovLight) tokenSets.push(ovLight);
-    if (ovDark) tokenSets.push(ovDark);
+    const tokenSets: Record<string, string>[] = [];
+    for (const { themeId } of selections.selections) {
+      // A selection naming no theme paints Default (the painter reports it),
+      // so Default's fonts are the ones on screen.
+      const painted = themesById.has(themeId) ? themeId : DEFAULT_THEME_ID;
+      const fonts = resolveTheme(painted, themesById, descriptors).theme.groups[
+        fontFamilyGroup.id
+      ];
+      if (fonts) tokenSets.push(fonts.light, fonts.dark);
+    }
 
     // Only a face Google can actually serve gets a stylesheet. Asking for
     // anything else returns `400 text/html`, which Chromium blocks as an opaque
@@ -113,7 +126,7 @@ export function GoogleFontsLoader() {
     return collectPreferredFamilies(tokenSets).filter((name) =>
       googleFamilies.has(name),
     );
-  }, [active, config.overrides, googleFamilies]);
+  }, [selections, themes, groups, googleFamilies]);
 
   const fontsKey = fontsToLoad.join("\0");
 

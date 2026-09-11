@@ -4,21 +4,17 @@
 
 ## Plugin reference
 
-- Description: Extensible theme customization pane with global preset picker, search, and contributed sections.
+- Description: Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
 - Web:
   - Slots:
-    - `ThemeCustomizer.Section` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
+    - `ThemeCustomizer.Section` ← `ui.theme-engine.theme-gallery`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ui.tweakcn.community-browser`
     - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
   - Uses:
     - `apps-core.useCurrentAppId`
-    - `config_v2.useConfig`
-    - `config_v2.useConfigRegistrations`
     - `config_v2.useScopeMembership`
-    - `config_v2.useSetConfig`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.EndpointError`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/css/cluster.Cluster`
     - `primitives/css/color-picker.Color`
     - `primitives/css/color-picker.ColorPickerPopover`
     - `primitives/css/fill.Fill`
@@ -26,9 +22,14 @@
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.selfClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Separator`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.DropdownMenu`
+    - `primitives/css/ui-kit.DropdownMenuContent`
+    - `primitives/css/ui-kit.DropdownMenuItem`
+    - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
@@ -36,20 +37,27 @@
     - `primitives/search.SearchInput`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeScopeProvider`
+    - `ui/theme-engine.useResolvedTheme`
+    - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeScopeId`
+    - `ui/theme-engine/saved-themes.useEditTheme`
   - Exports (types):
-    - `TokenMode`
-    - `TokenRowProps`
+    - `ColorAdjustEditor`
+    - `ReadyTokenGroupEditor`
+    - `TokenGroupEditor`
   - Exports (values):
+    - `FillFromMenu`
     - `ThemeCustomizer`
     - `themeCustomizerPane`
     - `themeCustomizerRoute`
-    - `TokenModeContext`
-    - `TokenRow`
+    - `TokenRows`
+    - `useColorAdjustEditor`
+    - `useTokenGroupEditor`
 - Cross-plugin:
   - Imported by:
     - `apps/settings/appearance`
     - `ui/theme-engine/quick-theme`
+    - `ui/theme-engine/theme-gallery`
     - `ui/tokens/categorical`
     - `ui/tokens/chart`
     - `ui/tokens/color-adjust`

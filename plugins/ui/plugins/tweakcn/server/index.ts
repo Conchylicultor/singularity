@@ -1,21 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import {
-  listTweakcnThemes,
-  importTweakcnTheme,
-  deleteTweakcnTheme,
-} from "../core/endpoints";
-import { handleList } from "./internal/handle-list";
+import { importTweakcnTheme } from "../core/endpoints";
 import { handleImport } from "./internal/handle-import";
-import { handleDelete } from "./internal/handle-delete";
-
-export { _tweakcnThemes } from "./internal/tables";
 
 export default {
   description:
-    "Imports tweakcn themes and registers them as dynamic presets in all token groups.",
+    "Imports tweakcn themes by id: fetches one from tweakcn.com, converts it into token-group fragments, and saves it as a saved theme.",
   httpRoutes: {
-    [listTweakcnThemes.route]: handleList,
     [importTweakcnTheme.route]: handleImport,
-    [deleteTweakcnTheme.route]: handleDelete,
   },
 } satisfies ServerPluginDefinition;

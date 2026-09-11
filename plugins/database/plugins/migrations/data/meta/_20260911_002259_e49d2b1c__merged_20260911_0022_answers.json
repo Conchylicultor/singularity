@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:saved_themes",
+      "entityType": "table",
+      "entityName": "saved_themes",
+      "action": "create"
+    }
+  ]
+}
