@@ -1386,6 +1386,21 @@ export function createResourceRuntime(
   // flush sets `flushAgain` instead of overlapping, and the live flush re-drains.
   let flushRunning = false;
   let flushAgain = false;
+  // `performance.now()` when the live flush last made progress — stamped when it
+  // takes the mutex and re-stamped at the start of every re-drain pass; `null`
+  // while no flush runs. The heartbeat reports its age as `flushOpenMs`. A flush
+  // whose loader never settles (a DB query whose socket was closed underneath
+  // it) holds the mutex forever, queueing every later push behind it while pings
+  // keep flowing — so the ping is the one frame that can tell the tab pushes are
+  // stuck. Per PASS, not per mutex hold: a steady notify stream keeps one hold
+  // alive across many short, delivering passes, and that is not a stall.
+  // research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
+  let flushPassStartedAt: number | null = null;
+  function flushOpenMs(): number {
+    return flushPassStartedAt === null
+      ? 0
+      : Math.round(performance.now() - flushPassStartedAt);
+  }
   let batchDepth = 0;
   const heartbeats = new Map<
     ServerWebSocket<WsData>,
@@ -2677,6 +2692,9 @@ export function createResourceRuntime(
       return;
     }
     flushRunning = true;
+    // Stamped with the mutex (not inside the wrapper) so the heartbeat's
+    // `flushOpenMs` covers the whole hold, wrapper included.
+    flushPassStartedAt = performance.now();
     try {
       // Run the whole drain inside the injected flush wrapper (server:
       // recordEntrySpan("flush", ...)) so each cycle is one `flush` entry and the
@@ -2686,6 +2704,7 @@ export function createResourceRuntime(
       else await runFlushCycle();
     } finally {
       flushRunning = false;
+      flushPassStartedAt = null;
     }
   }
 
@@ -2696,6 +2715,8 @@ export function createResourceRuntime(
   // entry at the same or an earlier depth.
   async function runFlushCycle(): Promise<void> {
     do {
+      // A fresh pass is progress: the previous one settled (see `flushOpenMs`).
+      flushPassStartedAt = performance.now();
       flushAgain = false;
       flushScheduled = false;
       rebuildDag();
@@ -3718,8 +3739,11 @@ export function createResourceRuntime(
   const notificationsWsHandler: WsHandler = {
     open(ws) {
       sockets.set(ws, { ws, subs: new Map() });
+      // `flushOpenMs`: how long the running flush pass has been open (0 when
+      // idle) — see `flushPassStartedAt`. Additive on the wire: an older client
+      // ignores it, and the client reads a ping without it as 0.
       const timer = setInterval(
-        () => sendJson(ws, { kind: "ping" }),
+        () => sendJson(ws, { kind: "ping", flushOpenMs: flushOpenMs() }),
         HEARTBEAT_MS,
       );
       heartbeats.set(ws, timer);

@@ -68,7 +68,19 @@ const SUB_KEEPALIVE_MS = 30_000;
 
 type SocketKind = keyof typeof WS_URLS;
 
-export type ChannelStatuses = { worktree: WsStatus; central: WsStatus };
+export type ChannelStatuses = {
+  worktree: WsStatus;
+  central: WsStatus;
+  /**
+   * Per channel: how long the server's running live-state flush pass had been
+   * open at its latest heartbeat ping (0 when idle, and 0 until the first ping
+   * of the current connection). A flush that never settles freezes every push
+   * behind it while the socket stays open and quiet, so this is the only sign
+   * of it the tab gets — the health report's Connection row reads it.
+   * research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md
+   */
+  serverFlushOpenMs: Record<LiveStateSocketKind, number>;
+};
 
 /** Live-state pipeline socket kind, as classified from a ws-status-bus url. */
 export type LiveStateSocketKind = SocketKind;
@@ -233,7 +245,9 @@ type ServerMsg =
       params: ResourceParams;
       reason: string;
     }
-  | { kind: "ping" };
+  // `flushOpenMs`: how long the server's running flush pass has been open (0
+  // when idle). Absent from a server that predates it — read as 0.
+  | { kind: "ping"; flushOpenMs?: number };
 
 function paramsKey(params: ResourceParams | undefined): string {
   if (!params) return "{}";
@@ -393,6 +407,13 @@ export class NotificationsClient {
    */
   private staleDropCounts = new Map<string, number>();
   private channelStatuses = new Map<string, WsStatus>();
+  /** Latest heartbeat `flushOpenMs` per channel — see `ChannelStatuses`. Reset
+   *  to 0 whenever the channel's socket status changes, so a stall reported by
+   *  a server that has since restarted never outlives its connection. */
+  private serverFlushOpenMs: Record<SocketKind, number> = {
+    worktree: 0,
+    central: 0,
+  };
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
   /** Fired on any sub/version/socket/leader change for the Layer-2 inspector. */
@@ -461,6 +482,8 @@ export class NotificationsClient {
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = liveStateSocketKind(url);
       if (kind === null) return;
+      if (this.channelStatuses.get(url) !== status)
+        this.serverFlushOpenMs[kind] = 0;
       this.channelStatuses.set(url, status);
       // Stamp the first instant THIS channel reached "open" (per-origin cold-
       // start latch; see `firstReadyByKind`). Written once per kind, never
@@ -542,7 +565,28 @@ export class NotificationsClient {
     return {
       worktree: this.channelStatuses.get(WS_URLS.worktree) ?? "connecting",
       central: this.channelStatuses.get(WS_URLS.central) ?? "connecting",
+      serverFlushOpenMs: { ...this.serverFlushOpenMs },
     };
+  }
+
+  /**
+   * Record a heartbeat's `flushOpenMs` for `kind`. Notifies channel-status
+   * listeners only when the value moved, so an idle server's pings (0 → 0)
+   * re-render nothing. Every tab records it: the shared socket broadcasts every
+   * frame, pings included, to all tabs.
+   */
+  private noteServerFlushOpenMs(kind: SocketKind, raw: unknown): void {
+    const ms = raw ?? 0;
+    if (typeof ms !== "number" || !Number.isFinite(ms) || ms < 0) {
+      throw new Error(
+        `[notifications] ping carried a malformed flushOpenMs: ${JSON.stringify(raw)}`,
+      );
+    }
+    if (this.serverFlushOpenMs[kind] === ms) return;
+    this.serverFlushOpenMs[kind] = ms;
+    const channels = this.getChannelStatuses();
+    for (const fn of this.channelStatusListeners) fn(channels);
+    this.emitDebug();
   }
 
   subscribeChannelStatuses(fn: (s: ChannelStatuses) => void): () => void {
@@ -1313,9 +1357,13 @@ export class NotificationsClient {
 
   private handleServerMessage(channel: SocketChannel, msg: ServerMsg): void {
     if (msg.kind === "ping") {
-      // Server keepalive; no app-level action needed. Per-tab duplicate
-      // responses would be harmless (server ignores `pong`) but skipping
-      // avoids N× writes through the leader per ping.
+      // Server keepalive: never answered (per-tab duplicate `pong`s would be N×
+      // writes through the leader for nothing). It does carry the server's
+      // flush age, which the health report reads as "live updates stuck".
+      this.noteServerFlushOpenMs(
+        channel === this.channels.central ? "central" : "worktree",
+        msg.flushOpenMs,
+      );
       return;
     }
     if (msg.kind === "sub-error") {

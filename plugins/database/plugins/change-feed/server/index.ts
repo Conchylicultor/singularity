@@ -4,7 +4,11 @@ import {
   scopedResourceIdentities,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { db } from "@plugins/database/server";
+import {
+  BOOT_DDL_QUERY_DEADLINE_MS,
+  db,
+  withQueryDeadline,
+} from "@plugins/database/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
@@ -57,7 +61,15 @@ export default {
   // barrier so the feed's triggers exist before any traffic — and the listener
   // (started in onReady, after the barrier) is guaranteed to find them.
   async onReadyBlocking() {
-    await rebuildTriggers(db);
+    // Per-table DROP+CREATE TRIGGER can wait on the previous backend's readers
+    // during a hot-swap: widen the query deadline for the rebuild's own queries.
+    await withQueryDeadline(
+      {
+        ms: BOOT_DDL_QUERY_DEADLINE_MS,
+        reason: "boot: change-feed trigger rebuild",
+      },
+      () => rebuildTriggers(db),
+    );
     // Reject dead scope policy: a keyed resource whose identityTable names a table
     // the feed installed no trigger on can never receive its declared scoped
     // delivery (scoped fires only on origin === identityTable, and only a

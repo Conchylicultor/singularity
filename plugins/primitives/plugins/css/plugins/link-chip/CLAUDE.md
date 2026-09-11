@@ -38,6 +38,7 @@
     - `debug/slow-ops`
     - `debug/slow-ops/pane`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `improve/element-picker`
     - `page/inline-date`
     - `page/inline-page-link`

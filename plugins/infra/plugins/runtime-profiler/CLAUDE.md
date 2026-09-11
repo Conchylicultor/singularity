@@ -304,6 +304,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `captureFlightWindow`
     - `chargeWait`
     - `currentCallerKind`
+    - `currentEntryLabel`
     - `currentOriginClass`
     - `getLastLoaderReadSet`
     - `getReadSetIndex`

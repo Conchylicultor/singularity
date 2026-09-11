@@ -222,17 +222,11 @@ export function registerBarrelStubs(_repoRoot: string): void {
       // the real barrel loads against the React stub above (see the note on
       // registerBarrelStubs). Stubbing it is what created the export-list drift bug.
 
-      // ── Server plugin barrels that fail outside the real server ─────
-      build.module("@plugins/database/server", () => ({
-        exports: {
-          db: {},
-          awaitDbReady: () => Promise.resolve(),
-          isTransientDbError: () => false,
-          currentTxId: () => Promise.resolve("0"),
-          __esModule: true,
-        },
-        loader: "object",
-      }));
+      // @plugins/database/server is intentionally left unstubbed too: its barrel
+      // is import-safe (lazy pool, no SINGULARITY_WORKTREE read at eval — see
+      // plugins/database/CLAUDE.md § Import-safety), so the real module loads.
+      // A hand-written export list here drifted the moment the barrel grew an
+      // export another barrel reads at eval (withQueryDeadline broke docgen).
 
       // ── Auto-generated stubs for npm packages ─────────────────────
       // Reads .d.ts entry points to discover named exports at build time.

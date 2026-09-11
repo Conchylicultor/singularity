@@ -40,6 +40,10 @@ const OWNER_DIRS = [
   "plugins/debug/plugins/trace/plugins/gates/",
   "plugins/debug/plugins/stall-monitor/",
   "plugins/debug/plugins/profiling/plugins/runtime/",
+  // Reads the open-span set on its own 15 s tick: a hang is only visible while
+  // the span is still open, and getRuntimeProfile has no in-flight set. Its
+  // evidence still goes through captureTrace.
+  "plugins/debug/plugins/stuck-spans/",
 ];
 
 export default createRule({

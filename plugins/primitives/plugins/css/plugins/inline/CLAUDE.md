@@ -79,6 +79,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
     - `conversations/conversation-view/op-status`
     - `conversations/transcript-watcher`
+    - `database/query-deadline`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/duress-shed`
@@ -93,6 +94,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `debug/session-divergence`
     - `debug/slow-ops`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `debug/trace/spans`
     - `page/editor`
     - `page/embed`

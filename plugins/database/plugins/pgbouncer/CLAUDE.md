@@ -39,9 +39,12 @@ The gateway supervisor starts PgBouncer after Postgres (service index 1 in `data
 - Description: PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
 - Load-bearing: yes
 - Cross-plugin:
-  - Imported by: `infra/launcher`
+  - Imported by:
+    - `database/query-deadline`
+    - `infra/launcher`
 - Server:
   - Exports (values):
+    - `PGBOUNCER_LOG_FILE`
     - `PGBOUNCER_PORT`
     - `PGBOUNCER_SOCKET_DIR`
     - `pgbouncerPidFileUnder`

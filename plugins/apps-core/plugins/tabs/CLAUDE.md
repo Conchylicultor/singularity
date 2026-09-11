@@ -234,6 +234,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `debug/slow-ops`
     - `debug/slow-ops/pane`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `shell/global-action-bar`
     - `shell/notifications`
     - `tasks/worktree-identity`

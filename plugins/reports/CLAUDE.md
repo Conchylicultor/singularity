@@ -27,7 +27,7 @@ read as "recorded with no id".
 
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 - Web:
-  - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+  - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
   - Contributes: `ConfigV2.WebRegister` "reports"
   - Uses:
     - `config_v2.ConfigV2`
@@ -114,6 +114,7 @@ read as "recorded with no id".
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
     - `database/db-test-fixture/sweep`
+    - `database/query-deadline`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/duress-shed`
@@ -127,6 +128,7 @@ read as "recorded with no id".
     - `debug/session-divergence`
     - `debug/slow-ops`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `debug/trace/engine`
     - `debug/worktree-cleanup`
     - `infra/boot-snapshot`

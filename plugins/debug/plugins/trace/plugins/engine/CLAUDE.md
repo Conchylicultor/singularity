@@ -279,6 +279,7 @@ expandable JSON.
     - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `debug/trace/boot`
     - `debug/trace/client-boot`
     - `debug/trace/contention`

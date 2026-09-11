@@ -1813,6 +1813,10 @@
       "name": "@singularity/plugin-database-query",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/query-deadline": {
+      "name": "@singularity/plugin-database-query-deadline",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/sql-column": {
       "name": "@singularity/plugin-database-sql-column",
       "version": "0.0.1",
@@ -2011,6 +2015,10 @@
     },
     "plugins/debug/plugins/stall-monitor": {
       "name": "@singularity/plugin-debug-stall-monitor",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/stuck-spans": {
+      "name": "@singularity/plugin-debug-stuck-spans",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/timeline": {
@@ -6730,6 +6738,8 @@
 
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 
+    "@singularity/plugin-database-query-deadline": ["@singularity/plugin-database-query-deadline@workspace:plugins/database/plugins/query-deadline"],
+
     "@singularity/plugin-database-sql-column": ["@singularity/plugin-database-sql-column@workspace:plugins/database/plugins/sql-column"],
 
     "@singularity/plugin-database-sql-projection": ["@singularity/plugin-database-sql-projection@workspace:plugins/database/plugins/sql-projection"],
@@ -6825,6 +6835,8 @@
     "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
 
     "@singularity/plugin-debug-stall-monitor": ["@singularity/plugin-debug-stall-monitor@workspace:plugins/debug/plugins/stall-monitor"],
+
+    "@singularity/plugin-debug-stuck-spans": ["@singularity/plugin-debug-stuck-spans@workspace:plugins/debug/plugins/stuck-spans"],
 
     "@singularity/plugin-debug-timeline": ["@singularity/plugin-debug-timeline@workspace:plugins/debug/plugins/timeline"],
 

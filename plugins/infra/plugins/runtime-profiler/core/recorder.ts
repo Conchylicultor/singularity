@@ -275,7 +275,12 @@ export function profilerNowMs(): number {
 // never overcounts (so selfMs stays ≥ 0). The returned slice is exactly
 // `[end − covered, end]`, which a caller records as a positioned wait band —
 // bands and the scalar union then share one source and cannot diverge.
-function contribute(track: Track, start: number, end: number, floor: number): number {
+function contribute(
+  track: Track,
+  start: number,
+  end: number,
+  floor: number,
+): number {
   if (start < floor) start = floor;
   const lo = start > track.prevEnd ? start : track.prevEnd;
   if (end > lo) {
@@ -302,7 +307,13 @@ export const WAIT_BAND_CAP = 12;
 // paint time the span was not waiting (the recorder is conservative in the UNDER
 // direction everywhere). `waitMs` stays the authoritative total, so a dropped
 // band's ms is still recoverable as `waitMs − crossLayerUnion(bands)`.
-function pushBand(bands: WaitBand[], layer: string, t0: number, t1: number, cap: number): void {
+function pushBand(
+  bands: WaitBand[],
+  layer: string,
+  t0: number,
+  t1: number,
+  cap: number,
+): void {
   const last = bands[bands.length - 1];
   if (last && last.layer === layer && t0 <= last.t1) {
     last.t1 = t1;
@@ -312,7 +323,8 @@ function pushBand(bands: WaitBand[], layer: string, t0: number, t1: number, cap:
   if (bands.length > cap) {
     let minIdx = 0;
     for (let i = 1; i < bands.length; i++) {
-      if (bands[i]!.t1 - bands[i]!.t0 < bands[minIdx]!.t1 - bands[minIdx]!.t0) minIdx = i;
+      if (bands[i]!.t1 - bands[i]!.t0 < bands[minIdx]!.t1 - bands[minIdx]!.t0)
+        minIdx = i;
     }
     bands.splice(minIdx, 1);
   }
@@ -572,7 +584,10 @@ export function runInBackgroundLane<T>(fn: () => T): T {
  * - `runInBackgroundLane` — declare the lane only, NO span (observability-internal).
  * - `runWithoutProfiling` — suppress recording entirely (observability-internal).
  */
-export function runTracked<T>(label: string, fn: () => T | Promise<T>): Promise<T> {
+export function runTracked<T>(
+  label: string,
+  fn: () => T | Promise<T>,
+): Promise<T> {
   return recordEntrySpan("bg", label, fn);
 }
 
@@ -732,20 +747,23 @@ interface FlightRingSlot {
   waitBands: WaitBand[] | undefined;
 }
 
-const flightRing: FlightRingSlot[] = Array.from({ length: FLIGHT_RING_CAPACITY }, () => ({
-  used: false,
-  id: 0,
-  parentId: null,
-  kind: "db" as SpanKind,
-  label: "",
-  t0: 0,
-  t1: 0,
-  waitMs: 0,
-  childMs: 0,
-  selfMs: 0,
-  waits: undefined,
-  waitBands: undefined,
-}));
+const flightRing: FlightRingSlot[] = Array.from(
+  { length: FLIGHT_RING_CAPACITY },
+  () => ({
+    used: false,
+    id: 0,
+    parentId: null,
+    kind: "db" as SpanKind,
+    label: "",
+    t0: 0,
+    t1: 0,
+    waitMs: 0,
+    childMs: 0,
+    selfMs: 0,
+    waits: undefined,
+    waitBands: undefined,
+  }),
+);
 let flightRingHead = 0;
 
 // Called from record(), just above the slow-span notify loop, so it sits behind
@@ -906,7 +924,8 @@ export function captureFlightWindow(opts: {
     let waits: WaitBreakdown | undefined;
     if (ctx.layerUnions.size > 0) {
       waits = {};
-      for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
+      for (const [layer, track] of ctx.layerUnions)
+        waits[layer] = track.unionMs;
     }
     let waitBands: WaitBand[] | undefined;
     if (ctx.layerBands.size > 0) {
@@ -914,7 +933,8 @@ export function captureFlightWindow(opts: {
       // Copy each band: this context is still live, so pushBand may extend its
       // last band in place after this snapshot is taken.
       for (const bands of ctx.layerBands.values()) {
-        for (const b of bands) waitBands.push({ layer: b.layer, t0: b.t0, t1: b.t1 });
+        for (const b of bands)
+          waitBands.push({ layer: b.layer, t0: b.t0, t1: b.t1 });
       }
     }
     open.push({
@@ -940,8 +960,15 @@ export function captureFlightWindow(opts: {
   // strand one. (A parent that closed in <5 ms never entered the ring at all;
   // its children are orphans by construction, which the consumer renders as roots.)
   const completed: FlightSpan[] = [];
-  for (let i = 0; i < FLIGHT_RING_CAPACITY && completed.length < maxCompleted; i++) {
-    const slot = flightRing[(flightRingHead - 1 - i + FLIGHT_RING_CAPACITY) % FLIGHT_RING_CAPACITY]!;
+  for (
+    let i = 0;
+    i < FLIGHT_RING_CAPACITY && completed.length < maxCompleted;
+    i++
+  ) {
+    const slot =
+      flightRing[
+        (flightRingHead - 1 - i + FLIGHT_RING_CAPACITY) % FLIGHT_RING_CAPACITY
+      ]!;
     if (!slot.used) continue;
     if (slot.t1 < opts.windowStartMs) continue;
     completed.push({
@@ -988,7 +1015,8 @@ function record(
   // self-feedback loop (see installProfilingSuppressionRuntime).
   if (suppressionRuntime.suppressed()) return;
 
-  const cappedLabel = label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
+  const cappedLabel =
+    label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
   const atMs = now();
 
   const byLabel = aggregates[kind];
@@ -1142,7 +1170,11 @@ function record(
  * A leaf never opens an `EntryContext`, so it mints its id here, at record time
  * — it has no in-flight window during which a child could reference it.
  */
-export function recordSpan(kind: SpanKind, label: string, durationMs: number): void {
+export function recordSpan(
+  kind: SpanKind,
+  label: string,
+  durationMs: number,
+): void {
   const cur = contextRuntime.current();
   record(
     kind,
@@ -1262,6 +1294,17 @@ export function currentCallerKind(): SpanKind | undefined {
 }
 
 /**
+ * The label of the innermost enclosing entry point at the current call site
+ * (the same entry `currentCallerKind` reads), or `undefined` when none is
+ * active. The DB pool wrapper stamps it on a lost query's deadline error, so the
+ * report names the resource / route / job that issued the query. Must be read
+ * synchronously (before any await) so the ambient context is still active.
+ */
+export function currentEntryLabel(): string | undefined {
+  return contextRuntime.current()?.label;
+}
+
+/**
  * The lane a unit of work belongs to: `interactive` = a human is blocked on it;
  * `background` = nobody is waiting on this millisecond. Shared-capacity layers
  * (the DB pool gates) partition by this so background demand, however deep its
@@ -1360,7 +1403,9 @@ export async function recordEntrySpan<T>(
   fn: () => T | Promise<T>,
 ): Promise<T> {
   const cur = contextRuntime.current();
-  const parent: SpanRef | null = cur ? { kind: cur.kind, label: cur.label } : null;
+  const parent: SpanRef | null = cur
+    ? { kind: cur.kind, label: cur.label }
+    : null;
   const t0 = now();
   // Fresh accumulators per entry, chained to the live parent context: a gate
   // charge deep inside `fn` walks this chain and unions into every open level.
@@ -1410,7 +1455,8 @@ export async function recordEntrySpan<T>(
     let waits: WaitBreakdown | undefined;
     if (ctx.layerUnions.size > 0) {
       waits = {};
-      for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
+      for (const [layer, track] of ctx.layerUnions)
+        waits[layer] = track.unionMs;
     }
     // Flatten the per-layer bands into one list. The context is closed and about
     // to be discarded, so the band objects can be handed off by reference.
@@ -1422,7 +1468,19 @@ export async function recordEntrySpan<T>(
       }
     }
     const parentId = ctx.parent ? ctx.parent.id : null;
-    record(kind, label, wall, ctx.id, parentId, parent, waits, waitMs, childMs, selfMs, waitBands);
+    record(
+      kind,
+      label,
+      wall,
+      ctx.id,
+      parentId,
+      parent,
+      waits,
+      waitMs,
+      childMs,
+      selfMs,
+      waitBands,
+    );
     // Flush the loader's captured table read-set into the index, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
     // under a non-loader entry is never indexed. Done after `record` so it can
@@ -1459,7 +1517,8 @@ export function getRuntimeProfile(): {
       .map((agg) => {
         let recentMaxMs = 0;
         for (const bucket of agg.recentBuckets) {
-          if (bucket.at > liveFloor && bucket.max > recentMaxMs) recentMaxMs = bucket.max;
+          if (bucket.at > liveFloor && bucket.max > recentMaxMs)
+            recentMaxMs = bucket.max;
         }
         return {
           label: agg.label,
@@ -1472,7 +1531,9 @@ export function getRuntimeProfile(): {
           selfTotalMs: agg.selfTotalMs,
           recentMaxMs,
           maxAgeMs: nowMs - agg.maxAtMs,
-          byParent: Array.from(agg.byParent.values()).sort((a, b) => b.count - a.count),
+          byParent: Array.from(agg.byParent.values()).sort(
+            (a, b) => b.count - a.count,
+          ),
           waits: agg.waits ? { ...agg.waits } : undefined,
         };
       })
@@ -1480,7 +1541,9 @@ export function getRuntimeProfile(): {
       // peak is stale (the aged peak stays readable via maxMs + maxAgeMs).
       .sort((a, b) => b.recentMaxMs - a.recentMaxMs);
     // Most-recent-slowest first: sort the slowest-N buffer by duration desc.
-    slowOut[kind] = [...slowest[kind]].sort((a, b) => b.durationMs - a.durationMs);
+    slowOut[kind] = [...slowest[kind]].sort(
+      (a, b) => b.durationMs - a.durationMs,
+    );
   }
   return { aggregates: aggOut, slowest: slowOut, sinceMs };
 }
@@ -1525,7 +1588,9 @@ export function getLastLoaderReadSet(key: string): string[] | undefined {
  * table→resource inversion (`getReadSetIndex` / `tableToResources`) is non-empty
  * for the first `applyDbChange` of catch-up, WITHOUT any loader having run.
  */
-export function seedReadSetIndex(seed: Record<string, readonly string[]>): void {
+export function seedReadSetIndex(
+  seed: Record<string, readonly string[]>,
+): void {
   for (const key in seed) {
     const tables = seed[key]!;
     if (tables.length === 0) continue;
@@ -1547,7 +1612,10 @@ export function seedReadSetIndex(seed: Record<string, readonly string[]>): void 
  * does not read only removes a spurious catch-up recompute trigger, never causes
  * staleness. Returns the resource keys whose read-set changed (for logging).
  */
-export function removeReadSetTable(table: string, keepKeys: readonly string[]): string[] {
+export function removeReadSetTable(
+  table: string,
+  keepKeys: readonly string[],
+): string[] {
   const keep = new Set(keepKeys);
   const changed: string[] = [];
   for (const [key, set] of readSetIndex) {

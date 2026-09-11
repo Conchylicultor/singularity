@@ -8,6 +8,7 @@ export {
   seedReadSetIndex,
   removeReadSetTable,
   currentCallerKind,
+  currentEntryLabel,
   currentOriginClass,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,

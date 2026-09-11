@@ -105,6 +105,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `conversations/conversation-view/status`
     - `conversations/summary`
     - `conversations/transcript-watcher`
+    - `database/query-deadline`
     - `debug/boot-budget`
     - `debug/boot-watchdog`
     - `debug/broadcasts`
@@ -130,6 +131,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `debug/slow-ops`
     - `debug/slow-ops/cluster`
     - `debug/stall-monitor`
+    - `debug/stuck-spans`
     - `debug/timeline`
     - `debug/trace/boot`
     - `debug/trace/client-boot`

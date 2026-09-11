@@ -7,7 +7,11 @@ Watches this page's connection to its backends and says so.
   (`web/internal/connection-health.ts`, bun-tested) folds the two notification
   sockets — this worktree's server and central — into one status: both open is
   ok, any closed is critical and names which, and any still (re)connecting is
-  attention with `transitioning` set so the dot pulses.
+  attention with `transitioning` set so the dot pulses. An open socket whose
+  server's heartbeat reports a live-state flush open ≥ 30 s
+  (`ChannelStatuses.serverFlushOpenMs`) is critical too — "live updates stuck":
+  the socket looks healthy but no push gets through. Closed outranks stuck;
+  stuck outranks (re)connecting.
 - **`ReconnectWatcher`** — the toast when the server restarts.
 - **`WedgeWatchdog`** — detects a live-state channel that stopped delivering.
 - **`getHealth` / `waitForRestart`** — the `/api/health` client helpers.

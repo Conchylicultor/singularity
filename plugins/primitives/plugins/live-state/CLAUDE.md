@@ -127,6 +127,13 @@ force a resub (its own ack is already in flight, and congestion is what triggers
 this path). Adopting a version you cannot back silently drops your own
 value-carrying `sub-ack` as stale.
 
+**Pings carry the server's flush age.** A ping's `flushOpenMs` (missing ⇒ 0)
+lands per channel in `ChannelStatuses.serverFlushOpenMs` — the only sign a tab
+gets of a server flush stuck while the socket stays open (read by the health
+report's Connection row). It resets to 0 on any socket status change, so a dead
+server's stall never outlives its connection; listeners fire only when it moves.
+Pinned by `notifications-heartbeat.test.ts`.
+
 **`sub-error` frames carry `params` and heal through `applyInvalidate`.** The
 frame is `{ kind, id?, key, params, reason }`; `params` exists so the
 shared-socket broadcast is gated on the local sub entry exactly like every other
@@ -748,6 +755,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `conversations/model-provider`
     - `conversations/recover`
     - `conversations/summary`
+    - `database/query-deadline`
     - `debug/claude-cli-calls`
     - `debug/live-state-health`
     - `debug/queue`

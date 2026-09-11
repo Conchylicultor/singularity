@@ -124,7 +124,9 @@ contribution/registry sets:
 - Server:
   - Contributes: `fork-data-exclusion` "live_state_changelog"
   - Uses:
+    - `database.BOOT_DDL_QUERY_DEADLINE_MS`
     - `database.db`
+    - `database.withQueryDeadline`
     - `database/admin.connectionString`
     - `database/admin.ExcludeFromFork`
     - `database/derived-tables.feedExemptTables`

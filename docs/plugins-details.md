@@ -5890,6 +5890,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `debug/slow-ops/pane`
           - `debug/stall-monitor`
+          - `debug/stuck-spans`
           - `shell/global-action-bar`
           - `shell/notifications`
           - `tasks/worktree-identity`
@@ -10912,12 +10913,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/derived-views.rebuildDerivedViews`
       - `database/migrations.runMigrations`
       - `primitives/log-channels.defineLogSink`
-    - Exports (types): `DbExecutor`
+    - Exports (types):
+      - `DbExecutor`
+      - `QueryDeadlineEvent`
     - Exports (values):
       - `awaitDbReady`
+      - `BOOT_DDL_QUERY_DEADLINE_MS`
       - `currentTxId`
       - `db`
       - `isTransientDbError`
+      - `QueryDeadlineExceededError`
+      - `queryDeadlineSink`
+      - `withQueryDeadline`
   - Cross-plugin:
     - Imported by:
       - `active-data`
@@ -10966,6 +10973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database/change-feed`
       - `database/db-test-fixture/worktree-db`
       - `database/live-state-snapshot`
+      - `database/query-deadline`
       - `debug/boot-profile`
       - `debug/profiling/boot-bench`
       - `debug/slow-ops`
@@ -11083,7 +11091,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
+          - `database.BOOT_DDL_QUERY_DEADLINE_MS`
           - `database.db`
+          - `database.withQueryDeadline`
           - `database/admin.connectionString`
           - `database/admin.ExcludeFromFork`
           - `database/derived-tables.feedExemptTables`
@@ -11292,9 +11302,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Loose top-level files: `drizzle.config.ts`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Cross-plugin:
-        - Imported by: `infra/launcher`
+        - Imported by:
+          - `database/query-deadline`
+          - `infra/launcher`
       - Server:
         - Exports (values):
+          - `PGBOUNCER_LOG_FILE`
           - `PGBOUNCER_PORT`
           - `PGBOUNCER_SOCKET_DIR`
           - `pgbouncerPidFileUnder`
@@ -11315,6 +11328,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
+    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per query label) when a query got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+      - Web:
+        - Contributes:
+          - `Reports.KindView` → `QueryDeadlineSummary`
+          - `Reports.KindView` → `AbandonCapSummary`
+          - `HealthReport.Row` "Database"
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/live-state.useResource`
+          - `reports.Reports`
+          - `shell/health-report.HealthReport`
+      - Server:
+        - Contributes:
+          - `report-kind` "db-query-deadline"
+          - `report-kind` "db-abandon-cap"
+          - `resource.declare` "db-query-deadlines"
+        - Uses:
+          - `database.queryDeadlineSink`
+          - `database/pgbouncer.PGBOUNCER_LOG_FILE`
+          - `reports.recordReport`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+        - Exports (values):
+          - `abandonCapKind`
+          - `queryDeadlineKind`
+        - Resources: `db-query-deadlines` (push)
+      - Core:
+        - Uses: `primitives/live-state.resourceDescriptor`
+        - Exports (types):
+          - `DbAbandonCapPayload`
+          - `DbQueryDeadlinePayload`
+          - `QueryDeadlineHit`
+          - `QueryDeadlines`
+        - Exports (values):
+          - `DB_ABANDON_CAP_KIND`
+          - `DB_QUERY_DEADLINE_KIND`
+          - `DbAbandonCapPayloadSchema`
+          - `DbQueryDeadlinePayloadSchema`
+          - `dbQueryDeadlinesResource`
+          - `QUERY_DEADLINE_RING_CAPACITY`
+          - `QueryDeadlineHitSchema`
+          - `QueryDeadlinesSchema`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
@@ -12944,6 +13000,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `StallPayloadSchema`
       - Cross-plugin:
         - Imported by: `debug/health-monitor`
+    - **`stuck-spans`** — Stuck-span report renderer: a one-line Debug → Reports summary for the span-stuck kind (how long it has been running, the chain of operations it is stuck under, and a View-trace chip). Stuck-span watchdog: a 15 s interval on each backend's own event loop — deliberately NOT a scheduled job — that reads the runtime profiler's open entries and files a span-stuck report while an http / sub / loader / push / flush / cascade span is still running past its threshold (90 s — past the app pool's 60 s query deadline; http 120 s), once per span run, naming the deepest stuck span of a chain with its open ancestors and attaching one coherent-instant trace per tick. Catches the hang a completion-time slow-op report never can. duressExempt; job and bg spans are excluded.
+      - Web:
+        - Contributes: `Reports.KindView` → `SpanStuckSummary`
+        - Uses:
+          - `apps-core/tabs.navigate`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/link-chip.LinkChip`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "span-stuck"
+        - Uses:
+          - `debug/trace/engine.captureTrace`
+          - `reports.recordReport`
+          - `reports.ReportKind`
+      - Core:
+        - Exports (types):
+          - `StuckAncestor`
+          - `StuckSpanPayload`
+        - Exports (values):
+          - `SPAN_STUCK_KIND`
+          - `StuckSpanPayloadSchema`
     - **`timeline`** — Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, streamed pull-only from the timeline endpoint. Cross-worktree unified timeline endpoint: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and streams them as NDJSON — pull-only, never live or polled.
       - Web:
         - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
@@ -13171,6 +13249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/sentinel`
               - `debug/slow-ops`
               - `debug/stall-monitor`
+              - `debug/stuck-spans`
               - `debug/trace/boot`
               - `debug/trace/client-boot`
               - `debug/trace/contention`
@@ -17700,6 +17779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `captureFlightWindow`
           - `chargeWait`
           - `currentCallerKind`
+          - `currentEntryLabel`
           - `currentOriginClass`
           - `getLastLoaderReadSet`
           - `getReadSetIndex`
@@ -21680,6 +21760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/status`
               - `conversations/summary`
               - `conversations/transcript-watcher`
+              - `database/query-deadline`
               - `debug/boot-budget`
               - `debug/boot-watchdog`
               - `debug/broadcasts`
@@ -21705,6 +21786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/slow-ops/cluster`
               - `debug/stall-monitor`
+              - `debug/stuck-spans`
               - `debug/timeline`
               - `debug/trace/boot`
               - `debug/trace/client-boot`
@@ -22390,6 +22472,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools/edit-page`
               - `conversations/conversation-view/op-status`
               - `conversations/transcript-watcher`
+              - `database/query-deadline`
               - `debug/boot-budget`
               - `debug/boot-watchdog`
               - `debug/duress-shed`
@@ -22404,6 +22487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/session-divergence`
               - `debug/slow-ops`
               - `debug/stall-monitor`
+              - `debug/stuck-spans`
               - `debug/trace/spans`
               - `page/editor`
               - `page/embed`
@@ -22635,6 +22719,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/slow-ops/pane`
               - `debug/stall-monitor`
+              - `debug/stuck-spans`
               - `improve/element-picker`
               - `page/inline-date`
               - `page/inline-page-link`
@@ -26323,6 +26408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/model-provider`
           - `conversations/recover`
           - `conversations/summary`
+          - `database/query-deadline`
           - `debug/claude-cli-calls`
           - `debug/live-state-health`
           - `debug/queue`
@@ -28906,7 +28992,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -28993,6 +29079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-tmux`
       - `conversations/transcript-watcher`
       - `database/db-test-fixture/sweep`
+      - `database/query-deadline`
       - `debug/boot-budget`
       - `debug/boot-watchdog`
       - `debug/duress-shed`
@@ -29006,6 +29093,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `debug/session-divergence`
       - `debug/slow-ops`
       - `debug/stall-monitor`
+      - `debug/stuck-spans`
       - `debug/trace/engine`
       - `debug/worktree-cleanup`
       - `infra/boot-snapshot`
@@ -29768,7 +29856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
-        - Slots: `HealthReport.Row` ← `infra.health`, `tasks.worktree-identity`
+        - Slots: `HealthReport.Row` ← `database.query-deadline`, `infra.health`, `tasks.worktree-identity`
         - Uses:
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -29803,6 +29891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HealthReportButton`
       - Cross-plugin:
         - Imported by:
+          - `database/query-deadline`
           - `infra/health`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`

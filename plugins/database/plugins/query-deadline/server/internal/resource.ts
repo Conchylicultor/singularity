@@ -1,0 +1,27 @@
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import {
+  QUERY_DEADLINE_RING_CAPACITY,
+  dbQueryDeadlinesResource as descriptor,
+} from "../../core";
+import { createHitRing } from "./hit-ring";
+
+/** This backend's recent query-deadline hits. Process memory: a restart empties it. */
+export const deadlineHitRing = createHitRing(QUERY_DEADLINE_RING_CAPACITY);
+
+// External, not DB-backed: the truth is the ring above, which the change-feed
+// can never observe — so it keeps the explicit `notify()` that only
+// `defineExternalResource` hands out. Push mode: the value is a handful of
+// small rows, identical for every tab, and read by the always-mounted health
+// dot whenever it changes.
+//
+// The push rides the same live-state flush that a lost query can freeze. That
+// is safe by construction: the deadline is what unfreezes the flush (the stuck
+// loader gets its error within one deadline), and the hit's notify is queued
+// behind it. The "stalled right now" case is the Connection row's job.
+export const dbQueryDeadlinesServerResource = defineExternalResource(
+  descriptor,
+  {
+    mode: "push",
+    loader: () => Promise.resolve({ hits: deadlineHitRing.snapshot() }),
+  },
+);

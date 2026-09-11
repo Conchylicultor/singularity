@@ -80,6 +80,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`pgbouncer`** [load-bearing] — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
+    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per query label) when a query got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
     - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
@@ -88,7 +89,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
         - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.
 
-- **`debug`** [53 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [54 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [91 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
