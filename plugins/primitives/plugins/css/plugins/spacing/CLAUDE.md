@@ -347,6 +347,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/multi-select`
     - `primitives/outline/rail`
     - `primitives/overlay/floating-action`
+    - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/pane`
     - `primitives/prompt-editor`

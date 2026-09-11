@@ -33,6 +33,7 @@
     - `primitives/action-presentation`
     - `primitives/icon-button`
     - `primitives/launch`
+    - `primitives/overlay/image-viewer`
     - `primitives/undo-redo`
     - `reorder/edit-mode`
     - `tasks/task-draft-form`

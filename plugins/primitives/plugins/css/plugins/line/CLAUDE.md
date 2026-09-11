@@ -83,6 +83,7 @@ attribute type carries.
     - `primitives/error-boundary`
     - `primitives/log-channels`
     - `primitives/outline/rail`
+    - `primitives/overlay/image-viewer`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `review/code-review`

@@ -1,43 +1,53 @@
-import { useState } from "react";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
-import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { useRowMarkdown, useSectionExpand } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import type {
+  JsonlEvent,
+  UserTextSegment,
+} from "@plugins/conversations/plugins/transcript-watcher/core";
+import {
+  useRowMarkdown,
+  useSectionExpand,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Expandable } from "@plugins/primitives/plugins/expandable/web";
+import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
 function InlineImage({ mime, data }: { mime: string; data: string }) {
-  const [expanded, setExpanded] = useState(false);
+  // `image/svg+xml` → `svg`: the name is also the download's file name.
+  const ext = mime.slice(mime.indexOf("/") + 1).split("+")[0];
   return (
-    <button
-      type="button"
-      onClick={() => setExpanded((v) => !v)}
-      className="block max-w-full"
-      aria-label={expanded ? "Collapse image" : "Expand image"}
-    >
-      <img
-        src={`data:${mime};base64,${data}`}
-        alt="Attached image"
-        className={
-          expanded
-            ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
-            : "max-h-40 max-w-xs rounded-md border border-border object-cover"
-        }
-      />
-    </button>
+    <ViewerThumbnail
+      image={{
+        src: `data:${mime};base64,${data}`,
+        name: `pasted-image.${ext}`,
+        sourceLabel: "Pasted",
+        alt: "Attached image",
+      }}
+    />
   );
 }
 
-function SegmentedContent({ segments, raw }: { segments: UserTextSegment[]; raw: boolean }) {
+function SegmentedContent({
+  segments,
+  raw,
+}: {
+  segments: UserTextSegment[];
+  raw: boolean;
+}) {
   return (
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
-          <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
+          <Text
+            as="div"
+            variant="body"
+            key={i}
+            className="whitespace-pre-wrap break-words"
+          >
             {raw ? seg.value : <InlineText text={seg.value} />}
           </Text>
         ) : (

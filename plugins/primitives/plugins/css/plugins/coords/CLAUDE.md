@@ -180,6 +180,7 @@ default is stated twice and can therefore drift.
     - `improve/element-picker`
     - `page/editor`
     - `primitives/graph-canvas`
+    - `primitives/overlay/image-viewer`
     - `primitives/virtual-rows`
     - `screenshot`
     - `screenshot/draw-canvas`

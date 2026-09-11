@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
 export function ReadImageView({
   worktree,
@@ -7,33 +7,8 @@ export function ReadImageView({
   worktree: string;
   filePath: string;
 }) {
-  const [expanded, setExpanded] = useState(true);
   const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(filePath)}`;
-  const alt = filePath.slice(filePath.lastIndexOf("/") + 1);
+  const name = filePath.slice(filePath.lastIndexOf("/") + 1);
 
-  return (
-    <button
-      type="button"
-      onClick={() => setExpanded((v) => !v)}
-      className="block max-w-full"
-      aria-label={expanded ? "Collapse image" : "Expand image"}
-    >
-      <img
-        src={src}
-        alt={alt}
-        className={
-          expanded
-            ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
-            : "max-h-32 max-w-xs rounded-md border border-border object-cover"
-        }
-        style={expanded ? undefined : { imageRendering: "pixelated" }}
-        onLoad={(e) => {
-          const img = e.currentTarget;
-          if (img.naturalWidth > 64 || img.naturalHeight > 64) {
-            img.style.imageRendering = "auto";
-          }
-        }}
-      />
-    </button>
-  );
+  return <ViewerThumbnail image={{ src, name, sourceLabel: "Read" }} />;
 }

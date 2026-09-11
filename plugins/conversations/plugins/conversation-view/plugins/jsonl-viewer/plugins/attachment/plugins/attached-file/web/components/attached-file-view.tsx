@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { CodeListing } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
 interface ImageContent {
   type: "image";
@@ -67,32 +67,6 @@ function noteOf(parts: (string | null)[]): string | undefined {
   return kept.length > 0 ? `· ${kept.join(" · ")}` : undefined;
 }
 
-/** Mirrors the `user-image` row's small/large toggle so a file-attached image
- *  behaves like a pasted one. It fits rather than crops, though: these are
- *  screenshots, and a cropped thumbnail of a wide screenshot shows a strip of
- *  the middle instead of the picture. */
-function AttachedImage({ src }: { src: string }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => setExpanded((v) => !v)}
-      className="block max-w-full"
-      aria-label={expanded ? "Shrink image" : "Enlarge image"}
-    >
-      <img
-        src={src}
-        alt="Attached image"
-        className={
-          expanded
-            ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
-            : "max-h-64 max-w-full rounded-md border border-border object-contain"
-        }
-      />
-    </button>
-  );
-}
-
 /**
  * A file the user attached to their message — 9 times in 10 a pasted
  * screenshot, otherwise a text file.
@@ -114,6 +88,7 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
     const { base64, type, originalSize, dimensions } = content.file;
     const width = dimensions?.originalWidth;
     const height = dimensions?.originalHeight;
+    const path = payload.filename ?? payload.displayPath;
     return (
       <CollapsibleCard
         label="Attached image"
@@ -123,7 +98,18 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
         ])}
         defaultOpen
       >
-        <AttachedImage src={`data:${type};base64,${base64}`} />
+        <ViewerThumbnail
+          image={{
+            src: `data:${type};base64,${base64}`,
+            // The `<uuid>.png` blob name: meaningless on the row, but it is
+            // the file a download saves as.
+            name: path
+              ? path.slice(path.lastIndexOf("/") + 1)
+              : "attached-image",
+            sourceLabel: "Attached",
+            alt: "Attached image",
+          }}
+        />
       </CollapsibleCard>
     );
   }

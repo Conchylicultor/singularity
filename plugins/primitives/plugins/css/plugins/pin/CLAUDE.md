@@ -145,6 +145,7 @@ offsets expressible on the semantic ramp.
     - `primitives/log-channels`
     - `primitives/multi-select`
     - `primitives/outline/rail`
+    - `primitives/overlay/image-viewer`
     - `primitives/row-actions`
     - `primitives/search`
     - `primitives/sync-status`

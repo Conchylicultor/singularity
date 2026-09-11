@@ -28,6 +28,7 @@ import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ImageGallery } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
@@ -137,26 +138,31 @@ function EventSections({
 
   return (
     <Stack gap="sm" className="mx-auto max-w-reading p-sm pb-2xl">
-      {sections.map((section) => {
-        const firstEvent = events[section.start]!;
-        if (firstEvent.kind !== "user-text") {
+      {/* One ← / → set per pane, over the transcript's own images only: the
+          trailing children (working indicator, pending prompt and turns) and
+          the composer below the pane hold nothing that was sent yet. */}
+      <ImageGallery>
+        {sections.map((section) => {
+          const firstEvent = events[section.start]!;
+          if (firstEvent.kind !== "user-text") {
+            return (
+              <Fragment key={section.start}>
+                {Array.from({ length: section.end - section.start }, (_, j) =>
+                  renderEvent(section.start + j),
+                )}
+              </Fragment>
+            );
+          }
           return (
-            <Fragment key={section.start}>
-              {Array.from({ length: section.end - section.start }, (_, j) =>
-                renderEvent(section.start + j),
+            <Stack key={section.start} gap="sm">
+              <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
+              {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
+                renderEvent(section.start + 1 + j),
               )}
-            </Fragment>
+            </Stack>
           );
-        }
-        return (
-          <Stack key={section.start} gap="sm">
-            <StickyUserHeader>{renderEvent(section.start)}</StickyUserHeader>
-            {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
-              renderEvent(section.start + 1 + j),
-            )}
-          </Stack>
-        );
-      })}
+        })}
+      </ImageGallery>
       {children}
     </Stack>
   );

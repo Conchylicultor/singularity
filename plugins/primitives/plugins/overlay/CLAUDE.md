@@ -5,7 +5,7 @@ as the user is doing one thing, and then it goes away. A menu, a tooltip, a moda
 panel that grows out of a button. Everything here answers **what floats above the page,
 and what does it anchor to?**
 
-The nine members overlap enough that the choice is easy to get wrong, so pick by the
+The ten members overlap enough that the choice is easy to get wrong, so pick by the
 anchor and the focus behaviour, not by the word in the name.
 
 Reach for:
@@ -21,6 +21,7 @@ Reach for:
 | A box that **fills the app tab**, leaving the tab bar and app rail usable | `surface-overlay` |
 | A crash inside open overlay content to **stay inside that overlay** | `overlay-boundary` |
 | A **hover label**, or a keyboard-shortcut badge | `tooltip` |
+| An image that opens **full-window** to zoom and pan, stepping through its neighbours | `image-viewer` |
 | To know a **popup is open underneath you**, so hover-revealed chrome stays revealed | `popup-open` |
 
 `popover` and `floating-surface` are siblings, not one wrapping the other. They render the
@@ -48,11 +49,12 @@ read.
 
 ## Plugin reference
 
-- Description: What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), and the signal saying a popup is open beneath you (popup-open).
+- Description: What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), and the signal saying a popup is open beneath you (popup-open).
 - Sub-plugins:
   - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
   - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
   - **`floating-surface`** — Focus-less caret-anchored floating surface: positions a panel against a virtual anchor rect via Floating UI (flip + scroll-follow), rendering the shared OverlayPanel inside a ViewportOverlay, without ever taking focus. A sibling to InlinePopover for transient caret menus.
+  - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail, with tall/tiny shapes and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
   - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
   - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
   - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.

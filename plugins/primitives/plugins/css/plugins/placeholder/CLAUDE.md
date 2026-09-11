@@ -80,6 +80,7 @@
     - `primitives/folder-picker`
     - `primitives/live-state`
     - `primitives/loading`
+    - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `review/code-review`
     - `search/quick-find`

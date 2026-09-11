@@ -305,6 +305,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/dom/copy-source-text`
     - `primitives/dom/overscroll-hint`
     - `primitives/networking`
+    - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/row-actions`
     - `primitives/text-editor/caret-trigger`

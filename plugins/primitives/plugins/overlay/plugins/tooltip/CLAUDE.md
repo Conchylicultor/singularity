@@ -45,6 +45,7 @@
     - `primitives/css/control-panel`
     - `primitives/icon-button`
     - `primitives/launch`
+    - `primitives/overlay/image-viewer`
     - `primitives/overlay/popover`
     - `primitives/pane`
     - `primitives/sync-status`

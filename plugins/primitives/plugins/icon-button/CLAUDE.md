@@ -134,6 +134,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/date-picker`
     - `primitives/folder-picker`
     - `primitives/launch`
+    - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/prompt-editor/voice-input`
     - `primitives/sync-status`

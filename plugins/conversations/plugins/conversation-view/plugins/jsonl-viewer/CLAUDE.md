@@ -69,6 +69,11 @@ re-contribute a renderer matching `"unknown"` — that would make the dispatch
 report `matched: true` and silently take the investigate action away from the
 one row family that most needs it.
 
+**Render an image as a `ViewerThumbnail`** (`primitives/overlay/image-viewer`),
+never a hand-rolled expand toggle. `JsonlPane` wraps the rendered events (not the
+pending turns or the composer) in one `<ImageGallery>` per pane, so every
+thumbnail in a row joins the pane's ← / → set with no wiring.
+
 ## Overlays: get the scroller from `paneScrollScope.useRoot()`
 
 An `Overlay` contribution renders as a SIBLING of the transcript scroller (inside
@@ -132,6 +137,7 @@ back.
     - `primitives/live-state.ResourceView`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/relative-time.RelativeTime`
     - `primitives/row-actions.rowActionsAnchor`

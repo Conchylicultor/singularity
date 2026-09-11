@@ -182,7 +182,7 @@ looks equivalent and silently discards the caller's.
     - `page/editor`
     - `primitives/adaptive-bar`
     - `primitives/overlay/floating-surface`
-    - `primitives/text-editor/paste-images`
+    - `primitives/overlay/image-viewer`
     - `reports/viewport-escape`
     - `screenshot/draw-on-app`
 

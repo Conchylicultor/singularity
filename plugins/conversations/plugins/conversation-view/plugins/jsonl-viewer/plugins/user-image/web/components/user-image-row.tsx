@@ -1,6 +1,6 @@
-import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
+import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -9,8 +9,9 @@ type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
 
 export function UserImageRow({ event }: { event: JsonlEvent }) {
   const e = event as UserImageEvent;
-  const [expanded, setExpanded] = useState(false);
   const src = `data:${e.mime};base64,${e.data}`;
+  // `image/svg+xml` → `svg`: the name is also the download's file name.
+  const ext = e.mime.slice(e.mime.indexOf("/") + 1).split("+")[0];
   return (
     <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
       <Pin to="top-right" offset="sm">
@@ -23,22 +24,14 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
           <span>{e.mime}</span>
         </Stack>
       </SectionLabel>
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="block max-w-full"
-        aria-label={expanded ? "Collapse image" : "Expand image"}
-      >
-        <img
-          src={src}
-          alt="User-pasted image"
-          className={
-            expanded
-              ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
-              : "max-h-32 max-w-xs rounded-md border border-border object-cover"
-          }
-        />
-      </button>
+      <ViewerThumbnail
+        image={{
+          src,
+          name: `pasted-image.${ext}`,
+          sourceLabel: "Pasted",
+          alt: "User-pasted image",
+        }}
+      />
     </div>
   );
 }

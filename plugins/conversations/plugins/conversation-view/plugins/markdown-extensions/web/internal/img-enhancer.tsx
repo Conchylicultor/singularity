@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
@@ -19,6 +20,13 @@ function isExternalUrl(src: string): boolean {
     src.startsWith("https://") ||
     src.startsWith("data:")
   );
+}
+
+/** The file name a markdown image's address ends in — `IMG_HREF_RE` has
+ *  already required an image extension there. */
+function basename(src: string): string {
+  const path = src.replace(/[?#].*$/, "");
+  return path.slice(path.lastIndexOf("/") + 1);
 }
 
 export function ImgEnhancer({ children }: { children: ReactNode }) {
@@ -41,24 +49,17 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
         img: ({ src, alt }) => {
           if (typeof src !== "string" || !src) return null;
           const isImage = IMG_HREF_RE.test(src);
-          if (isExternalUrl(src) && isImage) {
-            return (
-              <img
-                src={src}
-                alt={alt ?? ""}
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- block margin separating an inline-rendered markdown image from surrounding flow content; no flex parent to own a gap
-                className="my-2 max-w-full rounded-sm border border-border"
-              />
-            );
-          }
           if (isImage) {
-            const apiSrc = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(src)}`;
             return (
-              <img
-                src={apiSrc}
-                alt={alt ?? ""}
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- block margin separating an inline-rendered markdown image from surrounding flow content; no flex parent to own a gap
-                className="my-2 max-w-full rounded-sm border border-border"
+              <ViewerThumbnail
+                image={{
+                  src: isExternalUrl(src)
+                    ? src
+                    : `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(src)}`,
+                  name: basename(src),
+                  sourceLabel: "Markdown",
+                  alt: alt || undefined,
+                }}
               />
             );
           }

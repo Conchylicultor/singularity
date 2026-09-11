@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-overlay-image-viewer",
+  "description": "One full-screen image viewer for every image in the app: fit, click-to-100%, wheel/pinch zoom, drag pan, ← / → through a page-ordered gallery, and the capped inline thumbnail that opens it.",
+  "private": true,
+  "version": "0.0.1"
+}

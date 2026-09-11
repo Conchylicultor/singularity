@@ -420,6 +420,7 @@ fixed raw size escapes per-site via
     - `primitives/log-channels`
     - `primitives/markdown`
     - `primitives/outline/rail`
+    - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/pane`
     - `primitives/rank-reorder`

@@ -55,6 +55,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `page/video`
     - `primitives/data-view`
     - `primitives/data-view/view-core`
+    - `primitives/overlay/image-viewer`
     - `primitives/text-editor/paste-images`
     - `tasks/task-description`
     - `tasks/task-draft-form`

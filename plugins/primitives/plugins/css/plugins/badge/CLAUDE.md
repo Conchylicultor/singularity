@@ -158,6 +158,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/file-links`
+    - `primitives/overlay/image-viewer`
     - `release/runs-arm`
     - `reorder`
     - `reports/adaptive-bar`

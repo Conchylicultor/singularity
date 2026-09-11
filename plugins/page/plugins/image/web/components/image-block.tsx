@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { MdClose, MdImage } from "react-icons/md";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
+import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
-  attachmentUrl,
-  Lightbox,
-} from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+  ImageGallery,
+  useImageViewerTrigger,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -40,12 +41,16 @@ export function ImageBlock({ block, isFocused, editor }: BlockRendererProps) {
   }
 
   return (
-    <FilledImageBlock
-      attachmentId={attachmentId}
-      width={width ?? DEFAULT_W}
-      alt={alt}
-      editor={editor}
-    />
+    // The block keeps its own <img>, so it renders the gallery its trigger
+    // needs: a gallery of one, rendered inside the block.
+    <ImageGallery>
+      <FilledImageBlock
+        attachmentId={attachmentId}
+        width={width ?? DEFAULT_W}
+        alt={alt}
+        editor={editor}
+      />
+    </ImageGallery>
   );
 }
 
@@ -62,7 +67,13 @@ function FilledImageBlock({
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [liveWidth, setLiveWidth] = useState<number | null>(null);
-  const [lightbox, setLightbox] = useState(false);
+  const src = attachmentUrl(attachmentId);
+  // A click on the resizable <img> opens the full-window viewer.
+  const viewerTrigger = useImageViewerTrigger<HTMLImageElement>({
+    src,
+    name: alt || "Image",
+    alt: alt || undefined,
+  });
 
   const displayWidth = liveWidth ?? width;
 
@@ -100,9 +111,9 @@ function FilledImageBlock({
         style={{ width: displayWidth }}
       >
         <img
-          src={attachmentUrl(attachmentId)}
+          src={src}
           alt={alt ?? ""}
-          onClick={() => setLightbox(true)}
+          {...viewerTrigger}
           className="block w-full cursor-zoom-in rounded-md"
         />
         <Pin to="top-right" offset="xs">
@@ -132,13 +143,6 @@ function FilledImageBlock({
           <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
         </Pin>
       </div>
-      {lightbox ? (
-        <Lightbox
-          attachmentId={attachmentId}
-          alt={alt}
-          onClose={() => setLightbox(false)}
-        />
-      ) : null}
     </Inset>
   );
 }

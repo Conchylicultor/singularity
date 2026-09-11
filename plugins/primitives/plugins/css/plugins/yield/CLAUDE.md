@@ -79,6 +79,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
     - `primitives/app-shell`
     - `primitives/css/fill`
     - `primitives/data-view`
+    - `primitives/overlay/image-viewer`
     - `primitives/prompt-editor`
     - `primitives/text-editor`
     - `search/quick-find`

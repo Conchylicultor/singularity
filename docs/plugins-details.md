@@ -8904,6 +8904,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.ResourceView`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/image-viewer.ImageGallery`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/relative-time.RelativeTime`
               - `primitives/row-actions.rowActionsAnchor`
@@ -9069,6 +9070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `conversations/conversation-view/jsonl-viewer/code-listing.CodeListing`
                       - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                       - `conversations/conversation-view/jsonl-viewer/file-path.FilePath`
+                      - `primitives/overlay/image-viewer.ViewerThumbnail`
                 - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
@@ -9755,6 +9757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                       - `primitives/css/badge.Badge`
                       - `primitives/css/line.Line`
                       - `primitives/css/text.Text`
+                      - `primitives/overlay/image-viewer.ViewerThumbnail`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
@@ -9898,6 +9901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/pin.Pin`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.SectionLabel`
+                  - `primitives/overlay/image-viewer.ViewerThumbnail`
             - **`user-text`** — Renders user text events in the JSONL viewer.
               - Web:
                 - Contributes:
@@ -9914,6 +9918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/text.Text`
                   - `primitives/expandable.Expandable`
                   - `primitives/inline-text.InlineText`
+                  - `primitives/overlay/image-viewer.ViewerThumbnail`
                   - `primitives/select-scope.ContentScope`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
@@ -9962,6 +9967,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/markdown.MarkdownEnhancementContext`
               - `primitives/markdown.MarkdownEnhancerSlot`
               - `primitives/markdown.useMarkdownEnhancement`
+              - `primitives/overlay/image-viewer.ViewerThumbnail`
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.taskDetailPane`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
@@ -15576,6 +15582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/dom/copy-source-text`
               - `primitives/dom/overscroll-hint`
               - `primitives/networking`
+              - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/row-actions`
               - `primitives/text-editor/caret-trigger`
@@ -19529,8 +19536,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/hover-reveal.hoverRevealGroup`
           - `primitives/hover-reveal.hoverRevealTarget`
+          - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.useImageViewerTrigger`
           - `primitives/text-editor/paste-images.attachmentUrl`
-          - `primitives/text-editor/paste-images.Lightbox`
         - Exports (values): `imageBlock`
       - Server:
         - Contributes: `page.block-data` "image"
@@ -21245,6 +21253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `page/editor`
           - `primitives/date-picker`
+          - `primitives/overlay/image-viewer`
     - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
       - Web:
         - Slots: `AppShell.Framing` ← `ui.sidebar-framing`
@@ -21724,6 +21733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/file-links`
+              - `primitives/overlay/image-viewer`
               - `release/runs-arm`
               - `reorder`
               - `reports/adaptive-bar`
@@ -21872,6 +21882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/diff-view`
               - `primitives/folder-picker`
               - `primitives/icon-picker`
+              - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/setup-steps`
               - `primitives/text-editor/paste-images`
@@ -21937,6 +21948,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/diff-view`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `review/plugin-changes`
               - `review/plugin-changes/file-changes`
               - `screenshot`
@@ -22166,6 +22178,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `improve/element-picker`
               - `page/editor`
               - `primitives/graph-canvas`
+              - `primitives/overlay/image-viewer`
               - `primitives/virtual-rows`
               - `screenshot`
               - `screenshot/draw-canvas`
@@ -22269,6 +22282,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/launch`
               - `primitives/log-channels`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/prompt-editor`
               - `primitives/setup-steps`
@@ -22445,6 +22459,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/loop`
               - `apps/sonata/progress/scrubber`
               - `page/code-block`
+              - `primitives/overlay/image-viewer`
               - `primitives/tree`
         - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
           - Web:
@@ -22569,6 +22584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/error-boundary`
               - `primitives/log-channels`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `reorder/node-types/header`
               - `reorder/node-types/overflow`
               - `review/code-review`
@@ -22704,6 +22720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/log-channels`
               - `primitives/multi-select`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `primitives/row-actions`
               - `primitives/search`
               - `primitives/sync-status`
@@ -22791,6 +22808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/folder-picker`
               - `primitives/live-state`
               - `primitives/loading`
+              - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `review/code-review`
               - `search/quick-find`
@@ -23387,6 +23405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/multi-select`
               - `primitives/outline/rail`
               - `primitives/overlay/floating-action`
+              - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/pane`
               - `primitives/prompt-editor`
@@ -23869,6 +23888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/log-channels`
               - `primitives/markdown`
               - `primitives/outline/rail`
+              - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/pane`
               - `primitives/rank-reorder`
@@ -24373,6 +24393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/cursor-menu`
               - `primitives/overlay/floating-action`
               - `primitives/overlay/floating-surface`
+              - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog`
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/overlay/popover`
@@ -24471,7 +24492,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor`
               - `primitives/adaptive-bar`
               - `primitives/overlay/floating-surface`
-              - `primitives/text-editor/paste-images`
+              - `primitives/overlay/image-viewer`
               - `reports/viewport-escape`
               - `screenshot/draw-on-app`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
@@ -24490,6 +24511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/app-shell`
               - `primitives/css/fill`
               - `primitives/data-view`
+              - `primitives/overlay/image-viewer`
               - `primitives/prompt-editor`
               - `primitives/text-editor`
               - `search/quick-find`
@@ -25523,6 +25545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/graph-canvas`
               - `primitives/outline/rail`
               - `primitives/overlay/floating-action`
+              - `primitives/overlay/image-viewer`
               - `primitives/terminal`
               - `reorder`
               - `screenshot`
@@ -25790,6 +25813,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/video`
           - `primitives/data-view`
           - `primitives/data-view/view-core`
+          - `primitives/overlay/image-viewer`
           - `primitives/text-editor/paste-images`
           - `tasks/task-description`
           - `tasks/task-draft-form`
@@ -25884,6 +25908,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/date-picker`
           - `primitives/folder-picker`
           - `primitives/launch`
+          - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
           - `primitives/sync-status`
@@ -26033,6 +26058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/networking`
           - `primitives/optimistic-mutation`
           - `primitives/outline/scroll-spy`
+          - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `primitives/prompt-editor/voice-input`
           - `primitives/scope/scoped-store`
@@ -26481,6 +26507,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-picker`
           - `primitives/lazy-component`
           - `primitives/live-state`
+          - `primitives/overlay/image-viewer`
           - `primitives/pane`
           - `review/code-review`
           - `review/plugin-changes`
@@ -26781,7 +26808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `primitives/outline/rail`
-    - **`overlay`** — What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), and the signal saying a popup is open beneath you (popup-open).
+    - **`overlay`** — What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), and the signal saying a popup is open beneath you (popup-open).
       - Plugins:
         - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
           - Web:
@@ -26832,6 +26859,105 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `FloatingSurface`
           - Cross-plugin:
             - Imported by: `primitives/text-editor/caret-trigger`
+        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail, with tall/tiny shapes and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+          - Web:
+            - Uses:
+              - `primitives/announce.announce`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/clip.clipClasses`
+              - `primitives/css/coords.placedClasses`
+              - `primitives/css/coords.placedStyle`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.selfClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.Separator`
+              - `primitives/css/ui-kit.SURFACE_LEVELS`
+              - `primitives/css/viewport-overlay.ViewportOverlay`
+              - `primitives/css/yield.yieldClass`
+              - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/hover-reveal.hoverRevealGroup`
+              - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
+              - `primitives/loading.Loading`
+              - `primitives/overlay/tooltip.Kbd`
+              - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/scope/scoped-store.defineScopedStore`
+              - `primitives/shortcuts.formatShortcutLabel`
+            - Exports (types):
+              - `ImageViewerProps`
+              - `ImageViewerTrigger`
+              - `ViewerImage`
+              - `ViewerThumbnailProps`
+            - Exports (values):
+              - `ImageGallery`
+              - `ImageViewer`
+              - `useImageViewerTrigger`
+              - `ViewerThumbnail`
+          - Cross-plugin:
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer`
+              - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
+              - `conversations/conversation-view/jsonl-viewer/tool-call/read`
+              - `conversations/conversation-view/jsonl-viewer/user-image`
+              - `conversations/conversation-view/jsonl-viewer/user-text`
+              - `conversations/conversation-view/markdown-extensions`
+              - `page/image`
+              - `primitives/text-editor/paste-images`
+          - Core:
+            - Exports (types):
+              - `Area`
+              - `ImageCapabilities`
+              - `KeyInput`
+              - `Minimap`
+              - `OpenVia`
+              - `Rect`
+              - `Size`
+              - `ThumbnailShape`
+              - `View`
+              - `ViewerAction`
+              - `ViewerKey`
+              - `WheelInput`
+            - Exports (values):
+              - `areaCenter`
+              - `centerOn`
+              - `clampView`
+              - `COMPACT_BELOW`
+              - `dataUriToBlob`
+              - `dataUriType`
+              - `detailScale`
+              - `DRAG_THRESHOLD`
+              - `fitScale`
+              - `fitView`
+              - `imageCapabilities`
+              - `isAtScale`
+              - `isZoomed`
+              - `matchViewerKey`
+              - `MAX_SCALE`
+              - `MINIMAP_BOX`
+              - `minimapRect`
+              - `overflows`
+              - `panView`
+              - `stepScale`
+              - `thumbnailShape`
+              - `VIEWER_GESTURES`
+              - `VIEWER_KEYS`
+              - `viewerArea`
+              - `viewerKey`
+              - `viewOverRect`
+              - `wheelZoomFactor`
+              - `ZOOM_LADDER`
+              - `zoomAt`
         - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
           - Web:
             - Contributes: `Core.Root` → `ImperativeDialogHost`
@@ -26982,6 +27108,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/control-panel`
               - `primitives/icon-button`
               - `primitives/launch`
+              - `primitives/overlay/image-viewer`
               - `primitives/overlay/popover`
               - `primitives/pane`
               - `primitives/sync-status`
@@ -27659,6 +27786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/audio/live-play`
               - `apps/sonata/shell`
               - `page/editor`
+              - `primitives/overlay/image-viewer`
               - `primitives/scope/dom-scope`
               - `primitives/sync-status`
               - `primitives/undo-redo`
@@ -27813,6 +27941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/action-presentation`
           - `primitives/icon-button`
           - `primitives/launch`
+          - `primitives/overlay/image-viewer`
           - `primitives/undo-redo`
           - `reorder/edit-mode`
           - `tasks/task-draft-form`
@@ -28113,7 +28242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `page/editor`
               - `primitives/text-editor`
-        - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
+        - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders them as inline thumbnail chips that open the full-window image viewer.
           - Web:
             - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
             - Uses:
@@ -28121,9 +28250,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/center.Center`
               - `primitives/css/pin.Pin`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/viewport-overlay.ViewportOverlay`
-              - `primitives/hover-reveal.hoverRevealGroup`
               - `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`
+              - `primitives/overlay/image-viewer.ViewerThumbnail`
               - `primitives/text-editor.registerNodeExtension`
               - `primitives/text-editor.TextEditorSlots`
             - Exports (values):
@@ -28133,7 +28261,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `attachmentUrl`
               - `extractAttachmentIds`
               - `isAttachmentUrl`
-              - `Lightbox`
               - `rewriteAttachmentMarkdown`
           - Core:
             - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`

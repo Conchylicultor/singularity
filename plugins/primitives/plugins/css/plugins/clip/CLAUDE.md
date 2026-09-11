@@ -74,6 +74,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `primitives/data-view/list`
     - `primitives/diff-view`
     - `primitives/outline/rail`
+    - `primitives/overlay/image-viewer`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`
     - `screenshot`

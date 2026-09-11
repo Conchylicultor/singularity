@@ -89,6 +89,7 @@ sink*, and it belongs in [`primitives/scope/install-sink`](../install-sink/CLAUD
     - `apps/sonata/audio/live-play`
     - `apps/sonata/shell`
     - `page/editor`
+    - `primitives/overlay/image-viewer`
     - `primitives/scope/dom-scope`
     - `primitives/sync-status`
     - `primitives/undo-redo`

@@ -73,6 +73,7 @@ different need, extend the primitive rather than allowlisting a copy.
     - `primitives/graph-canvas`
     - `primitives/outline/rail`
     - `primitives/overlay/floating-action`
+    - `primitives/overlay/image-viewer`
     - `primitives/terminal`
     - `reorder`
     - `screenshot`

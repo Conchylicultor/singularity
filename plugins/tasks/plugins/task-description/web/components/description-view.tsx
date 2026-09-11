@@ -1,7 +1,13 @@
-import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { useState } from "react";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import { useRef, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
@@ -40,6 +46,13 @@ export function DescriptionView({
     end: number;
   } | null>(null);
 
+  // Set when focus leaves the editor's DOM, and cleared if it lands back in the
+  // editor's React TREE within the same task: a pasted image's viewer is
+  // portaled to <body>, yet its focus bubbles here through React. Without
+  // this, opening an image would drop back to display mode — unmounting the
+  // chip, and the viewer with it.
+  const leaving = useRef(false);
+
   const enterEdit = (selection: { start: number; end: number } | null) => {
     setPendingSelection(selection);
     setEditing(true);
@@ -48,14 +61,23 @@ export function DescriptionView({
   if (editing) {
     return (
       <div
-        onFocus={onFocus}
+        onFocus={() => {
+          leaving.current = false;
+          onFocus?.();
+        }}
         onBlur={(e) => {
           // Only collapse back to display when focus leaves the whole editor —
-          // not when moving between Lexical's internal nodes.
+          // not when moving between Lexical's internal nodes, nor into a
+          // popup rendered from inside it (see `leaving`).
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-          setEditing(false);
-          setPendingSelection(null);
-          onBlur?.();
+          leaving.current = true;
+          queueMicrotask(() => {
+            if (!leaving.current) return;
+            leaving.current = false;
+            setEditing(false);
+            setPendingSelection(null);
+            onBlur?.();
+          });
         }}
       >
         <TextEditor
@@ -75,7 +97,10 @@ export function DescriptionView({
     <Text
       as="div"
       variant="body"
-      className={cn(hoverRevealGroup, "relative min-h-48 w-full cursor-text rounded-md border p-md")}
+      className={cn(
+        hoverRevealGroup,
+        "relative min-h-48 w-full cursor-text rounded-md border p-md",
+      )}
       // Enter edit on mouse-up so a drag-select (which suppresses `click`) still
       // switches to edit mode — carrying the selected range into the editor so
       // the user can immediately replace it. A plain click resolves to null and
@@ -118,7 +143,8 @@ function domSelectionToValueRange(
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
   const { anchorNode, anchorOffset, focusNode, focusOffset } = sel;
   if (!anchorNode || !focusNode) return null;
-  if (!container.contains(anchorNode) || !container.contains(focusNode)) return null;
+  if (!container.contains(anchorNode) || !container.contains(focusNode))
+    return null;
   const a = resolveRawOffset(container, anchorNode, anchorOffset);
   const b = resolveRawOffset(container, focusNode, focusOffset);
   if (a === null || b === null || a === b) return null;
@@ -131,9 +157,7 @@ function resolveRawOffset(
   offset: number,
 ): number | null {
   const el =
-    node.nodeType === Node.TEXT_NODE
-      ? node.parentElement
-      : (node as Element);
+    node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
   const seg = el?.closest<HTMLElement>("[data-vstart]");
   if (!seg || !container.contains(seg)) return null;
   const base = Number(seg.dataset.vstart);
@@ -161,7 +185,11 @@ function DescriptionDisplay({ text }: { text: string }) {
     const id = isAttachmentUrl(m[2]!);
     if (!id) continue;
     if (m.index > lastIdx) {
-      segments.push({ kind: "text", value: text.slice(lastIdx, m.index), start: lastIdx });
+      segments.push({
+        kind: "text",
+        value: text.slice(lastIdx, m.index),
+        start: lastIdx,
+      });
     }
     segments.push({ kind: "image", id, alt: m[1] ?? "", start: m.index });
     lastIdx = m.index + m[0].length;

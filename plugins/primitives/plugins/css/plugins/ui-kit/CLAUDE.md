@@ -651,6 +651,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/overlay/cursor-menu`
     - `primitives/overlay/floating-action`
     - `primitives/overlay/floating-surface`
+    - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog`
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/overlay/popover`

@@ -4303,6 +4303,10 @@
         "@floating-ui/react-dom": "^2.1.8",
       },
     },
+    "plugins/primitives/plugins/overlay/plugins/image-viewer": {
+      "name": "@singularity/plugin-primitives-overlay-image-viewer",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overlay/plugins/imperative-dialog": {
       "name": "@singularity/plugin-primitives-overlay-imperative-dialog",
       "version": "0.0.1",
@@ -7891,6 +7895,8 @@
     "@singularity/plugin-primitives-overlay-floating-action": ["@singularity/plugin-primitives-overlay-floating-action@workspace:plugins/primitives/plugins/overlay/plugins/floating-action"],
 
     "@singularity/plugin-primitives-overlay-floating-surface": ["@singularity/plugin-primitives-overlay-floating-surface@workspace:plugins/primitives/plugins/overlay/plugins/floating-surface"],
+
+    "@singularity/plugin-primitives-overlay-image-viewer": ["@singularity/plugin-primitives-overlay-image-viewer@workspace:plugins/primitives/plugins/overlay/plugins/image-viewer"],
 
     "@singularity/plugin-primitives-overlay-imperative-dialog": ["@singularity/plugin-primitives-overlay-imperative-dialog@workspace:plugins/primitives/plugins/overlay/plugins/imperative-dialog"],
 
