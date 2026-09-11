@@ -18167,7 +18167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `build/serve-composition`
               - `debug/worktree-cleanup`
-        - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
+        - **`removal-audit`** — Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call or a failed in-app checkout (whose partial tree git rolls back) when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
           - Server:
             - Contributes: `report-kind` "worktree-removed-externally"
             - Uses:

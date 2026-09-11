@@ -4,13 +4,14 @@ import { dirname, join } from "node:path";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { attemptBranchName } from "../../core";
+import { attemptBranchName, attemptBranchRef } from "../../core";
 import { namespaceCollision, probeNamespace } from "./composition-namespace";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 import {
   beginInAppRemoval,
   finishInAppRemoval,
   setRemovalBranch,
+  withCheckoutClaim,
   type InAppRemovalRecord,
 } from "./removal-seam";
 
@@ -48,6 +49,7 @@ const ADD_TIMEOUT_MS = 600_000; // ~160x the 3.8 s p50; its false positive is th
 const PRUNE_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as list
 const REMOVE_TIMEOUT_MS = 300_000; // ~250x the 1.2 s p50; still frees the flock inside one hourly tick
 const LOCK_TIMEOUT_MS = 60_000; // metadata-only, same starvation exposure as prune
+const REF_TIMEOUT_MS = 60_000; // one ref read, same starvation exposure as list
 const MISE_TRUST_TIMEOUT_MS = 30_000;
 
 // A git subprocess in this file blew its bound and was KILLED. Its own type,
@@ -245,6 +247,127 @@ async function unlockWorktreeForRemoval(
 }
 
 /**
+ * Whether the attempt's branch already exists in the main repo.
+ *
+ * `git worktree add -b` creates the branch BEFORE it writes the checkout, so an
+ * add that dies part-way leaves the branch standing with no checkout — git's own
+ * cleanup deletes the half-written directory and keeps the branch. That is the
+ * state a backend restart produces (the gateway signals the backend's whole
+ * process group, so the checkout child dies with it), and a retry that runs
+ * `add -b` again can only fail with "a branch named … already exists".
+ *
+ * Throws on anything but "exists" / "does not exist": reading a git failure as
+ * "no branch" would pick `-b` and fail the same way, and reading it as "branch
+ * exists" would check out a ref we never confirmed.
+ */
+async function attemptBranchExists(
+  repoRoot: string,
+  id: string,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const argv = [
+    GIT,
+    "-C",
+    repoRoot,
+    "show-ref",
+    "--verify",
+    "--quiet",
+    attemptBranchRef(id),
+  ];
+  const r = await spawnCaptured(argv, { timeoutMs: REF_TIMEOUT_MS, signal });
+  if (r.timedOut) {
+    throw new WorktreeGitTimeoutError({
+      message: `git show-ref did not finish within ${REF_TIMEOUT_MS} ms and was killed: ${argv.join(" ")}`,
+      command: argv.join(" "),
+      timeoutMs: REF_TIMEOUT_MS,
+    });
+  }
+  if (r.exitCode === 0) return true;
+  if (r.exitCode === 1) return false;
+  throw new Error(
+    `git show-ref for ${attemptBranchRef(id)} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+  );
+}
+
+/**
+ * Run one `git worktree add` (`argv`, either form) and leave no partial
+ * checkout behind when it fails. Called by `setupWorktree` inside its
+ * mutate-gate hold.
+ */
+async function addCheckout(
+  id: string,
+  repoRoot: string,
+  wtPath: string,
+  argv: string[],
+  signal?: AbortSignal,
+): Promise<void> {
+  // Demoted (`background: true` applies backgroundArgv/darwinbg): the checkout
+  // runs in the deferred spawn job — always background work relative to the
+  // interactive backends.
+  const r = await spawnCaptured(argv, {
+    background: true,
+    timeoutMs: ADD_TIMEOUT_MS,
+    signal,
+  });
+  if (r.timedOut) {
+    // MANDATORY companion to the timeout, not defensive tidiness. `setupWorktree`
+    // opens with `if (existsSync(wtPath)) return;` — so a checkout we killed
+    // half-way leaves a partial tree that the durable job's next retry reads as
+    // "already set up", handing a HALF-POPULATED worktree to `runtime.create`.
+    // That is strictly worse than the hang the timeout replaces, so the partial
+    // tree must not outlive the kill.
+    //
+    // Cleaned up INSIDE the same gate hold, and deliberately NOT via
+    // `removeWorktree`: that re-enters `withWorktreeMutateSlot` and would take a
+    // second of the three host-wide slots while we are still holding one.
+    //
+    // Known gap, accepted: SIGTERM reaches only the direct child. `taskpolicy`
+    // execs, so the kill lands on git itself, but git's forked `checkout` /
+    // `read-tree` grandchildren survive and may write into the tree we are about
+    // to remove. `rm -rf` is idempotent and anything they recreate is an
+    // unregistered leftover the reaper's next tick removes.
+    await rm(wtPath, { recursive: true, force: true });
+    // Deliberately NOT signal-bound, unlike the `add` above. This is the cleanup
+    // that keeps a killed checkout from leaving a partial tree the next retry
+    // reads as finished, so it has to run even when the caller has already been
+    // abandoned — cancelling it would trade a released flock for a corrupt
+    // worktree. Its own timeout is what makes running it unconditionally safe.
+    const pruned = await spawnCaptured(
+      [GIT, "-C", repoRoot, "worktree", "prune"],
+      {
+        background: true,
+        timeoutMs: PRUNE_TIMEOUT_MS,
+      },
+    );
+    if (pruned.timedOut || pruned.exitCode !== 0) {
+      console.warn(
+        `[worktree] prune after a timed-out 'worktree add' for ${id} did not succeed ` +
+          `(${pruned.timedOut ? "timed out" : `exit ${pruned.exitCode}`}): ` +
+          `${pruned.stderr.trim() || "<no stderr>"}`,
+      );
+    }
+    throw new WorktreeGitTimeoutError({
+      message:
+        `git worktree add for ${id} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
+        `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
+      command: argv.join(" "),
+      timeoutMs: ADD_TIMEOUT_MS,
+      worktreePath: wtPath,
+    });
+  }
+  // Fail loudly on a genuine checkout failure so the durable spawn job retries
+  // instead of handing `runtime.create` a nonexistent worktree dir (the latent
+  // swallowed-failure bug this replaces: the old code awaited `.exited` and
+  // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
+  // "already exists" race (a concurrent creator won) — treat it as success.
+  if (r.exitCode !== 0 && !existsSync(wtPath)) {
+    throw new Error(
+      `git worktree add for ${id} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
+    );
+  }
+}
+
+/**
  * @param compositionIds the ids currently in the composition manifest — the
  * checkout side of the namespace collision guard.
  *
@@ -307,69 +430,23 @@ export async function setupWorktree(
   // offender). The idempotent existsSync early-return and `mise trust` stay
   // outside the gate — they are cheap and must not hold a slot.
   await withWorktreeMutateSlot(async () => {
-    // Demoted (`background: true` applies backgroundArgv/darwinbg): the checkout
-    // runs in the deferred spawn job — always background work relative to the
-    // interactive backends.
-    const r = await spawnCaptured(
-      [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
-      { background: true, timeoutMs: ADD_TIMEOUT_MS, signal },
+    // Converge from a half-finished earlier try instead of assuming all-or-nothing.
+    // The branch is created before the checkout is written, so a killed add
+    // leaves "branch, no checkout" — check the existing branch out rather than
+    // asking git to create it again. Also the right answer when the branch
+    // outlived a reaped checkout: its commits are this attempt's work, and this
+    // is the same command the external-removal report prints as the recovery.
+    // Read inside the gate, like the registration check in `removeWorktreeUnlogged`.
+    const addArgv = (await attemptBranchExists(repoRoot, id, signal))
+      ? [GIT, "-C", repoRoot, "worktree", "add", wtPath, branch]
+      : [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"];
+    // Claimed on the removal seam for the whole add, cleanup included: a failed
+    // add deletes its own partial checkout (git from its signal handler, or the
+    // `rm` below after a timeout), and without the claim the removal audit would
+    // report our own rollback as an outside deletion.
+    await withCheckoutClaim(wtPath, () =>
+      addCheckout(id, repoRoot, wtPath, addArgv, signal),
     );
-    if (r.timedOut) {
-      // MANDATORY companion to the timeout, not defensive tidiness. This function
-      // opens with `if (existsSync(wtPath)) return;` — so a checkout we killed
-      // half-way leaves a partial tree that the durable job's next retry reads as
-      // "already set up", handing a HALF-POPULATED worktree to `runtime.create`.
-      // That is strictly worse than the hang the timeout replaces, so the partial
-      // tree must not outlive the kill.
-      //
-      // Cleaned up INSIDE the same gate hold, and deliberately NOT via
-      // `removeWorktree`: that re-enters `withWorktreeMutateSlot` and would take a
-      // second of the three host-wide slots while we are still holding one.
-      //
-      // Known gap, accepted: SIGTERM reaches only the direct child. `taskpolicy`
-      // execs, so the kill lands on git itself, but git's forked `checkout` /
-      // `read-tree` grandchildren survive and may write into the tree we are about
-      // to remove. `rm -rf` is idempotent and anything they recreate is an
-      // unregistered leftover the reaper's next tick removes.
-      await rm(wtPath, { recursive: true, force: true });
-      // Deliberately NOT signal-bound, unlike the `add` above. This is the cleanup
-      // that keeps a killed checkout from leaving a partial tree the next retry
-      // reads as finished, so it has to run even when the caller has already been
-      // abandoned — cancelling it would trade a released flock for a corrupt
-      // worktree. Its own timeout is what makes running it unconditionally safe.
-      const pruned = await spawnCaptured(
-        [GIT, "-C", repoRoot, "worktree", "prune"],
-        {
-          background: true,
-          timeoutMs: PRUNE_TIMEOUT_MS,
-        },
-      );
-      if (pruned.timedOut || pruned.exitCode !== 0) {
-        console.warn(
-          `[worktree] prune after a timed-out 'worktree add' for ${id} did not succeed ` +
-            `(${pruned.timedOut ? "timed out" : `exit ${pruned.exitCode}`}): ` +
-            `${pruned.stderr.trim() || "<no stderr>"}`,
-        );
-      }
-      throw new WorktreeGitTimeoutError({
-        message:
-          `git worktree add for ${id} did not finish within ${ADD_TIMEOUT_MS} ms and was ` +
-          `killed; the partial checkout at ${wtPath} was removed so the retry starts clean`,
-        command: `${GIT} -C ${repoRoot} worktree add -b ${branch} ${wtPath} main`,
-        timeoutMs: ADD_TIMEOUT_MS,
-        worktreePath: wtPath,
-      });
-    }
-    // Fail loudly on a genuine checkout failure so the durable spawn job retries
-    // instead of handing `runtime.create` a nonexistent worktree dir (the latent
-    // swallowed-failure bug this replaces: the old code awaited `.exited` and
-    // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
-    // "already exists" race (a concurrent creator won) — treat it as success.
-    if (r.exitCode !== 0 && !existsSync(wtPath)) {
-      throw new Error(
-        `git worktree add for ${id} failed (exit ${r.exitCode}): ${r.stderr.trim() || "<no stderr>"}`,
-      );
-    }
     // Locked inside the same gate hold as the checkout that created it: the
     // window between "the directory exists" and "the directory is protected" is
     // exactly the window an outside sweep can take it, so it is closed here

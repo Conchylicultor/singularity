@@ -8,6 +8,7 @@ function removal(over: Partial<InAppRemovalRecord> = {}): InAppRemovalRecord {
     path: "/repo/.claude/worktrees/att-1-aaaa",
     pid: 100,
     startedAt: 1_000,
+    endedAt: 2_000,
     branch: "git-worktree-remove",
     ...over,
   };
@@ -67,9 +68,20 @@ describe("classifyDisappearance", () => {
 
   test("an unfinished removal (no branch chosen yet) still claims it", () => {
     const verdict = classifyDisappearance("att-1-aaaa", [
-      removal({ branch: null }),
+      removal({ branch: null, endedAt: null }),
     ]);
     expect(verdict.attribution).toBe("in-app");
     expect(verdict.claimedBy?.branch).toBeNull();
+  });
+
+  // The incident this arm exists for: a backend restart killed a `git worktree
+  // add`, git deleted its own half-written checkout, and the audit reported it
+  // as an outside deletion because no removeWorktree call explained it.
+  test("a failed checkout's rollback claims it", () => {
+    const verdict = classifyDisappearance("att-1-aaaa", [
+      removal({ branch: "checkout-rollback" }),
+    ]);
+    expect(verdict.attribution).toBe("in-app");
+    expect(verdict.claimedBy?.branch).toBe("checkout-rollback");
   });
 });

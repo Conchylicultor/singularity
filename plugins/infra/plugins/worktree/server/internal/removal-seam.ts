@@ -21,11 +21,25 @@ import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
  * `emit()` never throws (the report-sink contract), so observability can never
  * take down the removal it describes.
  */
-export type RemovalBranch = "git-worktree-remove" | "rm-and-prune";
+/**
+ * How an in-app removal took the checkout away. The first two are the strategies
+ * `removeWorktree` chooses between. `checkout-rollback` is the removal nobody
+ * asks for: a `git worktree add` that fails deletes the partial checkout it had
+ * started writing. Git does that itself when it is killed mid-checkout (a
+ * backend restart signals the whole process group, git included), and
+ * `setupWorktree` does it with its own `rm` after killing an add that overran.
+ */
+export type RemovalBranch =
+  "git-worktree-remove" | "rm-and-prune" | "checkout-rollback";
 
-/** One announcement about an in-app removal. `phase` discriminates the arms. */
+/**
+ * One announcement about an in-app removal. `phase` discriminates the arms:
+ * `start` / `ok` / `failed` bracket a `removeWorktree` call, and
+ * `checkout-failed` is the single line a failed `git worktree add` leaves — its
+ * partial checkout, if it had written one, is gone by the time it is emitted.
+ */
 export interface WorktreeRemovalEvent {
-  phase: "start" | "ok" | "failed";
+  phase: "start" | "ok" | "failed" | "checkout-failed";
   id: string;
   path: string;
   pid: number;
@@ -50,6 +64,13 @@ export interface InAppRemovalRecord {
   path: string;
   pid: number;
   startedAt: number;
+  /**
+   * null while the operation is still running. The correlation window counts
+   * from here, not from `startedAt`: an operation can run for longer than the
+   * window (a removal queued behind the mutate gate, a checkout that overruns
+   * until its own timeout), and its directory vanishes at the END of it.
+   */
+  endedAt: number | null;
   /** null until `removeWorktree` has chosen its strategy. */
   branch: RemovalBranch | null;
 }
@@ -61,17 +82,29 @@ const RECENT_MAX = 200;
 const recent: InAppRemovalRecord[] = [];
 
 /**
- * In-app removals started within `withinMs`. The window is generous (the
- * removal is recorded before it queues on the host-wide mutate gate, so a
- * contended removal can sit for a while before its directory actually goes),
- * but bounded — matching an id against an hours-old entry would let one real
- * removal launder a later external deletion of a recreated worktree.
+ * In-app removals still running, or ended within `withinMs`. A running one
+ * always counts — however long it has queued on the host-wide mutate gate, its
+ * directory is about to go. An ended one counts only for a bounded window:
+ * matching an id against an hours-old entry would let one real removal launder a
+ * later external deletion of a recreated worktree.
  */
 export function recentInAppRemovals(
   withinMs: number,
   now: number = Date.now(),
 ): InAppRemovalRecord[] {
-  return recent.filter((r) => now - r.startedAt <= withinMs);
+  return recent.filter(
+    (r) => r.endedAt === null || now - r.endedAt <= withinMs,
+  );
+}
+
+function remember(record: InAppRemovalRecord): void {
+  recent.push(record);
+  if (recent.length > RECENT_MAX) recent.splice(0, recent.length - RECENT_MAX);
+}
+
+function forget(record: InAppRemovalRecord): void {
+  const i = recent.indexOf(record);
+  if (i !== -1) recent.splice(i, 1);
 }
 
 // The frames that identify the caller, minus this module's own. Trimmed to a
@@ -94,10 +127,10 @@ export function beginInAppRemoval(path: string): InAppRemovalRecord {
     path,
     pid: process.pid,
     startedAt: Date.now(),
+    endedAt: null,
     branch: null,
   };
-  recent.push(record);
-  if (recent.length > RECENT_MAX) recent.splice(0, recent.length - RECENT_MAX);
+  remember(record);
   worktreeRemovalSink.emit({
     phase: "start",
     id: record.id,
@@ -121,13 +154,64 @@ export function finishInAppRemoval(
   record: InAppRemovalRecord,
   outcome: { ok: true } | { ok: false; error: string },
 ): void {
+  record.endedAt = Date.now();
   worktreeRemovalSink.emit({
     phase: outcome.ok ? "ok" : "failed",
     id: record.id,
     path: record.path,
     pid: record.pid,
     branch: record.branch,
-    durationMs: Date.now() - record.startedAt,
+    durationMs: record.endedAt - record.startedAt,
     ...(outcome.ok ? {} : { error: outcome.error }),
   });
+}
+
+/**
+ * Run a `git worktree add` (and whatever cleanup follows it) while claiming the
+ * path it creates, so a checkout that fails is not reported as deleted by an
+ * outside actor.
+ *
+ * A failed add removes its own partial checkout, and it does so BEFORE the
+ * caller learns it failed: git deletes the half-written directory from its own
+ * signal handler when it is killed, and the watcher can see the directory go
+ * while `spawnCaptured` is still reaping the child. So the claim is taken before
+ * `fn` runs, the same ordering `beginInAppRemoval` uses and for the same reason.
+ *
+ * A successful `fn` drops the claim silently — the checkout exists, nothing
+ * vanished, and a claim left standing would let a later external deletion of
+ * the fresh checkout pass as ours. A throwing `fn` ends the claim, announces
+ * `checkout-failed` with the error, and rethrows; the claim then covers the
+ * correlation window after the failure like any finished removal.
+ */
+export async function withCheckoutClaim<T>(
+  path: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const record: InAppRemovalRecord = {
+    id: basename(path),
+    path,
+    pid: process.pid,
+    startedAt: Date.now(),
+    endedAt: null,
+    branch: "checkout-rollback",
+  };
+  remember(record);
+  let value: T;
+  try {
+    value = await fn();
+  } catch (err) {
+    record.endedAt = Date.now();
+    worktreeRemovalSink.emit({
+      phase: "checkout-failed",
+      id: record.id,
+      path: record.path,
+      pid: record.pid,
+      branch: record.branch,
+      durationMs: record.endedAt - record.startedAt,
+      error: String(err),
+    });
+    throw err;
+  }
+  forget(record);
+  return value;
 }

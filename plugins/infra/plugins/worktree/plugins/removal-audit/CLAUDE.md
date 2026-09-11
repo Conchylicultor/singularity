@@ -79,6 +79,18 @@ Two failure rules, both load-bearing:
   already exited), so it must stay distinct from "the probe could not run" — the
   report renders the two differently.
 
+## Failed checkouts are in-app removals too
+
+A failed `git worktree add` deletes its own partial checkout (git from its signal
+handler when killed, e.g. by a backend restart; `setupWorktree`'s `rm` after a
+timeout). So `setupWorktree` claims the path for the whole add
+(`withCheckoutClaim`, branch `checkout-rollback`) — taken BEFORE git runs, since
+git deletes the directory before the caller learns the add failed. A successful
+add drops the claim so it cannot excuse a later outside deletion.
+
+The correlation window counts from when an operation ENDED; a running one always
+claims, since a queued removal or a checkout running to its timeout can outlast it.
+
 ## What it still cannot attribute
 
 The process snapshot is best-effort and racy: a `git worktree remove` that has
@@ -91,7 +103,7 @@ part that took hours to establish by hand.
 
 ## Plugin reference
 
-- Description: Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
+- Description: Worktree checkout disappearance audit: a main-only watcher over <repo>/.claude/worktrees that diffs the top-level checkout set on every filesystem event and records each vanished checkout to the worktree-removal channel — attributed to an in-app removeWorktree call or a failed in-app checkout (whose partial tree git rolls back) when one claims it, or filed as a worktree-removed-externally report (Debug → Reports + bell) with a process snapshot when none does.
 - Server:
   - Contributes: `report-kind` "worktree-removed-externally"
   - Uses:

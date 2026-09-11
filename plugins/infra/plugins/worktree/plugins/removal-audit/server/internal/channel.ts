@@ -32,7 +32,7 @@ import {
 const log = defineLogSink({
   id: "worktree-removal",
   description:
-    "Worktree checkout removal audit: every in-app removeWorktree call (path, id, pid, caller, branch, outcome) and every observed disappearance of a checkout, flagged in-app or external.",
+    "Worktree checkout removal audit: every in-app removeWorktree call (path, id, pid, caller, branch, outcome), every failed in-app checkout, and every observed disappearance of a checkout, flagged in-app or external.",
 });
 
 // Publishing is observability on a path that must not fail because of it: a
