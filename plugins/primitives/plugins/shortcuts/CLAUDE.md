@@ -28,6 +28,7 @@
     - `apps-core/surface/floating`
     - `apps-core/surface/solo`
     - `apps-core/tabs`
+    - `apps/prototypes/gallery`
     - `apps/sonata/controls`
     - `apps/sonata/progress/loop`
     - `primitives/action-presentation`

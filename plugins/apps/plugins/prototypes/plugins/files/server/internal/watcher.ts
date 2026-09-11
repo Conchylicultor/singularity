@@ -3,14 +3,20 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { isPrototypeId } from "../../core";
 import { prototypesDir } from "../../data-dirs";
+import {
+  adoptPrototypeHistories,
+  prototypeHistoryLiveResource,
+} from "./history";
 import { seedTemplate } from "./seed";
 import {
   prototypesResource,
   prototypesVersionResource,
   bumpPrototypesVersion,
 } from "./resources";
-import { readPrototypesSignature } from "./signature";
+import { changedPrototypes, readPrototypesSignature } from "./signature";
+import { classifyTreePath } from "./tree-path";
 
 let watcher: FileWatcher | null = null;
 let started = false;
@@ -18,7 +24,7 @@ let started = false;
 const listeners: (() => void)[] = [];
 
 /** The tree as of the last time it was looked at — see {@link readPrototypesSignature}. */
-let lastSignature: string | null = null;
+let lastSignature = new Map<string, string>();
 
 /**
  * Subscribe to "something under `prototypes/` changed".
@@ -39,7 +45,8 @@ export function onPrototypesChanged(listener: () => void): void {
 /**
  * Re-read the tree; if its bytes really moved, re-broadcast the list (new/edited
  * mocks appear in the gallery), bump the version (open iframes cache-bust and
- * reload) and wake the listeners.
+ * reload), re-read the history of every prototype that moved (an edit flips its
+ * `dirty` flag) and wake the listeners. Then give any new prototype its `v0`.
  *
  * Everything goes through this one gate — the watcher's events and the
  * reconcile tick alike — because the version is a RELOAD. A prototype on screen
@@ -49,13 +56,25 @@ export function onPrototypesChanged(listener: () => void): void {
  */
 async function refreshOnce(): Promise<void> {
   const signature = await readPrototypesSignature();
-  if (signature === lastSignature) return;
+  const changed = changedPrototypes(lastSignature, signature);
+  if (changed.length === 0) return;
   lastSignature = signature;
 
   bumpPrototypesVersion();
   prototypesResource.notify();
   prototypesVersionResource.notify();
+  for (const name of changed) notifyHistory(name);
   for (const listener of listeners) listener();
+
+  // A folder that appeared without the mint (made by hand, restored from a
+  // backup) gets its history here; a minted one already has it. Last, so a
+  // failure to adopt cannot hold back the notifications above.
+  await adoptPrototypeHistories();
+}
+
+/** Re-read one prototype's history, for whoever is subscribed to it. */
+function notifyHistory(name: string): void {
+  if (isPrototypeId(name)) prototypeHistoryLiveResource.notify({ name });
 }
 
 // Single-flight with a trailing re-run: a signature read is async, so two
@@ -81,6 +100,24 @@ async function refresh(): Promise<void> {
 }
 
 /**
+ * Sort one batch of watcher events. A version recorded under `_history/`
+ * (by this backend or any other — the store is host-global) re-reads that one
+ * history and nothing else: the prototype's bytes did not move, so nothing may
+ * reload. Everything else outside `_history/` goes through the signature gate.
+ */
+function onTreeEvents(paths: string[]): void {
+  let treeMoved = false;
+  const recorded = new Set<string>();
+  for (const path of paths) {
+    const kind = classifyTreePath(prototypesDir.path, path);
+    if (kind.kind === "version-recorded") recorded.add(kind.id);
+    else if (kind.kind === "tree") treeMoved = true;
+  }
+  for (const id of recorded) notifyHistory(id);
+  if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
+}
+
+/**
  * Watch `prototypes/` for edits. Push-based — no polling; the 30s reconcile is a
  * backstop for an fsevent parcel drops, and costs one stat per prototype file
  * because it changes nothing when the signature matches.
@@ -100,12 +137,22 @@ export async function startPrototypesWatcher(): Promise<void> {
   // what bumps the version — not the first tick after start.
   lastSignature = await readPrototypesSignature();
 
+  // Every prototype that predates version history gets its `v0` — once; after
+  // that this is a stat per prototype. Not awaited: boot need not wait on a few
+  // hundred milliseconds of git, and every backend on the box races to do it
+  // (the store's per-repo lock makes exactly one of them win each prototype).
+  void runTracked("prototypes:adopt-histories", () =>
+    adoptPrototypeHistories(),
+  );
+
   watcher = await createFileWatcher({
     dirs: [prototypesDir.path],
     // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
     // inline in index.html, because Babel fetches an external `src` with XHR
     // and Chrome blocks that over file:// (the `prototypes:self-contained`
     // check rejects such a script tag, so an external .jsx cannot exist).
+    // `.json` also passes each history's `latest.json` stamp — git's own
+    // files carry no extension, so they never reach `onChange`.
     extensions: [
       ".html",
       ".css",
@@ -119,8 +166,8 @@ export async function startPrototypesWatcher(): Promise<void> {
       ".gif",
       ".woff2",
     ],
-    onChange: () => {
-      void runTracked("prototypes:refresh", () => refresh());
+    onChange: (events) => {
+      onTreeEvents(events.map((e) => e.path));
     },
     onReconcile: () => {
       void runTracked("prototypes:reconcile", () => refresh());
@@ -131,7 +178,7 @@ export async function startPrototypesWatcher(): Promise<void> {
 export async function stopPrototypesWatcher(): Promise<void> {
   if (!started) return;
   started = false;
-  lastSignature = null;
+  lastSignature = new Map();
   if (watcher) {
     await watcher.stop();
     watcher = null;

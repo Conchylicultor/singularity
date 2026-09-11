@@ -28,6 +28,10 @@ export type CopyFolderOutcome = "copied" | "already-there";
  * re-seeding would silently revert that; for a minted id, the folder IS the
  * prototype and clobbering it would destroy somebody's work.
  *
+ * `prepare` edits the copy before it becomes visible — the mint stamps the
+ * title there, so a new prototype never exists without it (and its `v0` is the
+ * titled page, whoever records it first).
+ *
  * Returns which of the two happened rather than a bare boolean, because the
  * callers act on it differently: seeding treats `already-there` as the desired
  * end state, minting treats it as a collision and draws another id.
@@ -35,12 +39,14 @@ export type CopyFolderOutcome = "copied" | "already-there";
 export async function copyFolderOnce(
   src: string,
   dest: string,
+  opts: { prepare?: (staging: string) => Promise<void> } = {},
 ): Promise<CopyFolderOutcome> {
   if (existsSync(dest)) return "already-there";
 
   const staging = await mkdtemp(join(dirname(dest), ".staging-"));
   try {
     await cp(src, staging, { recursive: true });
+    await opts.prepare?.(staging);
     await rename(staging, dest);
   } catch (err) {
     await rm(staging, { recursive: true, force: true });

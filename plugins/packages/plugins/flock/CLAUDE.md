@@ -2,6 +2,11 @@
 
 `flockTry(fd)` / `flockRelease(fd)` over libc's `flock(2)`, dlopen'd lazily.
 
+Exported from `core/` (runtime-neutral Node/Bun, like `infra/spawn/core` — never
+`web/`) so a plugin's `shared/` code, which may not import a `server` barrel,
+can lock too (the prototype version store). The `server` barrel re-exports the
+same binding for its existing consumers.
+
 **Why this is its own plugin.** The binding was hand-rolled in two places
 (`packages/host-semaphore`, `infra/worktree`'s push-lock probe) before a third
 consumer — the CLI's `.build.lock` — needed it. Three copies of a `dlopen` is a
@@ -38,6 +43,10 @@ N-slot pools on top; `checkout-lock.ts` builds a size-1 mutex.
     - `infra/worktree`
     - `packages/host-semaphore`
 - Server:
+  - Exports (values):
+    - `flockRelease`
+    - `flockTry`
+- Core:
   - Exports (values):
     - `flockRelease`
     - `flockTry`

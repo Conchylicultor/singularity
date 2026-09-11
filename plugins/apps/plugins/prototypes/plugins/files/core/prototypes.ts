@@ -116,6 +116,20 @@ export const PROTOTYPE_FILE_ROUTE = "GET /api/prototypes/:name";
 export const PROTOTYPE_ASSET_ROUTE = "GET /api/prototypes/:name/:file";
 
 /**
+ * Route key for one file of one recorded VERSION of a prototype. A path prefix
+ * per version, for the same reason the live route has one: a relative
+ * `href="styles.css"` inside that version's `index.html` resolves to the same
+ * version's `styles.css`. The sha addresses the content, so the response is
+ * immutable. Raw handler, like the live file route. Built by
+ * {@link prototypeVersionUrl}.
+ *
+ * Six segments against the live route's four, and the router matches on the
+ * segment count, so the two never compete for a URL.
+ */
+export const PROTOTYPE_VERSION_FILE_ROUTE =
+  "GET /api/prototypes/:name/versions/:sha/:file";
+
+/**
  * Typed list endpoint. JSON, so it goes through `implement()` (raw JSON
  * handlers are banned by `endpoints:no-raw-json-handlers`). The `:name` file
  * routes stay raw handlers — they return per-file bytes/html with a custom
@@ -144,6 +158,16 @@ export function prototypeUrl(
   }
   const qs = params.size === 0 ? "" : `?${params.toString()}`;
   return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${qs}`;
+}
+
+/**
+ * Build the URL of a recorded version's document — the one builder for
+ * {@link PROTOTYPE_VERSION_FILE_ROUTE}. No `v` (a version never changes) and no
+ * picks: a past version is shown exactly as it was saved, and the live page's
+ * declared options may not exist in it.
+ */
+export function prototypeVersionUrl(name: string, sha: string): string {
+  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/versions/${sha}/index.html`;
 }
 
 /**

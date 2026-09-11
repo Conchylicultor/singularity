@@ -17,7 +17,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`home`** [2 sub-plugins] — Home — app launcher and entry point.
     - **`mail`** [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [12 sub-plugins] — Notion-like pages app.
-    - **`prototypes`** [8 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
+    - **`prototypes`** [9 sub-plugins] — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [63 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [26 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.

@@ -226,6 +226,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `apps/deploy/composition`
     - `apps/home/app-cards`
     - `apps/mail/shell`
+    - `apps/prototypes/gallery`
     - `apps/prototypes/present`
     - `build`
     - `config_v2/config-link`

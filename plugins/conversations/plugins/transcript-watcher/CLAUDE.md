@@ -110,6 +110,7 @@ memo degrades to a full chain re-read on every push.
     - `watchTranscript`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
     - `conversations/conversation-view/jsonl-viewer`

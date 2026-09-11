@@ -124,6 +124,7 @@ never be clobbered.
     - `apps/events/sources/source-detail/runs/caveats`
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/mail/reading-pane`
+    - `apps/prototypes/gallery`
     - `apps/studio/graph`
     - `conversations/agents`
     - `fields/json/config`

@@ -171,9 +171,13 @@ export interface SpawnResult {
   stdout: string;
   /** Lazy, cached utf8 decode of `stderrBytes`. Always `""` under `mergeStderr`. */
   stderr: string;
-  /** Raw output bytes, for byte-offset parsers (`git cat-file --batch` framing). */
-  stdoutBytes: Uint8Array;
-  stderrBytes: Uint8Array;
+  /**
+   * Raw output bytes, for byte-offset parsers (`git cat-file --batch` framing).
+   * Each is a fresh copy over its own `ArrayBuffer` (never a shared/pooled one),
+   * which is what lets it go straight into a `Response` body.
+   */
+  stdoutBytes: Uint8Array<ArrayBuffer>;
+  stderrBytes: Uint8Array<ArrayBuffer>;
   resourceUsage: ChildResourceUsage;
 }
 

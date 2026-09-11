@@ -131,6 +131,7 @@ queue-health); only the wasted retry churn is removed.
   - Imported by:
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/prototypes/checkpoints`
     - `build`
     - `conversations`
     - `conversations/conversation-category`

@@ -76,17 +76,73 @@ Three consequences worth knowing:
 
 Design: `research/2026-08-21-global-prototype-ids-and-mint.md`.
 
+## Version history (`shared/history/`)
+
+Every agent turn that changes a prototype is recorded as a version; the detail
+pane steps through them and can restore one; `prototype log -p` is how the next
+agent reads the evolution. Design:
+`research/2026-09-11-apps-prototype-version-history.md`.
+
+**One private bare git repo per prototype, at `_history/<id>.git`, whose work
+tree is the prototype folder.** Beside the folder, not in it: a prototype is
+flat, and a `.git` inside would churn the signature and the thumbnail
+fingerprint. `_history/` is `_`-prefixed, so `listPrototypeDirNames` skips it
+like `_template/`, and both file routes refuse it (404). Not the `history/engine`
+DB: prototypes are host-global and forever, a worktree DB is neither.
+
+- `store.ts` — `openHistoryStore(root)`; the caller resolves the root
+  (`prototypesDir.path`, per call; the tests pass a temp dir). Ops:
+  `ensureHistory` (v0 = the folder as it is; built in a staging dir and renamed
+  in, so an existing repo always has its baseline), `adoptAll`, `checkpoint`
+  (`add -A`, commit only if `diff --cached` moved; a `messageId` already on a
+  commit is `unchanged` — the turn event is at-least-once), `readHistory`
+  (versions + `dirty`; adopts on first read), `readVersionFile` (bytes via
+  `cat-file blob`), `readVersionPatch`, `restoreVersion` ("Before restore" if
+  dirty → `read-tree -u --reset <sha>` → "Restored vN"). Every arg that becomes a
+  path or a revision is validated first (`isPrototypeId`, `isVersionSha`,
+  `isFlatFileName`).
+- `message.ts` — the commit message format, written and read in one module:
+  subject (≤ 72), body (the request + agent summary), then `Prototype-Kind` /
+  `Prototype-Conversation` / `Prototype-Message` trailers. `n` is the commit's
+  position, never stored.
+- `git.ts` — hermetic git: the environment is REPLACED (`GIT_CONFIG_GLOBAL=/dev/null`,
+  `GIT_CONFIG_NOSYSTEM=1`, no leaked `GIT_DIR`/`GIT_INDEX_FILE`), hooks and
+  signing off, fixed identity, `GIT_OPTIONAL_LOCKS=0` so a `status` never takes
+  the index lock a write needs. Spelled `git`, not `paths/server`'s `GIT`:
+  `shared/` may not import a `server` barrel.
+- `lock.ts` — one flock per repo (`_history/<id>.lock`, never unlinked); a
+  writer waits ≤ 10 s, then throws `HistoryBusyError` (the job retries).
+
+**How a recorded version reaches every backend.** After each commit the store
+writes `_history/<id>.git/latest.json` (`{ n, sha }`, temp-then-rename). Git's
+own files have no extension, so they never pass the watcher's extension filter;
+this stamp does, and the watcher turns it into a notify of that one id's
+`prototypes.history` — without bumping the frame-reload version, since the
+prototype's bytes did not move. Folder edits reach it through the signature
+gate, which is per folder so it can name the prototypes whose `dirty` may have
+flipped. Nothing notifies after a write in-process; the stamp is the one signal.
+
+Adoption: `mintPrototype` calls `ensureHistory` (v0 = the page as minted — the
+title is stamped in the staging copy, before the folder is visible); boot and
+every real tree change run `adoptAll`, so the prototypes that predate history,
+and any folder made by hand, get a v0. Every backend races to do it; the lock
+makes one win.
+
 ## `./singularity prototype`
 
-Two verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
+Five verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
 no registry edit and no codegen edit; `./singularity build` regenerates
 `cli.generated.ts` from the filesystem.
 
 - `prototype new [title]` — mint a folder and print its id, its path and its URL.
 - `prototype list` — id, title and URL for every prototype on disk, plus any
   `problems[]` the folder carries.
+- `prototype log <id> [-p]` — versions newest first, with each request and
+  agent summary; `-p` adds each version's diff.
+- `prototype checkpoint <id> [-m <msg>]` — record a `manual` version now.
+- `prototype restore <id> <vN|sha>` — the pane's Restore button.
 
-**Both work with no backend running, and that is the point of having them.** The
+**All of them work with no backend running, and that is the point of having them.** The
 prototypes tree is host-global and outside every checkout, so `new` calls
 `mintPrototype()` straight against the filesystem rather than
 `POST /api/prototypes`, and `list` calls `listPrototypeMetas()` rather than
@@ -105,8 +161,8 @@ a CLI process and the server both run (`read-folder.ts`, `mint.ts`,
 
 `cli/index.ts` is the DECLARATION and is loaded on every single `./singularity`
 invocation, `build` included, because commander needs the names and flags before
-it parses argv. It therefore imports `defineCliCommand` and nothing else; both
-bodies sit behind `run: () => import("./new")` / `import("./list")`.
+it parses argv. It therefore imports `defineCliCommand` and nothing else; every
+body sits behind `run: () => import("./<verb>")`.
 `cli:command-declarations-light` fails the declaration if its static closure
 reaches an npm package or a `web`/`server` barrel.
 
@@ -202,8 +258,18 @@ that works off `file://`.
 **Why `no-store`.** The version query cache-busts only the document; without it
 the browser keeps the old `styles.css` and an edit looks like it didn't land.
 
+- `GET /api/prototypes/:name/versions/:sha/:file` → that file as recorded in
+  that version, read out of git; `Cache-Control: immutable` (the sha addresses
+  the content); 404 for anything that does not name a version's file. A path
+  prefix per version, so its relative `styles.css` resolves to the same version.
+  Built by `prototypeVersionUrl(name, sha)`.
+- `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore`
+  version (`restorePrototypeVersion`, via `implement()`).
+
 Each `:param` matches exactly one segment and the router has no wildcard, so a
 prototype folder is flat by construction — `<name>/assets/x.svg` is unserveable.
+The router matches on the segment count, so the six-segment version routes
+never compete with the four-segment file route.
 
 ## Live state
 
@@ -211,6 +277,8 @@ prototype folder is flat by construction — `<name>/assets/x.svg` is unserveabl
 - `prototypes.version` — a timestamp bumped when a prototype's bytes change;
   iframes append it to their `src` so an agent's edit reloads them
   automatically.
+- `prototypes.history` — one prototype's versions + `dirty` (push, keyed by
+  `name`); see Version history.
 
 `onReady` starts a `createFileWatcher` over `prototypes/`, watching every
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
@@ -251,34 +319,42 @@ but its name is not a forbidden reference target. The check catches copied
 *files*, never copied *design*.
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
-`prototypesResource` / `prototypesVersionResource` (descriptors), `prototypeUrl()`,
-the `listPrototypes` / `createPrototype` endpoints, and the id format
-(`newPrototypeId`, `PROTOTYPE_ID_RE`, `isPrototypeId`).
+`prototypesResource` / `prototypesVersionResource` / `prototypeHistoryResource`
+(descriptors), `prototypeUrl()` / `prototypeVersionUrl()`, the `listPrototypes` /
+`createPrototype` / `restorePrototypeVersion` endpoints, the version shapes
+(`PrototypeVersion`, `PrototypeHistory`), and the id format (`newPrototypeId`,
+`PROTOTYPE_ID_RE`, `isPrototypeId`). The server barrel adds `checkpointPrototype`
+for the `checkpoints` plugin's end-of-turn job.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.version"
+    - `resource.declare` "prototypes.history"
   - Uses:
+    - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.REPO_ROOT`
   - Exports (values):
+    - `checkpointPrototype`
     - `listPrototypeMetas`
     - `onPrototypesChanged`
     - `prototypesDir`
   - Resources:
+    - `prototypes.history` (push)
     - `prototypes.list` (push)
     - `prototypes.version` (push)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
+    - `POST /api/prototypes/:name/versions/:sha/restore`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -291,9 +367,12 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `OptionPicks`
     - `OptionSource`
     - `PrototypeFolder`
+    - `PrototypeHistory`
     - `PrototypeMeta`
     - `PrototypeOption`
     - `PrototypeProblem`
+    - `PrototypeVersion`
+    - `PrototypeVersionKind`
   - Exports (values):
     - `createPrototype`
     - `foldOptions`
@@ -312,6 +391,10 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `PROTOTYPE_ENTRY_FILE`
     - `PROTOTYPE_FILE_ROUTE`
     - `PROTOTYPE_ID_RE`
+    - `PROTOTYPE_VERSION_FILE_ROUTE`
+    - `PROTOTYPE_VERSION_KINDS`
+    - `prototypeHistoryResource`
+    - `PrototypeHistorySchema`
     - `PrototypeMetaSchema`
     - `PrototypeOptionSchema`
     - `PrototypeProblemSchema`
@@ -319,14 +402,18 @@ the `listPrototypes` / `createPrototype` endpoints, and the id format
     - `prototypesResource`
     - `prototypesVersionResource`
     - `prototypeUrl`
+    - `PrototypeVersionSchema`
+    - `prototypeVersionUrl`
     - `readOptionSource`
     - `readPrototypeOptions`
     - `resolvePicks`
+    - `restorePrototypeVersion`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`
+    - `apps/prototypes/checkpoints`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
 

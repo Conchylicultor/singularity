@@ -70,6 +70,7 @@ appears (YAGNI).
   - Exports (values): `confirmDialog`
 - Cross-plugin:
   - Imported by:
+    - `apps/prototypes/gallery`
     - `build/serve-composition`
     - `ui/theme-engine/theme-gallery`
 

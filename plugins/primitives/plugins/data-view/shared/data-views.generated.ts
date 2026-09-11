@@ -42,6 +42,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "plugin-view.file-tree", pluginId: "plugin-meta.plugin-view.file-tree" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
+  { id: "prototypes.versions", pluginId: "apps.prototypes.gallery" },
   { id: "runs", pluginId: "runs" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
   { id: "studio.compositions", pluginId: "apps.studio.compositions" },

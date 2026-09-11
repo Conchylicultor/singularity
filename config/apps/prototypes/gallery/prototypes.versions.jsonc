@@ -1,0 +1,14 @@
+// @hash 6ec84829688d
+{
+  // The version list behind the prototype stepper's `v3 of 7` label: every
+  // recorded version of one prototype, in a popover. One list view, newest
+  // first — the question it answers is "what did it look like a few turns
+  // ago", so the most recent turns lead and the baseline (v0) sits last.
+  "views": [
+    {
+      "id": "all",
+      "name": "All versions",
+      "view": { "type": "list", "sort": [{ "fieldId": "n", "direction": "desc" }] }
+    }
+  ]
+}

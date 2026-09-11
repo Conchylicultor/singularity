@@ -8,6 +8,7 @@ import {
   readPrototypeOptions,
   type OptionPicks,
 } from "../../core";
+import { HISTORY_DIR_NAME } from "../../shared/history/store";
 import { mintPrototype } from "../../shared/mint";
 import { listPrototypeMetas } from "./list";
 import { contentTypeForPath, resolvePrototypeFile } from "./paths";
@@ -44,6 +45,7 @@ export function handlePrototypeFile(
 ): Response {
   const name = params.name;
   if (!name) return new Response("missing name", { status: 400 });
+  if (name === HISTORY_DIR_NAME) return historyNotServed();
 
   const { search } = new URL(req.url);
   const location = `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${search}`;
@@ -70,6 +72,7 @@ export async function handlePrototypeAsset(
   const name = params.name;
   const fileName = params.file;
   if (!name || !fileName) return new Response("missing name", { status: 400 });
+  if (name === HISTORY_DIR_NAME) return historyNotServed();
 
   const abs = resolvePrototypeFile(name, fileName);
   if (abs === null) {
@@ -90,6 +93,15 @@ export async function handlePrototypeAsset(
     return servePickedDocument(await file.text(), search, headers);
   }
   return new Response(file, { headers });
+}
+
+/**
+ * `_history/` sits in the served tree beside the prototypes, and holds each
+ * one's private git repo. Its internals are never served — a version's files
+ * are, through the versions route, which reads them out of git.
+ */
+function historyNotServed(): Response {
+  return new Response("not found", { status: 404 });
 }
 
 /** Does the query carry anything besides the `v` cache-bust? */

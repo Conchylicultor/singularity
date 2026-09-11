@@ -3,12 +3,14 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useState,
   type ReactNode,
 } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
   prototypeUrl,
+  prototypeVersionUrl,
   resolvePicks,
   type OptionPicks,
   type PrototypeMeta,
@@ -44,6 +46,15 @@ export interface PrototypeDetailContextValue {
   storedPicks: Readonly<Record<string, string>>;
   setPick: (option: string, value: string) => void;
   resetPicks: () => void;
+  /**
+   * The recorded version the pane is showing, as its sha — `null` for the live
+   * folder. Every frame of the open prototype follows it (through
+   * {@link usePrototypeSrc}). Belongs to one prototype: opening another one
+   * shows that one live.
+   */
+  shownVersion: string | null;
+  /** Show a recorded version (its sha), or the live folder (`null`). */
+  showVersion: (sha: string | null) => void;
 }
 
 const PrototypeDetailContext =
@@ -103,6 +114,19 @@ export function PrototypeDetailProvider({
     [setStoredPicks],
   );
 
+  // Held WITH the prototype it belongs to, so switching prototype shows the
+  // new one live without an effect resetting anything: a sha recorded for
+  // another name simply does not apply here. Not remembered across visits —
+  // an old version is something you look at, not a place the pane reopens on.
+  const [shown, setShown] = useState<{ name: string; sha: string } | null>(
+    null,
+  );
+  const shownVersion = shown?.name === name ? shown.sha : null;
+  const showVersion = useCallback(
+    (sha: string | null) => setShown(sha === null ? null : { name, sha }),
+    [name],
+  );
+
   const value = useMemo<PrototypeDetailContextValue>(
     () => ({
       name,
@@ -112,8 +136,20 @@ export function PrototypeDetailProvider({
       storedPicks,
       setPick,
       resetPicks: clearPicks,
+      shownVersion,
+      showVersion,
     }),
-    [name, stages, stage, onStageChange, storedPicks, setPick, clearPicks],
+    [
+      name,
+      stages,
+      stage,
+      onStageChange,
+      storedPicks,
+      setPick,
+      clearPicks,
+      shownVersion,
+      showVersion,
+    ],
   );
   return (
     <PrototypeDetailContext.Provider value={value}>
@@ -135,12 +171,22 @@ export function usePrototypePicks(meta: PrototypeMeta): OptionPicks {
 }
 
 /**
- * THE url of the prototype's document as this pane shows it: its `index.html`,
- * cache-busted by `version` and carrying the picked options. Every frame of the
+ * THE url of the prototype's document as this pane shows it. Every frame of the
  * open prototype (Focus, Compare's mock half, Present) and the new-tab link go
- * through this, so none of them can show a different variant from the others.
+ * through this, so none of them can show a different variant — or a different
+ * version — from the others.
+ *
+ * - live (no version picked): its `index.html`, cache-busted by `version` and
+ *   carrying the picked options.
+ * - a recorded version: that version's frozen document, as it was saved. No
+ *   picks — the options declared today may not exist in it, so it renders at
+ *   its own defaults — and no cache-bust, since a sha addresses content that
+ *   never changes.
  */
 export function usePrototypeSrc(meta: PrototypeMeta, version: number): string {
+  const { shownVersion } = usePrototypeDetail();
   const picks = usePrototypePicks(meta);
-  return prototypeUrl(meta.name, { v: version, picks });
+  return shownVersion === null
+    ? prototypeUrl(meta.name, { v: version, picks })
+    : prototypeVersionUrl(meta.name, shownVersion);
 }

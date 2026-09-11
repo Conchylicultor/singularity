@@ -67,6 +67,7 @@ declared as its main axis. The disagreement is the design, not an oversight.
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`
+    - `apps/prototypes/gallery`
     - `apps/sonata/track-mixer`
     - `conversations/conversation-view/jsonl-viewer/attachment/environment`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`

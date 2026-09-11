@@ -519,6 +519,7 @@ sweeper will reclaim it.
     - `apps/mail/sync`
     - `apps/pages/content-search`
     - `apps/pages/history`
+    - `apps/prototypes/checkpoints`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
     - `backup`

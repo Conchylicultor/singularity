@@ -1,6 +1,10 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  PrototypeMeta,
+  PrototypeVersion,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
  * What every stage is handed. The pane resolves these once — it has to, to say
@@ -55,3 +59,11 @@ export interface PrototypeStageContribution {
 export const PrototypeStages = {
   Stage: defineSlot<PrototypeStageContribution>({ docLabel: (c) => c.label }),
 };
+
+/**
+ * Per-row actions on the version list (the popover behind the stepper's
+ * `v3 of 7` label). The gallery ships one — open the conversation whose turn
+ * recorded the version — and anything else a version grows is a contribution,
+ * not a branch in the list.
+ */
+export const PrototypeVersionActions = defineItemActions<PrototypeVersion>();

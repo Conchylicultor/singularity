@@ -17,7 +17,13 @@ in sub-plugins:
 - **`files`** — server-side raw file serving out of the data dir, seeding of the
   repo's `_template/` into it, the live-state
   list + version resources, and the file-watcher that auto-reloads open iframes
-  on edit. Owns the `/api/prototypes` route contract.
+  on edit. Owns the `/api/prototypes` route contract. Also owns each
+  prototype's version history (a private git repo at `_history/<id>.git`
+  inside the data dir), the routes that serve and restore a past version, and
+  `./singularity prototype log|checkpoint|restore`.
+- **`checkpoints`** — the end-of-turn job: when an agent turn ends, records a
+  version of every prototype that turn's tool calls named, labelled with the
+  turn's request. Its own plugin so `files` never depends on `conversations`.
 - **`shell`** — the `Apps.App` rail entry, the app layout, and pane registration.
 - **`present`** — the Present menu (this app tab / this browser tab /
   fullscreen / new browser tab), a contribution into the detail pane's
@@ -25,7 +31,8 @@ in sub-plugins:
 - **`gallery`** — the gallery list pane and the detail pane whose stage set is a
   slot (it contributes Focus). Also owns the two launch prompts (New prototype / Improve this prototype) — the
   always-taken path by which prototype agents are launched, and therefore where
-  "start from the blank template, never read a sibling" has to be said.
+  "start from the blank template, never read a sibling" has to be said. The
+  detail pane's `‹ v3 of 7 ›` version stepper (and Restore) lives here too.
 - **`compare`** — the Compare stage: the mock beside the real thing it declares
   it mocks (`<meta name="mocks" content="<kind>:<ref>">`), at one shared width.
   Owns the declaration dispatch and the chrome; each kind of counterpart is a
@@ -45,12 +52,13 @@ whose app surface still stands).
 
 - Description: Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
 - Sub-plugins:
+  - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
   - **`compare`** — The Compare stage of the prototype detail pane: the prototype mock beside the real app thing it declares it mocks (<meta name="mocks" content="<kind>:<ref>">), both live and both at one shared width the reader changes. Owns the declaration dispatch and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route) is a child plugin contributed into the open Counterpart.Kind registry.
     - Plugins:
       - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
       - **`route`** — The route: counterpart kind for the prototype Compare stage: the running app itself, framed chromeless (no rail, no tab bar) at an in-app path (route:/agents/c/123) on this deploy's own origin, so a whole-screen mock is compared against the real screen as this branch renders it — never a second implementation that could drift.
-  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
-  - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).
+  - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+  - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
   - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
   - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + detail panes (Focus, and the sibling compare plugin's Compare stage) in a Miller layout.
   - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.

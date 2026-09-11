@@ -516,6 +516,10 @@
       "name": "@singularity/plugin-apps-prototypes",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/checkpoints": {
+      "name": "@singularity/plugin-apps-prototypes-checkpoints",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/compare": {
       "name": "@singularity/plugin-apps-prototypes-compare",
       "version": "0.0.1",
@@ -6119,6 +6123,8 @@
     "@singularity/plugin-apps-pages-welcome-recent-pages": ["@singularity/plugin-apps-pages-welcome-recent-pages@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages"],
 
     "@singularity/plugin-apps-prototypes": ["@singularity/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
+
+    "@singularity/plugin-apps-prototypes-checkpoints": ["@singularity/plugin-apps-prototypes-checkpoints@workspace:plugins/apps/plugins/prototypes/plugins/checkpoints"],
 
     "@singularity/plugin-apps-prototypes-compare": ["@singularity/plugin-apps-prototypes-compare@workspace:plugins/apps/plugins/prototypes/plugins/compare"],
 

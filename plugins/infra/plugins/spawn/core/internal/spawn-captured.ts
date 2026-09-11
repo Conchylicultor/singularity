@@ -46,8 +46,8 @@ function makeResult(
   exitCode: number,
   signalCode: string | null,
   timedOut: boolean,
-  stdoutBytes: Uint8Array,
-  stderrBytes: Uint8Array,
+  stdoutBytes: Uint8Array<ArrayBuffer>,
+  stderrBytes: Uint8Array<ArrayBuffer>,
   resourceUsage: ChildResourceUsage,
 ): SpawnResult {
   let stdoutText: string | undefined;

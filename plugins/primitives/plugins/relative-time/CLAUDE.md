@@ -22,6 +22,7 @@
     - `apps/mail/threads`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`
+    - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/playback-history`
     - `apps/studio/compositions/release`

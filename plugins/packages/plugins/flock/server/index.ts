@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { flockTry, flockRelease } from "./internal/flock";
+export { flockTry, flockRelease } from "../core/internal/flock";
 
 export default {
   description:

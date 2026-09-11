@@ -7,11 +7,25 @@ export {
   PROTOTYPES_API_BASE,
   PROTOTYPE_FILE_ROUTE,
   PROTOTYPE_ASSET_ROUTE,
+  PROTOTYPE_VERSION_FILE_ROUTE,
   prototypeUrl,
+  prototypeVersionUrl,
   listPrototypes,
   createPrototype,
 } from "./prototypes";
 export type { PrototypeMeta } from "./prototypes";
+export {
+  PROTOTYPE_VERSION_KINDS,
+  PrototypeVersionSchema,
+  PrototypeHistorySchema,
+  prototypeHistoryResource,
+  restorePrototypeVersion,
+} from "./history";
+export type {
+  PrototypeVersion,
+  PrototypeVersionKind,
+  PrototypeHistory,
+} from "./history";
 export {
   PrototypeProblemSchema,
   PROTOTYPE_ENTRY_FILE,

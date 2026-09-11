@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { prototypesDir } from "../data-dirs";
 import { newPrototypeId } from "../core/id";
 import { PROTOTYPE_ENTRY_FILE } from "../core/validate";
+import { openHistoryStore } from "./history/store";
 import { copyFolderOnce, seededTemplateDir } from "./template";
 
 // THE one way a prototype comes into existence.
@@ -34,7 +35,11 @@ const MAX_MINT_ATTEMPTS = 8;
  * `title` stamps the copy's `<title>`, which is where every surface reads a
  * prototype's display name from — there is no `meta.json`. Omit it and the card
  * reads the template's own "Untitled prototype" until the agent writes, which is
- * honest: the prototype does exist.
+ * honest: the prototype does exist. The stamp lands in the staging copy, before
+ * the folder becomes visible.
+ *
+ * The new prototype's version history starts here: its `v0` is the folder as
+ * minted (see `history/store.ts`).
  *
  * Returns the id (which IS the folder name, and the URL segment) and its
  * absolute path. Throws on failure — there is no id-shaped empty value a caller
@@ -51,9 +56,19 @@ export async function mintPrototype(
     // A name collision re-mints rather than throwing: the caller asked for a
     // prototype, not for this particular id, and the folder that is already
     // there belongs to somebody else's mint.
-    if ((await copyFolderOnce(template, dir)) === "already-there") continue;
+    const { title } = opts;
+    const outcome = await copyFolderOnce(
+      template,
+      dir,
+      title === undefined
+        ? {}
+        : { prepare: (staging) => stampTitle(staging, title) },
+    );
+    if (outcome === "already-there") continue;
 
-    if (opts.title !== undefined) await stampTitle(dir, opts.title);
+    // v0 is the page as minted — the blank template, titled — so the first
+    // agent turn shows as the full diff of what it designed.
+    await openHistoryStore(prototypesDir.path).ensureHistory(id);
     return { id, dir };
   }
 

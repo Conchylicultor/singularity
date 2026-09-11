@@ -6,15 +6,15 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * so `./singularity prototype` printing its own help is a property of the shape
  * rather than a runtime check.
  *
- * Both leaves work straight against the filesystem, never over HTTP, and that
+ * Every leaf works straight against the filesystem, never over HTTP, and that
  * is the whole point of having them: the prototypes tree is host-global and
- * outside every checkout, so an agent can mint and enumerate mocks with no
- * backend running and nothing built.
+ * outside every checkout, so an agent can mint, enumerate and read or rewind
+ * the history of mocks with no backend running and nothing built.
  *
  * This file is reached on EVERY `./singularity` invocation (commander needs the
  * names and flags before it can parse argv), so it imports `defineCliCommand`
- * and nothing else; `mintPrototype` and the lister sit behind the dynamic
- * `run: () => import(…)`. `cli:command-declarations-light` measures that
+ * and nothing else; `mintPrototype`, the lister and the history store sit
+ * behind the dynamic `run: () => import(…)`. `cli:command-declarations-light` measures that
  * closure. The generics are pinned so this declaration is checked against each
  * implementation's default export — see `cli/core/internal/command.ts`.
  */
@@ -44,6 +44,55 @@ export default defineCliCommand({
         "List every prototype — id, title and URL — read straight off the " +
         "host-global prototypes dir. Needs no running backend.",
       run: () => import("./list"),
+    }),
+    defineCliCommand<[string], { patch?: boolean }>({
+      name: "log",
+      description:
+        "Show a prototype's version history, newest first: each version's " +
+        "number, time, kind, request and agent summary, and the conversation " +
+        "that recorded it. Every agent turn that changes the folder records " +
+        "one. -p adds the diff each version made. Needs no running backend.",
+      arguments: [{ name: "<id>", description: "the prototype's id" }],
+      options: [
+        {
+          flags: "-p, --patch",
+          description: "show the diff each version made",
+        },
+      ],
+      run: () => import("./log"),
+    }),
+    defineCliCommand<[string], { message?: string }>({
+      name: "checkpoint",
+      description:
+        "Record the prototype folder as a new version now (a 'manual' " +
+        "version), if it changed since the last one. Agent turns record " +
+        "versions on their own; this is for edits made outside one. Needs no " +
+        "running backend.",
+      arguments: [{ name: "<id>", description: "the prototype's id" }],
+      options: [
+        {
+          flags: "-m, --message <message>",
+          description: "what this version is (its subject line)",
+        },
+      ],
+      run: () => import("./checkpoint"),
+    }),
+    defineCliCommand<[string, string], object>({
+      name: "restore",
+      description:
+        "Make an older version of a prototype live again. Unsaved changes are " +
+        "recorded first as a 'Before restore' version, the old files are " +
+        "written back, and a 'Restored vN' version is recorded — nothing is " +
+        "lost. Needs no running backend.",
+      arguments: [
+        { name: "<id>", description: "the prototype's id" },
+        {
+          name: "<version>",
+          description:
+            "the version to restore: vN (from `prototype log`) or a sha",
+        },
+      ],
+      run: () => import("./restore"),
     }),
   ],
 });

@@ -1,4 +1,4 @@
-// @hash 1e879662063a
+// @hash 1a2c6aa50d26
 // A horizontal pane header, read left to right. The pane's own title comes
 // first, then `view-mode` — which stage you are looking at is a choice about
 // the prototype itself, so it leads, beside the title. (It used to sit there
@@ -8,6 +8,17 @@
 // `view-mode` is one chip per contributed stage, not a fixed Focus/Compare
 // pair — the stage set is a slot. The id stays `view-mode` because this list is
 // what pins where the switcher sits.
+//
+// `version` (the `‹ v3 of 7 ›` stepper) comes right after it: stage and version
+// together say WHAT is on screen, so they read as one group beside the title,
+// before the spacer that separates them from the things you do with it.
+//
+// Nothing in this header may appear or disappear as the stepper steps. The
+// header shares its slack between the title and the spacer, so the group
+// before the spacer sits roughly centred, and any change of width ANYWHERE in
+// the header — even past the spacer — slides the ‹ you just clicked out from
+// under the pointer. That is why Restore / Back to latest are not header items
+// at all: they float over the stage while a past version is shown.
 //
 // After the spacer, `present` and `improve` share the trailing cluster, and
 // their order there is the real decision. `present` goes first: it is what this
@@ -28,6 +39,7 @@
   "items": [
     "primitives.pane:title",
     "apps.prototypes.gallery:view-mode",
+    "apps.prototypes.gallery:version",
     { "type": "spacer", "id": "spacer-1" },
     "apps.prototypes.present:present",
     "apps.prototypes.gallery:improve"

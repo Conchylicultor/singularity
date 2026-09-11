@@ -35,6 +35,29 @@ and your prompt names it — edit that one, don't mint a second.
 Write the id in your messages: it renders as a chip that opens the mock in a
 column beside the text.
 
+## History: every turn is saved
+
+Each agent turn that changes the folder is recorded as a **version**,
+automatically — you do nothing. The user steps through versions with the
+`‹ v3 of 7 ›` arrows in the prototype's pane, and can restore any of them.
+
+Before you change a prototype someone has already iterated on, read how it got
+here — what was asked for, what was tried, in what order:
+
+```bash
+./singularity prototype log <id>       # versions, newest first, with each request
+./singularity prototype log <id> -p    # ... and the diff each one made
+```
+
+`./singularity prototype restore <id> v3` makes an old version live again
+(nothing is lost: unsaved changes are saved first). `./singularity prototype
+checkpoint <id> -m "…"` records a version by hand — only needed for edits made
+outside an agent turn.
+
+The history is kept beside the folder (`_history/`), not in it. **Never create a
+`.git` or any subfolder inside a prototype folder**, and never touch
+`_history/`.
+
 ## Design from a blank page
 
 **Do not open another prototype's folder.** Not to see how it is built, not to

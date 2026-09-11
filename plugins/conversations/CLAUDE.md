@@ -183,6 +183,7 @@
     - `active-data/conv`
     - `active-data/task`
     - `apps/agent-manager/welcome`
+    - `apps/prototypes/checkpoints`
     - `code-explorer`
     - `conversations/agents`
     - `conversations/conversation-category`

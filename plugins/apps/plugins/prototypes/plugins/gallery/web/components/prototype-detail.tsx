@@ -23,6 +23,7 @@ import {
 } from "../context";
 import { PrototypeStages } from "../slots";
 import { OptionsPicker } from "./options-picker";
+import { PastVersionPill } from "./past-version-pill";
 
 /**
  * The detail pane. Its header controls (the stage switcher, Present, Improve)
@@ -137,8 +138,15 @@ function StageBody() {
  * prototype declares any. The picker sits at the PANE level, not in a stage, so
  * every stage shows the same variant under the same control.
  *
+ * While a recorded version is shown the picker is gone: that version renders
+ * as it was saved, at its own defaults, and the options declared TODAY may not
+ * exist in it — a chip there would pick nothing. Its corner then holds the
+ * past-version pill (Restore / Back to latest), which lives over the stage
+ * rather than in the header so the header's width never changes as you step.
+ *
  * `src` is built once here (`usePrototypeSrc`) and handed down whole: a stage
- * never composes a frame URL, so none can drop the picks or the cache-bust.
+ * never composes a frame URL, so none can drop the picks, the cache-bust or
+ * the shown version.
  */
 function ReadyStage({
   meta,
@@ -152,6 +160,7 @@ function ReadyStage({
   stage: PrototypeStage;
 }) {
   const src = usePrototypeSrc(meta, version);
+  const { shownVersion } = usePrototypeDetail();
   return (
     // The positioning context the picker pins to.
     <div className="relative h-full">
@@ -160,7 +169,14 @@ function ReadyStage({
         gallery,
         src,
       })}
-      {meta.options.length > 0 ? (
+      {/* One corner, one occupant: the options picker on the live folder, or
+          — on a recorded version, which has no picker — what that version is,
+          with Restore and Back to latest. */}
+      {shownVersion !== null ? (
+        <Pin to="bottom-right" offset="md">
+          <PastVersionPill />
+        </Pin>
+      ) : meta.options.length > 0 ? (
         <Pin to="bottom-right" offset="md">
           <OptionsPicker meta={meta} />
         </Pin>

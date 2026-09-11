@@ -1,9 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
+ *
+ * **A new `src` never blanks the stage.** A prototype renders client-side
+ * (inline JSX through Babel), so a frame that navigates in place is empty from
+ * the moment its new document commits until that document has rendered —
+ * a visible flash on every step of the version stepper and every live reload.
+ * So the new document loads in a SECOND frame, hidden on top of the one on
+ * screen, and replaces it on `load`. The frames are keyed by `src` and the
+ * incoming one is always rendered after the one on screen, so promoting it
+ * only removes its predecessor — React never moves the loaded frame's DOM node,
+ * which would reload it.
  *
  * The container is the scaling box: it measures its own size and computes a
  * scale that fits the prototype's fixed `viewport`, never upscaling past 1 —
@@ -36,6 +47,9 @@ export function ScaledIframe({
   upscale?: boolean;
 }) {
   const [containerRef, { width, height }] = useElementSize<HTMLDivElement>();
+  // The document on screen. `src` differing from it means a new one is loading.
+  const [shownSrc, setShownSrc] = useState(src);
+  const frames = shownSrc === src ? [src] : [shownSrc, src];
   // Default to 1 (not 0): the iframe must ALWAYS mount so it loads, even before
   // the container is measured — gating it behind a measured scale meant a 0-size
   // mount (a ResizeObserver timing race) left the frame permanently absent. The
@@ -60,31 +74,50 @@ export function ScaledIframe({
       }}
     >
       <div
+        // The positioning context the incoming frame's layer covers.
+        className="relative"
         style={{
           width: meta.viewport.w * scale,
           height: meta.viewport.h * scale,
           overflow: "hidden",
         }}
       >
-        <iframe
-          title={title ?? meta.title}
-          src={src}
-          // allow-same-origin keeps the frame on our own origin, so a prototype
-          // that fetch()es one of its own flat files (a `data.json`, say) works
-          // here exactly as it does when the file is opened off disk — without
-          // it the frame is a null origin and every such fetch is blocked.
-          // Safe here: prototypes are first-party files, authored on this
-          // machine and served from the user's own ~/.singularity/apps/prototypes/.
-          sandbox="allow-scripts allow-same-origin"
-          width={meta.viewport.w}
-          height={meta.viewport.h}
-          style={{
-            border: "0",
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            display: "block",
-          }}
-        />
+        {frames.map((frameSrc) => {
+          const loading = frameSrc !== shownSrc;
+          return (
+            <iframe
+              key={frameSrc}
+              title={title ?? meta.title}
+              src={frameSrc}
+              // allow-same-origin keeps the frame on our own origin, so a prototype
+              // that fetch()es one of its own flat files (a `data.json`, say) works
+              // here exactly as it does when the file is opened off disk — without
+              // it the frame is a null origin and every such fetch is blocked.
+              // Safe here: prototypes are first-party files, authored on this
+              // machine and served from the user's own ~/.singularity/apps/prototypes/.
+              sandbox="allow-scripts allow-same-origin"
+              width={meta.viewport.w}
+              height={meta.viewport.h}
+              // The incoming frame is invisible and out of the accessibility
+              // tree until it has loaded; `load` then makes it the one shown.
+              aria-hidden={loading || undefined}
+              tabIndex={loading ? -1 : undefined}
+              onLoad={loading ? () => setShownSrc(frameSrc) : undefined}
+              // The frame on screen sits in flow; the incoming one is a layer
+              // over it (anchored top-left — its own width/height win over the
+              // inset), and drops back into flow when promoted. A class/style
+              // change, never a remount, so the promoted document stays loaded.
+              className={loading ? layerClasses() : undefined}
+              style={{
+                border: "0",
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                display: "block",
+                visibility: loading ? "hidden" : "visible",
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );

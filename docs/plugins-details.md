@@ -2748,6 +2748,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/relative-time.RelativeTime`
     - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the host-global prototypes data dir (the `apps/prototypes` declaration), outside any checkout.
       - Plugins:
+        - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
+          - Server:
+            - Contributes: `trigger` "prototypes.checkpoint-turn"
+            - Uses:
+              - `apps/prototypes/files.checkpointPrototype`
+              - `conversations.conversationTurnCompleted`
+              - `conversations/transcript-watcher.readJsonlEventsFromChain`
+              - `conversations/transcript-watcher.resolveConversationTranscriptPaths`
+              - `infra/events.Trigger`
+              - `infra/jobs.defineJob`
+              - `infra/jobs.NonRetryableError`
+            - Register: `defineJob('prototypes.checkpoint-turn')`
         - **`compare`** — The Compare stage of the prototype detail pane: the prototype mock beside the real app thing it declares it mocks (<meta name="mocks" content="<kind>:<ref>">), both live and both at one shared width the reader changes. Owns the declaration dispatch and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route) is a child plugin contributed into the open Counterpart.Kind registry.
           - Web:
             - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
@@ -2806,26 +2818,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, and stamps a document's picked options (?<option>=<value>) onto its <html data-*>.
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
               - `resource.declare` "prototypes.version"
+              - `resource.declare` "prototypes.history"
             - Uses:
+              - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/paths.REPO_ROOT`
             - Exports (values):
+              - `checkpointPrototype`
               - `listPrototypeMetas`
               - `onPrototypesChanged`
               - `prototypesDir`
             - Resources:
+              - `prototypes.history` (push)
               - `prototypes.list` (push)
               - `prototypes.version` (push)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
+              - `POST /api/prototypes/:name/versions/:sha/restore`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
@@ -2838,9 +2855,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `OptionPicks`
               - `OptionSource`
               - `PrototypeFolder`
+              - `PrototypeHistory`
               - `PrototypeMeta`
               - `PrototypeOption`
               - `PrototypeProblem`
+              - `PrototypeVersion`
+              - `PrototypeVersionKind`
             - Exports (values):
               - `createPrototype`
               - `foldOptions`
@@ -2859,6 +2879,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PROTOTYPE_ENTRY_FILE`
               - `PROTOTYPE_FILE_ROUTE`
               - `PROTOTYPE_ID_RE`
+              - `PROTOTYPE_VERSION_FILE_ROUTE`
+              - `PROTOTYPE_VERSION_KINDS`
+              - `prototypeHistoryResource`
+              - `PrototypeHistorySchema`
               - `PrototypeMetaSchema`
               - `PrototypeOptionSchema`
               - `PrototypeProblemSchema`
@@ -2866,29 +2890,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypesResource`
               - `prototypesVersionResource`
               - `prototypeUrl`
+              - `PrototypeVersionSchema`
+              - `prototypeVersionUrl`
               - `readOptionSource`
               - `readPrototypeOptions`
               - `resolvePicks`
+              - `restorePrototypeVersion`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
+              - `apps/prototypes/checkpoints`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
-        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance and the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page).
+        - **`gallery`** — Prototypes gallery list pane and the detail pane whose stage set is a slot (Focus is its own contribution; Compare is a sibling plugin's), with an Improve this prototype affordance, the hover picker for a prototype's declared options (drawn by the app over the stage, never inside the page), and the ‹ v3 of 7 › stepper that points every stage at a recorded version and restores it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
               - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
+              - `PrototypeVersionActions` ← `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
               - `prototypeDetailPane.Actions` "view-mode" → `StageSwitcher`
+              - `prototypeDetailPane.Actions` "version" → `VersionStepper`
               - `prototypeDetailPane.Actions` "improve" → `ImproveButton`
               - `PrototypeStages.Stage` "Focus" → `FocusStage`
+              - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
             - Uses:
+              - `apps-core/tabs.navigate`
               - `apps/prototypes/thumbnails.PrototypeThumbnail`
               - `apps/prototypes/thumbnails.usePrototypeThumbnails`
               - `infra/endpoints.fetchEndpoint`
@@ -2897,30 +2929,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
+              - `primitives/css/layer.layerClasses`
+              - `primitives/css/line.Line`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/surface.Surface`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/yield.yieldClass`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view.defineItemActions`
               - `primitives/data-view.FieldDef`
+              - `primitives/data-view.FieldOption`
+              - `primitives/data-view.ItemActionProps`
               - `primitives/dom/element-size.useElementSize`
+              - `primitives/icon-button.IconButton`
+              - `primitives/latest-ref.useEventCallback`
               - `primitives/launch.LaunchAgentPopover`
+              - `primitives/link-gesture.linkGestureProps`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
               - `primitives/overlay/floating-action.FloatingAction`
               - `primitives/overlay/floating-action.FloatingActionFadeIn`
+              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
               - `primitives/persistent-draft.useDraft`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
@@ -2932,6 +2980,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypeDetailPane`
               - `prototypesGalleryPane`
               - `PrototypeStages`
+              - `PrototypeVersionActions`
               - `ScaledIframe`
               - `usePrototypeDetail`
               - `usePrototypePicks`
@@ -5909,6 +5958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/composition`
           - `apps/home/app-cards`
           - `apps/mail/shell`
+          - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `build`
           - `config_v2/config-link`
@@ -7774,6 +7824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data/conv`
       - `active-data/task`
       - `apps/agent-manager/welcome`
+      - `apps/prototypes/checkpoints`
       - `code-explorer`
       - `conversations/agents`
       - `conversations/conversation-category`
@@ -10907,6 +10958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `watchTranscript`
       - Cross-plugin:
         - Imported by:
+          - `apps/prototypes/checkpoints`
           - `backup/sources/transcripts`
           - `conversations`
           - `conversations/conversation-view/jsonl-viewer`
@@ -16783,6 +16835,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/content-search`
           - `apps/pages/history`
+          - `apps/prototypes/checkpoints`
           - `build`
           - `conversations`
           - `conversations/conversation-category`
@@ -17317,6 +17370,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync`
           - `apps/pages/content-search`
           - `apps/pages/history`
+          - `apps/prototypes/checkpoints`
           - `apps/prototypes/thumbnails`
           - `apps/sonata/sources/midi/folders`
           - `backup`
@@ -18465,6 +18519,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree`
           - `packages/host-semaphore`
       - Server:
+        - Exports (values):
+          - `flockRelease`
+          - `flockTry`
+      - Core:
         - Exports (values):
           - `flockRelease`
           - `flockTry`
@@ -22678,6 +22736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps-core/surface/floating`
+              - `apps/prototypes/gallery`
               - `apps/sonata/piano-keyboard`
               - `apps/sonata/piano-roll`
               - `apps/sonata/primitives/keyboard`
@@ -22773,6 +22832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/prototypes/compare`
+              - `apps/prototypes/gallery`
               - `apps/sonata/library`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
@@ -23086,6 +23146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/shell`
               - `apps/pages/welcome/recent-pages`
+              - `apps/prototypes/gallery`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
               - `auth`
@@ -23817,6 +23878,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/runs/caveats`
               - `apps/events/sources/source-detail/runs/model-call`
               - `apps/mail/reading-pane`
+              - `apps/prototypes/gallery`
               - `apps/studio/graph`
               - `conversations/agents`
               - `fields/json/config`
@@ -24741,6 +24803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by:
               - `apps/pages/page-tree`
+              - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `conversations/conversation-view/jsonl-viewer/attachment/environment`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
@@ -24862,7 +24925,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.Grouping` ← `fields.bool.data-view-group`, `fields.date.data-view-group`, `fields.enum.data-view-group`
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
         - Contributes:
-          - `ConfigV2.WebRegister` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+          - `ConfigV2.WebRegister` ×38: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
           - `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`
           - `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
           - `DataViewSlots.Control` "Filter" → `FilterControlPanel`
@@ -25043,7 +25106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useServerDataSource`
           - `useSortController`
       - Server:
-        - Contributes: `ConfigV2.Register` ×37: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
+        - Contributes: `ConfigV2.Register` ×38: "agent-launches", "agents-list", "all-conversations", "code-explorer.file-tree", "config_v2.settings.nav", "conversations-sidebar", "debug.boot-profiles", "debug.config-orphans", "debug.profiling.runtime", "debug.reports", "debug.slow-ops.cluster-aggregate", "debug.slow-ops.cluster-timeline", "debug.slow-ops.local", "debug.trace.events", "deploy.deployment.history", "deploy.deployments", "deploy.servers", "events.list", "events.run-events", "events.source-runs", "events.sources", "home.apps", "mail-threads", "page.links.backlinks", "pages-sidebar", "plugin-view.file-tree", "prototypes.gallery", "prototypes.versions", "runs", "sonata.library", "studio.compositions", "studio.compositions.closure-tree", "studio.explorer.tree", "studio.release.history", "task-deps-tree", "tasks-list", "theme-engine.themes", "theme-engine.themes.quick"
         - Uses:
           - `config_v2.getConfig`
           - `primitives/data-view/view-core.buildViewConfigRegistrations`
@@ -26097,6 +26160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
+          - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/metronome`
@@ -26265,6 +26329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/surface/floating`
           - `apps-core/tabs`
+          - `apps/prototypes/gallery`
           - `apps/sonata/audio/engine`
           - `apps/sonata/audio/live-play`
           - `apps/sonata/audio/metronome`
@@ -26397,6 +26462,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps-core/tabs`
+          - `apps/prototypes/gallery`
           - `primitives/pane`
       - Web:
         - Exports (types): `LinkGestureProps`
@@ -27239,6 +27305,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports (values): `confirmDialog`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/prototypes/gallery`
                   - `build/serve-composition`
                   - `ui/theme-engine/theme-gallery`
         - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
@@ -27263,6 +27330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `InlinePopover`
           - Cross-plugin:
             - Imported by:
+              - `apps/prototypes/gallery`
               - `apps/sonata/track-mixer`
               - `apps/studio/compositions/entry-points`
               - `apps/website/improve`
@@ -27904,6 +27972,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/threads`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/playback-history`
           - `apps/studio/compositions/release`
@@ -28183,6 +28252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating`
           - `apps-core/surface/solo`
           - `apps-core/tabs`
+          - `apps/prototypes/gallery`
           - `apps/sonata/controls`
           - `apps/sonata/progress/loop`
           - `primitives/action-presentation`
@@ -29018,7 +29088,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister` ×203: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.WebRegister` ×204: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -29047,7 +29117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ReorderLayoutContext`
       - `useReorderedEntries`
   - Server:
-    - Contributes: `ConfigV2.Register` ×202: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
+    - Contributes: `ConfigV2.Register` ×203: "above-prompt-input", "accounts.actions", "action", "action-bar", "actions", "actions", "actions", "agent-actions", "agent-detail.actions", "agent-report.actions", "agent-side.actions", "agent-system-detail.actions", "agents-root.actions", "all-conversations.actions", "app", "apple-setup.actions", "attempt.actions", "backup-run.actions", "backup.actions", "banner", "block", "build-detail.actions", "build.actions", "chart", "chips", "claude-cli-calls.actions", "commit-detail.actions", "composition-compare.actions", "composition-detail.actions", "compositions.actions", "config-orphans.actions", "config-v2-detail.actions", "config-v2-nav.actions", "conflict-action", "contributions.actions", "conv-commits-graph.actions", "conv-docs.actions", "conv-file-tree.actions", "conv-push-profiling.actions", "conv-review.actions", "conv-summary.actions", "conv-terminal.actions", "conversation.actions", "conversations-recover.actions", "debug-boot-profile-detail.actions", "debug-boot-profile.actions", "debug-boot-profiles-list.actions", "debug-broadcasts.actions", "debug-health-monitor.actions", "debug-heap-snapshot.actions", "debug-live-state-emit.actions", "debug-memory.actions", "debug-profiling-build-detail.actions", "debug-profiling-op-detail.actions", "debug-profiling.actions", "debug-read-set.actions", "deploy-deployment-detail.actions", "deploy-server-detail.actions", "deploy-servers.actions", "event-list.actions", "event-source-detail.actions", "event-source-run.actions", "event-sources.actions", "events-root.actions", "events-test.actions", "explorer.actions", "field-extension", "fields", "fields", "fields", "fields", "fields", "fields", "fields", "file-peek.actions", "floating-action", "format-action", "global-file-tree.actions", "google-maps-setup.actions", "google-setup.actions", "graph.actions", "header", "header", "header-actions", "history-actions", "home", "hud", "item", "item", "item", "item", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "item-actions", "layout-lab.actions", "list", "list-actions", "list-actions", "live-state-health.actions", "logs-channel.actions", "logs.actions", "mail-message.actions", "mail-root.actions", "mail-search.actions", "mail-thread.actions", "mail-threads.actions", "nav-controls", "omnibox", "option", "overlay", "overlay", "page-detail.actions", "pages-root.actions", "pages-tree.actions", "pending-prompt-action", "plugin", "plugin-conv-side.actions", "plugin-view.actions", "prompt-bar", "prompt-input", "prototypes-detail.actions", "prototypes-gallery.actions", "queue-actions", "queue.actions", "rail-badge", "rail-badge", "release-detail.actions", "render-profiler.actions", "report-detail.actions", "reports.actions", "row-actions", "row-order", "screenshot.actions", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "section", "settings-config-index.actions", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sidebar", "sonata-library.actions", "sonata-player.actions", "song-actions", "sources", "sources", "start-page", "stats.actions", "sub-bar", "system-agent", "tab-bar-actions", "tab-strip", "table-detail.actions", "task-actions", "task-detail.actions", "tasks-root.actions", "theme-customizer.actions", "toolbar", "toolbar", "toolbar", "toolbar", "trace-detail.actions", "traces.actions", "transport", "tree-row-accent", "tree-row-badge", "turn-into", "variant-group", "version-actions", "view", "viewport", "welcome.actions", "workflow-node.actions", "worktree-cleanup.actions", "zero-test.actions"
     - Uses: `config_v2.ConfigV2`
     - Exports (values):
       - `reorderableSlots`

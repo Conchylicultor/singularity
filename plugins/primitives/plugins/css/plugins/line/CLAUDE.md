@@ -45,6 +45,7 @@ attribute type carries.
     - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/prototypes/compare`
+    - `apps/prototypes/gallery`
     - `apps/sonata/library`
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`

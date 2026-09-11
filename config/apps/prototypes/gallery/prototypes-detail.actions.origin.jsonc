@@ -1,4 +1,4 @@
-// @hash 1e879662063a
+// @hash 1a2c6aa50d26
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.prototypes.gallery:view-mode",
+    "apps.prototypes.gallery:version",
     "apps.prototypes.gallery:improve",
     "apps.prototypes.present:present",
     "primitives.pane:title"

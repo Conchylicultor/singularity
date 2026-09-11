@@ -8,8 +8,10 @@ import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
+  prototypeHistoryResource,
   prototypesResource,
   resolvePicks,
+  type PrototypeHistory,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
 import { OPTIONS_RULE, pickedVariantLine } from "./launch-rules";
@@ -59,14 +61,40 @@ function improveText(name: string): string {
     "must still render when double-clicked straight off disk (`file://`).",
     "`prototypes/CLAUDE.md` is the full contract.",
     "",
+    "Every agent turn that changes the folder is recorded as a version. To see how",
+    `the design got here, run \`./singularity prototype log ${name} -p\` — every past`,
+    "version with its request and its diff.",
+    "",
     OPTIONS_RULE,
   ].join("\n");
 }
 
+/**
+ * The line saying which recorded version was on screen when Improve was
+ * launched — "make this darker" may be about v3, not about the live folder.
+ * Named by number and sha; by sha alone (which the restore command accepts
+ * too) if the history no longer holds it.
+ */
+function shownVersionLine(
+  name: string,
+  sha: string,
+  history: PrototypeHistory,
+): string {
+  const n = history.versions.find((v) => v.sha === sha)?.n;
+  const which = n === undefined ? `version ${sha}` : `v${n} (${sha})`;
+  const ref = n === undefined ? sha : `v${n}`;
+  return [
+    `The user was viewing ${which} when launching this, not the live folder —`,
+    "they may want to build from that version;",
+    `\`./singularity prototype restore ${name} ${ref}\` brings it back.`,
+  ].join(" ");
+}
+
 /** Launches an agent to iterate on the open prototype. */
 export function ImproveButton() {
-  const { name, storedPicks } = usePrototypeDetail();
+  const { name, storedPicks, shownVersion } = usePrototypeDetail();
   const list = useResource(prototypesResource);
+  const history = useResource(prototypeHistoryResource, { name });
   return (
     <LaunchAgentPopover
       trigger={
@@ -80,8 +108,9 @@ export function ImproveButton() {
       placeholder="What should change? (optional)"
       align="end"
       // Until the list is known there is no declaration to say which variant
-      // is on screen against, so the launch waits for it.
-      disabled={list.pending}
+      // is on screen against, so the launch waits for it — and likewise for the
+      // history when a recorded version is on screen, to say which one.
+      disabled={list.pending || (shownVersion !== null && history.pending)}
       onLaunched={(conv) => {
         toast({
           type: "prototype",
@@ -102,11 +131,23 @@ export function ImproveButton() {
             "the prototype list is still loading — cannot say which variant is on screen",
           );
         }
-        const meta = list.data.find((p) => p.name === name);
-        const variant = meta
-          ? pickedVariantLine(resolvePicks(meta.options, storedPicks))
-          : null;
-        if (variant) parts.push(variant);
+        if (shownVersion !== null) {
+          // A past version renders at its own defaults, so there is no picked
+          // variant to name — the version is what is on screen.
+          if (history.pending) {
+            // Unreachable: the popover is disabled while the history loads.
+            throw new Error(
+              "the prototype history is still loading — cannot say which version is on screen",
+            );
+          }
+          parts.push(shownVersionLine(name, shownVersion, history.data));
+        } else {
+          const meta = list.data.find((p) => p.name === name);
+          const variant = meta
+            ? pickedVariantLine(resolvePicks(meta.options, storedPicks))
+            : null;
+          if (variant) parts.push(variant);
+        }
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };
