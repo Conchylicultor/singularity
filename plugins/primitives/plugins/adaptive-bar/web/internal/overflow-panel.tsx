@@ -85,6 +85,7 @@ export function OverflowPanel({
       if (anchor?.contains(target) === true) return;
       onDismiss();
     }
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- listens only while this panel is open; capture-phase on the document so Escape still reaches it from a relocated widget's own top-layer popover, and any outside press closes it.
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => {

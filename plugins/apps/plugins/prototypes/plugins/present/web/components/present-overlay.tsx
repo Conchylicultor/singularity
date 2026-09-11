@@ -72,6 +72,7 @@ export function PresentOverlay({
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- installed only while this surface is focused (the useSurfaceFocused gate above) and only while presenting.
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, surfaceFocused]);

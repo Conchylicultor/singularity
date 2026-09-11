@@ -277,10 +277,13 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/css/rail.useRailGuard`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useEventCallback`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/select-scope.ContentScope`
     - `primitives/select-scope.scopeSelectAllKeyDown`
+    - `primitives/shortcuts.ShortcutDescriptor`
+    - `primitives/shortcuts.useSurfaceShortcuts`
   - Exports (types):
     - `ButtonIconSize`
     - `ControlSize`

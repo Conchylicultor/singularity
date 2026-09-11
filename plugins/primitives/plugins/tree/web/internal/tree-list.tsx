@@ -30,7 +30,6 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
-import { pendingFocus } from "./pending-focus";
 import { TreeListProvider, TreeRowSlot } from "./use-tree-row";
 import { useSubtreeExpandIndex } from "./use-subtree-expand-index";
 import { useFlatExpandAll } from "./use-flat-expand-all";
@@ -139,9 +138,10 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     multiSelect,
   } = props;
 
-  const [pendingFocusId, setPendingFocusId] = useState<string | null>(() =>
-    pendingFocus.take(),
-  );
+  // The row whose name input should take focus once it appears: set by a create
+  // (the row lands one live-state round-trip later), consumed by that row. Held
+  // by THIS list, never page-wide, so two mounted trees can't take each other's.
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const clearPendingFocus = useCallback(() => setPendingFocusId(null), []);
 
   // One-shot per TreeList mount: the first row to read it (the initially
@@ -159,7 +159,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       if (!onCreate) return;
       const id = await onCreate({ parentId });
       if (!id) return;
-      pendingFocus.set(id);
       setPendingFocusId(id);
       onSelect(id);
     },
@@ -341,6 +340,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       rows,
       selectedId,
       pendingFocusId,
+      setPendingFocus: setPendingFocusId,
       clearPendingFocus,
       onSelect,
       setExpanded,

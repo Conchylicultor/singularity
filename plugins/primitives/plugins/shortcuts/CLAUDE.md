@@ -31,6 +31,7 @@
     - `apps/sonata/controls`
     - `apps/sonata/progress/loop`
     - `primitives/action-presentation`
+    - `primitives/css/ui-kit`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`

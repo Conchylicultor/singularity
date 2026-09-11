@@ -309,6 +309,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/row-actions`
+    - `primitives/shortcuts`
     - `primitives/text-editor/caret-trigger`
     - `primitives/tree`
     - `release`

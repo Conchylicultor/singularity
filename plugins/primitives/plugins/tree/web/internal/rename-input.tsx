@@ -1,6 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { pendingFocus } from "./pending-focus";
 import { useTreeListContext } from "./use-tree-row";
 
 export type RenameInputProps = {
@@ -70,10 +69,7 @@ export function RenameInput({
       value={text}
       onChange={(e) => onChange(e.target.value)}
       onMouseDown={() => {
-        if (!isSelected) {
-          pendingFocus.set(nodeId);
-          ctx.onSelect(nodeId);
-        }
+        if (!isSelected) ctx.onSelect(nodeId);
       }}
       onBlur={onBlur}
       onKeyDown={(e) => {

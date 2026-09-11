@@ -73,6 +73,7 @@ export function PickerOverlay({
     window.addEventListener("mousemove", onMove, true);
     window.addEventListener("pointerdown", onDown, true);
     window.addEventListener("click", onClick, true);
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- pick mode is page-wide by design (it overlays every surface) and listens only while picking; Escape cancels it.
     window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("mousemove", onMove, true);

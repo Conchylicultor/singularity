@@ -13,6 +13,7 @@ export function CommandPaletteRoot() {
         setOpen((v) => !v);
       }
     };
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- ⌘K opens the one page-wide palette, mounted once in Core.Root; the registry's static defineShortcut can't reach this component's open state.
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);

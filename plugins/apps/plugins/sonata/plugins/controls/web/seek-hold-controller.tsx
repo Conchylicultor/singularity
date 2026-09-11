@@ -100,7 +100,9 @@ export function SeekHoldController() {
       if (heldKey) release(heldKey);
     };
 
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- tap-vs-hold seeking needs keyup + auto-repeat, which the keydown-only registry can't express; the handler gates on the focused surface itself (see the doc above).
     window.addEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- the keyup half of the tap-vs-hold seek above; it only ends a hold this surface's keydown started.
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
     return () => {

@@ -49,9 +49,12 @@ export function useWindowKeyboardInteraction(
   const geoRef = useLatestRef(geo);
 
   // The box to restore on Escape, captured once when a mode begins.
-  const originRef = useRef<{ x: number; y: number; w: number; h: number } | null>(
-    null,
-  );
+  const originRef = useRef<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  } | null>(null);
 
   const begin = useCallback(
     (next: WindowInteraction) => {
@@ -142,6 +145,7 @@ export function useWindowKeyboardInteraction(
     };
     const armId = window.setTimeout(arm, 0);
 
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- keyboard move/resize mode of the window the user just picked it for; listens only while the mode is on, and any click ends it.
     window.addEventListener("keydown", onKey, { capture: true });
     window.addEventListener("pointerdown", onPointerDown);
     return () => {

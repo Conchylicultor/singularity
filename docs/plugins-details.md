@@ -15691,6 +15691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/image-viewer`
               - `primitives/pane`
               - `primitives/row-actions`
+              - `primitives/shortcuts`
               - `primitives/text-editor/caret-trigger`
               - `primitives/tree`
               - `release`
@@ -24141,10 +24142,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/rail.useRailGuard`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useEventCallback`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/overlay-boundary.OverlayBoundary`
               - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/select-scope.ContentScope`
               - `primitives/select-scope.scopeSelectAllKeyDown`
+              - `primitives/shortcuts.ShortcutDescriptor`
+              - `primitives/shortcuts.useSurfaceShortcuts`
             - Exports (types):
               - `ButtonIconSize`
               - `ControlSize`
@@ -28064,6 +28068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/controls`
           - `apps/sonata/progress/loop`
           - `primitives/action-presentation`
+          - `primitives/css/ui-kit`
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/overlay/image-viewer`

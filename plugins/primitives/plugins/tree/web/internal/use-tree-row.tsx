@@ -13,13 +13,14 @@ import {
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import type { ExpandChange, TreeNode } from "../../core";
-import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
 
 export type TreeListContextValue<T extends TreeItem> = {
   rows: readonly T[];
   selectedId: string | undefined;
   pendingFocusId: string | null;
+  /** Focus this row's name input once it appears (e.g. right after a create). */
+  setPendingFocus: (id: string) => void;
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
   /** Batched expand write (see `TreeListProps.setExpanded`) — a single-row
@@ -261,7 +262,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     // lands in `rows` (a live-state round-trip), so on a collapsed folder the
     // child would be created invisibly. Expanding the parent needs no round-trip.
     await ctx.setExpanded([{ id: node.id, expanded: true }]);
-    pendingFocus.set(id);
+    ctx.setPendingFocus(id);
     ctx.onSelect(id);
   }, [ctx, node.id]);
 
@@ -275,7 +276,7 @@ export function useTreeRow<T extends TreeItem>(node: TreeNode<T>): RowControls {
     if (!create) return;
     const id = await create({ parentId: node.parentId, afterId: node.id });
     if (!id) return;
-    pendingFocus.set(id);
+    ctx.setPendingFocus(id);
     ctx.onSelect(id);
   }, [ctx, node.id, node.parentId]);
 
