@@ -59,6 +59,7 @@ what an untitled conversation is called — is below both.
   - Exports (values): `ConversationChip`
 - Cross-plugin:
   - Imported by:
+    - `page/annotations/agent-notes/agent-page`
     - `page/annotations/todo/task-link`
     - `page/prompt/block`
 

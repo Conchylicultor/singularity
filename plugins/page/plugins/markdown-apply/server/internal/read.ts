@@ -27,8 +27,27 @@ export interface BlockScope {
    * function used to throw that half away.
    */
   title: string;
+  /**
+   * That page's OWN row — what a caller judging a write needs above the root:
+   * the page row is not in its content partition (`rows`), so a chain walk that
+   * reaches the top of `rows` has nowhere else to ask whose words the page holds.
+   * An agent-authored page (`data.author === "agent"`) is open to an agent's
+   * writes all the way down, and this is the one place that fact is in hand.
+   *
+   * From the same read as `rows` and `title` (`serializePageContent`), so a
+   * policy judging a plan asks the page the plan was built against. `data` is the
+   * decoded `PageData`, `title` included.
+   */
+  pageRow: BlockScopePageRow;
   /** Every LIVE row of that partition (sub-page shells included). */
   rows: StoredBlock[];
+}
+
+/** The page row a {@link BlockScope} carries: enough to classify, nothing to write. */
+export interface BlockScopePageRow {
+  id: string;
+  type: string;
+  data: unknown;
 }
 
 /**
@@ -77,7 +96,12 @@ export async function loadBlockScope(blockId: string): Promise<BlockScope> {
   if (blockId !== pageId && !snapshot.blocks.some((b) => b.id === blockId)) {
     throw new HttpError(404, `block ${blockId} is not part of page ${pageId}`);
   }
-  return { pageId, title: snapshot.page.title, rows: snapshot.blocks };
+  return {
+    pageId,
+    title: snapshot.page.title,
+    pageRow: { id: pageId, type: PAGE_BLOCK_TYPE, data: snapshot.page },
+    rows: snapshot.blocks,
+  };
 }
 
 /**

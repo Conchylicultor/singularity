@@ -7,8 +7,14 @@ import { blocksChanged } from "./tables-events";
  * (the `applyBlockOp` and `patch` handlers both call this). It:
  *
  *   1. emits `blocksChanged` for the edited page so the link/image reindexers
- *      refresh; and
- *   2. for any `type="page"` block in the deleted set, emits its `blocksChanged`.
+ *      refresh;
+ *   2. for any `type="page"` block in the deleted set, emits its `blocksChanged`;
+ *      and
+ *   3. for any `type="page"` block the edit CREATED, emits its `blocksChanged` —
+ *      the mirror of 2. A new page's content arrived under a `page_id` nothing
+ *      has announced, and every consumer of that page's content (search, history,
+ *      links, attachments) keys on this event. A markdown apply minting an
+ *      `<agent-page>`, and a paste or duplicate of a sub-page, all create one.
  *
  * The `page_blocks` content + sidebar live resources are invalidated
  * automatically by the L4 DB change-feed on the underlying write, so this helper
@@ -24,6 +30,8 @@ export async function notifyStructuralChange(
      * `type` are read.
      */
     deletedRows: { id: string; type: string }[];
+    /** Page rows this edit inserted (`ForestWriteResult.createdPageIds`). */
+    createdPageIds: readonly string[];
   },
   executor?: NodePgDatabase,
 ): Promise<void> {
@@ -44,5 +52,8 @@ export async function notifyStructuralChange(
   );
   for (const p of deletedPages) {
     await blocksChanged.emit({ pageId: p.id }, opts);
+  }
+  for (const id of args.createdPageIds) {
+    await blocksChanged.emit({ pageId: id }, opts);
   }
 }

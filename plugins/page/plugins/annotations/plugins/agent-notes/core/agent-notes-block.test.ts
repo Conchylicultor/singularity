@@ -36,7 +36,7 @@ describe("agentNotesBlock (derived + forced facts)", () => {
     expect(agentNotesBlock.audience).toBe("agent");
   });
 
-  it("declares the AGENT author — the only such card in the system", () => {
+  it("declares the AGENT author — the only such CARD in the system", () => {
     // The single row the whole agent-write rule reduces to. `author: "agent"` is
     // the only thing anywhere that opens a region to an agent's pen; every other
     // block on every page is the human's, by declaration or by the absent-value
@@ -57,19 +57,29 @@ describe("agentNotesBlock (derived + forced facts)", () => {
   });
 
   it("is typed SINGULAR, and the former plural survives as a menu alias", () => {
-    // The type is the markdown tag an agent reads and writes (`<agent-note>`),
-    // and one card is one note. The symbol, directory, package and
+    // One card is one note. The symbol, directory, package and
     // `agent-notes-authors` resource stay plural — they name a feature area.
     expect(agentNotesBlock.type).toBe("agent-note");
     expect(agentNotesBlock.aliases).toContain("agent-notes");
   });
 
-  it("maps to a round-tripping <agent-note> tag, not a one-way marker", () => {
+  it("is TAGGED <agent-inline> while its stored type stays `agent-note`", () => {
+    // The tag names what tells it apart from an agent-authored PAGE
+    // (`<agent-page>`): it sits inline among the page's blocks. Only the tag
+    // moved — no row changes, nothing migrates — and the menu finds the card
+    // under the name the document spells it.
+    expect(agentNotesBlock.markdown?.tag?.name).toBe("agent-inline");
+    expect(agentNotesBlock.type).toBe("agent-note");
+    expect(agentNotesBlock.aliases).toContain("agent-inline");
+  });
+
+  it("maps to a round-tripping <agent-inline> tag, not a one-way marker", () => {
     // A void container has no text of its own, so its markdown mapping is the
     // generic TAG: the children go inside it and it comes back as a container.
     // The retired `**[…]**` marker could only ever go one way.
     expect(agentNotesBlock.markdown?.serialize).toBeUndefined();
     expect(agentNotesBlock.markdown?.tag).toEqual({
+      name: "agent-inline",
       body: "children",
       identified: true,
     });

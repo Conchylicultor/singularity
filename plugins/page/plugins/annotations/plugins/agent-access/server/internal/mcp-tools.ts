@@ -12,8 +12,8 @@ import { pageTitleBanner } from "@plugins/page/plugins/markdown-apply/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
 import {
   assertAgentAddressable,
-  assertNoteCard,
-  assertNotesOnlyPlan,
+  assertAgentAuthored,
+  assertAgentAuthoredPlan,
   redactHumanAudience,
 } from "./policy";
 
@@ -30,13 +30,15 @@ import {
  * root, a row filter and a boundary predicate, and knows nothing about who
  * anything is for. These three tools are the POLICY over it (see `./policy.ts`),
  * which is why they live under `annotations`: withholding `/private` and owning
- * `<agent-note>` are both statements about that family, not about markdown.
+ * `<agent-inline>` and `<agent-page>` are statements about that family, not
+ * about markdown.
  *
  * **One parameter name — `block_id` — in all three.** The old
  * `blockId`-means-scope / `noteId`-means-target split dissolved with
- * `append_agent_notes`: a tagless `<agent-note>` in the document is now how a
- * card is minted. What the three tools differ in is what they ACCEPT, and that
- * difference is carried by the refusals, which name the tool to use instead.
+ * `append_agent_notes`: a tagless `<agent-inline>` (or `<agent-page title="…">`)
+ * in the document is now how a card (or a page) is minted. What the three tools
+ * differ in is what they ACCEPT, and that difference is carried by the refusals,
+ * which name the tool to use instead.
  *
  * snake_case, matching the file tools (`file_path`, `old_string`, `replace_all`)
  * — and this plugin's results, which were already snake_case.
@@ -54,8 +56,13 @@ const jsonResult = (
  * `scope_id` is the root the apply was made at — the id the agent passed, which
  * for `edit_page` is routinely a whole page. It was called `note_id` when the
  * only writable root WAS a card; keeping that name would now claim a page is a
- * note. The cards a write actually touched are `note_ids`, plural, because one
- * edit may create and revise several of them.
+ * note. The agent-authored blocks a write actually touched — cards and pages —
+ * are `note_ids`, plural, because one edit may create and revise several of them.
+ *
+ * `created_page_ids` is the pages among `created_ids`: an `<agent-page>` the
+ * document minted comes back as the page AND its body, and the page's id is the
+ * one the agent passes back to read or write that page. Without it, telling the
+ * page apart from its first paragraph means another read.
  */
 function applySummary(
   report: ApplyReport,
@@ -71,6 +78,7 @@ function applySummary(
     moved: report.stats.moved,
     text_edited: report.textEditedIds.length,
     created_ids: report.createdIds,
+    created_page_ids: report.createdPageIds,
     // Writes that came from re-applying the document rather than from the edit
     // itself, dropped before the write was judged. Surfaced rather than hidden:
     // a number climbing here is the projection becoming lossy, which nothing
@@ -92,12 +100,18 @@ function countOccurrences(haystack: string, needle: string): number {
 }
 
 /**
- * Stamp this conversation onto every card a write touched.
+ * Stamp this conversation onto every agent-authored block a write touched —
+ * cards and pages alike, one authorship table for both.
  *
  * AFTER the patch commits, always: `page_blocks_agent_authors.block_id` FKs onto
- * the card's row, so stamping a card the same call just created is a foreign-key
- * violation until then. `recordAgentNotesAuthor` is `onConflictDoNothing`, so
- * re-stamping a card this conversation already wrote is free.
+ * the row, so stamping a card — or a page — the same call just created is a
+ * foreign-key violation until then. `recordAgentNotesAuthor` is
+ * `onConflictDoNothing`, so re-stamping one this conversation already wrote is
+ * free. The EARLIEST stamp is a page's creator (the chip its row shows): a page
+ * minted here is stamped by the conversation that minted it, and an empty one a
+ * human inserted with `/agent-page` by its first writer. A crash between the
+ * commit and this loop leaves a page with no creator — nothing corrupt, only an
+ * absent chip.
  *
  * The tool layer is where `conversationId` exists at all — neither the engine nor
  * the policy ever learns one.
@@ -121,25 +135,34 @@ collaboratively with the user, not something to test on.
 \`block_id\` is the SCOPE, not a line in the output: you get that block's
 sub-blocks. A page's id gives the whole page, opening with a \`# Title\` line.
 
-Three things in the output are ADDRESSES, and all of them matter when you write
+Four things in the output are ADDRESSES, and all of them matter when you write
 back:
 
-- \`<agent-note id="…">\` — an agent-note card. Everything an agent writes to a
-  page lives inside one of these, and that id is what \`write_agent_note\` takes.
+- \`<agent-inline id="…">\` — an agent card, placed inline among the page's own
+  blocks. What an agent writes to a page lives inside one of these, or in an
+  agent page (next).
+- \`<agent-page id="…" title="…"/>\` — an AGENT PAGE: a sub-page an agent created,
+  whose whole content is the agent's to write. Here it is only a pointer; its
+  content lives in its own page — pass its id as \`block_id\` to read or write it.
 - \`<human id="…">\` — a card the page's author wrote. Same kind of address, the
   opposite permission: see below.
-- \`<page id="…"/>\` — a sub-page pointer. Leave the id alone: it is how a later
-  write reconciles the tag against the existing sub-page instead of destroying it.
+- \`<page id="…" title="…"/>\` — a pointer at another page: one of the author's
+  sub-pages, or a link to a page. Leave it alone: the id is how a later write
+  reconciles the pointer against the existing page instead of destroying it.
+
+An \`<agent-inline>\` id and an \`<agent-page>\` id are what \`write_agent_note\`
+takes. On both pointers \`title\` is READ-ONLY — shown so you can tell pages
+apart without opening each one; editing it changes nothing.
 
 **\`<human>\` and \`<todo>\` cards are the page author's OWN words.** A \`<human>\`
 card is what they wrote for you — conventions, corrections, "the writer is in
 encode.ts"; a \`<todo>\` card is work they assigned. Read both, follow both, and
 never write one: you may not create a \`<human>\` or \`<todo>\` card, and you may
 not change, move or drop an existing one. That holds even when the card sits
-INSIDE your own \`<agent-note>\` card — nesting one there is exactly how the
-author answers you inside your own note, and it stays theirs. Hand every such
-card back byte-identical, id and all; reply beside it, in the \`<agent-note>\`
-card that holds it.
+INSIDE your own \`<agent-inline>\` card or agent page — nesting one there is
+exactly how the author answers you inside your own note, and it stays theirs.
+Hand every such card back byte-identical, id and all; reply beside it, in the
+block that holds it.
 
 The markdown is a faithful projection of the block forest: what this returns
 re-parses to exactly the same blocks. Hand a line back the way you found it and
@@ -170,9 +193,10 @@ There is no offset/limit, deliberately — a line window can open a tag it never
 closes. To read less, pass the id of the block you care about; that is what the
 ids in the output are for.
 
-To write: \`write_agent_note\` replaces one card's contents; \`edit_page\`
-changes anything, as long as every block it touches sits inside an
-\`<agent-note>\` card and not inside a \`<human>\` or \`<todo>\` card within it.`,
+To write: \`write_agent_note\` replaces the whole contents of one
+\`<agent-inline>\` card or agent page; \`edit_page\` changes anything, as long as
+every block it touches sits inside an \`<agent-inline>\` card or an agent page,
+and not inside a \`<human>\` or \`<todo>\` card within it.`,
   inputSchema: {
     block_id: z
       .string()
@@ -197,82 +221,105 @@ changes anything, as long as every block it touches sits inside an
 
 export const writeAgentNoteTool = Mcp.tool({
   name: "write_agent_note",
-  description: `Replace ONE \`<agent-note>\` card's contents with a markdown document.
+  description: `Replace the whole contents of ONE agent-authored block — an \`<agent-inline>\` card or an agent page — with a markdown document.
 
 **This writes to the SHARED instance (normally main), not your worktree** — the
 opposite default from \`query_db\`, because pages are prod documents you edit
 collaboratively with the user, not something to test on. What you write is live
 for them at once and outlives your worktree.
 
-\`block_id\` must name an \`<agent-note>\` card — copy the id off the opening tag
-\`read_page\` emits. To CREATE a card, use \`edit_page\` and put a tagless
-\`<agent-note>\` … \`</agent-note>\` where you want it; there is no separate
-append tool.
+\`block_id\` must name one of the two — copy the id off the tag \`read_page\`
+emits:
 
-\`content\` is the card's CONTENTS, not the card. Write ordinary markdown
-(paragraphs, lists, headings) and it becomes the card's children; do not wrap it
-in an \`<agent-note>\` tag yourself, or you get a card inside this card rather
-than the contents of this one (nesting is legal, so nothing will stop you).
+- \`<agent-inline id="…">\` — a card inline in a page. \`content\` becomes the
+  card's children.
+- \`<agent-page id="…" title="…"/>\` — an agent page. A page's content is written
+  by its OWN id: \`content\` becomes the page's whole content. If it opens with
+  the page's \`# Title\` line exactly as \`read_page\` showed it, that line is
+  dropped rather than written. Any OTHER \`# …\` line is an ordinary heading
+  inside the page's content — the title itself is not writable here.
+
+To CREATE one, use \`edit_page\` on the page that should hold it: a tagless
+\`<agent-inline>\` … \`</agent-inline>\` mints a card where you put it, and
+\`<agent-page title="…">\` … \`</agent-page>\` mints an agent page there, its
+body becoming the new page's content. There is no separate append tool.
+
+\`content\` is the block's CONTENTS, not the block. Write ordinary markdown
+(paragraphs, lists, headings); do not wrap it in an \`<agent-inline>\` tag
+yourself, or you get a card inside this one rather than the contents of this one
+(nesting is legal, so nothing will stop you).
 
 A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line here, so a blank line you leave between two
 paragraphs becomes a spacer block of its own rather than whitespace.
 
 This is a MERGE, not an overwrite: the incoming document is aligned against the
-card's existing blocks, so unchanged blocks keep their identity (and with it
+block's existing children, so unchanged blocks keep their identity (and with it
 their edit history, stars, backlinks and any task launched from them). Only what
 really changed is written.
 
-**If the card contains a \`<human id="…">\` or \`<todo id="…">\` card, your
+**If the block contains a \`<human id="…">\` or \`<todo id="…">\` card, your
 \`content\` must echo it back verbatim, id and all.** Those are the page author's
-own words — typically their answer to you, written inside your own card — and
-they are not yours to rewrite or to drop. \`content\` is the card's WHOLE new
-contents, so a document that simply leaves such a card out is a document that
+own words — typically their answer to you, written inside your own card or page —
+and they are not yours to rewrite or to drop. \`content\` is the block's WHOLE
+new contents, so a document that simply leaves such a card out is a document that
 plans its deletion: the whole write is refused and NOTHING is written, not even
-the parts that were fine. \`read_page\` the card first and edit that text; that
-is the only way to be sure you are echoing what is actually there.
+the parts that were fine. \`read_page\` the block first and edit that text; that
+is the only way to be sure you are echoing what is actually there. The same goes
+for \`<page id="…"/>\` and \`<agent-page id="…"/>\` pointers inside an agent page:
+a sub-page is never deleted by leaving it out, but hand the pointers back anyway.
 
-Always \`read_page\` the card first (\`read_page\` with the card's id returns
-exactly this document) and edit THAT text: a document written from memory loses
-every block the projection encoded and re-mints the blocks it fails to reproduce
+Always \`read_page\` the block first (\`read_page\` with its id returns exactly
+this document) and edit THAT text: a document written from memory loses every
+block the projection encoded and re-mints the blocks it fails to reproduce
 byte-for-byte. Prefer \`edit_page\` for a localized change — same machinery, far
-smaller chance of rewriting the whole card by accident.
+smaller chance of rewriting the whole block by accident.
 
-The card records that THIS conversation wrote it, so a human reading the page can
-open the run that produced the note. Returns what the write actually did
+The block records that THIS conversation wrote it, so a human reading the page
+can open the run that produced it. Returns what the write actually did
 (survived / created / deleted / moved).`,
   inputSchema: {
     block_id: z
       .string()
       .min(1)
-      .describe("The `<agent-note>` card's block id, as read_page emits it."),
+      .describe(
+        "The `<agent-inline>` card's or agent page's block id, as read_page emits it.",
+      ),
     content: z
       .string()
       .describe(
-        "The card's full new contents, in the same dialect `read_page` emits.",
+        "The block's full new contents, in the same dialect `read_page` emits.",
       ),
   },
   async handler({ block_id: blockId, content }, ctx) {
-    assertNoteCard(await loadBlockScope(blockId), blockId);
-    // The card set the acceptance predicate resolved, carried out of the hook.
+    assertAgentAuthored(await loadBlockScope(blockId), blockId);
+    // The block set the acceptance predicate resolved, carried out of the hook.
     // `assertAcceptable` returns void by design — its only verdict is throwing —
     // so the answer it computes on the way rides out on a closure rather than
     // being walked a second time here.
-    let cards: string[] = [];
+    let authored: string[] = [];
     const report = await applyMarkdownToBlock(blockId, content, {
       // The SAME filter the read used, which is what makes the apply a diff
       // against the document the agent actually saw.
       redact: redactHumanAudience,
-      assertAcceptable: (plan, rows) => {
-        cards = assertNotesOnlyPlan({ plan, rows, rootId: blockId });
+      assertAcceptable: (plan, { rows, pageRow }) => {
+        authored = assertAgentAuthoredPlan({
+          plan,
+          rows,
+          pageRow,
+          rootId: blockId,
+        });
       },
     });
-    // The target card is stamped even when the diff was empty: "I wrote this
-    // card" is true either way, and an agent that re-sends an unchanged document
-    // has still taken authorship of what it says.
-    await stampAuthors([blockId, ...cards], ctx.conversationId);
+    // The target is stamped even when the diff was empty: "I wrote this" is true
+    // either way, and an agent that re-sends an unchanged document has still
+    // taken authorship of what it says.
+    await stampAuthors([blockId, ...authored], ctx.conversationId);
     return jsonResult(
-      applySummary(report, [blockId, ...cards.filter((c) => c !== blockId)]),
+      applySummary(report, [
+        blockId,
+        ...authored.filter((id) => id !== blockId),
+      ]),
     );
   },
 });
@@ -287,19 +334,34 @@ collaboratively with the user, not something to test on. Your edit is live for
 them at once and outlives your worktree.
 
 THE ONE RULE: **every block this edit creates, rewrites, moves or deletes must
-sit inside an \`<agent-note>\` card — and not inside a \`<human>\` or \`<todo>\`
-card within it.** The page's own prose is read-only to an agent — you annotate
-it, you do not rewrite it — and so is a card the author wrote, wherever it sits.
-The rule is one walk: from each block you touched, go up until you reach a card
-that says whose words it holds; \`<agent-note>\` says yours, \`<human>\` and
-\`<todo>\` say theirs, and reaching the page without meeting either means the
-page's own prose, which is theirs too. You may not create a \`<human>\`,
-\`<todo>\` or \`<private-note>\` card anywhere, including inside your own — to
-file work, use \`add_task\`.
+sit inside an agent-authored block — an \`<agent-inline>\` card or an agent page
+— and not inside a \`<human>\` or \`<todo>\` card within it.** The page's own
+prose is read-only to an agent — you annotate it, you do not rewrite it — and so
+is a card the author wrote, wherever it sits. The rule is one walk: from each
+block you touched, go up until you reach something that says whose words it
+holds; \`<agent-inline>\` and an agent page say yours, \`<human>\` and
+\`<todo>\` say theirs, and reaching the top of a page the author wrote without
+meeting either means the page's own prose, which is theirs too. You may not
+create a \`<human>\`, \`<todo>\` or \`<private-note>\` card anywhere, including
+inside your own — to file work, use \`add_task\`.
+
+Two ways to add something of your own, both TAGLESS — a tag with an id names a
+block that already exists:
+
+- \`<agent-inline>\` … \`</agent-inline>\` — a card, right where you put it,
+  among the page's blocks. For an annotation on a line.
+- \`<agent-page title="…">\` … \`</agent-page>\` — an AGENT PAGE: a new sub-page
+  in this page, its body becoming the new page's content, all of it yours. For
+  something long enough to deserve its own page. It comes back from \`read_page\`
+  as the pointer \`<agent-page id="…" title="…"/>\`, and the result's
+  \`created_page_ids\` names it. After that, a page's content is written by its
+  OWN id — pass it as \`block_id\` (here or to \`write_agent_note\`); a pointer
+  with a body, or with any attribute besides \`title\`, is refused. Its
+  \`title\` is read-only on the pointer: set it when you create the page.
 
 \`block_id\` is only the SCOPE the edit applies to (a page id for the whole
 page); what is allowed is judged by what the resulting diff TOUCHED, not by which
-id you passed.
+id you passed. Scoped to an agent page's own id, every block in it is yours.
 
 A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line in this document, so a blank line you add is a
@@ -320,21 +382,20 @@ A worked round trip:
 
        The parser handles UTF-8.
 
-       <agent-note id="block-77">
+       <agent-inline id="block-77">
        Checked the writer.
        <human id="block-90">
        No — the writer is in encode.ts.
        </human>
-       </agent-note>
+       </agent-inline>
 
 2. Annotate that prose line — the line itself comes back byte-identical, and the
-   only new block sits in a new, TAGLESS card (a tagless \`<agent-note>\` mints
-   one; a tagged one names the card that already exists):
+   only new block sits in a new, TAGLESS card:
 
        edit_page(
          block_id:   "<page id>",
          old_string: "The parser handles UTF-8.",
-         new_string: "The parser handles UTF-8.\\n<agent-note>\\nUTF-16 input is rejected in decode.ts.\\n</agent-note>",
+         new_string: "The parser handles UTF-8.\\n<agent-inline>\\nUTF-16 input is rejected in decode.ts.\\n</agent-inline>",
        )
 
 3. Revise what you wrote earlier — inside the existing card, so it is yours:
@@ -349,7 +410,7 @@ A worked round trip:
                  old_string: "The parser handles UTF-8.",
                  new_string: "The parser handles UTF-16.")
 
-       403: block block-12 was edited outside every "agent-note" card. …
+       403: block block-12 was edited outside every agent-authored block. …
 
 5. REFUSED — this one is INSIDE your own card, and still refused, because the
    line it rewrites is inside the \`<human>\` card the author nested there:
@@ -370,9 +431,11 @@ Contract, matching the \`Edit\` file tool:
 - \`old_string\` and \`new_string\` must differ.
 
 Match against what \`read_page\` returns for this \`block_id\`, not against what
-you imagine it says. Everything outside a card must come back byte-identical —
-including the \`# Title\` line, every \`<page id="…"/>\` pointer, and every
-\`<human>\` / \`<todo>\` card, which is the author's even when it sits in yours.`,
+you imagine it says. Everything outside your own blocks must come back
+byte-identical — including the \`# Title\` line (a page's title is not writable,
+an agent page's included), every \`<page id="…"/>\` and \`<agent-page id="…"/>\`
+pointer, and every \`<human>\` / \`<todo>\` card, which is the author's even when
+it sits in yours.`,
   inputSchema: {
     block_id: z
       .string()
@@ -464,7 +527,7 @@ including the \`# Title\` line, every \`<page id="…"/>\` pointer, and every
       }
     }
 
-    let cards: string[] = [];
+    let authored: string[] = [];
     const report = await applyMarkdownToBlock(blockId, next, {
       // `markdown` is what this tool read a moment ago and `next` is that same
       // string with one splice in it, so every write the two have in common is
@@ -472,16 +535,23 @@ including the \`# Title\` line, every \`<page id="…"/>\` pointer, and every
       // below judges the caller for blocks the projection touched.
       baseline: markdown,
       redact: redactHumanAudience,
-      assertAcceptable: (plan, rows) => {
-        cards = assertNotesOnlyPlan({ plan, rows, rootId: blockId });
+      assertAcceptable: (plan, { rows, pageRow }) => {
+        authored = assertAgentAuthoredPlan({
+          plan,
+          rows,
+          pageRow,
+          rootId: blockId,
+        });
       },
     });
     // Nothing is stamped when nothing changed: unlike `write_agent_note`, this
-    // tool names no card of its own, so an edit that touched no card has no
-    // authorship to claim.
-    await stampAuthors(cards, ctx.conversationId);
+    // tool names no block of its own, so an edit that touched no agent-authored
+    // block has no authorship to claim. A page it MINTED is among `authored` —
+    // the new page is its own nearest agent-authored row — so it is stamped as
+    // its creator here, after the commit.
+    await stampAuthors(authored, ctx.conversationId);
     return jsonResult({
-      ...(applySummary(report, cards) as object),
+      ...(applySummary(report, authored) as object),
       replaced: replaceAll ? matches : 1,
     });
   },

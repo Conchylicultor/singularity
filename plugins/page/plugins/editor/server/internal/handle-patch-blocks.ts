@@ -143,6 +143,30 @@ export async function applyPageBlockPatch(
       // An update naming a row that is not live is a skip — see the header.
       const updates = patch.updates.filter((u) => stored.has(u.id));
 
+      // --- Closed-world guard ---------------------------------------------------
+      // A patch holds ONE page's lock, so the rows it creates may join exactly
+      // two partitions: the locked page's, and that of a page this same patch
+      // creates (a markdown apply minting an `<agent-page>` with its body, a
+      // pasted sub-page with its content). No lock is needed for the second:
+      // nobody else can know an id that does not exist yet. Any other `pageId`
+      // names a partition this write does not hold — a row written there would
+      // race that page's own writers and escape its content forest's read. Web
+      // patches satisfy this already (the composite store routes creates by
+      // their own `pageId`); the guard makes it a refusal rather than a hope.
+      const createdPages = new Set(
+        inserts.filter((b) => b.type === PAGE_BLOCK_TYPE).map((b) => b.id),
+      );
+      for (const b of [...inserts, ...overwrites]) {
+        if (b.pageId === pageId) continue;
+        if (b.pageId !== null && createdPages.has(b.pageId)) continue;
+        throw new HttpError(
+          400,
+          `Block ${b.id} is created under page ${b.pageId ?? "null"}, but this patch ` +
+            `writes page ${pageId}: a create may join the locked page, or a page the same ` +
+            `patch creates, and no other.`,
+        );
+      }
+
       // --- Page-type transition guard -----------------------------------------
       // A `page` row owns every row keyed `page_id = <its id>`. Flipping it to a
       // content type would leave that content unreachable by any query, forever;
@@ -207,7 +231,11 @@ export async function applyPageBlockPatch(
 
   if (didWrite) {
     await notifyStructuralChange(
-      { pageId, deletedRows: write.deletedRows },
+      {
+        pageId,
+        deletedRows: write.deletedRows,
+        createdPageIds: write.createdPageIds,
+      },
       executor,
     );
   }

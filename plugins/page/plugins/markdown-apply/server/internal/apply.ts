@@ -1,6 +1,7 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   applyPageBlockPatch,
+  PAGE_BLOCK_TYPE,
   serializePageContent,
   type StoredBlock,
 } from "@plugins/page/plugins/editor/server";
@@ -20,7 +21,7 @@ import {
   type MarkdownApplyPlan,
 } from "../../core";
 import { serverMarkdownContext } from "./markdown-context";
-import { loadBlockScope } from "./read";
+import { loadBlockScope, type BlockScopePageRow } from "./read";
 
 /**
  * Apply an edited markdown document onto an existing block's subtree — the write
@@ -90,12 +91,15 @@ import { loadBlockScope } from "./read";
  * ---------------------------------------------------------------------------
  *
  * `agentOriginCreateHook` reads the `x-singularity-origin` header off an HTTP
- * `Request` and marks whole PAGES an automated session created. A markdown
- * apply has no `Request` (it runs from an MCP tool), and it never creates a
- * page — it edits one that already exists. Both halves of that hook's
- * precondition are absent, so there is nothing to plumb. Do not "fix" this by
- * synthesizing a header: it would mark a human's page as agent-origin and hand
- * it to the 24h retention sweep.
+ * `Request` and marks whole PAGES an automated session created, for a 24h
+ * retention sweep of e2e debris. A markdown apply has no `Request` (it runs from
+ * an MCP tool), and the one page it can create — an agent-authored page minted
+ * by `<agent-page title="…">` — is written through `applyPageBlockPatch`, which
+ * never fires `BlockLifecycle.AfterCreate`. So the sweep never sees it, and must
+ * not: an agent-authored page is a real document the user keeps. Do not "fix"
+ * this by synthesizing a header or firing the hook: it would hand the page to
+ * the sweep. (The two share a word and nothing else — see
+ * `research/2026-09-11-page-agent-pages.md`.)
  */
 
 export interface ApplyBlockOptions {
@@ -151,6 +155,9 @@ export interface ApplyBlockOptions {
    * exactly like the planner's own refusals above it. `rows` is the same
    * whole-partition, UNREDACTED row set the plan was built over, which is what a
    * chain walk needs: an ancestor may be a row the document never showed.
+   * `pageRow` is the page's own row from that same read — above every row of the
+   * partition, and the last thing such a walk can ask (see
+   * `BlockScope.pageRow`).
    *
    * There is deliberately no exported `plan`/`commit` pair doing the same job
    * from outside. A caller holding a plan could commit it against rows it re-read
@@ -160,7 +167,7 @@ export interface ApplyBlockOptions {
    */
   assertAcceptable?(
     plan: MarkdownApplyPlan,
-    rows: readonly StoredBlock[],
+    forest: { rows: readonly StoredBlock[]; pageRow: BlockScopePageRow },
   ): void;
 }
 
@@ -178,6 +185,13 @@ export interface ApplyReport {
    */
   survivingIds: string[];
   createdIds: string[];
+  /**
+   * The PAGES among {@link createdIds} — each a new `<agent-page>` the document
+   * minted, whose body is the rest of `createdIds` under it. Separate because a
+   * caller has to tell the page from its content: the page's id is what it passes
+   * back to read or write the page, and a body row's is not.
+   */
+  createdPageIds: string[];
   /** Survivors whose content doc this apply spliced. */
   textEditedIds: string[];
   /**
@@ -292,6 +306,8 @@ async function applyToScope(scope: {
   pageId: string;
   /** The page's STORED title — the banner this apply may have to strip. */
   title: string;
+  /** The page's own row, from the same read as `rows` — for `assertAcceptable`. */
+  pageRow: BlockScopePageRow;
   rows: readonly StoredBlock[];
   markdown: string;
   baseline?: string;
@@ -302,6 +318,7 @@ async function applyToScope(scope: {
     rootId,
     pageId,
     title,
+    pageRow,
     rows,
     markdown,
     baseline,
@@ -434,7 +451,7 @@ async function applyToScope(scope: {
   // Throwing here refuses the whole apply with nothing written — the same
   // guarantee the planner's refusal above has, and the reason this cannot be a
   // check the caller performs afterwards.
-  assertAcceptable?.(plan, rows);
+  assertAcceptable?.(plan, { rows, pageRow });
 
   const { patch, textEdits, stats } = plan;
 
@@ -446,6 +463,9 @@ async function applyToScope(scope: {
 
   const createdIds = patch.creates.map((b) => b.id);
   const createdSet = new Set(createdIds);
+  const createdPageIds = patch.creates
+    .filter((b) => b.type === PAGE_BLOCK_TYPE)
+    .map((b) => b.id);
   // The SAME walk the plan was built over, re-run on the post-patch rows — so
   // "survived" means "still in the scope this apply had authority over", and a
   // preserved sub-page shell re-homed above the rank floor is counted where it
@@ -469,6 +489,7 @@ async function applyToScope(scope: {
     stats,
     survivingIds: inScope.filter((b) => !createdSet.has(b.id)).map((b) => b.id),
     createdIds,
+    createdPageIds,
     textEditedIds: textEdits.map((e) => e.blockId),
     absorbedWrites,
   };
@@ -484,11 +505,12 @@ export async function applyMarkdownToBlock(
   markdown: string,
   opts?: ApplyBlockOptions,
 ): Promise<ApplyReport> {
-  const { pageId, title, rows } = await loadBlockScope(blockId);
+  const { pageId, title, pageRow, rows } = await loadBlockScope(blockId);
   return applyToScope({
     rootId: blockId,
     pageId,
     title,
+    pageRow,
     rows,
     markdown,
     baseline: opts?.baseline,
@@ -518,6 +540,7 @@ export async function applyMarkdownToPage(
     rootId: pageId,
     pageId,
     title: snapshot.page.title,
+    pageRow: { id: pageId, type: PAGE_BLOCK_TYPE, data: snapshot.page },
     rows: snapshot.blocks,
     markdown,
     baseline: opts?.baseline,

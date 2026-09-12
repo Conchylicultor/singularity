@@ -130,10 +130,12 @@ export const handleApplyBlockOp = implement(
 
     // --- Notify (shared with the patch handler) --------------------------------
     // The shared helper emits `blocksChanged` for this page and fans out per
-    // emptied sub-page in the deleted subtree.
+    // emptied sub-page in the deleted subtree, and per sub-page the op created
+    // (a paste or duplicate of one).
     await notifyStructuralChange({
       pageId: params.pageId,
       deletedRows: write.deletedRows,
+      createdPageIds: write.createdPageIds,
     });
 
     // Return the reloaded LIVE page rows (mirrors the live push payload).

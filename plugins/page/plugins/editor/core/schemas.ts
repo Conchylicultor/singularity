@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import { defineBlock } from "./define-block";
+import { defineBlock, type BlockAuthor } from "./define-block";
 import type { BlockMarkdown } from "./markdown";
 
 // A block `data` payload that has been validated against its block type's schema.
@@ -136,11 +136,20 @@ export type PageCover = z.infer<typeof PageCoverSchema>;
 // directly so display surfaces don't ship the icon registry. Both null = no
 // icon (a default glyph is shown instead). `cover` is the optional page cover
 // (absent on legacy rows — decodes to `undefined`, no data migration).
+// `author: "agent"` marks an AGENT-AUTHORED page — a sub-page whose whole
+// content an agent may write (`<agent-page>` in markdown). Absent means the
+// human's, the fail-safe reading, exactly as for every block that declares no
+// author; it is read through `blockAuthorOf` (`pageBlockAuthor` below), never
+// directly. The marker is the page's KIND, fixed at creation: the server refuses
+// a data write that flips it (`rewriteBlockData`). Not to be confused with
+// `apps/pages/agent-origin`'s "agent pages" (e2e-created, swept after 24h) —
+// see research/2026-09-11-page-agent-pages.md.
 export const PageDataSchema = z.object({
   title: z.string(),
   icon: z.string().nullable(),
   iconSvgNodes: z.array(SvgNodeSchema).nullable().optional(),
   cover: PageCoverSchema.nullable().optional(),
+  author: z.literal("agent").optional(),
 });
 export type PageData = z.infer<typeof PageDataSchema>;
 
@@ -152,11 +161,36 @@ export function pageData(block: Pick<Block, "data">): PageData {
 }
 
 /**
+ * The attributes `<agent-page>` accepts. `id` is not among them because the
+ * parse lifts it off as the node's `ref` before these are read.
+ */
+const AGENT_PAGE_ATTRS = new Set(["title"]);
+
+/**
  * The `page` row's markdown mapping, declared ONCE and shared by BOTH handles
  * that register the type — `pageBlockHandle` below (server `Editor.BlockData`)
  * and `sub-page`'s web renderer handle. A second copy would let the two disagree
  * about the tag name, and two handles claiming one tag name on PARSE is a loud
  * error.
+ *
+ * Two spellings of one row type, chosen by `data.author` (`BlockTag.spellings`):
+ *
+ * - `<page id="…" title="…"/>` — a human's sub-page. Serialize-only: the same
+ *   line is how a link-to-page block writes itself, and `page-link` claims it
+ *   on parse.
+ * - `<agent-page id="…" title="…"/>` — an agent-authored page. Claimed on parse,
+ *   and the ONE way a markdown parse mints a sub-page: its tagless mint form
+ *   `<agent-page title="…">body</agent-page>` becomes a new `page` node carrying
+ *   `author: "agent"` and its body. Minting a human's sub-page stays
+ *   turn-into-page's alone.
+ *
+ * `title` rides both, for two reasons that come to one: an agent must be able to
+ * tell pages apart without opening each one. On `<agent-page>` it is the row's
+ * own data, emitted by the spelling's `attrs` and kept by its parse (the mint
+ * form needs it; the planner ignores it on a pointer, comparing only the
+ * spelling's preset). On `<page>` it is an `annotated` attribute — read-only,
+ * discarded on parse — because `page-link` shares that tag and a link's title
+ * lives on another row; `editor/server` and `page-link/server` supply it.
  */
 export const pageBlockMarkdown: BlockMarkdown<PageData> = {
   tag: {
@@ -180,15 +214,55 @@ export const pageBlockMarkdown: BlockMarkdown<PageData> = {
       }
       return { id: ctx.id };
     },
+    // Read-only, supplied from outside the walk — see the doc above. Declared on
+    // `page-link`'s tag too, so the two halves of `<page>` read the same.
+    annotated: ["title"],
     // SERIALIZE ONLY: `<page id="x"/>` parses back as a `page-link`, never as a
-    // sub-page. **Markdown parse alone can never mint a sub-page** — minting one
-    // means minting its `page_id` partition and restamping a subtree, which only
-    // the server's turn-into-page op does (and neither handle declares a `label`,
-    // so it cannot be menu-created either). The id in the tag is precisely what
-    // lets a future diff/merge reconcile the tag against the EXISTING sub-page
-    // row instead of re-minting it.
+    // human's sub-page — minting one means minting its `page_id` partition and
+    // restamping a subtree, which the server's turn-into-page op does. The id in
+    // the tag is what lets a markdown apply reconcile the pointer against the
+    // EXISTING sub-page row instead of re-minting it.
     serializeOnly: true,
+    spellings: [
+      {
+        name: "agent-page",
+        data: { author: "agent" },
+        // The row id, as every agent-facing card carries one: `read_page`'s
+        // pointer is the id an agent passes back as `block_id` to write the
+        // page's content, and what a later apply pins the row by.
+        identified: true,
+        body: "children-when-expanded",
+        attrs: (data) => ({ title: data.title }),
+        // Only `title`, and loudly. A pointer's content is the page's own, so
+        // any other attribute on it would be an edit the planner has no way to
+        // honour — and on the mint form an icon or a cover is not something an
+        // agent can author through markdown yet.
+        parseAttrs: (attrs) => {
+          for (const name of Object.keys(attrs)) {
+            if (!AGENT_PAGE_ATTRS.has(name)) {
+              throw new Error(
+                `markdown: <agent-page> takes only \`title\` (and \`id\` on a pointer), but was ` +
+                  `given \`${name}\`. A page's content lives in the page itself: to change an ` +
+                  "existing agent page, pass its id as `block_id` and write its content there.",
+              );
+            }
+          }
+          return { title: attrs.title ?? "", icon: null };
+        },
+      },
+    ],
   },
+};
+
+/**
+ * The `page` row's author declaration, shared by both handles for
+ * `pageBlockMarkdown`'s reason: an agent-authored page is `data.author ===
+ * "agent"`, and every other page — `author` absent — is the human's. The per-row
+ * twin of an annotation's static `author` (`BlockHandle.authorFromData`).
+ */
+export const pageBlockAuthor = {
+  authorFromData: (data: Partial<PageData>): BlockAuthor | undefined =>
+    data.author,
 };
 
 // The block handle for the reserved `type="page"` node. Owned by `editor/core` —
@@ -196,9 +270,11 @@ export const pageBlockMarkdown: BlockMarkdown<PageData> = {
 // `restorePageContent` write page rows directly, so page creation must not depend
 // on the sub-page plugin being enabled. `editor/server` contributes THIS handle to
 // the server `Editor.BlockData` registry; the `sub-page` web renderer declares its
-// own handle for the same type, sharing `pageBlockMarkdown` above.
+// own handle for the same type, sharing `pageBlockMarkdown` and `pageBlockAuthor`
+// above.
 export const pageBlockHandle = defineBlock({
   type: PAGE_BLOCK_TYPE,
   schema: PageDataSchema,
   markdown: pageBlockMarkdown,
+  ...pageBlockAuthor,
 });

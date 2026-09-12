@@ -78,10 +78,15 @@ export const Editor = {
    * It takes the rows in one call rather than one call per block on purpose: a
    * provider's natural query is a single `WHERE parent_id IN (…)`, bounded by
    * the page, and a per-block seam would turn a page read into N round trips.
+   *
+   * Each row carries its `data`, because the read already holds full rows and
+   * some answers are IN them: a human sub-page's `title` is its own row's, and
+   * a link-to-page block's `pageId` is what its provider looks the target up
+   * by. A provider must not read it back from the table instead.
    */
   BlockAnnotation: defineServerContribution<{
     resolve(
-      rows: readonly { id: string; type: string }[],
+      rows: readonly { id: string; type: string; data: unknown }[],
     ): Promise<ReadonlyMap<string, Record<string, string>>>;
   }>("page.block-annotation"),
 };
@@ -242,7 +247,7 @@ export function blockTextServerNodes(): Klass<LexicalNode>[] {
  * naming both.
  */
 export async function resolveBlockAnnotations(
-  rows: readonly { id: string; type: string }[],
+  rows: readonly { id: string; type: string; data: unknown }[],
 ): Promise<ReadonlyMap<string, Record<string, string>>> {
   const providers = Editor.BlockAnnotation.getContributions();
   const merged = new Map<string, Record<string, string>>();

@@ -3,8 +3,9 @@ import { z } from "zod";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { defineBlock, textBlockSchema, type BlockData } from "../../core";
+import { pageBlockHandle } from "../../core/schemas";
 import { Editor, resolveBlockHandle } from "./block-registry";
-import { parseBlockData } from "./parse-block-data";
+import { parseBlockData, rewriteBlockData } from "./parse-block-data";
 
 // Throwaway handles registered via `collectContributions`, keeping this resolver
 // unit test decoupled from any concrete block-type plugin (importing one would form
@@ -31,7 +32,9 @@ function asRecord(data: BlockData): Record<string, unknown> {
 
 test("valid data parses to canonical output", () => {
   register();
-  expect(asRecord(parseBlockData("__note__", { title: "hi", pinned: true }))).toEqual({
+  expect(
+    asRecord(parseBlockData("__note__", { title: "hi", pinned: true })),
+  ).toEqual({
     title: "hi",
     pinned: true,
   });
@@ -120,15 +123,19 @@ test("string data.text is normalized to a single run", () => {
   });
 });
 
-test('empty-string data.text normalizes to []', () => {
+test("empty-string data.text normalizes to []", () => {
   registerText();
-  expect(asRecord(parseBlockData("__text__", { text: "" }))).toEqual({ text: [] });
+  expect(asRecord(parseBlockData("__text__", { text: "" }))).toEqual({
+    text: [],
+  });
 });
 
 test("runs data.text passes through unchanged", () => {
   registerText();
   expect(
-    asRecord(parseBlockData("__text__", { text: [{ text: "hi", marks: ["bold"] }] })),
+    asRecord(
+      parseBlockData("__text__", { text: [{ text: "hi", marks: ["bold"] }] }),
+    ),
   ).toEqual({ text: [{ text: "hi", marks: ["bold"] }] });
 });
 
@@ -154,4 +161,103 @@ test("a void type with an injected string text key is still a 400", () => {
     expect(err).toBeInstanceOf(HttpError);
     expect((err as HttpError).status).toBe(400);
   }
+});
+
+// ── rewriteBlockData: a row's author is fixed when it is created ─────────────
+//
+// The ONE minting site of the update brand, so every path that rewrites an
+// existing row's payload — the op writer, the patch writer, `PATCH
+// /api/blocks/:id`, history restore — refuses the same thing here: a data write
+// that changes whose words the row holds. The row that decides it per row today
+// is a page (`data.author === "agent"`).
+
+function registerPage(): void {
+  collectContributions([
+    {
+      id: "page",
+      contributions: [
+        Editor.BlockData(pageBlockHandle),
+        Editor.BlockData(noteBlock),
+      ],
+    },
+  ]);
+}
+
+const humanPage = { type: "page", data: { title: "Notes", icon: null } };
+const agentPage = {
+  type: "page",
+  data: { title: "Findings", icon: null, author: "agent" },
+};
+
+function expectStatus(fn: () => unknown, status: number): void {
+  try {
+    fn();
+    throw new Error(`expected a ${status}`);
+  } catch (err) {
+    expect(err).toBeInstanceOf(HttpError);
+    expect((err as HttpError).status).toBe(status);
+  }
+}
+
+test("a rewrite that keeps the author passes — a title edit carries the marker", () => {
+  registerPage();
+  expect(
+    asRecord(
+      rewriteBlockData({
+        type: "page",
+        before: agentPage,
+        next: { ...agentPage.data, title: "Renamed" },
+      }),
+    ),
+  ).toEqual({ ...agentPage.data, title: "Renamed" });
+});
+
+test("marking a human's page as agent-authored is a 409", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      rewriteBlockData({
+        type: "page",
+        before: humanPage,
+        next: { ...humanPage.data, author: "agent" },
+      }),
+    409,
+  );
+});
+
+test("DROPPING the marker from an agent-authored page is a 409 too", () => {
+  // A writer that restated `{ title, icon }` without spreading the stored data
+  // would take the page away from the agent — as silently as the other way.
+  registerPage();
+  expectStatus(
+    () =>
+      rewriteBlockData({
+        type: "page",
+        before: agentPage,
+        next: { title: "Findings", icon: null },
+      }),
+    409,
+  );
+});
+
+test("a TYPE change is not judged — turn-into-page is where a page is born", () => {
+  registerPage();
+  expect(
+    asRecord(
+      rewriteBlockData({
+        type: "page",
+        before: { type: "__note__", data: { title: "x", pinned: false } },
+        next: { title: "x", icon: null, author: "agent" },
+      }),
+    ),
+  ).toEqual({ title: "x", icon: null, author: "agent" });
+});
+
+test("it still validates like parseBlockData — a malformed payload is a 400", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      rewriteBlockData({ type: "page", before: agentPage, next: { title: 1 } }),
+    400,
+  );
 });

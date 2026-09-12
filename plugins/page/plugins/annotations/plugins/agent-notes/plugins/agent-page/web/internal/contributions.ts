@@ -1,0 +1,43 @@
+import { MdAutoAwesome } from "react-icons/md";
+import type { PageData } from "@plugins/page/plugins/editor/core";
+import type { InsertAction } from "@plugins/page/plugins/editor/web";
+import type { PageReferenceDecorationContribution } from "@plugins/page/plugins/page-reference/web";
+import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
+import { AgentPageCreatorChip } from "../components/agent-page-creator-chip";
+import { turnIntoAgentPage } from "./turn-into-agent-page";
+
+/** An agent-authored page is a `page` row whose data says so. */
+function isAgentAuthoredPage(page: PageData): boolean {
+  return page.author === "agent";
+}
+
+/**
+ * How a reference paints an agent-authored page: the agent-notes card's own
+ * wash (`agent-notes-frame.tsx`), so "an agent wrote this" reads the same in a
+ * card and in a page row, and the chip naming the conversation that created it.
+ *
+ * The wash co-publishes itself as `--scrim` — its composite over the ambient
+ * mask, the way `Row`'s translucent hover does — so an action cluster pinned
+ * over a tinted row dissolves what it covers into blue, not into a hole.
+ */
+export const agentPageDecoration: PageReferenceDecorationContribution = {
+  applies: isAgentAuthoredPage,
+  tint: "bg-info/10 [--scrim:color-mix(in_srgb,var(--info)_10%,var(--chrome-mask))]",
+  component: AgentPageCreatorChip,
+};
+
+/**
+ * `/agent-page`: an agent-authored page made in place of the caret's line, the
+ * line's other words becoming its title — listed right after the agent-notes
+ * card, its sibling in the menu.
+ */
+export const agentPageInsertAction: InsertAction = {
+  id: "agent-page",
+  label: "Agent page",
+  icon: MdAutoAwesome,
+  aliases: ["agent", "agent-page", "agent page", "ai page"],
+  after: agentNotesBlock.type,
+  run: ({ blockId, text }) => {
+    void turnIntoAgentPage(blockId, text);
+  },
+};

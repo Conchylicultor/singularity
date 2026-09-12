@@ -73,7 +73,7 @@ function composePrompt(
     "",
     `Read the page with read_page("${pageId}") for the surrounding context — the`,
     "card above is a snapshot and the page is authoritative. When you are done,",
-    "write your findings back with edit_page as an <agent-note> card placed at the",
+    "write your findings back with edit_page as an <agent-inline> card placed at the",
     "END of that TODO card.",
     ...(extra ? ["", extra] : []),
   ].join("\n");

@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   agentNotesAuthorsResource,
   type AgentNotesAuthor,
@@ -21,12 +24,47 @@ const NO_AUTHORS: readonly AgentNotesAuthor[] = [];
  * freshly-opened page's agent-notes glyph becomes interactive a beat after it
  * paints — the same call `useBlockPromptTasks` makes for its chips.
  */
-export function useAgentNotesAuthors(blockId: string): readonly AgentNotesAuthor[] {
+export function useAgentNotesAuthors(
+  blockId: string,
+): readonly AgentNotesAuthor[] {
   const result = useResource(agentNotesAuthorsResource, { blockId });
   return useMemo(() => {
     if (result.pending) return NO_AUTHORS;
     return [...result.data].sort(
       (a, b) => +new Date(a.createdAt) - +new Date(b.createdAt),
     );
+  }, [result]);
+}
+
+/**
+ * The conversation that wrote into `blockId` FIRST — the block's creator, when
+ * the block is one an agent brings into being (an agent-authored page) — or
+ * `null` once the authorship has loaded and holds nobody.
+ *
+ * Unlike `useAgentNotesAuthors` this keeps "not loaded yet" as its own state.
+ * A glyph can afford to become interactive a beat late; a chip that NAMES the
+ * creator cannot stand in "nobody" for "not known yet", since that is a claim
+ * about the block that then reverses itself.
+ *
+ * Earliest by `createdAt`, recomputed from the whole set rather than trusted to
+ * arrive first: a keyed resource merges deltas by key, so array order after a
+ * live update is the merge's (see above).
+ */
+export function useAgentNotesCreator(
+  blockId: string,
+): ResourceResult<AgentNotesAuthor | null> {
+  const result = useResource(agentNotesAuthorsResource, { blockId });
+  return useMemo(() => {
+    if (result.pending) {
+      return { pending: true, error: result.error, refetch: result.refetch };
+    }
+    let first: AgentNotesAuthor | null = null;
+    for (const author of result.data) {
+      const earlier =
+        first === null ||
+        +new Date(author.createdAt) < +new Date(first.createdAt);
+      if (earlier) first = author;
+    }
+    return { pending: false, data: first, refetch: result.refetch };
   }, [result]);
 }

@@ -7,7 +7,11 @@ import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
 import { namesField, type BlockFieldChanges } from "../../core/block-diff";
 import { _blocks } from "./tables";
 import type { BlockRow } from "./forest";
-import { parseBlockData } from "./parse-block-data";
+import {
+  parseBlockData,
+  rewriteBlockData,
+  type BlockDataRewrite,
+} from "./parse-block-data";
 import { reconcileBlocks } from "./reconcile";
 import { BlockLifecycle, type DeletedBlockRow } from "./document-hooks";
 import type { PageForestCtx, PageForestTx } from "./page-forest";
@@ -52,8 +56,14 @@ export type NewBlockRow = typeof _blocks.$inferInsert;
  * a field — and `createdAt` is excluded because a row is created once. Nothing
  * is stamped implicitly: the write says exactly what it changes, `updatedAt`
  * included, so a caller can never discover a column it did not author.
+ *
+ * `data` takes the {@link BlockDataRewrite} brand rather than an insert's plain
+ * `BlockData`: rewriting an EXISTING row's payload must also prove it keeps the
+ * row's author, and `rewriteBlockData` is the only thing that mints the proof.
  */
-export type BlockColumnChanges = Partial<Omit<NewBlockRow, "id" | "createdAt">>;
+export type BlockColumnChanges = Partial<
+  Omit<NewBlockRow, "id" | "createdAt" | "data"> & { data: BlockDataRewrite }
+>;
 
 // ---------------------------------------------------------------------------
 // Low-level column writers
@@ -372,6 +382,22 @@ export interface ForestWriteResult {
    * inline — exactly when the caller has a handle to offer as "Undo".
    */
   trashedEntryId: string | null;
+  /**
+   * The `type="page"` rows this write INSERTED — pages that did not exist before
+   * it. The mirror of the page rows in {@link deletedRows}: a new page's content
+   * appeared under a `page_id` nobody has announced, so the caller emits one
+   * `blocksChanged` per id (`notifyStructuralChange`), which is what drives
+   * search, history, links and attachments for it. A markdown apply minting an
+   * `<agent-page>`, a paste or a duplicate of a sub-page all land here.
+   */
+  createdPageIds: string[];
+}
+
+/** The ids of the page rows among a write's inserts. */
+function pageIdsOf(
+  inserted: readonly { id: string; type: string }[],
+): string[] {
+  return inserted.filter((r) => r.type === PAGE_BLOCK_TYPE).map((r) => r.id);
 }
 
 /** Deleted ids whose parent is not itself being deleted. */
@@ -587,7 +613,7 @@ async function trashBeforePlacing(
       { id: string; pageId: string | null; data: unknown }
     >;
   },
-): Promise<ForestWriteResult> {
+): Promise<Omit<ForestWriteResult, "createdPageIds">> {
   const deletedRows = deleteClosureOf(args.asWritten, args.deleteIds);
   const deleteRootIds = deleteRootsOf(deletedRows);
   const deferredToChokepoint = deletedRows.some(
@@ -733,14 +759,20 @@ export async function writeForestTarget(
     await updateBlockFields(ctx.tx, id, {
       parentId: node.parentId,
       type: node.type,
-      data: parseBlockData(node.type, node.data),
+      // The reducer's output restates every column of a changed row, `data`
+      // included, so it is judged against the row it replaces.
+      data: rewriteBlockData({
+        type: node.type,
+        before: beforeById.get(id)!,
+        next: node.data,
+      }),
       rank: node.rank,
       expanded: node.expanded,
       updatedAt: new Date(),
     });
   }
 
-  return write;
+  return { ...write, createdPageIds: pageIdsOf(inserted) };
 }
 
 // ---------------------------------------------------------------------------
@@ -778,13 +810,16 @@ export interface ResolvedBlockPatch {
   deleteIds: readonly string[];
 }
 
-/** Every column of a full row — what a create asserts. */
-function fullRow(b: Block): BlockColumnChanges {
+/**
+ * Every column of a full row — what a create asserts. Written over a row that
+ * is already live, so its `data` is a rewrite of `before`'s and is judged as one.
+ */
+function fullRow(b: Block, before: BlockRow): BlockColumnChanges {
   return {
     pageId: b.pageId,
     parentId: b.parentId,
     type: b.type,
-    data: parseBlockData(b.type, b.data),
+    data: rewriteBlockData({ type: b.type, before, next: b.data }),
     rank: b.rank.toJSON(),
     expanded: b.expanded,
     updatedAt: new Date(),
@@ -900,16 +935,17 @@ export async function writeBlockPatch(
   );
 
   for (const b of overwrites) {
-    await updateBlockFields(ctx.tx, b.id, fullRow(b));
+    await updateBlockFields(ctx.tx, b.id, fullRow(b, stored.get(b.id)!));
   }
 
   for (const u of updates) {
     const before = stored.get(u.id)!;
     const changes = u.changes;
-    // ONLY the named columns. `parseBlockData` validates against the EFFECTIVE
+    // ONLY the named columns. `rewriteBlockData` validates against the EFFECTIVE
     // type, which is the point of the two-way split below:
     //  - `data` named → validate it against the type this write leaves the row
-    //    at (the new one when `type` is also named, else the STORED one);
+    //    at (the new one when `type` is also named, else the STORED one) — and,
+    //    when the type is kept, refuse a payload that changes the row's author;
     //  - `type` named alone → the stored blob's validity is now judged by a
     //    different schema, so re-validate (and re-mint) it against the new type.
     //    A blob the target type rejects is a loud 400 here rather than an
@@ -921,11 +957,11 @@ export async function writeBlockPatch(
     if (namesField(changes, "expanded")) set.expanded = changes.expanded!;
     if (namesField(changes, "type")) set.type = changes.type!;
     if (namesField(changes, "data"))
-      set.data = parseBlockData(type, changes.data);
+      set.data = rewriteBlockData({ type, before, next: changes.data });
     else if (namesField(changes, "type"))
-      set.data = parseBlockData(type, before.data);
+      set.data = rewriteBlockData({ type, before, next: before.data });
     await updateBlockFields(ctx.tx, u.id, set);
   }
 
-  return write;
+  return { ...write, createdPageIds: pageIdsOf(inserts) };
 }

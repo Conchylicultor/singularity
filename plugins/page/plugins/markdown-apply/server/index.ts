@@ -10,7 +10,7 @@ export type { ReadBlockOptions } from "./internal/read";
 // rows is not the same authority as writing them, and re-deriving the block→page
 // rule per consumer is what would drift.
 export { loadBlockScope } from "./internal/read";
-export type { BlockScope } from "./internal/read";
+export type { BlockScope, BlockScopePageRow } from "./internal/read";
 // The ONE assembly of the markdown contract's two halves (handle set + protected
 // spans). A consumer that parses a document destined for this page's forest —
 // `annotations/agent-access`'s creates-only append — must parse it with the same

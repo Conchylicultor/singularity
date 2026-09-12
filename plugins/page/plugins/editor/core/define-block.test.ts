@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { defineBlock } from "./define-block";
+import { blockAuthorOf, defineBlock } from "./define-block";
+import { pageBlockHandle } from "./schemas";
 import { textBlockSchema } from "./text-data";
 
 describe("defineBlock acceptsText", () => {
@@ -136,5 +137,39 @@ describe("typed text lens", () => {
     // This line fails to compile if the lens type ever widens to a function.
     const lens: undefined = voidHandle.text;
     expect(lens).toBeUndefined();
+  });
+});
+
+describe("blockAuthorOf (the one resolution of the author axis)", () => {
+  test("a handle's static `author` answers for every row", () => {
+    const card = {
+      ...defineBlock({ type: "card", schema: z.object({}) }),
+      author: "agent" as const,
+    };
+    expect(blockAuthorOf(card, {})).toBe("agent");
+  });
+
+  test("a page decides per ROW, from its own data", () => {
+    // An agent-authored page is `data.author === "agent"`; every other page — and
+    // every paragraph — declares nothing, which is the human's.
+    expect(
+      blockAuthorOf(pageBlockHandle, {
+        title: "Findings",
+        icon: null,
+        author: "agent",
+      }),
+    ).toBe("agent");
+    expect(
+      blockAuthorOf(pageBlockHandle, { title: "Notes", icon: null }),
+    ).toBeUndefined();
+    const paragraph = defineBlock({
+      type: "text",
+      schema: textBlockSchema({}),
+    });
+    expect(blockAuthorOf(paragraph, { text: [] })).toBeUndefined();
+  });
+
+  test("a malformed row is a LOUD parse error, never an author read off it", () => {
+    expect(() => blockAuthorOf(pageBlockHandle, { author: "agent" })).toThrow();
   });
 });

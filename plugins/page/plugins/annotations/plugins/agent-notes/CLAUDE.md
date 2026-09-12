@@ -1,24 +1,37 @@
 # agent-notes
 
-`/agent` — the **agent → human** direction of the page's annotation channel:
-what an agent wrote back (what it found, assumed, or left undone), boxed so the
-reader can tell it from their own prose.
+The **agent → human** direction of the page's annotation channel: what an agent
+wrote back (what it found, assumed, or left undone), set apart so the reader can
+tell it from their own prose. It comes in TWO kinds, and this umbrella covers
+both (`research/2026-09-11-page-agent-pages.md`):
 
-A void container (`z.object({})`, content IS its children), built on
+- **`/agent` — the inline card, `<agent-inline>`**, which this plugin defines: a
+  void container placed among the page's own blocks.
+- **The agent-authored PAGE, `<agent-page>`**: a sub-page whose whole content is
+  the agent's. It declares no block type — it is an ordinary `type="page"` row
+  whose `data.author === "agent"` (`page/editor`'s `pageBlockAuthor`) — so what
+  lives here is only its appearance: the
+  [`agent-page`](./plugins/agent-page/CLAUDE.md) sub-plugin (the blue tint and the
+  creator chip on the sub-page row and the sidebar, and the `/agent-page` insert).
+
+The card is a void container (`z.object({})`, content IS its children), built on
 [`page/container`](../../../container/CLAUDE.md) exactly like its
 [siblings](../../CLAUDE.md) — read those two for the shape and the family's
-visual language. This plugin declares only identity: a fixed `Agent notes` corner name,
-the `info` dashed tint, and the `<agent-note>` markdown tag.
+visual language. This plugin declares only identity: a fixed `Agent notes`
+corner name, the `info` tint, and the `<agent-inline>` markdown tag.
 
-## The type is `agent-note`; the directory is `agent-notes`
+## The type is `agent-note`; the tag is `<agent-inline>`; the directory is `agent-notes`
 
-`agentNotesBlock.type === "agent-note"` — a type names ONE card, and the type IS
-the markdown tag. Everything naming the feature AREA stays plural and is
-deliberately not renamed: this directory, `authorship`, the packages, the
-exported `agentNotesBlock`, the `agent-notes-authors` resource. `"agent-notes"`
-survives as a `/` menu alias.
+`agentNotesBlock.type === "agent-note"` — a type names ONE card. Its markdown TAG
+is `<agent-inline>`, renamed when the agent-authored page arrived so the name says
+what tells the two kinds apart: this one sits inline. Only the tag moved — the
+stored type did not, so no row changed and nothing migrated (`human-notes`, type
+`context`, tag `<human>`, is the precedent). Everything naming the feature AREA
+stays plural and is deliberately not renamed: this directory, `authorship`, the
+packages, the exported `agentNotesBlock`, the `agent-notes-authors` resource.
+`"agent-notes"` and `"agent-inline"` are `/` menu aliases.
 
-The tag is `identified` (`<agent-note id="…">`): it carries the row it
+The tag is `identified` (`<agent-inline id="…">`): it carries the row it
 addresses, which is what makes the card writable by id. See
 `page/editor/core/markdown.ts` and
 [`markdown-apply`](../../../markdown-apply/CLAUDE.md).
@@ -32,7 +45,8 @@ match. `private-note` is not: an agent never sees it, so nothing addresses it.
 
 Provenance lives in [`authorship`](./plugins/authorship/CLAUDE.md) — a
 `(block, conversation)` link table plus the card's name popover — never in this
-block's `data`. It has to survive edits, be queryable, and accumulate several
+block's `data`. The same table records who wrote into an agent-authored page; its
+earliest row is the page's creator. It has to survive edits, be queryable, and accumulate several
 authors; a name in `data` would be an unjoinable, single-valued copy of that.
 This is why `agent-notes` is an umbrella while its three siblings are leaves.
 
@@ -67,6 +81,7 @@ without being in it.
     - `agentNotesBlock`
     - `agentNotesDataSchema`
 - Sub-plugins:
-  - **`authorship`** — Reads an agent-notes card's authorship (useAgentNotesAuthors) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+  - **`agent-page`** — Agent-authored pages in the page editor: a sub-page whose data marks it `author: "agent"` is tinted with the agent-notes wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a chip naming the conversation that created it, and can be made from the caret's line with `/agent-page` (the line's other words become its title). Declares no block type — the page is an ordinary `page` row.
+  - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
 
 <!-- AUTOGENERATED:END -->

@@ -10,7 +10,7 @@ import { recomputePageIdSubtree } from "./page-id";
 import { withPageForest } from "./page-forest";
 import { insertBlocks, updateBlockFields } from "./forest-writer";
 import { notifyBlockChange } from "./notify";
-import { parseBlockData } from "./parse-block-data";
+import { parseBlockData, rewriteBlockData } from "./parse-block-data";
 
 /**
  * "Turn into → Page": convert an existing content block into a sub-page **in
@@ -54,11 +54,32 @@ export const handleTurnIntoPage = implement(
     // shell) and the block's own, which comes into existence here — every
     // descendant moves into the `page_id = params.id` partition.
     await withPageForest([block.pageId, params.id], async (ctx) => {
+      // Re-read under the lock: the row's CURRENT type and data are what this
+      // write replaces, and a concurrent conversion or delete between the scope
+      // read above and here must not be written over.
+      const [current] = await ctx.tx
+        .select({ type: liveBlocks.type, data: liveBlocks.data })
+        .from(liveBlocks)
+        .where(eq(liveBlocks.id, params.id))
+        .limit(1);
+      if (!current) throw new HttpError(404, "Block not found");
+      if (current.type === PAGE_BLOCK_TYPE) {
+        throw new HttpError(409, `Block ${params.id} is already a page`);
+      }
       await updateBlockFields(ctx.tx, params.id, {
         type: PAGE_BLOCK_TYPE,
-        data: parseBlockData(PAGE_BLOCK_TYPE, {
-          title: body.title,
-          icon: null,
+        // A TYPE change, so `rewriteBlockData` validates and judges no author:
+        // this is where a page is born, and the one place its author is chosen
+        // — `author: "agent"` is the `/agent-page` insert, an agent-authored page
+        // a human made for an agent to fill. Absent is a human's page, as ever.
+        data: rewriteBlockData({
+          type: PAGE_BLOCK_TYPE,
+          before: current,
+          next: {
+            title: body.title,
+            icon: null,
+            ...(body.author === undefined ? {} : { author: body.author }),
+          },
         }),
         // Turn into → Page folds deterministically, rather than inheriting
         // whatever the block had (e.g. an expanded toggle). A sub-page reads as

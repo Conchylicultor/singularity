@@ -20,6 +20,7 @@ import { Editor, useBlockFrameMenus } from "../slots";
 import { useBlockHandles } from "../internal/block-handles";
 import { useBlockEditor } from "../block-editor-context";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
+import { blockEntries } from "../internal/block-sections";
 
 /**
  * Per-block actions popover, opened from the gutter drag handle — the ONE rail
@@ -69,7 +70,7 @@ export function BlockActionsMenu({
   // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
   // passes one label-less section and ignores the config's group boundaries
   // while still inheriting the flattened config order.
-  const sections = useMemo(() => [{ blocks }], [blocks]);
+  const sections = useMemo(() => blockEntries([{ blocks }]), [blocks]);
   const { serverSync, unwrapBlock } = useBlockEditor();
   const handle = useBlockHandles().get(block.type);
   const ContainerMenu = useBlockFrameMenus().get(block.type);
@@ -181,7 +182,7 @@ export function BlockActionsMenu({
             // `target`, not `handle`: the container arm above already binds
             // `handle` to the OWNER's handle, and a parameter shadowing it here
             // would read as the same value while being the conversion target.
-            onSelect={(target) => {
+            onSelect={({ block: target }) => {
               // Only the target's NON-text defaults: the block keeps its id,
               // hence its content doc, so `convertTo` carries its text over.
               api.convertTo(target.type, target.emptyRowData());

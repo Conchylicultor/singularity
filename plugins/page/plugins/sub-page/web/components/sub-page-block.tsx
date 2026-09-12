@@ -4,8 +4,12 @@ import {
   Row,
   type RowFocus,
 } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { pageData } from "@plugins/page/plugins/editor/core";
 import {
   PageIcon,
@@ -16,6 +20,7 @@ import {
 import {
   usePageNavigation,
   usePageReferenceActions,
+  usePageReferenceDecoration,
 } from "@plugins/page/plugins/page-reference/web";
 
 /**
@@ -42,7 +47,12 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // own control and moves it the moment the row carries `actions` (which this
   // one does), so there is no node here worth holding.
   const focusRef = useRef<RowFocus>(null);
-  const { title, iconSvgNodes } = pageData(block);
+  const page = pageData(block);
+  const { title, iconSvgNodes } = page;
+  // What KIND of page this is — an agent-authored one, say — is another
+  // plugin's answer, read off the page's own data: a tint for the row and
+  // perhaps a chip naming something about it. This row knows no kind.
+  const decoration = usePageReferenceDecoration(block.id, page);
 
   // The whole void-block caret plumbing — register the focus handle, pull DOM
   // focus when the editor says the caret is here, report focus back — is the
@@ -68,6 +78,27 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
   // stays an explicit menu action.
   const onKeyDown = useCaretEscape(editor);
 
+  // A decoration's chip is information, so it reads at rest; the reference
+  // actions are something you reach for, so they still appear on hover. Two
+  // clusters, then — the data-view group header's count + fold toggle shape: the
+  // row's own cluster turns persistent and carries the chip, and the actions
+  // ride an inline `RowActions` beside it, revealed off the row's hover group
+  // like before. Inline rather than pinned is the price: the pinned cluster
+  // overlays the row's trailing edge, which is exactly where the chip sits.
+  // Rows with no chip keep the plain pinned cluster, untouched.
+  const chip = decoration?.chip ?? null;
+  const trailing =
+    chip === null ? (
+      actions
+    ) : (
+      <Stack direction="row" gap="xs" align="center">
+        {chip}
+        {actions === null ? null : (
+          <RowActions pin={null}>{actions}</RowActions>
+        )}
+      </Stack>
+    );
+
   return (
     <Inset x="md" y="xs">
       <Row
@@ -82,10 +113,17 @@ export function SubPageBlock({ block, isFocused, editor }: BlockRendererProps) {
         // the host's box, say "the caret is here" in one voice.
         selected={isFocused}
         hover="accent"
+        // The decoration's wash — dropped while the caret is here, because
+        // `selected` and a tint are both a row BACKGROUND, and `Row` merges its
+        // caller's class last: kept, the tint would erase the caret cue. Hover
+        // still wins over it on its own (a `hover:` variant outranks a plain
+        // utility), so the row answers the pointer exactly like any other.
+        className={isFocused ? undefined : decoration?.tint}
         onClick={() => nav?.open(block.id)}
         onKeyDown={onKeyDown}
         onFocus={onFocus}
-        actions={actions}
+        actions={trailing}
+        actionsAlwaysVisible={chip !== null}
         icon={
           <Center as="span" className="text-muted-foreground size-4">
             <PageIcon nodes={iconSvgNodes} className="size-4" />

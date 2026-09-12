@@ -16,9 +16,20 @@ and the second answer is also who may WRITE it.
 | `/agent` | `agent` | **`agent`** | Notes an agent wrote back: what it found, what it assumed, what it left. |
 | `/private` | `human` | `human` | Withheld from agents. The one block whose contents an agent must never receive. |
 
-**`/agent` is the only agent-authored card in the system.** That single cell is
-what the whole agent-write rule reduces to — there is no list of writable types
-anywhere, just one block declaring `author: "agent"` and a walk that asks.
+**`/agent` is the only agent-authored CARD in the system** — its markdown tag is
+`<agent-inline>` (the stored type stays `agent-note`). The only other thing an
+agent authors is an **agent-authored page** (`<agent-page>`), and it is not a card
+of this family: it is an ordinary `type="page"` row whose `data.author ===
+"agent"` (`research/2026-09-11-page-agent-pages.md`).
+
+So the agent-write rule still reduces to one question, asked per ROW: *whose
+words does this row hold?* There is no list of writable types anywhere. An
+annotation answers from its handle (`author`, declared through
+`defineAnnotationBlock`); a page answers from its own data (`authorFromData`, on
+the shared page declaration); every other row answers nothing. Consumers read the
+answer through the one resolver, `blockAuthorOf(handle, data)` (`page/editor`
+core), never off `handle.author` directly — a consumer that did would read an
+agent-authored page as the human's.
 
 They are siblings under one umbrella rather than four entries in the flat
 `page/plugins/` list because a consumer of this family always wants the SET — the
@@ -35,8 +46,9 @@ addressed to an agent and are still not an agent's to rewrite.
 - **They ride the handle**, already what `Editor.BlockData.getContributions()`
   gives the server — so both consumers read the registry they already read, with
   no second registry to drift. Both filter generically (`audience === "human"`,
-  `author === "agent"`), never by type name, so a fifth annotation costs the
-  delivery and write paths zero edits.
+  `blockAuthorOf(handle, data) === "agent"`), never by type name, so a fifth
+  annotation costs the delivery and write paths zero edits — and the
+  agent-authored page cost them none either.
 - **Unmarked is unrepresentable here, not defaulted.** Outside this family the
   absent values are what an ordinary paragraph means, and they point in opposite
   directions — absent `audience` is *visible to everyone* (a paragraph is
@@ -64,20 +76,26 @@ For every block a write touches, the walk goes up from the block itself and stop
 at the **first row that declares an `author` at all** — not at the first row that
 says yes. So:
 
-- inside an `<agent-note>`: writable, because the nearest declaration is
+- inside an `<agent-inline>` card: writable, because the nearest declaration is
   `author: "agent"`;
-- inside a `<human>` or `<todo>` card **nested in that `<agent-note>`**: refused.
-  The nested card declares `human` first, and it is a hole in the agent's own
-  card. This is what makes answering an agent inside its own note survive the
-  next `write_agent_note`;
+- anywhere inside an `<agent-page>`: writable, because the nearest declaration is
+  the page's own row (its data says `author: "agent"`). A write rooted at the
+  page's own id hears that through the scope's ENCLOSURE — what the root sits
+  inside — which is how every block of the page is the agent's;
+- inside a `<human>` or `<todo>` card **nested in either**: refused. The nested
+  card declares `human` first, and it is a hole in the agent's own region. This
+  is what makes answering an agent inside its own note survive the next
+  `write_agent_note`;
 - anywhere else on the page: refused, because nothing declares and absent means
   the human's. The page's own prose is read-only to an agent for exactly that
   reason — not because a rule enumerates prose, but because prose declares
-  nothing.
+  nothing, and neither does a human's page.
 
 Minting counts as writing at the new card's own row, so an agent cannot create a
-`<human>`, `<todo>` or `<private-note>` anywhere, including inside its own card.
-Filing work is `add_task`.
+`<human>`, `<todo>` or `<private-note>` anywhere, including inside its own card or
+page. It CAN mint an `<agent-page>` wherever it could mint an `<agent-inline>`
+card: the new page's row declares `agent` from its own data. Filing work is
+`add_task`.
 
 **The markdown serializer keeps emitting private children**, deliberately: it
 runs for the CLIPBOARD, and a human copying their own page must get their own
@@ -105,8 +123,9 @@ the block id — not per-instance *data*:
 
 - **`agent-note`** passes `sections`: the card's PROVENANCE, which conversations
   wrote into it. See
-  [`agent-notes/plugins/authorship`](plugins/agent-notes/plugins/authorship/CLAUDE.md).
-  With no authors it falls back to the plain inert mark.
+  [`agent-notes/plugins/authorship`](plugins/agent-notes/plugins/authorship/CLAUDE.md)
+  — the same record an agent-authored page's creator chip reads. With no authors
+  it falls back to the plain inert mark.
 - **`todo`** passes `sections` AND a `BlockFrameMeta.menu` — the same dispatch
   panel in both places, per the container convention. It is the one annotation
   with an ACTION rather than a read, so its name is a trigger even before there
@@ -127,7 +146,8 @@ actually paints a box*, so a registration made on a plugin's behalf would move
 that fact one indirection away from the plugin it describes.
 
 A block's stored `type` is not always its spelling: `human-notes` stores
-`context` and tags `<human>`, `agent-notes` stores the singular `agent-note`.
+`context` and tags `<human>`, `agent-notes` stores the singular `agent-note` and
+tags `<agent-inline>` (renamed when `<agent-page>` arrived — only the tag moved).
 `BlockTag.name` exists so a tag may differ from a type, and a type is what page
 rows and the `Editor.Block` contribution id (hence users' persisted reorder
 directives) are keyed by — so renaming a card is a rename of everything except
@@ -204,7 +224,7 @@ rest. Don't reinstate it: two renderings of one status drift.
     - `page/annotations/private-notes`
     - `page/annotations/todo`
 - Sub-plugins:
-  - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-note> card admits it and a <human> or <todo> card nested there refuses it). The policy over page/markdown-apply's audience-and-author-agnostic engine.
+  - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
   - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`human-notes`** — Human block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding the page author's own words addressed to agents rather than to the reader — and, being the author's, the one an agent may read but never write. Human block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.

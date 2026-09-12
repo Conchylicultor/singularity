@@ -21,7 +21,8 @@
 //     "collapsed" from "childless", and blocks are born expanded), so writing it
 //     would silently unfold every collapsed toggle, callout and sub-page on the
 //     page on every apply. Newly created rows carry the incoming node's own
-//     `expanded`, which for a parsed forest is that same uniform `true`.
+//     `expanded`, which for a parsed forest is that same uniform `true` — except
+//     a page this apply mints, which is born folded, as turn-into-page folds one.
 //
 // Both are properties of the emitted patch, not of a downstream filter, and
 // `plan.test.ts` asserts them directly over fuzzed edits.
@@ -49,6 +50,12 @@
 // because a nested root cannot tell you its page — and because the two differing
 // is exactly what turns an absent sub-page shell from a re-home into a refusal.
 //
+// The one created row that joins ANOTHER partition is the body of a page this
+// apply mints (`<agent-page title="…">body</agent-page>`): the new page row
+// itself joins `pageId`, and everything under it joins the new page. That body
+// is asserted new — no stored row can be paired into it — so a row still never
+// moves between partitions; see "Minted pages" in the planner.
+//
 // ---------------------------------------------------------------------------
 // Idempotence is the recovery story
 // ---------------------------------------------------------------------------
@@ -63,8 +70,9 @@ import {
   PAGE_BLOCK_TYPE,
   coalesce,
   dataEqual,
-  markdownParseTagName,
+  markdownParseTagNames,
   markdownTagIsIdentified,
+  markdownTagNameOf,
   pageBlockMarkdown,
   runsOf,
   serializeForestToMarkdown,
@@ -178,6 +186,12 @@ interface IncomingNode {
   node: IdentifiedBlock;
   /** Index into this array, or null for a top-level node. */
   parentIndex: number | null;
+  /**
+   * Index of the nearest STRICT ancestor that is a `page` node, or null. Every
+   * such ancestor is a page the document MINTS (see "Minted pages" in the
+   * planner), so a non-null value means "this node is new content of a new page".
+   */
+  pageAncestor: number | null;
   type: string;
   data: unknown;
 }
@@ -187,14 +201,25 @@ function flattenIncoming(forest: readonly IdentifiedBlock[]): IncomingNode[] {
   const walk = (
     nodes: readonly IdentifiedBlock[],
     parentIndex: number | null,
+    pageAncestor: number | null,
   ): void => {
     for (const node of nodes) {
       const index = out.length;
-      out.push({ node, parentIndex, type: node.type, data: node.data ?? {} });
-      walk(node.children, index);
+      out.push({
+        node,
+        parentIndex,
+        pageAncestor,
+        type: node.type,
+        data: node.data ?? {},
+      });
+      walk(
+        node.children,
+        index,
+        node.type === PAGE_BLOCK_TYPE ? index : pageAncestor,
+      );
     }
   };
-  walk(forest, null);
+  walk(forest, null, null);
   return out;
 }
 
@@ -269,16 +294,18 @@ export function planMarkdownApply<R extends StoredRow>(
 
   // --- Asserted identity ----------------------------------------------------
   // Two kinds of node carry a row id rather than earning one from its content: a
-  // sub-page shell, whose `<page id="…"/>` pointer is its only identity, and a
-  // card of an IDENTIFIED type, which round-trips `id="…"` on its own tag so an
-  // agent reading the document gets an anchor it can hand back. Both resolve to
-  // the same thing — a `pin` (see `align.ts`) — and share one refusal
-  // vocabulary, because they are one mechanism.
+  // sub-page shell, whose `<page id="…"/>` or `<agent-page id="…"/>` pointer is
+  // its only identity, and a card of an IDENTIFIED type, which round-trips
+  // `id="…"` on its own tag so an agent reading the document gets an anchor it
+  // can hand back. Both resolve to the same thing — a `pin` (see `align.ts`) —
+  // and share one refusal vocabulary, because they are one mechanism.
   //
   // The identified TYPE SET is derived from the handle registry, never named
   // here: this module knows what a tag DECLARES, not which plugin declares it.
   // Naming `agent-note` would be the collection-consumer leak this codebase
-  // bans, and would silently stop pinning the day the type is renamed.
+  // bans, and would silently stop pinning the day the type is renamed. `page`
+  // is in it through its `<agent-page>` spelling, which carries a row id where
+  // the `<page>` spelling carries it as its own attribute.
   const identifiedTypes = new Set(
     handles.filter((h) => markdownTagIsIdentified(h)).map((h) => h.type),
   );
@@ -292,7 +319,8 @@ export function planMarkdownApply<R extends StoredRow>(
   // line, byte for byte, and string equality is the whole test.
   const pageTagName = pageBlockMarkdown.tag?.name ?? PAGE_BLOCK_TYPE;
   const pageRefType =
-    handles.find((h) => markdownParseTagName(h) === pageTagName)?.type ?? null;
+    handles.find((h) => markdownParseTagNames(h).includes(pageTagName))?.type ??
+    null;
   const hasPageHandle = byType.has(PAGE_BLOCK_TYPE);
   const pointerLine = (type: string, data: unknown, id?: string): string =>
     serializeForestToMarkdown(
@@ -309,7 +337,7 @@ export function planMarkdownApply<R extends StoredRow>(
 
   // The stored rows whose identity is ASSERTED rather than inferred. An
   // identified card is pinned even when the incoming document never names it —
-  // that is what stops a tagless `<agent-note>` written next to an existing one
+  // that is what stops a tagless `<agent-inline>` written next to an existing one
   // from absorbing the existing card's row id through an LCS ambiguity (both
   // cards are void and carry the byte-identical content key `agent-note ␀ {}`),
   // which would silently detach that card's authorship. A card the document did
@@ -342,35 +370,78 @@ export function planMarkdownApply<R extends StoredRow>(
   const identified = withMintedIds([...incoming]);
   const incomingNodes = flattenIncoming(identified);
 
+  // --- Minted pages ----------------------------------------------------------
+  // A `page` node the document does NOT pin is a page this apply CREATES: the
+  // `<agent-page title="…">body</agent-page>` mint form, the one way a markdown
+  // parse produces a page node without a `ref`. Its body joins a partition that
+  // does not exist yet, so every node under it answers two questions differently
+  // from the rest of the document:
+  //
+  // - **its `page_id`** is the new page's id, not the apply's (`partitionOf`);
+  // - **its identity is asserted NEW.** It is pinned to its own freshly minted id,
+  //   so no alignment pass can pair it with a stored row. Without that, a line in
+  //   the new body that happens to read like one already on this page would be
+  //   paired by pass 3 and MOVED into the new page, keeping the `page_id` of the
+  //   page it came from — a row visible in neither.
+  //
+  // `IncomingNode.pageAncestor` is the nearest STRICT ancestor of a node that is
+  // a page node, or null, resolved by the flatten walk. Every such ancestor is a
+  // minted page: a pinned pointer carrying a body is refused before anything is
+  // planned, so it can never be anyone's ancestor here.
+
+  // The page handle's own spelling choice, for the pointer's canonical check
+  // below. A page is written as a different TAG per kind (`<page>` / `<agent-page>`,
+  // chosen by its data), so "same tag name" is exactly "same kind of page" — and it
+  // compares only the spelling's preset, never the `title` a pointer also carries.
+  const pageHandle = byType.get(PAGE_BLOCK_TYPE);
+  const pageSpellingOf = (data: unknown): string | null =>
+    pageHandle === undefined ? null : markdownTagNameOf(pageHandle, data);
+
   const newItems: AlignItem[] = [];
   // Every row id this document has already claimed, whatever claimed it. One set
   // for one namespace (see `pinnedRowKey`): a row can occupy one position, so a
   // second claim on it is impossible to honour however it was written.
   const claimedRefs = new Set<string>();
-  for (const entry of incomingNodes) {
-    if (entry.type === PAGE_BLOCK_TYPE) {
-      // Not a refusal but a programming error: markdown parse alone can never
-      // mint a sub-page (`<page/>` is claimed by the pointer type), so a `page`
-      // node here came from a hand-built forest, and minting a `page_id`
-      // partition is the server's turn-into-page op, never a diff's.
-      throw new Error(
-        `planMarkdownApply: the incoming forest contains a "${PAGE_BLOCK_TYPE}" node. ` +
-          "A markdown apply can never mint a sub-page — use POST /api/blocks/:id/turn-into-page.",
-      );
-    }
+  for (let j = 0; j < incomingNodes.length; j++) {
+    const entry = incomingNodes[j]!;
     const handle = byType.get(entry.type);
     const contentKey = identityKeyOf(entry.type, entry.data, handle);
+    const isPage = entry.type === PAGE_BLOCK_TYPE;
+    const newPage = entry.pageAncestor;
     let pin: string | null = null;
 
-    // --- An identified card's `ref` ----------------------------------------
+    /**
+     * The refusal for an identity claim INSIDE a page this document creates. The
+     * claimed row lives in a partition that is not the new page's, and the new
+     * body is asserted new by construction — so honouring the claim would move a
+     * row between pages, which a markdown apply never does.
+     */
+    const claimInsideNewPage = (rowId: string): MarkdownApplyResult => ({
+      ok: false,
+      reason: "ref-out-of-scope",
+      detail:
+        `The document names row ${rowId} inside the new page it creates. A row ` +
+        "cannot move between pages: a new page's body is new content, so write it " +
+        "fresh (drop the id), and leave the existing row where it is.",
+    });
+
+    // --- An identified node's `ref` ----------------------------------------
     // `ref` is a CLAIM the document's author wrote down — "this node is the row
     // you showed me as `…`" — so it is honoured only after proving the row
     // exists AND is inside this apply's scope. A `ref` on a type that does not
     // round-trip an id is ignored rather than refused: `SerializedBlock.ref` is
     // only ever set by the parse of an identified tag, so one on anything else
     // came from a hand-built forest and means nothing here.
+    //
+    // Two kinds of node make this claim, and they must not cross: an identified
+    // CARD (`<agent-inline id>`, `<human id>`, …) and a page POINTER
+    // (`<agent-page id="…"/>`). A card ref pinning a page row would hang the
+    // card's children under the page with this page's `page_id`; a pointer
+    // pinning a card would turn a card into a page. Either is `unknown-ref`: the
+    // id names no addressable row of that kind here.
     const ref = entry.node.ref;
     if (ref !== undefined && identifiedTypes.has(entry.type)) {
+      if (newPage !== null) return claimInsideNewPage(ref);
       const target = pinnedOldRows.get(ref);
       if (claimedRefs.has(ref)) {
         return {
@@ -382,6 +453,49 @@ export function planMarkdownApply<R extends StoredRow>(
         };
       }
       if (target !== undefined && identifiedTypes.has(target.type)) {
+        const targetIsPage = target.type === PAGE_BLOCK_TYPE;
+        if (targetIsPage !== isPage) {
+          return {
+            ok: false,
+            reason: "unknown-ref",
+            detail:
+              `The document claims row ${ref} as a ${isPage ? "page" : entry.type}, ` +
+              `but it is a ${targetIsPage ? "page" : target.type}. A card's id and a ` +
+              "page's id are not interchangeable — re-read the block and copy the tag " +
+              "back verbatim.",
+          };
+        }
+        if (isPage) {
+          // The POINTER's canonical check: an existing page is named by the tag
+          // its own row serializes to, so `<agent-page id="H"/>` naming a HUMAN's
+          // page is not a pointer at H — it is a claim that H is something it is
+          // not. Only the spelling is compared (it is chosen by the preset keys
+          // alone), so a `title` edited on the pointer — or gone stale since the
+          // read — is simply ignored, the stance a read-only attribute takes.
+          const stored = pageSpellingOf(target.data);
+          const claimed = pageSpellingOf(entry.data);
+          if (stored !== claimed) {
+            return {
+              ok: false,
+              reason: "unknown-ref",
+              detail:
+                `The document names page ${ref} as <${claimed ?? PAGE_BLOCK_TYPE}>, but ` +
+                `it is written <${stored ?? PAGE_BLOCK_TYPE}>. Which kind of page a page ` +
+                "is cannot be changed through markdown — hand its pointer back exactly " +
+                "as read_page showed it.",
+            };
+          }
+          if (entry.node.children.length > 0) {
+            return {
+              ok: false,
+              reason: "ref-out-of-scope",
+              detail:
+                `The document gives existing page ${ref} a body. ${ref}'s content ` +
+                `lives in its own page, not in this document: pass ${ref} as the ` +
+                "block id to read or write it, and keep its pointer here self-closing.",
+            };
+          }
+        }
         claimedRefs.add(ref);
         pin = ref;
       } else if (existingIds.has(ref) && !reachedIds.has(ref)) {
@@ -419,6 +533,7 @@ export function planMarkdownApply<R extends StoredRow>(
     if (pageRefType !== null && entry.type === pageRefType) {
       const shell = shellByLine.get(pointerLine(entry.type, entry.data));
       if (shell !== undefined) {
+        if (newPage !== null) return claimInsideNewPage(shell.id);
         if (claimedRefs.has(shell.id)) {
           return {
             ok: false,
@@ -448,6 +563,13 @@ export function planMarkdownApply<R extends StoredRow>(
         };
       }
     }
+
+    // A page this document creates, and everything under one: asserted NEW (see
+    // "Minted pages" above). Its own freshly minted id is the pin, which no old
+    // row carries, so the pin pass can never pair it and the content passes skip
+    // it — it can only ever be a create.
+    if ((isPage && pin === null) || newPage !== null) pin = entry.node.id;
+
     newItems.push({
       key: pin === null ? contentKey : pinnedRowKey(pin),
       plain: plainTextOf(entry.data, handle),
@@ -473,6 +595,29 @@ export function planMarkdownApply<R extends StoredRow>(
     const parentIndex = incomingNodes[j]!.parentIndex;
     return parentIndex === null ? rootId : finalId[parentIndex]!;
   };
+  // The partition node j lands in: the page this document creates around it
+  // (the nearest STRICT ancestor page node — a page row is displayed in its
+  // parent's partition, never its own), else the apply's own page. `rootId` is a
+  // position, not a partition, so it plays no part here.
+  const partitionOf = (j: number): string => {
+    const newPage = incomingNodes[j]!.pageAncestor;
+    return newPage === null ? pageId : finalId[newPage]!;
+  };
+
+  // Programming-error guard, not a refusal: a survivor keeps its row, and a row
+  // is in exactly one partition, so a survivor can never sit inside a page this
+  // document creates. The asserted-new pin above makes pairing one there
+  // impossible; this states the consequence loudly rather than letting a broken
+  // pin silently move a row between pages with a stale `page_id`.
+  for (const [j, oldIndex] of pairs) {
+    if (partitionOf(j) !== pageId) {
+      throw new Error(
+        `planMarkdownApply: stored row ${oldRows[oldIndex]!.id} was paired into the ` +
+          `page ${partitionOf(j)} this document creates. A new page's body is asserted ` +
+          "new, so no survivor can land there — the pin is broken.",
+      );
+    }
+  }
 
   // --- Ranks: one sibling list at a time ------------------------------------
   const groups = new Map<string, number[]>();
@@ -577,19 +722,24 @@ export function planMarkdownApply<R extends StoredRow>(
   for (let j = 0; j < incomingNodes.length; j++) {
     if (pairs.has(j)) continue;
     const entry = incomingNodes[j]!;
+    const isPage = entry.type === PAGE_BLOCK_TYPE;
     creates.push({
       id: finalId[j]!,
-      // Every created row belongs to the page — NOT to `rootId`, which is a
-      // position in the forest, not a partition. The only node that could open a
-      // new `page_id` partition is a `page` row, which is refused above.
-      pageId,
+      // The partition, NOT `rootId` (a position in the forest). The apply's own
+      // page for everything but a minted page's body, which joins the new page;
+      // `applyPageBlockPatch`'s closed-world guard accepts exactly those two.
+      pageId: partitionOf(j),
       parentId: parentIdOf(j),
       type: entry.type,
       // A brand-new id has no content doc, so its row IS the seed — the one
       // place `text` legally rides a row write.
       data: entry.data,
       rank: Rank.from(finalRank[j]!),
-      expanded: entry.node.expanded,
+      // A minted page is born FOLDED, exactly as turn-into-page folds one: a
+      // sub-page reads as ONE row in its parent's flow, and its chevron is the
+      // way in. Every other created row carries the node's own `expanded`, which
+      // for a parsed forest is the uniform `true`.
+      expanded: isPage ? false : entry.node.expanded,
       createdAt: now,
       updatedAt: now,
     });

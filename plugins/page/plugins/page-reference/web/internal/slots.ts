@@ -1,11 +1,48 @@
 import type { ComponentType } from "react";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { PageData } from "@plugins/page/plugins/editor/core";
 import type { PageNavigation } from "./navigation";
 
 /** What every page-reference action operates on: the page being referenced. */
 export interface PageReferenceActionProps {
   /** The id of the page the reference points at. */
   pageId: string;
+}
+
+/** What a decoration's chip is handed: the page being referenced. */
+export interface PageReferenceChipProps {
+  /** The id of the page the reference points at. */
+  pageId: string;
+}
+
+/**
+ * A kind of page that a reference paints differently, declared by the plugin
+ * that owns the kind — so a reference renderer asks "is this page special?"
+ * without knowing any of the answers.
+ */
+export interface PageReferenceDecorationContribution {
+  /**
+   * Whether this decoration is the one for `page`. A pure function of the page
+   * row's own `data`: the kind of a page is written on the page, so every
+   * surface holding the row (a sub-page line, a sidebar tree of hundreds) can
+   * answer it without a read of its own.
+   */
+  applies: (page: PageData) => boolean;
+  /**
+   * Classes painting the reference's whole row — a background wash. Semantic
+   * tokens only. A wash that a hover-revealed action cluster may be pinned over
+   * co-publishes itself as `--scrim` (see `row-actions`), the way `Row`'s own
+   * tints do.
+   */
+  tint: string;
+  /**
+   * An always-visible chip at the row's trailing edge (who made this page, …),
+   * on the surfaces that have room for one. Named `component` so the framework
+   * seals it and every render goes through the error-boundary middleware: a
+   * crash in one chip stays in that chip instead of taking the row down.
+   */
+  component?: ComponentType<PageReferenceChipProps>;
 }
 
 export const PageReference = {
@@ -39,4 +76,17 @@ export const PageReference = {
      */
     available?: (nav: PageNavigation | undefined) => boolean;
   }>(),
+  /**
+   * How a reference paints a page of a particular KIND — a tint over its row
+   * and, where the row has room, a chip at its trailing edge. The kind is read
+   * off the page's own `data`, so the renderers (the sub-page row, the Pages
+   * sidebar) name no kind at all: a new kind is one plugin folder.
+   *
+   * A plain slot, not a render slot: nothing here is a list the user orders —
+   * each reference picks at most ONE decoration (the first whose `applies`
+   * answers yes, in registration order, the tie-break `Dispatch` uses) and
+   * paints it in its own places. Read it through `usePageReferenceDecoration`
+   * or `usePageReferenceTint`, never by walking the contributions.
+   */
+  Decoration: defineSlot<PageReferenceDecorationContribution>(),
 };

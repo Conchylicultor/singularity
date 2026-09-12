@@ -23,6 +23,7 @@ import type { StoredRow } from "./stored-row";
 import {
   boundaryViolations,
   touchedBlocks,
+  type ClassifiedRow,
   type WriteBoundary,
 } from "./touched";
 
@@ -37,12 +38,17 @@ import {
 // what an ordinary paragraph does.
 const OPEN_TYPE = "fence";
 const CLOSED_TYPE = "vault";
-const boundaryOf = (row: {
-  id: string;
-  type: string;
-}): WriteBoundary | undefined => {
+// A third synthetic type whose declaration is in its DATA, the shape of an
+// agent-authored page (`type="page"`, `data.author === "agent"`): a `sheet` with
+// `{ owner: "agent" }` is open, and any other `sheet` declares nothing.
+const DATA_TYPE = "sheet";
+const boundaryOf = (row: ClassifiedRow): WriteBoundary | undefined => {
   if (row.type === OPEN_TYPE) return "open";
   if (row.type === CLOSED_TYPE) return "closed";
+  if (row.type === DATA_TYPE)
+    return (row.data as { owner?: string }).owner === "agent"
+      ? "open"
+      : undefined;
   return undefined;
 };
 
@@ -242,11 +248,17 @@ function planOf(patch: {
   };
 }
 
+/**
+ * `enclosure` defaults to `"none"` — a page root whose page declares nothing,
+ * which is every case written before the enclosure existed. The cases about it
+ * pass it explicitly.
+ */
 const violationsOf = (
   plan: MarkdownApplyPlan,
   existing: readonly StoredRow[] = fixture(),
   rootId = PAGE_ID,
-) => boundaryViolations({ plan, existing, rootId, boundaryOf });
+  enclosure: WriteBoundary | "none" = "none",
+) => boundaryViolations({ plan, existing, rootId, boundaryOf, enclosure });
 
 // ---------------------------------------------------------------------------
 // T3 — the both-chains rule, through the REAL planner
@@ -816,6 +828,121 @@ describe("the scope root", () => {
     expect(
       violationsOf(planOf({ deleteIds: ["b1"] }), fixture(), PAGE_ID),
     ).toHaveLength(1);
+  });
+});
+
+describe("the enclosure: what the scope root sits inside", () => {
+  // The engine cannot see above its root, so the caller hands in what it found
+  // there — the nearest declaration on the root's own ancestry, up through the
+  // page row. These cases pin how the walk uses it, and that a nearer
+  // declaration always wins over it.
+
+  test("a chain reaching an undeclared root takes the enclosure — open, closed or none", () => {
+    // Rooted at b1, a line of prose: its own document is its children, so a
+    // create under it reaches the root with nothing declared on the way.
+    const plan = planOf({ creates: [create("n", "b1", "text")] });
+    expect(violationsOf(plan, fixture(), "b1", "open")).toEqual([]);
+    expect(violationsOf(plan, fixture(), "b1", "closed")).toEqual([
+      { blockId: "n", how: "created", side: "new", reason: "enclosed" },
+    ]);
+    expect(violationsOf(plan, fixture(), "b1", "none")).toEqual([
+      { blockId: "n", how: "created", side: "new", reason: "escaped" },
+    ]);
+  });
+
+  test("an OPEN enclosure opens the page's own prose, both chains", () => {
+    // The agent-authored page, rooted at itself: every row in it is the agent's.
+    const plan = planOf({
+      textEdits: [{ blockId: "b1", runs: runs("rewritten") }],
+      deleteIds: ["b3"],
+      updates: [{ id: "b5", changes: { parentId: PAGE_ID } }],
+    });
+    expect(violationsOf(plan, fixture(), PAGE_ID, "open")).toEqual([]);
+  });
+
+  test("a nearer declaration beats the enclosure — a closed card inside an open page", () => {
+    expect(
+      violationsOf(
+        planOf({ textEdits: [{ blockId: "b5", runs: runs("no") }] }),
+        nested(),
+        PAGE_ID,
+        "open",
+      ),
+    ).toEqual([
+      { blockId: "b5", how: "text-edited", side: "new", reason: "enclosed" },
+    ]);
+    // And minting one there is refused at its own row, the enclosure notwithstanding.
+    expect(
+      violationsOf(
+        planOf({ creates: [create("v", PAGE_ID, CLOSED_TYPE)] }),
+        fixture(),
+        PAGE_ID,
+        "open",
+      ),
+    ).toEqual([
+      { blockId: "v", how: "created", side: "new", reason: "enclosed" },
+    ]);
+  });
+
+  test("…and an open card under a CLOSED enclosure still admits writes", () => {
+    expect(
+      violationsOf(
+        planOf({ creates: [create("n", "b2", "text")] }),
+        fixture(),
+        PAGE_ID,
+        "closed",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("a row that declares through its DATA", () => {
+  const sheetRow = (id: string, data: unknown): StoredRow => ({
+    id,
+    parentId: PAGE_ID,
+    type: DATA_TYPE,
+    data,
+    rank: "a9",
+    expanded: true,
+  });
+
+  test("a CREATED row is open from its own data, and hosts its children", () => {
+    const created = {
+      ...create("s", PAGE_ID, DATA_TYPE),
+      data: { owner: "agent" },
+    };
+    expect(
+      violationsOf(planOf({ creates: [created, create("s1", "s", "text")] })),
+    ).toEqual([]);
+    const plain = { ...create("s", PAGE_ID, DATA_TYPE), data: {} };
+    expect(violationsOf(planOf({ creates: [plain] }))).toEqual([
+      { blockId: "s", how: "created", side: "new", reason: "escaped" },
+    ]);
+  });
+
+  test("an existing row answers from its STORED data", () => {
+    const rows = [...fixture(), sheetRow("s", { owner: "agent" })];
+    expect(
+      violationsOf(planOf({ creates: [create("s1", "s", "text")] }), rows),
+    ).toEqual([]);
+  });
+
+  test("re-marking a row through `data` is refused on the OLD chain", () => {
+    // The after-maps carry the written data, so the NEW chain sees an open row
+    // (itself); the old chain still sees what it was, and nothing declared there.
+    // The server's author-immutability guard refuses this too — this is the
+    // policy walk catching it on its own evidence.
+    const rows = [...fixture(), sheetRow("s", {})];
+    expect(
+      violationsOf(
+        planOf({
+          updates: [{ id: "s", changes: { data: { owner: "agent" } } }],
+        }),
+        rows,
+      ),
+    ).toEqual([
+      { blockId: "s", how: "updated", side: "old", reason: "escaped" },
+    ]);
   });
 });
 

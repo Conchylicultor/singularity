@@ -284,13 +284,62 @@ export interface BlockTag<T> {
   annotated?: readonly string[];
   /**
    * This tag is emitted but never CLAIMED on parse: another handle owns the name
-   * on the parse side. The one case is `page` — minting a sub-page means minting
-   * a `page_id` partition and restamping a subtree, which only the server's
-   * turn-into-page op does, so `<page id="x"/>` parses as a `page-link`.
-   * Two handles claiming one name where neither declares this is a loud error.
+   * on the parse side. The one case is `page`'s PRIMARY spelling — `<page
+   * id="x"/>` is also how a link-to-page block writes itself, so `page-link`
+   * claims the name and a bare `<page/>` parses as a pointer at a page, never as
+   * a sub-page. Two handles claiming one name where neither declares this is a
+   * loud error.
+   *
+   * It governs the primary spelling only: a {@link spellings} entry is always
+   * claimed, because being parseable is the whole reason a second spelling
+   * exists.
    */
   serializeOnly?: true;
+  /**
+   * Further spellings of this SAME block type, each selected by the row's data —
+   * `page` is written `<page id/>` for a human's sub-page and `<agent-page id
+   * title/>` for an agent-authored one, and both are one `type="page"` row.
+   *
+   * Each spelling's {@link BlockTagSpelling.data} is a PRESET of discriminator
+   * values, and that one object does both jobs, so the two directions cannot
+   * disagree:
+   *
+   * - **serialize** — a row whose data carries every preset value is written
+   *   under that spelling's name (and with that spelling's options); a row that
+   *   matches none is written under the primary tag above;
+   * - **parse** — the preset is merged OVER whatever the attributes parsed to,
+   *   so the name alone is what says it, and an attribute cannot contradict it.
+   *
+   * Round-trip correctness is then asserted rather than hoped for: a parse that
+   * produces data selecting a DIFFERENT spelling than the tag it came in under
+   * throws (see `tagsFor`). Resolution refuses a duplicate name, an empty preset
+   * (it would select every row, shadowing the primary), a preset key the schema
+   * does not declare, and a preset value that is not a discriminator literal.
+   */
+  spellings?: readonly BlockTagSpelling<T>[];
 }
+
+/**
+ * One data-selected spelling of a block type's tag — see
+ * {@link BlockTag.spellings}. It carries every option a tag does (its own
+ * `attrs`, `parseAttrs`, `body`, `identified`, `annotated`), because a spelling
+ * is a different WRITING of the row and may need a different one of each; what
+ * it cannot say is `serializeOnly` (a spelling exists to be parsed) or nest
+ * spellings of its own.
+ */
+export type BlockTagSpelling<T> = Omit<
+  BlockTag<T>,
+  "name" | "serializeOnly" | "spellings"
+> & {
+  /** The tag name. Required: a spelling with the primary's name is refused. */
+  name: string;
+  /**
+   * The discriminator values this spelling is selected by, and the preset its
+   * parse merges over the attributes. String / number / boolean / `null` only —
+   * a discriminator is a literal, and `===` is then the whole comparison.
+   */
+  data: Partial<T>;
+};
 
 export interface BlockMarkdown<T> {
   /**
@@ -383,7 +432,7 @@ function derivedParsePrefixes(h: Handle): string[] {
 // Tags: resolution, attribute encoding
 // ---------------------------------------------------------------------------
 
-/** A `BlockTag` with every default filled in, bound to its handle. */
+/** A `BlockTag` spelling with every default filled in, bound to its handle. */
 interface ResolvedTag {
   handle: Handle;
   name: string;
@@ -404,6 +453,24 @@ interface ResolvedTag {
    * emit and the strip are unconditional loops rather than a branch.
    */
   annotated: readonly string[];
+  /**
+   * The discriminator values that select this spelling — `null` for the PRIMARY
+   * spelling, which is what a row matching no preset is written under. See
+   * {@link BlockTag.spellings}.
+   */
+  preset: Readonly<Record<string, unknown>> | null;
+}
+
+/**
+ * Every spelling of one handle's tag: the primary, and the data-selected ones
+ * (possibly none). `select` is THE spelling choice for a row's data — the
+ * serializer asks it which tag to write, and every parse asks it back to prove
+ * it landed on the spelling it came in under.
+ */
+interface ResolvedTags {
+  primary: ResolvedTag;
+  spellings: readonly ResolvedTag[];
+  select(data: unknown): ResolvedTag;
 }
 
 /** Attribute names that survive as PLAIN attributes; anything else is JSON'd. */
@@ -413,10 +480,14 @@ const ATTR_NAME = /^[A-Za-z_][A-Za-z0-9_-]*$/;
  * The derived attribute projection — see `BlockTag.attrs`. Non-string values and
  * keys that are not legal attribute names go into one JSON `data` attribute, so
  * the projection is lossless for ANY schema without the type declaring anything.
+ *
+ * `omit` is a spelling's preset keys: the tag NAME already says them, and the
+ * parse merges the preset back over whatever the attributes carried.
  */
 function derivedAttrs(
   data: unknown,
   body: BlockTagBody,
+  omit: ReadonlySet<string>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   if (data === undefined || data === null) return out;
@@ -426,7 +497,7 @@ function derivedAttrs(
   }
   const rest: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
-    if (value === undefined) continue;
+    if (value === undefined || omit.has(key)) continue;
     // A `"text"` body carries the text between the tags; keeping it here too
     // would emit it twice and make the two copies drift.
     if (body === "text" && key === "text") continue;
@@ -438,13 +509,17 @@ function derivedAttrs(
   return out;
 }
 
-/** The exact inverse of {@link derivedAttrs}, finished with the handle's schema. */
+/**
+ * The exact inverse of {@link derivedAttrs}, finished with the handle's schema —
+ * after a spelling's preset is merged over what the attributes carried.
+ */
 function derivedTagData(
   h: Handle,
   attrs: Record<string, string>,
   inner: string | null,
   ctx: MdParseCtx,
   body: BlockTagBody,
+  preset: Readonly<Record<string, unknown>> | null,
 ): unknown {
   const raw: Record<string, unknown> = {};
   const blob = attrs.data;
@@ -466,14 +541,23 @@ function derivedTagData(
     if (key !== "data") raw[key] = value;
   }
   if (body === "text") raw.text = ctx.runs(inner ?? "");
-  return h.parse(raw);
+  return h.parse(preset ? { ...raw, ...preset } : raw);
 }
 
-function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
+/**
+ * Resolve ONE spelling's options against its handle, validating what can only
+ * be validated against the schema. `preset` is `null` for the primary spelling.
+ */
+function resolveTag(
+  h: Handle,
+  spec: Omit<BlockTag<unknown>, "spellings">,
+  name: string,
+  preset: Readonly<Record<string, unknown>> | null,
+): ResolvedTag {
   const body = spec.body ?? "children";
   if (body === "text" && !h.text) {
     throw new Error(
-      `defineBlock("${h.type}"): markdown.tag.body = "text" needs a text lens — ` +
+      `defineBlock("${h.type}"): markdown.tag.body = "text" on <${name}> needs a text lens — ` +
         "this block type's schema declares no `text`, so there is no body to emit.",
     );
   }
@@ -487,51 +571,193 @@ function resolveTag(h: Handle, spec: BlockTag<unknown>): ResolvedTag {
     );
   }
   const annotated = spec.annotated ?? [];
-  for (const name of annotated) {
+  for (const annotation of annotated) {
     // Each of the three is a name that ALREADY has a meaning on this tag, so
     // emitting an annotation under it would produce one attribute standing for
     // two things and parse would have to guess which. Caught at resolution —
     // the first time anything serializes or parses this type — rather than on
     // the one document where both values happen to be present.
+    //
+    // A schema field clashes only when the DERIVED projection is in use, since
+    // that is what would emit it. A tag declaring its own `attrs` chooses what
+    // it emits, and `tagAttrs` catches a declared `attrs` emitting a reserved
+    // name at serialize — which is how `page` reserves `title`, a field of its
+    // own schema, for the value a reader supplies: its declared `attrs` emits
+    // only the id.
     const clash =
-      name in h.schema.shape
+      annotation in h.schema.shape && spec.attrs === undefined
         ? "this type's schema declares a field of its own under that name, which the derived " +
           "attribute projection emits"
-        : name === "data"
+        : annotation === "data"
           ? "`data` is the attribute the derived projection JSON-encodes everything non-string into"
-          : spec.identified === true && name === "id"
+          : spec.identified === true && annotation === "id"
             ? "`id` is already reserved by `markdown.tag.identified` for the block's ROW id"
             : null;
     if (clash !== null) {
       throw new Error(
-        `defineBlock("${h.type}"): markdown.tag.annotated reserves the \`${name}\` attribute for a ` +
-          `value supplied from OUTSIDE this block's data, but ${clash}. The two meanings would ` +
-          "fight over one attribute — rename one of them; the annotated name is reserved.",
+        `defineBlock("${h.type}"): markdown.tag.annotated reserves the \`${annotation}\` attribute ` +
+          `on <${name}> for a value supplied from OUTSIDE this block's data, but ${clash}. The ` +
+          "two meanings would fight over one attribute — rename one of them; the annotated name " +
+          "is reserved.",
       );
     }
   }
   const attrs = spec.attrs;
   const parseAttrs = spec.parseAttrs;
+  const omit = new Set(Object.keys(preset ?? {}));
   return {
     handle: h,
-    name: spec.name ?? h.type,
+    name,
     body,
     attrsOf: attrs
       ? (data, ctx) => encodeAttrs(attrs(data, ctx))
-      : (data) => derivedAttrs(data, body),
+      : (data) => derivedAttrs(data, body, omit),
     dataOf: parseAttrs
       ? (a, inner, ctx) => {
-          const data = parseAttrs(a, ctx);
-          if (body !== "text") return data;
-          return {
-            ...(data as Record<string, unknown>),
-            text: ctx.runs(inner ?? ""),
-          };
+          const parsed = parseAttrs(a, ctx);
+          const data =
+            body === "text"
+              ? {
+                  ...(parsed as Record<string, unknown>),
+                  text: ctx.runs(inner ?? ""),
+                }
+              : parsed;
+          // A spelling's preset is part of what the name MEANS, so it lands over
+          // whatever the declared parser returned — and the result is finished
+          // with the schema, since the merge is a payload the parser never saw.
+          return preset
+            ? h.parse({ ...(data as Record<string, unknown>), ...preset })
+            : data;
         }
-      : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body),
-    serializeOnly: spec.serializeOnly === true,
+      : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body, preset),
+    serializeOnly: preset === null && spec.serializeOnly === true,
     identified: spec.identified === true,
     annotated,
+    preset,
+  };
+}
+
+/** Does `data` carry every one of `preset`'s discriminator values? */
+function presetMatches(
+  preset: Readonly<Record<string, unknown>>,
+  data: unknown,
+): boolean {
+  if (data === null || typeof data !== "object") return false;
+  const record = data as Record<string, unknown>;
+  return Object.entries(preset).every(([key, value]) => record[key] === value);
+}
+
+/**
+ * Every spelling of `h`'s tag, validated and bound — see {@link BlockTag.spellings}.
+ *
+ * The refusals are the ones that would otherwise surface as a document that
+ * cannot read back: a duplicate name (two spellings one parse cannot tell
+ * apart), an empty preset (it selects every row, so the primary would never be
+ * written), a key the schema does not declare (a preset nothing can store), and
+ * a non-literal value (a discriminator is compared with `===`).
+ *
+ * When there ARE spellings, every parse is wrapped in the round-trip assertion:
+ * the data a tag parses to must select that same tag. A primary parse landing on
+ * a spelling — an agent writing `<page data='{"author":"agent"}'/>`-shaped
+ * attributes onto a claimable primary — or a spelling whose own `parseAttrs`
+ * contradicts its preset is a loud error at the parse, never a row that
+ * serializes back under a different name.
+ */
+function tagsFor(h: Handle): ResolvedTags | null {
+  const spec = h.markdown?.tag;
+  const declared: BlockTag<unknown> | null = spec
+    ? (spec as BlockTag<unknown>)
+    : h.markdown?.serialize || h.text
+      ? null
+      : {};
+  if (declared === null) return null;
+
+  const primary = resolveTag(h, declared, declared.name ?? h.type, null);
+  const seen = new Set([primary.name]);
+  const spellings = (declared.spellings ?? []).map((s) => {
+    if (seen.has(s.name)) {
+      throw new Error(
+        `defineBlock("${h.type}"): markdown.tag.spellings names <${s.name}> twice (or reuses the ` +
+          "primary tag's name). One name is one spelling — a parse could not tell them apart.",
+      );
+    }
+    seen.add(s.name);
+    const preset = s.data as Record<string, unknown>;
+    const keys = Object.keys(preset);
+    if (keys.length === 0) {
+      throw new Error(
+        `defineBlock("${h.type}"): markdown.tag.spellings <${s.name}> has an EMPTY preset, which ` +
+          "selects every row — the primary spelling would never be written. A spelling is " +
+          "chosen by the discriminator values it presets.",
+      );
+    }
+    for (const key of keys) {
+      if (!(key in h.schema.shape)) {
+        throw new Error(
+          `defineBlock("${h.type}"): markdown.tag.spellings <${s.name}> presets \`${key}\`, which ` +
+            "this type's schema does not declare — a row could never carry it, so the spelling " +
+            "could never be written, and its parse would be refused by the schema.",
+        );
+      }
+      const value = preset[key];
+      if (
+        value !== null &&
+        typeof value !== "string" &&
+        typeof value !== "number" &&
+        typeof value !== "boolean"
+      ) {
+        throw new Error(
+          `defineBlock("${h.type}"): markdown.tag.spellings <${s.name}> presets \`${key}\` to a ` +
+            "non-literal value. A spelling is selected by DISCRIMINATOR values, compared with " +
+            "`===`: a string, number, boolean or null.",
+        );
+      }
+    }
+    return resolveTag(h, s, s.name, preset);
+  });
+
+  const select = (data: unknown): ResolvedTag => {
+    const matching = spellings.filter((s) => presetMatches(s.preset!, data));
+    if (matching.length > 1) {
+      throw new Error(
+        `markdown: a "${h.type}" row matches several spellings (${matching
+          .map((s) => `<${s.name}>`)
+          .join(
+            ", ",
+          )}). Their presets overlap, so which tag the row is written under ` +
+          "would depend on declaration order.",
+      );
+    }
+    return matching[0] ?? primary;
+  };
+  if (spellings.length === 0) return { primary, spellings, select };
+
+  const asserted = (tag: ResolvedTag): ResolvedTag => ({
+    ...tag,
+    dataOf: (a, inner, ctx) => {
+      const data = tag.dataOf(a, inner, ctx);
+      const landed = select(data);
+      if (landed !== tag) {
+        throw new Error(
+          `markdown: <${tag.name}> parsed to a "${h.type}" payload that is written as ` +
+            `<${landed.name}>. A spelling is chosen by its data, so a tag whose attributes ` +
+            "contradict its own name cannot read back — write the other tag instead.",
+        );
+      }
+      return data;
+    },
+  });
+  const boundPrimary = asserted(primary);
+  const boundSpellings = spellings.map(asserted);
+  // `select` must hand out the ASSERTED objects, so identity comparisons
+  // against a spelling looked up by name keep holding.
+  const byName = new Map(
+    [boundPrimary, ...boundSpellings].map((t) => [t.name, t] as const),
+  );
+  return {
+    primary: boundPrimary,
+    spellings: boundSpellings,
+    select: (data) => byName.get(select(data).name)!,
   };
 }
 
@@ -548,35 +774,60 @@ function encodeAttrs(
 }
 
 /**
- * The tag this handle maps to, or `null` when it maps to LINES instead.
+ * The tag a row of this handle is written under, or `null` when the type maps
+ * to LINES instead.
  *
  * Order matters and is the whole coverage rule: an explicitly declared `tag`
  * always wins (even beside a `serialize`, which then owns only the way out); a
  * text-bearing type keeps its derived `prefix + text` line; and a type with
  * NEITHER falls back to the derived tag — the branch that used to emit `""`.
+ * Which SPELLING of that tag is the row's data's choice — see
+ * {@link BlockTag.spellings}.
  */
-function tagFor(h: Handle): ResolvedTag | null {
-  const spec = h.markdown?.tag;
-  if (spec) return resolveTag(h, spec as BlockTag<unknown>);
-  if (h.markdown?.serialize || h.text) return null;
-  return resolveTag(h, {});
+function tagForData(h: Handle, data: unknown): ResolvedTag | null {
+  return tagsFor(h)?.select(data) ?? null;
 }
 
 /**
- * The tag name this handle CLAIMS on parse, or `null` when it claims none.
+ * Every tag name this handle CLAIMS on parse: its primary spelling unless that
+ * is `serializeOnly`, and every data-selected spelling. Empty when it claims
+ * none.
  *
  * Exported for the `page.editor:markdown-tag-names-unique` check, so the check
  * and the runtime read ONE resolution: two handles claiming a name is otherwise
  * only discovered when a user pastes (`tagParsersOf` throws), and the `page`
- * type — registered by two different handles — makes that a live hazard.
+ * type — registered by two different handles, and spelled two ways — makes that
+ * a live hazard. Also read by the markdown-apply planner, to find which type
+ * owns the `<page>` pointer on parse.
  */
-export function markdownParseTagName(h: BlockHandle<unknown>): string | null {
-  const tag = tagFor(h);
-  return tag && !tag.serializeOnly ? tag.name : null;
+export function markdownParseTagNames(h: BlockHandle<unknown>): string[] {
+  const tags = tagsFor(h);
+  if (!tags) return [];
+  return [tags.primary, ...tags.spellings]
+    .filter((t) => !t.serializeOnly)
+    .map((t) => t.name);
 }
 
 /**
- * Whether this handle's markdown tag carries its row id — see
+ * The tag name a row of this handle with this `data` is written under, or
+ * `null` when its type maps to markdown LINES only.
+ *
+ * A type is not always its tag (`human-notes` stores `context` and tags
+ * `<human>`), and since {@link BlockTag.spellings} one type is not even always
+ * ONE tag (`page` is `<page>` or `<agent-page>`) — so a message an agent reads
+ * has to name the spelling that is in the document in front of it, which only
+ * the row's data can answer. The same selection the serializer runs, shared for
+ * the reason {@link markdownParseTagNames} is.
+ */
+export function markdownTagNameOf(
+  h: BlockHandle<unknown>,
+  data: unknown,
+): string | null {
+  return tagForData(h, data)?.name ?? null;
+}
+
+/**
+ * Whether ANY spelling of this handle's markdown tag carries its row id — see
  * {@link BlockTag.identified}.
  *
  * Exported so a consumer can derive the identified TYPE SET from the handle
@@ -584,30 +835,63 @@ export function markdownParseTagName(h: BlockHandle<unknown>): string | null {
  * which honours a node's `ref` as a pin only for a type that really round-trips
  * an id; naming the type there instead would be the collection-consumer leak
  * this codebase bans, and would silently stop pinning the day the type is
- * renamed. Same resolution the serializer and parser run, for the same reason
- * `markdownParseTagName` is shared with the uniqueness check.
+ * renamed. Any spelling counts, because a `ref` only ever comes off an
+ * identified spelling's parse: `page` is in the set through `<agent-page
+ * id="…"/>` while its primary `<page>` is not identified at all. Same resolution
+ * the serializer and parser run, for the same reason `markdownParseTagNames` is
+ * shared with the uniqueness check.
  */
 export function markdownTagIsIdentified(h: BlockHandle<unknown>): boolean {
-  return tagFor(h)?.identified === true;
+  const tags = tagsFor(h);
+  if (!tags) return false;
+  return [tags.primary, ...tags.spellings].some((t) => t.identified);
 }
 
-/** How one block type turns into markdown: flat line(s), or a tag region. */
+/**
+ * Every tag name under which a block of these handles is DECLARED as written by
+ * `author` — for a message that has to tell an agent where it may write,
+ * without spelling a tag name literally.
+ *
+ * A handle's static `author` covers all of its spellings; a per-row
+ * `authorFromData` is asked about each spelling's PRESET (the primary's being
+ * the empty payload), which is the partial payload `BlockHandle.authorFromData`
+ * documents it must answer from. An UNDECLARED author never matches — this lists
+ * who a tag says it belongs to, and every paragraph saying nothing is not a tag
+ * written by anybody in particular.
+ */
+export function markdownTagNamesAuthoredBy(
+  handles: readonly BlockHandle<unknown>[],
+  author: "agent" | "human",
+): string[] {
+  const names: string[] = [];
+  for (const h of handles) {
+    const tags = tagsFor(h);
+    if (!tags) continue;
+    for (const tag of [tags.primary, ...tags.spellings]) {
+      const who = h.author ?? h.authorFromData?.(tag.preset ?? {});
+      if (who === author && !names.includes(tag.name)) names.push(tag.name);
+    }
+  }
+  return names;
+}
+
+/** How one block row turns into markdown: flat line(s), or a tag region. */
 type ResolvedSerializer =
   | { kind: "lines"; serialize(data: unknown, ctx: MdSerializeCtx): string }
   | { kind: "tag"; tag: ResolvedTag };
 
-function serializerFor(h: Handle): ResolvedSerializer {
+function serializerFor(h: Handle, data: unknown): ResolvedSerializer {
   const explicit = h.markdown?.serialize;
   if (explicit) return { kind: "lines", serialize: explicit };
-  const tag = tagFor(h);
+  const tag = tagForData(h, data);
   if (tag) return { kind: "tag", tag };
-  // `tagFor` returns null here only for a text-bearing handle (a type with
+  // `tagForData` returns null here only for a text-bearing handle (a type with
   // neither takes the derived-tag branch above), so the lens is present.
   const lens = h.text!;
   const prefix = outputPrefix(h);
   return {
     kind: "lines",
-    serialize: (data, ctx) => prefix + ctx.md(lens(data)),
+    serialize: (d, ctx) => prefix + ctx.md(lens(d)),
   };
 }
 
@@ -736,24 +1020,30 @@ type FlatToken = {
 };
 
 /**
- * The tag name → owning handle map, built per call. Exactly the set of tags the
- * SERIALIZER can emit minus the `serializeOnly` ones, so a name that comes out
- * can always go back in.
+ * The tag name → owning spelling map, built per call. Exactly the set of tags
+ * the SERIALIZER can emit — every spelling of every handle — minus the
+ * `serializeOnly` primaries, so a name that comes out can always go back in.
+ * Iterating the spellings keeps "exactly one handle claims a name" the one rule
+ * it was: a second spelling is a second NAME, never a second claim on one.
  */
 function tagParsersOf(handles: Handle[]): Map<string, ResolvedTag> {
   const byName = new Map<string, ResolvedTag>();
   for (const h of handles) {
-    const tag = tagFor(h);
-    if (!tag || tag.serializeOnly) continue;
-    const existing = byName.get(tag.name);
-    if (existing) {
-      throw new Error(
-        `markdown: block types "${existing.handle.type}" and "${h.type}" both claim the ` +
-          `<${tag.name}> tag on PARSE. Exactly one may own a name; the other must declare ` +
-          "`markdown.tag.serializeOnly` (as `page` does, so `<page/>` parses as a page-link).",
-      );
+    const tags = tagsFor(h);
+    if (!tags) continue;
+    for (const tag of [tags.primary, ...tags.spellings]) {
+      if (tag.serializeOnly) continue;
+      const existing = byName.get(tag.name);
+      if (existing) {
+        throw new Error(
+          `markdown: block types "${existing.handle.type}" and "${h.type}" both claim the ` +
+            `<${tag.name}> tag on PARSE. Exactly one may own a name; the other must declare ` +
+            "`markdown.tag.serializeOnly` (as `page`'s primary spelling does, so `<page/>` " +
+            "parses as a page-link).",
+        );
+      }
+      byName.set(tag.name, tag);
     }
-    byName.set(tag.name, tag);
   }
   return byName;
 }
@@ -955,11 +1245,12 @@ function tagToken(
   ctx: MarkdownContext,
 ): FlatToken {
   if (tag.body === "none") {
-    // LOUD, never a silent drop: `<page id="x">…</page>` is the syntax an
-    // authoritative sub-page write would use, and it is deliberately not enabled
-    // yet (a markdown apply must not span several `page_id` partitions).
-    // Swallowing the body here would make enabling it later a silent behavior
-    // change on documents that already exist.
+    // LOUD, never a silent drop: `<page id="x">…</page>` names a page whose
+    // content lives in its own `page_id` partition, and a body here would read
+    // as content authored THROUGH the pointer. The one tag that may carry a
+    // page's body is `<agent-page>`'s MINT form, where the page is new and the
+    // body is its first content; an existing page's content is written by its
+    // own id. Swallowing the body would hide that distinction.
     throw new Error(
       `markdown: <${tag.name}> takes no body, but one was written. This tag is a POINTER ` +
         "— its content lives elsewhere and cannot be authored through it.",
@@ -1162,6 +1453,13 @@ function indentLines(lines: string[]): string[] {
  * So the address is the first thing anything reading the line sees, the facts
  * about the row come next, and both stay in one place across types.
  *
+ * **`id` is first whoever supplies it.** A `<page id="…"/>` pointer's id is the
+ * type's OWN attribute (a sub-page's `attrs` reads `ctx.id`; a link-to-page
+ * block's is the page it points at), not the reserved one — and it is still the
+ * address, so it stays in front of the annotated `title` both kinds carry. The
+ * two pointer kinds therefore read the same way round, `<page id="…" title="…"/>`,
+ * as every identified tag does.
+ *
  * **An absent value omits the attribute rather than throwing**, for `id` and for
  * every annotation alike. An id-less, annotation-less forest is the clipboard
  * (copy/paste, a fuzz round trip) and it must still serialize: the bare
@@ -1223,7 +1521,11 @@ function tagAttrs(
     if (value !== undefined) reserved[name] = value;
   }
 
-  return Object.keys(reserved).length === 0 ? attrs : { ...reserved, ...attrs };
+  if (Object.keys(reserved).length === 0) return attrs;
+  const { id: ownId, ...own } = attrs;
+  return ownId === undefined
+    ? { ...reserved, ...own }
+    : { id: ownId, ...reserved, ...own };
 }
 
 /**
@@ -1275,7 +1577,7 @@ export function serializeForestToMarkdown(
         id: n.id,
         annotations: n.annotations,
       };
-      const resolved = h ? serializerFor(h) : null;
+      const resolved = h ? serializerFor(h, n.data) : null;
 
       // Flat line(s): the walk owns the children, exactly as it always has.
       if (resolved === null || resolved.kind === "lines") {
@@ -1300,7 +1602,7 @@ export function serializeForestToMarkdown(
           ctx.emptyBlocks === "pinned" &&
           line.trim() === "" &&
           (n.children.length > 0 || index === 0 || index === nodes.length - 1)
-            ? h && tagFor(h)
+            ? h && tagForData(h, n.data)
             : null;
         if (pinned) {
           out.push(

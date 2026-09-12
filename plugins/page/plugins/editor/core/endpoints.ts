@@ -128,6 +128,14 @@ export const TurnIntoPageBodySchema = z.object({
    * same seam as `CreateBlockBodySchema.type`.
    */
   seedChild: z.object({ type: z.string(), data: z.unknown().optional() }),
+  /**
+   * `"agent"` makes the new page AGENT-AUTHORED (`PageData.author`) — the
+   * `/agent-page` insert: a human makes an empty page for an agent to fill, and
+   * its first writer counts as its creator. Absent is an ordinary page, the
+   * human's. Chosen here and nowhere later: a page's author is fixed at creation
+   * (`rewriteBlockData` refuses a data write that flips it).
+   */
+  author: z.literal("agent").optional(),
 });
 export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
 

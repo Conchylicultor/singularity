@@ -1,6 +1,7 @@
 // Executable spec for the ANNOTATION FAMILY as a family — the four blocks that
 // carry a page's human↔agent side-channel (`context` — the human card, whose
-// stored type kept its old spelling — `todo`, `agent-note`, `private-note`).
+// stored type kept its old spelling — `todo`, `agent-note` (tagged
+// `<agent-inline>` in markdown, stored type unchanged), `private-note`).
 //
 // Per-container behaviour (wrap, unwrap, Enter-in-a-child, nesting, the void
 // write boundary) is already pinned by
@@ -88,6 +89,8 @@ const MEMBERS = [
     child: "wire the delivery filter",
   },
   {
+    // The STORED type. Its markdown tag is `<agent-inline>`, and — like the
+    // Human card's — that rename stopped at the tag.
     type: "agent-note",
     label: "Agent notes",
     name: "Agent notes",

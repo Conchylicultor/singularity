@@ -7,13 +7,13 @@
 //
 // Policy:
 //  P1. `read_page` is LOSSLESS and REDACTING at once — the prose and every
-//      `<agent-note id="…">` address are there; a `/private` card, its contents
+//      `<agent-inline id="…">` address are there; a `/private` card, its contents
 //      and even the substring `private-note` are not.
 //  P2. Every refusal fires with a message that names the fix, and — checked on a
 //      five-column row snapshot, not on the tool's own report — writes NOTHING.
 //  P3. A block INSIDE a private card cannot be read — the id itself is not a
 //      bypass.
-//  P4. A card MAY nest: an edit whose markdown puts an `<agent-note>` inside an
+//  P4. A card MAY nest: an edit whose markdown puts an `<agent-inline>` inside an
 //      existing card mints it there and attributes the write to the INNER card.
 //      This was a refusal until the rule that carried it over from the dead
 //      `append_agent_notes` tool was dropped — see the plugin's CLAUDE.md.
@@ -21,17 +21,29 @@
 //      (the provenance a human opens from the card's glyph). Every newly minted
 //      card, not one known id.
 //  P6. **The T3 attack.** An edit that re-indents the page's own prose under an
-//      existing `<agent-note id="…">` is refused. It is a MOVE, not a creation —
+//      existing `<agent-inline id="…">` is refused. It is a MOVE, not a creation —
 //      the text is byte-identical so the aligner preserves the block's id — which
 //      is exactly why the acceptance predicate has to test the OLD chain too.
 //  P7. A private card survives a PAGE-scoped edit untouched, in all five columns.
 //      The tool's report is not proof: a deleted card is simply unmentioned, and
 //      a card re-ranked to the end of the page passes any row-existence check.
-//  P8. A `<human>` card nested INSIDE an `<agent-note>` is a hole the agent
+//  P8. A `<human>` card nested INSIDE an `<agent-inline>` is a hole the agent
 //      cannot write: an `edit_page` of a line in it is refused, and so is a
 //      `write_agent_note` on the enclosing card that simply leaves it out — which
 //      is what "the whole card's contents" makes of an omission. Both checked on
 //      the five-column snapshot, because a refusal must write nothing.
+//  P9. **An agent page** (`research/2026-09-11-page-agent-pages.md`). A tagless
+//      `<agent-page title="…">body</agent-page>` in an `edit_page` mints a real
+//      sub-page, named in `created_page_ids`; the parent's `read_page` then shows
+//      the pointer `<agent-page id="…" title="…"/>`, and a human's sub-page shows
+//      as `<page id="…" title="…"/>`. `read_page` / `edit_page` /
+//      `write_agent_note` on the page's own id reach its whole content. The page
+//      is stamped with the creating conversation, and carries NO agent-origin
+//      marker (the 24h e2e sweep must never see it). An empty agent page a human
+//      inserts (`turn-into-page` with `author: "agent"`) is stamped by its first
+//      writer. Every refusal — a pointer given a body or an extra attribute, a
+//      pointer claiming a human's page is the agent's, a title rename, a PATCH
+//      flipping the marker — leaves both pages' snapshots unchanged.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -81,7 +93,17 @@ const NOTE_MD =
   "found two call sites\n\n- one in the parser\n- one in the writer";
 const NOTE_FIRST = "found two call sites";
 const NOTE_EDITED = "found three call sites";
-const CARD_TAG = "agent-note";
+// The card's STORED type and its markdown TAG differ since the tag became
+// `<agent-inline>` (nothing migrated), so both are needed: one to find rows, one
+// to read and write the document.
+const CARD_TYPE = "agent-note";
+const CARD_TAG = "agent-inline";
+// An agent-authored page (P9): the tag, and what it is minted with.
+const AGENT_PAGE_TAG = "agent-page";
+const AGENT_PAGE_TITLE = "Decoder findings";
+const AGENT_PAGE_FIRST = "first finding";
+const AGENT_PAGE_EDITED = "first finding, confirmed";
+const HUMAN_SUBPAGE_TITLE = "Human sub-page";
 // The page author answering the agent INSIDE the agent's own card (P8). The
 // stored type is `context` and the markdown tag is `human` — the card was
 // renamed everywhere except the column value, so both spellings are needed here:
@@ -156,7 +178,10 @@ async function mustCall(name: string, args: unknown): Promise<string> {
   return call.text;
 }
 
-/** What a write reports it did. `note_ids` are the cards it was attributed to. */
+/**
+ * What a write reports it did. `note_ids` are the agent-authored blocks (cards
+ * and pages) it was attributed to; `created_page_ids` the pages it minted.
+ */
 interface ApplySummary {
   note_ids?: string[];
   created?: number;
@@ -164,6 +189,7 @@ interface ApplySummary {
   moved?: number;
   text_edited?: number;
   created_ids?: string[];
+  created_page_ids?: string[];
 }
 
 /** A write that must succeed, with its summary parsed. */
@@ -336,7 +362,7 @@ async function seedHumanCard(
   );
 }
 
-/** The conversations recorded as authors of one agent-note card. */
+/** The conversations recorded as authors of one agent-authored block (card or page). */
 async function fetchAuthors(blockId: string): Promise<string[]> {
   const res = await agentFetch(
     `/api/resources/agent-notes-authors?blockId=${encodeURIComponent(blockId)}`,
@@ -345,6 +371,82 @@ async function fetchAuthors(blockId: string): Promise<string[]> {
     throw new Error(`agent-notes-authors ${blockId}: HTTP ${res.status}`);
   const body = (await res.json()) as { value?: { conversationId: string }[] };
   return (body.value ?? []).map((a) => a.conversationId);
+}
+
+/**
+ * Seed a SUB-PAGE of `parentId` the way a human makes one: a line, turned into a
+ * page in place (`POST /api/blocks/:id/turn-into-page`). `author: "agent"` is the
+ * `/agent-page` insert — an empty page a human made for an agent to fill.
+ *
+ * Through the browser rather than a tool: no agent tool mints a HUMAN's page,
+ * and the empty agent page is by definition the one no agent wrote yet.
+ */
+async function seedSubPage(
+  page: Page,
+  parentId: string,
+  title: string,
+  author?: "agent",
+): Promise<string> {
+  return page.evaluate(
+    async ({ parent, name, who }) => {
+      const call = async (
+        url: string,
+        body: unknown,
+      ): Promise<{ id: string }> => {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok)
+          throw new Error(`POST ${url} ${res.status}: ${await res.text()}`);
+        return (await res.json()) as { id: string };
+      };
+      const line = await call("/api/blocks", {
+        parentId: parent,
+        type: "text",
+        data: { text: [] },
+      });
+      await call(`/api/blocks/${line.id}/turn-into-page`, {
+        title: name,
+        seedChild: { type: "text", data: { text: [] } },
+        ...(who === undefined ? {} : { author: who }),
+      });
+      return line.id;
+    },
+    { parent: parentId, name: title, who: author },
+  );
+}
+
+/** `PATCH /api/blocks/:id` from the browser; the HTTP status it answered. */
+async function patchBlockStatus(
+  page: Page,
+  blockId: string,
+  body: unknown,
+): Promise<number> {
+  return page.evaluate(
+    async ({ id, payload }) =>
+      (
+        await fetch(`/api/blocks/${id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      ).status,
+    { id: blockId, payload: body },
+  );
+}
+
+/**
+ * The page ids `apps/pages/agent-origin` has marked as e2e debris (its 24h sweep
+ * trashes them). An agent-authored page must never be among them.
+ */
+async function fetchAgentOriginPageIds(): Promise<string[]> {
+  const res = await agentFetch("/api/resources/pages-origin?limit=500");
+  if (!res.ok) throw new Error(`pages-origin: HTTP ${res.status}`);
+  const body = (await res.json()) as { value?: { parentId: string }[] };
+  if (!body.value) throw new Error("pages-origin: response carried no value");
+  return body.value.map((row) => row.parentId);
 }
 
 await withBrowser(async (h) => {
@@ -408,7 +510,7 @@ await withBrowser(async (h) => {
   const card = rowsAfterCreate.find((b) => b.id === noteId);
   r.ok(
     `a tagless <${CARD_TAG}> minted a card under the page`,
-    card?.type === CARD_TAG && card.parentId === pageId,
+    card?.type === CARD_TYPE && card.parentId === pageId,
     JSON.stringify(card ?? null),
   );
   // Four children, not three: the blank line inside `NOTE_MD` is an empty
@@ -419,7 +521,7 @@ await withBrowser(async (h) => {
     "the markdown became the card's CHILDREN (not a nested card), blank line included",
     cardChildren.length === 4 &&
       cardChildren.filter((b) => rowText(b) === "").length === 1 &&
-      rowsAfterCreate.every((b) => b.id === noteId || b.type !== CARD_TAG),
+      rowsAfterCreate.every((b) => b.id === noteId || b.type !== CARD_TYPE),
     JSON.stringify(cardChildren.map((b) => [b.type, rowText(b)])),
   );
   r.ok(
@@ -574,7 +676,7 @@ await withBrowser(async (h) => {
       "P2: rewriting a prose block",
       "edit_page",
       { block_id: pageId, old_string: LINES[0]!, new_string: "hijacked" },
-      new RegExp(`outside every "${CARD_TAG}" card`),
+      /outside every agent-authored block/,
     ],
     [
       "P2: minting a private card inside its own",
@@ -624,19 +726,19 @@ await withBrowser(async (h) => {
       "P2: write_agent_note at a prose block",
       "write_agent_note",
       { block_id: proseIds[1]!, content: "hijacked" },
-      new RegExp(`is not an "${CARD_TAG}" card`),
+      /not agent-authored/,
     ],
     [
       "P2: write_agent_note at the page",
       "write_agent_note",
       { block_id: pageId, content: "hijacked" },
-      new RegExp(`is the page itself, not an "${CARD_TAG}" card`),
+      /its author wrote, not agent-authored/,
     ],
     [
       "P2: write_agent_note at the private card",
       "write_agent_note",
       { block_id: priv.card, content: "hijacked" },
-      new RegExp(`is not an "${CARD_TAG}" card`),
+      /not agent-authored/,
     ],
   ];
 
@@ -775,7 +877,7 @@ await withBrowser(async (h) => {
   );
   const rowsAfterNest = await fetchBlocks(pageId);
   const innerCard = rowsAfterNest.find(
-    (b) => b.type === CARD_TAG && b.parentId === noteId,
+    (b) => b.type === CARD_TYPE && b.parentId === noteId,
   );
   // The card's original children are still ITS children. Without this, a write
   // that swallowed them into the new card passes every other assertion here.
@@ -894,6 +996,254 @@ await withBrowser(async (h) => {
     beforeHuman.get(answer.card) === afterEcho.get(answer.card) &&
       beforeHuman.get(answer.child) === afterEcho.get(answer.child),
     JSON.stringify([afterEcho.get(answer.card), afterEcho.get(answer.child)]),
+  );
+
+  // --- P9. an agent page: minted by a tag, written by its own id --------------
+  const humanSubPage = await seedSubPage(
+    page,
+    pageId,
+    HUMAN_SUBPAGE_TITLE,
+  ).catch((err: unknown): Promise<never> =>
+    bail(
+      "seed: a human's sub-page through turn-into-page",
+      `${err instanceof Error ? err.message : String(err)} — P9 is not checkable`,
+    ),
+  );
+  await page.waitForTimeout(1000);
+
+  const beforeMint = await snapshot(pageId);
+  const minted = await mustWrite("edit_page", {
+    block_id: pageId,
+    old_string: LINES[0]!,
+    new_string:
+      `${LINES[0]!}\n<${AGENT_PAGE_TAG} title="${AGENT_PAGE_TITLE}">\n` +
+      `  ${AGENT_PAGE_FIRST}\n  - checked decode.ts\n</${AGENT_PAGE_TAG}>`,
+  });
+  const agentPageId = minted.created_page_ids?.[0];
+  if (agentPageId === undefined || minted.created_page_ids?.length !== 1) {
+    return await bail(
+      "P9: edit_page names the ONE page it minted in created_page_ids",
+      JSON.stringify(minted),
+    );
+  }
+  r.ok(
+    "P9: the page and its two body lines were created, and nothing else",
+    minted.created === 3 &&
+      minted.deleted === 0 &&
+      (minted.created_ids ?? []).includes(agentPageId),
+    JSON.stringify(minted),
+  );
+  r.ok(
+    "P9: the write is attributed to the new page, not to anything around it",
+    JSON.stringify(minted.note_ids ?? []) === JSON.stringify([agentPageId]),
+    JSON.stringify(minted.note_ids ?? null),
+  );
+
+  const parentAfterMint = await fetchBlocks(pageId);
+  const pageRow = parentAfterMint.find((b) => b.id === agentPageId);
+  r.ok(
+    "P9: the new page is a FOLDED sub-page row of the page, marked agent-authored",
+    pageRow !== undefined &&
+      pageRow.type === "page" &&
+      pageRow.parentId === pageId &&
+      !pageRow.expanded &&
+      (pageRow.data as { author?: string }).author === "agent",
+    JSON.stringify(pageRow ?? null),
+  );
+  // The parent gained exactly one row — the page — and no line of it moved: the
+  // body lives in the NEW page's partition, not in this page's rows.
+  const mintDiff = snapshotDiff(beforeMint, await snapshot(pageId));
+  r.ok(
+    "P9: the parent page gained the page row and nothing else changed",
+    mintDiff.length === 1 && mintDiff[0]!.startsWith(`+${agentPageId}`),
+    JSON.stringify(mintDiff),
+  );
+
+  const parentMarkdown = await mustCall("read_page", { block_id: pageId });
+  r.ok(
+    "P9: read_page on the parent shows the POINTER, with its title",
+    parentMarkdown.includes(
+      `<${AGENT_PAGE_TAG} id="${agentPageId}" title="${AGENT_PAGE_TITLE}"/>`,
+    ) && !parentMarkdown.includes(AGENT_PAGE_FIRST),
+    JSON.stringify(parentMarkdown),
+  );
+  r.ok(
+    "P9: …and a human's sub-page as `<page id title/>` — every page pointer is titled",
+    parentMarkdown.includes(
+      `<page id="${humanSubPage}" title="${HUMAN_SUBPAGE_TITLE}"/>`,
+    ),
+    JSON.stringify(parentMarkdown),
+  );
+
+  const pageMarkdown = await mustCall("read_page", { block_id: agentPageId });
+  r.ok(
+    "P9: read_page on the page's own id is its whole content, title banner first",
+    pageMarkdown.startsWith(`# ${AGENT_PAGE_TITLE}`) &&
+      pageMarkdown.includes(AGENT_PAGE_FIRST) &&
+      pageMarkdown.includes("checked decode.ts"),
+    JSON.stringify(pageMarkdown),
+  );
+
+  const creators = await fetchAuthors(agentPageId);
+  r.ok(
+    "P9: the page is stamped with the conversation that created it",
+    creators.includes(CONVERSATION),
+    JSON.stringify(creators),
+  );
+  const marked = await fetchAgentOriginPageIds();
+  r.ok(
+    "P9: the page carries NO agent-origin marker — the 24h sweep never sees it",
+    !marked.includes(agentPageId),
+    JSON.stringify(marked),
+  );
+
+  // Every block in an agent page is the agent's: a page-level line rewritten and
+  // a new one added, at the page's own root.
+  const pageEdit = await mustWrite("edit_page", {
+    block_id: agentPageId,
+    old_string: AGENT_PAGE_FIRST,
+    new_string: `${AGENT_PAGE_EDITED}\nanother paragraph`,
+  });
+  r.eq(
+    "P9: edit_page on the page rewrites its prose and adds a line — both legal",
+    counts(pageEdit),
+    { created: 1, deleted: 0, moved: 0, text_edited: 1 },
+  );
+  r.ok(
+    "P9: …attributed to the page",
+    (pageEdit.note_ids ?? []).includes(agentPageId),
+    JSON.stringify(pageEdit.note_ids ?? null),
+  );
+  // write_agent_note takes the page's id, and its own read — `# Title` banner
+  // included — is a fixed point: the banner is stripped, not written.
+  const pageRead = await mustCall("read_page", { block_id: agentPageId });
+  const pageRewrite = await mustWrite("write_agent_note", {
+    block_id: agentPageId,
+    content: pageRead,
+  });
+  r.eq(
+    "P9: write_agent_note of the page's own read writes nothing",
+    counts(pageRewrite),
+    { created: 0, deleted: 0, moved: 0, text_edited: 0 },
+  );
+
+  // An empty agent page a HUMAN inserted: no creator until an agent writes it,
+  // and then the first writer is the creator.
+  const emptyAgentPage = await seedSubPage(page, pageId, "", "agent").catch(
+    (err: unknown): Promise<never> =>
+      bail(
+        "seed: an empty agent page through turn-into-page with author: agent",
+        `${err instanceof Error ? err.message : String(err)} — the rest of P9 is not checkable`,
+      ),
+  );
+  r.ok(
+    "P9: an empty agent page a human inserted has no creator yet",
+    (await fetchAuthors(emptyAgentPage)).length === 0,
+    emptyAgentPage,
+  );
+  await mustWrite("write_agent_note", {
+    block_id: emptyAgentPage,
+    content: "filled in by the agent",
+  });
+  r.ok(
+    "P9: …and its first writer becomes its creator",
+    (await fetchAuthors(emptyAgentPage)).includes(CONVERSATION),
+    emptyAgentPage,
+  );
+
+  const afterPageWrites = await fetchBlocks(pageId);
+  const agentPointer = `<${AGENT_PAGE_TAG} id="${agentPageId}" title="${AGENT_PAGE_TITLE}"/>`;
+  const beforePageRefusals = await snapshot(pageId);
+  const beforePageContent = await snapshot(agentPageId);
+  const pageRefusals: [
+    name: string,
+    tool: string,
+    args: unknown,
+    expect: RegExp,
+  ][] = [
+    [
+      "P9: giving the pointer a BODY (a page's content is written by its own id)",
+      "edit_page",
+      {
+        block_id: pageId,
+        old_string: agentPointer,
+        new_string:
+          `<${AGENT_PAGE_TAG} id="${agentPageId}" title="${AGENT_PAGE_TITLE}">` +
+          `\n  smuggled\n</${AGENT_PAGE_TAG}>`,
+      },
+      /lives in its own page/,
+    ],
+    [
+      "P9: giving the pointer an attribute other than `title`",
+      "edit_page",
+      {
+        block_id: pageId,
+        old_string: agentPointer,
+        new_string: `<${AGENT_PAGE_TAG} id="${agentPageId}" title="${AGENT_PAGE_TITLE}" icon="x"/>`,
+      },
+      /takes only `title`/,
+    ],
+    [
+      "P9: a pointer claiming a HUMAN's sub-page is an agent page",
+      "edit_page",
+      {
+        block_id: pageId,
+        old_string: `<page id="${humanSubPage}" title="${HUMAN_SUBPAGE_TITLE}"/>`,
+        new_string: `<${AGENT_PAGE_TAG} id="${humanSubPage}" title="${HUMAN_SUBPAGE_TITLE}"/>`,
+      },
+      /cannot be changed through markdown/,
+    ],
+    [
+      "P9: renaming the agent page through its `# Title` line",
+      "edit_page",
+      {
+        block_id: agentPageId,
+        old_string: `# ${AGENT_PAGE_TITLE}`,
+        new_string: "# Renamed by an agent",
+      },
+      /TITLE and not a block/,
+    ],
+    [
+      "P9: write_agent_note at a HUMAN's sub-page",
+      "write_agent_note",
+      { block_id: humanSubPage, content: "hijacked" },
+      /its author wrote, not agent-authored/,
+    ],
+  ];
+  for (const [name, tool, args, expect] of pageRefusals) {
+    const refused = await callTool(tool, args);
+    r.ok(
+      `refused: ${name}`,
+      !refused.ok && expect.test(refused.text),
+      refused.text,
+    );
+  }
+  // The marker is the page's KIND, fixed at creation: a PATCH restating the
+  // page's data without it would hand the page back to the human.
+  const flipStatus = await patchBlockStatus(page, agentPageId, {
+    data: { title: AGENT_PAGE_TITLE, icon: null },
+  });
+  r.ok(
+    "P9: a PATCH dropping the agent marker is a 409",
+    flipStatus === 409,
+    String(flipStatus),
+  );
+  r.ok(
+    "P9: no refusal wrote anything — the parent and the agent page, five columns each",
+    snapshotDiff(beforePageRefusals, await snapshot(pageId)).length === 0 &&
+      snapshotDiff(beforePageContent, await snapshot(agentPageId)).length === 0,
+    JSON.stringify([
+      snapshotDiff(beforePageRefusals, await snapshot(pageId)),
+      snapshotDiff(beforePageContent, await snapshot(agentPageId)),
+    ]),
+  );
+  r.ok(
+    "P9: the page row still carries its marker after the refused PATCH",
+    (
+      (await fetchBlocks(pageId)).find((b) => b.id === agentPageId)?.data as
+        { author?: string } | undefined
+    )?.author === "agent",
+    JSON.stringify(afterPageWrites.find((b) => b.id === agentPageId) ?? null),
   );
 
   await snap(page, out, "after-notes");

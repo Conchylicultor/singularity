@@ -226,6 +226,7 @@
     - `conversations/runtime-tmux`
     - `conversations/summary`
     - `improve`
+    - `page/annotations/agent-notes/agent-page`
     - `review`
     - `review/code-review`
     - `review/plugin-changes/file-changes`

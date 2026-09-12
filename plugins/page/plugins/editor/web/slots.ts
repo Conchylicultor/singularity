@@ -1,5 +1,8 @@
 import { useMemo, type ComponentType } from "react";
-import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  defineSlotFacade,
+} from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineDispatchSlot,
   defineOrderedDispatchSlot,
@@ -14,6 +17,7 @@ import type {
   BlockFootProps,
   BlockFrameProps,
   BlockRendererProps,
+  InsertAction,
 } from "./types";
 import { UnknownBlock } from "./components/unknown-block";
 import { BlockTextRenderer } from "./components/block-text-renderer";
@@ -388,6 +392,24 @@ export const Editor = {
    * middleware applies automatically (the bar is reorderable, by design).
    */
   FormatAction: defineRenderSlot<{ component: ComponentType }>(),
+  /**
+   * Insert-menu entries (`/` and the gutter `+`) that RUN something rather than
+   * convert the caret's line into a block type — for what a type conversion
+   * cannot express, e.g. turning the line into a server-created kind of page.
+   * Listed among the block types (placed by `after`) and ranked against them by
+   * the same `/` query filter; committing one consumes the query text exactly
+   * as a block type does, then calls `run` on the caret's line.
+   *
+   * Offered only on a server-synced editor with an unrestricted palette: the
+   * same gate the block-actions menu puts on `TurnInto` ("none of that exists
+   * without rows"), plus the `enabledBlockTypes` allowlist, which curates
+   * exactly what an editor offers and so never lists an action. And only once
+   * the server holds the caret's line (see `useInsertMenuSections`).
+   *
+   * A plain slot: the order users curate is the block menu's config, which
+   * places block types; an action places itself relative to one (`after`).
+   */
+  InsertAction: defineSlot<InsertAction>({ docLabel: (a) => a.label }),
 };
 
 /**

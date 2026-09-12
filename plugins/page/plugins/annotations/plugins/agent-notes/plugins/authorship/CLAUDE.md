@@ -1,7 +1,9 @@
 # authorship
 
-**Which conversations wrote this agent-notes card**, and the popover that shows
-them.
+**Which conversations wrote into an agent-authored block** — an `<agent-inline>`
+card, or an `<agent-page>` — and the popover that shows them. The table keys on
+the block id whatever the block is, so a page needs no second store: its earliest
+row is its creator.
 
 A sub-plugin of [`agent-notes`](../../CLAUDE.md) rather than part of the MCP tool
 that first writes these cards, because the record is about the CARD, not about
@@ -53,7 +55,10 @@ one to serve.
 
 `useAgentNotesAuthors` re-sorts client-side: a keyed resource merges deltas by
 key, so array order after a live update is the merge's, not the loader's
-`ORDER BY`.
+`ORDER BY`. It also reads "not loaded yet" as "no authors" — fine for a glyph
+that turns interactive a beat late. `useAgentNotesCreator` (the earliest record,
+the [`agent-page`](../agent-page/CLAUDE.md) creator chip) keeps pending as a
+state instead: a chip that NAMES someone cannot stand in "nobody" for "unknown".
 
 ## The popover, and the one thing it cannot know
 
@@ -74,7 +79,7 @@ gap in that plugin.
 
 ## Plugin reference
 
-- Description: Reads an agent-notes card's authorship (useAgentNotesAuthors) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
 - Server:
   - Contributes: `resource.declare` "agent-notes-authors"
   - Uses:
@@ -92,16 +97,19 @@ gap in that plugin.
     - `conversations/conversation-ui/row.ConversationRowById`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
     - `primitives/relative-time.RelativeTime`
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):
     - `AgentNotesAuthors`
     - `useAgentNotesAuthors`
+    - `useAgentNotesCreator`
 - Cross-plugin:
   - Imported by:
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
+    - `page/annotations/agent-notes/agent-page`
 - Shared:
   - Exports (types): `AgentNotesAuthor`
   - Exports (values):

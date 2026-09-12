@@ -14,7 +14,7 @@ import {
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   conversionPrefixesOf,
-  markdownParseTagName,
+  markdownParseTagNames,
   type BlockHandle,
 } from "../core";
 import type {
@@ -331,9 +331,11 @@ const anchorHasDecoration: Check = {
  * handles register (the editor's own for the server write boundary, `sub-page`'s
  * for the web renderer) while `page-link` owns `<page>` on parse: any of the
  * three dropping `serializeOnly`, or a new type picking a taken name, breaks
- * every markdown paste.
+ * every markdown paste. Since `page` is also SPELLED two ways (`<page>` for a
+ * human's sub-page, `<agent-page>` for an agent-authored one), every spelling a
+ * handle claims is a name here.
  *
- * `markdownParseTagName` is the SAME resolution the runtime uses, imported
+ * `markdownParseTagNames` is the SAME resolution the runtime uses, imported
  * rather than restated, so the check cannot drift from what it checks.
  */
 const markdownTagNamesUnique: Check = {
@@ -378,11 +380,13 @@ const markdownTagNamesUnique: Check = {
       for (const raw of def.contributions) {
         const c = raw as { _slot?: SlotHandle; block?: BlockHandle<unknown> };
         if (c._slot !== slots.block || !c.block) continue;
-        const name = markdownParseTagName(c.block);
-        if (name === null) continue;
-        const list = claimants.get(name) ?? [];
-        list.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
-        claimants.set(name, list);
+        // Every spelling the handle claims (`markdown.tag.spellings`): a second
+        // spelling is a second NAME, and each name is one claim.
+        for (const name of markdownParseTagNames(c.block)) {
+          const list = claimants.get(name) ?? [];
+          list.push(`${tree.byDir.get(dir)?.id ?? dir} (${c.block.type})`);
+          claimants.set(name, list);
+        }
       }
     }
 
@@ -402,9 +406,10 @@ const markdownTagNamesUnique: Check = {
           )
           .join("\n")}`,
       hint:
-        "Either rename one type's tag (`markdown.tag.name`), or mark the one that only EMITS it " +
-        "as `markdown.tag.serializeOnly: true` — the way `page` does, so `<page id=…/>` " +
-        "serializes from a sub-page and parses back as a `page-link`.",
+        "Either rename one type's tag (`markdown.tag.name`, or a spelling's name), or mark the " +
+        "one that only EMITS it as `markdown.tag.serializeOnly: true` — the way `page`'s primary " +
+        "spelling does, so `<page id=…/>` serializes from a sub-page and parses back as a " +
+        "`page-link`.",
     };
   },
 };

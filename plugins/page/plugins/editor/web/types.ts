@@ -90,6 +90,55 @@ export interface BlockEditorAPI {
   onFocus(): void;
 }
 
+/** What an `Editor.InsertAction` runs against: the line the menu was opened on. */
+export interface InsertActionContext {
+  /** The caret line's block id. The item acts on this line, in place. */
+  blockId: string;
+  /** The caret line's own block API. */
+  editor: BlockEditorAPI;
+  /**
+   * The line's text with the query removed — what the user had on the line
+   * besides the command. Read from the live editor and cut here, because the
+   * strip itself lands only after `run` returns (the menu commits inside the
+   * editor's own update), so neither the row nor the doc says it yet. An action
+   * that replaces the line carries this over (as a title, say) instead of
+   * dropping the user's words.
+   */
+  text: RichText;
+}
+
+/**
+ * An entry of the insert menus (`/` and the gutter `+`) that RUNS something
+ * instead of converting the caret's line into a block type. See
+ * `Editor.InsertAction`.
+ */
+export interface InsertAction {
+  /** Unique among insert actions; keys the menu row. */
+  id: string;
+  /** The menu row's text, and what the `/` query is matched against first. */
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  /** Extra words the `/` query matches, ranked below `label` matches. */
+  aliases?: string[];
+  /**
+   * The block type this entry is listed right after, in whichever section the
+   * block menu's config puts that type — so an action sits beside the block it
+   * belongs with without the config (which only orders block types) having to
+   * know it exists. Absent, or that type not offered: a trailing section of its
+   * own.
+   */
+  after?: string;
+  /**
+   * Act on the caret's line. The menu has already consumed the query text (the
+   * `/…` span, or the gutter draft's filter) when this runs, exactly as it does
+   * before a block-type conversion. Synchronous by contract: a server call is
+   * fired from here and owns its own failure (`void promise` surfaces a
+   * rejection as an uncaught error), since the menu is gone by the time it
+   * settles.
+   */
+  run(ctx: InsertActionContext): void;
+}
+
 export interface BlockRendererProps {
   block: Block;
   isFocused: boolean;

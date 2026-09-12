@@ -25,7 +25,7 @@ import {
 import { rowToNode } from "./reconcile";
 import { notifyBlockChange } from "./notify";
 import { notifyStructuralChange } from "./notify-structural-change";
-import { parseBlockData } from "./parse-block-data";
+import { parseBlockData, rewriteBlockData } from "./parse-block-data";
 import type { BlockReadExecutor } from "./page-id";
 import { pageBlocksEntriesAmong, restoreEntryById } from "./trash-blocks";
 
@@ -210,7 +210,14 @@ export async function restorePageContent(
         );
       }
 
-      const data = parseBlockData(PAGE_BLOCK_TYPE, snapshot.page);
+      // The page row's data is a REWRITE of the one stored, and judged as one: a
+      // version of this same page carries the page's author (fixed at
+      // creation), so one that does not is refused rather than restored.
+      const data = rewriteBlockData({
+        type: PAGE_BLOCK_TYPE,
+        before: { type: PAGE_BLOCK_TYPE, data: pageRow.data },
+        next: snapshot.page,
+      });
       if (!dataEqual(pageRow.data, data)) {
         await updateBlockFields(ctx.tx, pageId, {
           data,

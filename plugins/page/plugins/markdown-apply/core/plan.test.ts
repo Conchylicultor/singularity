@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
+  PageDataSchema,
   defineBlock,
   isEmptyPatch,
+  pageBlockAuthor,
+  pageBlockMarkdown,
   namesField,
   parseMarkdownToForest,
   plainOf,
@@ -163,22 +166,15 @@ const codeBlock = defineBlock({
 });
 
 // The two `<page …>` halves: the sub-page SERIALIZES the tag (identity from
-// `ctx.id`), `page-link` OWNS it on parse.
+// `ctx.id`), `page-link` OWNS it on parse. The page handle is the REAL shared
+// declaration (editor core, which this plugin already imports): its second
+// spelling, `<agent-page>`, is what the agent-authored-page cases below pin, and
+// a local copy would pin the copy.
 const page = defineBlock({
   type: "page",
-  schema: z.object({ title: z.string(), icon: z.string().nullable() }),
-  markdown: {
-    tag: {
-      name: "page",
-      body: "children-when-expanded",
-      attrs: (_data, ctx) => {
-        if (ctx.id === undefined)
-          throw new Error("a `page` block needs its row id");
-        return { id: ctx.id };
-      },
-      serializeOnly: true,
-    },
-  },
+  schema: PageDataSchema,
+  markdown: pageBlockMarkdown,
+  ...pageBlockAuthor,
 });
 
 const pageLink = defineBlock({
@@ -189,6 +185,7 @@ const pageLink = defineBlock({
     tag: {
       name: "page",
       body: "none",
+      annotated: ["title"],
       attrs: (data) => ({ id: data.pageId }),
       parseAttrs: (attrs) => {
         const id = attrs.id;
@@ -591,6 +588,237 @@ describe("sub-pages", () => {
     expect(plan.patch.deleteIds).toEqual(["b1"]);
     const shellUpdate = plan.patch.updates.find((u) => u.id === "b2")!;
     expect(shellUpdate.changes.parentId).toBe(PAGE_ID);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Agent-authored pages: a pointer PINS, a tagless tag MINTS
+// ---------------------------------------------------------------------------
+//
+// `<agent-page id="…" title="…"/>` is the identified spelling of a `page` row,
+// so it rides the card's `ref` machinery with three extra conditions (same
+// kind, canonical spelling, no body); `<agent-page title="…">body</agent-page>`
+// with no id is a page this apply CREATES, whose body joins the new partition
+// and is asserted new so no stored row can be paired into it.
+
+describe("agent-authored pages", () => {
+  const agentPage = (title: string) => ({
+    title,
+    icon: null,
+    author: "agent" as const,
+  });
+  // b1 "intro" | b2 <agent-page "Findings"> | b3 <page "Human"> | b4 card > b5
+  const withPages = (): StoredRow[] =>
+    rowsOf([
+      raw("text", { text: runs("intro") }),
+      raw("page", agentPage("Findings")),
+      raw("page", { title: "Human", icon: null }),
+      raw("agent-notes", {}, [raw("text", { text: runs("noted") })]),
+    ]);
+  const MINT = [
+    `<agent-page title="New">`,
+    "  first",
+    `  <agent-page title="Inner">`,
+    "    deep",
+    "  </agent-page>",
+    "</agent-page>",
+  ].join("\n");
+  const refusal = (rows: StoredRow[], md: string) => {
+    const result = planResult(rows, md);
+    if (result.ok) throw new Error("expected a refusal");
+    return result;
+  };
+
+  test("the read's pointer carries the id and title, and re-applies to nothing", () => {
+    const rows = withPages();
+    expect(markdownOf(rows)).toContain(
+      `<agent-page id="b2" title="Findings"/>`,
+    );
+    const plan = replan(rows);
+    expect(isEmptyPatch(plan.patch)).toBe(true);
+  });
+
+  test("a pinned agent page is REPOSITION-only when it moves", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `intro\n<agent-page id="b2" title="Findings"/>`,
+      `<agent-page id="b2" title="Findings"/>\nintro`,
+    );
+    const plan = planOf(rows, md);
+    expect(plan.patch.creates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    for (const update of plan.patch.updates) {
+      expect(Object.keys(update.changes)).toEqual(["rank"]);
+    }
+    expect(markdownOf(applyPlan(rows, plan))).toBe(md);
+  });
+
+  test("a changed — or stale — title on a pointer is IGNORED, never written", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(`title="Findings"`, `title="Renamed"`);
+    expect(isEmptyPatch(planOf(rows, md).patch)).toBe(true);
+  });
+
+  test("a pointer given a BODY is refused, naming where the content lives", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `<agent-page id="b2" title="Findings"/>`,
+      `<agent-page id="b2" title="Findings">\n  smuggled\n</agent-page>`,
+    );
+    const result = refusal(rows, md);
+    expect(result.reason).toBe("ref-out-of-scope");
+    expect(result.detail).toMatch(/pass b2 as the block id/);
+  });
+
+  test("a pointer given an attribute other than `title` fails at the parse", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `title="Findings"`,
+      `title="Findings" icon="x"`,
+    );
+    expect(() => planResult(rows, md)).toThrow(/takes only `title`/);
+  });
+
+  test("`<agent-page id>` naming a HUMAN's page is unknown-ref — the spelling is canonical", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `<page id="b3"/>`,
+      `<agent-page id="b3" title="Human"/>`,
+    );
+    expect(refusal(rows, md).reason).toBe("unknown-ref");
+  });
+
+  test("turning an agent page into a link is refused", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `<agent-page id="b2" title="Findings"/>`,
+      `<page id="b2"/>`,
+    );
+    expect(refusal(rows, md).reason).toBe("unknown-ref");
+  });
+
+  test("a card ref at a page row, and a pointer at a card, are refused", () => {
+    const rows = withPages();
+    const cardAtPage = markdownOf(rows).replace(
+      `<agent-page id="b2" title="Findings"/>`,
+      `<agent-notes id="b2"/>`,
+    );
+    expect(refusal(rows, cardAtPage).reason).toBe("unknown-ref");
+    const pageAtCard = markdownOf(rows).replace(
+      [`<agent-notes id="b4">`, "  noted", "</agent-notes>"].join("\n"),
+      `<agent-page id="b4" title="x"/>`,
+    );
+    expect(refusal(rows, pageAtCard).reason).toBe("unknown-ref");
+  });
+
+  test("a mint creates the page and its body, each create in its right partition", () => {
+    const rows = withPages();
+    const plan = planOf(rows, `${markdownOf(rows)}\n${MINT}`);
+    expect(plan.patch.updates).toEqual([]);
+    expect(plan.patch.deleteIds).toEqual([]);
+    const [outer, first, inner, deep] = plan.patch.creates;
+    expect(plan.patch.creates).toHaveLength(4);
+    // The new page row is displayed in THIS page, so it joins this partition…
+    expect(outer).toMatchObject({
+      type: "page",
+      pageId: PAGE_ID,
+      parentId: PAGE_ID,
+      data: agentPage("New"),
+    });
+    // …and everything under it joins the NEW page's, nesting included.
+    expect(first).toMatchObject({ pageId: outer!.id, parentId: outer!.id });
+    expect(inner).toMatchObject({
+      type: "page",
+      pageId: outer!.id,
+      parentId: outer!.id,
+      data: agentPage("Inner"),
+    });
+    expect(deep).toMatchObject({ pageId: inner!.id, parentId: inner!.id });
+  });
+
+  test("a minted page is born FOLDED, as turn-into-page folds one", () => {
+    const rows = withPages();
+    const plan = planOf(rows, `${markdownOf(rows)}\n${MINT}`);
+    const pages = plan.patch.creates.filter((b) => b.type === "page");
+    expect(pages.map((p) => p.expanded)).toEqual([false, false]);
+    expect(
+      plan.patch.creates
+        .filter((b) => b.type !== "page")
+        .map((b) => b.expanded),
+    ).toEqual([true, true]);
+  });
+
+  test("a line MOVED from this page into a new body is a create there, never a paired move", () => {
+    // Hazard: pass 3 pairs by content across the whole document, so without the
+    // asserted-new pin `intro` would keep its row and land in the new page with
+    // this page's `page_id` — a row visible in neither.
+    const rows = withPages();
+    const md = markdownOf(rows)
+      .replace("intro\n", "")
+      .concat(`\n<agent-page title="New">\n  intro\n</agent-page>`);
+    const plan = planOf(rows, md);
+    expect(plan.patch.deleteIds).toEqual(["b1"]);
+    expect(plan.patch.updates.some((u) => u.id === "b1")).toBe(false);
+    const page = plan.patch.creates.find((b) => b.type === "page")!;
+    const moved = plan.patch.creates.find((b) => b.type === "text")!;
+    expect(moved).toMatchObject({ pageId: page.id, parentId: page.id });
+  });
+
+  test("an identical paragraph inside a new body is still a CREATE", () => {
+    const rows = withPages();
+    const md = `${markdownOf(rows)}\n<agent-page title="New">\n  intro\n</agent-page>`;
+    const plan = planOf(rows, md);
+    expect(plan.patch.updates).toEqual([]);
+    expect(plan.patch.creates.map((b) => b.type)).toEqual(["page", "text"]);
+  });
+
+  test("ranks are fresh: the body is its own sibling list, nothing on the page re-ranks", () => {
+    const rows = withPages();
+    const plan = planOf(rows, `${markdownOf(rows)}\n${MINT}`);
+    expect(plan.patch.updates).toEqual([]);
+    const outer = plan.patch.creates[0]!;
+    const last = rows.find((r) => r.id === "b4")!;
+    expect(Rank.compare(outer.rank, Rank.from(last.rank))).toBe(1);
+  });
+
+  test("an identity claim INSIDE a new page is ref-out-of-scope — a row cannot move between pages", () => {
+    const rows = withPages();
+    for (const claim of [
+      [`<agent-notes id="b4">`, "    noted", "  </agent-notes>"].join("\n"),
+      `<page id="b3"/>`,
+      `<agent-page id="b2" title="Findings"/>`,
+    ]) {
+      const md = `${markdownOf(rows)}\n<agent-page title="New">\n  ${claim}\n</agent-page>`;
+      const result = refusal(rows, md);
+      expect({ claim, reason: result.reason }).toEqual({
+        claim,
+        reason: "ref-out-of-scope",
+      });
+    }
+  });
+
+  test("the baseline plans no creates: a minted page reads back as its pointer", () => {
+    const rows = withPages();
+    const minted = applyPlan(
+      rows,
+      planOf(rows, `${markdownOf(rows)}\n${MINT}`),
+    );
+    const md = markdownOf(minted);
+    expect(md).toMatch(/<agent-page id="[^"]+" title="New"\/>$/);
+    const again = planOf(minted, md);
+    expect(again.patch.creates).toEqual([]);
+    expect(isEmptyPatch(again.patch)).toBe(true);
+  });
+
+  test("an agent page OMITTED from the document is re-homed, never deleted", () => {
+    const rows = withPages();
+    const md = markdownOf(rows).replace(
+      `<agent-page id="b2" title="Findings"/>\n`,
+      "",
+    );
+    const plan = planOf(rows, md);
+    expect(plan.patch.deleteIds).toEqual([]);
+    expect(plan.patch.updates.map((u) => u.id)).toContain("b2");
   });
 });
 
@@ -1071,6 +1299,13 @@ const gens: {
   // A sub-page SHELL: a leaf of this page's forest (its content lives under a
   // different `page_id` partition and is not in these rows at all).
   { type: "page", data: () => ({ title: "Sub", icon: null }), children: false },
+  // An agent-authored page's shell: the same leaf, written `<agent-page id
+  // title/>` — so the fuzz proves the identified spelling pins back to its row.
+  {
+    type: "page",
+    data: () => ({ title: "Found", icon: null, author: "agent" }),
+    children: false,
+  },
 ];
 
 function buildRaw(r: () => number, depth: number): RawNode {

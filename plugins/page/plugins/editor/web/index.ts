@@ -37,6 +37,8 @@ export type {
   BlockRegionProps,
   BlockRegions,
   BlockRendererProps,
+  InsertAction,
+  InsertActionContext,
 } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";
@@ -114,10 +116,14 @@ export {
   useInsertableBlocks,
   useGroupedInsertableBlocks,
   flattenSections,
-  filterBlockTypes,
+  filterInsertEntries,
   BlockTypeList,
 } from "./components/block-type-list";
-export type { BlockSection } from "./components/block-type-list";
+export type {
+  BlockSection,
+  InsertEntry,
+  InsertSection,
+} from "./components/block-type-list";
 export {
   registerBlockTextExtension,
   registerBlockTextExtensionSource,

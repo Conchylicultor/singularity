@@ -13,10 +13,15 @@ import {
   parseMarkdownToForest,
   serializeForestToMarkdown,
   defaultTextHandle,
+  markdownParseTagNames,
   markdownTagIsIdentified,
+  markdownTagNameOf,
+  markdownTagNamesAuthoredBy,
+  type BlockTagSpelling,
   type MarkdownContext,
   type MarkdownNode,
 } from "./markdown";
+import { PageDataSchema, pageBlockAuthor, pageBlockMarkdown } from "./schemas";
 
 // The orchestrator is parameterized on `BlockHandle[]`, so the test builds
 // handles LOCALLY with the real `defineBlock` (mirroring the block plugins'
@@ -244,22 +249,15 @@ const bookmark = defineBlock({
 });
 
 // The two `<page …>` halves: the sub-page SERIALIZES the tag (identity from
-// `ctx.id`), `page-link` OWNS it on parse.
+// `ctx.id`), `page-link` OWNS it on parse. The page handle is built from the REAL
+// shared declarations (`pageBlockMarkdown`, `pageBlockAuthor` — same plugin, so
+// no cycle), because its second spelling `<agent-page>` is what this suite pins
+// and a local copy would pin the copy.
 const page = defineBlock({
   type: "page",
-  schema: z.object({ title: z.string(), icon: z.string().nullable() }),
-  markdown: {
-    tag: {
-      name: "page",
-      body: "children-when-expanded",
-      attrs: (_data, ctx) => {
-        if (ctx.id === undefined)
-          throw new Error("a `page` block needs its row id");
-        return { id: ctx.id };
-      },
-      serializeOnly: true,
-    },
-  },
+  schema: PageDataSchema,
+  markdown: pageBlockMarkdown,
+  ...pageBlockAuthor,
 });
 
 const pageLink = defineBlock({
@@ -270,6 +268,8 @@ const pageLink = defineBlock({
     tag: {
       name: "page",
       body: "none",
+      // Mirrors `page-link`'s real declaration: the TARGET's title, read-only.
+      annotated: ["title"],
       attrs: (data) => ({ id: data.pageId }),
       parseAttrs: (attrs) => {
         const id = attrs.id;
@@ -1041,8 +1041,11 @@ describe("identified tags (the row id, both ways)", () => {
   test("the identified type set is derivable from the registry, never named", () => {
     // What the markdown-apply planner reads, so it can pin a `ref` without ever
     // naming a block type (and so a rename cannot silently stop the pinning).
+    // `page` is in it through its `<agent-page>` spelling alone: any spelling
+    // that round-trips a row id makes the type identified.
     expect(handles.filter(markdownTagIsIdentified).map((h) => h.type)).toEqual([
       "agent-notes",
+      "page",
     ]);
   });
 
@@ -1390,10 +1393,10 @@ describe("page tags", () => {
   test("a sub-page needs its row id — an id-less forest fails LOUDLY", () => {
     expect(() =>
       serialize([node("page", { title: "Sub", icon: null })]),
-    ).toThrow(/needs its row id/);
+    ).toThrow(/IDENTIFIED forest/);
   });
 
-  test("markdown parse alone can never mint a sub-page: `<page/>` is a page-link", () => {
+  test("markdown parse alone can never mint a HUMAN's sub-page: `<page/>` is a page-link", () => {
     expect(parse('<page id="p1"/>')).toEqual([
       node("page-link", { pageId: "p1" }),
     ]);
@@ -1408,6 +1411,249 @@ describe("page tags", () => {
 
   test("a page tag with no id is a loud rejection", () => {
     expect(() => parse("<page/>")).toThrow(/needs an `id`/);
+  });
+});
+
+describe("page spellings: `<page>` and `<agent-page>` are one row type", () => {
+  const identified = (
+    id: string,
+    type: string,
+    data: unknown,
+    children: MarkdownNode[] = [],
+    expanded = true,
+  ): MarkdownNode => ({ id, type, data, expanded, children });
+  const human = { title: "Mental model", icon: null };
+  const agent = { title: "Findings", icon: null, author: "agent" as const };
+
+  test("the row's data picks the spelling on serialize", () => {
+    expect(
+      serializeForestToMarkdown(
+        [identified("p1", "page", human, [], false)],
+        mdCtx,
+      ),
+    ).toBe('<page id="p1"/>');
+    expect(
+      serializeForestToMarkdown(
+        [identified("p2", "page", agent, [], false)],
+        mdCtx,
+      ),
+    ).toBe('<agent-page id="p2" title="Findings"/>');
+  });
+
+  test("an EXPANDED agent page emits its body inside its own tag", () => {
+    const child = identified("c1", "text", { text: runs("inside") });
+    expect(
+      serializeForestToMarkdown(
+        [identified("p2", "page", agent, [child])],
+        mdCtx,
+      ),
+    ).toBe(
+      [
+        '<agent-page id="p2" title="Findings">',
+        "  inside",
+        "</agent-page>",
+      ].join("\n"),
+    );
+  });
+
+  test("the MINT form parses to a new page node carrying `author` and its body", () => {
+    const [minted] = parse(
+      [
+        '<agent-page title="Findings">',
+        "  first line",
+        "  - a bullet",
+        "</agent-page>",
+      ].join("\n"),
+    );
+    expect(minted).toEqual({
+      type: "page",
+      data: agent,
+      expanded: true,
+      children: [
+        node("text", { text: runs("first line") }),
+        node("bulleted-list", { text: runs("a bullet") }),
+      ],
+    });
+    // No id, so no `ref` KEY at all: this is a document asking for a new page.
+    expect("ref" in minted!).toBe(false);
+  });
+
+  test("a POINTER parses to a `ref` on the page node — the id never reaches `data`", () => {
+    const [pointer] = parse('<agent-page id="p2" title="Findings"/>');
+    expect(pointer).toEqual({ ...node("page", agent), ref: "p2" });
+  });
+
+  test("an untitled mint is an untitled page, not an error", () => {
+    expect(parse("<agent-page/>")).toEqual([
+      node("page", { title: "", icon: null, author: "agent" }),
+    ]);
+  });
+
+  test("any attribute but `title` is a LOUD rejection naming where the content lives", () => {
+    expect(() =>
+      parse('<agent-page id="p2" title="x" icon="rocket"/>'),
+    ).toThrow(/takes only `title`[\s\S]*pass its id as `block_id`/);
+    // The preset key too: the NAME says whose page it is, an attribute cannot.
+    expect(() => parse('<agent-page title="x" author="agent"/>')).toThrow(
+      /takes only `title`/,
+    );
+  });
+
+  test("`<page>` carries an ANNOTATED title — emitted, then dropped on parse", () => {
+    // The sub-page shell's title and a link's target title are both supplied by
+    // a reader (the server's `Editor.BlockAnnotation` providers), never read off
+    // `data` — `page-link` owns the tag on parse and its title lives elsewhere.
+    expect(
+      serializeForestToMarkdown(
+        [
+          {
+            ...identified("p1", "page", human, [], false),
+            annotations: { title: "Mental model" },
+          },
+          {
+            ...identified("l1", "page-link", { pageId: "p9" }),
+            annotations: { title: "Elsewhere" },
+          },
+        ],
+        mdCtx,
+      ),
+    ).toBe(
+      [
+        '<page id="p1" title="Mental model"/>',
+        '<page id="p9" title="Elsewhere"/>',
+      ].join("\n"),
+    );
+    // Read-only: the value is discarded, whatever it says.
+    expect(parse('<page id="p9" title="edited by an agent"/>')).toEqual([
+      node("page-link", { pageId: "p9" }),
+    ]);
+  });
+
+  test("`<agent-page>` KEEPS its title on parse — it is the row's own data", () => {
+    expect(parse('<agent-page id="p2" title="Renamed?"/>')[0]!.data).toEqual({
+      ...agent,
+      title: "Renamed?",
+    });
+  });
+
+  test("an agent page handed a `title` ANNOTATION throws — its spelling does not reserve one", () => {
+    // The server's page-title provider skips agent pages for exactly this reason;
+    // if it ever stopped, this is the loud failure instead of a doubled attribute.
+    expect(() =>
+      serializeForestToMarkdown(
+        [
+          {
+            ...identified("p2", "page", agent, [], false),
+            annotations: { title: "x" },
+          },
+        ],
+        mdCtx,
+      ),
+    ).toThrow(/does not declare in `markdown.tag.annotated`/);
+  });
+
+  test("the registry answers per spelling: names, the row's name, identity, authorship", () => {
+    expect(markdownParseTagNames(page)).toEqual(["agent-page"]);
+    expect(markdownParseTagNames(pageLink)).toEqual(["page"]);
+    expect(markdownTagNameOf(page, human)).toBe("page");
+    expect(markdownTagNameOf(page, agent)).toBe("agent-page");
+    // Identified through `<agent-page>` alone — the primary is not.
+    expect(markdownTagIsIdentified(page)).toBe(true);
+    const agentTags = markdownTagNamesAuthoredBy(handles, "agent");
+    expect(agentTags).toContain("agent-page");
+    expect(agentTags).not.toContain("page");
+  });
+});
+
+describe("tag spellings: resolution refuses what could not read back", () => {
+  const flagSchema = z.object({
+    kind: z.string().optional(),
+    note: z.string().optional(),
+  });
+  /** A handle whose PRIMARY is claimable, so a primary parse can be asserted. */
+  const flagWith = (
+    spellings: { name: string; data: Record<string, unknown> }[],
+  ) =>
+    defineBlock({
+      type: "flag",
+      schema: flagSchema,
+      empty: () => ({}),
+      markdown: {
+        tag: {
+          name: "flag",
+          body: "none",
+          // Cast: the refusals below ARE presets the type would reject, and the
+          // point is that resolution refuses them at runtime too.
+          spellings: spellings.map((s) => ({
+            ...s,
+            body: "none" as const,
+          })) as BlockTagSpelling<z.infer<typeof flagSchema>>[],
+        },
+      },
+    }) as BlockHandle<unknown>;
+  const ctxWith = (h: BlockHandle<unknown>): MarkdownContext => ({
+    ...mdCtx,
+    handles: [text, h],
+  });
+
+  test("a spelling round-trips, and its preset keys are not re-emitted as attributes", () => {
+    const flag = flagWith([{ name: "flag-x", data: { kind: "x" } }]);
+    const md = serializeForestToMarkdown(
+      [
+        {
+          type: "flag",
+          data: { kind: "x", note: "hi" },
+          expanded: true,
+          children: [],
+        },
+      ],
+      ctxWith(flag),
+    );
+    expect(md).toBe('<flag-x note="hi"/>');
+    expect(parseMarkdownToForest(md, ctxWith(flag))).toEqual([
+      node("flag", { kind: "x", note: "hi" }),
+    ]);
+  });
+
+  test("a PRIMARY parse that lands on a spelling's preset throws", () => {
+    const flag = flagWith([{ name: "flag-x", data: { kind: "x" } }]);
+    expect(() =>
+      parseMarkdownToForest('<flag kind="x"/>', ctxWith(flag)),
+    ).toThrow(/written as <flag-x>/);
+    expect(parseMarkdownToForest('<flag kind="y"/>', ctxWith(flag))).toEqual([
+      node("flag", { kind: "y" }),
+    ]);
+  });
+
+  test("a duplicate name — or the primary's own — is refused", () => {
+    for (const spellings of [
+      [
+        { name: "flag-x", data: { kind: "x" } },
+        { name: "flag-x", data: { kind: "y" } },
+      ],
+      [{ name: "flag", data: { kind: "x" } }],
+    ]) {
+      expect(() => markdownParseTagNames(flagWith(spellings))).toThrow(/twice/);
+    }
+  });
+
+  test("a preset key the schema does not declare is refused", () => {
+    expect(() =>
+      markdownParseTagNames(
+        flagWith([{ name: "flag-x", data: { colour: "red" } }]),
+      ),
+    ).toThrow(/does not declare/);
+  });
+
+  test("an EMPTY preset and a non-literal one are refused", () => {
+    expect(() =>
+      markdownParseTagNames(flagWith([{ name: "flag-x", data: {} }])),
+    ).toThrow(/EMPTY preset/);
+    expect(() =>
+      markdownParseTagNames(
+        flagWith([{ name: "flag-x", data: { kind: ["x"] } }]),
+      ),
+    ).toThrow(/non-literal/);
   });
 });
 
@@ -1801,6 +2047,20 @@ describe("round-trip property (fuzzed forest)", () => {
       type: "page-link",
       data: (r) => ({ pageId: `p${Math.floor(r() * 99)}` }),
       children: false,
+    },
+    // An AGENT-AUTHORED page — the one `page` a document can carry both ways.
+    // Id-less below, it is the MINT form (`<agent-page title="…">body`); stamped,
+    // it is the pointer plus body, and its id comes back as `ref` because
+    // `<agent-page>` is an identified spelling. A HUMAN's page is absent on
+    // purpose: `<page>` parses as a link, so it cannot round-trip here at all.
+    {
+      type: "page",
+      data: (r) => ({
+        title: `${words[Math.floor(r() * words.length)]!} "notes"`,
+        icon: null,
+        author: "agent" as const,
+      }),
+      children: true,
     },
   ];
 

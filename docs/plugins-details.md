@@ -2548,6 +2548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/links.Backlinks`
               - `page/page-reference.PageNavigation`
               - `page/page-reference.PageNavigationProvider`
+              - `page/page-reference.usePageReferenceTint`
               - `primitives/breadcrumb.Breadcrumb`
               - `primitives/breadcrumb.BreadcrumbSegment`
               - `primitives/css/center.Center`
@@ -7871,6 +7872,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/runtime-tmux`
       - `conversations/summary`
       - `improve`
+      - `page/annotations/agent-notes/agent-page`
       - `review`
       - `review/code-review`
       - `review/plugin-changes/file-changes`
@@ -8328,6 +8330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `ConversationChip`
           - Cross-plugin:
             - Imported by:
+              - `page/annotations/agent-notes/agent-page`
               - `page/annotations/todo/task-link`
               - `page/prompt/block`
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
@@ -11083,6 +11086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `page/inline-date`
       - `page/links`
       - `page/markdown-apply`
+      - `page/page-link`
       - `page/prompt/link`
       - `plugin-meta/plugin-health`
       - `primitives/data-view/custom-columns`
@@ -15785,6 +15789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/events-test`
               - `page/annotations`
               - `page/annotations/agent-access`
+              - `page/annotations/agent-notes/agent-page`
               - `page/annotations/human-notes`
               - `page/annotations/todo/task-link`
               - `page/callout`
@@ -16616,6 +16621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/secrets`
           - `infra/trash`
           - `page/annotations/agent-access`
+          - `page/annotations/agent-notes/agent-page`
           - `page/annotations/todo/task-link`
           - `page/bookmark`
           - `page/editor`
@@ -18643,7 +18649,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/private-notes`
           - `page/annotations/todo`
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-note> card admits it and a <human> or <todo> card nested there refuses it). The policy over page/markdown-apply's audience-and-author-agnostic engine.
+        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
           - Server:
             - Uses:
               - `infra/endpoints.HttpError`
@@ -18682,7 +18688,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `agentNotesBlock`
               - `agentNotesDataSchema`
           - Plugins:
-            - **`authorship`** — Reads an agent-notes card's authorship (useAgentNotesAuthors) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+            - **`agent-page`** — Agent-authored pages in the page editor: a sub-page whose data marks it `author: "agent"` is tinted with the agent-notes wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a chip naming the conversation that created it, and can be made from the caret's line with `/agent-page` (the line's other words become its title). Declares no block type — the page is an ordinary `page` row.
+              - Web:
+                - Contributes:
+                  - `PageReference.Decoration` → `AgentPageCreatorChip`
+                  - `Editor.InsertAction` "Agent page"
+                - Uses:
+                  - `conversations.useConversationById`
+                  - `conversations/conversation-ui/chip.ConversationChip`
+                  - `infra/endpoints.fetchEndpoint`
+                  - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
+                  - `page/editor.Editor`
+                  - `page/page-reference.PageReference`
+                  - `primitives/loading.Loading`
+            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
               - Server:
                 - Contributes: `resource.declare` "agent-notes-authors"
                 - Uses:
@@ -18700,16 +18719,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `conversations/conversation-ui/row.ConversationRowById`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/live-state.ResourceResult`
                   - `primitives/live-state.useResource`
                   - `primitives/relative-time.RelativeTime`
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
                   - `AgentNotesAuthors`
                   - `useAgentNotesAuthors`
+                  - `useAgentNotesCreator`
               - Cross-plugin:
                 - Imported by:
                   - `page/annotations/agent-access`
                   - `page/annotations/agent-notes`
+                  - `page/annotations/agent-notes/agent-page`
               - Shared:
                 - Exports (types): `AgentNotesAuthor`
                 - Exports (values):
@@ -19117,6 +19139,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
+          - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -19225,6 +19248,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `FormatToolbarValue`
           - `FrameGeometry`
           - `FramePad`
+          - `InsertAction`
+          - `InsertActionContext`
+          - `InsertEntry`
+          - `InsertSection`
           - `MarkButtonProps`
           - `PageIconProps`
           - `PageOption`
@@ -19251,7 +19278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `collabHydrationReportSink`
           - `colorCssValue`
           - `Editor`
-          - `filterBlockTypes`
+          - `filterInsertEntries`
           - `flattenSections`
           - `FRAME_PAD_X`
           - `FRAME_PAD_Y`
@@ -19292,6 +19319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `resource.declare` "pages"
           - `resource.declare` "page-blocks"
           - `page.block-data` "page"
+          - `page.block-annotation`
         - Uses:
           - `database.currentTxId`
           - `database.db`
@@ -19393,6 +19421,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `BlockSemanticsAttrs`
           - `BlockTag`
           - `BlockTagBody`
+          - `BlockTagSpelling`
           - `BlockTextVariant`
           - `BlockUpdate`
           - `ColorToken`
@@ -19425,6 +19454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `applyBlockOp`
           - `applyBlockOpEndpoint`
+          - `blockAuthorOf`
           - `BlockFieldChangesSchema`
           - `blockOpContextOf`
           - `BlockOpSchema`
@@ -19458,8 +19488,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listBlocks`
           - `listPages`
           - `MARK_ORDER`
-          - `markdownParseTagName`
+          - `markdownParseTagNames`
           - `markdownTagIsIdentified`
+          - `markdownTagNameOf`
+          - `markdownTagNamesAuthoredBy`
           - `marksOfTextNode`
           - `matchInlineFormat`
           - `mergeRuns`
@@ -19471,6 +19503,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `opNamedIds`
           - `PAGE_BLOCK_TYPE`
           - `PAGE_BLOCKS_TRASH_SOURCE`
+          - `pageBlockAuthor`
           - `pageBlockHandle`
           - `pageBlockMarkdown`
           - `PageCoverSchema`
@@ -19540,6 +19573,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations`
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes`
+          - `page/annotations/agent-notes/agent-page`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/human-notes`
           - `page/annotations/private-notes`
@@ -19993,6 +20027,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ApplyBlockOptions`
           - `ApplyReport`
           - `BlockScope`
+          - `BlockScopePageRow`
           - `ReadBlockOptions`
         - Exports (values):
           - `applyMarkdownToBlock`
@@ -20013,8 +20048,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.IdentifiedBlock`
           - `page/editor.MarkdownContext`
           - `page/editor.MarkdownNode`
-          - `page/editor.markdownParseTagName`
+          - `page/editor.markdownParseTagNames`
           - `page/editor.markdownTagIsIdentified`
+          - `page/editor.markdownTagNameOf`
           - `page/editor.namesField`
           - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.pageBlockMarkdown`
@@ -20028,6 +20064,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.Rank`
         - Exports (types):
           - `BoundaryViolation`
+          - `ClassifiedRow`
           - `MarkdownApplyArgs`
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
@@ -20128,7 +20165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.defineBlock`
           - `page/editor.textDataSchema`
         - Exports (values): `numberedListBlock`
-    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary.
+    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
         - Uses:
@@ -20155,27 +20192,42 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `page.block-data` "page-link"
           - `page.links.extractor` "page-link"
+          - `page.block-annotation`
         - Uses:
+          - `database.db`
           - `page/editor.Editor`
+          - `page/editor.liveBlocks`
+          - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.pageData`
           - `page/links.PageLinks`
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports (values): `pageLinkBlock`
-    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, and the PageReference.Actions frontier whose contributions become the reference row's hover actions. Owns no reference and no action of its own.
+    - **`page-reference`** — The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
       - Web:
-        - Slots: `PageReference.Actions` ← `page.page-reference.open-aside`
-        - Uses: `primitives/slot-render.defineRenderSlot`
+        - Slots:
+          - `PageReference.Actions` ← `page.page-reference.open-aside`
+          - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
+        - Uses:
+          - `primitives/slot-render.defineRenderSlot`
+          - `primitives/slot-render.renderIsolated`
         - Exports (types):
           - `PageNavigation`
           - `PageReferenceActionProps`
+          - `PageReferenceChipProps`
+          - `PageReferenceDecoration`
+          - `PageReferenceDecorationContribution`
         - Exports (values):
           - `PageNavigationProvider`
           - `PageReference`
           - `usePageNavigation`
           - `usePageReferenceActions`
+          - `usePageReferenceDecoration`
+          - `usePageReferenceTint`
       - Cross-plugin:
         - Imported by:
           - `apps/pages/page-tree`
+          - `page/annotations/agent-notes/agent-page`
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
@@ -20446,16 +20498,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.useVoidCaret`
           - `page/page-reference.usePageNavigation`
           - `page/page-reference.usePageReferenceActions`
+          - `page/page-reference.usePageReferenceDecoration`
           - `primitives/css/center.Center`
           - `primitives/css/row.Row`
           - `primitives/css/row.RowFocus`
           - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
+          - `primitives/row-actions.RowActions`
         - Exports (values): `subPageBlock`
       - Core:
         - Uses:
           - `page/editor.defineBlock`
           - `page/editor.PAGE_BLOCK_TYPE`
+          - `page/editor.pageBlockAuthor`
           - `page/editor.pageBlockMarkdown`
           - `page/editor.PageDataSchema`
         - Exports (values): `subPageBlock`
@@ -26814,6 +26870,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/secret/config`
           - `history/dialog`
           - `layouts/route-fallback`
+          - `page/annotations/agent-notes/agent-page`
           - `page/bookmark`
           - `page/editor`
           - `page/inline-page-link`
@@ -28041,6 +28098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
+          - `page/sub-page`
           - `primitives/breadcrumb`
           - `primitives/css/control-panel`
           - `primitives/css/row`

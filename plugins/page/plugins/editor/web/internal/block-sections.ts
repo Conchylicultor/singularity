@@ -1,6 +1,7 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { isNodeData, type TopLevelEntry } from "@plugins/reorder/web";
 import type { BlockHandle } from "../../core";
+import type { InsertAction } from "../types";
 
 /**
  * A group of insertable block types the menus render together. A `label`-less
@@ -54,7 +55,9 @@ export function entriesToSections(
       if (entry.type !== "header") continue; // spacer / unknown → ignored
       flushLoose();
       const label =
-        typeof entry.payload.label === "string" ? entry.payload.label : undefined;
+        typeof entry.payload.label === "string"
+          ? entry.payload.label
+          : undefined;
       const blocks = (entry.members ?? [])
         .map(blockOf)
         .filter((b): b is BlockHandle<unknown> => !!b && keep(b));
@@ -74,4 +77,77 @@ export function flattenSections(
   sections: BlockSection[],
 ): BlockHandle<unknown>[] {
   return sections.flatMap((s) => s.blocks);
+}
+
+/**
+ * One row of an insert menu: a block type the caret's line converts into, or a
+ * contributed `Editor.InsertAction` the line runs. Tagged rather than told apart
+ * by shape, because the two commit differently and the menu must never guess.
+ */
+export type InsertEntry =
+  | { kind: "block"; block: BlockHandle<unknown> }
+  | { kind: "action"; action: InsertAction };
+
+/** A group of insert-menu rows — `BlockSection`, with actions placed in it. */
+export interface InsertSection<E extends InsertEntry = InsertEntry> {
+  label?: string;
+  entries: E[];
+}
+
+/** The block-type rows alone, as entries (the turn-into picker's list). */
+export function blockEntries(
+  sections: BlockSection[],
+): InsertSection<Extract<InsertEntry, { kind: "block" }>>[] {
+  return sections.map((s) => ({
+    label: s.label,
+    entries: s.blocks.map((block) => ({ kind: "block" as const, block })),
+  }));
+}
+
+/**
+ * PURE: place `actions` among the grouped block types. Each action is listed
+ * right after the block type its `after` names, in that type's section, in
+ * contribution order when several follow one type; an action with no `after`,
+ * or whose `after` type is not offered here (unregistered, or filtered out by
+ * the allowlist), goes to one trailing label-less section — never dropped, so a
+ * renamed block type moves an action rather than hiding it.
+ */
+export function withInsertActions(
+  sections: BlockSection[],
+  actions: readonly InsertAction[],
+): InsertSection[] {
+  const offered = new Set(sections.flatMap((s) => s.blocks.map((b) => b.type)));
+  const following = new Map<string, InsertAction[]>();
+  const loose: InsertAction[] = [];
+  for (const action of actions) {
+    if (action.after !== undefined && offered.has(action.after)) {
+      const list = following.get(action.after);
+      if (list) list.push(action);
+      else following.set(action.after, [action]);
+    } else loose.push(action);
+  }
+
+  const out: InsertSection[] = sections.map((s) => ({
+    label: s.label,
+    entries: s.blocks.flatMap((block): InsertEntry[] => [
+      { kind: "block", block },
+      ...(following.get(block.type) ?? []).map((action): InsertEntry => ({
+        kind: "action",
+        action,
+      })),
+    ]),
+  }));
+  if (loose.length > 0) {
+    out.push({
+      entries: loose.map((action): InsertEntry => ({ kind: "action", action })),
+    });
+  }
+  return out;
+}
+
+/** Flatten entry sections to the menu's keyboard index space (order preserved). */
+export function flattenEntries<E extends InsertEntry>(
+  sections: InsertSection<E>[],
+): E[] {
+  return sections.flatMap((s) => s.entries);
 }

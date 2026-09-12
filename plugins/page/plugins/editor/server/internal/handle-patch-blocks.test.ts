@@ -49,6 +49,10 @@ import { parseBlockData } from "./parse-block-data";
 import { BlockLifecycle } from "./document-hooks";
 import { applyPageBlockPatch } from "./handle-patch-blocks";
 import { deleteBlocksSubtree, purgeTrashedBlocks } from "./trash-blocks";
+import { withPageForest } from "./page-forest";
+import { writeForestTarget } from "./forest-writer";
+import { rowToNode } from "./reconcile";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 
 // Stand-in for `page/text` (the concrete block plugin imports this one, so
 // importing it back would be a cycle). Text-bearing, so `data.text` is real.
@@ -619,5 +623,250 @@ describe("applyPageBlockPatch — blind-writer rules still hold", () => {
     expect(c2?.deletedAt).toBeInstanceOf(Date);
     expect(c2?.trashEntryId).toBe(entry.id);
     expect(await entries()).toHaveLength(1);
+  });
+});
+
+// ── Pages a patch creates (research/2026-09-11-page-agent-pages.md §3) ──────
+
+/** An agent-authored page's `data`. */
+const agentData = (title: string) => ({
+  title,
+  icon: null,
+  author: "agent" as const,
+});
+
+/** A page row a markdown apply mints: displayed in `pageId`, folded. */
+function newPage(args: {
+  id: string;
+  parentId: string;
+  pageId: string;
+  rank: string;
+}): Block {
+  return {
+    ...blockOf({ ...args, type: "page" }),
+    data: agentData(args.id),
+    expanded: false,
+  };
+}
+
+/**
+ * A row's stored `data`, widened to `unknown` so a test compares it against a
+ * plain literal — the `BlockData` brand is for writers, and a reader needs none.
+ */
+async function storedData(id: string): Promise<unknown> {
+  return (await row(id))?.data;
+}
+
+/** Await a write that must be refused with `status`, returning its message. */
+async function refusedWith(
+  write: Promise<unknown>,
+  status: number,
+): Promise<string> {
+  try {
+    await write;
+  } catch (err) {
+    if (!(err instanceof HttpError)) throw err;
+    expect(err.status).toBe(status);
+    return err.message;
+  }
+  throw new Error(`expected an HTTP ${status}`);
+}
+
+describe("applyPageBlockPatch — a page the patch creates", () => {
+  test("a create spanning BOTH partitions lands, each row in its own", async () => {
+    await seedPage();
+    await patch({
+      creates: [
+        newPage({ id: "NEW", parentId: "P", pageId: "P", rank: "a5" }),
+        blockOf({
+          id: "NEW1",
+          parentId: "NEW",
+          pageId: "NEW",
+          type: "text",
+          rank: "a0",
+          text: "first line",
+        }),
+        // Nested: a page minted inside the new page's body.
+        newPage({ id: "NEW2", parentId: "NEW", pageId: "NEW", rank: "a1" }),
+        blockOf({
+          id: "NEW2a",
+          parentId: "NEW2",
+          pageId: "NEW2",
+          type: "text",
+          rank: "a0",
+        }),
+      ],
+    });
+    expect(await row("NEW")).toMatchObject({
+      pageId: "P",
+      parentId: "P",
+      type: "page",
+      data: agentData("NEW"),
+    });
+    expect(await row("NEW1")).toMatchObject({ pageId: "NEW", parentId: "NEW" });
+    expect(await row("NEW2")).toMatchObject({ pageId: "NEW", parentId: "NEW" });
+    expect(await row("NEW2a")).toMatchObject({
+      pageId: "NEW2",
+      parentId: "NEW2",
+    });
+  });
+
+  test("a create joining ANY other partition is a 400 — and writes nothing", async () => {
+    await seedPage();
+    await seedBlock({
+      id: "OTHER",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a1",
+    });
+    const message = await refusedWith(
+      patch({
+        creates: [
+          blockOf({
+            id: "c3",
+            parentId: "P",
+            pageId: "P",
+            type: "text",
+            rank: "a5",
+          }),
+          blockOf({
+            id: "stray",
+            parentId: "OTHER",
+            pageId: "OTHER",
+            type: "text",
+            rank: "a0",
+          }),
+        ],
+      }),
+      400,
+    );
+    expect(message).toMatch(/created under page OTHER/);
+    // The guard runs before the write, inside the same transaction: the
+    // legitimate create beside the stray one did not land either.
+    expect(await row("stray")).toBeUndefined();
+    expect(await row("c3")).toBeUndefined();
+  });
+
+  test("ONE blocksChanged per created page, beside the patched page's own", async () => {
+    await seedPage();
+    await t.db.execute(sql`DELETE FROM event_emissions`);
+    await patch({
+      creates: [
+        newPage({ id: "NEW", parentId: "P", pageId: "P", rank: "a5" }),
+        newPage({ id: "NEW2", parentId: "NEW", pageId: "NEW", rank: "a0" }),
+      ],
+    });
+    const res = await t.db.execute<{ page_id: string }>(
+      sql`SELECT payload->>'pageId' AS page_id FROM event_emissions
+          WHERE event_name = 'page.blocksChanged'`,
+    );
+    expect(res.rows.map((r) => r.page_id).sort()).toEqual(["NEW", "NEW2", "P"]);
+  });
+});
+
+describe("a page's author is fixed at creation — refused on every rewrite path", () => {
+  /** P ▸ [HUMAN (a human's sub-page), AGENT (an agent-authored one)]. */
+  async function seedPages(): Promise<void> {
+    await seedPage();
+    await seedBlock({
+      id: "HUMAN",
+      parentId: "P",
+      pageId: "P",
+      type: "page",
+      rank: "a5",
+    });
+    await t.db.insert(_blocks).values({
+      id: "AGENT",
+      parentId: "P",
+      pageId: "P",
+      type: "page",
+      rank: "a6",
+      data: parseBlockData("page", agentData("Findings")),
+    });
+  }
+
+  test("patch: an update marking a human's page as the agent's is a 409", async () => {
+    await seedPages();
+    await refusedWith(
+      patch({
+        updates: [
+          {
+            id: "HUMAN",
+            changes: { data: { title: "HUMAN", icon: null, author: "agent" } },
+          },
+        ],
+      }),
+      409,
+    );
+    expect(await storedData("HUMAN")).toEqual({ title: "HUMAN", icon: null });
+  });
+
+  test("patch: an update DROPPING the marker is a 409 — a title edit must carry it", async () => {
+    await seedPages();
+    await refusedWith(
+      patch({
+        updates: [
+          { id: "AGENT", changes: { data: { title: "Renamed", icon: null } } },
+        ],
+      }),
+      409,
+    );
+    // The same rename, carrying the stored data through as every page-data
+    // writer does (`{...pageData(page), title}`), is an ordinary edit.
+    await patch({
+      updates: [
+        {
+          id: "AGENT",
+          changes: { data: { ...agentData("Findings"), title: "Renamed" } },
+        },
+      ],
+    });
+    expect(await storedData("AGENT")).toEqual({
+      ...agentData("Findings"),
+      title: "Renamed",
+    });
+  });
+
+  test("patch: a full-row OVERWRITE (a create on a live row) flipping it is a 409", async () => {
+    await seedPages();
+    await refusedWith(
+      patch({
+        creates: [
+          {
+            ...blockOf({
+              id: "AGENT",
+              parentId: "P",
+              pageId: "P",
+              type: "page",
+              rank: "a6",
+            }),
+            data: { title: "Findings", icon: null },
+          },
+        ],
+      }),
+      409,
+    );
+  });
+
+  test("op: the reducer's persist is judged the same way", async () => {
+    await seedPages();
+    await refusedWith(
+      withPageForest(
+        "P",
+        async (ctx) => {
+          const before = (await ctx.forest()).map(rowToNode);
+          const after = before.map((n) =>
+            n.id === "HUMAN"
+              ? { ...n, data: { title: "HUMAN", icon: null, author: "agent" } }
+              : n,
+          );
+          return writeForestTarget(ctx, before, after);
+        },
+        t.db,
+      ),
+      409,
+    );
+    expect(await storedData("HUMAN")).toEqual({ title: "HUMAN", icon: null });
   });
 });

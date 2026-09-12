@@ -347,8 +347,41 @@ export interface BlockHandle<T> {
    * type went through `defineAnnotationBlock`, the factory that makes the
    * declaration mandatory. The `annotations:parties-declared` check keys on that
    * presence, for both fields at once.
+   *
+   * Read it through {@link blockAuthorOf}, never directly: a type whose author
+   * is decided per ROW declares {@link authorFromData} instead, and a consumer
+   * reading only this field would see that row as the human's.
    */
   author?: BlockAuthor;
+  /**
+   * Whose words a ROW of this type holds, decided from its own `data` — the
+   * per-row twin of {@link author}, for a type where the answer is not the same
+   * for every row. The one today is `page`: an agent-authored page (`data.author
+   * === "agent"`, `<agent-page>` in markdown) is a sub-page whose whole content
+   * an agent may write, and every other page is the human's. A second block type
+   * was the alternative, and it would have meant widening every one of the ~46
+   * sites that test `type === "page"` (see
+   * `research/2026-09-11-page-agent-pages.md`).
+   *
+   * **Absent answer means the human's**, exactly as an absent {@link author}
+   * does — a page that says nothing is the fail-safe reading.
+   *
+   * It is handed a PARTIAL payload by one reader — `markdownTagNamesAuthoredBy`
+   * asks it about a tag spelling's preset, which carries only the discriminator
+   * keys — so it must decide from the keys it reads and nothing else. That is not
+   * a restriction in practice: a data-decided author is exactly what a spelling's
+   * preset discriminates, which is what lets a tag's NAME say whose words it
+   * holds.
+   *
+   * Never beside {@link author}: a handle declares one or the other. `defineBlock`
+   * accepts this and not `author`; `defineAnnotationBlock` installs `author` and
+   * its options (`ContainerBlockOptions`) do not forward this — so an annotation
+   * can never declare both, and presence of `author` stays the
+   * `annotations:parties-declared` discriminator it is.
+   *
+   * Declared in METHOD syntax for the bivariance reason `text` gives.
+   */
+  authorFromData?(data: Partial<T>): BlockAuthor | undefined;
   /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST
@@ -417,6 +450,7 @@ export function defineBlock<
   anchor?: A;
   wrapOnConvert?: true;
   splitChildWhenExpanded?: { childType: string };
+  authorFromData?(data: Partial<z.infer<S>>): BlockAuthor | undefined;
 }): BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A } {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
   const acceptsText = "text" in opts.schema.shape;
@@ -458,6 +492,7 @@ export function defineBlock<
     anchor: opts.anchor,
     wrapOnConvert: opts.wrapOnConvert,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
+    authorFromData: opts.authorFromData,
   };
   // Neither intersection can be proved from the value, and each states a fact
   // already established above. `TextLens<S>`: the runtime `text` presence tracks
@@ -467,6 +502,28 @@ export function defineBlock<
   // the call site passed — the widening to `true | undefined` happens only in
   // `BlockHandle`'s own declaration, which has no `A` to name.
   return handle as BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A };
+}
+
+/**
+ * Whose words one ROW holds — THE resolution of the author axis, and the only
+ * one a consumer may use: the handle's static {@link BlockHandle.author} when it
+ * declares one, else the row's own answer through
+ * {@link BlockHandle.authorFromData}, else `undefined` (the human's, the
+ * fail-safe reading of an absent value).
+ *
+ * `data` is parsed through the handle's own schema before the per-row question
+ * is asked, so a malformed row is a LOUD zod error rather than an author read off
+ * a payload the write boundary would never have stored. A handle with no
+ * per-row answer never parses at all — the common case (every paragraph) costs a
+ * field read.
+ */
+export function blockAuthorOf<T>(
+  handle: BlockHandle<T>,
+  data: unknown,
+): BlockAuthor | undefined {
+  if (handle.author !== undefined) return handle.author;
+  if (!handle.authorFromData) return undefined;
+  return handle.authorFromData(handle.parse(data));
 }
 
 /**

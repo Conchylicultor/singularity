@@ -6,22 +6,23 @@ the file triple an agent already knows.
 
 ```
 read_page(block_id)                              → subtree markdown; human-audience subtrees pruned,
-                                                   `# Title`, `<agent-note id="…">` and `<human id="…">` emitted
-write_agent_note(block_id, content)              → merge-apply ONE card's contents
+                                                   `# Title`, `<agent-inline id="…">`, `<human id="…">`,
+                                                   `<agent-page id="…" title="…"/>` and `<page id="…" title="…"/>` emitted
+write_agent_note(block_id, content)              → merge-apply ONE agent-authored block's whole contents
 edit_page(block_id, old_string, new_string, …)   → ANY block; legality is what the diff TOUCHED
 ```
 
 It lives under `annotations` because it is the filter over THIS family: "withhold
-`/private`", "own `<agent-note>`" and "leave `<human>` alone" are all statements
-about the two-axis family, not about markdown. The engine stays agnostic — it
+`/private`", "own `<agent-inline>` and `<agent-page>`" and "leave `<human>`
+alone" are all statements about the two-axis family, not about markdown. The engine stays agnostic — it
 takes a root, a row filter and a row classifier, and never learns what an
 audience or an author is.
 
 `read_page`'s ids are what make the triple compose. A file path exists before you
 read the file; a block id did not, so `read_page` + a write tool used to be two
 tools with no shared vocabulary — the only anchor an agent could name was the
-page root it started from. Emitting `<agent-note id="…">` (and `<page id="…"/>`)
-gives the read an output the write tools take as input, which is the whole reason
+page root it started from. Emitting `<agent-inline id="…">` (and the page
+pointers) gives the read an output the write tools take as input, which is the whole reason
 the two sections below reverse what they reverse. Design:
 [`research/2026-08-07-page-agent-note-file-like-tools.md`](../../../../../../research/2026-08-07-page-agent-note-file-like-tools.md).
 
@@ -62,10 +63,10 @@ page's own. The id is only the SCOPE the edit is applied at. Legality is decided
 afterwards, on the plan:
 
 > Every block an edit creates, rewrites, moves or deletes must sit inside an
-> `<agent-note>` card, and not inside a `<human>` or `<todo>` card within it —
-> checked on **BOTH** the block's old and its new ancestry for anything that
-> survived, so an edit cannot drag the page's prose into a card, nor carry a line
-> out of one the author wrote.
+> agent-authored block — an `<agent-inline>` card or an `<agent-page>` — and not
+> inside a `<human>` or `<todo>` card within it — checked on **BOTH** the block's
+> old and its new ancestry for anything that survived, so an edit cannot drag the
+> page's prose into a card, nor carry a line out of one the author wrote.
 
 **Why that is still safe, and in three ways stronger than what it replaced.**
 
@@ -108,13 +109,15 @@ verdict on the way out.
 > note and have the answer survive the next `write_agent_note`.
 
 Every annotation declares `author` as well as `audience`, and the write rule is
-**the nearest declaring ancestor wins**: `writeBoundaryOf()` maps
-`author: "agent"` → `"open"`, `author: "human"` → `"closed"`, everything else →
-`undefined`, and the engine's walk stops at the first row that declares
-ANYTHING — not the first that says yes. So a `<human>` or `<todo>` card nested
-inside an `<agent-note>` shields its own contents, an `<agent-note>` a human
-nested inside a `<human>` card still admits writes, and prose is refused because
-nothing on its chain ever declared. **A declaring row is inside itself**, so
+**the nearest declaring ancestor wins**: `writeBoundaryOf()` asks each ROW
+`blockAuthorOf(handle, data)` and maps `"agent"` → `"open"`, `"human"` →
+`"closed"`, nothing → `undefined`, and the engine's walk stops at the first row
+that declares ANYTHING — not the first that says yes. So a `<human>` or `<todo>`
+card nested inside an `<agent-inline>` card (or an `<agent-page>`) shields its own
+contents, an `<agent-inline>` card a human nested inside a `<human>` card still
+admits writes, and prose is refused because nothing on its chain ever declared.
+The classifier is handed the row's `data` because one kind of row declares
+through it: an agent-authored page (see below). **A declaring row is inside itself**, so
 minting a `<human>`, `<todo>` or `<private-note>` anywhere — including inside the
 agent's own card — is refused by that same walk, at the new row.
 
@@ -135,7 +138,7 @@ workaround, is to put the answer in a `<human>` card.
 
 ### A card inside a card
 
-An `<agent-note>` nested in another one used to be refused outright. That rule
+An `<agent-inline>` card nested in another one used to be refused outright. That rule
 came from `append_agent_notes`, where a card id was the append TARGET and nesting
 was a caller mistake with no meaning; when that tool died it was carried across
 onto the plan rather than reconsidered.
@@ -152,11 +155,12 @@ nested card as inside a card, because it is one.
 Two consequences, stated rather than discovered:
 
 - **`write_agent_note` no longer catches the wrapping mistake.** Its `content` is
-  the card's CONTENTS; an agent that wraps it in an `<agent-note>` tag anyway now
+  the card's CONTENTS; an agent that wraps it in an `<agent-inline>` tag anyway now
   mints a card inside the card it was writing. The tool's description says that,
   rather than promising an error it no longer raises.
-- **Authorship stamps the NEAREST card.** A write inside a nested card marks that
-  card as this conversation's work; the card holding it is not marked.
+- **Authorship stamps the NEAREST agent-authored row.** A write inside a nested
+  card marks that card as this conversation's work; the card holding it is not
+  marked — and nor is an agent page holding it.
 
 ### Redaction is no longer a read-only concern either
 
@@ -180,12 +184,13 @@ second, differently-typed copy cannot drift.
 
 The three rules are stated once, in `server/internal/policy.ts`, one per declared
 fact plus the door between them: **`audience`** decides what an agent may SEE
-(redaction + `assertAgentAddressable`), `assertNoteCard` is `write_agent_note`'s
-door, and **`author`** decides what it may WRITE (`assertNotesOnlyPlan`). All of
-them enumerate the family generically off `Editor.BlockData` and never name a
-type — `agent-note` excepted, which the door is about — so a fifth annotation
-costs this plugin zero edits. Both sets are read at CALL time; see the inverted
-degradation above.
+(redaction + `assertAgentAddressable`), `assertAgentAuthored` is
+`write_agent_note`'s door, and **`author`** decides what it may WRITE
+(`assertAgentAuthoredPlan`). All of them enumerate the family generically off
+`Editor.BlockData`, ask each row through `blockAuthorOf`, and never name a type —
+the agent-note handle excepted, whose TAG a refusal names as the card to mint — so
+a fifth annotation costs this plugin zero edits, and so did the agent-authored
+page. Both sets are read at CALL time; see the inverted degradation above.
 
 ## `write_page` / `edit_page` came BACK — the other reversal
 
@@ -213,7 +218,7 @@ message — the primary mistake is passing a page id, and the name pre-empts it.
 
 `edit_page` reads the scope, splices one string, and applies the whole document —
 so every block it did not touch still round-trips through markdown → forest, and
-any loss in that projection would reach `assertNotesOnlyPlan` as a write outside
+any loss in that projection would reach `assertAgentAuthoredPlan` as a write outside
 every card. It therefore passes the pre-splice document as
 `ApplyBlockOptions.baseline`, and the engine subtracts the writes that document
 would produce by itself before the predicate judges anything (the engine's own
@@ -225,7 +230,7 @@ caller's edit rather than against the round trip.
 baseline — there is nothing to subtract, and its apply is rooted at one card
 anyway.
 
-## The `append` trade: `assertNotesOnlyPlan` is what a creates-only patch was
+## The `append` trade: `assertAgentAuthoredPlan` is what a creates-only patch was
 
 `append_agent_notes` is deleted. It never went through the planner: it built the
 patch directly — one create for the card, one per parsed child, ranked after the
@@ -236,14 +241,14 @@ time, unanswerable:
 > diff-based append would need a guard to promise.
 
 That is exactly the trade this rework made, and it is recorded here rather than
-deleted with the file. The guard now exists — `assertNotesOnlyPlan` — so the
+deleted with the file. The guard now exists — `assertAgentAuthoredPlan` — so the
 promise is made by a predicate over a plan instead of by the shape of a patch.
 What was bought:
 
 - **One dialect, one path.** Append parsed with the engine's own
   `serverMarkdownContext()` but planned with nothing, so "what an agent writes"
   and "what an agent reads back" agreed only for as long as two code paths
-  agreed. A tagless `<agent-note>` in an ordinary `edit_page` document is now how
+  agreed. A tagless `<agent-inline>` in an ordinary `edit_page` document is now how
   a card is minted, through the same planner as every other write.
 - **The `blockId`-vs-`noteId` split dissolves.** Three tools, one parameter name
   (`block_id`), because there is no longer a tool whose id means "the parent to
@@ -263,11 +268,16 @@ the `(parent_id, rank)` unique index. Two concurrent `edit_page`s cannot — eac
 plans its ranks against the forest it read under the page lock — but they can
 lose an update, the second simply not seeing the first's card.
 
-## Authorship is stamped per card, after the commit
+## Authorship is stamped per agent-authored row, after the commit
 
-An edit may mint and revise several cards, so `assertNotesOnlyPlan` returns **the
-card set** it resolved — the same walk, one answer — and the tool layer stamps
-each one. Always AFTER the patch commits: `page_blocks_agent_authors.block_id`
+An edit may mint and revise several cards and pages, so `assertAgentAuthoredPlan`
+returns **the set of agent-authored rows** it resolved — each touched block's
+NEAREST row whose author is the agent, walked over a forest that includes the page
+row — and the tool layer stamps each one. So a write anywhere inside an agent page
+stamps the page, and a page the edit MINTED is its own nearest row: it is stamped
+as its own creator. The creator chip is the EARLIEST stamp, which is also why an
+empty agent page a human inserted (`/agent-page`) shows no chip until an agent
+writes it, and then names that first writer. Always AFTER the patch commits: `page_blocks_agent_authors.block_id`
 FKs onto the card's row, so stamping a card the same call just created is a
 foreign-key violation until then. `recordAgentNotesAuthor` is
 `onConflictDoNothing`, so re-stamping is free.
@@ -277,6 +287,78 @@ this card" is true either way. `edit_page` stamps nothing in that case: it names
 no card of its own, so an edit that touched none has no authorship to claim. The
 tool layer is the only place a `conversationId` exists at all; neither the engine
 nor the policy ever learns one.
+
+## Agent-authored pages: `<agent-page>` next to `<agent-inline>`
+
+An agent writes to a page through one of TWO kinds of block
+(`research/2026-09-11-page-agent-pages.md`):
+
+- **`<agent-inline>`** — the card, placed among the page's own blocks. Its tag was
+  `<agent-note>`; only the tag was renamed (the stored type stays `agent-note`,
+  nothing migrated), and `write_agent_note` keeps its name.
+- **`<agent-page>`** — a real sub-page whose whole content is the agent's. Not a
+  new block type: a `type="page"` row whose `data.author === "agent"`, so every
+  site that knows what a page is (sidebar, trash, history, search, backlinks, the
+  expand-inline mount) needed no change. The page declares its own author from
+  that field (`pageBlockAuthor.authorFromData`), which is the ONE thing this
+  policy reads — through `blockAuthorOf`, like every other row.
+
+```
+edit_page(parent)   <agent-page title="Findings">…body…</agent-page>   ← tagless: mints the page
+read_page(parent)   <agent-page id="block-…" title="Findings"/>          ← afterwards: a pointer
+read_page / edit_page / write_agent_note (block_id = the page)          ← its whole content
+```
+
+- **A page's content is written by its own id.** The pointer never carries a body:
+  one with a body, or with any attribute but `title`, is refused (a planner
+  `ref-out-of-scope`, and a parse error for the attribute). The result's
+  `created_page_ids` names a minted page so the agent can tell it from its body.
+- **The pointer's `title` is read-only**, shown so an agent can tell pages apart.
+  It is ignored on a pointer (the planner compares only the spelling), so a title
+  gone stale since the read costs nothing. A human's sub-page and a link now show
+  `<page id="…" title="…"/>` too — an annotated attribute supplied by
+  `editor/server` and `page-link/server`.
+- **Renaming is still refused**, by `edit_page`'s title-line check — which is now
+  load-bearing: inside an agent page every block is writable, so a changed
+  `# Title` would otherwise land as a heading. `write_agent_note` on a page strips
+  an echoed banner (byte-identity, as for every page-rooted apply); any other
+  `# …` line in its content is an ordinary heading.
+- **Nothing an agent does makes it one or unmakes it.** `<agent-page id="H"/>`
+  naming a human's page is `unknown-ref` (the planner's canonical-spelling check),
+  a pointer at an agent page cannot be turned into a link, and the server refuses
+  any data write that flips the marker (`rewriteBlockData`, 409). An agent page is
+  never deleted by an apply — leaving it out of a document re-homes it, the
+  sub-page rule.
+- **No agent-origin marker.** `apps/pages/agent-origin` also says "agent pages" —
+  for e2e debris its 24h sweep trashes. An MCP apply writes through
+  `applyPageBlockPatch`, which never fires `BlockLifecycle.AfterCreate`, so an
+  agent-authored page is never marked. Keep it that way: no synthesized `Request`,
+  no header.
+
+### The enclosure: what the scope root sits inside
+
+The engine's walk stops at the apply's ROOT, so a root that declares nothing used
+to end every chain in "outside every card". `boundaryViolations` now takes a
+required `enclosure`: the policy's `enclosureOf` walks from the root's parent up
+through the partition, then the page row — never into the parent page — and hands
+in the nearest declaration it meets. For a PAGE root it is the page row's own
+declaration, which is how an agent page is open all the way down.
+
+**The stated behaviour change:** an apply rooted at a nested block INSIDE an
+`<agent-inline>` card was refused, and is accepted now. Rooted inside a `<human>`
+card it stays refused, now as `enclosed`, naming the card. The page row comes from
+the same read as the plan (`BlockScope.pageRow`, handed to `assertAcceptable` as
+`{ rows, pageRow }`), so the enclosure is judged against the page the plan was
+built over.
+
+### The door
+
+`assertAgentAuthored` (was `assertNoteCard`) admits a live row whose author is the
+agent — an `<agent-inline>` card, or an agent page by its own id — asked through
+`blockAuthorOf`, never by type. Its refusal, like every refusal here, spells the
+tags off the handles (`markdownTagNamesAuthoredBy`, `markdownTagNameOf`): the
+document says `<agent-inline>` while the column says `agent-note`, and a literal
+would drift the day either moves.
 
 ## Stated bounds
 
@@ -301,8 +383,15 @@ nor the policy ever learns one.
   true rather than probably true.
 - **The `# Title` banner is not writable**, and `edit_page` refuses an edit that
   changes the document's first line with a message naming the title rather than
-  letting it fall through to the planner as a created heading. Diagnosis, not
-  authority: the planner would refuse it anyway.
+  letting it fall through to the planner as a created heading. On a human's page
+  that is diagnosis, not authority — the planner would refuse the heading anyway.
+  Inside an agent page it IS the authority: every block there is the agent's, so
+  a changed banner would land as a writable heading. A later rename feature
+  should write the page row's `data`, not relax this.
+- **Sending the same minting document twice creates two pages** — the same as a
+  tagless `<agent-inline>` today. A mint has no identity to converge on.
+- **A crash between the commit and the authorship stamp** leaves an agent page
+  with no creator chip. Nothing is corrupted; the next write stamps it.
 
 Design: [`research/2026-08-07-page-agent-note-file-like-tools.md`](../../../../../../research/2026-08-07-page-agent-note-file-like-tools.md)
 (supersedes [`research/2026-08-05-page-agent-notes-mcp-access.md`](../../../../../../research/2026-08-05-page-agent-notes-mcp-access.md),
@@ -313,7 +402,7 @@ Spec: `e2e/agent-access-verify.ts`.
 
 ## Plugin reference
 
-- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one card's contents) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-note> card admits it and a <human> or <todo> card nested there refuses it). The policy over page/markdown-apply's audience-and-author-agnostic engine.
+- Description: The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`

@@ -10,6 +10,7 @@ export {
   pageData,
   pageBlockHandle,
   pageBlockMarkdown,
+  pageBlockAuthor,
 } from "./schemas";
 export type { Block, PageRow, PageData, PageCover, BlockData } from "./schemas";
 
@@ -140,7 +141,11 @@ export { rankWindow, planForestInsert } from "./block-forest";
 export { semanticsAttrs } from "./block-semantics";
 export type { BlockSemantics, BlockSemanticsAttrs } from "./block-semantics";
 
-export { conversionPrefixesOf, defineBlock } from "./define-block";
+export {
+  blockAuthorOf,
+  conversionPrefixesOf,
+  defineBlock,
+} from "./define-block";
 export type {
   BlockAudience,
   BlockAuthor,
@@ -155,13 +160,16 @@ export {
   serializeForestToMarkdown,
   parseMarkdownToForest,
   defaultTextHandle,
-  markdownParseTagName,
+  markdownParseTagNames,
   markdownTagIsIdentified,
+  markdownTagNameOf,
+  markdownTagNamesAuthoredBy,
 } from "./markdown";
 export type {
   BlockMarkdown,
   BlockTag,
   BlockTagBody,
+  BlockTagSpelling,
   MarkdownContext,
   MarkdownNode,
   MdSerializeCtx,

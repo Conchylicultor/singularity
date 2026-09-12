@@ -18,6 +18,7 @@ import {
 } from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
+import { resolvePageTitleAnnotations } from "./internal/page-title-annotations";
 import {
   pageBlockHandle,
   PAGES_TRASH_SOURCE,
@@ -128,5 +129,8 @@ export default {
     // depend on the sub-page plugin being enabled. sub-page contributes only its web
     // renderer — a second `Editor.BlockData("page")` would be a duplicate → throw.
     Editor.BlockData(pageBlockHandle),
+    // The read-only `title` on `<page id="…" title="…"/>` for a human sub-page —
+    // its own row's. `page-link` answers for the links sharing the tag.
+    Editor.BlockAnnotation({ resolve: resolvePageTitleAnnotations }),
   ],
 } satisfies ServerPluginDefinition;

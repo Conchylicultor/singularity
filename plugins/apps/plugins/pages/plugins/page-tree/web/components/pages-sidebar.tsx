@@ -3,6 +3,7 @@ import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useCurrentPane,
   useOpenPane,
@@ -21,6 +22,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { pageLinksResource } from "@plugins/page/plugins/links/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { usePageReferenceTint } from "@plugins/page/plugins/page-reference/web";
 import { pageDetailPane, pagesTreePane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
@@ -33,6 +35,7 @@ export function PagesSidebar() {
   const result = useResource(pagesResource);
   const links = useResource(pageLinksResource);
   const openPane = useOpenPane();
+  const tintOf = usePageReferenceTint();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
   // Where a page opens depends on WHICH host is showing this tree, and the tree
   // can read that off its own position instead of being told:
@@ -102,6 +105,17 @@ export function PagesSidebar() {
         // footer "New Page" line is dropped for a more compact tree.
         addLabel: null,
         dragOverlay: (b: PageRow) => pageData(b).title || "Untitled",
+        // A decorated KIND of page (an agent-authored one, …) keeps its wash
+        // here too, painted as the tree's full-row accent layer — which sits
+        // over the row, so it composes with hover and selection instead of
+        // replacing them. Tint only: the sidebar has no room for a chip, and
+        // a row of no decorated kind paints no layer at all.
+        rowAccent: (b: PageRow) => {
+          const tint = tintOf(pageData(b));
+          return tint === undefined ? null : (
+            <div aria-hidden className={cn("size-full rounded-md", tint)} />
+          );
+        },
       },
       // Favorites (a filtered `list` view) gets the same page icon + density.
       list: {
@@ -111,7 +125,7 @@ export function PagesSidebar() {
         size: "sm" as const,
       },
     }),
-    [],
+    [tintOf],
   );
 
   const creators = useMemo<CreateOption[]>(() => {

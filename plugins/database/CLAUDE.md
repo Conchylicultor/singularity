@@ -321,6 +321,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `page/inline-date`
     - `page/links`
     - `page/markdown-apply`
+    - `page/page-link`
     - `page/prompt/link`
     - `plugin-meta/plugin-health`
     - `primitives/data-view/custom-columns`

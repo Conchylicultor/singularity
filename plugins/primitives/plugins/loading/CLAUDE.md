@@ -140,6 +140,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `fields/secret/config`
     - `history/dialog`
     - `layouts/route-fallback`
+    - `page/annotations/agent-notes/agent-page`
     - `page/bookmark`
     - `page/editor`
     - `page/inline-page-link`

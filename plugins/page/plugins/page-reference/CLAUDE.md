@@ -2,9 +2,10 @@
 
 A **page reference** is anything inside a page that names another page: the
 sub-page row, the link block, the inline `[[page]]` chip — three block types in
-three plugins, all answering the same two questions. *Where does clicking me
-open that page?* and *what else can the user do with it?* This plugin owns both
-answers and nothing else: it renders no reference and ships no action.
+three plugins, all answering the same questions. *Where does clicking me open
+that page?*, *what else can the user do with it?* and *is that page of a kind
+that looks different?* This plugin owns those answers and nothing else: it
+renders no reference, ships no action and declares no kind.
 
 ## Navigation is declared by the host, once
 
@@ -47,6 +48,30 @@ way of OPENING the page, so that is the only thing it can turn on, and keeping
 it pure is what leaves one `usePageNavigation()` at the top of the hook instead
 of one per contribution inside a loop.
 
+## A kind of page is a decoration, read off the page's data
+
+`PageReference.Decoration` lets the plugin that owns a KIND of page (today:
+agent-authored pages, `data.author === "agent"`) say how its references look —
+a `tint` class for the row and, optionally, a chip (`component`) at the row's
+trailing edge — so no renderer names a kind. `applies(page)` is a pure function
+of the referenced page's own `data`, which every reference row already holds, so
+answering costs no read. The first match wins (registration order, `Dispatch`'s
+tie-break).
+
+Two reading hooks, because the surfaces differ in what they can afford:
+
+- `usePageReferenceDecoration(pageId, data)` → `{ tint, chip } | null`, the chip
+  already error-isolated — for a row that paints both (the sub-page row).
+- `usePageReferenceTint()` → `(data) => tint | undefined`, one hook for a
+  surface painting hundreds of rows and no chip (the Pages sidebar, through the
+  tree's `rowAccent` layer).
+
+A chip is information, so it is always visible; the `Actions` cluster is still
+revealed on hover. The sub-page row therefore carries two clusters when it has a
+chip — a persistent one holding the chip, with the actions in an inline
+`RowActions` beside it — the shape data-view's group header uses for its count
+and fold toggle. The pinned cluster would have overlaid the chip.
+
 ## Inline chips take navigation but no cluster
 
 A trailing button inside an inline `[[page]]` chip reflows the prose around it,
@@ -58,21 +83,31 @@ carrying the same actions — a separate feature.
 
 ## Plugin reference
 
-- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, and the PageReference.Actions frontier whose contributions become the reference row's hover actions. Owns no reference and no action of its own.
+- Description: The shared contract for a reference to another page rendered inside a page (sub-page row, link block, inline mention): the PageNavigation context a host declares once so no callback is threaded through the composite block store, the PageReference.Actions frontier whose contributions become the reference row's hover actions, and the PageReference.Decoration seam through which a kind of page (read off its own data) tints its reference rows and adds a trailing chip. Owns no reference, no action and no decoration of its own.
 - Web:
-  - Slots: `PageReference.Actions` ← `page.page-reference.open-aside`
-  - Uses: `primitives/slot-render.defineRenderSlot`
+  - Slots:
+    - `PageReference.Actions` ← `page.page-reference.open-aside`
+    - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
+  - Uses:
+    - `primitives/slot-render.defineRenderSlot`
+    - `primitives/slot-render.renderIsolated`
   - Exports (types):
     - `PageNavigation`
     - `PageReferenceActionProps`
+    - `PageReferenceChipProps`
+    - `PageReferenceDecoration`
+    - `PageReferenceDecorationContribution`
   - Exports (values):
     - `PageNavigationProvider`
     - `PageReference`
     - `usePageNavigation`
     - `usePageReferenceActions`
+    - `usePageReferenceDecoration`
+    - `usePageReferenceTint`
 - Cross-plugin:
   - Imported by:
     - `apps/pages/page-tree`
+    - `page/annotations/agent-notes/agent-page`
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`

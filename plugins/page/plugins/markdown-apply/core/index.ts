@@ -13,6 +13,7 @@ export { planWriteCount, subtractNoise } from "./subtract-noise";
 export { boundaryViolations, touchedBlocks } from "./touched";
 export type {
   BoundaryViolation,
+  ClassifiedRow,
   TouchedBlocks,
   TouchedHow,
   WriteBoundary,

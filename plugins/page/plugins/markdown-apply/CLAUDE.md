@@ -91,7 +91,11 @@ and the title handling adds **zero authority of its own**.
   apart needs the banner to be a node, which is what this refuses to make it.
 
 `BlockScope` carries `title` because `loadBlockScope` is the only place it exists
-without a second query — a page's own row is not in its content partition.
+without a second query — a page's own row is not in its content partition. It
+carries the whole `pageRow` for the same reason: a policy walking a chain up past
+the scope root needs to ask the page itself whose words it holds (an
+agent-authored page is open all the way down), and `assertAcceptable` is handed it
+beside the rows.
 
 ## Alignment: three passes, weakest evidence last
 
@@ -122,10 +126,13 @@ A node whose identity is **asserted** (a row id in the document) rather than
 inferred (content similarity) is a `pin`, settled in its own pass after the three
 content passes. Two sources, one mechanism, one refusal vocabulary:
 
-- a **sub-page shell**, whose `<page id="…"/>` pointer is its only identity;
+- a **sub-page shell**, whose `<page id="…"/>` pointer is its only identity —
+  or, for an agent-authored page, `<agent-page id="…" title="…"/>`, the
+  identified SPELLING of the same `page` row type;
 - an **identified card** — a tag declaring `markdown.tag.identified`, which
   round-trips its row id as the reserved `id` attribute. The type set is derived
-  from the handle registry via `markdownTagIsIdentified`, **never named here**.
+  from the handle registry via `markdownTagIsIdentified` (any spelling counts —
+  `page` is in it through `<agent-page>`), **never named here**.
 
 A stored identified card is pinned even when the document does not name it —
 otherwise a tagless `<agent-note>` written beside it shares its byte-identical
@@ -135,7 +142,22 @@ ambiguity.
 Three refusals, resolved in this order: **`ref-duplicated`** (one row, two
 positions), **`ref-out-of-scope`** (a real row the walk cannot reach — another
 branch, or redacted; this is what stops a page-rooted edit dragging a hidden card
-into scope and MOVING it), **`unknown-ref`**. `unknown-ref` gets no "already in
+into scope and MOVING it), **`unknown-ref`**.
+
+A `ref` that resolves must also be the SAME KIND of row as the node claiming it:
+a card ref may not pin a page row (its children would be created under the page
+with this page's `page_id`), nor a page pointer a card. A page pointer has two
+more conditions, both because its content is not in this document:
+
+- **canonical spelling** — the pointer's tag must be the one the stored row
+  serializes to, so `<agent-page id="H"/>` naming a HUMAN's page is `unknown-ref`
+  (and turning an agent page into a `<page>` link is refused the same way). Only
+  the spelling is compared — it is chosen by the preset keys alone — so an edited
+  or stale `title` on a pointer is ignored, as a read-only attribute is.
+- **no body** — else `ref-out-of-scope`: the page's content lives in its own
+  partition, and is written by passing its id as the root.
+
+A matched shell is reposition-only, whichever spelling it came in under. `unknown-ref` gets no "already in
 this document" hatch, unlike `<page>` below: an id on an identified tag is *only*
 ever an identity claim, so a typo must never quietly become a create.
 
@@ -151,6 +173,10 @@ which `<page id="…"/>` carries and no `data` field does — and the engine rea
 that id back **by serializing the incoming pointer node and comparing the line**,
 never by naming a block type or a `data` field. The tag is the contract; the
 serializer is the only thing that knows how a type encodes its identity into one.
+The comparison is id-only: the `title` a `<page>` line carries is an annotation,
+and annotations never reach the planner. An agent-authored page's
+`<agent-page id="…"/>` pointer pins through the identified-`ref` route above
+instead, and is never deleted either.
 
 - A shell **absent** from the incoming markdown is preserved, re-homed to the top
   level after everything the document did place (a rank floor above the highest
@@ -167,9 +193,34 @@ serializer is the only thing that knows how a type encodes its identity into one
   verify. Repositioning a shell within its page is legal; naming it twice is
   `ref-duplicated`.
 
-A `page` node in the incoming forest **throws** rather than refusing — markdown
-parse can never produce one, so it is a programming error, and minting a
-`page_id` partition is `turn-into-page`'s job.
+## Minting a page: `<agent-page title="…">body</agent-page>`
+
+A `page` node WITHOUT a `ref` is a page this apply creates — the mint form of the
+agent-authored page, the one way a markdown parse produces a page node at all
+(`<page>` parses as a link; a human's sub-page is still only ever born through
+`turn-into-page`). Research: `research/2026-09-11-page-agent-pages.md`.
+
+- **Partition.** The new page row joins the apply's `pageId` (a page is displayed
+  in its parent's partition); everything under it joins the NEW page's —
+  `partitionOf(j)` is the nearest strict ancestor page node being created, else
+  `pageId`. Nested mints work the same way.
+- **Its body is asserted NEW.** Every node of a minted page is pinned to its own
+  freshly minted id, so the aligner can never pair it with a stored row. Without
+  that, a line in the new body reading like one already on this page would be
+  paired by pass 3 and MOVED into the new page with this page's `page_id` — a row
+  visible in neither. An identity claim inside a new body (an identified `ref`, a
+  pointer at an existing page) is `ref-out-of-scope`: a row cannot move between
+  pages. A survivor landing in a new partition is asserted impossible (a thrown
+  programming error).
+- **Born folded**, as `turn-into-page` folds a page: the one created row that does
+  not carry the node's own `expanded`.
+- Ranks, the rank floor, the preserved-shell logic and `subtractNoise` needed no
+  change: the new body is its own sibling group under a new id, and a baseline
+  document holds only pointers, which pin — so it plans no creates.
+- `ApplyReport.createdPageIds` names the minted pages, so a caller can tell a page
+  from its body. `applyPageBlockPatch` accepts exactly these two partitions (its
+  closed-world guard) and announces each created page with its own
+  `blocksChanged`.
 
 ## Ranks are minimal, per sibling list
 
@@ -218,8 +269,11 @@ learns what an audience is: one takes rows and returns rows, the other takes a
 plan and either returns or throws.
 
 - `touchedBlocks(plan)` flattens the plan to four ids-by-channel lists;
-  `boundaryViolations({plan, existing, rootId, boundaryOf})` judges them against
-  a caller-supplied ROW CLASSIFIER. **No block type is named here** — naming one
+  `boundaryViolations({plan, existing, rootId, boundaryOf, enclosure})` judges
+  them against a caller-supplied ROW CLASSIFIER, handed `{id, type, data}` — a
+  row may declare through its payload (an agent-authored page is a `page` row
+  whose `data` says so), so the chain maps carry `dataOf`, overlaid by the data a
+  plan writes. **No block type is named here** — naming one
   inverts `agent-access` → `markdown-apply` into a cycle. It returns violations
   rather than throwing (status and wording are the caller's), and throws for
   exactly one thing: a non-terminating ancestor chain, bounded by
@@ -232,6 +286,10 @@ plan and either returns or throws.
   contents, and an open card inside a closed one still admits writes. Two values
   could only ever say "allowed at and under this row", so a region the caller
   wants to shield INSIDE an allowed one would have no spelling at all.
+- **`enclosure` is what the root sits inside**, required: a chain reaching
+  `rootId` with nothing declared answers it. The engine cannot see above its root,
+  so the caller resolves it (the policy walks the root's ancestry up through the
+  page row) and a default would be a verdict with no evidence behind it.
 - **A declaring row is inside itself**, in both directions. That is what lets a
   newly minted OPEN card satisfy its own check — otherwise minting a card is the
   one thing a boundary rule could never allow — and it is also why creating a
@@ -262,8 +320,9 @@ plan and either returns or throws.
   text edits are judged. Without the carve-out the predicate refuses the feature.
 - **`ApplyBlockOptions.assertAcceptable` runs once, synchronously, after planning
   and strictly before the first `applyPageBlockPatch`**, so a refusal has provably
-  written nothing. It gets the UNREDACTED partition — a chain walk needs ancestors
-  the document never showed. Deliberately **no exported `plan`/`commit` pair**: a
+  written nothing. It gets `{ rows, pageRow }`: the UNREDACTED partition — a
+  chain walk needs ancestors the document never showed — and the page's own row
+  from the same read, the top of every chain. Deliberately **no exported `plan`/`commit` pair**: a
   caller could commit a plan against rows it re-read, and no type can express
   "these two came from one read".
 
@@ -332,9 +391,12 @@ second policy (export, share link) reuses it without adding a branch.
 The end-to-end spec moved too — `agent-access/e2e/agent-access-verify.ts`.
 
 **Agent-origin provenance does not apply, on purpose.** That hook reads
-`x-singularity-origin` off an HTTP `Request` and marks whole PAGES an agent
-created; an apply has no `Request` and never creates a page. Synthesizing the
-header would mark a human's page as agent-origin and hand it to the 24h sweep.
+`x-singularity-origin` off an HTTP `Request` and marks whole PAGES an automated
+session created, for a 24h sweep. An apply has no `Request`, and the page it can
+mint — an agent-authored page — is written through `applyPageBlockPatch`, which
+never fires `BlockLifecycle.AfterCreate`. That is load-bearing: the page is a real
+document the user keeps, and synthesizing the header (or firing the hook) would
+hand it to the sweep.
 
 ## `markdownNodesOfRows` and the plan share ONE traversal
 
@@ -383,6 +445,7 @@ annotation in the key would make every status change look like a new block.
     - `ApplyBlockOptions`
     - `ApplyReport`
     - `BlockScope`
+    - `BlockScopePageRow`
     - `ReadBlockOptions`
   - Exports (values):
     - `applyMarkdownToBlock`
@@ -403,8 +466,9 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.IdentifiedBlock`
     - `page/editor.MarkdownContext`
     - `page/editor.MarkdownNode`
-    - `page/editor.markdownParseTagName`
+    - `page/editor.markdownParseTagNames`
     - `page/editor.markdownTagIsIdentified`
+    - `page/editor.markdownTagNameOf`
     - `page/editor.namesField`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.pageBlockMarkdown`
@@ -418,6 +482,7 @@ annotation in the key would make every status change look like a new block.
     - `primitives/rank.Rank`
   - Exports (types):
     - `BoundaryViolation`
+    - `ClassifiedRow`
     - `MarkdownApplyArgs`
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`

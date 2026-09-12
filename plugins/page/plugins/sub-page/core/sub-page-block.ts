@@ -1,5 +1,6 @@
 import {
   defineBlock,
+  pageBlockAuthor,
   pageBlockMarkdown,
   PAGE_BLOCK_TYPE,
   PageDataSchema,
@@ -22,7 +23,8 @@ export const subPageBlock = defineBlock({
   schema: PageDataSchema,
   // An icon+title Row (not doc text), wrapped in `Inset y="xs"`: seat the rail on
   // the Row's center — its own `pad-row-y` top plus half a `text-body` line.
-  gutterFirstLineCenter: "calc(var(--space-xs) + var(--pad-row-y) + var(--line-height-body) / 2)",
+  gutterFirstLineCenter:
+    "calc(var(--space-xs) + var(--pad-row-y) + var(--line-height-body) / 2)",
   // Always show the collapse chevron: a collapsed page mounts no children, so
   // `hasChildren` is false and without this no chevron would ever appear.
   collapsible: "always",
@@ -31,4 +33,9 @@ export const subPageBlock = defineBlock({
   // it. Imported, never restated: `page-link` owns `<page>` on parse, and a
   // second handle claiming the same tag name is a loud error.
   markdown: pageBlockMarkdown,
+  // THE shared author declaration (an agent-authored page is `data.author ===
+  // "agent"`), spread for the same reason: the two page handles must agree about
+  // whose words a page row holds, or the web and the server would read one row
+  // two ways.
+  ...pageBlockAuthor,
 });

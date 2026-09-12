@@ -1776,6 +1776,23 @@ a block that already exists.
 Commit is `insertAfter` + `convertTo`, i.e. two undo entries (undo once → back to
 a paragraph, twice → gone). Deliberate: the paragraph genuinely existed.
 
+**`Editor.InsertAction` — entries that RUN rather than convert** (`/agent-page`:
+a server op that turns the line into a kind of page). Listed in the same menu,
+ranked by the same `filterInsertEntries`, and placed by `after: <block type>`
+(the config orders block types only; an action with no placeable `after` gets a
+trailing section, never dropped). Committing one strips the query through
+`stripText` — `convertStrippingText`'s doc half alone — then calls `run`, handing
+it the line's text with the query cut out (`runsWithoutSpan` over the live runs:
+the strip lands only after the menu's own update, so nothing else says it yet),
+so an action replacing the line carries the user's words over. Offered
+only on a `serverSync` editor with no `enabledBlockTypes` allowlist (the
+`TurnInto` gate), and only once the line is `rowTruthOf === "present"`: the
+gutter `+` opens the menu on a paragraph it inserted optimistically, and a
+server op on a row the server does not have yet 404s. The turn-into picker lists block types only: an action does not
+convert. Rows are `InsertEntry`s (`{kind: "block"} | {kind: "action"}`), and
+`BlockTypeList` is generic over the kind, so turn-into's `onSelect` sees block
+entries only.
+
 ## Indent / outdent is a set operation
 
 `BlockOp`'s `indent` / `outdent` carry `blockIds: string[]`, not one id. Tab inside
@@ -3543,14 +3560,46 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
 `web/serialize-blocks.ts` stamps `id: block.id`. Both its consumers overwrite it
 (`withMintedIds`): the id is provenance, never a destination identity.
 
-- `page-link` owns `<page>` on parse; the sub-page handle's tag is
+- `page-link` owns `<page>` on parse; the sub-page handle's PRIMARY spelling is
   `serializeOnly` (two non-`serializeOnly` handles on one name is a loud error).
-  **Markdown parse alone can never mint a sub-page** — that means minting a
-  `page_id` partition and restamping a subtree, which only the server's
-  turn-into-page op does. The id is what lets a future diff/merge reconcile
-  against the EXISTING row.
-- A **body on a parsed `<page>` is a loud rejection**, so authoritative sub-page
-  writes can be enabled later without a syntax change.
+  **Markdown parse creates a sub-page only as an agent-authored page.** A human's
+  sub-page means minting a `page_id` partition and restamping a subtree, which
+  only the server's turn-into-page op does; `<page id="…"/>` always parses as a
+  link. The id is what lets a markdown apply reconcile against the EXISTING row.
+- **One row type, two spellings** (`BlockTag.spellings`): a `page` row whose
+  `data.author === "agent"` is written `<agent-page id="…" title="…"/>`. The
+  spelling's `data` preset (`{ author: "agent" }`) does both jobs — it picks the
+  spelling on serialize and is merged over the attributes on parse — so the round
+  trip is correct by construction, and asserted: a parse landing on a different
+  spelling than the tag it came in under throws. `<agent-page>` IS claimed on
+  parse, `identified` (the id becomes `ref`), and accepts only `title`; its tagless
+  MINT form `<agent-page title="…">body</agent-page>` is a new page node carrying
+  its body, which `markdown-apply` creates in a new partition.
+  `markdownParseTagNames(h)` / `markdownTagNameOf(h, data)` are the shared
+  resolution the uniqueness check, the planner and the agent policy read.
+- **Every page pointer carries a title.** On `<agent-page>` it is the row's own
+  `data.title`, emitted by the spelling's `attrs` and kept by its parse. On
+  `<page>` it is an `annotated` attribute (read-only, discarded on parse) on BOTH
+  handles that write the tag — the sub-page shell and `page-link` — because the
+  link's title lives on another row. The `Editor.BlockAnnotation` providers are
+  this plugin's server (a human sub-page's own title) and `page-link/server` (the
+  target page's, one query; a deleted target emits none). `id` is emitted first
+  whoever supplies it, so both kinds read `<page id="…" title="…"/>`.
+- A **body on a parsed `<page>` is a loud rejection** — its content lives in its
+  own partition. An EXISTING page's content is written by its own id; the one tag
+  that may carry a page's body is `<agent-page>`'s mint form.
+- **A page's author is fixed at creation.** `rewriteBlockData` (server) is the one
+  mint of the `BlockDataRewrite` brand that every UPDATE of `data` needs
+  (`BlockColumnChanges.data`), and it refuses (409) a same-type rewrite whose
+  `blockAuthorOf` differs — so the op writer, the patch writer, `PATCH
+  /api/blocks/:id` and history restore all refuse flipping the marker, by type
+  construction. Turn-into-page (a type change) is where a page's author is chosen
+  (`author: "agent"` is the `/agent-page` insert); creates stay free.
+- **A patch's creates stay in its world.** `applyPageBlockPatch` accepts a create
+  whose `pageId` is the locked page or a page the same patch creates, and refuses
+  any other with a 400. Every page a write inserts is announced with its own
+  `blocksChanged` (`ForestWriteResult.createdPageIds`), mirroring deleted pages —
+  which also covers a sub-page created by paste or duplicate.
 - A parsed forest is uniformly `expanded: true` — a self-closing tag cannot
   distinguish "collapsed" from "childless", and blocks are born expanded.
 
@@ -3577,8 +3626,10 @@ the walk.
   minute ago, nor write the owning table. `status="done"` typed into a document
   is ignored, and the tool handing out the document says so.
 
-Loud, never silent: a name colliding with a schema field / `data` / an
-`identified` `id` throws at resolution; a type's own `attrs` emitting a reserved
+Loud, never silent: a name colliding with a schema field the DERIVED projection
+would emit / `data` / an `identified` `id` throws at resolution (a tag declaring
+its own `attrs` may reserve a field name — `page` reserves `title` — and is held
+to it by the serialize-time check below); a type's own `attrs` emitting a reserved
 name throws at serialize; and a node carrying an annotation its tag never
 declared (or any annotation at all, for a type serializing as LINES) throws —
 emitting it would make it a `data` key on the way back in, dropping it would
@@ -3601,6 +3652,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
+    - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
@@ -3709,6 +3761,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `FormatToolbarValue`
     - `FrameGeometry`
     - `FramePad`
+    - `InsertAction`
+    - `InsertActionContext`
+    - `InsertEntry`
+    - `InsertSection`
     - `MarkButtonProps`
     - `PageIconProps`
     - `PageOption`
@@ -3735,7 +3791,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `collabHydrationReportSink`
     - `colorCssValue`
     - `Editor`
-    - `filterBlockTypes`
+    - `filterInsertEntries`
     - `flattenSections`
     - `FRAME_PAD_X`
     - `FRAME_PAD_Y`
@@ -3776,6 +3832,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `resource.declare` "pages"
     - `resource.declare` "page-blocks"
     - `page.block-data` "page"
+    - `page.block-annotation`
   - Uses:
     - `database.currentTxId`
     - `database.db`
@@ -3877,6 +3934,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockSemanticsAttrs`
     - `BlockTag`
     - `BlockTagBody`
+    - `BlockTagSpelling`
     - `BlockTextVariant`
     - `BlockUpdate`
     - `ColorToken`
@@ -3909,6 +3967,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Exports (values):
     - `applyBlockOp`
     - `applyBlockOpEndpoint`
+    - `blockAuthorOf`
     - `BlockFieldChangesSchema`
     - `blockOpContextOf`
     - `BlockOpSchema`
@@ -3942,8 +4001,10 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `listBlocks`
     - `listPages`
     - `MARK_ORDER`
-    - `markdownParseTagName`
+    - `markdownParseTagNames`
     - `markdownTagIsIdentified`
+    - `markdownTagNameOf`
+    - `markdownTagNamesAuthoredBy`
     - `marksOfTextNode`
     - `matchInlineFormat`
     - `mergeRuns`
@@ -3955,6 +4016,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `opNamedIds`
     - `PAGE_BLOCK_TYPE`
     - `PAGE_BLOCKS_TRASH_SOURCE`
+    - `pageBlockAuthor`
     - `pageBlockHandle`
     - `pageBlockMarkdown`
     - `PageCoverSchema`
@@ -4024,6 +4086,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `page/annotations`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
+    - `page/annotations/agent-notes/agent-page`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/human-notes`
     - `page/annotations/private-notes`

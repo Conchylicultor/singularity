@@ -7,7 +7,7 @@ import { liveBlocks } from "./live-blocks";
 import { withPageForest } from "./page-forest";
 import { updateBlockFields, type BlockColumnChanges } from "./forest-writer";
 import { notifyBlockChange } from "./notify";
-import { parseBlockData } from "./parse-block-data";
+import { rewriteBlockData } from "./parse-block-data";
 
 export const handleUpdateBlock = implement(
   updateBlock,
@@ -37,12 +37,14 @@ export const handleUpdateBlock = implement(
     const { value: updated } = await withPageForest(
       existing.pageId,
       async (ctx) => {
-        // Re-read the type under the lock: a concurrent conversion between the scope
+        // Re-read the row under the lock: a concurrent conversion between the scope
         // read above and this write would otherwise have `data` validated against a
         // type the row no longer holds — and a concurrent delete would have
-        // trashed it, which is the same 404.
+        // trashed it, which is the same 404. `data` rides along because a rewrite
+        // is judged against the payload it replaces (`rewriteBlockData`: a page's
+        // author is fixed at creation), and that has to be the one under the lock.
         const [row] = await ctx.tx
-          .select({ type: liveBlocks.type })
+          .select({ type: liveBlocks.type, data: liveBlocks.data })
           .from(liveBlocks)
           .where(eq(liveBlocks.id, params.id))
           .limit(1);
@@ -51,7 +53,11 @@ export const handleUpdateBlock = implement(
         const patch: BlockColumnChanges = { updatedAt: new Date() };
         if (typeof body.type === "string") patch.type = body.type;
         if (body.data !== undefined) {
-          patch.data = parseBlockData(body.type ?? row.type, body.data);
+          patch.data = rewriteBlockData({
+            type: body.type ?? row.type,
+            before: row,
+            next: body.data,
+          });
         }
         if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
         await updateBlockFields(ctx.tx, params.id, patch);

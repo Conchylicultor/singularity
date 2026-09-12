@@ -375,6 +375,20 @@ interface BlockEditorContextValue {
     /** Reset the open/collapsed state in the same write (a toggle opens). */
     expanded?: boolean;
   }) => void;
+  /**
+   * The strip half of `convertStrippingText`, alone: delete `[from, to)` from
+   * the block's content doc and write nothing to the row. For a commit that
+   * consumes its query text and then does something OTHER than a type change —
+   * an `Editor.InsertAction` — so the query is gone from the line by the same
+   * rule, at the same moment, as before a conversion.
+   */
+  stripText: (args: {
+    blockId: string;
+    /** Linear start of the consumed span (stored-runs basis), inclusive. */
+    from: number;
+    /** Linear end of the consumed span, exclusive. `to <= from` strips nothing. */
+    to: number;
+  }) => void;
   setFlatOrder: (blocks: Block[]) => void;
   /** All blocks of the page (incl. collapsed), kept current for bulk ops. */
   setRows: (blocks: Block[]) => void;
@@ -1785,6 +1799,29 @@ export function BlockEditorProviderInner({
     [commitRow, blockHandles, wrapInContainer],
   );
 
+  // The doc half of every text-consuming commit. `deleteRange` is DISCRETE, so
+  // its Yjs transaction commits within this task — before React can re-render
+  // and move the block (a `wrapOnConvert` target reparents it into a fresh
+  // container, which DOES remount its editor). That is the guarantee, not the
+  // statement order: called from the slash menu this runs inside the caret
+  // menu's own `editor.update()`, where Lexical defers the nested update to the
+  // end of the outer one — still ahead of any re-render, which is all that
+  // matters.
+  //
+  // A block with no registered handle (text-less, or not yet mounted) has
+  // nothing to strip — an empty span is the normal case here, not a swallowed
+  // failure.
+  //
+  // Reached through the caret authority's `surgeryOf` seam, which hands back
+  // content surgery and NOT `focus` — the registry itself is unreachable from
+  // here on purpose, so no caller can place a caret behind the authority's back.
+  const stripText = useCallback(
+    ({ blockId, from, to }: { blockId: string; from: number; to: number }) => {
+      authority.surgeryOf(blockId)?.deleteRange?.(from, to);
+    },
+    [authority],
+  );
+
   const convertStrippingText = useCallback(
     ({
       blockId,
@@ -1801,29 +1838,15 @@ export function BlockEditorProviderInner({
       data: RowData;
       expanded?: boolean;
     }) => {
-      // (1) The doc. `deleteRange` is DISCRETE, so its Yjs transaction commits
-      // within this task — before React can re-render and move the block (a
-      // `wrapOnConvert` target reparents it into a fresh container, which DOES
-      // remount its editor). That is the guarantee, not the statement order:
-      // called from the slash menu this runs inside the caret menu's own
-      // `editor.update()`, where Lexical defers the nested update to the end of
-      // the outer one — still ahead of any re-render, which is all that matters.
-      //
-      // A block with no registered handle (text-less, or not yet mounted) has
-      // nothing to strip — an empty span is the normal case here, not a
-      // swallowed failure.
-      //
-      // Reached through the caret authority's `surgeryOf` seam, which hands back
-      // content surgery and NOT `focus` — the registry itself is unreachable from
-      // here on purpose, so no caller can place a caret behind the authority's back.
-      authority.surgeryOf(blockId)?.deleteRange?.(from, to);
+      // (1) The doc — see `stripText`.
+      stripText({ blockId, from, to });
       // (2) The row. It states the TYPE and nothing about text: the stripped
       // content reaches `data.text` on its own, through the projection. Strictly
       // AFTER the strip — `/callout` must lose its `/callout` query from the
       // content doc before the block becomes a container's first child.
       convertRow(blockId, type, data, expanded);
     },
-    [convertRow, authority],
+    [convertRow, stripText],
   );
 
   const makeBlockAPI = useCallback(
@@ -2115,6 +2138,7 @@ export function BlockEditorProviderInner({
       attachContainer: authority.attachContainer,
       makeBlockAPI,
       convertStrippingText,
+      stripText,
       setFlatOrder,
       setRows,
       rowsRef,
@@ -2156,6 +2180,7 @@ export function BlockEditorProviderInner({
       authority,
       makeBlockAPI,
       convertStrippingText,
+      stripText,
       setFlatOrder,
       setRows,
       focusBlock,

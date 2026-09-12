@@ -27,12 +27,17 @@ export const agentNotesDataSchema = z.object({});
  */
 /**
  * `agentNotesBlock.type === "agent-note"`, and the mismatch is deliberate. The
- * TYPE is an instance — one card, singular — and it is also the markdown tag an
- * agent reads and writes (`<agent-note id="…">`), where the plural read as a
- * container of several notes. The SYMBOL, the directory, the package and the
- * `agent-notes-authors` resource name a feature AREA, not an instance, and stay
- * plural: renaming them is all cost and no meaning. See
+ * TYPE is an instance — one card, singular. The SYMBOL, the directory, the
+ * package and the `agent-notes-authors` resource name a feature AREA, not an
+ * instance, and stay plural: renaming them is all cost and no meaning. See
  * `research/2026-08-07-page-agent-note-file-like-tools.md` §1.
+ *
+ * Its markdown TAG is a third spelling, `<agent-inline>`: since an agent can also
+ * write a whole page (`<agent-page>`, `research/2026-09-11-page-agent-pages.md`),
+ * the card is named for what distinguishes it — it sits INLINE among the page's
+ * own blocks. Only the tag moved. The stored type stays `agent-note`, so no row
+ * changes and nothing migrates — `human-notes` (type `context`, tag `<human>`)
+ * is the precedent.
  */
 export const agentNotesBlock = defineAnnotationBlock({
   type: "agent-note",
@@ -44,13 +49,16 @@ export const agentNotesBlock = defineAnnotationBlock({
   // to re-read what it wrote last time — and it is the one card an agent may
   // WRITE, which would be incoherent if it could not also see it.
   audience: "agent",
-  // THE row the whole agent-write rule reduces to. This is the only card in the
-  // system an agent authors, so `author: "agent"` is the only thing anywhere
-  // that opens a region to an agent's pen — every other block on every page,
+  // One of the two rows the whole agent-write rule reduces to. This is the only
+  // CARD in the system an agent authors, so `author: "agent"` here and an
+  // agent-authored page's own data are the only things anywhere that open a
+  // region to an agent's pen — every other block on every page,
   // annotation or prose, is the human's by declaration or by the absent-value
   // default. Nothing enumerates that fact: the write walk asks each ancestor
   // what it declares and stops at the nearest answer, so this one field is what
-  // makes an `<agent-note>` writable and the page around it not.
+  // makes an `<agent-inline>` card writable and the page around it not. (An
+  // agent-authored PAGE opens a region the same way, through its own row's data
+  // — `BlockHandle.authorFromData` — rather than through a second card type.)
   //
   // It does NOT reach inside: a `<human>` or `<todo>` card nested in this one
   // declares CLOSED at its own row, and the nearest declaration wins — which is
@@ -62,7 +70,10 @@ export const agentNotesBlock = defineAnnotationBlock({
   // habit (and every doc that spells the card plural). An alias is menu-search
   // only — it is not a markdown tag and not a stored value — so this costs the
   // rename nothing.
+  // `"agent-inline"` is the markdown tag, so an agent (or a human who has read
+  // one) finds the card under the name the document spells it.
   aliases: [
+    "agent-inline",
     "agent-notes",
     "agent",
     "agents",
@@ -72,8 +83,9 @@ export const agentNotesBlock = defineAnnotationBlock({
     "report",
   ],
   empty: () => ({}),
-  // `<agent-note id="…">…</agent-note>` — a real round-tripping syntax,
-  // replacing the one-way `**[Agent notes]**` marker. What the marker was for is
+  // `<agent-inline id="…">…</agent-inline>` — a real round-tripping syntax,
+  // replacing the one-way `**[Agent notes]**` marker. The name differs from the
+  // type on purpose (see the note above `agentNotesBlock`). What the marker was for is
   // unchanged (a reader of the page's markdown can tell these lines were written
   // BY an agent rather than by the page's author), and the card now survives the
   // round trip instead of dissolving into its contents. Still no prefix claim: a
@@ -87,5 +99,7 @@ export const agentNotesBlock = defineAnnotationBlock({
   // this card's `data` — which is still, and stays, `z.object({})`. On the
   // CLIPBOARD there is no row id to emit, so a copied card serializes bare and
   // pasting it mints a fresh one, exactly as before.
-  markdown: { tag: { body: "children", identified: true } },
+  markdown: {
+    tag: { name: "agent-inline", body: "children", identified: true },
+  },
 });

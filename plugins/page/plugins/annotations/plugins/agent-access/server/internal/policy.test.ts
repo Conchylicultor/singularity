@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { Editor, type StoredBlock } from "@plugins/page/plugins/editor/server";
-import type { Block, BlockUpdate } from "@plugins/page/plugins/editor/core";
+import {
+  pageBlockHandle,
+  type Block,
+  type BlockUpdate,
+} from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { defineAnnotationBlock } from "@plugins/page/plugins/annotations/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
@@ -14,8 +18,8 @@ import type {
 import type { BlockScope } from "@plugins/page/plugins/markdown-apply/server";
 import {
   assertAgentAddressable,
-  assertNoteCard,
-  assertNotesOnlyPlan,
+  assertAgentAuthored,
+  assertAgentAuthoredPlan,
   redactHumanAudience,
 } from "./policy";
 
@@ -29,8 +33,11 @@ import {
  * or `/human`. A test that seeded the real four would prove the rules work for
  * the four we have, which is the weaker claim.
  *
- * `agent-note` is the one exception, on both sides: rule 2 is ABOUT that type,
- * and rule 3 names it as the one open boundary, so the fixture uses its real id.
+ * `agent-note` is the one exception, on both sides: its tag is what a refusal
+ * tells an agent to mint, so the fixture uses the real handle. So is `page`: an
+ * agent-authored page declares its author through its own data
+ * (`pageBlockHandle`'s `authorFromData`), and that per-row answer is exactly
+ * what the cases below it pin.
  *
  * The two throwaways cover the two cells that matter to the write rule. Only
  * `author` decides a boundary, so `zz-authored` — agent-audience, human-authored
@@ -62,6 +69,7 @@ beforeEach(() => {
         Editor.BlockData(humanish),
         Editor.BlockData(textBlock),
         Editor.BlockData(agentNotesBlock),
+        Editor.BlockData(pageBlockHandle),
       ],
     },
   ]);
@@ -92,11 +100,15 @@ function row(id: string, parentId: string, type: string): StoredBlock {
   rank += 1;
   return { id, parentId, type, data: {}, rank: `a${rank}`, expanded: true };
 }
+/** A HUMAN's page row: `author` absent. */
+const humanPageData = { title: "Test page", icon: null };
 const scope: BlockScope = {
   pageId: PAGE,
   // Carried by the scope for the page-title banner (`markdown-apply`'s
   // `core/page-title.ts`); nothing this policy asserts on reads it.
   title: "Test page",
+  // The page's own row: a human's page, so it opens nothing.
+  pageRow: { id: PAGE, type: "page", data: humanPageData },
   rows: [
     row("prose", PAGE, "text"),
     row("withheld", PAGE, privateish.type),
@@ -187,36 +199,34 @@ describe("assertAgentAddressable (rule 1, the ancestor half)", () => {
   });
 });
 
-describe("assertNoteCard (rule 2 — write_agent_note's door)", () => {
+describe("assertAgentAuthored (rule 2 — write_agent_note's door)", () => {
   test("accepts an agent-note card", () => {
     expect(() => {
-      assertNoteCard(scope, "notes");
+      assertAgentAuthored(scope, "notes");
     }).not.toThrow();
   });
 
-  test("refuses prose, an agent-audience card, and the page — naming edit_page", () => {
+  test("refuses prose, an agent-audience card, and a human's page — naming edit_page", () => {
     for (const id of ["prose", "note-line", "shared", PAGE]) {
       expect(() => {
-        assertNoteCard(scope, id);
-      }).toThrow(
-        /is not an "agent-note" card|is the page itself, not an "agent-note"/,
-      );
+        assertAgentAuthored(scope, id);
+      }).toThrow(/not agent-authored/);
     }
     // The primary error is a page id sent to Write, so its message points at the
-    // tool that does take one — not at the deleted append tool.
+    // tool that does take one — not at the deleted append tool — and names both
+    // kinds of block the door does admit, off the handles.
     expect(() => {
-      assertNoteCard(scope, PAGE);
-    }).toThrow(/edit_page/);
+      assertAgentAuthored(scope, PAGE);
+    }).toThrow(/<agent-inline> or <agent-page>[\s\S]*edit_page/);
   });
 
   test("refuses an agent-note card that sits inside a withheld one", () => {
     const nested: BlockScope = {
-      pageId: PAGE,
-      title: scope.title,
+      ...scope,
       rows: [...scope.rows, row("buried", "withheld", agentNotesBlock.type)],
     };
     expect(() => {
-      assertNoteCard(nested, "buried");
+      assertAgentAuthored(nested, "buried");
     }).toThrow(/withheld from agents/);
   });
 
@@ -227,7 +237,7 @@ describe("assertNoteCard (rule 2 — write_agent_note's door)", () => {
     // card is invisible to the walk AND preserved by it (its `(parent_id, rank)`
     // key stays reserved), so there is nothing left to refuse.
     expect(() => {
-      assertNoteCard(scope, "tainted");
+      assertAgentAuthored(scope, "tainted");
     }).not.toThrow();
   });
 
@@ -237,13 +247,13 @@ describe("assertNoteCard (rule 2 — write_agent_note's door)", () => {
     // document echoed `answer` back or dropped it — is visible on the PLAN, and
     // the case below asserts the drop is refused there.
     expect(() => {
-      assertNoteCard(scope, "notes");
+      assertAgentAuthored(scope, "notes");
     }).not.toThrow();
   });
 });
 
 // ---------------------------------------------------------------------------
-// assertNotesOnlyPlan (rule 3)
+// assertAgentAuthoredPlan (rule 3)
 // ---------------------------------------------------------------------------
 
 const NOW = new Date("2026-08-07T00:00:00.000Z");
@@ -286,9 +296,22 @@ function planOf(patch: {
 
 /** The page-rooted call `edit_page` makes. */
 const judgePage = (plan: MarkdownApplyPlan): string[] =>
-  assertNotesOnlyPlan({ plan, rows: scope.rows, rootId: PAGE });
+  assertAgentAuthoredPlan({
+    plan,
+    rows: scope.rows,
+    pageRow: scope.pageRow,
+    rootId: PAGE,
+  });
 
-describe("assertNotesOnlyPlan — every write inside a card", () => {
+/** The same judgement at any root of `scope`, over any rows. */
+const judgeAt = (
+  plan: MarkdownApplyPlan,
+  rootId: string,
+  rows: readonly StoredBlock[] = scope.rows,
+): string[] =>
+  assertAgentAuthoredPlan({ plan, rows, pageRow: scope.pageRow, rootId });
+
+describe("assertAgentAuthoredPlan — every write inside a card", () => {
   test("accepts writes inside an existing card", () => {
     expect(
       judgePage(
@@ -332,7 +355,7 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
           textEdits: [{ blockId: "prose", runs: [{ text: "hijacked" }] }],
         }),
       );
-    }).toThrow(/was edited outside every "agent-note" card/);
+    }).toThrow(/was edited outside every agent-authored block/);
   });
 
   test("refuses deleting prose — and words it as a delete, not as a drag", () => {
@@ -341,13 +364,13 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
     // would be a claim about a move that never happened.
     expect(() => {
       judgePage(planOf({ deleteIds: ["prose"] }));
-    }).toThrow(/was deleted outside every "agent-note" card/);
+    }).toThrow(/was deleted outside every agent-authored block/);
   });
 
   test("refuses creating an ordinary block outside every card", () => {
     expect(() => {
       judgePage(planOf({ creates: [create("loose", PAGE, "text")] }));
-    }).toThrow(/was created outside every "agent-note" card/);
+    }).toThrow(/was created outside every agent-authored block/);
   });
 
   test("T3: refuses MOVING prose into a card — the new chain is not enough", () => {
@@ -357,7 +380,7 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
       judgePage(
         planOf({ updates: [{ id: "prose", changes: { parentId: "notes" } }] }),
       );
-    }).toThrow(/did not COME from inside an "agent-note" card/);
+    }).toThrow(/did not COME from inside an agent-authored block/);
   });
 
   test("reports only the FIRST violation, and says how many there were", () => {
@@ -377,19 +400,18 @@ describe("assertNotesOnlyPlan — every write inside a card", () => {
     // `write_agent_note`'s shape: the root IS the boundary, so everything under
     // it passes — including a delete of the card's own line.
     expect(
-      assertNotesOnlyPlan({
-        plan: planOf({
+      judgeAt(
+        planOf({
           creates: [create("added", "notes", "text")],
           deleteIds: ["note-line"],
         }),
-        rows: scope.rows,
-        rootId: "notes",
-      }),
+        "notes",
+      ),
     ).toEqual(["notes"]);
   });
 });
 
-describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's own", () => {
+describe("assertAgentAuthoredPlan — a human-authored card is a hole in the agent's own", () => {
   test("refuses a text edit inside it — the page author's words, inside the agent's card", () => {
     expect(() => {
       judgePage(
@@ -421,11 +443,7 @@ describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's
     // does not echo `<zz-authored id="answer">` back plans exactly this delete,
     // and the whole write is refused with nothing written.
     expect(() => {
-      assertNotesOnlyPlan({
-        plan: planOf({ deleteIds: ["answer", "answer-line"] }),
-        rows: scope.rows,
-        rootId: "notes",
-      });
+      judgeAt(planOf({ deleteIds: ["answer", "answer-line"] }), "notes");
     }).toThrow(/the document deletes the <zz-authored> card answer/);
   });
 
@@ -452,7 +470,7 @@ describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's
 
   test("an agent-note nested INSIDE it still admits writes — nearest wins both ways", () => {
     // The composition rule read in the other direction. A human may nest an
-    // `<agent-note>` in their own card; the walk stops at that card's `author:
+    // `<agent-inline>` card in their own; the walk stops at that card's `author:
     // "agent"` before it ever reaches the human one above.
     const rows = [
       ...scope.rows,
@@ -460,13 +478,13 @@ describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's
       row("reply-line", "reply", "text"),
     ];
     expect(
-      assertNotesOnlyPlan({
-        plan: planOf({
+      judgeAt(
+        planOf({
           textEdits: [{ blockId: "reply-line", runs: [{ text: "ok" }] }],
         }),
+        PAGE,
         rows,
-        rootId: PAGE,
-      }),
+      ),
     ).toEqual(["reply"]);
   });
 
@@ -496,7 +514,7 @@ describe("assertNotesOnlyPlan — a human-authored card is a hole in the agent's
   });
 });
 
-describe("assertNotesOnlyPlan — minting a closed card is the SAME walk", () => {
+describe("assertAgentAuthoredPlan — minting a closed card is the SAME walk", () => {
   test("refuses minting a human-authored card, even INSIDE the agent's own", () => {
     // This is the case that used to be a rule of its own — a separate walk over
     // the plan's creates. It is asserted here to still fail, now through the
@@ -519,7 +537,7 @@ describe("assertNotesOnlyPlan — minting a closed card is the SAME walk", () =>
     expect(() => {
       judgePage(planOf({ creates: [create("mine", PAGE, privateish.type)] }));
     }).toThrow(
-      /page AUTHOR's own words[\s\S]*<agent-note>…<\/agent-note> card instead/,
+      /page AUTHOR's own words[\s\S]*<agent-inline>…<\/agent-inline> card instead/,
     );
   });
 
@@ -537,7 +555,7 @@ describe("assertNotesOnlyPlan — minting a closed card is the SAME walk", () =>
   });
 });
 
-describe("assertNotesOnlyPlan — a card inside a card", () => {
+describe("assertAgentAuthoredPlan — a card inside a card", () => {
   // The rule that used to refuse these ("notes do not nest") is gone: nesting is
   // an ordinary shape, and the boundary judgement reads a nested card as inside a
   // card because it is one. What each case pins is the ATTRIBUTION, which is the
@@ -604,7 +622,7 @@ describe("assertNotesOnlyPlan — a card inside a card", () => {
   });
 });
 
-describe("assertNotesOnlyPlan — the cards to stamp", () => {
+describe("assertAgentAuthoredPlan — the cards to stamp", () => {
   test("names every card a single edit touched", () => {
     const cards = judgePage(
       planOf({
@@ -641,5 +659,249 @@ describe("assertNotesOnlyPlan — the cards to stamp", () => {
         }),
       ),
     ).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Agent-authored pages: the page row declares through its own data
+// ---------------------------------------------------------------------------
+
+/** An agent-authored page's `data`, as the planner mints and the row stores it. */
+const agentPageData = (title: string) => ({
+  title,
+  icon: null,
+  author: "agent" as const,
+});
+
+/** A row with a real payload — `row()` gives `{}`, which a page cannot hold. */
+function rowWith(
+  id: string,
+  parentId: string,
+  type: string,
+  data: unknown,
+): StoredBlock {
+  return { ...row(id, parentId, type), data };
+}
+
+/**
+ * An agent-authored page's OWN scope — what `loadBlockScope(<its id>)` returns,
+ * since a page's content is written by its own id:
+ *
+ * ```
+ * apage                 (page, author: agent)
+ * ├── a-line
+ * ├── a-answer          (audience: agent, author: human)
+ * │   └── a-answer-line
+ * └── a-sub             (a human's sub-page, a shell here)
+ * ```
+ */
+const APAGE = "apage";
+const agentScope: BlockScope = {
+  pageId: APAGE,
+  title: "Findings",
+  pageRow: { id: APAGE, type: "page", data: agentPageData("Findings") },
+  rows: [
+    row("a-line", APAGE, "text"),
+    row("a-answer", APAGE, humanish.type),
+    row("a-answer-line", "a-answer", "text"),
+    rowWith("a-sub", APAGE, "page", { title: "Sub", icon: null }),
+  ],
+};
+const judgeAgentPage = (plan: MarkdownApplyPlan): string[] =>
+  assertAgentAuthoredPlan({
+    plan,
+    rows: agentScope.rows,
+    pageRow: agentScope.pageRow,
+    rootId: APAGE,
+  });
+/** A row created in the agent page's partition. */
+const createIn = (id: string, parentId: string, type: string): Block => ({
+  ...create(id, parentId, type),
+  pageId: APAGE,
+});
+
+describe("an agent-authored page — every block in it is the agent's", () => {
+  test("writes to its own prose are accepted, and stamp the PAGE", () => {
+    expect(
+      judgeAgentPage(
+        planOf({
+          textEdits: [{ blockId: "a-line", runs: [{ text: "revised" }] }],
+          creates: [createIn("a-new", APAGE, "text")],
+        }),
+      ),
+    ).toEqual([APAGE]);
+  });
+
+  test("deleting its prose and moving a line are accepted too — both chains open", () => {
+    expect(
+      judgeAgentPage(
+        planOf({
+          deleteIds: ["a-line"],
+          updates: [
+            { id: "a-sub", changes: { rank: Rank.between(null, null) } },
+          ],
+        }),
+      ),
+    ).toEqual([APAGE]);
+  });
+
+  test("a human-authored card inside it is still a hole", () => {
+    expect(() => {
+      judgeAgentPage(
+        planOf({
+          textEdits: [{ blockId: "a-answer-line", runs: [{ text: "no" }] }],
+        }),
+      );
+    }).toThrow(/sits inside <zz-authored> card a-answer/);
+  });
+
+  test("minting a human-authored card inside it is refused at its own row", () => {
+    expect(() => {
+      judgeAgentPage(
+        planOf({ creates: [createIn("mine", APAGE, humanish.type)] }),
+      );
+    }).toThrow(/the document creates a <zz-authored> card/);
+  });
+
+  test("a HUMAN's page is not: the same edit on it is refused as escaped", () => {
+    expect(() => {
+      judgePage(
+        planOf({ textEdits: [{ blockId: "prose", runs: [{ text: "x" }] }] }),
+      );
+    }).toThrow(/outside every agent-authored block/);
+  });
+});
+
+describe("minting an agent-authored page", () => {
+  /** A page row the planner mints: in THIS page, its body in its own partition. */
+  const mintedPage = (id: string, parentId: string, title: string): Block => ({
+    ...create(id, parentId, "page"),
+    data: agentPageData(title),
+    expanded: false,
+  });
+  const bodyOf = (id: string, pageId: string): Block => ({
+    ...create(id, pageId, "text"),
+    pageId,
+  });
+
+  test("at the human page's top level is legal, and stamps the NEW page as its creator", () => {
+    expect(
+      judgePage(
+        planOf({
+          creates: [
+            mintedPage("new-page", PAGE, "Findings"),
+            bodyOf("new-line", "new-page"),
+          ],
+        }),
+      ),
+    ).toEqual(["new-page"]);
+  });
+
+  test("inside an agent-inline card too — the new page is still its own nearest", () => {
+    expect(
+      judgePage(
+        planOf({ creates: [mintedPage("new-page", "notes", "Findings")] }),
+      ),
+    ).toEqual(["new-page"]);
+  });
+
+  test("a minted page WITHOUT the agent marker is prose, and refused", () => {
+    const humanPage: Block = {
+      ...create("sneaky", PAGE, "page"),
+      data: { title: "Mine now", icon: null },
+    };
+    expect(() => {
+      judgePage(planOf({ creates: [humanPage] }));
+    }).toThrow(/was created outside every agent-authored block/);
+  });
+
+  test("a minted page's body inside a human card stays refused — nearest wins", () => {
+    expect(() => {
+      judgePage(
+        planOf({
+          creates: [
+            mintedPage("new-page", PAGE, "Findings"),
+            {
+              ...create("n-card", "new-page", humanish.type),
+              pageId: "new-page",
+            },
+          ],
+        }),
+      );
+    }).toThrow(/the document creates a <zz-authored> card/);
+  });
+});
+
+describe("the door admits an agent-authored page, by its own row", () => {
+  test("write_agent_note on the page's own id is admitted", () => {
+    expect(() => {
+      assertAgentAuthored(agentScope, APAGE);
+    }).not.toThrow();
+  });
+
+  test("…and refused for a human's page, naming what it is", () => {
+    expect(() => {
+      assertAgentAuthored(scope, PAGE);
+    }).toThrow(/page page is a <page> its author wrote, not agent-authored/);
+  });
+});
+
+describe("a NESTED root takes what its ancestry declares — the stated behaviour change", () => {
+  const rows = [
+    ...scope.rows,
+    row("note-para", "notes", "text"),
+    row("note-para-child", "note-para", "text"),
+  ];
+
+  test("rooted at a line INSIDE an agent-inline card, a write is ACCEPTED", () => {
+    // It used to be refused: the engine's walk hit the undeclared root and
+    // answered "outside every card", while the card holding the root said the
+    // opposite. The enclosure is that card, so the write resolves inside it —
+    // and is attributed to it.
+    expect(
+      judgeAt(
+        planOf({
+          creates: [create("n", "note-para", "text")],
+          textEdits: [{ blockId: "note-para-child", runs: [{ text: "x" }] }],
+        }),
+        "note-para",
+        rows,
+      ),
+    ).toEqual(["notes"]);
+  });
+
+  test("rooted at a line inside a <human> card it stays refused, now as enclosed — naming the card", () => {
+    expect(() => {
+      judgeAt(
+        planOf({ creates: [create("n", "answer-line", "text")] }),
+        "answer-line",
+      );
+    }).toThrow(/sits inside <zz-authored> card answer/);
+  });
+
+  test("rooted at a line of prose it stays escaped", () => {
+    expect(() => {
+      judgeAt(planOf({ creates: [create("n", "prose", "text")] }), "prose");
+    }).toThrow(/outside every agent-authored block/);
+  });
+});
+
+describe("refusal wording names BOTH kinds, off the handles", () => {
+  test("an escaped write names <agent-inline> and <agent-page> as where writes go", () => {
+    expect(() => {
+      judgePage(planOf({ deleteIds: ["prose"] }));
+    }).toThrow(/inside an <agent-inline> or <agent-page>/);
+  });
+
+  test("and tells the agent to mint the INLINE card, by its tag — never its stored type", () => {
+    let message = "";
+    try {
+      judgePage(planOf({ creates: [create("loose", PAGE, "text")] }));
+    } catch (err) {
+      if (!(err instanceof Error)) throw err;
+      message = err.message;
+    }
+    expect(message).toContain("<agent-inline>…</agent-inline>");
+    expect(message).not.toContain("agent-note");
   });
 });

@@ -152,30 +152,38 @@ function updateIsJudged(changes: BlockFieldChanges): boolean {
 }
 
 /**
- * The parent/type maps a chain walk resolves against. Two of them exist per call
- * — see {@link boundaryViolations} — and neither is ever mutated after it is
+ * The parent/type/data maps a chain walk resolves against. Two of them exist per
+ * call — see {@link boundaryViolations} — and none is ever mutated after it is
  * built.
+ *
+ * `dataOf` is there because a row's declaration may be decided by its DATA as
+ * well as its type — an agent-authored page is a `type="page"` row whose `data`
+ * says so — so the classifier is handed both, and the after-maps must carry the
+ * data a plan writes exactly as they carry the type it writes.
  */
 interface ChainMaps {
   parentOf: Map<string, string | null>;
   typeOf: Map<string, string>;
+  dataOf: Map<string, unknown>;
 }
 
 /** The forest as it stands BEFORE the plan: the whole partition, unmodified. */
 function mapsOfExisting(existing: readonly StoredRow[]): ChainMaps {
   const parentOf = new Map<string, string | null>();
   const typeOf = new Map<string, string>();
+  const dataOf = new Map<string, unknown>();
   for (const row of existing) {
     parentOf.set(row.id, row.parentId);
     typeOf.set(row.id, row.type);
+    dataOf.set(row.id, row.data);
   }
-  return { parentOf, typeOf };
+  return { parentOf, typeOf, dataOf };
 }
 
 /**
  * The forest as it stands AFTER the plan: the same maps, overlaid by everything
  * the patch writes to a row's IDENTITY or POSITION IN THE TREE — the creates
- * (which carry both) and the `parentId` / `type` an update names.
+ * (which carry all three) and the `parentId` / `type` / `data` an update names.
  *
  * `deleteIds` are deliberately NOT removed. A deleted row is only ever walked in
  * the before-maps, so removing it here would buy nothing; and leaving it means a
@@ -185,9 +193,11 @@ function mapsOfExisting(existing: readonly StoredRow[]): ChainMaps {
 function mapsAfterPlan(before: ChainMaps, plan: MarkdownApplyPlan): ChainMaps {
   const parentOf = new Map(before.parentOf);
   const typeOf = new Map(before.typeOf);
+  const dataOf = new Map(before.dataOf);
   for (const created of plan.patch.creates) {
     parentOf.set(created.id, created.parentId);
     typeOf.set(created.id, created.type);
+    dataOf.set(created.id, created.data);
   }
   for (const update of plan.patch.updates) {
     if (namesField(update.changes, "parentId")) {
@@ -195,13 +205,23 @@ function mapsAfterPlan(before: ChainMaps, plan: MarkdownApplyPlan): ChainMaps {
     }
     if (namesField(update.changes, "type"))
       typeOf.set(update.id, update.changes.type!);
+    if (namesField(update.changes, "data"))
+      dataOf.set(update.id, update.changes.data);
   }
-  return { parentOf, typeOf };
+  return { parentOf, typeOf, dataOf };
+}
+
+/** What a caller-supplied classifier is handed about one row. */
+export interface ClassifiedRow {
+  id: string;
+  type: string;
+  data: unknown;
 }
 
 /**
  * What does `startId`'s ancestor chain, resolved against `maps`, declare about
- * writes — and `"none"` when nothing on it declares anything.
+ * writes — `enclosure` when it reaches the scope root with nothing on it
+ * declaring anything, and `"none"` when it ends without reaching the root.
  *
  * **The nearest declaring row wins.** The walk stops at the first row that
  * declares ANYTHING, not at the first row that says yes, and that single choice is
@@ -221,6 +241,9 @@ function mapsAfterPlan(before: ChainMaps, plan: MarkdownApplyPlan): ChainMaps {
  * The walk ends at that first declaration, at `rootId` (the scope's own ceiling —
  * checked AFTER the declaration test, so a scoped apply whose root IS a declaring
  * card still resolves against it), or at a parent that is null or names no row.
+ * Reaching the ceiling answers `enclosure`: what the caller found ABOVE the root
+ * (see {@link boundaryViolations}' `enclosure`), since a root that declares
+ * nothing is not the end of its ancestry, only of this plan's.
  *
  * **The bound is corruption-only and throws.** A forest cannot hold a cycle, so a
  * chain longer than every row plus every created row means the maps are corrupt,
@@ -231,7 +254,8 @@ function nearestBoundary(
   startId: string,
   maps: ChainMaps,
   rootId: string,
-  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined,
+  boundaryOf: (row: ClassifiedRow) => WriteBoundary | undefined,
+  enclosure: WriteBoundary | "none",
   bound: number,
 ): WriteBoundary | "none" {
   let current: string | undefined = startId;
@@ -244,10 +268,14 @@ function nearestBoundary(
     }
     const type = maps.typeOf.get(current);
     if (type !== undefined) {
-      const declared = boundaryOf({ id: current, type });
+      const declared = boundaryOf({
+        id: current,
+        type,
+        data: maps.dataOf.get(current),
+      });
       if (declared !== undefined) return declared;
     }
-    if (current === rootId) return "none";
+    if (current === rootId) return enclosure;
     current = maps.parentOf.get(current) ?? undefined;
   }
   return "none";
@@ -327,10 +355,30 @@ export function boundaryViolations(args: {
    * never learns what any of the three answers means, and never names a block
    * type. `undefined` is the ordinary case: the overwhelming majority of a page's
    * rows are prose, which declares nothing.
+   *
+   * Handed the row's `data` as well as its type, as the chain maps resolve it
+   * (the after-side carrying whatever the plan writes), because a row may
+   * declare through its payload: an agent-authored page is an ordinary
+   * `type="page"` row whose `data` says whose it is.
    */
-  boundaryOf: (row: { id: string; type: string }) => WriteBoundary | undefined;
+  boundaryOf: (row: ClassifiedRow) => WriteBoundary | undefined;
+  /**
+   * What a chain gets when it reaches `rootId` with nothing on it declaring —
+   * i.e. what the caller found ABOVE the scope root: the nearest declaration on
+   * the root's own ancestry, up through the page row. `"none"` when nothing up
+   * there declares either.
+   *
+   * REQUIRED, because the engine cannot see above the root and a default would
+   * be a verdict it has no evidence for. Before it existed, a chain simply ended
+   * at the root with `"none"` — so an apply rooted at a nested block INSIDE an
+   * open card was refused for being "outside every boundary" while the card
+   * holding it said the opposite; and an apply rooted at the page itself had no
+   * way to hear that the PAGE declares one (an agent-authored page is open all
+   * the way down). The caller resolves it once per apply, from rows it holds.
+   */
+  enclosure: WriteBoundary | "none";
 }): BoundaryViolation[] {
-  const { plan, existing, rootId, boundaryOf } = args;
+  const { plan, existing, rootId, boundaryOf, enclosure } = args;
   const before = mapsOfExisting(existing);
   const after = mapsAfterPlan(before, plan);
   // Every row that can be on a chain: the partition plus everything this plan
@@ -349,14 +397,28 @@ export function boundaryViolations(args: {
     const hasNew = sides !== "old";
     const hasOld = sides !== "new";
     if (hasNew) {
-      const lands = nearestBoundary(blockId, after, rootId, boundaryOf, bound);
+      const lands = nearestBoundary(
+        blockId,
+        after,
+        rootId,
+        boundaryOf,
+        enclosure,
+        bound,
+      );
       if (lands !== "open") {
         violations.push({ blockId, how, side: "new", reason: reasonOf(lands) });
         return;
       }
     }
     if (hasOld) {
-      const came = nearestBoundary(blockId, before, rootId, boundaryOf, bound);
+      const came = nearestBoundary(
+        blockId,
+        before,
+        rootId,
+        boundaryOf,
+        enclosure,
+        bound,
+      );
       if (came !== "open") {
         violations.push({ blockId, how, side: "old", reason: reasonOf(came) });
       }

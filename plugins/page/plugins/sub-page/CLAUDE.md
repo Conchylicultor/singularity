@@ -15,16 +15,20 @@
     - `page/editor.useVoidCaret`
     - `page/page-reference.usePageNavigation`
     - `page/page-reference.usePageReferenceActions`
+    - `page/page-reference.usePageReferenceDecoration`
     - `primitives/css/center.Center`
     - `primitives/css/row.Row`
     - `primitives/css/row.RowFocus`
     - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/row-actions.RowActions`
   - Exports (values): `subPageBlock`
 - Core:
   - Uses:
     - `page/editor.defineBlock`
     - `page/editor.PAGE_BLOCK_TYPE`
+    - `page/editor.pageBlockAuthor`
     - `page/editor.pageBlockMarkdown`
     - `page/editor.PageDataSchema`
   - Exports (values): `subPageBlock`

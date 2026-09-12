@@ -45,7 +45,7 @@ import {
 import { pageBlockHandle, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { Editor } from "./block-registry";
-import { parseBlockData } from "./parse-block-data";
+import { parseBlockData, rewriteBlockData } from "./parse-block-data";
 import { BlockLifecycle, type DeletedBlockRow } from "./document-hooks";
 import { withPageForest } from "./page-forest";
 import {
@@ -291,7 +291,13 @@ describe("withPageForest — lost update", () => {
             write: (changes) =>
               updateBlockFields(ctx.tx, "x", {
                 expanded: changes.expanded,
-                data: parseBlockData("text", changes.data),
+                // An update's data is a REWRITE, and says so; the stub text type
+                // declares no author, so the check is a formality here.
+                data: rewriteBlockData({
+                  type: "text",
+                  before: { type: "text", data: {} },
+                  next: changes.data,
+                }),
               }),
           }),
         // A and B must sit on different connections or the pool serializes them
@@ -472,13 +478,14 @@ describe("withPageForest — multi-page locking", () => {
       withPageForest(
         scopes,
         async (ctx) => {
-          await updateBlockFields(ctx.tx, "x1", {
-            data: parseBlockData("text", { label }),
+          const rewrite = rewriteBlockData({
+            type: "text",
+            before: { type: "text", data: {} },
+            next: { label },
           });
+          await updateBlockFields(ctx.tx, "x1", { data: rewrite });
           await raceWindow();
-          await updateBlockFields(ctx.tx, "x2", {
-            data: parseBlockData("text", { label }),
-          });
+          await updateBlockFields(ctx.tx, "x2", { data: rewrite });
         },
         handle,
       );

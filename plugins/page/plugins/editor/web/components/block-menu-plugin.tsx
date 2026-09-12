@@ -8,14 +8,17 @@ import {
   useCaretQuery,
   useForcedCaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
-import type { BlockHandle } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
-import { $linearCaretOffset } from "../internal/block-text-extensions";
+import {
+  $linearCaretOffset,
+  serializeBlockRuns,
+} from "../internal/block-text-extensions";
+import { runsWithoutSpan } from "../internal/runs-without-span";
+import { flattenEntries, type InsertEntry } from "../internal/block-sections";
 import {
   BlockTypeList,
-  filterBlockTypes,
-  flattenSections,
-  useGroupedInsertableBlocks,
+  filterInsertEntries,
+  useInsertMenuSections,
 } from "./block-type-list";
 
 const TRIGGER = "/";
@@ -40,18 +43,34 @@ const TRIGGER = "/";
  * before the caret (it was pure filter, not content). Both go through the ONE
  * `convertStrippingText` primitive — the strip is a CONTENT-DOC edit (text has a
  * single owner), never a row payload the type write carries.
+ *
+ * The list also carries contributed `Editor.InsertAction`s, ranked among the
+ * block types by the same filter. Committing one consumes the same span by the
+ * same rule (`stripText`, the strip half alone) and then hands the line to the
+ * action's `run` instead of converting it.
  */
 export function BlockMenuPlugin({ blockId }: { blockId: string }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const grouped = useGroupedInsertableBlocks();
-  const flatAll = useMemo(() => flattenSections(grouped), [grouped]);
-  const { blockMenuDraftId, clearBlockMenu, convertStrippingText } = useBlockEditor();
+  const grouped = useInsertMenuSections(blockId);
+  const flatAll = useMemo(() => flattenEntries(grouped), [grouped]);
+  const {
+    blockMenuDraftId,
+    clearBlockMenu,
+    convertStrippingText,
+    stripText,
+    makeBlockAPI,
+  } = useBlockEditor();
   const active = blockMenuDraftId === blockId;
   // A newline ends the query; any space means the user typed a literal `/ …`
   // (not a command) — Notion dismisses the menu the moment a space follows.
   const isQueryValid = (q: string) => !/[\n ]/.test(q);
 
-  const caret = useCaretQuery({ id: "slash", trigger: TRIGGER, canOpen: atWordBoundary, isQueryValid });
+  const caret = useCaretQuery({
+    id: "slash",
+    trigger: TRIGGER,
+    canOpen: atWordBoundary,
+    isQueryValid,
+  });
   const forced = useForcedCaretQuery({
     id: "block-draft",
     active,
@@ -66,12 +85,15 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
   // sections. `flat` is the keyboard nav index space (over selectable rows only),
   // matching what `BlockTypeList` renders.
   const sections = useMemo(
-    () => (menu.query ? [{ blocks: filterBlockTypes(flatAll, menu.query) }] : grouped),
+    () =>
+      menu.query
+        ? [{ entries: filterInsertEntries(flatAll, menu.query) }]
+        : grouped,
     [menu.query, flatAll, grouped],
   );
-  const flat = useMemo(() => flattenSections(sections), [sections]);
+  const flat = useMemo(() => flattenEntries(sections), [sections]);
 
-  function handleSelect(handle: BlockHandle<unknown>) {
+  function handleSelect(entry: InsertEntry) {
     // Resolve the consumed span as LINEAR offsets — the stored-runs plain-text
     // basis the whole content-surgery seam speaks (same as split `position`).
     //   - slash: `[the `/`, the caret)`, so the text AROUND the slash survives.
@@ -97,7 +119,10 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
       }
       const node = sel.anchor.getNode();
       if (!$isTextNode(node)) return;
-      const idx = node.getTextContent().slice(0, sel.anchor.offset).lastIndexOf(TRIGGER);
+      const idx = node
+        .getTextContent()
+        .slice(0, sel.anchor.offset)
+        .lastIndexOf(TRIGGER);
       if (idx === -1) return;
       found = true;
       // Within ONE text node linear offsets advance 1:1 with node offsets, so
@@ -107,29 +132,50 @@ export function BlockMenuPlugin({ blockId }: { blockId: string }) {
     });
     if (!found) return;
 
-    convertStrippingText({
-      blockId,
-      from,
-      to,
-      type: handle.type,
-      // The block keeps its id, so it keeps its content doc: seed only the
-      // target type's NON-text defaults and let its text come along untouched.
-      data: handle.emptyRowData(),
-    });
+    if (entry.kind === "block") {
+      convertStrippingText({
+        blockId,
+        from,
+        to,
+        type: entry.block.type,
+        // The block keeps its id, so it keeps its content doc: seed only the
+        // target type's NON-text defaults and let its text come along untouched.
+        data: entry.block.emptyRowData(),
+      });
+    } else {
+      // Same strip, same moment — the action then owns what happens to the
+      // line. The action is handed the line's text WITHOUT the query, cut here
+      // from the live runs (same linear basis as `from`/`to`): the strip is a
+      // nested update that lands only after this commit's own, so nothing the
+      // action could read would say it yet — and an action that replaces the
+      // line must carry the rest of it over, never drop it.
+      const text = runsWithoutSpan(serializeBlockRuns(lexicalEditor), from, to);
+      stripText({ blockId, from, to });
+      entry.action.run({ blockId, editor: makeBlockAPI(blockId), text });
+    }
     if (useForced) clearBlockMenu(blockId);
   }
 
-  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(menu, {
-    itemCount: flat.length,
-    onCommit: (i) => handleSelect(flat[i]!),
-    surfaceWhen: "interactive",
-  });
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(
+    menu,
+    {
+      itemCount: flat.length,
+      onCommit: (i) => handleSelect(flat[i]!),
+      surfaceWhen: "interactive",
+    },
+  );
 
   // Both keyboard (Enter) and mouse commit through the SAME `onCommit` — the
   // menu's `commit` runs it on pointerdown and inside an `editor.update()`, so a
   // click and Enter are the same operation (see `useCaretMenu`).
   return (
-    <CaretTriggerMenu caret={menu} open={surfaceOpen} width="sm" padding="xs" maxHeight="lg">
+    <CaretTriggerMenu
+      caret={menu}
+      open={surfaceOpen}
+      width="sm"
+      padding="xs"
+      maxHeight="lg"
+    >
       <BlockTypeList
         sections={sections}
         activeIndex={activeIndex}

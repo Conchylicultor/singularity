@@ -236,7 +236,7 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "the prompt tells the agent where to write its findings back",
-    prompt.includes("<agent-note>") && prompt.includes("read_page"),
+    prompt.includes("<agent-inline>") && prompt.includes("read_page"),
     prompt,
   );
 
