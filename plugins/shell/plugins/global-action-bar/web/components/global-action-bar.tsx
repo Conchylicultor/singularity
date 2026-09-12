@@ -1,11 +1,9 @@
 import { useEffect } from "react";
-import { MdPushPin, MdOutlinePushPin } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -18,6 +16,7 @@ import {
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { HealthReportButton } from "@plugins/shell/plugins/health-report/web";
 import { actionBarConfig } from "../../shared/config";
+import { ViewOptionsButton } from "./view-options-button";
 
 // Effectively permanent: the pin is a deliberate UI preference, not a transient
 // draft, so it must outlive the persistent-draft primitive's default 7-day TTL.
@@ -35,7 +34,10 @@ function HealthItem() {
   );
 }
 
-/** The shared action set plus the pin toggle — the expanding portion of the bar. */
+/**
+ * The shared action set plus the gear popover (view options and the pin
+ * toggle) — the expanding portion of the bar.
+ */
 function ActionRow({
   pinned,
   onTogglePin,
@@ -47,11 +49,7 @@ function ActionRow({
     <>
       <ActionBar.Item.Render />
       <ControlSizeProvider size="sm">
-        <IconButton
-          icon={pinned ? MdPushPin : MdOutlinePushPin}
-          label={pinned ? "Unpin action bar" : "Pin action bar"}
-          onClick={onTogglePin}
-        />
+        <ViewOptionsButton pinned={pinned} onTogglePin={onTogglePin} />
       </ControlSizeProvider>
     </>
   );

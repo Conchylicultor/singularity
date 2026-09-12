@@ -1,4 +1,4 @@
-// @hash 0d675211e194
+// @hash 9d611b0001bf
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,12 +6,8 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "build:build",
-    "improve:improve",
-    "improve.element-picker:element-picker",
-    "screenshot:screenshot",
-    "screenshot.draw-on-app:draw-on-app",
-    "shell.notifications:notifications",
-    "ui.theme-engine.quick-theme:quick-theme"
+    "apps-core.surface:placement-control",
+    "fullscreen:fullscreen-toggle",
+    "reorder.edit-mode:reorder-pen"
   ]
 }

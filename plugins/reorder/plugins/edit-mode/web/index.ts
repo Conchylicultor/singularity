@@ -5,16 +5,18 @@ import {
   getEditMode,
   setEditMode,
 } from "@plugins/primitives/plugins/edit-mode-signal/web";
-import { PenButton } from "./internal/pen-button";
+import { EditLayoutSwitch } from "./internal/edit-layout-switch";
 
 export default {
   description:
-    "Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.",
+    "Edit-layout switch in the action bar's view-options popover that toggles global edit mode for all reorderable slots; Esc exits edit mode.",
   contributions: [
-    ActionBar.Item({
+    ActionBar.ViewOption({
       id: "reorder-pen",
+      // In edit mode every reorderable item is a drag target that ignores
+      // clicks, so the switch that turns edit mode off must stay out of it.
       excludeFromReorder: true,
-      component: PenButton,
+      component: EditLayoutSwitch,
     }),
     defineShortcut({
       id: "reorder.exit-edit-mode",

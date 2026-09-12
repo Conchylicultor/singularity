@@ -202,6 +202,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "runs.fields", pluginId: "runs", configName: "fields" },
   { slotId: "screenshot.screenshot.actions", pluginId: "screenshot", configName: "screenshot.actions" },
   { slotId: "shell.action-bar.item", pluginId: "shell.action-bar", configName: "item" },
+  { slotId: "shell.action-bar.view-option", pluginId: "shell.action-bar", configName: "view-option" },
   { slotId: "shell.sidebar", pluginId: "shell", configName: "sidebar" },
   { slotId: "shell.toolbar", pluginId: "shell", configName: "toolbar" },
   { slotId: "stats.chart", pluginId: "stats", configName: "chart" },

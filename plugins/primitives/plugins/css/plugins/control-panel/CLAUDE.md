@@ -618,6 +618,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `usePanelStack`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/surface`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/settings`
     - `apps/pages/page-tree`
@@ -628,6 +629,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `config_v2/settings`
     - `conversations/conversation-category`
     - `fields/date/filter`
+    - `fullscreen`
     - `page/callout`
     - `page/container`
     - `page/editor`
@@ -635,6 +637,8 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `primitives/data-view`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/view-core`
+    - `reorder/edit-mode`
+    - `shell/global-action-bar`
     - `ui/theme-engine/quick-theme`
     - `ui/theme-toggle`
 

@@ -4,10 +4,17 @@ Renders the shared `ActionBar.Item` set as a single global bar in the tab bar
 (`Apps.TabBarActions`), so the main actions are available identically in every
 app. Its leading item, in both hosts, is the health report's dot
 (`HealthReportButton` from `shell/health-report`): collapsed, the bar is just that
-dot, which expands the bar on hover and opens the report on click; a pin button
-sticks it expanded inline, persisted in localStorage. Pinned is the default, so a
-fresh origin (every new worktree's `<wt>.localhost:9000`) shows the docked strip
-until the user unpins it there. Owns the `enabled` config.
+dot, which expands the bar on hover and opens the report on click; a pin
+switch sticks it expanded inline, persisted in localStorage. Pinned is the
+default, so a fresh origin (every new worktree's `<wt>.localhost:9000`) shows the
+docked strip until the user unpins it there. Owns the `enabled` config.
+
+Its trailing item is one gear button (`ViewOptionsButton`) opening a
+control-panel popover: the `ActionBar.ViewOption` rows (surface mode, browser
+fullscreen, edit layout — whatever is contributed) followed by the bar's own
+"Pin action bar" switch. Options about how the app is shown are set once and
+left alone, so they share that one button rather than each taking a slot in
+the bar.
 
 The two hosts are mutually exclusive (the pin), which is what keeps exactly one
 `HealthReportButton` — and so one set of health probes — mounted at a time.
@@ -33,6 +40,8 @@ tab bar, which an embed does not paint.
     - `apps-core/tabs.useSurfaceMode`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
+    - `primitives/css/control-panel.ControlPanel`
+    - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/embed.isEmbeddedDocument`

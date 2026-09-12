@@ -9,7 +9,7 @@
   - Slots: `Surface.Placement` ← `apps-core.surface.docked`, `apps-core.surface.floating`, `apps-core.surface.solo`
   - Contributes:
     - `Apps.Surface` "Surface" → `SurfaceBody`
-    - `ActionBar.Item` → `ActionBarPlacementControl`
+    - `ActionBar.ViewOption` → `ActionBarPlacementControl`
   - Uses:
     - `apps-core.Apps`
     - `apps-core/tab-surface.TabSurface`
@@ -19,6 +19,7 @@
     - `apps-core/tabs.useSurfaceMode`
     - `apps-core/tabs.useTabs`
     - `primitives/css/clip.Clip`
+    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/ui-kit.cn`

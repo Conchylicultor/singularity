@@ -20,9 +20,9 @@ export default {
   contributions: [
     // The single body that renders every tab under the one surface mode.
     Apps.Surface({ component: SurfaceBody }),
-    // The mode control, contributed as a shared action-bar item so it renders in
-    // both the docked tab-bar strip and the floating overlay.
-    ActionBar.Item({
+    // The mode control, contributed as an action-bar view option so it renders
+    // in the bar's gear popover (docked tab-bar strip and floating overlay).
+    ActionBar.ViewOption({
       id: "placement-control",
       component: ActionBarPlacementControl,
     }),

@@ -3,8 +3,12 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { FullscreenToggle } from "./components/fullscreen-toggle";
 
 export default {
-  description: "Toolbar toggle to enter / exit browser fullscreen.",
+  description:
+    "Browser fullscreen switch in the action bar's view-options popover.",
   contributions: [
-    ActionBar.Item({ id: "fullscreen-toggle", component: FullscreenToggle }),
+    ActionBar.ViewOption({
+      id: "fullscreen-toggle",
+      component: FullscreenToggle,
+    }),
   ],
 } satisfies PluginDefinition;
