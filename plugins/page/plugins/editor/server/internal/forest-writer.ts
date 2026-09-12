@@ -648,7 +648,7 @@ async function trashBeforePlacing(
  */
 async function trashOrphanInserts(
   tx: PageForestTx,
-  write: ForestWriteResult,
+  write: Pick<ForestWriteResult, "trashedEntryId" | "deletedRows">,
   insertedIds: readonly string[],
 ): Promise<void> {
   if (write.trashedEntryId === null) return;

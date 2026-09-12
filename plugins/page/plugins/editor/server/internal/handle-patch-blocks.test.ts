@@ -52,7 +52,6 @@ import { deleteBlocksSubtree, purgeTrashedBlocks } from "./trash-blocks";
 import { withPageForest } from "./page-forest";
 import { writeForestTarget } from "./forest-writer";
 import { rowToNode } from "./reconcile";
-import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 
 // Stand-in for `page/text` (the concrete block plugin imports this one, so
 // importing it back would be a cycle). Text-bearing, so `data.text` is real.

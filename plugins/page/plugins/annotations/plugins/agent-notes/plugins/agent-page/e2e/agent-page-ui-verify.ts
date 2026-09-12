@@ -157,8 +157,8 @@ await withBrowser(async (h) => {
   await agentRow.getByText(AGENT_PAGE_TITLE).waitFor({ state: "visible", timeout: 30_000 });
   r.ok("U1: the agent page's row is tinted with the agent wash", await washed(agentRow));
   const chip = agentRow.locator("button[title]").filter({ hasNotText: AGENT_PAGE_TITLE });
-  await chip.first().waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
-  const chipTitle = await chip.first().getAttribute("title").catch(() => null);
+  await chip.first().waitFor({ state: "visible", timeout: 30_000 });
+  const chipTitle = await chip.first().getAttribute("title");
   r.ok(
     "U1: the row carries a chip naming the creating conversation",
     chipTitle !== null && chipTitle.length > 0,
@@ -173,7 +173,7 @@ await withBrowser(async (h) => {
   // --- U2. expanded ---------------------------------------------------------
   await api(page, "PATCH", `/api/blocks/${agentPageId}`, { expanded: true });
   const body = page.getByText(AGENT_PAGE_BODY, { exact: true }).first();
-  await body.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
+  await body.waitFor({ state: "visible", timeout: 30_000 });
   r.ok("U2: expanding shows the page's content inline", await body.isVisible());
   r.ok("U2: the row keeps its wash while expanded", await washed(agentRow));
   await snap(page, out, "expanded");
@@ -186,7 +186,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1500);
   await page.keyboard.type(`${SLASH_TITLE} /agent-page`);
   const option = page.getByText("Agent page", { exact: true }).first();
-  await option.waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
+  await option.waitFor({ state: "visible", timeout: 15_000 });
   r.ok("U4: the / menu offers \"Agent page\"", await option.isVisible());
   // Let the caret-anchored menu settle onto its anchor before the picture.
   await page.waitForTimeout(500);
@@ -196,7 +196,7 @@ await withBrowser(async (h) => {
     .locator("[data-block-id]")
     .filter({ has: page.getByText(SLASH_TITLE, { exact: true }) })
     .first();
-  await slashRow.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
+  await slashRow.waitFor({ state: "visible", timeout: 30_000 });
   // The caret lands on the new row, and a row under the caret shows the caret
   // cue INSTEAD of the wash (both are a row background) — so move it away.
   await page.getByText(ANCHOR, { exact: true }).first().click();

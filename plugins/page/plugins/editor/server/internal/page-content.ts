@@ -227,6 +227,7 @@ export async function restorePageContent(
 
       return {
         deletedRows: write.deletedRows,
+        createdPageIds: write.createdPageIds,
         textEdits: plan.textEdits,
         pageScope: pageRow.pageId,
       };
@@ -235,7 +236,11 @@ export async function restorePageContent(
   );
 
   await notifyStructuralChange(
-    { pageId, deletedRows: value.deletedRows },
+    {
+      pageId,
+      deletedRows: value.deletedRows,
+      createdPageIds: value.createdPageIds,
+    },
     executor,
   );
   // The page row's own data (title, cover): its cover links are scoped to its
