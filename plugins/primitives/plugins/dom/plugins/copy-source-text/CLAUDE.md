@@ -61,6 +61,26 @@ the HTML a rich target reads.
   because `querySelectorAll` is document-ordered: the outer element is replaced
   first and carries the inner one out of the fragment.
 
+## Selecting: one unit, like it copies
+
+An element that stands in for source text (a **non-empty** declaration) is
+copied whole — a selection ending halfway into a chip still copies the full
+token. So the selection has to *look* whole too, or it lies about the copy:
+
+- `selection-units.css` makes its letters unselectable, so the browser paints
+  no half-highlighted label.
+- `installSelectionUnits()` (the same `Core.Root` host) listens to
+  `selectionchange` and stamps `data-copy-text-selected` on every such element
+  the selection overlaps; the CSS rings it — the same ring the prompt editor
+  draws on a selected chip decorator.
+
+Both rules target the declaring element's **child**: the declaring wrapper is
+`display:contents`, so the chip inside it is the box. A wrapper still showing
+its raw token as text (chip data not loaded yet) stays normally selectable. An
+empty declaration (`copiesAsOwnText`) is left alone — it copies exactly the
+letters selected. Editors are skipped by the same `[contenteditable]` gate as
+the copy: they ring their own chips.
+
 ## Who declares
 
 | declaration | who | text |
@@ -78,7 +98,7 @@ useful than their tag source.
 
 ## Plugin reference
 
-- Description: Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable.
+- Description: Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText (core), and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
 - Web:
   - Contributes: `Core.Root` → `CopySourceTextHost`
   - Uses: `primitives/dom/dom-selection.selectionRange`

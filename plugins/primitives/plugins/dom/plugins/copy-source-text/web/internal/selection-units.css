@@ -1,0 +1,27 @@
+/*
+ * An element that stands in for source text (a non-empty `data-copy-text`) is
+ * ONE unit of selection, the way it is one unit of copy.
+ *
+ * Its letters take no per-character highlight — `selection-units.ts` marks the
+ * whole element instead, and the ring below is the only thing a selection
+ * paints on it. It matches the ring the prompt editor draws on a selected chip
+ * decorator (`ring-2 ring-ring ring-offset-1 ring-offset-background`).
+ *
+ * Both rules reach the element's CHILD: the declaring wrapper is
+ * `display:contents` (no box of its own), and the chip it wraps is the box.
+ * `:has(> *)` keeps a wrapper that is still showing its raw token as plain text
+ * (a chip whose data has not loaded) selectable like the words around it.
+ *
+ * Plain CSS, not utilities on the element, because the declaring sites belong
+ * to other plugins and the rule belongs to the declaration, not to them.
+ */
+[data-copy-text]:not([data-copy-text=""]):has(> *) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+[data-copy-text-selected] > * {
+  box-shadow:
+    0 0 0 1px var(--background),
+    0 0 0 3px var(--ring);
+}

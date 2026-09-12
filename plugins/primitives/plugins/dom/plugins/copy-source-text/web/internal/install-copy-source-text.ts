@@ -1,5 +1,6 @@
 import { selectionRange } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { applyCopySources } from "./rewrite";
+import { isInsideEditable } from "./inside-editable";
 
 /**
  * Install the document-level `copy` handler that puts declared source text on
@@ -34,7 +35,7 @@ function onCopy(event: ClipboardEvent): void {
   const selection = window.getSelection();
   const live = selectionRange();
   if (!selection || !live || live.collapsed) return;
-  if (isInsideEditable(live)) return;
+  if (isInsideEditable(live.commonAncestorContainer)) return;
 
   // Cloned before the stage takes the selection away: this is what we put back.
   const restore = live.cloneRange();
@@ -91,20 +92,4 @@ function serialize(
     selection.addRange(restore);
     stage.remove();
   }
-}
-
-/**
- * Whether the selection sits inside an editor's editable region.
- *
- * Matches `contenteditable="false"` too, and that is wanted: an inline chip in a
- * Lexical document is a `contenteditable=false` decorator inside an editable
- * root, and either way the editor owns the copy.
- */
-function isInsideEditable(range: Range): boolean {
-  const node = range.commonAncestorContainer;
-  const element =
-    node.nodeType === Node.ELEMENT_NODE
-      ? (node as Element)
-      : node.parentElement;
-  return element?.closest("[contenteditable]") != null;
 }
