@@ -4,6 +4,7 @@ import { useActiveApp, Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   appThemeScope,
+  subThemeScope,
   themeScopeSelectors,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -21,6 +22,9 @@ import {
   themeSelectionConfig,
   type ColorAdjustment,
   type GroupValues,
+  type SubTheme,
+  type TokenGroupFragment,
+  type TokenValues,
 } from "../../core";
 import { transformValues } from "../internal/transform";
 import { renderGroupBlock } from "../internal/serialize-vars";
@@ -105,10 +109,24 @@ function GroupStyle({
   // Scoped overrides get a distinct `theme-scope-` id; the global path keeps the
   // `theme-engine-` id the pre-paint replay and cache rely on. Both id families
   // feed the aggregator and the claim-based prune set.
-  const id = scopeToken
-    ? `theme-scope-${scopeToken}-${group.id}`
-    : styleIdFor(group.id);
+  usePaintedStyle(
+    scopeToken ? scopedStyleIdFor(scopeToken, group.id) : styleIdFor(group.id),
+    text,
+  );
+  return null;
+}
 
+// styleId for a scoped block — an app scope's or a sub-theme's. The
+// `theme-scope-` prefix is what the prune pass and the pre-paint replay match.
+const scopedStyleIdFor = (scopeToken: string, groupId: string) =>
+  `theme-scope-${scopeToken}-${groupId}`;
+
+/**
+ * One painted `<style>` element: `text` in the document and in the pre-paint
+ * cache, under `id`. `null` text (a theme still loading) leaves whatever is
+ * there — the CSS replayed before first paint — untouched.
+ */
+function usePaintedStyle(id: string, text: string | null): void {
   // Element lifecycle — runs once per id, NOT on theme changes. Adopts the
   // replay-injected element in place (by id) or creates it, and claims the id
   // so the prune pass keeps it. Claiming here (even while the theme is still
@@ -142,8 +160,6 @@ function GroupStyle({
     if (el && el.textContent !== text) el.textContent = text;
     reportPaintStyle(id, text);
   }, [id, text]);
-
-  return null;
 }
 
 /**
@@ -208,6 +224,11 @@ function useReportResolutionFaults(
       );
     }
   }
+  useReportFaults(faults);
+}
+
+/** Report each distinct fault once per mount. */
+function useReportFaults(faults: ThemeResolutionFault[]): void {
   const faultsKey = JSON.stringify(faults);
 
   useEffect(() => {
@@ -342,4 +363,107 @@ export function AppScopeThemes() {
       ))}
     </>
   );
+}
+
+/**
+ * Every contributed sub-theme's blocks: one `<style>` per fragment, targeting
+ * `[data-theme-scope="sub:<id>"]` and holding ONLY the tokens that fragment
+ * names. Everything else inside a sub-theme region reads the surrounding theme
+ * by plain CSS inheritance — which is why a sub-theme is resolved against
+ * nothing and never needs to know which theme it sits in.
+ *
+ * Painted for as long as a sub-theme is contributed, not when a region wearing
+ * it mounts: the blocks are a handful of variables, and always being there puts
+ * them in the pre-paint cache, so a region never shows one frame in the
+ * surrounding theme's values before its own.
+ */
+export function SubThemeStyles() {
+  const subThemes = ThemeEngine.SubTheme.useContributions();
+  const groups = ThemeEngine.TokenGroup.useContributions();
+  const groupsById = new Map(groups.map((g) => [g.id, g]));
+
+  const seen = new Set<string>();
+  const faults: ThemeResolutionFault[] = [];
+  const blocks: {
+    subTheme: SubTheme;
+    group: TokenGroupContribution;
+    fragment: TokenGroupFragment;
+  }[] = [];
+  for (const subTheme of subThemes) {
+    if (seen.has(subTheme.id)) {
+      throw new Error(
+        `[theme-engine] two sub-themes claim the id "${subTheme.id}" — sub-theme ids must be unique.`,
+      );
+    }
+    seen.add(subTheme.id);
+    for (const fragment of subTheme.fragments) {
+      const group = groupsById.get(fragment.groupId);
+      if (!group) {
+        faults.push({
+          kind: "unregistered-group",
+          themeId: subTheme.id,
+          groupId: fragment.groupId,
+        });
+        continue;
+      }
+      const unknown = Object.keys(fragment.light).filter(
+        (token) => !Object.hasOwn(group.descriptor.schema, token),
+      );
+      if (unknown.length > 0) {
+        faults.push({
+          kind: "unknown-tokens",
+          themeId: subTheme.id,
+          groupId: group.id,
+          tokens: unknown,
+        });
+      }
+      blocks.push({ subTheme, group, fragment });
+    }
+  }
+  useReportFaults(faults);
+
+  return (
+    <>
+      {blocks.map(({ subTheme, group, fragment }) => (
+        <SubThemeFragmentStyle
+          key={`${subTheme.id}-${group.id}`}
+          subTheme={subTheme}
+          group={group}
+          fragment={fragment}
+        />
+      ))}
+    </>
+  );
+}
+
+function SubThemeFragmentStyle({
+  subTheme,
+  group,
+  fragment,
+}: {
+  subTheme: SubTheme;
+  group: TokenGroupContribution;
+  fragment: TokenGroupFragment;
+}) {
+  const scopeToken = subThemeScope(subTheme);
+  const text = useMemo(
+    () =>
+      renderGroupBlock(
+        group.descriptor,
+        definedValues(fragment.light),
+        definedValues(fragment.dark),
+        themeScopeSelectors(scopeToken),
+      ),
+    [group, fragment, scopeToken],
+  );
+  usePaintedStyle(scopedStyleIdFor(scopeToken, group.id), text);
+  return null;
+}
+
+function definedValues(values: TokenValues): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [token, value] of Object.entries(values)) {
+    if (value !== undefined) out[token] = value;
+  }
+  return out;
 }

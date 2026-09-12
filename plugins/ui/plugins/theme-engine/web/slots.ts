@@ -1,7 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
-import type { Theme, ThemeId, TokenGroupDescriptor } from "../core";
+import type { SubTheme, Theme, ThemeId, TokenGroupDescriptor } from "../core";
 
 export interface VariantGroupContribution {
   id: string;
@@ -136,5 +136,11 @@ export const ThemeEngine = {
   }),
   TokenGroup: defineSlot<TokenGroupContribution>({ docLabel: (p) => p.label }),
   Theme: defineSlot<Theme>({ docLabel: (p) => p.label }),
+  /**
+   * Sub-themes (`defineSubTheme`): painted for as long as they are
+   * contributed, whether or not a region wears one yet, so the pre-paint cache
+   * holds them and a region that mounts later never repaints.
+   */
+  SubTheme: defineSlot<SubTheme>({ docLabel: (p) => p.label }),
   ThemeSource: defineSlot<ThemeSourceContribution>({ docLabel: (p) => p.id }),
 };

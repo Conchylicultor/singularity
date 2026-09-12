@@ -51,6 +51,10 @@ The global UI kit — one cohesive design-system unit. It owns:
   first consumer; the element-picker's plugin lineage and the layout pane id are
   the others. It must live beside the portal components for the same reason
   `ControlSize` lives beside `Button`.
+  A value registered `regionOnly` (a theme sub-theme's token) is left out of
+  what popups re-stamp (`usePortalForwardedAttrs`), which keep the value from
+  above; content portaled but still in the region (adaptive-bar items) reads
+  `useRegionForwardedAttrs`, which has it.
 
 ## Boundary
 
@@ -328,6 +332,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `DropdownMenuTrigger`
     - `iconSizeFor`
     - `Input`
+    - `isSubThemeScope`
     - `OverlayPanel`
     - `Popover`
     - `POPOVER_MAX_HEIGHT`
@@ -385,6 +390,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `SidebarSeparator`
     - `SidebarTrigger`
     - `SingleLineProvider`
+    - `subThemeScope`
     - `SURFACE_LEVELS`
     - `textSizeFor`
     - `textStepFor`
@@ -396,6 +402,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useControlSize`
     - `usePortalForwardedAttrs`
     - `usePortalThemeScope`
+    - `useRegionForwardedAttrs`
     - `useSidebar`
     - `useSingleLine`
 - Cross-plugin:

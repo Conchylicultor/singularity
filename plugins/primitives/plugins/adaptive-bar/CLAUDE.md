@@ -438,7 +438,9 @@ whose `no-portal-toggle` rule bans the shape.
 
 Everything ancestry-derived that a portal severs — theme scope, plugin lineage,
 pane id — is stamped onto the container **imperatively and unconditionally**, not
-at move time. A move-time branch is a branch that can be wrong, and the symptom
+at move time. It is the REGION bag (`useRegionForwardedAttrs`), not the popup
+one: an occupant is part of its row's region, so it keeps a sub-theme a popup
+would drop — without that, a page's header items revert to UI sizes. A move-time branch is a branch that can be wrong, and the symptom
 would be a widget that renders in the wrong palette only after it has been
 relocated once.
 
@@ -826,7 +828,7 @@ rendered.
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.OverlayPanel`
     - `primitives/css/ui-kit.SingleLineProvider`
-    - `primitives/css/ui-kit.usePortalForwardedAttrs`
+    - `primitives/css/ui-kit.useRegionForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useResizeObserver`

@@ -14,7 +14,7 @@ import {
   ActionFormProvider,
   type ItemFormChannel,
 } from "@plugins/primitives/plugins/action-presentation/web";
-import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useRegionForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import {
@@ -113,7 +113,10 @@ function PortaledBarItem({
     el.className = rigidClass();
     return el;
   });
-  const forwarded = usePortalForwardedAttrs();
+  // The REGION bag, not the popup one: this container is still part of the
+  // region it was rendered in, whether docked in the row or parked in the
+  // panel, so it keeps a region-only value (a theme sub-theme) a popup drops.
+  const forwarded = useRegionForwardedAttrs();
   const forms = useContext(BarFormsContext);
   const form = forms.get(id) ?? "full";
 

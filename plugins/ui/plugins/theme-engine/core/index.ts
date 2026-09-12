@@ -21,6 +21,8 @@ export {
   isBuiltInThemeId,
 } from "./theme";
 export type { ColorAdjustment, Theme, ThemeId, ThemeSource } from "./theme";
+export { defineSubTheme } from "./sub-theme";
+export type { SubTheme } from "./sub-theme";
 export { mergeGroupValues } from "./merge-group-values";
 export { resolveTheme } from "./resolve-theme";
 export type {

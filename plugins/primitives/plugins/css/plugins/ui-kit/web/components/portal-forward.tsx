@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 /** A bag of `data-*` attributes to re-stamp onto portaled content.
  *
@@ -17,35 +17,67 @@ import { createContext, useContext, useMemo, type ReactNode } from "react"
  *  collection/consumer split that keeps "portals sever ancestry" from being a
  *  bug re-fixed once per signal. Theme scope and plugin lineage are the first two
  *  contributors. */
-export type PortalForwardedAttrs = Record<string, string>
+export type PortalForwardedAttrs = Record<string, string>;
 
-const PortalForwardContext = createContext<PortalForwardedAttrs>({})
+/** The two bags a portal can re-stamp. They differ only by the values
+ *  registered `regionOnly`: `region` has them, `popup` keeps the value from
+ *  above instead. */
+interface ForwardedBags {
+  region: PortalForwardedAttrs;
+  popup: PortalForwardedAttrs;
+}
 
-/** The merged `data-*` attributes to spread onto a portaled positioner/root. */
+const PortalForwardContext = createContext<ForwardedBags>({
+  region: {},
+  popup: {},
+});
+
+/** The merged `data-*` attributes a POPUP re-stamps onto its portaled
+ *  positioner/root — a popover, menu, dialog, tooltip or overlay opened from
+ *  here. A value registered `regionOnly` is not in it: a popup is not part of
+ *  the region it was opened from. */
 export function usePortalForwardedAttrs(): PortalForwardedAttrs {
-  return useContext(PortalForwardContext)
+  return useContext(PortalForwardContext).popup;
+}
+
+/** The merged `data-*` attributes for content that is portaled but still part
+ *  of this region — an adaptive bar's item, which renders through a portal
+ *  whether it sits in the bar or in its overflow panel. Includes every
+ *  `regionOnly` value. */
+export function useRegionForwardedAttrs(): PortalForwardedAttrs {
+  return useContext(PortalForwardContext).region;
 }
 
 /** Register one forwarded `data-*` attribute for portaled descendants. Merges
  *  into the inherited bag (nearest provider wins per key); an `undefined` value
- *  is a no-op so callers forward conditionally without branching. */
+ *  is a no-op so callers forward conditionally without branching.
+ *
+ *  `regionOnly`: the value holds for this region only. Content relocated within
+ *  the region keeps it; a popup opened from inside keeps the value from above.
+ *  A theme sub-theme is the case — it restyles a page, not the menus opened
+ *  from it. */
 export function PortalForwardProvider({
   name,
   value,
+  regionOnly = false,
   children,
 }: {
-  name: string
-  value: string | undefined
-  children: ReactNode
+  name: string;
+  value: string | undefined;
+  regionOnly?: boolean;
+  children: ReactNode;
 }) {
-  const parent = useContext(PortalForwardContext)
-  const merged = useMemo(
-    () => (value === undefined ? parent : { ...parent, [name]: value }),
-    [parent, name, value],
-  )
+  const parent = useContext(PortalForwardContext);
+  const merged = useMemo(() => {
+    if (value === undefined) return parent;
+    return {
+      region: { ...parent.region, [name]: value },
+      popup: regionOnly ? parent.popup : { ...parent.popup, [name]: value },
+    };
+  }, [parent, name, value, regionOnly]);
   return (
     <PortalForwardContext.Provider value={merged}>
       {children}
     </PortalForwardContext.Provider>
-  )
+  );
 }

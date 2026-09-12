@@ -5320,7 +5320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `WebsiteHarness`
               - Cross-plugin:
                 - Imported by: `apps/website/landing/fork`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, type scale, density, shape, font), which the website app selects.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
           - Web:
             - Slots:
               - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
@@ -5330,6 +5330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
               - `Pane.Register` "website-landing"
               - `ThemeEngine.Theme` "equin"
+              - `ThemeEngine.SubTheme` "equin document"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
@@ -5342,8 +5343,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/text.TextVariant`
+              - `primitives/css/theme-boundary.Theme`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.subThemeScope`
               - `primitives/pane.AnyPane`
               - `primitives/pane.definePaneHeaderSlot`
               - `primitives/pane.defineRoute`
@@ -21437,7 +21440,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.OverlayPanel`
           - `primitives/css/ui-kit.SingleLineProvider`
-          - `primitives/css/ui-kit.usePortalForwardedAttrs`
+          - `primitives/css/ui-kit.useRegionForwardedAttrs`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/element-size.useResizeObserver`
@@ -24251,6 +24254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/tab-bar`
               - `apps-core/tab-surface`
+              - `apps/website/shell`
               - `layouts/miller`
               - `primitives/pane`
               - `shell/toast`
@@ -24374,6 +24378,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DropdownMenuTrigger`
               - `iconSizeFor`
               - `Input`
+              - `isSubThemeScope`
               - `OverlayPanel`
               - `Popover`
               - `POPOVER_MAX_HEIGHT`
@@ -24431,6 +24436,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `SidebarSeparator`
               - `SidebarTrigger`
               - `SingleLineProvider`
+              - `subThemeScope`
               - `SURFACE_LEVELS`
               - `textSizeFor`
               - `textStepFor`
@@ -24442,6 +24448,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `useControlSize`
               - `usePortalForwardedAttrs`
               - `usePortalThemeScope`
+              - `useRegionForwardedAttrs`
               - `useSidebar`
               - `useSingleLine`
           - Cross-plugin:
@@ -31954,10 +31961,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
         - Contributes:
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
+          - `Core.Root` → `SubThemeStyles`
           - `Core.Root` → `ThemeSelectionsCollector`
           - `ConfigV2.WebRegister` "theme"
           - `DynamicEnum.Options` "Theme"
@@ -31973,6 +31982,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/css/ui-kit.appThemeScope`
+          - `primitives/css/ui-kit.subThemeScope`
           - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/slot-render.defineRenderSlot`
         - Exports (types):
@@ -32015,6 +32025,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GroupValues`
           - `ResolvedTheme`
           - `SkippedThemeValue`
+          - `SubTheme`
           - `Theme`
           - `ThemeId`
           - `ThemeResolution`
@@ -32028,6 +32039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `both`
           - `ColorAdjustmentSchema`
           - `DEFAULT_THEME_ID`
+          - `defineSubTheme`
           - `defineTheme`
           - `defineTokenGroup`
           - `isBuiltInThemeId`

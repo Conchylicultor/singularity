@@ -55,12 +55,47 @@ so. Only a hand-edited file gets there: deleting a theme first moves every scope
 selecting it to Default. Stored values the resolver drops (a retired group or
 token) are reported the same way.
 
+## Sub-themes: a region that wears a few values on top
+
+A **sub-theme** (`defineSubTheme`, contributed through `ThemeEngine.SubTheme`)
+is a handful of token values one region of the screen wears over whatever
+theme surrounds it. The website is the case: the app's theme (`equin`) is its
+palette and font at standard UI sizes, and every page wears the
+`equin-document` sub-theme, which only sets the page's type scale, spacing and
+radius.
+
+```tsx
+<Theme name={subThemeScope(equinDocumentTheme)} surface="canvas">…</Theme>
+```
+
+It differs from a theme in three ways:
+
+- **Silence means "the surrounding theme", not "the schema default".**
+  `SubThemeStyles` paints each fragment as a block holding ONLY the tokens it
+  names, on `[data-theme-scope="sub:<id>"]`; everything else reaches the region
+  by plain CSS inheritance. So a sizes-only sub-theme keeps the app's colours,
+  even after the app's theme is switched. Its values are painted as written —
+  the surrounding color adjustment does not apply to them.
+- **It is never selected.** No scope picks it, the theme picker never lists it;
+  a region opts in by wrapping itself in `<Theme>`.
+- **Popups leave it.** The boundary forwards its token as region-only
+  (`PortalForwardProvider regionOnly`, see ui-kit): a popover, menu, dialog or
+  tooltip opened from inside wears the surrounding theme, while content that is
+  portaled but still part of the region (an adaptive bar's items) keeps it.
+
+Each fragment must name the same tokens in light and dark (`both(…)` does it):
+the light block also matches in dark mode, so a light-only token would leak.
+Sub-themes are painted for as long as they are contributed, not when a region
+mounts, so they are in the pre-paint cache and a region never repaints.
+
 ## Painting
 
 `ThemeInjector` paints the focused full-surface app's theme into `:root` (the
 desktop's when nothing is focused or the focus is a floating window).
 `AppScopeThemes` adds a `[data-theme-scope="app:<id>"]` block for each other
-visible app with its own theme document. Nothing is injected while a resident
+visible app with its own theme document, and `SubThemeStyles` one sparse
+`[data-theme-scope="sub:<id>"]` block per sub-theme fragment. Nothing is
+injected while a resident
 source loads, so the CSS replayed before first paint stays up (pre-paint cache:
 `.claude/skills/theme/SKILL.md`). Picking a theme is `theme-gallery`'s job.
 
@@ -74,10 +109,12 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
     - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
     - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
+    - `ThemeEngine.SubTheme` ← `apps.website.shell`
     - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
   - Contributes:
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
+    - `Core.Root` → `SubThemeStyles`
     - `Core.Root` → `ThemeSelectionsCollector`
     - `ConfigV2.WebRegister` "theme"
     - `DynamicEnum.Options` "Theme"
@@ -93,6 +130,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/css/ui-kit.appThemeScope`
+    - `primitives/css/ui-kit.subThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
     - `primitives/slot-render.defineRenderSlot`
   - Exports (types):
@@ -135,6 +173,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `GroupValues`
     - `ResolvedTheme`
     - `SkippedThemeValue`
+    - `SubTheme`
     - `Theme`
     - `ThemeId`
     - `ThemeResolution`
@@ -148,6 +187,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `both`
     - `ColorAdjustmentSchema`
     - `DEFAULT_THEME_ID`
+    - `defineSubTheme`
     - `defineTheme`
     - `defineTokenGroup`
     - `isBuiltInThemeId`

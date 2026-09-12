@@ -75,11 +75,12 @@ const THEME_SURFACES: Record<ThemeSurface, string> = {
 
 export interface ThemeProps extends Passthrough {
   /**
-   * Scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`. `undefined`
-   * = inherit `:root` — the legitimate answer `useChromeThemeScope()` returns
-   * when there is no app theme to wear. Both halves agree on it by
-   * construction: no attribute is stamped, and `PortalForwardProvider` already
-   * treats an undefined value as a no-op.
+   * Scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`, or
+   * `subThemeScope(subTheme)` for a sub-theme. `undefined` = inherit `:root` —
+   * the legitimate answer `useChromeThemeScope()` returns when there is no app
+   * theme to wear. Both halves agree on it by construction: no attribute is
+   * stamped, and `PortalForwardProvider` already treats an undefined value as a
+   * no-op.
    */
   name: string | undefined;
   /**
@@ -125,6 +126,12 @@ export interface ThemeProps extends Passthrough {
  * bundles: `<Surface>` bakes in `tabIndex={-1}` and a Ctrl+A select-scope, which
  * are right for a contained card and wrong for every pane, rail and tab strip.
  * Same stance ui-kit's own `OverlayPanel` takes.
+ *
+ * A **sub-theme** boundary (`subThemeScope(…)`) forwards its token as
+ * region-only. A sub-theme restyles one region — the website's page type scale —
+ * and a popover opened from that region is app UI, not more of the region, so a
+ * popup wears the theme around the sub-theme. Content that is portaled but still
+ * part of the region (an adaptive bar's items) keeps it.
  */
 export function Theme({
   name,

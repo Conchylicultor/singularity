@@ -14,6 +14,8 @@ High-level map of where to look. Open the linked `CLAUDE.md` for details.
 A **theme** is a named, sparse set of token values across the token groups. Each **scope** — the desktop, or one app — selects ONE theme; nothing is stored per token group, so an app cannot own part of a look and inherit the rest. A group a theme never mentions paints that group's schema defaults (in git), never another scope's choice. There are no global presets: the **Default** theme is simply every group's schema defaults.
 → [`plugins/ui/plugins/theme-engine/CLAUDE.md`](../../../plugins/ui/plugins/theme-engine/CLAUDE.md) (model, resolution, copy-on-write edits, missing-theme reporting)
 
+**Sub-themes** are the one exception to "one theme per scope": a region (the website's pages) wraps itself in `<Theme name={subThemeScope(sub)}>` to wear a few extra values (`defineSubTheme` + `ThemeEngine.SubTheme`) over the surrounding theme. Tokens it leaves out come from the surrounding theme, not from the defaults, and popups opened from the region leave it. Use one when part of an app needs different sizes or colours from the rest of the app's UI.
+
 ## Design tokens
 Umbrella of token-group plugins (color-palette, type-scale, density, shape, shadow, font-family, chart, categorical, sidebar-palette, rich-text-palette). Each declares its CSS variables with schema defaults (`default` + `darkDefault`) via `defineTokenGroup`, registers through `ThemeEngine.TokenGroup`, and contributes a customizer section that edits the scope's theme. Shape, shadow, density and color-adjust add "Fill from…" shortcuts — values copied into the theme, not settings.
 → [`plugins/ui/plugins/tokens/CLAUDE.md`](../../../plugins/ui/plugins/tokens/CLAUDE.md)

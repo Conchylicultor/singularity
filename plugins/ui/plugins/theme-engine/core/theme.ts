@@ -41,7 +41,7 @@ export const TokenGroupFragmentSchema = z.object({
 }) satisfies ZodParser<TokenGroupFragment>;
 
 /** The group a theme names twice, if any — a theme has at most one fragment per group. */
-function duplicateGroupId(
+export function duplicateGroupId(
   fragments: readonly { groupId: string }[],
 ): string | undefined {
   const seen = new Set<string>();

@@ -1,4 +1,8 @@
-import { defineTheme, both } from "@plugins/ui/plugins/theme-engine/core";
+import {
+  defineSubTheme,
+  defineTheme,
+  both,
+} from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { chartGroup } from "@plugins/ui/plugins/tokens/plugins/chart/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
@@ -220,16 +224,16 @@ const shape = shapeGroup.fragment(
 );
 
 /**
- * The site's own theme: one fragment per token group its design has an opinion
- * on, selected for the website app in
- * `config/ui/theme-engine/@app/website/theme.jsonc`.
+ * The site's own theme — its look: palette, chart ramp and typeface. Selected
+ * for the website app in `config/ui/theme-engine/@app/website/theme.jsonc`.
  *
- * The public site is a designed thing — a palette, a type scale, a rhythm and a
- * corner radius someone chose — so it does not follow whatever the desktop is
- * set to. Every website component reads semantic tokens, so the one place a
- * colour or a size is spelled is this file. A group the theme does not mention
- * (sidebar, categorical, rich-text, shadow) paints that group's schema defaults
- * — never another scope's setting.
+ * The public site is a designed thing, so it does not follow whatever the
+ * desktop is set to. Every website component reads semantic tokens, so the one
+ * place a colour is spelled is this file. A group the theme does not mention
+ * paints that group's schema defaults — never another scope's setting. That
+ * includes the sizes: everything the app shows OUTSIDE its pages (the Improve
+ * panel and every other popup, the tab bar and rail while the site is focused)
+ * is ordinary UI, at the standard UI sizes, in the site's colours.
  *
  * The dark values are the design. The light values are a readable inversion of
  * it — the site follows the desktop's colour mode, which is still global, and a
@@ -238,5 +242,17 @@ const shape = shapeGroup.fragment(
 export const equinTheme = defineTheme({
   id: "equin",
   label: "equin",
-  fragments: [colorPalette, chart, typeScale, density, shape, fontFamily],
+  fragments: [colorPalette, chart, fontFamily],
+});
+
+/**
+ * The site's page sizes — the type scale, rhythm and corner radius a page read
+ * at arm's length is designed on. Worn by every page through `WebsiteChrome`,
+ * over `equinTheme`: this sets sizes only, so the colours are always the app's.
+ * Popups opened from a page leave it and go back to the standard UI sizes.
+ */
+export const equinDocumentTheme = defineSubTheme({
+  id: "equin-document",
+  label: "equin document",
+  fragments: [typeScale, density, shape],
 });

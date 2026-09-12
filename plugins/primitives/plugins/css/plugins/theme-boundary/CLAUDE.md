@@ -42,7 +42,11 @@ primitive with a **required** `surface`, not a note in a doc.
 <Theme as={Stack} name={themeScope} surface="chrome" direction="row">…</Theme>
 ```
 
-- **`name`** — the scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`.
+- **`name`** — the scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`,
+  or `subThemeScope(subTheme)` for a theme-engine sub-theme. A sub-theme token
+  is forwarded **region-only**: popups opened from inside wear the enclosing
+  theme (the sub-theme restyles a page, not the menus opened from it), while an
+  adaptive bar's portaled items keep it.
   `undefined` is a legitimate value meaning *inherit `:root`* — it is what
   `useChromeThemeScope()` returns when there is no app theme to wear. Both halves
   agree on it by construction: no attribute is stamped, and
@@ -163,6 +167,7 @@ the code:
     - `apps-core/surface`
     - `apps-core/tab-bar`
     - `apps-core/tab-surface`
+    - `apps/website/shell`
     - `layouts/miller`
     - `primitives/pane`
     - `shell/toast`

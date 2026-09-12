@@ -5,7 +5,11 @@ import {
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { themeSelectionConfig } from "../core";
-import { ThemeInjector, AppScopeThemes } from "./components/theme-injector";
+import {
+  ThemeInjector,
+  AppScopeThemes,
+  SubThemeStyles,
+} from "./components/theme-injector";
 import { ThemeSelectionsCollector } from "./theme-selections";
 import { ThemeEngine } from "./slots";
 import { defaultTheme } from "./default-theme";
@@ -45,6 +49,7 @@ export default {
   contributions: [
     Core.Root({ component: ThemeInjector }),
     Core.Root({ component: AppScopeThemes }),
+    Core.Root({ component: SubThemeStyles }),
     Core.Root({ component: ThemeSelectionsCollector }),
     ConfigV2.WebRegister({ descriptor: themeSelectionConfig }),
     DynamicEnum.Options({
