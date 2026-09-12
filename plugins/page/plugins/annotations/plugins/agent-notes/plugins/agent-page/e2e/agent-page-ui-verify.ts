@@ -74,7 +74,9 @@ async function callTool(name: string, args: unknown): Promise<string> {
   };
   const text = body.result?.content?.[0]?.text;
   if (body.error || body.result?.isError || text === undefined)
-    throw new Error(`MCP ${name} refused: ${body.error?.message ?? text ?? raw}`);
+    throw new Error(
+      `MCP ${name} refused: ${body.error?.message ?? text ?? raw}`,
+    );
   return text;
 }
 
@@ -92,7 +94,8 @@ async function api(
         headers: { "content-type": "application/json" },
         body: JSON.stringify(b),
       });
-      if (!res.ok) throw new Error(`${m} ${u} ${res.status}: ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`${m} ${u} ${res.status}: ${await res.text()}`);
       return res.json() as unknown;
     },
     { m: method, u: url, b: body },
@@ -154,9 +157,16 @@ await withBrowser(async (h) => {
   }
 
   const agentRow = row(page, agentPageId);
-  await agentRow.getByText(AGENT_PAGE_TITLE).waitFor({ state: "visible", timeout: 30_000 });
-  r.ok("U1: the agent page's row is tinted with the agent wash", await washed(agentRow));
-  const chip = agentRow.locator("button[title]").filter({ hasNotText: AGENT_PAGE_TITLE });
+  await agentRow
+    .getByText(AGENT_PAGE_TITLE)
+    .waitFor({ state: "visible", timeout: 30_000 });
+  r.ok(
+    "U1: the agent page's row is tinted with the agent wash",
+    await washed(agentRow),
+  );
+  const chip = agentRow
+    .locator("button[title]")
+    .filter({ hasNotText: AGENT_PAGE_TITLE });
   await chip.first().waitFor({ state: "visible", timeout: 30_000 });
   const chipTitle = await chip.first().getAttribute("title");
   r.ok(
@@ -165,7 +175,9 @@ await withBrowser(async (h) => {
     `chip title: ${chipTitle}`,
   );
   const humanRow = row(page, humanLine.id);
-  await humanRow.getByText(HUMAN_PAGE_TITLE).waitFor({ state: "visible", timeout: 30_000 });
+  await humanRow
+    .getByText(HUMAN_PAGE_TITLE)
+    .waitFor({ state: "visible", timeout: 30_000 });
   r.ok("U1: a human's sub-page is NOT tinted", !(await washed(humanRow)));
   await agentRow.hover();
   await snap(page, out, "collapsed");
@@ -187,7 +199,7 @@ await withBrowser(async (h) => {
   await page.keyboard.type(`${SLASH_TITLE} /agent-page`);
   const option = page.getByText("Agent page", { exact: true }).first();
   await option.waitFor({ state: "visible", timeout: 15_000 });
-  r.ok("U4: the / menu offers \"Agent page\"", await option.isVisible());
+  r.ok('U4: the / menu offers "Agent page"', await option.isVisible());
   // Let the caret-anchored menu settle onto its anchor before the picture.
   await page.waitForTimeout(500);
   await snap(page, out, "slash-menu");
@@ -208,7 +220,10 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(1500);
   r.ok(
     "U4: a human-made agent page shows no chip before an agent writes",
-    (await slashRow.locator("button[title]").filter({ hasNotText: SLASH_TITLE }).count()) === 0,
+    (await slashRow
+      .locator("button[title]")
+      .filter({ hasNotText: SLASH_TITLE })
+      .count()) === 0,
   );
   await snap(page, out, "after-slash");
 
@@ -216,13 +231,21 @@ await withBrowser(async (h) => {
   // On the agent page itself the content holds no agent-page rows, so any wash
   // on screen is the sidebar's tree row for it.
   await page.goto(page.url().replace(pageId, agentPageId));
-  await page.getByText(AGENT_PAGE_BODY, { exact: true }).first().waitFor({ state: "visible", timeout: 30_000 });
+  await page
+    .getByText(AGENT_PAGE_BODY, { exact: true })
+    .first()
+    .waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForTimeout(1000);
   const sidebarWash = await page.evaluate(
-    (cls) => document.querySelectorAll(`[class~="${cls.replace("/", "\\/")}"]`).length,
+    (cls) =>
+      document.querySelectorAll(`[class~="${cls.replace("/", "\\/")}"]`).length,
     WASH,
   );
-  r.ok("U3: the sidebar paints the agent wash on the page's tree row", sidebarWash > 0, `washed elements: ${sidebarWash}`);
+  r.ok(
+    "U3: the sidebar paints the agent wash on the page's tree row",
+    sidebarWash > 0,
+    `washed elements: ${sidebarWash}`,
+  );
   await snap(page, out, "sidebar");
 });
 
