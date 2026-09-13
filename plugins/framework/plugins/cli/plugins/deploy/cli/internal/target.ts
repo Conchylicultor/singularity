@@ -258,7 +258,7 @@ export async function resolveTarget(opts: {
     const [row] = await db
       .select()
       .from(serverHealth.table)
-      .where(eq(serverHealth.table.parentId, found.id));
+      .where(eq(serverHealth.table.serverId, found.id));
     return { server: found, health: row };
   });
 

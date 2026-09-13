@@ -43,13 +43,10 @@ export function PlaybackFields({ render }: FieldExtensionProps<Song>) {
         label: "Last played",
         type: "date",
         width: "8rem",
-        value: (s) => {
-          const iso = map.get(s.id)?.lastPlayedAt;
-          return iso ? new Date(iso) : null;
-        },
+        value: (s) => map.get(s.id)?.lastPlayedAt ?? null,
         cell: (s) => {
-          const iso = map.get(s.id)?.lastPlayedAt;
-          return iso ? formatRelativeTime(new Date(iso)) : "—";
+          const at = map.get(s.id)?.lastPlayedAt;
+          return at ? formatRelativeTime(at) : "—";
         },
         sortable: true,
       },

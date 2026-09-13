@@ -1,43 +1,35 @@
-import {
-  type BuildExtraConfigColumns,
-  eq,
-  getTableName,
-  type InferInsertModel,
-  type InferSelectModel,
-} from "drizzle-orm";
+import { type BuildExtraConfigColumns, eq, getTableName } from "drizzle-orm";
 import {
   type AnyIndexBuilder,
   type AnyPgColumn,
   index,
-  type PgColumnBuilderBase,
   type PgTable,
-  pgTable,
-  text,
-  timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
-import { assertNoReservedColumns, extensionIndexName } from "./index-names";
+import type { FieldsRecord } from "@plugins/fields/core";
+import {
+  defaultNow,
+  type DefaultedKeys,
+  defineEntity,
+  type Entity,
+  type EntityColumns,
+  type EntityMeta,
+} from "@plugins/infra/plugins/entities/server";
+import type {
+  AnyExtensionShape,
+  ExtensionTimestamp,
+} from "@plugins/infra/plugins/entity-extensions/core";
+import { extensionIndexName } from "./index-names";
 
 type ParentTable = PgTable & { id: AnyPgColumn };
-type UserColumns = Record<string, PgColumnBuilderBase>;
-type ExtensionTable = PgTable & { parentId: AnyPgColumn };
 
-// The three columns the primitive owns, in one non-generic place so the
-// callback's `ExtensionColumns<C>` type is DERIVED from the runtime columns and
-// cannot drift from them.
-function baseColumns(parentTable: ParentTable) {
-  return {
-    parentId: text("parent_id")
-      .primaryKey()
-      .references((): AnyPgColumn => parentTable.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  };
-}
-
-type BaseColumns = ReturnType<typeof baseColumns>;
-type ExtensionColumns<C extends UserColumns> = BaseColumns & C;
+// The plugin's own fields: the shape's full record minus the key and the
+// timestamps, which belong to the primitive.
+type OwnFields<Sh extends AnyExtensionShape> = Omit<
+  Sh["fields"],
+  Sh["key"] | ExtensionTimestamp
+>;
 
 // Index builders pre-bound to the DERIVED table name. The caller supplies only
 // a short table-local suffix (`"block_created"`) and gets back drizzle's own
@@ -49,107 +41,166 @@ export interface ExtensionIndexBuilders {
   uniqueIndex(suffix: string): ReturnType<typeof uniqueIndex>;
 }
 
-// Optional 4th argument to `defineExtension`, mirroring `defineEntity`'s `meta`
-// (room to grow beyond indexes).
-export interface ExtensionMeta<C extends UserColumns> {
+// Optional 4th argument to `defineExtension`: the DB-only concerns of the
+// table, as in `defineEntity`'s `meta`.
+export interface ExtensionMeta<Sh extends AnyExtensionShape> {
+  // Per-column DDL (`default`, `name`, `references`) for the plugin's OWN
+  // fields only. The key column and the timestamps are the primitive's, so
+  // they cannot be declared here.
+  columns?: EntityMeta<OwnFields<Sh>>["columns"];
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
-  // name and covers the base columns as well as the user's.
+  // name and covers the key and the timestamps as well as the plugin's fields.
   indexes?: (
-    t: BuildExtraConfigColumns<string, ExtensionColumns<C>, "pg">,
+    t: BuildExtraConfigColumns<string, EntityColumns<Sh["fields"]>, "pg">,
     b: ExtensionIndexBuilders,
   ) => AnyIndexBuilder[];
 }
 
-// Typed handle returned by `EntityExtensions.defineExtension(...)`. Wraps a
-// 1:1 side-table keyed by the parent's id. The pgTable is exposed as
-// `.table` so the *defining* plugin can compose richer drizzle queries
-// (live-state resource loaders, complex SQL); cross-plugin imports of the
-// table are blocked by the boundary checker because the table never leaves
-// `internal/` — only the handle is barrel-exported.
-export interface EntityExtension<T extends ExtensionTable> {
-  readonly table: T;
-  get(parentId: string): Promise<InferSelectModel<T> | undefined>;
-  upsert<
-    U extends Partial<
-      Omit<InferInsertModel<T>, "parentId" | "createdAt" | "updatedAt">
-    >,
-  >(parentId: string, patch: U): Promise<InferSelectModel<T>>;
-  delete(parentId: string): Promise<void>;
-}
+// The columns with a DB default — optional on insert. The plugin's own
+// defaulted columns come from `meta.columns` (the same derivation
+// `defineEntity` uses); the timestamps always default to now().
+type ExtensionDefaultedKeys<
+  Sh extends AnyExtensionShape,
+  M extends ExtensionMeta<Sh>,
+> =
+  DefaultedKeys<OwnFields<Sh>, { columns: M["columns"] }> | ExtensionTimestamp;
 
-// Bind the handle methods to a concrete table type. T is generic at this
-// call so consumers see strict per-column types in `upsert`'s patch and
-// `get`'s return — same shape the original `getExtension`/`upsertExtension`
-// helpers had at their call sites.
-function createHandle<T extends ExtensionTable>(table: T): EntityExtension<T> {
-  // Loose alias for drizzle's overloads, which choke on the precise generic.
-  const t = table as unknown as ExtensionTable;
-  return Object.freeze({
-    table,
-    async get(parentId: string): Promise<InferSelectModel<T> | undefined> {
-      const rows = await db
-        .select()
-        .from(t)
-        .where(eq(t.parentId, parentId))
-        .limit(1);
-      return rows[0] as InferSelectModel<T> | undefined;
-    },
-    async upsert<
-      U extends Partial<
-        Omit<InferInsertModel<T>, "parentId" | "createdAt" | "updatedAt">
-      >,
-    >(parentId: string, patch: U): Promise<InferSelectModel<T>> {
-      const now = new Date();
-      const rows = await db
-        .insert(t)
-        .values({ parentId, ...patch, updatedAt: now })
-        .onConflictDoUpdate({
-          target: t.parentId,
-          set: { ...patch, updatedAt: now },
-        })
-        .returning();
-      return rows[0] as InferSelectModel<T>;
-    },
-    async delete(parentId: string): Promise<void> {
-      await db.delete(t).where(eq(t.parentId, parentId));
-    },
-  });
-}
+type ExtensionTable<F extends FieldsRecord, D extends keyof F> = Entity<
+  F,
+  D
+>["table"];
 
-// Define a `<parent>_ext_<name>` 1:1 side-table and return a handle whose
-// methods close over it. The parent plugin doesn't know the extension
-// exists; the consumer owns the table, its live-state resource, its HTTP
-// route, and its UI. Drizzle-kit discovers the underlying pgTable when the
-// consumer re-exports `<handle>.table` from the same `tables*.ts` file —
-// see the entity-extensions CLAUDE.md for the convention.
+// The handle `defineExtension` returns: an `Entity` over the extension's full
+// field record `F` (key + own fields + timestamps), plus the 1:1 accessors.
+// Because it IS an entity, query-resource takes it as `from:` directly.
 //
-// `meta.indexes` declares indexes on the extension's own columns — needed when
-// the plugin composes queries off `.table` keyed by something other than
-// `parentId` (the PK's implicit btree covers that read and nothing else).
-export function defineExtension<P extends ParentTable, C extends UserColumns>(
-  parentTable: P,
+// `table` is exposed so the *defining* plugin can compose richer drizzle
+// queries (live-state loaders, complex SQL); cross-plugin imports of the table
+// are blocked by the boundary checker because the table never leaves
+// `internal/` — only the handle is barrel-exported.
+export interface EntityExtension<
+  K extends string,
+  F extends FieldsRecord,
+  D extends keyof F = never,
+  S extends keyof F = never,
+> extends Entity<F, D, S> {
+  // The parent key's name: the key column's JS property and the wire field.
+  readonly key: K;
+  // The full row, server-only columns included.
+  get(id: string): Promise<ExtensionTable<F, D>["$inferSelect"] | undefined>;
+  upsert(
+    id: string,
+    patch: Partial<
+      Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>
+    >,
+  ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
+  delete(id: string): Promise<void>;
+}
+
+// The handle type a given shape + meta produce.
+type ExtensionOf<
+  Sh extends AnyExtensionShape,
+  M extends ExtensionMeta<Sh>,
+> = EntityExtension<
+  Sh["key"],
+  Sh["fields"],
+  ExtensionDefaultedKeys<Sh, M>,
+  Sh["serverOnly"][number]
+>;
+
+// Define a `<parent>_ext_<name>` 1:1 side-table from a shape
+// (`defineExtensionShape`, in `core/`) and return a handle whose methods close
+// over it. The parent plugin doesn't know the extension exists; the consumer
+// owns the table, its live-state resource, its HTTP route, and its UI.
+// Drizzle-kit discovers the underlying pgTable when the consumer re-exports
+// `<handle>.table` from the same `tables*.ts` file — see the entity-extensions
+// CLAUDE.md for the convention.
+//
+// Built on `defineEntity`: the key column is the shape's key, stored as
+// `parent_id` (text PK, FK → parent.id ON DELETE CASCADE); the timestamps
+// default to now(). `schema` is `shape.schema` itself, so the browser's row
+// schema and the server's are one object.
+//
+// `const M`, as in `defineEntity`: it keeps each column meta at its literal type
+// so the presence of `default` survives into `DefaultedKeys`.
+export function defineExtension<
+  Sh extends AnyExtensionShape,
+  const M extends ExtensionMeta<Sh> = ExtensionMeta<Sh>,
+>(
+  parentTable: ParentTable,
   name: string,
-  columns: C,
-  meta: ExtensionMeta<C> = {},
-) {
+  shape: Sh,
+  meta: M = {} as M,
+): ExtensionOf<Sh, M> {
   const tableName = `${getTableName(parentTable)}_ext_${name}`;
-  assertNoReservedColumns(tableName, columns);
+  const { key } = shape;
 
   const builders: ExtensionIndexBuilders = {
     index: (suffix) => index(extensionIndexName(tableName, suffix)),
     uniqueIndex: (suffix) => uniqueIndex(extensionIndexName(tableName, suffix)),
   };
 
-  const { parentId, createdAt, updatedAt } = baseColumns(parentTable);
-  const table = pgTable(
-    tableName,
-    // Key order is load-bearing: drizzle-kit diffs positionally, so moving
-    // createdAt/updatedAt ahead of the user columns would emit a spurious
-    // column-reorder migration for all 22 existing extensions.
-    { parentId, ...columns, createdAt, updatedAt },
-    // One `as any` at the runtime/type boundary, same as `define-entity.ts`:
-    // the precise `t` type rides in `ExtensionMeta`'s own signature.
-    (t: any) => meta.indexes?.(t, builders) ?? [],
-  );
-  return createHandle(table);
+  // Typed against the widened `FieldsRecord`: the precise types are restated
+  // once, by the return cast below.
+  const fields: FieldsRecord = shape.fields;
+  const entityMeta: EntityMeta<FieldsRecord> = {
+    primaryKey: key,
+    columns: {
+      ...meta.columns,
+      [key]: {
+        name: "parent_id",
+        references: {
+          column: (): AnyPgColumn => parentTable.id,
+          onDelete: "cascade",
+        },
+      },
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
+    },
+    serverOnly: shape.serverOnly,
+    // `as any` at the runtime/type boundary, as in `define-entity.ts`: the
+    // precise `t` type rides in `ExtensionMeta`'s own signature.
+    indexes: (t: any) => meta.indexes?.(t, builders) ?? [],
+  };
+  const entity = defineEntity(tableName, fields, entityMeta);
+
+  const { table } = entity;
+  const keyColumn = table[key];
+  if (!keyColumn) {
+    throw new Error(`defineExtension("${tableName}"): no key column "${key}".`);
+  }
+
+  // The one cast, as in `defineEntity`: the body is typed against the widened
+  // `FieldsRecord`; `ExtensionOf<Sh, M>` restates the precise types the shape
+  // and meta produce (the rows the methods read are that table's rows).
+  return Object.freeze({
+    ...entity,
+    // The same object the browser imports — equal by identity, not just by
+    // construction.
+    schema: shape.schema,
+    key,
+    async get(id: string) {
+      const rows = await db
+        .select()
+        .from(table)
+        .where(eq(keyColumn, id))
+        .limit(1);
+      return rows[0];
+    },
+    async upsert(id: string, patch: Record<string, unknown>) {
+      const now = new Date();
+      const rows = await db
+        .insert(table)
+        .values({ ...patch, [key]: id, updatedAt: now })
+        .onConflictDoUpdate({
+          target: keyColumn,
+          set: { ...patch, updatedAt: now },
+        })
+        .returning();
+      return rows[0];
+    },
+    async delete(id: string): Promise<void> {
+      await db.delete(table).where(eq(keyColumn, id));
+    },
+  }) as unknown as ExtensionOf<Sh, M>;
 }

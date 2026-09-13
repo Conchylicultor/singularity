@@ -2,9 +2,9 @@ import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/c
 import { ServerHealthRowSchema, type ServerHealthRow } from "./schemas";
 
 /**
- * Keyed query-resource contract: rows key on `parentId` (the side-table PK).
- * The server half is compiled from the drizzle declaration in
- * `server/internal/resource.ts`.
+ * Keyed query-resource contract: rows key on `serverId` (the extension's key,
+ * whose column is the side-table's `parent_id` PK). The server half is compiled
+ * from the extension handle in `server/internal/resource.ts`.
  *
  * Plain (unbounded) `queryResource` is correct here and does NOT need the
  * bounded working-set contract: the set is at most one row per registered
@@ -16,5 +16,5 @@ import { ServerHealthRowSchema, type ServerHealthRow } from "./schemas";
 export const serverHealthResource = queryResourceDescriptor<ServerHealthRow>(
   "deploy.server-health",
   ServerHealthRowSchema,
-  "parentId",
+  "serverId",
 );

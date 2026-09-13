@@ -1,15 +1,20 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
-// One row per starred page. Presence in the table = starred; the row carries no
-// order of its own — the Favorites view's row order lives in data-view's
+// One row per starred page, in the `page_blocks_ext_starred` entity-extension
+// table that `server/internal/tables.ts` builds from this shape. Presence in the
+// table = starred, so the plugin has no fields of its own; the row carries no
+// order of its own either — the Favorites view's row order lives in data-view's
 // `view-order`. `createdAt` (when the page was starred) is the WINDOW's order
 // key, and is on the wire because the compiler derives the order signature from
 // the wire row and throws at module eval if an order column is unprojected.
-export const StarredPageRowSchema = z.object({
-  parentId: z.string(),
-  createdAt: z.coerce.date(),
+export const starredPageShape = defineExtensionShape({
+  key: "blockId",
+  fields: {},
+  wireTimestamps: ["createdAt"],
 });
+export const StarredPageRowSchema = starredPageShape.schema;
 export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 
 // Bounded ordered WINDOW (desc createdAt — most recently starred first), NOT a
@@ -26,14 +31,15 @@ export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 // past `maxLimit` favorites the oldest-starred page reads as unstarred (hollow
 // star, absent from Favorites).
 //
-// Rows key on `parentId` (the side-table pk); the server half is compiled from
-// the drizzle declaration in `server/internal/resource.ts`. Web consumers read it
+// Rows key on `blockId` (the side-table pk — the starred page's id); the server
+// half is compiled from the extension handle in `server/internal/resource.ts`.
+// Web consumers read it
 // through `useStarredPageIds` (web/internal/use-starred-ids.ts); the wire shape
 // stays `StarredPageRow[]`.
 export const starredPagesResource =
   windowQueryResourceDescriptor<StarredPageRow>(
     "pages-starred",
     StarredPageRowSchema,
-    "parentId",
+    "blockId",
     { defaultLimit: 500 },
   );

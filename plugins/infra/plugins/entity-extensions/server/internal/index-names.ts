@@ -1,7 +1,6 @@
-// Pure name derivation + the two module-eval validations for
-// `defineExtension`. Deliberately import-free: `define-extension.ts` pulls in
-// `db` at module scope, so this logic lives here to stay unit-testable without
-// a database.
+// Pure index-name derivation + its module-eval validation for
+// `defineExtension`. Deliberately import-free, so it stays unit-testable on its
+// own. (The reserved-field guard lives with the shape, in `core/`.)
 
 // Postgres truncates any identifier past NAMEDATALEN-1 = 63 BYTES (not chars)
 // and does so SILENTLY — two long index names can collapse onto the same
@@ -36,25 +35,4 @@ export function extensionIndexName(tableName: string, suffix: string): string {
     );
   }
   return name;
-}
-
-// The three columns the primitive owns. A user column of the same name today
-// produces an incoherent table: the runtime spread order lets `parentId` lose
-// to the user column while `createdAt`/`updatedAt` win, so the declared shape
-// and the actual DDL disagree. Refuse instead.
-const RESERVED_COLUMN_KEYS = ["parentId", "createdAt", "updatedAt"] as const;
-
-export function assertNoReservedColumns(
-  tableName: string,
-  columns: Record<string, unknown>,
-): void {
-  for (const key of RESERVED_COLUMN_KEYS) {
-    if (key in columns) {
-      throw new Error(
-        `defineExtension("${tableName}"): column "${key}" is reserved — ` +
-          `the primitive defines parentId, createdAt and updatedAt itself. ` +
-          `Rename the column.`,
-      );
-    }
-  }
 }

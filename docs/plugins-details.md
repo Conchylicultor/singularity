@@ -4033,7 +4033,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `database.db`
-                  - `database/sql-column.parsedJson`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/rich/plugins/rhythm-controls/server/internal/tables.ts`
@@ -4275,7 +4274,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
                   - `apps/sonata/library.updateSongMeta`
-                  - `database.db`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
@@ -8251,7 +8249,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.conversationCreated`
           - `conversations/preprompts.resolvePrepromptItem`
-          - `database/sql-column.parsedJson`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -8296,7 +8293,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `conversations.conversationTurnCompleted`
           - `database.db`
-          - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -10397,6 +10393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `database.db`
               - `infra/claude-cli.ClaudeCliError`
               - `infra/claude-cli.runClaudePrint`
+              - `infra/entities.defaultNow`
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
@@ -10587,7 +10584,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `classifyQueue`
           - Core:
             - Uses:
+              - `fields/bool/config.boolField`
+              - `fields/rank/config.rankField`
               - `infra/endpoints.defineEndpoint`
+              - `infra/entity-extensions.defineExtensionShape`
               - `infra/query-resource.pointQueryResourceDescriptor`
               - `primitives/rank.RankSchema`
             - Exports (types):
@@ -11035,7 +11035,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `apps/sonata/rich/chord-mode`
       - `apps/sonata/rich/key-mode`
       - `apps/sonata/rich/rhythm-controls`
-      - `apps/sonata/sources/chord-grid`
       - `apps/sonata/sources/midi`
       - `apps/sonata/track-mixer`
       - `apps/sonata/transpose`
@@ -11463,11 +11462,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
-          - `apps/sonata/rich/rhythm-controls`
           - `backup`
           - `conversations/conversation-category`
-          - `conversations/conversation-preprompt`
-          - `conversations/conversation-progress`
           - `fields/json/storage`
           - `fields/tags/storage`
           - `fields/text/storage`
@@ -11479,8 +11475,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports`
           - `search/engine`
           - `shell/notifications`
-          - `tasks/auto-start`
-          - `tasks/task-effort`
           - `ui/theme-engine/saved-themes`
       - Server:
         - Exports (types):
@@ -13790,6 +13784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/track-mixer`
               - `apps/sonata/voicing`
               - `conversations`
+              - `conversations/conversations-view/queue`
               - `debug/boot-budget`
               - `debug/boot-monitor`
               - `debug/boot-watchdog`
@@ -13917,6 +13912,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/claude-cli`
+              - `infra/entity-extensions`
               - `infra/events`
               - `plugin-meta/plugin-health`
               - `tasks/tasks-core`
@@ -14508,7 +14504,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `RankFieldDef`
             - Exports (values): `rankField`
           - Cross-plugin:
-            - Imported by: `tasks/tasks-core`
+            - Imported by:
+              - `conversations/conversations-view/queue`
+              - `tasks/tasks-core`
         - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
           - Server:
             - Contributes: `fields.storage` "rank"
@@ -14844,6 +14842,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/slow-ops`
               - `debug/trace/engine`
               - `infra/claude-cli`
+              - `infra/entity-extensions`
               - `infra/events`
               - `plugin-meta/composition`
               - `plugin-meta/plugin-health`
@@ -16713,19 +16712,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/mail-core`
           - `apps/sonata/library`
           - `apps/sonata/track-mixer`
+          - `conversations/conversation-view/turn-summary`
           - `conversations/session-chain`
           - `conversations/summary`
           - `debug/boot-profile`
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `infra/claude-cli`
+          - `infra/entity-extensions`
           - `infra/events`
           - `plugin-meta/plugin-health`
           - `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
-        - Uses: `database.db`
-        - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
+        - Uses:
+          - `database.db`
+          - `infra/entities.DefaultedKeys`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
+          - `infra/entities.Entity`
+          - `infra/entities.EntityColumns`
+          - `infra/entities.EntityMeta`
         - Exports (types):
           - `EntityExtension`
           - `ExtensionIndexBuilders`
@@ -16733,6 +16740,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `defineExtension`
           - `EntityExtensions`
+      - Core:
+        - Uses:
+          - `fields/date/config.dateField`
+          - `fields/date/config.DateFieldDef`
+          - `fields/text/config.textField`
+          - `fields/text/config.TextFieldDef`
+          - `infra/entities.wireSchema`
+        - Exports (types):
+          - `AnyExtensionShape`
+          - `ExtensionFields`
+          - `ExtensionServerOnly`
+          - `ExtensionShape`
+          - `ExtensionShapeDef`
+          - `ExtensionTimestamp`
+          - `ExtensionWireShape`
+        - Exports (values):
+          - `defineExtensionShape`
+          - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/health`
@@ -30854,7 +30879,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `trigger` "tasks.auto-start-cancel-on-drop"
         - Uses:
           - `database.db`
-          - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -31215,7 +31239,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `taskLaunchServer` "effort"
         - Uses:
           - `database.db`
-          - `database/sql-column.parsedText`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
           - `tasks/launch-options.TaskLaunchServer`

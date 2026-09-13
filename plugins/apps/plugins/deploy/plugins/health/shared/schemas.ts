@@ -1,11 +1,22 @@
 import { z } from "zod";
 import { SshFailureKindSchema } from "@plugins/infra/plugins/ssh/core";
 import { PLATFORM_TAGS } from "@plugins/release/core";
+import { nullable } from "@plugins/fields/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import {
+  enumTextField,
+  parsedTextField,
+  textField,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
 /**
  * One reachability verdict per server — the row of the
- * `deploy_servers_ext_health` side-table, minus `hostKeyLine` (the pinned
- * known_hosts line stays server-side: no client surface needs it).
+ * `deploy_servers_ext_health` side-table (built from this shape in
+ * `server/internal/tables.ts`), minus `hostKeyLine`: the pinned known_hosts
+ * line is `serverOnly`, so it stays server-side — no client surface needs it.
+ * The row keys on `serverId` (the `parent_id` PK).
  *
  * `checkedPublicKey` is `deploy_servers.ssh_public_key` **as of the check**, and
  * it is what makes "verified" exact without any cross-plugin write: the setup
@@ -34,18 +45,46 @@ import { PLATFORM_TAGS } from "@plugins/release/core";
  * `converge` / `ship` therefore refuse on a null with a message naming which of
  * the three non-shippable states it is, instead of asserting against the null.
  */
-export const ServerHealthRowSchema = z.object({
-  parentId: z.string(),
-  ok: z.boolean(),
-  /** Coerced Date on the wire (the DB column is a timestamp). */
-  checkedAt: z.coerce.date(),
-  /** Null when `ok` — the classified reason otherwise. */
-  failureKind: SshFailureKindSchema.nullable(),
-  failureMessage: z.string().nullable(),
-  checkedPublicKey: z.string().nullable(),
-  /** The host's own `uname -sm` as of this check. See the state table above. */
-  platform: z.enum(PLATFORM_TAGS).nullable(),
+export const serverHealthShape = defineExtensionShape({
+  key: "serverId",
+  fields: {
+    ok: boolField(),
+    checkedAt: dateField(),
+    /**
+     * Null when `ok` — the classified reason otherwise. The column is `text`;
+     * the field's schema narrows it, so the value is decoded on the server's
+     * reads too, not only on the wire.
+     */
+    failureKind: nullable(
+      parsedTextField(SshFailureKindSchema, { default: "unknown" }),
+    ),
+    failureMessage: nullable(textField()),
+    /** `deploy_servers.ssh_public_key` AS OF the check — see above. */
+    checkedPublicKey: nullable(textField()),
+    /**
+     * TOFU-pinned known_hosts line, learned on the first successful check and
+     * required to match on every later one. Never leaves the server: it is
+     * `serverOnly` below.
+     */
+    hostKeyLine: nullable(textField()),
+    /**
+     * The host's own `uname -sm` as of this check, parsed to a `PlatformTag` —
+     * which artifact this server will accept. DISCOVERED, never typed by a
+     * human: a reinstalled or resized box reports its own truth on the next
+     * check, so moving from x86 to ARM is not a code change. It lives here
+     * rather than on `deploy_servers` for the same reason `ok` does —
+     * probe-written state with its own writer and lifecycle — and it is the
+     * twin of `checkedPublicKey`: stamped AS OF this check. See the state table
+     * above.
+     *
+     * Last on purpose: field order is column order, which drizzle-kit diffs
+     * positionally, so a new column goes on the end and no existing one shifts.
+     */
+    platform: nullable(enumTextField(PLATFORM_TAGS)),
+  },
+  serverOnly: ["hostKeyLine"],
 });
+export const ServerHealthRowSchema = serverHealthShape.schema;
 export type ServerHealthRow = z.infer<typeof ServerHealthRowSchema>;
 
 /**

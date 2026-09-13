@@ -1,6 +1,6 @@
-import { text } from "drizzle-orm/pg-core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
+import { agentPageShape } from "../../shared/resources";
 
 // `page_blocks_ext_origin`: presence = the page was created by an automated
 // session (`x-singularity-origin: agent`). `source` records WHICH one, e.g.
@@ -11,9 +11,7 @@ import { _blocks } from "@plugins/page/plugins/editor/server";
 export const pageBlocksOrigin = defineExtension(
   _blocks,
   "origin",
-  {
-    source: text("source").notNull(),
-  },
+  agentPageShape,
   {
     // The nightly sweep scans by age, not by `parent_id` — the PK's implicit
     // btree covers nothing here, so the age column gets its own index.

@@ -16,7 +16,9 @@ const NO_LINKS: readonly PromptTaskLink[] = [];
 // Empty while the resource is still hydrating: the consumer renders a chip row,
 // and a spinner in place of zero-to-three chips would be noise. A block with no
 // launches and a block that hasn't loaded both render nothing.
-export function useBlockPromptTasks(blockId: string): readonly PromptTaskLink[] {
+export function useBlockPromptTasks(
+  blockId: string,
+): readonly PromptTaskLink[] {
   const result = useResource(blockPromptTasksResource, { blockId });
   return useMemo(() => {
     if (result.pending) return NO_LINKS;
@@ -36,5 +38,5 @@ export function usePromptTaskLink(
   const result = useResource(promptTaskOriginsResource);
   if (!taskId) return null;
   if (result.pending) return null;
-  return result.data.find((row) => row.parentId === taskId) ?? null;
+  return result.data.find((row) => row.taskId === taskId) ?? null;
 }

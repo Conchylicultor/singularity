@@ -39,10 +39,10 @@ export async function resolveTodoAnnotations(
   if (todoIds.length === 0) return byBlock;
 
   const links = await db
-    .select({ blockId: t.parentId, taskId: t.taskId, status: tasksView.status })
+    .select({ blockId: t.blockId, taskId: t.taskId, status: tasksView.status })
     .from(t)
     .innerJoin(tasksView, eq(tasksView.id, t.taskId))
-    .where(inArray(t.parentId, todoIds));
+    .where(inArray(t.blockId, todoIds));
 
   for (const link of links) {
     byBlock.set(link.blockId, { task_id: link.taskId, status: link.status });

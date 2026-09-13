@@ -35,6 +35,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
     - `apps/sonata/track-mixer`
     - `apps/sonata/voicing`
     - `conversations`
+    - `conversations/conversations-view/queue`
     - `debug/boot-budget`
     - `debug/boot-monitor`
     - `debug/boot-watchdog`

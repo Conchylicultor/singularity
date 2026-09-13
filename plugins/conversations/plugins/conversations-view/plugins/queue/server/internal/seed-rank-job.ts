@@ -28,7 +28,7 @@ export const seedRankJob = defineJob({
       const [existing] = await tx
         .select({ rank: conversationsQueue.table.rank })
         .from(conversationsQueue.table)
-        .where(eq(conversationsQueue.table.parentId, conversationId))
+        .where(eq(conversationsQueue.table.conversationId, conversationId))
         .limit(1);
       if (existing) return;
 

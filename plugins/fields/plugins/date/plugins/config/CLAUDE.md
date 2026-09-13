@@ -25,6 +25,7 @@
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/claude-cli`
+    - `infra/entity-extensions`
     - `infra/events`
     - `plugin-meta/plugin-health`
     - `tasks/tasks-core`

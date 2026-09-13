@@ -37,8 +37,8 @@ export const agentPagesSweep = defineRetention({
   ttlDays: AGENT_PAGE_TTL_DAYS,
   perWorktree: true,
   beforeDelete: async (rows) => {
-    const parentIds = rows.map((row) => String(row.parentId));
-    if (parentIds.length === 0) return;
+    const pageIds = rows.map((row) => String(row.blockId));
+    if (pageIds.length === 0) return;
     // Only pages that are still LIVE get trashed. A row whose page is already
     // gone (hard-deleted) or already trashed (`deleted_at IS NOT NULL`) is
     // skipped, so a user-deleted agent page doesn't mint a second trash entry —
@@ -47,7 +47,7 @@ export const agentPagesSweep = defineRetention({
     const live = await db
       .select({ id: liveBlocks.id })
       .from(liveBlocks)
-      .where(inArray(liveBlocks.id, parentIds));
+      .where(inArray(liveBlocks.id, pageIds));
     // One call per page so each gets its own independently-restorable
     // `trash_entries` row, rather than folding a night's worth of unrelated
     // agent pages into a single all-or-nothing restore.

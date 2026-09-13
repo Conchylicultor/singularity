@@ -38,7 +38,7 @@ export const cancelAutoStartOnDropJob = defineJob({
     if (event.status !== "dropped") return;
     await db
       .delete(_tasksAutoStartExt)
-      .where(eq(_tasksAutoStartExt.parentId, event.taskId));
+      .where(eq(_tasksAutoStartExt.taskId, event.taskId));
   },
 });
 
@@ -51,14 +51,14 @@ export async function sweepArmedDroppedTasks(): Promise<number> {
     .delete(_tasksAutoStartExt)
     .where(
       inArray(
-        _tasksAutoStartExt.parentId,
+        _tasksAutoStartExt.taskId,
         db
           .select({ id: _tasks.id })
           .from(_tasks)
           .where(isNotNull(_tasks.droppedAt)),
       ),
     )
-    .returning({ parentId: _tasksAutoStartExt.parentId });
+    .returning({ taskId: _tasksAutoStartExt.taskId });
   if (removed.length > 0) {
     console.warn(
       `[tasks.auto-start] cleared ${removed.length} auto-start marker(s) on dropped task(s)`,

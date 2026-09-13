@@ -6,28 +6,22 @@ import {
   blockPromptTasksResource as blockPromptTasksDescriptor,
   promptTaskOriginsResource as promptTaskOriginsDescriptor,
 } from "../../shared/schemas";
-import { _tasksPromptBlockExt, promptBlock } from "./tables";
+import { promptBlock } from "./tables";
 
 const t = promptBlock.table;
-
-const linkColumns = {
-  taskId: t.parentId,
-  pageId: t.pageId,
-  blockId: t.blockId,
-  createdAt: t.createdAt,
-};
 
 // Per-block launched-task list (keyed, params `{ blockId }`, identityTable
 // "tasks_ext_prompt_block"). Hand-written like `pushesByAttemptResource`: this
 // keys on `block_id`, a FOREIGN column, so `windowQueryResource`'s `point`
 // membership cannot serve it — `point.by` must be the identity pk, and the
-// identity pk here is `parent_id` (the task id).
+// identity pk here is the `taskId` key (stored as `parent_id`).
 //
 // The identityTable scopes recompute, so an extension-row change is delivered to
 // every subscribed block tuple; the scoped refill (`WHERE block_id = X AND
 // parent_id IN affectedIds`) returns the row only for the owning block, so other
 // tuples no-op. FULL load = one block's tasks (bounded), oldest-first so the
-// chips read in launch order.
+// chips read in launch order. Both branches select the extension's wire
+// columns, so the row is the shape's wire row by construction.
 export const blockPromptTasksServerResource = defineResource(
   blockPromptTasksDescriptor,
   {
@@ -39,36 +33,30 @@ export const blockPromptTasksServerResource = defineResource(
     loader: async ({ blockId }, ctx) =>
       ctx?.affectedIds
         ? db
-            .select(linkColumns)
+            .select(promptBlock.wireColumns)
             .from(t)
             .where(
               and(
                 eq(t.blockId, blockId),
-                inArray(t.parentId, [...ctx.affectedIds]),
+                inArray(t.taskId, [...ctx.affectedIds]),
               ),
             )
         : db
-            .select(linkColumns)
+            .select(promptBlock.wireColumns)
             .from(t)
             .where(eq(t.blockId, blockId))
             .orderBy(asc(t.createdAt)),
   },
 );
 
-// The task-side read (`WHERE parent_id = taskId`), which the block-keyed
+// The task-side read (keyed on the `taskId` pk), which the block-keyed
 // resource above does not serve. Compiled keyed query-resource — the default
-// identityTable-scoped keyed resource. Plain (unbounded) `queryResource` on
-// purpose: the set is bounded by the domain — at most one row per task,
-// co-bounded with the already boot-critical unbounded-legacy `tasks` resource —
-// and migrates to the bounded working-set contract together with it.
+// identityTable-scoped keyed resource, projecting the extension's wire columns.
+// Plain (unbounded) `queryResource` on purpose: the set is bounded by the
+// domain — at most one row per task, co-bounded with the already boot-critical
+// unbounded-legacy `tasks` resource — and migrates to the bounded working-set
+// contract together with it.
 export const promptTaskOriginsServerResource = queryResource(
   promptTaskOriginsDescriptor,
-  {
-    from: _tasksPromptBlockExt,
-    select: {
-      parentId: _tasksPromptBlockExt.parentId,
-      pageId: _tasksPromptBlockExt.pageId,
-      blockId: _tasksPromptBlockExt.blockId,
-    },
-  },
+  { from: promptBlock },
 );

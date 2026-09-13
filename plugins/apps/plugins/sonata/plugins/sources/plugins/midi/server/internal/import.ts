@@ -221,7 +221,7 @@ export async function getSongMidiBySourcePath(
     .where(eq(_songMidiExt.sourcePath, sourcePath))
     .limit(1);
   if (!row) return null;
-  return { songId: row.parentId, sourceMissing: row.sourceMissing };
+  return { songId: row.songId, sourceMissing: row.sourceMissing };
 }
 
 /**
@@ -230,9 +230,7 @@ export async function getSongMidiBySourcePath(
  * its existing song. Returns the current `sourcePath`/`sourceMissing` so the
  * caller can decide whether to adopt the new path.
  */
-export async function getSongMidiByContentHash(
-  contentHash: string,
-): Promise<{
+export async function getSongMidiByContentHash(contentHash: string): Promise<{
   songId: string;
   sourcePath: string | null;
   sourceMissing: boolean;
@@ -244,7 +242,7 @@ export async function getSongMidiByContentHash(
     .limit(1);
   if (!row) return null;
   return {
-    songId: row.parentId,
+    songId: row.songId,
     sourcePath: row.sourcePath,
     sourceMissing: row.sourceMissing,
   };
@@ -269,21 +267,21 @@ export async function backfillContentHashes(): Promise<void> {
     const att = await getAttachment(row.attachmentId);
     if (!att) {
       console.warn(
-        `[midi] backfill: attachment ${row.attachmentId} for song ${row.parentId} not found, skipping`,
+        `[midi] backfill: attachment ${row.attachmentId} for song ${row.songId} not found, skipping`,
       );
       continue;
     }
     const file = Bun.file(att.diskPath);
     if (!(await file.exists())) {
       console.warn(
-        `[midi] backfill: attachment file gone for song ${row.parentId}, skipping`,
+        `[midi] backfill: attachment file gone for song ${row.songId}, skipping`,
       );
       continue;
     }
     await db
       .update(_songMidiExt)
       .set({ contentHash: hashMidiBytes(await file.bytes()) })
-      .where(eq(_songMidiExt.parentId, row.parentId));
+      .where(eq(_songMidiExt.songId, row.songId));
   }
 }
 
@@ -301,7 +299,7 @@ export async function listFolderImportedSongs(): Promise<
     .from(_songMidiExt)
     .where(isNotNull(_songMidiExt.sourcePath));
   return rows.map((row) => ({
-    songId: row.parentId,
+    songId: row.songId,
     // Narrow: the `isNotNull` filter guarantees a non-null path here.
     sourcePath: row.sourcePath as string,
     sourceMissing: row.sourceMissing,
@@ -320,5 +318,5 @@ export async function setSourceMissing(
   await db
     .update(_songMidiExt)
     .set({ sourceMissing: missing })
-    .where(eq(_songMidiExt.parentId, songId));
+    .where(eq(_songMidiExt.songId, songId));
 }

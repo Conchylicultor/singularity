@@ -336,20 +336,25 @@ Two consequences worth knowing before editing:
   that has ever served something. Gitignored, but they are `tsc` input. Phase 5
   of `research/2026-08-17-global-composition-build-serve-model.md` owns the
   reclaim trigger.
-- **Nothing in the CLI *process*'s import closure may reach a registered
-  pre-barrel or post-web codegen manifest.** Bun freezes a module on first
+- **No CLI process may load a registered pre-barrel or post-web codegen
+  manifest that it later regenerates.** Bun freezes a module on first
   `import()`, and stage 2 regenerates every such manifest and then re-reads it: a
-  manifest frozen at CLI load is rewritten on disk but never re-read, so
+  manifest the process already loaded is rewritten on disk but never re-read, so
   `generateConfigOrigins` sees the previous run's descriptor set and
   `pruneOrphanedConfigFiles` deletes a freshly-authored config override — silent
-  data loss, no failing step. Enforced by `cli:codegen-manifests-not-frozen`,
-  which walks `bin/index.ts`'s closure against `preBarrelManifests` /
-  `postWebManifests`. The old subset-of-`build.ts` framing never measured this:
-  `bin/cli.ts` already statically reaches 14 plugin server barrels through
-  `release.ts`, and a frozen *barrel* is harmless — its frozen generated *inputs*
-  are not. It is still why `release.ts` **shells out** to a fresh `build
-  --hermetic` process instead of calling the module in-process: process isolation
-  is the correctness boundary, not an implementation detail.
+  data loss, no failing step. Enforced by `cli:codegen-manifests-not-frozen` as
+  two rules. The **startup closure** (`bin/index.ts` → `bin/cli.ts` → every
+  command *declaration*) may load no manifest. The **run closure of each command
+  that regenerates in-process** may load none either. Each `run: () => import(…)`
+  thunk is cut out of startup, because one process runs one command's body.
+  "Regenerates" is derived, not listed: live code in that closure calls the
+  registry's writer (`writePreBarrelManifest`) — today `build`,
+  `regen-generated` and, conservatively, `check`. So `deploy converge` may load
+  `fieldsEager` through an entity-backed handle; `build`'s body may not. Process
+  isolation is the correctness boundary: `release` needs stage 2 but **shells
+  out** to a fresh `build --hermetic` (its own body statically imports plugin
+  barrels), and `push` / `normalize-generated` spawn `regen-generated` — never
+  "simplify" those into in-process calls.
 
 Design + rationale:
 [`research/2026-07-28-cli-hermetic-artifact-phase.md`](../../../../research/2026-07-28-cli-hermetic-artifact-phase.md),

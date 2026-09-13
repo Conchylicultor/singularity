@@ -54,6 +54,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
     - `database.db`
     - `infra/claude-cli.ClaudeCliError`
     - `infra/claude-cli.runClaudePrint`
+    - `infra/entities.defaultNow`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`

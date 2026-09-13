@@ -140,7 +140,6 @@ directives establish); the selected voicing strategy from the shared
     - `apps/sonata/library._songs`
     - `apps/sonata/library.createSongRow`
     - `apps/sonata/library.updateSongMeta`
-    - `database.db`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`

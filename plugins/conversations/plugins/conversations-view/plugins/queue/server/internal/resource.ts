@@ -2,17 +2,16 @@ import { windowQueryResource } from "@plugins/infra/plugins/query-resource/serve
 import { queueRanksResource as queueRanksDescriptor } from "../../core/resources";
 import { conversationsQueue } from "./tables";
 
-const t = conversationsQueue.table;
-
 // Compiled bounded POINT resource: the loader reads only the subscribed id set
 // (`WHERE parent_id IN (ids)`) — the queue's LIVE conversation set — and the
 // change-feed routes a rank insert/reseat to a tuple iff the changed conversation
 // ids intersect its set. So `seedRankJob` on every `conversationCreated` ships a
 // single-row point delta to whatever tuple contains that id (structurally none
 // until the live set includes it), never a full 2,726-row re-select + persist.
-// The PK column `parent_id` is projected under the ALIAS `conversationId` (the
-// point identity); `point.by` IS that identity pk. No orderBy — point sets are
-// unordered (the client sorts by rank).
+// The extension handle is the source, so the projection is its `wireColumns`
+// and the identity is its key `conversationId` (the `parent_id` PK); `point.by`
+// IS that identity pk. No orderBy — point sets are unordered (the client sorts
+// by rank).
 //
 // `ackChannel: true` is load-bearing: a reorder write that lands OUTSIDE the
 // subscribed tuple, or produces a net-zero diff, still emits a standalone ack
@@ -26,8 +25,7 @@ const t = conversationsQueue.table;
 // status, but that is computed client-side from the conversations the sidebar
 // already holds.
 export const queueRanksResource = windowQueryResource(queueRanksDescriptor, {
-  from: t,
-  select: { conversationId: t.parentId, rank: t.rank, pinned: t.pinned },
-  point: { by: t.parentId },
+  from: conversationsQueue,
+  point: { by: conversationsQueue.table.conversationId },
   ackChannel: true,
 });

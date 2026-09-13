@@ -10,9 +10,9 @@ export const handleRecordPlay = implement(recordPlay, async ({ params }) => {
   // makes a play for a non-existent song fail loudly.
   await db
     .insert(_songPlaybackExt)
-    .values({ parentId: params.id, playCount: 1, lastPlayedAt: now })
+    .values({ songId: params.id, playCount: 1, lastPlayedAt: now })
     .onConflictDoUpdate({
-      target: _songPlaybackExt.parentId,
+      target: _songPlaybackExt.songId,
       set: {
         playCount: sql`${_songPlaybackExt.playCount} + 1`,
         lastPlayedAt: now,

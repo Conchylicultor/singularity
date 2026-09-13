@@ -26,7 +26,7 @@ block-side query returns nothing; the task-side origin section renders nothing).
 ## Why the block-keyed resource is hand-written
 
 `blockPromptTasksResource` keys on `block_id` — a **foreign** column, not the
-identity pk (`parent_id` = the task id). `windowQueryResource`'s `point`
+identity pk (the `taskId` key, stored as `parent_id`). `windowQueryResource`'s `point`
 membership requires `by` to be the identity pk, so it cannot express this read.
 The sanctioned shape for a foreign-column-keyed resource is the hand-written
 `defineResource(descriptor, { identityTable, loader })` with the
@@ -46,6 +46,11 @@ a bitmap scan plus a sort, and the trailing column costs nothing either way.
 The second, task-keyed read (`promptTaskOriginsResource`) is a plain
 `queryResource` — bounded by the domain (at most one row per task, co-bounded
 with the already boot-critical unbounded-legacy `tasks` resource).
+
+Both reads send the same wire row, `{ taskId, pageId, blockId, createdAt }`: the
+extension's shape (`promptBlockShape`, in `shared/schemas.ts`) declares it once,
+and each loader selects the handle's `wireColumns`, so there is no projection to
+drift from the table.
 
 ## Public API
 

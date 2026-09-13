@@ -1,8 +1,8 @@
 import { windowQueryResource } from "@plugins/infra/plugins/query-resource/server";
 import { starredPagesResource as starredPagesDescriptor } from "../../shared/resources";
-import { _pageBlocksStarredExt } from "./tables";
+import { pageBlocksStarred } from "./tables";
 
-const t = _pageBlocksStarredExt;
+const t = pageBlocksStarred.table;
 
 // Compiled bounded window (desc createdAt, default 500 / max 1000). Starring is a
 // membership ENTRY and unstarring a membership EXIT; both ship incremental
@@ -13,16 +13,14 @@ const t = _pageBlocksStarredExt;
 // on conflict only ever touches `updatedAt` — re-starring an already-starred page
 // is an in-place refill with an unchanged order signature and zero ids queries.
 //
-// `createdAt` is projected because the compiler derives the order signature from
-// the wire row and throws at module eval if an order column is unprojected.
+// No `select`: the projection is the extension's wire columns, which carry
+// `createdAt` (a `wireTimestamps` entry of the shape) — the compiler derives the
+// order signature from the wire row and throws at module eval if an order
+// column is unprojected.
 export const starredPagesServerResource = windowQueryResource(
   starredPagesDescriptor,
   {
-    from: t,
-    select: {
-      parentId: t.parentId,
-      createdAt: t.createdAt,
-    },
+    from: pageBlocksStarred,
     orderBy: { col: t.createdAt, dir: "desc" },
     window: { maxLimit: 1000 },
   },

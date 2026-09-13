@@ -6,20 +6,14 @@ import {
 } from "../../shared/schemas";
 import { tasksEffort } from "./tables";
 
-const t = tasksEffort.table;
-
 export const taskEffortsResource = defineResource<TaskEffortsPayload>({
   key: "task-efforts",
   mode: "push",
   schema: TaskEffortsPayloadSchema,
   loader: async () => {
     const rows = await db
-      .select({
-        taskId: t.parentId,
-        level: t.level,
-        updatedAt: t.updatedAt,
-      })
-      .from(t);
+      .select(tasksEffort.wireColumns)
+      .from(tasksEffort.table);
     const out: TaskEffortsPayload = {};
     for (const r of rows) out[r.taskId] = r;
     return out;

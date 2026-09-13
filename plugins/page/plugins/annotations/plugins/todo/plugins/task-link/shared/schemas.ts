@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
 // The task ONE TODO card dispatched an agent onto, and when it was first
 // dispatched. It carries the link and nothing else — no title, no status: those
@@ -7,11 +9,16 @@ import { keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/
 // holds them on the boot-critical `tasks` resource. Copying them here would make
 // this row a second, drifting answer to a question the task list already
 // answers.
-export const TodoTaskLinkSchema = z.object({
-  blockId: z.string(),
-  taskId: z.string(),
-  createdAt: z.coerce.date(),
+//
+// The `page_blocks_ext_todo_task` row, keyed on the card's `blockId`;
+// `server/internal/tables.ts` builds the table (and the `task_id` FK) from this
+// shape.
+export const todoTaskShape = defineExtensionShape({
+  key: "blockId",
+  fields: { taskId: textField() },
+  wireTimestamps: ["createdAt"],
 });
+export const TodoTaskLinkSchema = todoTaskShape.schema;
 export type TodoTaskLink = z.infer<typeof TodoTaskLinkSchema>;
 
 // The link of ONE TODO card — an array of length 0 or 1, because the card's row

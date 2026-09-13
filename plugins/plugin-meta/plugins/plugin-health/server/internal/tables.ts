@@ -1,7 +1,12 @@
-import { text, uniqueIndex } from "drizzle-orm/pg-core";
+import { uniqueIndex } from "drizzle-orm/pg-core";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { defineEntity, defaultNow } from "@plugins/infra/plugins/entities/server";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
 import { pluginHealthReviewFields } from "../../core";
 
 // The table + the `PluginHealthReview` wire schema both derive from the single
@@ -29,14 +34,17 @@ export const _pluginHealthReviews = pluginHealthReviews.table;
 
 // Which tasks belong to a review. The `review_id` index serves the only read
 // keyed on a foreign column — `handleGetTasksForReview` (see ./routes.ts),
-// `WHERE review_id = X` joined to `_tasks` on `parent_id`; the pk's implicit
-// btree covers the join side, not the filter.
+// `WHERE review_id = X` joined to `_tasks` on the `taskId` key (`parent_id`);
+// the pk's implicit btree covers the join side, not the filter. The row never
+// reaches the browser, so the shape is declared here rather than in `shared/`.
+const healthReviewShape = defineExtensionShape({
+  key: "taskId",
+  fields: { reviewId: textField() },
+});
 export const healthReviewExt = defineExtension(
   _tasks,
   "health_review",
-  {
-    reviewId: text("review_id").notNull(),
-  },
+  healthReviewShape,
   {
     indexes: (t, b) => [b.index("review_id").on(t.reviewId)],
   },

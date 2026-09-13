@@ -1,10 +1,19 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
-import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _conversations,
+  _attempts,
+  listBlockingDepIds,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
-import { lockDeck, rankAfterBlockers, reseatGroupMembers, upsertRank } from "./queue-ranks";
+import {
+  lockDeck,
+  rankAfterBlockers,
+  reseatGroupMembers,
+  upsertRank,
+} from "./queue-ranks";
 
 const LIVE_STATUSES: ConversationStatus[] = ["waiting", "working", "starting"];
 
@@ -20,12 +29,12 @@ export async function repairBlockedOrder(): Promise<void> {
 
       const rows = await tx
         .select({
-          convId: _cq.parentId,
+          convId: _cq.conversationId,
           rank: _cq.rank,
           taskId: _attempts.taskId,
         })
         .from(_cq)
-        .innerJoin(_conversations, eq(_conversations.id, _cq.parentId))
+        .innerJoin(_conversations, eq(_conversations.id, _cq.conversationId))
         .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
         .where(inArray(_conversations.status, LIVE_STATUSES))
         .orderBy(asc(_cq.rank));
@@ -41,7 +50,11 @@ export async function repairBlockedOrder(): Promise<void> {
         const blockingTaskIds = await listBlockingDepIds(taskId, tx);
         if (blockingTaskIds.length === 0) continue;
 
-        const requiredRank = await rankAfterBlockers(lead.convId, blockingTaskIds, tx);
+        const requiredRank = await rankAfterBlockers(
+          lead.convId,
+          blockingTaskIds,
+          tx,
+        );
         const currentRank = Rank.from(lead.rank as string);
         if (Rank.compare(currentRank, requiredRank) >= 0) continue;
 

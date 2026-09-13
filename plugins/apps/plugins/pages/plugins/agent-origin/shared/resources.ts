@@ -1,14 +1,18 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { windowQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 
-// One row per agent-created page. `source` is the script that minted it
-// ("e2e:copy-paste-verify"); `createdAt` is both the window's order key and the
-// sweep's age column.
-export const AgentPageRowSchema = z.object({
-  parentId: z.string(),
-  source: z.string(),
-  createdAt: z.coerce.date(),
+// One row per agent-created page, in the `page_blocks_ext_origin`
+// entity-extension table that `server/internal/tables.ts` builds from this
+// shape. `source` is the script that minted it ("e2e:copy-paste-verify");
+// `createdAt` is both the window's order key and the sweep's age column.
+export const agentPageShape = defineExtensionShape({
+  key: "blockId",
+  fields: { source: textField() },
+  wireTimestamps: ["createdAt"],
 });
+export const AgentPageRowSchema = agentPageShape.schema;
 export type AgentPageRow = z.infer<typeof AgentPageRowSchema>;
 
 // Bounded ordered window (desc createdAt, default 200 / max 500): a DB-backed
@@ -16,13 +20,13 @@ export type AgentPageRow = z.infer<typeof AgentPageRowSchema>;
 // bounded-working-set contract). The sibling `starred` plugin is the same shape
 // on a bigger window — its favorites have no TTL. The 24h TTL
 // (see server/internal/sweep.ts) keeps the live set in single digits, so the
-// 200-row window is never the binding constraint. Rows key on `parentId` (the
-// side-table PK); the server half is compiled from the drizzle declaration in
-// `server/internal/resource.ts`. Web consumers read it via `useWindowResource`;
-// the wire shape stays `AgentPageRow[]`.
+// 200-row window is never the binding constraint. Rows key on `blockId` (the
+// side-table PK — the marked page's id); the server half is compiled from the
+// extension handle in `server/internal/resource.ts`. Web consumers read it via
+// `useWindowResource`; the wire shape stays `AgentPageRow[]`.
 export const agentPagesResource = windowQueryResourceDescriptor<AgentPageRow>(
   "pages-origin",
   AgentPageRowSchema,
-  "parentId",
+  "blockId",
   { defaultLimit: 200 },
 );

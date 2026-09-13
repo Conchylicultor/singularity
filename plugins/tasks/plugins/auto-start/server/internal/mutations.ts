@@ -14,9 +14,9 @@ export async function getTaskAutoStart(id: string) {
 // the marker set, which is small (~180) and shrinks as tasks launch.
 export async function listArmedTaskIds(): Promise<string[]> {
   const rows = await db
-    .select({ parentId: _tasksAutoStartExt.parentId })
+    .select({ taskId: _tasksAutoStartExt.taskId })
     .from(_tasksAutoStartExt);
-  return rows.map((r) => r.parentId);
+  return rows.map((r) => r.taskId);
 }
 
 export async function setTaskAutoStart(
@@ -47,7 +47,7 @@ export async function setTaskAutoStart(
 export async function claimAutoStart(id: string): Promise<boolean> {
   const [row] = await db
     .delete(_tasksAutoStartExt)
-    .where(eq(_tasksAutoStartExt.parentId, id))
-    .returning({ parentId: _tasksAutoStartExt.parentId });
+    .where(eq(_tasksAutoStartExt.taskId, id))
+    .returning({ taskId: _tasksAutoStartExt.taskId });
   return !!row;
 }

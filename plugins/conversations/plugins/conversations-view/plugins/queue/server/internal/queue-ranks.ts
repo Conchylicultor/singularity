@@ -17,12 +17,12 @@ function joinedLive(executor: RankExecutor = db) {
   return executor
     .select({
       rank: _conversationsExtQueue.rank,
-      id: _conversationsExtQueue.parentId,
+      id: _conversationsExtQueue.conversationId,
     })
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     );
 }
 
@@ -43,11 +43,11 @@ export async function endRank(): Promise<Rank> {
 
 export async function lockDeck(executor: RankExecutor): Promise<void> {
   await executor
-    .select({ id: _conversationsExtQueue.parentId })
+    .select({ id: _conversationsExtQueue.conversationId })
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     )
     .where(inArray(_conversations.status, LIVE_STATUSES))
     .for("update", { of: _conversationsExtQueue });
@@ -61,7 +61,7 @@ export async function rankForTop(
     .where(
       and(
         inArray(_conversations.status, LIVE_STATUSES),
-        ne(_conversationsExtQueue.parentId, excludeId),
+        ne(_conversationsExtQueue.conversationId, excludeId),
       ),
     )
     .orderBy(asc(_conversationsExtQueue.rank))
@@ -80,7 +80,7 @@ export async function rankForBottom(
     .where(
       and(
         inArray(_conversations.status, LIVE_STATUSES),
-        ne(_conversationsExtQueue.parentId, excludeId),
+        ne(_conversationsExtQueue.conversationId, excludeId),
       ),
     )
     .orderBy(desc(_conversationsExtQueue.rank))
@@ -97,7 +97,7 @@ export async function rankAfterN(
   const [self] = await executor
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
-    .where(eq(_conversationsExtQueue.parentId, conversationId))
+    .where(eq(_conversationsExtQueue.conversationId, conversationId))
     .limit(1);
   if (!self?.rank) return rankForBottom(conversationId, executor);
 
@@ -106,7 +106,7 @@ export async function rankAfterN(
 
   const conditions = [
     inArray(_conversations.status, LIVE_STATUSES),
-    ne(_conversationsExtQueue.parentId, conversationId),
+    ne(_conversationsExtQueue.conversationId, conversationId),
   ];
   if (taskId) conditions.push(ne(_attempts.taskId, taskId));
 
@@ -118,7 +118,7 @@ export async function rankAfterN(
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(and(...conditions))
@@ -150,7 +150,7 @@ export async function rankAdjacentTo(
   const [target] = await executor
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
-    .where(eq(_conversationsExtQueue.parentId, targetId))
+    .where(eq(_conversationsExtQueue.conversationId, targetId))
     .limit(1);
   if (!target?.rank)
     throw new Error(`No queue rank for conversation ${targetId}`);
@@ -161,7 +161,7 @@ export async function rankAdjacentTo(
       .from(_conversationsExtQueue)
       .innerJoin(
         _conversations,
-        eq(_conversations.id, _conversationsExtQueue.parentId),
+        eq(_conversations.id, _conversationsExtQueue.conversationId),
       )
       .where(
         and(
@@ -182,7 +182,7 @@ export async function rankAdjacentTo(
       .from(_conversationsExtQueue)
       .innerJoin(
         _conversations,
-        eq(_conversations.id, _conversationsExtQueue.parentId),
+        eq(_conversations.id, _conversationsExtQueue.conversationId),
       )
       .where(
         and(
@@ -212,13 +212,13 @@ export async function rankAfterBlockers(
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
         inArray(_conversations.status, LIVE_STATUSES),
-        ne(_conversationsExtQueue.parentId, conversationId),
+        ne(_conversationsExtQueue.conversationId, conversationId),
         inArray(_attempts.taskId, blockingTaskIds),
       ),
     )
@@ -231,7 +231,7 @@ export async function rankAfterBlockers(
     .where(
       and(
         inArray(_conversations.status, LIVE_STATUSES),
-        ne(_conversationsExtQueue.parentId, conversationId),
+        ne(_conversationsExtQueue.conversationId, conversationId),
         gt(_conversationsExtQueue.rank, last.rank),
       ),
     )
@@ -265,17 +265,17 @@ async function findGroupSiblingIds(
   executor: RankExecutor = db,
 ): Promise<string[]> {
   const rows = await executor
-    .select({ id: _conversationsExtQueue.parentId })
+    .select({ id: _conversationsExtQueue.conversationId })
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
         eq(_attempts.taskId, taskId),
-        ne(_conversationsExtQueue.parentId, excludeId),
+        ne(_conversationsExtQueue.conversationId, excludeId),
         inArray(_conversations.status, LIVE_STATUSES),
       ),
     );
@@ -321,13 +321,13 @@ export async function seatJoiningGroup(
     .from(_conversationsExtQueue)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, _conversationsExtQueue.parentId),
+      eq(_conversations.id, _conversationsExtQueue.conversationId),
     )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(
         eq(_attempts.taskId, taskId),
-        ne(_conversationsExtQueue.parentId, conversationId),
+        ne(_conversationsExtQueue.conversationId, conversationId),
         inArray(_conversations.status, LIVE_STATUSES),
       ),
     )
@@ -351,13 +351,13 @@ export async function upsertRank(
   await executor
     .insert(_conversationsExtQueue)
     .values({
-      parentId: conversationId,
+      conversationId,
       rank: rank.toJSON(),
       pinned,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: _conversationsExtQueue.parentId,
+      target: _conversationsExtQueue.conversationId,
       set: { rank: rank.toJSON(), updatedAt: now },
     });
 }
@@ -379,6 +379,9 @@ export async function setGroupPinned(
     .update(_conversationsExtQueue)
     .set({ pinned, updatedAt: new Date() })
     .where(
-      inArray(_conversationsExtQueue.parentId, [conversationId, ...siblingIds]),
+      inArray(_conversationsExtQueue.conversationId, [
+        conversationId,
+        ...siblingIds,
+      ]),
     );
 }

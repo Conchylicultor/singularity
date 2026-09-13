@@ -15,7 +15,8 @@ Design: [`research/2026-08-07-page-todo-agent-dispatch.md`](../../../../../../..
 ## A block-keyed extension, not a copy of `/prompt`'s link table
 
 `page_blocks_ext_todo_task(parent_id PK → page_blocks, task_id → tasks)`.
-`defineExtension` synthesizes `parent_id` as the PRIMARY KEY, and **that is what
+`defineExtension` synthesizes its key (`blockId`, stored as `parent_id`) as the
+PRIMARY KEY, and **that is what
 makes "one task per TODO card" a fact of the schema** rather than a rule the
 create endpoint remembers to check — i.e. rather than a rule two concurrent
 dispatches can both pass. A second dispatch is an upsert onto the same key.

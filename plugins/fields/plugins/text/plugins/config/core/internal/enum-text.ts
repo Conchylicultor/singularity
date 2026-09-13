@@ -27,9 +27,13 @@ import { textFieldType } from "@plugins/fields/plugins/text/core";
 // `default` is REQUIRED here: a general schema has no "first value" to fall back
 // to, and a `defaultValue` that does not really parse would be a silent
 // mis-backfill. `enumTextField` supplies it from the tuple.
+//
+// `default` is `NoInfer<T>`: `T` comes from `schema` alone. Were the literal
+// default an inference site too, `parsedTextField(schema, { default: "high" })`
+// would widen `T` to `string` and the field would silently lose its union.
 export function parsedTextField<T extends string>(
   schema: ZodParser<T>,
-  opts: FieldMeta & { default: T },
+  opts: FieldMeta & { default: NoInfer<T> },
 ): FieldDef<T> {
   return Object.freeze({
     // True by construction now: the text storage arm really does produce `T`,

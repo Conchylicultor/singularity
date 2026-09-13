@@ -18,7 +18,7 @@ Design: [`research/2026-07-29-global-agent-origin-provenance-for-pages.md`](../.
   receives the raw `Request` so *this* plugin classifies provenance and the
   handler stays agnostic.
 - `page_blocks_ext_origin` is a presence side-table (`source` column + the
-  synthesized `parentId`/timestamps). Presence = agent-created. Only
+  synthesized `blockId` key/timestamps). Presence = agent-created. Only
   `type="page"` blocks are marked, roots and nested pages alike.
 - **The live resource is a `windowQueryResource`, not the `queryResource` the
   sibling `starred` uses.** New DB-backed collection resources must be

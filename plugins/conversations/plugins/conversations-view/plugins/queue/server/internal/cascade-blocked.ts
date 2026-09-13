@@ -63,9 +63,9 @@ async function leadConversation(
 ): Promise<{ id: string; rank: string } | null> {
   const _cq = conversationsQueue.table;
   const [row] = await tx
-    .select({ id: _cq.parentId, rank: _cq.rank })
+    .select({ id: _cq.conversationId, rank: _cq.rank })
     .from(_cq)
-    .innerJoin(_conversations, eq(_conversations.id, _cq.parentId))
+    .innerJoin(_conversations, eq(_conversations.id, _cq.conversationId))
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(
       and(

@@ -47,6 +47,6 @@ export const sweepGoneRanksJob = defineJob({
       );
     await db
       .delete(conversationsQueue.table)
-      .where(inArray(conversationsQueue.table.parentId, goneIds));
+      .where(inArray(conversationsQueue.table.conversationId, goneIds));
   },
 });

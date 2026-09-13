@@ -23,7 +23,7 @@ export function OriginField({ render }: FieldExtensionProps<PageRow>) {
   const result = useWindowResource(agentPagesResource);
   const agentIds = useMemo(() => {
     if (result.pending) return new Set<string>();
-    return new Set(result.data.map((r) => r.parentId));
+    return new Set(result.data.map((r) => r.blockId));
   }, [result]);
   const fields = useMemo<FieldDef<PageRow>[]>(
     () => [

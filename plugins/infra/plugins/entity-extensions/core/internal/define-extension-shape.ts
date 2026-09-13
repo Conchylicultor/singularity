@@ -1,0 +1,138 @@
+import type { z } from "zod";
+import type { FieldsRecord } from "@plugins/fields/core";
+import {
+  textField,
+  type TextFieldDef,
+} from "@plugins/fields/plugins/text/plugins/config/core";
+import {
+  dateField,
+  type DateFieldDef,
+} from "@plugins/fields/plugins/date/plugins/config/core";
+import { wireSchema } from "@plugins/infra/plugins/entities/core";
+import {
+  assertNoReservedKeys,
+  EXTENSION_TIMESTAMPS,
+  type ExtensionTimestamp,
+} from "./reserved";
+
+// The complete field record of an extension: the parent key, the plugin's own
+// fields, then the two timestamps. `K` is the key's name (`"songId"`), `F` the
+// plugin's own fields.
+export type ExtensionFields<K extends string, F extends FieldsRecord> = {
+  [P in K | keyof F | ExtensionTimestamp]: P extends K
+    ? TextFieldDef
+    : P extends ExtensionTimestamp
+      ? DateFieldDef
+      : P extends keyof F
+        ? F[P]
+        : never;
+};
+
+// The keys kept off the wire: the plugin's `serverOnly` fields `S`, plus every
+// timestamp the plugin did not put on the wire (`W`).
+export type ExtensionServerOnly<
+  S extends string,
+  W extends ExtensionTimestamp,
+> = S | Exclude<ExtensionTimestamp, W>;
+
+// The wire row's zod shape. Spelled exactly like `Entity["schema"]`'s shape
+// (`{ [K in Exclude<keyof F, S>]: F[K]["schema"] }`), so a shape's `schema` and
+// the entity `defineExtension` builds from it are the same type.
+export type ExtensionWireShape<
+  K extends string,
+  F extends FieldsRecord,
+  S extends keyof F & string,
+  W extends ExtensionTimestamp,
+> = {
+  [
+    P in Exclude<keyof ExtensionFields<K, F>, ExtensionServerOnly<S, W>>
+  ]: ExtensionFields<K, F>[P]["schema"];
+};
+
+// What `defineExtensionShape` returns: everything about an extension row that
+// the browser needs too. The server half (`defineExtension`) builds the table
+// from it; the browser reads `schema` directly.
+export interface ExtensionShape<
+  K extends string,
+  F extends FieldsRecord,
+  S extends keyof F & string = never,
+  W extends ExtensionTimestamp = never,
+> {
+  readonly key: K;
+  // The complete record, in column order (see `defineExtensionShape`).
+  readonly fields: ExtensionFields<K, F>;
+  readonly serverOnly: readonly ExtensionServerOnly<S, W>[];
+  readonly schema: z.ZodObject<ExtensionWireShape<K, F, S, W>>;
+}
+
+// The structural bound `defineExtension` takes a shape through. Deliberately
+// loose: `ExtensionShape<string, FieldsRecord, …>` would make every field a
+// `TextFieldDef` (`P extends string` is true for every key), so a concrete
+// shape would not satisfy it.
+export interface AnyExtensionShape {
+  readonly key: string;
+  readonly fields: FieldsRecord;
+  readonly serverOnly: readonly string[];
+  readonly schema: z.AnyZodObject;
+}
+
+export interface ExtensionShapeDef<
+  K extends string,
+  F extends FieldsRecord,
+  S extends keyof F & string,
+  W extends ExtensionTimestamp,
+> {
+  // The parent key's name — the key column's JS property AND the wire field
+  // (`"songId"`, `"conversationId"`). Its DB column is always `parent_id`.
+  key: K;
+  // The plugin's own fields. The key and the timestamps are the primitive's;
+  // declaring any of them throws.
+  fields: F;
+  // Own fields that stay in the table but off the wire (`defineEntity`'s rule).
+  serverOnly?: readonly S[];
+  // Timestamps to put ON the wire. They are off it by default: they belong to
+  // the primitive, and leaving them off keeps a write that changes nothing from
+  // sending a row diff just because `updatedAt` moved.
+  wireTimestamps?: readonly W[];
+}
+
+// Declare an extension's row once, in browser-safe code. `defineExtension`
+// (server) builds the `<parent>_ext_<name>` table from it, and the browser uses
+// `shape.schema` as the row schema — the same object the server's entity
+// carries, so the two cannot drift.
+export function defineExtensionShape<
+  K extends string,
+  F extends FieldsRecord,
+  S extends keyof F & string = never,
+  W extends ExtensionTimestamp = never,
+>(def: ExtensionShapeDef<K, F, S, W>): ExtensionShape<K, F, S, W> {
+  const { key, fields } = def;
+  assertNoReservedKeys(key, fields);
+
+  // Key order is load-bearing: drizzle-kit diffs columns positionally, and this
+  // is the order every extension table already has (parent_id, the plugin's
+  // columns, created_at, updated_at). The cast re-states what the literal holds:
+  // a computed `[key]` property widens to an index signature, which TS cannot
+  // relate to the per-key conditional of `ExtensionFields`.
+  const fullFields = Object.freeze({
+    [key]: textField(),
+    ...fields,
+    createdAt: dateField(),
+    updatedAt: dateField(),
+  }) as unknown as ExtensionFields<K, F>;
+
+  const onWire = new Set<string>(def.wireTimestamps ?? []);
+  const serverOnly: readonly ExtensionServerOnly<S, W>[] = Object.freeze([
+    ...(def.serverOnly ?? []),
+    ...EXTENSION_TIMESTAMPS.filter(
+      (t): t is Exclude<ExtensionTimestamp, W> => !onWire.has(t),
+    ),
+  ]);
+
+  return Object.freeze({
+    key,
+    fields: fullFields,
+    serverOnly,
+    schema: wireSchema(fullFields, serverOnly),
+  });
+}

@@ -1,19 +1,38 @@
 import { pointQueryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
-import { z } from "zod";
-import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import type { z } from "zod";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { parsedTextField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import {
+  DEFAULT_MODEL,
+  StoredModelSchema,
+} from "@plugins/conversations/plugins/model-provider/core";
 
-export const TaskAutoStartRowSchema = z.object({
-  parentId: z.string(),
-  autoStartAt: z.coerce.date(),
-  // Tolerant by construction (see StoredModelSchema): a legacy/unknown stored model
-  // normalizes instead of rejecting the row, which would blank the whole resource.
-  autoStartModel: StoredModelSchema,
+// One task's auto-start marker, stored in the `tasks_ext_auto_start`
+// entity-extension table (1:1 per task), which `server/internal/tables.ts`
+// builds from this shape.
+export const taskAutoStartShape = defineExtensionShape({
+  key: "taskId",
+  fields: {
+    autoStartAt: dateField(),
+    // The tolerant schema, not the strict one: model ids get renamed and stored
+    // rows outlive them. Normalizing at the COLUMN is what reaches the
+    // server-side readers too — the launch job looks this id up in
+    // MODEL_REGISTRY — and on the wire a legacy/unknown stored model normalizes
+    // instead of rejecting the row, which would blank the whole resource.
+    // `default` is only the wire default the field record requires; the column
+    // has no DB default.
+    autoStartModel: parsedTextField(StoredModelSchema, {
+      default: DEFAULT_MODEL,
+    }),
+  },
 });
+export const TaskAutoStartRowSchema = taskAutoStartShape.schema;
 export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 
 // Bounded POINT resource. The marker is 1:1 with its task, so the point identity
-// IS the side-table's pk (`parent_id` = the task id): one subscribed id names
-// exactly one task's marker.
+// IS the side-table's pk (`taskId`, stored as `parent_id`): one subscribed id
+// names exactly one task's marker.
 //
 // Every consumer asks about ONE task and needs an exact answer — the launch
 // option's select control both reads and writes this row — so `point` is the
@@ -26,11 +45,11 @@ export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 // NOT bootCritical: point resources hydrate post-mount (the recorded decision of
 // the bounded working-set contract), which is what this resource already did.
 //
-// The server half is compiled from the drizzle declaration in
+// The server half is compiled from the extension handle in
 // `server/internal/resource.ts`; the wire shape stays `TaskAutoStartRow[]`.
 export const taskAutoStartResource =
   pointQueryResourceDescriptor<TaskAutoStartRow>(
     "tasks-auto-start",
     TaskAutoStartRowSchema,
-    "parentId",
+    "taskId",
   );

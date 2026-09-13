@@ -72,11 +72,11 @@ async function rerankTaskConversations(
   ) => Promise<Rank>,
 ): Promise<void> {
   const convRows = await db
-    .select({ id: conversationsQueue.table.parentId })
+    .select({ id: conversationsQueue.table.conversationId })
     .from(conversationsQueue.table)
     .innerJoin(
       _conversations,
-      eq(_conversations.id, conversationsQueue.table.parentId),
+      eq(_conversations.id, conversationsQueue.table.conversationId),
     )
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(

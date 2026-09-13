@@ -8,71 +8,117 @@ A child plugin that wants per-entity state (toggles, settings, soft-delete flags
 
 ## API
 
-```ts
-import { boolean } from "drizzle-orm/pg-core";
-import { _agents } from "@plugins/conversations/plugins/agents/server";
-import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
+An extension is an **entity with a parent key and two timestamps added for you**. It is declared in two halves, so the browser can read the row schema without importing drizzle:
 
-export const agentAutoLaunch = defineExtension(_agents, "auto_launch", {
-  enabled: boolean("enabled").notNull().default(false),
+```ts
+// shared/resources.ts (or core/ when another plugin reads the row) — browser-safe
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+
+export const transposeShape = defineExtensionShape({
+  key: "songId",                       // the parent key's name
+  fields: { semitones: intField() },   // the plugin's own fields
+  // serverOnly?:     ["contentHash"]              — own fields kept off the wire
+  // wireTimestamps?: ["createdAt" | "updatedAt"]  — timestamps put ON the wire
 });
-// Re-export the underlying pgTable so drizzle-kit's schema glob picks it
-// up. The leading `_` and the `internal/` location keep cross-plugin
-// imports impossible — only `agentAutoLaunch` (the handle) goes in barrels.
-export const _agentAutoLaunchTable = agentAutoLaunch.table;
+export const TransposeRowSchema = transposeShape.schema;   // { songId, semitones }
 ```
 
 ```ts
-await agentAutoLaunch.upsert(agentId, { enabled: true });
-const row = await agentAutoLaunch.get(agentId);
-await agentAutoLaunch.delete(agentId);
+// server/internal/tables.ts
+import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
+import { transposeShape } from "../../shared/resources";
+
+export const songTranspose = defineExtension(_songs, "transpose", transposeShape, {
+  columns: { semitones: { default: 0 } },   // DB-only concerns, own fields only
+});
+// Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
+// The leading `_` and the `internal/` location keep cross-plugin imports
+// impossible — only `songTranspose` (the handle) goes in barrels.
+export const _songTransposeExt = songTranspose.table;
 ```
 
-Creates `agents_ext_auto_launch(parent_id text PK FK CASCADE, enabled bool NOT NULL DEFAULT false, created_at, updated_at)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
+```ts
+await songTranspose.upsert(songId, { semitones: 3 });
+const row = await songTranspose.get(songId);   // full row, server-only columns included
+await songTranspose.delete(songId);
+```
 
-The handle exposes `.table` for same-plugin raw queries (live-state resource loaders that read all rows, complex SQL composition keyed by columns other than `parentId`). Cross-plugin imports of the underlying pgTable are blocked by the plugin-boundary checker (R4) because the table stays in `internal/`.
+This creates `sonata_songs_ext_transpose(parent_id text PK FK → sonata_songs.id ON DELETE CASCADE, semitones integer NOT NULL DEFAULT 0, created_at timestamptz NOT NULL DEFAULT now(), updated_at …)`. Drizzle-kit picks the table up via the `tables.ts` pattern in `SCHEMA_GLOBS` (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) — no central registration.
+
+### `defineExtensionShape({ key, fields, serverOnly?, wireTimestamps? })` — `core/`
+
+Returns a frozen `{ key, fields, serverOnly, schema }`:
+
+- `fields` is the **complete** field record, in column order: `{ [key]: textField(), ...fields, createdAt: dateField(), updatedAt: dateField() }`. The order is load-bearing — drizzle-kit diffs columns positionally, and it is the order every extension table has always had.
+- `serverOnly` is the plugin's `serverOnly` plus every timestamp not listed in `wireTimestamps`.
+- `schema` is `wireSchema(fields, serverOnly)` from `entities/core` — the same helper `defineEntity` uses, so the browser's schema and the server's come from the same code with the same inputs.
+
+### `defineExtension(parent, name, shape, meta?)` — `server/`
+
+Built on `defineEntity`. The table is `<parent>_ext_<name>`; the key column is the shape's key (`primaryKey`), stored as `parent_id` with the FK to `parent.id` ON DELETE CASCADE; both timestamps default to `now()`. `meta` takes the DB-only concerns:
+
+- `columns` — `default` / `name` / `references` for the plugin's **own** fields (`defineEntity`'s `meta.columns`). The key and the timestamps are the primitive's, so they are not declarable here.
+- `indexes` — see below.
+
+The handle is an `Entity` (`name`, `table`, `schema`, `wireColumns`) plus `key`, `get(id)`, `upsert(id, patch)` and `delete(id)`, all keyed on `table[key]`. `schema` **is** `shape.schema` — the same object, not a rebuilt one. `upsert`'s patch is the plugin's own columns only (DB-defaulted ones optional); it always bumps `updatedAt`.
+
+### The key is named after the parent
+
+Each extension names its parent key (`songId`, `conversationId`, `taskId`, `blockId`, `serverId`). The table's JS property and the wire field share that name, so no loader renames `parentId` to the domain key. Only the DB column keeps the generic `parent_id` name — the DDL is unchanged by the name you pick.
+
+### Wire, timestamps and `serverOnly`
+
+- **Own fields are on the wire** unless listed in `serverOnly` (`defineEntity`'s rule). A server-only column stays in the DDL and in `get`'s row, but is never selected by `wireColumns`, so it cannot leak.
+- **Timestamps are off the wire** unless listed in `wireTimestamps`. They belong to the primitive, so leaving them off by default cannot drop a column the plugin cares about — and it keeps a write that changes nothing from sending a row diff just because `updatedAt` moved.
+
+### Loaders
+
+Because the handle is an entity, a loader has no row projection left to write:
+
+| Resource form | Loader |
+|---|---|
+| push `defineResource` | `schema: z.array(ext.schema)`, `loader: () => db.select(ext.wireColumns).from(ext.table)` |
+| `windowQueryResource` / `queryResource` | `from: ext`, **no `select`** — query-resource defaults the projection to `wireColumns` and the identity to the single PK — and `point: { by: ext.table.<key> }` |
+| push resource folding rows into a `Record` | `db.select(ext.wireColumns)`, then the fold; each value's schema is `ext.schema` |
+
+A `select: { conversationId: t.parentId, … }` map or a `.map((r) => ({ songId: r.parentId, … }))` is the hand-rolled projection `no-hand-rolled-entity-projection` bans: a column added to the table silently misses the wire.
 
 ### `indexes`
 
-The table ships with exactly one index: the implicit btree behind the `parent_id` primary key. That covers every read the handle's own methods make, so **a table read only by `parent_id` needs no `indexes` at all**. Declare one only when the plugin composes a query off `.table` keyed by something else — that read is otherwise a seq scan, and there is no other supported way to add the index (generated migrations are never hand-edited).
+The table ships with exactly one index: the implicit btree behind the `parent_id` primary key. That covers every read the handle's own methods make, so **a table read only by its key needs no `indexes` at all**. Declare one only when the plugin composes a query off `.table` keyed by something else — that read is otherwise a seq scan, and there is no other supported way to add the index (generated migrations are never hand-edited).
 
-The optional 4th argument takes an `indexes` callback receiving the typed columns `t` and a builder pair `b`:
+`meta.indexes` is a callback receiving the typed columns `t` and a builder pair `b`:
 
 ```ts
-export const promptBlock = defineExtension(
-  _tasks,
-  "prompt_block",
-  {
-    pageId: text("page_id").notNull(),
-    blockId: text("block_id").notNull(),
-  },
-  {
-    // b.index("block_created") → index("tasks_ext_prompt_block_block_created_idx")
-    indexes: (t, b) => [b.index("block_created").on(t.blockId, t.createdAt)],
-  },
-);
+export const promptBlock = defineExtension(_tasks, "prompt_block", promptBlockShape, {
+  // b.index("block_created") → index("tasks_ext_prompt_block_block_created_idx")
+  indexes: (t, b) => [b.index("block_created").on(t.blockId, t.createdAt)],
+});
 ```
 
 **The name is derived, not authored.** The caller gives a short table-local suffix; the primitive prefixes the derived table name and appends `_idx`. An extension's table name is computed (`<parent>_ext_<name>`), so re-typing it as a string would be pure drift — a typo or a later parent rename yields a silently misleading index name that Postgres accepts without complaint. Binding the prefix makes a wrong name unrepresentable.
 
-`b.index` / `b.uniqueIndex` return **drizzle's own builders**, so the full surface stays available: `.on()`, `.using("gin", …)`, `.where(sql\`…\`)`, `.desc()`. `t` is keyed by JS property name and covers `parentId`, `createdAt` and `updatedAt` alongside the user's columns.
+`b.index` / `b.uniqueIndex` return **drizzle's own builders**, so the full surface stays available: `.on()`, `.using("gin", …)`, `.where(sql\`…\`)`, `.desc()`. `t` is keyed by JS property name and covers the key, `createdAt` and `updatedAt` alongside the plugin's own fields.
 
-Two module-eval throws guard the primitive's invariants:
+### Module-eval throws
 
-- **Reserved column names.** Declaring `parentId`, `createdAt` or `updatedAt` in `columns` used to silently produce an incoherent table (the spread order lets `parentId` lose to the user column while the timestamps win). It now throws, naming the key and the table.
-- **Identifier length.** `<table>_<suffix>_idx` past Postgres's 63-**byte** limit is silently truncated, which can collide with another index. It throws with the offending name and its byte length. The suffix shape is validated too (`/^[a-z0-9_]+$/`, non-empty).
+- **Reserved field names** (`defineExtensionShape`). A plugin field named after the chosen key, `createdAt` or `updatedAt` would collide with the primitive's own field, so the declared shape and the DDL would disagree. It throws, naming the key and the field. A key named `createdAt` / `updatedAt` throws too.
+- **Identifier length** (`defineExtension`). `<table>_<suffix>_idx` past Postgres's 63-**byte** limit is silently truncated, which can collide with another index. It throws with the offending name and its byte length. The suffix shape is validated too (`/^[a-z0-9_]+$/`, non-empty).
+- Everything `defineEntity` checks (a field type with no storage, a `serverOnly` key that is not a field).
 
 ## Wire-up
 
 Each consumer plugin owns its own:
-- `server/internal/tables.ts` — calls `defineExtension(...)`
-- `server/internal/resource.ts` — `defineResource({mode: "push"})` returning the rows
-- `core/endpoints.ts` — `defineEndpoint(...)` for the `POST /api/<feature>/:parentId` mutation
+- `shared/resources.ts` (or `core/` when another plugin reads the row) — `defineExtensionShape(...)`, the row schema (`= shape.schema`) and the `resourceDescriptor(...)` for the web client
+- `server/internal/tables.ts` — `defineExtension(parent, name, shape, meta?)`, plus the `.table` re-export
+- `server/internal/resource.ts` — the live-state resource, in one of the loader forms above
+- `shared/endpoints.ts` (or `core/`) — `defineEndpoint(...)` for the `POST /api/<feature>/:id` mutation
 - `server/index.ts` — registers the resource and wires the mutation via `implement(...)`
-- `shared/resources.ts` — `resourceDescriptor(...)` for the web client
 - `web/components/...` — `useResource(...)` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
 
-The parent plugin doesn't change.
+The parent plugin doesn't change. `sonata/transpose` is the reference consumer.
 
 ## Migration: moving data into or out of an extension
 
@@ -92,8 +138,14 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
 - Description: Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
 - Load-bearing: yes
 - Server:
-  - Uses: `database.db`
-  - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
+  - Uses:
+    - `database.db`
+    - `infra/entities.DefaultedKeys`
+    - `infra/entities.defaultNow`
+    - `infra/entities.defineEntity`
+    - `infra/entities.Entity`
+    - `infra/entities.EntityColumns`
+    - `infra/entities.EntityMeta`
   - Exports (types):
     - `EntityExtension`
     - `ExtensionIndexBuilders`
@@ -101,6 +153,24 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
   - Exports (values):
     - `defineExtension`
     - `EntityExtensions`
+- Core:
+  - Uses:
+    - `fields/date/config.dateField`
+    - `fields/date/config.DateFieldDef`
+    - `fields/text/config.textField`
+    - `fields/text/config.TextFieldDef`
+    - `infra/entities.wireSchema`
+  - Exports (types):
+    - `AnyExtensionShape`
+    - `ExtensionFields`
+    - `ExtensionServerOnly`
+    - `ExtensionShape`
+    - `ExtensionShapeDef`
+    - `ExtensionTimestamp`
+    - `ExtensionWireShape`
+  - Exports (values):
+    - `defineExtensionShape`
+    - `EXTENSION_TIMESTAMPS`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/health`

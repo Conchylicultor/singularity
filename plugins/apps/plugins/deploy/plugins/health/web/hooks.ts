@@ -12,7 +12,7 @@ export function useServerHealthMap(): ReadonlyMap<string, ServerHealthRow> {
   const result = useResource(serverHealthResource);
   return useMemo(() => {
     if (result.pending) return new Map<string, ServerHealthRow>();
-    return new Map(result.data.map((r) => [r.parentId, r]));
+    return new Map(result.data.map((r) => [r.serverId, r]));
   }, [result]);
 }
 
@@ -39,6 +39,8 @@ export function useServerHealth(serverId: string): ServerHealthRow | undefined {
 export function useServerVerified(server: Server): boolean {
   const row = useServerHealth(server.id);
   return (
-    !!row && row.ok && row.checkedPublicKey === (server.sshKey?.publicKey ?? null)
+    !!row &&
+    row.ok &&
+    row.checkedPublicKey === (server.sshKey?.publicKey ?? null)
   );
 }

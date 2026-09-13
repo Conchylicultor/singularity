@@ -12,9 +12,9 @@ const t = todoTask.table;
 // `identityTable` says which table's changes are this resource's own — a
 // dispatch on one card never recomputes an unrelated RESOURCE. `rowIdentity`
 // says which of them are THIS tuple's: the params name exactly one row of the
-// table (`parent_id`, the PK, IS the blockId), so a dispatch on one card is
-// scheduled for that card's tuple alone instead of waking every mounted card to
-// run its own primary-key seek and diff to empty. The seek is cheap; there was
+// table (the `blockId` key IS the PK, stored as `parent_id`), so a dispatch on
+// one card is scheduled for that card's tuple alone instead of waking every
+// mounted card to run its own primary-key seek and diff to empty. The seek is cheap; there was
 // one per open card per write, and how many that is belongs to the page. Routing
 // only — the owning card's frames are unchanged.
 //
@@ -25,8 +25,5 @@ export const todoTaskServerResource = defineResource(todoTaskResource, {
   identityTable: "page_blocks_ext_todo_task",
   rowIdentity: ({ blockId }) => blockId,
   loader: ({ blockId }) =>
-    db
-      .select({ blockId: t.parentId, taskId: t.taskId, createdAt: t.createdAt })
-      .from(t)
-      .where(eq(t.parentId, blockId)),
+    db.select(todoTask.wireColumns).from(t).where(eq(t.blockId, blockId)),
 });

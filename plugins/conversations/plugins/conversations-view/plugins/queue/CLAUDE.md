@@ -69,7 +69,10 @@
     - `classifyQueue`
 - Core:
   - Uses:
+    - `fields/bool/config.boolField`
+    - `fields/rank/config.rankField`
     - `infra/endpoints.defineEndpoint`
+    - `infra/entity-extensions.defineExtensionShape`
     - `infra/query-resource.pointQueryResourceDescriptor`
     - `primitives/rank.RankSchema`
   - Exports (types):
@@ -93,7 +96,8 @@
 The queue's live state is one bounded resource, not a push struct:
 
 - **`queue-ranks`** — a **bounded POINT** resource (`windowQueryResource(…, {
-  point: { by: parent_id } })`). The sidebar subscribes by the LIVE conversation
+  from: conversationsQueue, point: { by: conversationId } })` — the extension
+  handle is the source, so there is no `select` map to keep in sync). The sidebar subscribes by the LIVE conversation
   id set it already tracks via `conversations-active`, so a read costs O(live)
   (~26 rows), never O(2,726). `seedRankJob` on `conversationCreated` therefore
   ships a single-row point delta to the tuples containing that id (structurally

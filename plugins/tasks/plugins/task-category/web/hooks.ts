@@ -26,6 +26,6 @@ export function useTaskCategoryMap(): ReadonlyMap<string, string> {
   const result = useResource(taskCategoriesResource);
   return useMemo(() => {
     if (result.pending) return new Map<string, string>();
-    return new Map(result.data.map((r) => [r.parentId, r.category]));
+    return new Map(result.data.map((r) => [r.taskId, r.category]));
   }, [result]);
 }

@@ -213,12 +213,14 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
     - `apps/mail/mail-core`
     - `apps/sonata/library`
     - `apps/sonata/track-mixer`
+    - `conversations/conversation-view/turn-summary`
     - `conversations/session-chain`
     - `conversations/summary`
     - `debug/boot-profile`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/claude-cli`
+    - `infra/entity-extensions`
     - `infra/events`
     - `plugin-meta/plugin-health`
     - `tasks/tasks-core`

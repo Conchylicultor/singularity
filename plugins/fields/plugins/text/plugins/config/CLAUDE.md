@@ -47,6 +47,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/claude-cli`
+    - `infra/entity-extensions`
     - `infra/events`
     - `plugin-meta/composition`
     - `plugin-meta/plugin-health`

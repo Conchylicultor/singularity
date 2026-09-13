@@ -1,5 +1,3 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   createSongRow,
@@ -11,7 +9,7 @@ import {
   getSongChordGrid,
   updateChordGridSong,
 } from "../../shared/endpoints";
-import { songChordGrid, _songChordGridExt } from "./tables";
+import { songChordGrid } from "./tables";
 
 /**
  * Create a chord-grid–backed song. Writes the generic song row (library helper)
@@ -38,11 +36,7 @@ export const handleCreateChordGridSong = implement(
 export const handleGetSongChordGrid = implement(
   getSongChordGrid,
   async ({ params }) => {
-    const [row] = await db
-      .select()
-      .from(_songChordGridExt)
-      .where(eq(_songChordGridExt.parentId, params.id))
-      .limit(1);
+    const row = await songChordGrid.get(params.id);
     if (!row) return null;
     return {
       chordText: row.chordText,

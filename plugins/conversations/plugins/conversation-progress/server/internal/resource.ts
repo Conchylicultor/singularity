@@ -5,16 +5,14 @@ import { conversationProgress } from "./tables";
 // Compiled bounded POINT resource: the loader reads only the subscribed id set
 // (`WHERE parent_id IN (ids)`), and the change-feed routes a progress
 // insert/reclassify to a tuple iff the changed conversation ids intersect its
-// set — so a phase change never sweeps the whole table. The PK column
-// `parent_id` is projected under the ALIAS `conversationId` (the point identity);
-// `point.by` IS that identity pk. No orderBy — point sets are unordered.
-export const conversationProgressResource = windowQueryResource(conversationProgressDescriptor, {
-  from: conversationProgress.table,
-  select: {
-    conversationId: conversationProgress.table.parentId,
-    phase: conversationProgress.table.phase,
-    source: conversationProgress.table.source,
-    updatedAt: conversationProgress.table.updatedAt,
+// set — so a phase change never sweeps the whole table. The extension handle is
+// the source, so the projection is its `wireColumns` and the identity is its key
+// `conversationId` (the `parent_id` PK); `point.by` IS that identity pk. No
+// orderBy — point sets are unordered.
+export const conversationProgressResource = windowQueryResource(
+  conversationProgressDescriptor,
+  {
+    from: conversationProgress,
+    point: { by: conversationProgress.table.conversationId },
   },
-  point: { by: conversationProgress.table.parentId },
-});
+);

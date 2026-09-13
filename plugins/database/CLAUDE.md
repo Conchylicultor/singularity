@@ -270,7 +270,6 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `apps/sonata/rich/chord-mode`
     - `apps/sonata/rich/key-mode`
     - `apps/sonata/rich/rhythm-controls`
-    - `apps/sonata/sources/chord-grid`
     - `apps/sonata/sources/midi`
     - `apps/sonata/track-mixer`
     - `apps/sonata/transpose`

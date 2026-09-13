@@ -1,8 +1,6 @@
-import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { createMidiSong, getSongMidi } from "../../shared/endpoints";
-import { _songMidiExt } from "./tables";
+import { songMidi } from "./tables";
 import { createMidiSongFromAttachment } from "./import";
 
 /**
@@ -31,11 +29,7 @@ export const handleCreateMidiSong = implement(
 
 /** Fetch one song's MIDI data (attachment + track count), or null. */
 export const handleGetSongMidi = implement(getSongMidi, async ({ params }) => {
-  const [row] = await db
-    .select()
-    .from(_songMidiExt)
-    .where(eq(_songMidiExt.parentId, params.id))
-    .limit(1);
+  const row = await songMidi.get(params.id);
   if (!row) return null;
   return { attachmentId: row.attachmentId, trackCount: row.trackCount };
 });

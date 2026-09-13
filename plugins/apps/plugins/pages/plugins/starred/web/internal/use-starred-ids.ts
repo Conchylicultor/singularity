@@ -24,7 +24,7 @@ export function useStarredPageIds(): {
   const result = useWindowResource(starredPagesResource);
   const ids = useMemo(() => {
     if (result.pending) return EMPTY_IDS;
-    return new Set(result.data.map((r) => r.parentId));
+    return new Set(result.data.map((r) => r.blockId));
   }, [result]);
   return { ids, pending: result.pending };
 }

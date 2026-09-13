@@ -16,7 +16,11 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * (the loader's return type IS the hand-written object). This is the bug that
  * dropped `recentSamples` from `slow_ops`. The fix is `defineEntity`
  * (@plugins/infra/plugins/entities/server): derive the pgTable AND the zod wire
- * schema from one field record, then return `db.select()` rows verbatim.
+ * schema from one field record, then return `db.select()` rows verbatim. For a
+ * 1:1 side-table the same fix is `defineExtensionShape` (entity-extensions/core,
+ * browser-safe) + `defineExtension` (entity-extensions/server): the handle IS an
+ * entity, so the loader selects its `wireColumns` — the extension's named key
+ * (`songId`, `conversationId`, …) included, with no `parentId` rename to write.
  *
  * This is a NUDGE, not a guarantee — modeled on `no-reactive-server-io`. It is
  * intentionally evadable by indirection, and that is accepted. The detection
@@ -320,8 +324,9 @@ export default createRule({
       description:
         "Disallow a hand-written identity row projection over db.select() inside " +
         "a resource loader — it silently drops any column you forget. Define the " +
-        "table with defineEntity so the wire schema derives from the same field " +
-        "record and return db.select() rows verbatim.",
+        "table with defineEntity (or, for a 1:1 side-table, defineExtensionShape + " +
+        "defineExtension) so the wire schema derives from the same field record, " +
+        "and return db.select() rows verbatim.",
     },
     schema: [],
     messages: {
@@ -329,8 +334,13 @@ export default createRule({
         "Hand-rolled row projection over db.select() in a resource loader " +
         "silently drops any column you forget. Define the table with defineEntity " +
         "(@plugins/infra/plugins/entities/server) so the wire schema derives from " +
-        "the same field record, then return db.select() rows verbatim. See " +
-        "research/2026-06-17-global-fields-unified-entities.md.",
+        "the same field record, then return db.select() rows verbatim. For a 1:1 " +
+        "side-table, declare it with defineExtensionShape " +
+        "(@plugins/infra/plugins/entity-extensions/core) + defineExtension " +
+        "(@plugins/infra/plugins/entity-extensions/server) and select the " +
+        "handle's wireColumns — its named key replaces the parentId rename. See " +
+        "research/2026-06-17-global-fields-unified-entities.md and " +
+        "research/2026-09-11-global-define-extension-wire-schema.md.",
     },
   },
   defaultOptions: [],

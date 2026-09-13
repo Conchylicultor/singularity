@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { assertNoReservedColumns, extensionIndexName } from "./index-names";
+import { extensionIndexName } from "./index-names";
 
 describe("extensionIndexName", () => {
   test("derives <table>_<suffix>_idx", () => {
@@ -59,33 +59,5 @@ describe("extensionIndexName", () => {
     // 36 characters — a `.length` check would wrongly let this through.
     const tableName = "é".repeat(30);
     expect(() => extensionIndexName(tableName, "b")).toThrow(/66 bytes/);
-  });
-});
-
-describe("assertNoReservedColumns", () => {
-  test.each(["parentId", "createdAt", "updatedAt"])(
-    "throws when the columns record declares %s",
-    (key) => {
-      expect(() =>
-        assertNoReservedColumns("tasks_ext_thing", { [key]: {} }),
-      ).toThrow(
-        new RegExp(
-          `defineExtension\\("tasks_ext_thing"\\): column "${key}" is reserved`,
-        ),
-      );
-    },
-  );
-
-  test("passes a normal column record", () => {
-    expect(() =>
-      assertNoReservedColumns("tasks_ext_prompt_block", {
-        pageId: {},
-        blockId: {},
-      }),
-    ).not.toThrow();
-  });
-
-  test("passes an empty column record", () => {
-    expect(() => assertNoReservedColumns("tasks_ext_marker", {})).not.toThrow();
   });
 });
