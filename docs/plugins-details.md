@@ -16924,6 +16924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.defineJob`
           - `infra/jobs.LEGACY_JOB_TASK`
           - `infra/jobs.NonRetryableError`
+          - `infra/jobs.queryRecentDeadJobs`
           - `infra/jobs.queryRunningJobs`
           - `infra/jobs.reachableSlots`
           - `infra/jobs.UNSAFE_sweepStuckLocks`
@@ -16932,6 +16933,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('events_test.log')`
           - `defineJob('events_test.serial')`
           - `defineJob('events_test.cron-dedup')`
+          - `defineJob('events_test.superseded')`
           - `defineJob('events_test.saturate-sleeper')`
           - `defineJob('events_test.dead-letter')`
           - `defineTriggerEvent('events_test.pinged')`
@@ -16949,6 +16951,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/events-test/serial-queue`
           - `POST /api/events-test/queue-lock-no-steal`
           - `POST /api/events-test/cron-dedup`
+          - `POST /api/events-test/superseded`
           - `POST /api/events-test/queue-saturate`
       - Shared:
         - Exports (types):
@@ -16976,6 +16979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `serialQueueEventsTest`
           - `SubscribeBodySchema`
           - `subscribeEventsTest`
+          - `supersededEventsTest`
           - `waitEventsTestIdle`
     - **`file-sink`** — Bounded-append file sink primitive: defineFileSink declares an absolute-path sink that rotates at a byte cap (default 128 MB × 3), true by construction because append() IS the rotation. Node-only (no db/jobs) so a CLI process can import it. getFileSinks exposes the registered set; openDynamicSink covers the open-ended browser clientLog family under one declared bound.
       - Cross-plugin:

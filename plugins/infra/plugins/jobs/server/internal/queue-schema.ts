@@ -1,5 +1,6 @@
 import { runMigrations as runGraphileMigrations } from "graphile-worker";
 import { Pool } from "pg";
+import { installSupersededTrigger } from "./superseded-trigger";
 
 // ── Who installs the queue schema, and who merely asserts it ─────────────────
 //
@@ -44,9 +45,10 @@ const UNDEFINED_SCHEMA = "3F000";
 
 /**
  * Install (or bring up to date) graphile-worker's own schema on the database
- * `connectionString` names. Idempotent: graphile records its migration
- * watermark in the schema itself, so on an already-installed database this is
- * one connect plus one `SELECT`.
+ * `connectionString` names, plus this plugin's superseded-row trigger on
+ * graphile's job table. Idempotent: graphile records its migration watermark in
+ * the schema itself and the trigger carries its own definition signature, so on
+ * an already-installed database this is one connect plus two catalog reads.
  *
  * Deliberately NOT memoized. A `Map` keyed by connection string would grow once
  * per worktree ever forked and never shrink, to save a round trip on a path
@@ -68,6 +70,17 @@ export async function installQueueSchema(
   const pool = new Pool({ connectionString, max: 1 });
   try {
     await runGraphileMigrations({ pgPool: pool });
+    // Ours, not graphile's, and installed HERE because this is the one place
+    // every database gets its queue schema — main's boot, a graphile version
+    // bump, and every `createTestDb` throwaway. It has to follow the
+    // migrations, which create the table it hangs off. A no-op (catalog read
+    // only, no table lock) once installed; see `superseded-trigger.ts`.
+    const client = await pool.connect();
+    try {
+      await installSupersededTrigger(client);
+    } finally {
+      client.release();
+    }
   } finally {
     await pool.end();
   }

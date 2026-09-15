@@ -14,7 +14,12 @@ import {
   type JobState,
 } from "../../core/resources";
 import { HoldClassSchema } from "../../core/hold";
-import { jobHoldExpr, jobLockHeldExpr, jobTaskScope } from "./introspection";
+import {
+  jobHoldExpr,
+  jobLockHeldExpr,
+  jobTaskScope,
+  supersededExpr,
+} from "./introspection";
 import { isSlotForfeited } from "./forfeit";
 import { onQueueActivity } from "./slot-ledger";
 import { _deadJobs } from "./tables";
@@ -78,6 +83,12 @@ function deriveState(row: GraphileJobRow): JobState {
 // no meaning, and answering `false` there would read as a fault. The CASE also
 // keeps the cost honest: only the taken branch is evaluated, so the pg_locks scan
 // runs for the handful of locked rows, not all 500.
+//
+// An UNLOCKED superseded row (`supersededExpr`) is skipped: its run is over, a
+// newer copy of the job is queued, and the stuck-lock sweeper deletes it on its
+// next tick. Listing it would show a "dead" row in the seconds before that — the
+// exact false alarm the flag exists to stop. A LOCKED superseded row is still a
+// live run and keeps showing as "running".
 export async function loadJobsList(limit = 500): Promise<JobsPayload> {
   const raw = await executeRows(db, {
     label: "jobs-list",
@@ -96,6 +107,7 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
           JOIN graphile_worker._private_tasks t ON t.id = j.task_id
      LEFT JOIN graphile_worker._private_job_queues q ON q.id = j.job_queue_id
          WHERE ${jobTaskScope}
+           AND NOT (j.locked_at IS NULL AND ${supersededExpr})
          ORDER BY j.run_at DESC
          LIMIT ${limit}`,
   });

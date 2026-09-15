@@ -54,11 +54,42 @@ export const jobHoldExpr = sql`CASE ${sql.join(
   sql` `,
 )} END`;
 
-// "Dead" = our task AND exhausted retries AND not currently locked. Never
-// reap/aggregate a row a worker is actively running.
+// The one spelling of the flag our trigger writes into graphile's own `flags`
+// column when graphile RETIRES a row that is still locked — the moment a newer
+// copy of the same job key is queued (`add_jobs`) or the key is removed
+// (`remove_job`) while this row is mid-run. The trigger that writes it is
+// installed by `superseded-trigger.ts`, which imports this constant, so the
+// writer and every reader below cannot disagree about the name.
+//
+// graphile reads `flags` only when `forbiddenFlags` is configured, and this repo
+// configures none; a retired row also has `attempts = max_attempts`, so it is
+// never fetched again anyway. See jobs/CLAUDE.md, "Superseded rows".
+export const SUPERSEDED_FLAG = "singularity.superseded";
+
+// "A newer intent replaced this run": the row was retired by graphile while it
+// was locked. It is NOT a dead job — a newer copy exists and will run — so it is
+// excluded from `deadJobPredicate` below and dropped by the stuck-lock sweeper
+// once its run is over.
+//
+// The `coalesce` is load-bearing, not tidiness: `flags` is NULL on almost every
+// row, `NULL ? '…'` is NULL, and `NOT NULL` is NULL — so without it, `AND NOT
+// supersededExpr` would silently exclude every ordinary row from "dead" and
+// hide every genuine dead-letter. Correlated on `j` like every other fragment.
+export const supersededExpr = sql`coalesce(j.flags ? ${SUPERSEDED_FLAG}, false)`;
+
+// "Dead" = our task AND exhausted retries AND not currently locked AND not
+// superseded. Never reap/aggregate a row a worker is actively running.
+//
+// The superseded exclusion is why a restart that lands mid-run no longer files
+// a dead job. graphile's retirement writes exactly the columns a dead row has
+// (`attempts = max_attempts`, key cleared), so once the row is unlocked it is
+// indistinguishable from a real failure — except for the flag, which only a
+// retirement WHILE LOCKED sets. A dead row retired while unlocked (the next cron
+// tick of a job that genuinely dead-lettered) carries no flag and stays dead.
 export const deadJobPredicate = sql`${jobTaskScope}
   AND j.attempts >= j.max_attempts
-  AND j.locked_at IS NULL`;
+  AND j.locked_at IS NULL
+  AND NOT ${supersededExpr}`;
 
 // "Ready" = eligible to run right now but not yet picked up: overdue, unlocked,
 // and still within its retry budget. The single home for the ready predicate,

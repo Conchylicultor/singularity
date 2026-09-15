@@ -15,7 +15,6 @@ import { Pool } from "pg";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -47,8 +46,7 @@ import { LOCK_HELD, withJobLock } from "./job-lock";
 import { markJobPermanentlyFailed } from "./introspection";
 import { classifyFailure, discardWorkflowLog } from "./workflow-log";
 import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
-
-const log = Log.channel("jobs");
+import { jobsLog } from "./jobs-log";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
@@ -190,12 +188,15 @@ function buildCronItems(): ParsedCronItem[] {
           // and `is_available` is `locked_at is null AND attempts < max_attempts`
           // (000011.sql:67). So a row that is mid-run — or that has already
           // dead-lettered — releases the key and this tick inserts a fresh row.
-          // The cost is the one behaviour to watch on day 1: an OVERRUNNING run
-          // has its retry budget collapsed to `attempts = max_attempts` when the
-          // next tick fires. A successful overrun is still just deleted, so
-          // nothing is lost; a FAILING one dead-letters after that attempt
-          // instead of retrying. Only `mail.sync-tick` and `backup.run` can
-          // plausibly overrun their interval — watch `queue-dead-job` for those.
+          // An OVERRUNNING run has its retry budget collapsed to `attempts =
+          // max_attempts` when the next tick fires, and because it was locked
+          // at that moment our trigger marks it SUPERSEDED (`supersededExpr`,
+          // jobs/CLAUDE.md "Superseded rows"). A successful overrun is still
+          // just deleted, so nothing is lost. A FAILING one is reported by
+          // `dispatch()` like any failure, and is then dropped by the
+          // stuck-lock sweeper instead of dead-lettering — the fresh tick row
+          // is its retry, so it never reaches `queue-dead-job` or the dead
+          // archive.
           jobKey: `${job.name}:_`,
           jobKeyMode: "preserve_run_at",
           // A scheduled job that declared `serial` must tick INTO its own queue,
@@ -468,7 +469,7 @@ async function repointHoldTasks(): Promise<void> {
     // introduces a class is exactly "someone reclassified a job" — the one time
     // you want to see it. A steady-state boot is silent.
     if (moved.length > 0) {
-      log.publish(
+      jobsLog.publish(
         `re-pointed pending rows onto hold tasks: ${moved.join(", ")}`,
       );
     }

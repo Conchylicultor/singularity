@@ -96,6 +96,13 @@ export const cronDedupEventsTest = defineEndpoint({
   route: "POST /api/events-test/cron-dedup",
 });
 
+// A row graphile retired mid-run (a newer copy of its key was queued) is
+// dropped by the stuck-lock sweeper once its worker dies — never released into
+// the dead-job set. Same verdict shape as the three above.
+export const supersededEventsTest = defineEndpoint({
+  route: "POST /api/events-test/superseded",
+});
+
 // Drives the job queue into a saturated, dead-lettered state on a dev deploy,
 // so queue observability (the health report's Job queue row, Debug → Queue)
 // can be looked at in its amber/red states. Not a regression harness: it

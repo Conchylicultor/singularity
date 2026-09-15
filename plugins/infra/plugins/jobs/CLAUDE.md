@@ -49,7 +49,7 @@ lock is held by a *live* connection survives a forced sweep — the case the old
 harness could not express) and **reclaim** (destroy the socket, wait for the lock
 to drop, sweep, handler re-runs).
 
-Three more harnesses beside it, same plugin, same verdict shape:
+Four more harnesses beside it, same plugin, same verdict shape:
 
 - `POST /api/events-test/queue-lock-no-steal` — the queue-level twin, guarding the
   riskier half of the same sweep: **no-steal** (a queue whose job's advisory lock
@@ -63,6 +63,36 @@ Three more harnesses beside it, same plugin, same verdict shape:
   Drives `add_job` with the cron path's arguments rather than waiting on real
   ticks, so the key format is restated there rather than read from
   `buildCronItems`.
+- `POST /api/events-test/superseded` — replays the 2026-09-12 incident: a keyed
+  row held by a live stand-in worker is superseded by a re-queue of its key,
+  survives a forced sweep while its lock is live (**no-steal**), is **deleted**
+  (not released) once the holder dies, never shows up as a dead job, and the
+  newer row runs to completion. See "Superseded rows" below.
+
+## Superseded rows
+
+**A row graphile retires while it is locked is superseded, not dead.** Queue a
+keyed job while its row is running and graphile's `add_jobs`
+(`sql/000018.sql:103-116`; `remove_job` likewise) inserts a fresh row and
+retires the running one: `key = null, attempts = max_attempts`. The newer row
+owns the work. Once unlocked (restart sweep, graceful-shutdown timeout, failing
+overrun) the old row has exactly a dead job's columns.
+
+- **It must be a trigger.** The retire UPDATE touches only `key`, `attempts`,
+  `updated_at`, so the evidence exists only inside it. `BEFORE UPDATE OF key`
+  with `WHEN (OLD.locked_at IS NOT NULL AND OLD.key IS NOT NULL AND NEW.key IS
+  NULL)` adds `SUPERSEDED_FLAG` to graphile's own `flags` column
+  (`superseded-trigger.ts`; we configure no `forbiddenFlags`).
+- **Never use "key is null" alone.** graphile retires *every* unavailable row
+  with the key, dead ones included — the next cron tick would hide a real
+  dead-letter. Only a retirement while **locked** is flagged.
+- **Compose `supersededExpr`** (`introspection.ts`, the one spelling of the
+  flag). `deadJobPredicate` excludes it; `jobs-list` hides unlocked ones.
+- **The stuck-lock sweeper deletes it** once its run is over — never releases
+  it. Worker died: reported like a reclaim. Already unlocked: one `jobs` log
+  line, no report (`dispatch()` reported any real failure).
+- `installQueueSchema` installs it after graphile's migrations. A signature in
+  the trigger's COMMENT makes every later boot a catalog read with no table lock.
 
 ## Retry policy & non-retryable failures
 

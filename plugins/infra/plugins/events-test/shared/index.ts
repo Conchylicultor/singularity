@@ -12,6 +12,7 @@ export {
   serialQueueEventsTest,
   queueLockNoStealEventsTest,
   cronDedupEventsTest,
+  supersededEventsTest,
   queueSaturateEventsTest,
   SubscribeBodySchema,
   EmitBodySchema,

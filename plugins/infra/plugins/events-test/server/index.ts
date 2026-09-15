@@ -10,6 +10,7 @@ import {
 } from "./internal/queue-saturate";
 import { handleSerialQueue } from "./internal/serial-queue";
 import { serialProbe } from "./internal/serial-job";
+import { handleSuperseded, supersededProbe } from "./internal/superseded";
 import {
   handleDeleteTargeting,
   handleDeleteTrigger,
@@ -37,6 +38,7 @@ import {
   serialQueueEventsTest,
   queueLockNoStealEventsTest,
   cronDedupEventsTest,
+  supersededEventsTest,
   queueSaturateEventsTest,
 } from "../shared/endpoints";
 
@@ -56,12 +58,14 @@ export default {
     [serialQueueEventsTest.route]: handleSerialQueue,
     [queueLockNoStealEventsTest.route]: handleQueueLockNoSteal,
     [cronDedupEventsTest.route]: handleCronDedup,
+    [supersededEventsTest.route]: handleSuperseded,
     [queueSaturateEventsTest.route]: handleQueueSaturate,
   },
   register: [
     logPing,
     serialProbe,
     cronDedupProbe,
+    supersededProbe,
     saturateSleeper,
     deadLetterProbe,
     pinged,

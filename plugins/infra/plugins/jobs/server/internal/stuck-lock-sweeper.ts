@@ -4,7 +4,8 @@ import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { jobLockHeldExpr, jobNameExpr } from "./introspection";
+import { jobLockHeldExpr, jobNameExpr, supersededExpr } from "./introspection";
+import { jobsLog } from "./jobs-log";
 import { emitQueueActivity } from "./slot-ledger";
 
 // Recovery floor for jobs that were mid-execution when their worker died
@@ -29,6 +30,13 @@ import { emitQueueActivity } from "./slot-ledger";
 // NOT running it: no session holds its advisory lock (`jobLockHeldExpr`), a fact
 // Postgres maintains and releases as part of backend teardown. See
 // `job-lock.ts` and `research/2026-07-30-jobs-exact-liveness-advisory-locks.md`.
+//
+// A reclaim RELEASES the row so graphile runs it again — except for a
+// SUPERSEDED row (`supersededExpr`): one graphile retired mid-run because a
+// newer copy of the same job key was queued. That copy owns the work, so a
+// superseded row whose run is over (unlocked, or locked with no live lock) is
+// DELETED instead of released. Released, it would read as a dead job. See
+// jobs/CLAUDE.md, "Superseded rows", and `superseded-trigger.ts`.
 //
 // Why this stays a raw setInterval and NOT a scheduled `defineJob`: it is the
 // recovery mechanism FOR the job system. Routing it through graphile's own
@@ -80,8 +88,18 @@ const ReclaimedQueueRowSchema = z.object({
   queue_name: z.string(),
 });
 
-// Exported for the events-test crash-recovery endpoint, which forces a
-// sweep instead of waiting up to a minute for the next tick.
+const DroppedRowSchema = z.object({
+  id: z.string(),
+  job_name: z.string(),
+  // Read off the row as it was BEFORE the delete (RETURNING sees the old
+  // tuple): locked ⇒ its worker died holding it; unlocked ⇒ its run had
+  // already ended on graphile's own fail or shutdown path.
+  owner_died: z.boolean(),
+});
+
+// Exported for the events-test harnesses (crash-recovery, queue-lock-no-steal,
+// superseded), which force a sweep instead of waiting up to a minute for the
+// next tick.
 //
 // TWO locks are swept here, in the same tick and on the same evidence: the job
 // row's, and — since `defineJob({ serial })` landed — the row's named QUEUE.
@@ -107,6 +125,66 @@ const ReclaimedQueueRowSchema = z.object({
 // wedge every job in the lane for four hours — a new outage, strictly worse than
 // the one `serial` was introduced to fix.
 export async function sweepOnce(): Promise<void> {
+  // The superseded half, FIRST. A superseded row (`supersededExpr`) was retired
+  // by graphile while it was running, because a newer copy of the same job was
+  // queued — see jobs/CLAUDE.md, "Superseded rows". Its work is owned by that
+  // newer copy, so once its own run is over there is nothing left to do with it:
+  // it is deleted, never released. Releasing it is what used to happen, and it
+  // turned the row into a false dead job (retired rows already carry `attempts =
+  // max_attempts`), filed as `queue-dead-job` and archived to `dead_jobs`.
+  // (graphile's `remove_job` on a running row flags it too — the key was
+  // withdrawn rather than re-queued, which equally means "do not run this
+  // again". No production path calls it; the report wording below assumes the
+  // re-queue case that does happen.)
+  //
+  // "Its run is over" is the same evidence as everywhere else in this file:
+  //   · already unlocked — graphile's fail path or a graceful-shutdown timeout
+  //     (`failJobs`) let go of it; or
+  //   · locked, past the acquisition grace, with NO live advisory lock — its
+  //     worker died mid-run. A superseded row whose lock is still held is a live
+  //     run and is left alone exactly like any other locked row.
+  //
+  // A serial lane held by a row deleted here has no live holder any more, so the
+  // queue half below reclaims it on the same tick, unchanged.
+  const dropped = await executeRows(db, {
+    label: "stuck-lock-sweep: superseded",
+    row: DroppedRowSchema,
+    query: sql`
+    DELETE FROM graphile_worker._private_jobs j
+     WHERE ${supersededExpr}
+       AND (
+             j.locked_at IS NULL
+          OR (j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
+              AND NOT ${jobLockHeldExpr})
+           )
+    RETURNING j.id::text AS id,
+              ${jobNameExpr} AS job_name,
+              (j.locked_at IS NOT NULL) AS owner_died
+  `,
+  });
+
+  for (const row of dropped) {
+    if (row.owner_died) {
+      // Reported like a reclaim, because it IS one as far as backend health
+      // goes: a worker died holding this row. Only the ending differs — the
+      // newer copy does the work, so this row is not re-run.
+      const message = `[jobs] dropped ${row.job_name} (job ${row.id}) — locked with no live advisory lock holder; its worker died mid-run and a newer copy was already queued, so it is not re-run`;
+      console.warn(message);
+      reportServerError({ message, stack: null });
+    } else {
+      // No report. The run ended on graphile's own fail or shutdown path, and a
+      // real failure there was already reported by `dispatch()` (worker.ts); this
+      // is only the tidy-up of a row whose work a newer copy has taken over.
+      jobsLog.publish(
+        `dropped superseded ${row.job_name} (job ${row.id}) — its run already ended and a newer copy was queued while it ran`,
+      );
+    }
+  }
+
+  // `NOT supersededExpr` makes this UPDATE's "re-queueing" true by construction.
+  // A row retired between the DELETE above and this statement would otherwise be
+  // released here and reported as re-queued, when it can never run again; left
+  // locked, it is dropped — with the right wording — on the next tick.
   const reclaimed = await executeRows(db, {
     label: "stuck-lock-sweep: jobs",
     row: ReclaimedRowSchema,
@@ -118,6 +196,7 @@ export async function sweepOnce(): Promise<void> {
      WHERE j.locked_at IS NOT NULL
        AND j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
        AND NOT ${jobLockHeldExpr}
+       AND NOT ${supersededExpr}
     RETURNING j.id::text AS id, ${jobNameExpr} AS job_name
   `,
   });
@@ -186,5 +265,6 @@ export async function sweepOnce(): Promise<void> {
   // slot". Neither UPDATE sends a notification → announce it. Only when
   // something moved: the sweeper ticks every minute and an empty sweep changed
   // nothing a reader could see.
-  if (reclaimed.length > 0 || reclaimedQueues.length > 0) emitQueueActivity();
+  if (dropped.length > 0 || reclaimed.length > 0 || reclaimedQueues.length > 0)
+    emitQueueActivity();
 }
