@@ -3,6 +3,7 @@ import {
   computeLoadWaves,
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
+import { setBootMode } from "../core/boot-mode";
 import { collectContributions } from "../core/contributions";
 import { profilerStart, recordMemoryCheckpoint } from "../core/profiler";
 import type { LoadedServerPlugin, ServerPluginDefinition } from "../core/types";
@@ -98,6 +99,8 @@ export type BootSpec = {
 export async function bootPluginGraph(
   spec: BootSpec,
 ): Promise<LoadedServerPlugin[]> {
+  // Before any plugin loads, so every phase hook can ask which mode it runs in.
+  setBootMode(spec.mode);
   const ordered = await loadServerPlugins(spec.entries, spec.hasCoreBarrel);
   await runRegisterPhase(ordered);
 

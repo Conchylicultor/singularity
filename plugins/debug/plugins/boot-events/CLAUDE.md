@@ -13,7 +13,8 @@ Both lines go to the persisted `boot` log channel →
   earliest per-process hook, before migrations and any `onReadyBlocking` work.
   (The register phase is documented "no I/O"; this one ~140-byte synchronous
   append is the deliberate exception — its entire point is landing before the
-  boot work that can wedge.)
+  boot work that can wedge.) **Serve mode only** — an `exec` child (the
+  backup) runs `register` but never `onReady`, so its `start` would never pair.
 - **`phase: "ready"`** — written from `onReady` (post-`onReadyBlocking`
   readiness — a migrated DB and ready registry), carrying `readyAt`.
 

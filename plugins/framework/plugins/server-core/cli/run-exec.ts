@@ -50,6 +50,11 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 //   surviving backend after a gateway crash leaks. A detached supervised child is
 //   *supposed* to be reparented to init; that poll would kill it immediately.
 //
+// WHAT `exec` DOES NOT SKIP: `register` and `onReadyBlocking` run in both
+// modes. A hook there that makes a claim about the SERVING backend must check
+// `getBootMode()` (`../core/boot-mode.ts`) — boot-events' `start` line is the
+// example.
+//
 // `isMain()` is env-derived (`SINGULARITY_WORKTREE === "singularity"`), so a
 // child spawned by main's backend inherits a TRUE `isMain()`. Nothing gated on
 // it fires here: every main-only side effect in the tree hangs off `onReady`,

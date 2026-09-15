@@ -1,4 +1,5 @@
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import { getBootMode } from "@plugins/framework/plugins/server-core/core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { BootLine } from "./schema";
@@ -31,8 +32,14 @@ function publish(line: BootLine): void {
 // is landing BEFORE the boot work (migrations, onReadyBlocking) that can
 // wedge. Routing it through onReady would re-create the blind spot it exists
 // to close.
+//
+// SERVE ONLY. An `exec` child (e.g. the nightly backup) runs this register
+// phase too, under its parent's worktree name, but never reaches `onReady` —
+// so its `start` would never pair with a `ready`, and the boot watchdog would
+// report the healthy serving backend as wedged for as long as it stayed up.
 export const bootStartRegistration: Registration = {
   register() {
+    if (getBootMode() !== "serve") return;
     publish({
       sampledAt: Date.now(),
       worktree: currentWorktreeName(),

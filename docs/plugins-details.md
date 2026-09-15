@@ -15306,6 +15306,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/resource-runtime.createResourceRuntime`
           - `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
+          - `BootMode`
           - `DependsOnEntry`
           - `ExternalResource`
           - `HttpHandler`
@@ -15341,6 +15342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineExternalResource`
           - `defineResource`
           - `defineServerContribution`
+          - `getBootMode`
           - `getProfilingData`
           - `handleResourceHttp`
           - `isServerReady`

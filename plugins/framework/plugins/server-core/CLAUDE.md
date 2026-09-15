@@ -231,6 +231,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/resource-runtime.createResourceRuntime`
     - `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
+    - `BootMode`
     - `DependsOnEntry`
     - `ExternalResource`
     - `HttpHandler`
@@ -266,6 +267,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `defineExternalResource`
     - `defineResource`
     - `defineServerContribution`
+    - `getBootMode`
     - `getProfilingData`
     - `handleResourceHttp`
     - `isServerReady`

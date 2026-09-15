@@ -32,6 +32,8 @@ export {
 } from "./profiler";
 export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
+export { getBootMode } from "./boot-mode";
+export type { BootMode } from "./boot-mode";
 export {
   Resource,
   applyDbChange,
