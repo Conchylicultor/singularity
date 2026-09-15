@@ -21,6 +21,7 @@
     - `conversations/conversation-view/jsonl-viewer/row-actions`
     - `page/code-block`
     - `page/editor`
+    - `page/formatting/link`
     - `primitives/filepath-breadcrumb`
     - `primitives/log-channels`
     - `primitives/setup-steps`

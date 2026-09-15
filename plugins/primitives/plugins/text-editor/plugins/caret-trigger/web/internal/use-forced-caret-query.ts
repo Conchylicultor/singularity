@@ -89,9 +89,10 @@ export function useForcedCaretQuery(opts: UseForcedCaretQueryOpts): CaretQuery {
   // `sync` resets only when the QUERY changes, which is the trigger-char flow's
   // reset: there, typing is what opens the menu, so a fresh open always brings a
   // fresh query. The forced flow breaks that coupling — `url-paste` force-opens
-  // on an EMPTY block, so its query is `""` on every open and the reset never
-  // fires: dismiss with row 3 highlighted, paste again, and the menu reopens on
-  // row 3 with Enter committing it.
+  // with the caret just past the link it inserted — never inside a text node
+  // with text before it — so its query is `""` on every open and the reset
+  // never fires: dismiss with row 3 highlighted, paste again, and the menu
+  // reopens on row 3 with Enter committing it.
   //
   // Resetting on close rather than on open is what keeps this flash-free: while
   // `active` is false the surface is unmounted, so the write lands with nothing
@@ -137,5 +138,13 @@ export function useForcedCaretQuery(opts: UseForcedCaretQueryOpts): CaretQuery {
 
   const dismiss = useEventCallback(() => opts.onDismiss?.());
 
-  return { id: opts.id, query, open, activeIndex, setActiveIndex, dismiss, editor: lexicalEditor };
+  return {
+    id: opts.id,
+    query,
+    open,
+    activeIndex,
+    setActiveIndex,
+    dismiss,
+    editor: lexicalEditor,
+  };
 }

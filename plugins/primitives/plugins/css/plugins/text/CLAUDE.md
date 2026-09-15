@@ -380,6 +380,7 @@ fixed raw size escapes per-site via
     - `page/embed`
     - `page/file`
     - `page/formatting/color`
+    - `page/formatting/link`
     - `page/inline-date`
     - `page/math/equation`
     - `page/math/inline`

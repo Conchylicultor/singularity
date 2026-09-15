@@ -150,6 +150,7 @@ primitive exists to name.
     - `page/bookmark`
     - `page/code-block`
     - `page/file`
+    - `page/formatting/link`
     - `page/inline-date`
     - `page/place`
     - `page/prompt/block`

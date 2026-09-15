@@ -2172,13 +2172,17 @@ forest/markdown cases — it would double-handle with the container's.
   `preventDefault` — so a single line still lands at the drop caret exactly as
   it always did.
 - **A dropped URL gets the paste's treatment, and CONSUMES the gesture.**
-  `page/url-paste` registers `DROP_COMMAND` beside its `PASTE_COMMAND` on the
-  same gate, so dragging a link into an empty text block offers Bookmark / Embed
-  / Plain link. Because the container's drop door sits ABOVE it, that arm also
+  `page/url-paste` registers `DROP_COMMAND` beside its `PASTE_COMMAND`: a bare
+  URL pasted at a collapsed caret in any text block — or dropped into an EMPTY
+  one — becomes a link at once, with a Keep as link / Mention / Bookmark / Embed
+  menu beside it (Bookmark and Embed only when the link is all the block holds).
+  The drop keeps the empty-block gate because a drop into existing text lands
+  where the browser puts it, not at a caret we hold. Because the container's
+  drop door sits ABOVE it, that arm also
   calls `stopPropagation()`, and the reason is not defensive tidiness: a
   `text/uri-list` is CRLF-terminated (RFC 2483), so the payload a link drag most
   often carries is *literally* multi-line, classifies as `markdown` up at the
-  container, and a single dropped URL would open the menu AND mint a block. Only
+  container, and a single dropped URL would insert the link AND mint a block. Only
   DROP needs this — a caret paste never reaches the container's `onPaste`, which
   gates on the CONTAINER holding focus.
   - Note what is NOT done about that CRLF, and why: `decideTransfer` reads the
@@ -2191,8 +2195,10 @@ forest/markdown cases — it would double-handle with the container's.
     drag also carries a terminator-free `text/plain`, which `readTransferText`
     prefers.
   - Its one bound is focus — a drop need not have focused the editor, so it
-    calls `lexical.focus()`, which is a no-op on a root with no children (a
-    block whose content doc has not hydrated yet).
+    seats the caret at the (empty) block's start and calls `lexical.focus()`.
+    A root with no children (a block whose content doc has not hydrated yet)
+    has nowhere to seat it, so the drop arm declines there and the gesture
+    falls through.
 
 Spec: `e2e/drop-verify.ts` and `page/url-paste`'s `e2e/url-drop-verify.ts`
 (manual), plus `transfer.test.ts` / `drag-kind.test.ts` for the two pure
@@ -3389,15 +3395,20 @@ which here is JSX order:
 | --- | --- | --- | --- |
 | 1 | `BlockPastePlugin` | NORMAL | a pasted FILE (an upload, never text) |
 | 2 | `BlockForestPastePlugin` | NORMAL | forest MIME, or any multi-line text |
-| 3 | `UrlPastePlugin` | LOW (an `ext.Plugin`, so registered first) | a bare URL into an EMPTY block |
+| 3 | `UrlPastePlugin` | LOW (an `ext.Plugin`, so registered first) | a bare URL at a collapsed caret |
 | 4 | **`TokenPastePlugin`** | LOW | single-line text carrying a token |
 | 5 | RichText default | EDITOR | everything else |
+
+A URL pasted over a SELECTED range is `LinkPlugin`'s own LOW listener, which
+wraps the range in a link; `UrlPastePlugin` declines every non-collapsed
+selection, so the two never compete for one paste.
 
 BELOW NORMAL because a file paste is an upload and a multi-line paste is
 STRUCTURAL — a token inside either must not hijack them. Which also means this
 only ever sees single-line text, so a plain inline insert is all it does. NOT
-above `UrlPastePlugin`, because "URL into an empty block → bookmark" is a shipped
-affordance; belt and braces, the two gates are provably disjoint
+above `UrlPastePlugin`, because "a pasted URL becomes a link, with the Bookmark /
+Embed / Mention menu beside it" is a shipped affordance; belt and braces, the two
+gates are provably disjoint
 (`inlineBoundary`'s `(?<!\/)` means an id inside a URL path matches nothing).
 ABOVE EDITOR, so a token that would otherwise land as literal characters — and
 stay literal forever, since nothing re-scans an existing doc — materializes.

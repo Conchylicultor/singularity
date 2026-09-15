@@ -29,6 +29,7 @@
     - `debug/profiling/ops`
     - `infra/health`
     - `page/editor`
+    - `page/url-paste`
     - `primitives/data-view`
     - `shell/notifications`
 - Core:

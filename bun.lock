@@ -3460,6 +3460,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@lexical/link": "^0.44.0",
+        "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },
     },
@@ -3610,6 +3611,7 @@
       "name": "@singularity/plugin-page-url-paste",
       "version": "0.0.1",
       "dependencies": {
+        "@lexical/link": "^0.44.0",
         "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },

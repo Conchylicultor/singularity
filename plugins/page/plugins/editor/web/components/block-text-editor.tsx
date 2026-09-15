@@ -403,9 +403,11 @@ export function BlockTextEditor({
         ErrorBoundary={LexicalErrorBoundary}
       />
       {/* Wires TOGGLE_LINK_COMMAND → LinkNode; validateUrl gates the href to
-          the allowed protocols. ClickableLinkPlugin makes links open in a new
-          tab on cmd/ctrl-click (plain click still places the caret), the
-          Notion-like editable-link UX. */}
+          the allowed protocols, and a URL pasted over a SELECTED range wraps
+          that range in a link. ClickableLinkPlugin opens a link in a new tab on
+          a PLAIN click, as it does on cmd/ctrl- and middle-click; only a click
+          that leaves a selected range (a drag across the link text) does not
+          open it (`@lexical/link@0.44.0 LexicalLink.dev.mjs:847-907`). */}
       <LinkPlugin validateUrl={isValidLinkUrl} />
       <ClickableLinkPlugin newTab />
       {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
@@ -453,17 +455,22 @@ export function BlockTextEditor({
 
             1 BlockPastePlugin       NORMAL  a pasted FILE (an upload, never text)
             2 BlockForestPastePlugin NORMAL  forest MIME, or any multi-line text
-            3 UrlPastePlugin         LOW     a bare URL into an EMPTY block
+            3 UrlPastePlugin         LOW     a bare URL at a collapsed caret
             4 TokenPastePlugin       LOW     single-line text carrying a token
             5 RichText default       EDITOR  everything else
+
+          (A URL pasted over a SELECTED range is `LinkPlugin`'s LOW listener,
+          which wraps the range in a link. `UrlPastePlugin` declines every
+          non-collapsed selection, so the two never compete for one paste.)
 
           BELOW NORMAL, because a file paste is an upload and a multi-line paste
           is STRUCTURAL — a token inside either must not hijack them. Which also
           means this only ever sees single-line text, so a plain inline insert is
           the whole of what it has to do.
 
-          NOT above `UrlPastePlugin`: "paste a URL into an empty block → bookmark"
-          is a shipped affordance. Within one priority Lexical runs listeners in
+          NOT above `UrlPastePlugin`: "a pasted URL becomes a link, with the
+          Bookmark / Embed / Mention menu beside it" is a shipped affordance.
+          Within one priority Lexical runs listeners in
           REGISTRATION order, which here is JSX order — hence this mount site,
           after the contributed `ext.Plugin`s that `UrlPastePlugin` is one of.
           Belt and braces, the two gates are provably disjoint: `inlineBoundary`'s

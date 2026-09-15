@@ -69,6 +69,7 @@ attribute type carries.
     - `debug/queue-health`
     - `debug/timeline`
     - `page/annotations/todo/task-link`
+    - `page/formatting/link`
     - `page/inline-date`
     - `page/place`
     - `page/prompt/block`

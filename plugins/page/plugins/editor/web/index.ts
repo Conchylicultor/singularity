@@ -142,6 +142,7 @@ export { readTransferText } from "./internal/transfer";
 export type { BlockPasteHandler } from "./internal/block-paste-handlers";
 export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
 export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";
+export { $setLinkText } from "./internal/link-text";
 export type {
   BlockTextExtension,
   BlockTextTokenExtension,

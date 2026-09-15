@@ -7,7 +7,7 @@ export { bookmarkBlock, BOOKMARK_TYPE } from "../core";
 
 export default {
   description:
-    "Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin).",
+    "Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin).",
   contributions: [
     Editor.Block({
       id: bookmarkBlock.type,

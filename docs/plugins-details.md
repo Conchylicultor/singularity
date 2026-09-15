@@ -15806,6 +15806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/divider`
               - `page/editor`
               - `page/editor-collab`
+              - `page/formatting/link`
               - `page/image`
               - `page/inline-date`
               - `page/page-reference`
@@ -16639,6 +16640,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/place`
           - `page/prompt/link`
           - `page/turn-into-page`
+          - `page/url-paste`
           - `plugin-meta/composition`
           - `plugin-meta/plugin-health`
           - `plugin-meta/plugin-view`
@@ -18986,7 +18988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/history`
           - `page/markdown-apply`
-    - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also registers the bookmark `data` schema at the server write boundary.
+    - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
         - Uses:
@@ -19025,15 +19027,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/safe-fetch.safeFetch`
           - `infra/safe-fetch.SsrfError`
           - `page/editor.Editor`
-        - Routes: `GET /api/link-preview`
+        - Routes:
+          - `GET /api/link-preview`
+          - `GET /api/link-meta`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `page/editor.defineBlock`
-        - Exports (types): `LinkPreview`
+        - Exports (types):
+          - `LinkMeta`
+          - `LinkPreview`
         - Exports (values):
           - `BOOKMARK_TYPE`
           - `bookmarkBlock`
+          - `linkMetaEndpoint`
+          - `LinkMetaSchema`
           - `linkPreviewEndpoint`
           - `LinkPreviewSchema`
     - **`bulleted-list`** — Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
@@ -19812,20 +19820,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/editor.Editor`
               - `page/editor.MarkButton`
               - `primitives/overlay/tooltip.Kbd`
-        - **`link`** — Inline-link control for the page editor's selection toolbar.
+        - **`link`** — Inline links in the page editor: the selection toolbar's link control (⌘K), and a hover card under any link showing its URL with Copy and Edit (URL + title, Remove link).
           - Web:
             - Contributes: `Editor.FormatAction` → `LinkButton`
             - Uses:
+              - `page/editor.BlockTextPluginProps`
               - `page/editor.Editor`
               - `page/editor.normalizeLinkUrl`
               - `page/editor.OPEN_LINK_POPOVER_COMMAND`
+              - `page/editor.registerBlockTextExtension`
+              - `page/editor.useBlockEditor`
               - `page/editor.useFormatToolbar`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
+              - `primitives/css/rigid.rigidClass`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.Input`
               - `primitives/icon-button.IconButton`
+              - `primitives/overlay/floating-surface.FloatingSurface`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.Kbd`
               - `primitives/undo-redo.localUndoProps`
@@ -20614,16 +20631,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`
           - `primitives/css/row.Row`
-    - **`url-paste`** — Paste or drop a URL into an empty text block to turn it into a bookmark or embed.
+    - **`url-paste`** — Paste a URL into any text block (or drop one into an empty block) and it becomes a link at once, with a menu beside it: keep it as a link, mention it (the page's title becomes the link text), or — when the link is all the block holds — turn the block into a bookmark or embed.
       - Web:
         - Uses:
+          - `infra/endpoints.EndpointError`
+          - `infra/endpoints.fetchEndpoint`
+          - `infra/endpoints.getEndpointErrorMessage`
           - `page/editor.BlockTextPluginProps`
           - `page/editor.readTransferText`
           - `page/editor.registerBlockTextExtension`
+          - `page/editor.useBlockEditor`
           - `primitives/css/row.Row`
+          - `primitives/latest-ref.useEventCallback`
           - `primitives/text-editor/caret-trigger.CaretTriggerMenu`
           - `primitives/text-editor/caret-trigger.useCaretMenu`
           - `primitives/text-editor/caret-trigger.useForcedCaretQuery`
+          - `shell/toast.showToast`
     - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
@@ -21982,6 +22005,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/row-actions`
           - `page/code-block`
           - `page/editor`
+          - `page/formatting/link`
           - `primitives/filepath-breadcrumb`
           - `primitives/log-channels`
           - `primitives/setup-steps`
@@ -22659,6 +22683,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/code-block`
               - `page/file`
+              - `page/formatting/link`
               - `page/inline-date`
               - `page/place`
               - `page/prompt/block`
@@ -22969,6 +22994,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue-health`
               - `debug/timeline`
               - `page/annotations/todo/task-link`
+              - `page/formatting/link`
               - `page/inline-date`
               - `page/place`
               - `page/prompt/block`
@@ -23299,6 +23325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/bookmark`
               - `page/code-block`
               - `page/file`
+              - `page/formatting/link`
               - `page/place`
               - `plugin-meta/facets/db-schema/render-detail`
               - `plugin-meta/facets/registrations/render-detail`
@@ -24258,6 +24285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/embed`
               - `page/file`
               - `page/formatting/color`
+              - `page/formatting/link`
               - `page/inline-date`
               - `page/math/equation`
               - `page/math/inline`
@@ -26464,6 +26492,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `layouts/miller`
           - `page/code-block`
           - `page/editor`
+          - `page/url-paste`
           - `primitives/action-presentation`
           - `primitives/css/color-picker`
           - `primitives/css/ui-kit`
@@ -27287,7 +27316,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types): `FloatingSurfaceProps`
             - Exports (values): `FloatingSurface`
           - Cross-plugin:
-            - Imported by: `primitives/text-editor/caret-trigger`
+            - Imported by:
+              - `page/formatting/link`
+              - `primitives/text-editor/caret-trigger`
         - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail, with tall/tiny shapes and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses:
@@ -30399,6 +30430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/profiling/ops`
           - `infra/health`
           - `page/editor`
+          - `page/url-paste`
           - `primitives/data-view`
           - `shell/notifications`
       - Core:

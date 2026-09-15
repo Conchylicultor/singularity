@@ -37,7 +37,10 @@ interface ScrapedMeta {
  * wrong query string unless decoded exactly once. See
  * `@plugins/infra/plugins/html-decode` for why.
  */
-async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta> {
+async function parseMeta(
+  res: Response,
+  finalUrl: string,
+): Promise<ScrapedMeta> {
   const meta: ScrapedMeta = {};
   const ogImageCandidates: { og?: string; twitter?: string } = {};
   const titleCandidates: { og?: string; twitter?: string; tag?: string } = {};
@@ -129,7 +132,8 @@ async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta>
   // splits text on its own buffer boundaries, so a character reference can straddle
   // two chunks and only reassembles here.
   titleCandidates.tag = decodeHtmlText(titleText).trim() || undefined;
-  meta.title = titleCandidates.og ?? titleCandidates.twitter ?? titleCandidates.tag;
+  meta.title =
+    titleCandidates.og ?? titleCandidates.twitter ?? titleCandidates.tag;
   meta.description =
     descCandidates.og ?? descCandidates.twitter ?? descCandidates.meta;
 
@@ -150,7 +154,10 @@ async function scrapeMeta(res: Response, finalUrl: string): Promise<ScrapedMeta>
   return meta;
 }
 
-function resolveUrl(value: string | undefined, base: string): string | undefined {
+function resolveUrl(
+  value: string | undefined,
+  base: string,
+): string | undefined {
   if (!value) return undefined;
   try {
     return new URL(value, base).toString();
@@ -177,10 +184,9 @@ async function cacheImage(
     if (!(err instanceof SsrfError)) throw err;
     return undefined;
   }
+  const headers = { "user-agent": USER_AGENT };
   // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort OG-image scrape; undefined means "no preview image", the correct degraded result (guarded below by `if (!res || !res.ok) return undefined`), not a swallowed data failure
-  const res = await safeFetch(parsed, { headers: { "user-agent": USER_AGENT } }).catch(
-    () => undefined,
-  );
+  const res = await safeFetch(parsed, { headers }).catch(() => undefined);
   if (!res || !res.ok) return undefined;
 
   const contentType = res.headers.get("content-type") ?? "";
@@ -188,7 +194,8 @@ async function cacheImage(
 
   const buf = await res.arrayBuffer().catch(() => undefined);
   if (!buf) return undefined;
-  if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) return undefined;
+  if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES)
+    return undefined;
 
   const mime = contentType.split(";")[0]?.trim() || "application/octet-stream";
   const name = fileNameFor(parsed, fallbackName, mime);
@@ -203,17 +210,33 @@ function fileNameFor(url: URL, fallback: string, mime: string): string {
   return `${fallback}.${ext}`;
 }
 
-export async function scrapeLinkPreview(url: string): Promise<LinkPreview> {
+/**
+ * Fetch `url` (SSRF-guarded) and parse its metadata — and nothing more. Downloads
+ * no image: a caller that only wants the title (the pasted-link Mention) must not
+ * mint the two attachments `scrapeLinkPreview` caches, which only a bookmark
+ * block ever links and the orphan sweep would otherwise reclaim.
+ *
+ * `imageUrl` / `faviconUrl` come back resolved against the final (post-redirect)
+ * URL, ready for `scrapeLinkPreview` to cache.
+ */
+export async function scrapeLinkMeta(url: string): Promise<ScrapedMeta> {
   const target = parsePublicUrl(url);
 
-  const res = await safeFetch(target, { headers: { "user-agent": USER_AGENT } });
+  const res = await safeFetch(target, {
+    headers: { "user-agent": USER_AGENT },
+  });
   if (!res.ok) {
     throw new HttpError(502, `Failed to fetch URL (status ${res.status})`);
   }
 
   // The final URL after redirects, used to resolve relative image/favicon paths.
   const finalUrl = res.url || target.toString();
-  const meta = await scrapeMeta(res, finalUrl);
+  return parseMeta(res, finalUrl);
+}
+
+/** `scrapeLinkMeta`, plus the og:image and favicon cached as attachments. */
+export async function scrapeLinkPreview(url: string): Promise<LinkPreview> {
+  const meta = await scrapeLinkMeta(url);
 
   // Download og:image + favicon best-effort. Degrade gracefully on missing.
   const [imageId, faviconId] = await Promise.all([

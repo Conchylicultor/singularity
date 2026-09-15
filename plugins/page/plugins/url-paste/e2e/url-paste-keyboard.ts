@@ -10,6 +10,10 @@
 // with LESS code, not broken code. Only driving the real keyboard shows it, so
 // the assertions here are deliberately about keys, not about the menu opening.
 //
+// The paste itself now inserts the URL as a link at once, so the menu opens
+// BESIDE a link: Keep as link / Mention / Create bookmark / Create embed (all
+// four here — the block is empty and the Pages app syncs to a server).
+//
 // The script creates its OWN scratch page and deletes it on the way out — it
 // must never type into a page a human owns.
 //
@@ -17,6 +21,7 @@
 //   ./singularity run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--url <deploy>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
+import type { Locator } from "playwright";
 import {
   arg,
   boot,
@@ -29,7 +34,8 @@ import {
 const OUT = arg("out", "/tmp/url-paste-keyboard");
 
 const MENU = '[data-caret-trigger="url-paste"]';
-// The menu's three rows, in commit-index order: bookmark, embed, plain link.
+// The menu's four rows, in commit-index order: keep as link, mention, bookmark,
+// embed.
 // `CaretTriggerMenu` puts `data-caret-trigger` on a `display:contents` wrapper
 // whose children ARE the rows. They are `<div>`s, not `<button>`s: `Row` infers
 // its element from `href`/`onClick`, and a caret-menu row commits on
@@ -96,7 +102,20 @@ await withBrowser(async (h) => {
     await page.waitForSelector('[contenteditable="true"]');
 
     /**
+     * Click a block near its RIGHT edge, past the end of its text. Never at its
+     * centre: a plain click on a link OPENS it (`ClickableLinkPlugin`), and from
+     * the second paste on the block holds one.
+     */
+    async function clickRightEdge(block: Locator): Promise<void> {
+      const box = await block.boundingBox();
+      if (!box) throw new Error("block has no box");
+      await block.click({ position: { x: box.width - 4, y: box.height / 2 } });
+    }
+
+    /**
      * Focus the page's block, empty it, and fire a `paste` carrying a bare URL.
+     * Emptying it matters: Bookmark / Embed are only offered when the pasted
+     * link is all the block holds.
      *
      * The paste is SYNTHETIC. Playwright's `Meta+V` reads the system clipboard,
      * which is shared machine state a headless run must not depend on (or
@@ -106,7 +125,7 @@ await withBrowser(async (h) => {
      */
     async function pasteUrl(): Promise<void> {
       let block = page.locator('[contenteditable="true"]').last();
-      await block.click();
+      await clickRightEdge(block);
       await page.keyboard.press("End");
       // Clear whatever is there. `Ctrl+A` is scoped by ContentScope and can
       // select the block set rather than the text, so walk it back a character
@@ -118,7 +137,7 @@ await withBrowser(async (h) => {
       await page.waitForTimeout(200);
 
       block = page.locator('[contenteditable="true"]').last();
-      await block.click();
+      await clickRightEdge(block);
       await page.keyboard.press("End");
       await page.waitForTimeout(200);
 
@@ -164,6 +183,14 @@ await withBrowser(async (h) => {
         await page.locator('[contenteditable="true"]').last().innerText()
       ).trim();
 
+    /** The href of the block's link, or null when it holds none. */
+    const linkHref = async (): Promise<string | null> => {
+      const link = page.locator('[contenteditable="true"]').last().locator("a");
+      return (await link.count()) > 0
+        ? link.first().getAttribute("href")
+        : null;
+    };
+
     // --- the menu opens, with row 0 pre-selected --------------------------------
     console.log("\n=== opens with a highlighted row");
     await pasteUrl();
@@ -171,8 +198,14 @@ await withBrowser(async (h) => {
     r.ok("paste opens the menu", opened);
     if (!opened) await snap(page, OUT, "no-menu");
     r.ok(
-      "3 rows (bookmark / embed / plain link)",
-      (await page.locator(ROWS).count()) === 3,
+      "4 rows (keep as link / mention / bookmark / embed)",
+      (await page.locator(ROWS).count()) === 4,
+    );
+    // The paste is a LINK before any row is picked — the menu offers
+    // alternatives to what is already there.
+    r.ok(
+      "the URL is already a link while the menu is open",
+      (await linkHref()) === URL,
     );
     // The hand-rolled menu had NO active row at all — this is the first thing a
     // keyboard model buys, before any key is pressed.
@@ -190,26 +223,33 @@ await withBrowser(async (h) => {
     await page.waitForTimeout(200);
     r.ok("ArrowDown → row 2", (await activeRow()) === 2);
 
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(200);
+    r.ok("ArrowDown → row 3", (await activeRow()) === 3);
+
     // Wrap-around is `useCaretMenu`'s `move()`, not something a hand-rolled menu
     // tends to get right even when it handles arrows at all.
     await page.keyboard.press("ArrowDown");
     await page.waitForTimeout(200);
-    r.ok("ArrowDown wraps 2 → 0", (await activeRow()) === 0);
+    r.ok("ArrowDown wraps 3 → 0", (await activeRow()) === 0);
 
     await page.keyboard.press("ArrowUp");
     await page.waitForTimeout(200);
-    r.ok("ArrowUp wraps 0 → 2", (await activeRow()) === 2);
+    r.ok("ArrowUp wraps 0 → 3", (await activeRow()) === 3);
 
     // --- Esc dismisses (was a duplicate hand-written command) -------------------
     console.log("\n=== Esc dismisses");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(250);
     r.ok("Esc closes the menu", (await page.locator(MENU).count()) === 0);
+    r.ok("Esc keeps the link", (await linkHref()) === URL);
 
     // --- Enter commits the ACTIVE row -------------------------------------------
-    // Row 2 is "Plain link": it inserts the URL as text in the same block, which
-    // is the one outcome observable without leaving the page (bookmark/embed
-    // convert the block to a different type and fetch).
+    // Row 0 is "Keep as link": it only closes the menu, which is the one outcome
+    // observable without leaving the page (Mention fetches; bookmark/embed
+    // convert the block to a different type). What separates a COMMITTED Enter
+    // from a fallen-through one is the block count: an Enter that reached
+    // Lexical would split the block, leaving the link above a new empty block.
     console.log("\n=== Enter commits the active row");
     await pasteUrl();
     r.ok(
@@ -217,29 +257,36 @@ await withBrowser(async (h) => {
       (await page.locator(MENU).count()) > 0,
     );
     // A reopened menu must start at row 0 again — the previous section left the
-    // highlight on row 2, and the forced producer's query is `""` on every open,
+    // highlight on row 3, and the forced producer's query is `""` on every open,
     // so nothing in the query-change path would reset it.
     r.ok("reopen starts back at row 0", (await activeRow()) === 0);
-    await page.keyboard.press("ArrowUp"); // 0 → wraps to 2 (Plain link)
+    await page.keyboard.press("ArrowDown"); // 0 → 1
+    await page.waitForTimeout(200);
+    await page.keyboard.press("ArrowUp"); // 1 → 0, "Keep as link"
     await page.waitForTimeout(200);
     const beforeEnter = await activeRow();
     r.ok(
-      `ArrowUp selects 'Plain link' (saw ${beforeEnter})`,
-      beforeEnter === 2,
+      `arrows land back on 'Keep as link' (saw ${beforeEnter})`,
+      beforeEnter === 0,
     );
 
+    const blocksBefore = await page.locator('[contenteditable="true"]').count();
     await page.keyboard.press("Enter");
     await page.waitForTimeout(600);
     r.ok("Enter closes the menu", (await page.locator(MENU).count()) === 0);
-    const text = await blockText();
-    // The old menu swallowed nothing: Enter reached Lexical and split the block,
-    // leaving it empty. So "the URL is in the block" is precisely the assertion
-    // that separates a committed menu from a fallen-through keypress.
+    const blocksAfter = await page.locator('[contenteditable="true"]').count();
     r.ok(
-      `Enter inserted the URL (block reads ${JSON.stringify(text)})`,
+      `Enter did not split the block (${blocksBefore} → ${blocksAfter} editable blocks)`,
+      blocksAfter === blocksBefore,
+    );
+    const text = await blockText();
+    r.ok(
+      `the block still reads the URL (${JSON.stringify(text)})`,
       text === URL,
     );
-    if (text !== URL) await snap(page, OUT, "enter-did-not-commit");
+    r.ok("and it is still a link", (await linkHref()) === URL);
+    if (text !== URL || blocksAfter !== blocksBefore)
+      await snap(page, OUT, "enter-did-not-commit");
 
     await snap(page, OUT, "final");
   } finally {

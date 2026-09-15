@@ -10,7 +10,7 @@
   - **`code`** — Inline-code mark button for the page editor's selection toolbar.
   - **`color`** — Inline text-color control for the page editor's selection toolbar.
   - **`italic`** — Italic mark button for the page editor's selection toolbar.
-  - **`link`** — Inline-link control for the page editor's selection toolbar.
+  - **`link`** — Inline links in the page editor: the selection toolbar's link control (⌘K), and a hover card under any link showing its URL with Copy and Edit (URL + title, Remove link).
   - **`strikethrough`** — Strikethrough mark button for the page editor's selection toolbar.
   - **`underline`** — Underline mark button for the page editor's selection toolbar.
 

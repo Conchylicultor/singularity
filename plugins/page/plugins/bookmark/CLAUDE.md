@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also registers the bookmark `data` schema at the server write boundary.
+- Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
   - Uses:
@@ -43,15 +43,21 @@
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`
     - `page/editor.Editor`
-  - Routes: `GET /api/link-preview`
+  - Routes:
+    - `GET /api/link-preview`
+    - `GET /api/link-meta`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `page/editor.defineBlock`
-  - Exports (types): `LinkPreview`
+  - Exports (types):
+    - `LinkMeta`
+    - `LinkPreview`
   - Exports (values):
     - `BOOKMARK_TYPE`
     - `bookmarkBlock`
+    - `linkMetaEndpoint`
+    - `LinkMetaSchema`
     - `linkPreviewEndpoint`
     - `LinkPreviewSchema`
 

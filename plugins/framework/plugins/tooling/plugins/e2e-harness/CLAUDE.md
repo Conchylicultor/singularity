@@ -288,6 +288,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `page/divider`
     - `page/editor`
     - `page/editor-collab`
+    - `page/formatting/link`
     - `page/image`
     - `page/inline-date`
     - `page/page-reference`

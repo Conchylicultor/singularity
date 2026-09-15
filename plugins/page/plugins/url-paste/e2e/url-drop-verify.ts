@@ -6,8 +6,9 @@
 // focus living inside THIS editor's root, so the drop handler has to seat the
 // caret itself (`lexical.focus()`). Nothing below the browser can check that:
 // tsc sees a method call, and the two ways it can go wrong are both silent —
-// the menu never opens (we already `preventDefault`ed, so the URL is simply
-// swallowed), or it opens anchored to nothing and paints at the page origin.
+// the menu never opens, or it opens anchored to nothing and paints at the page
+// origin. And the link the drop inserts goes wherever the editor's selection
+// is, so a caret that was never seated here would put it in the WRONG block.
 //
 // So every case here drops into a block the user is NOT standing in: focus is
 // parked in the first block and the payload lands on a later one. A test that
@@ -17,9 +18,10 @@
 // Verifies:
 //   A. a bare https URL dropped on an EMPTY text block opens the menu, anchored
 //      at that block (not at the page origin)
-//   B. Enter commits "Plain link" — which inserts through the editor's own
-//      RangeSelection, so it is the proof that the caret really landed HERE and
-//      not in the block that had focus a moment ago
+//   B. the URL landed as a link in the block that was dropped on — it inserts
+//      through the editor's own RangeSelection, so it is the proof that the
+//      caret really landed HERE and not in the block that had focus a moment
+//      ago — and Enter commits "Keep as link", closing the menu
 //   C. the same URL dropped on a NON-empty block does not open the menu
 //   D. a `text/uri-list`-only transfer (no `text/plain`) opens it too — the case
 //      `readTransferText` exists for, and the one a link dragged out of another
@@ -152,9 +154,9 @@ await withBrowser(async (h) => {
     r.ok("A: the drop opened the menu", opened);
     if (!opened) await snap(page, OUT, "no-menu");
     r.eq(
-      "A: 3 rows (bookmark / embed / plain link)",
+      "A: 4 rows (keep as link / mention / bookmark / embed)",
       await page.locator(ROWS).count(),
-      3,
+      4,
     );
 
     const menuBox = await page.locator(ROWS).first().boundingBox();
@@ -181,24 +183,38 @@ await withBrowser(async (h) => {
       if (!near) await snap(page, OUT, "menu-misplaced");
     }
 
-    // ---- B: Enter commits "Plain link" ----------------------------------------
-    // Row 2 inserts the URL through `sel.insertText` on the editor's OWN
-    // RangeSelection. It can only land if the drop really seated the caret in
-    // this block — so this is the caret-seating assertion, not a menu one. (And
-    // Enter reaching the menu at all proves DOM focus is inside this editor: the
-    // surface is focus-less, the editor's keydown is what drives it.)
-    await page.keyboard.press("ArrowUp"); // row 0 → wraps to 2, "Plain link"
-    await page.waitForTimeout(200);
-    await page.keyboard.press("Enter");
-    await page.waitForTimeout(800);
-    r.eq("B: Enter closed the menu", await page.locator(MENU).count(), 0);
+    // ---- B: the link landed HERE, and Enter keeps it --------------------------
+    // The insert goes through the editor's OWN RangeSelection. It can only land
+    // in this block if the drop really seated the caret here — so this is the
+    // caret-seating assertion, not a menu one. (And Enter reaching the menu at
+    // all proves DOM focus is inside this editor: the surface is focus-less, the
+    // editor's keydown is what drives it.)
     r.eq(
       "B: the URL landed in the block that was dropped on",
       await blockTexts(page),
       ["alpha", URL],
     );
+    r.eq(
+      "B: as a link",
+      await editableBlocks(page)
+        .nth(1)
+        .locator("a")
+        .first()
+        .getAttribute("href"),
+      URL,
+    );
+    // Row 0 is "Keep as link" — the menu opens with it active.
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(800);
+    r.eq("B: Enter closed the menu", await page.locator(MENU).count(), 0);
+    r.eq("B: and left the block as it was", await blockTexts(page), [
+      "alpha",
+      URL,
+    ]);
 
     // ---- C: the same URL on a NON-empty block does not open the menu ----------
+    // A drop into existing text lands where the browser puts it, not at a caret
+    // we hold — so the drop arm keeps its empty-block gate.
     await parkAwayFromDropTarget(page);
     await dropOn(page, 1, { "text/plain": URL });
     r.eq(
@@ -211,7 +227,15 @@ await withBrowser(async (h) => {
     // ---- D: a text/uri-list-only transfer opens it too ------------------------
     // No `text/plain` at all: a bare `getData("text/plain")` reads "" here, which
     // is exactly what `readTransferText` exists to stop.
-    await editableBlocks(page).nth(1).click();
+    // Near the RIGHT edge, past the text: block 1 now holds a link, and a plain
+    // click on a link opens it (`ClickableLinkPlugin`) instead of placing the
+    // caret.
+    const linkBlock = editableBlocks(page).nth(1);
+    const linkBox = await linkBlock.boundingBox();
+    if (!linkBox) throw new Error("block 1 has no box");
+    await linkBlock.click({
+      position: { x: linkBox.width - 4, y: linkBox.height / 2 },
+    });
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
     await page.waitForTimeout(2000);
@@ -223,9 +247,7 @@ await withBrowser(async (h) => {
     r.ok("D: a uri-list-only drop opened the menu", uriListOpened);
     if (!uriListOpened) await snap(page, OUT, "no-menu-uri-list");
 
-    await page.keyboard.press("ArrowUp"); // "Plain link"
-    await page.waitForTimeout(200);
-    await page.keyboard.press("Enter");
+    await page.keyboard.press("Enter"); // "Keep as link"
     await page.waitForTimeout(800);
     // The CRLF the uri-list carried must not survive into the block.
     r.eq("D: the trimmed URL landed in the block", await blockTexts(page), [

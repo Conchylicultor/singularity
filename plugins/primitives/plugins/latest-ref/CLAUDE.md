@@ -44,6 +44,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `layouts/miller`
     - `page/code-block`
     - `page/editor`
+    - `page/url-paste`
     - `primitives/action-presentation`
     - `primitives/css/color-picker`
     - `primitives/css/ui-kit`

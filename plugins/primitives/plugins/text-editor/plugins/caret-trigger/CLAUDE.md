@@ -87,8 +87,8 @@ where open-state comes from:
   one place the two producers genuinely cannot share a rule. In the trigger-char
   flow, typing is what opens the menu, so a fresh open always brings a fresh
   query and the query-change reset in `sync` covers it. The forced flow breaks
-  that coupling: `url-paste` force-opens on an EMPTY block, so its query is `""`
-  on *every* open and the query-change reset never fires — dismiss with row 3
+  that coupling: `url-paste` force-opens with the caret just past the link it
+  inserted, so its query is `""` on *every* open and the query-change reset never fires — dismiss with row 3
   highlighted, paste again, and the menu reopens on row 3 with Enter committing
   it. Resetting on close rather than on open is what keeps it flash-free: while
   `active` is false the surface is unmounted, so the write lands with nothing
@@ -101,9 +101,8 @@ This is the substrate for any menu whose open signal is not a trigger char:
 - The page editor's gutter `+` — inserts an empty paragraph below, focuses it,
   flags it `active`, and lets its block force-open the same menu the `/` trigger
   opens. Same surface, same keyboard model, one filtered list.
-- `page/url-paste`'s bookmark / embed / plain-link menu — the PASTE event sets
-  `active`, and the block is empty so the query stays `""` (the three items are
-  fixed, not filtered).
+- `page/url-paste`'s Keep as link / Mention / Bookmark / Embed menu — the PASTE
+  event sets `active`; its items are fixed, not filtered.
 
 Both are the reason the forced producer exists rather than each menu going its
 own way. `url-paste` originally did go its own way: it imported `caretAnchor`
@@ -128,7 +127,10 @@ A single gate would be wrong in both directions, so the hook registers three:
 - **Arrows + Enter** gate on `interactive` (`open && itemCount > 0`) — there
   must be something to commit. Arrows are registered *only* when `navigate !==
   false`; `$$` passes `navigate: false` so arrows still move the caret through
-  LaTeX.
+  LaTeX. A consumed arrow also `preventDefault`s: returning `true` stops only
+  Lexical's listeners, so the browser would still move the caret, change the
+  query, and reset the highlight the arrow just moved (url-paste's caret sits
+  past a link and slides into it; `/`'s is already at the line end, which hid it).
 - **Esc** gates on `surfaceOpen` — the exact boolean driving the surface's
   visibility. `[[`'s loading spinner and `@`'s "keep typing" hint are visible
   with zero items, and Esc must dismiss them; but Esc must *not* be swallowed

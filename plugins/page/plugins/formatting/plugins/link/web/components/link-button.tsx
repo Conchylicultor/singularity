@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MdLink } from "react-icons/md";
 import {
   $getSelection,
@@ -15,37 +9,30 @@ import {
 import { TOGGLE_LINK_COMMAND } from "@lexical/link";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import {
-  Button,
-  Input,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
-import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import {
   useFormatToolbar,
   OPEN_LINK_POPOVER_COMMAND,
-  normalizeLinkUrl,
 } from "@plugins/page/plugins/editor/web";
+import { LinkForm, type LinkFormResult } from "./link-form";
 
 /**
  * Inline-link toolbar control. A chain button, active when the selection sits
- * within a link, opening a popover with a URL input + Apply / Remove.
+ * within a link, opening a popover holding the shared `LinkForm` (URL only).
  *
  * Selection survival: opening the popover moves focus into the input, which would
  * collapse the editor selection. We (1) pin the toolbar so the bar doesn't tear
  * down, and (2) snapshot the live `RangeSelection` on open and restore it inside
  * the `editor.update` before dispatching `TOGGLE_LINK_COMMAND`, so the link
- * applies to the originally-selected span. Apply normalizes the URL
- * (`https://` / `mailto:` defaulting, allowed-protocol gate); Remove passes
- * `null`.
+ * applies to the originally-selected span. `LinkForm` normalizes the URL
+ * (`https://` / `mailto:` defaulting, allowed-protocol gate) before Apply ever
+ * reaches us; Remove passes `null`.
  */
 export function LinkButton() {
   const toolbar = useFormatToolbar();
   const [open, setOpen] = useState(false);
-  const [url, setUrl] = useState("");
   // The editor selection captured when the popover opened (restored on apply).
   const savedSelection = useRef<BaseSelection | null>(null);
 
@@ -59,10 +46,9 @@ export function LinkButton() {
       const sel = $getSelection();
       savedSelection.current = sel ? sel.clone() : null;
     });
-    setUrl(activeLink ?? "");
     setPinned?.(true);
     setOpen(true);
-  }, [editor, activeLink, setPinned]);
+  }, [editor, setPinned]);
 
   const closePopover = useCallback(() => {
     setOpen(false);
@@ -95,10 +81,7 @@ export function LinkButton() {
     closePopover();
   };
 
-  const apply = (e?: FormEvent) => {
-    e?.preventDefault();
-    const href = normalizeLinkUrl(url);
-    if (!href) return; // invalid URL — keep the popover open for correction
+  const apply = ({ href }: LinkFormResult) => {
     withSavedSelection(() => {
       editor.dispatchCommand(TOGGLE_LINK_COMMAND, href);
     });
@@ -133,41 +116,13 @@ export function LinkButton() {
         />
       }
     >
-      <form onSubmit={apply}>
-        <Stack gap="xs">
-          <Input
-            // NOT redundant, however portaled this looks. This field reads as
-            // `local` today only because the popover portals to `document.body`,
-            // which severs it from the page body's `surfaceUndoProps` subtree so
-            // `resolveUndoOwner`'s `closest()` walk finds nothing. That is an
-            // accident: `PortalForwardProvider` re-stamps ancestry-derived `data-*`
-            // across portals and already carries four, so the day
-            // `data-undo-owner` joins them this flips to `surface` with no test to
-            // catch it. Declared, the answer stays true either way.
-            {...localUndoProps}
-            autoFocus
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste or type a link"
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                e.preventDefault();
-                closePopover();
-              }
-            }}
-          />
-          <Stack direction="row" gap="xs" justify="end">
-            {activeLink !== null && (
-              <Button type="button" variant="ghost" onClick={remove}>
-                Remove
-              </Button>
-            )}
-            <Button type="submit" disabled={normalizeLinkUrl(url) === null}>
-              Apply
-            </Button>
-          </Stack>
-        </Stack>
-      </form>
+      <LinkForm
+        initialUrl={activeLink ?? ""}
+        canRemove={activeLink !== null}
+        onApply={apply}
+        onRemove={remove}
+        onCancel={closePopover}
+      />
     </InlinePopover>
   );
 }

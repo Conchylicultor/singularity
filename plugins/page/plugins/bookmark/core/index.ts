@@ -1,3 +1,8 @@
 export { bookmarkBlock, BOOKMARK_TYPE } from "./bookmark-block";
-export { linkPreviewEndpoint } from "./endpoints";
-export { LinkPreviewSchema, type LinkPreview } from "./schemas";
+export { linkMetaEndpoint, linkPreviewEndpoint } from "./endpoints";
+export {
+  LinkMetaSchema,
+  LinkPreviewSchema,
+  type LinkMeta,
+  type LinkPreview,
+} from "./schemas";

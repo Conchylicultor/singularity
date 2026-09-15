@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   BLUR_COMMAND,
   COMMAND_PRIORITY_CRITICAL,
@@ -10,9 +16,17 @@ import {
   type LexicalEditor,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useEventCallback, useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import { findTrigger, type CanOpenCtx } from "./find-trigger";
-import { isOpen, reduceTriggerState, triggerId, type MenuState } from "./trigger-state";
+import {
+  isOpen,
+  reduceTriggerState,
+  triggerId,
+  type MenuState,
+} from "./trigger-state";
 import { useCaretOwner } from "./arbiter";
 
 /**
@@ -71,7 +85,10 @@ export interface CaretQuery {
 export function useCaretQuery(opts: UseCaretQueryOpts): CaretQuery {
   const [lexicalEditor] = useLexicalComposerContext();
 
-  const [state, setState] = useState<MenuState>({ trigger: null, dismissedId: null });
+  const [state, setState] = useState<MenuState>({
+    trigger: null,
+    dismissedId: null,
+  });
   const [activeIndex, setActiveIndex] = useState(0);
   // Focus is a DIMENSION of the derived state, not a side effect: blur closes
   // but never latches, so returning to a block whose text still holds the
@@ -143,7 +160,15 @@ export function useCaretQuery(opts: UseCaretQueryOpts): CaretQuery {
     );
   });
 
-  return { id: opts.id, query, open, activeIndex, setActiveIndex, dismiss, editor: lexicalEditor };
+  return {
+    id: opts.id,
+    query,
+    open,
+    activeIndex,
+    setActiveIndex,
+    dismiss,
+    editor: lexicalEditor,
+  };
 }
 
 export interface UseCaretMenuOpts {
@@ -200,7 +225,10 @@ export interface UseCaretMenuResult {
  *   isn't swallowed by a no-match query showing nothing.
  * - Blur flips `focused` in `useCaretQuery` and never latches.
  */
-export function useCaretMenu(caret: CaretQuery, opts: UseCaretMenuOpts): UseCaretMenuResult {
+export function useCaretMenu(
+  caret: CaretQuery,
+  opts: UseCaretMenuOpts,
+): UseCaretMenuResult {
   const navigate = opts.navigate ?? true;
   const surfaceWhen = opts.surfaceWhen ?? "open";
   const lexicalEditor = caret.editor;
@@ -210,7 +238,8 @@ export function useCaretMenu(caret: CaretQuery, opts: UseCaretMenuOpts): UseCare
   const interactive = open && opts.itemCount > 0;
   const surfaceOpen = surfaceWhen === "interactive" ? interactive : open;
   // Clamp reads to [0, itemCount) so an async list shrink can't index out of range.
-  const activeIndex = opts.itemCount > 0 ? Math.min(caret.activeIndex, opts.itemCount - 1) : 0;
+  const activeIndex =
+    opts.itemCount > 0 ? Math.min(caret.activeIndex, opts.itemCount - 1) : 0;
 
   // Stable reads for the (registered-once) Lexical command callbacks.
   const interactiveRef = useLatestRef(interactive);
@@ -228,19 +257,28 @@ export function useCaretMenu(caret: CaretQuery, opts: UseCaretMenuOpts): UseCare
         const n = itemCountRef.current;
         return n === 0 ? i : (i + delta + n) % n;
       });
-    const unDown = lexicalEditor.registerCommand(
+    // A consumed arrow must ALSO cancel the browser's default: returning `true`
+    // only stops Lexical's other listeners, while the browser still moves the
+    // caret. That move changes the text before the caret — the query — and a
+    // query change resets the highlight to row 0, so the arrow the menu just
+    // applied is undone. Invisible for `/` (its caret already sits at the line
+    // end, where Down has nowhere to go); fatal for url-paste, whose caret sits
+    // just past a link and slides into it.
+    const unDown = lexicalEditor.registerCommand<KeyboardEvent | null>(
       KEY_ARROW_DOWN_COMMAND,
-      () => {
+      (event) => {
         if (!interactiveRef.current) return false;
+        event?.preventDefault();
         move(1);
         return true;
       },
       COMMAND_PRIORITY_CRITICAL,
     );
-    const unUp = lexicalEditor.registerCommand(
+    const unUp = lexicalEditor.registerCommand<KeyboardEvent | null>(
       KEY_ARROW_UP_COMMAND,
-      () => {
+      (event) => {
         if (!interactiveRef.current) return false;
+        event?.preventDefault();
         move(-1);
         return true;
       },
@@ -279,7 +317,14 @@ export function useCaretMenu(caret: CaretQuery, opts: UseCaretMenuOpts): UseCare
       unEnter();
       unEscape();
     };
-  }, [lexicalEditor, dismiss, interactiveRef, surfaceOpenRef, activeIndexRef, onCommitRef]);
+  }, [
+    lexicalEditor,
+    dismiss,
+    interactiveRef,
+    surfaceOpenRef,
+    activeIndexRef,
+    onCommitRef,
+  ]);
 
   // Pointer commit — see `UseCaretMenuResult.commit` for the two hazards this
   // guards. Running `onCommit` inside `editor.update()` puts it in the SAME
