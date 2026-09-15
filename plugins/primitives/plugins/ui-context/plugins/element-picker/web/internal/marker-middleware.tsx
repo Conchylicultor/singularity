@@ -44,11 +44,11 @@ function contributionNode(
  * row) climbed past the whole contribution and answered with the enclosing pane.
  * As data there is no placement to get right, here or in any future consumer.
  *
- * Registering here rather than in `ui-context` keeps it opt-in: it describes
- * *every* slot contribution repo-wide, and that cost should only be paid when
- * the element-picker is actually in the app composition. `<UiRegion>` — a
- * handful of explicit call sites — has no such constraint and lives in the
- * primitive.
+ * Registering here, in the picker sub-plugin, rather than in the `ui-context`
+ * barrel keeps it opt-in: it describes *every* slot contribution repo-wide, and
+ * that cost should only be paid when something that can pick is actually in
+ * the app composition. `<UiRegion>` — a handful of explicit call sites — has
+ * no such constraint and lives in the parent primitive.
  */
 registerSlotItemAttrs(({ slotId, contribution, boxless }) =>
   contributionNodeAttrs(contributionNode(slotId, contribution), { boxless }),

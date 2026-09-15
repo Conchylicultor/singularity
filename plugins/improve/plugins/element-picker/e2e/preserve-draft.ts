@@ -29,9 +29,17 @@ await withBrowser(async (h) => {
   const { page } = await h.session();
   await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
+  // The action bar floats collapsed at the top-right unless it is pinned into
+  // the tab bar: the floating one is hovered open, the pinned one is already.
   const bar = page.locator('[data-source*="floating-action"]').first();
-  await bar.waitFor({ state: "visible", timeout: 30_000 });
-  await bar.hover();
+  const revealBar = async () => {
+    if (await bar.isVisible()) await bar.hover();
+  };
+  await page
+    .getByRole("button", { name: "Improve" })
+    .first()
+    .waitFor({ state: "attached", timeout: 30_000 });
+  await revealBar();
 
   const improve = page.getByRole("button", { name: "Improve" }).first();
   await improve.waitFor({ state: "visible", timeout: 10_000 });
@@ -47,7 +55,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "drafted");
 
   // Pick #1 — popover still open: the tag goes in at the caret.
-  await bar.hover();
+  await revealBar();
   await picker.click();
   await page.mouse.move(PICK_AT.x, PICK_AT.y);
   await page.mouse.click(PICK_AT.x, PICK_AT.y);
@@ -61,7 +69,7 @@ await withBrowser(async (h) => {
   // tag is appended to it.
   await page.keyboard.press("Escape");
   await page.waitForTimeout(400);
-  await bar.hover();
+  await revealBar();
   await picker.click();
   await page.mouse.move(PICK_AT.x, PICK_AT.y);
   await page.mouse.click(PICK_AT.x, PICK_AT.y);

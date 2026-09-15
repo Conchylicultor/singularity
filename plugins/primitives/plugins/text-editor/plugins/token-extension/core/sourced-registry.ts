@@ -8,7 +8,7 @@
  *
  * ## Why a source and not just an item
  *
- * A plugin whose token set is itself a registry (active-data's inline chips)
+ * A plugin whose token set is itself a registry (`inline-chip`'s chips)
  * cannot hand over a finished list at module eval: the chips register
  * progressively as the plugin tiers load, so a snapshot taken by whoever
  * happens to evaluate first silently under-reports and the host renders those

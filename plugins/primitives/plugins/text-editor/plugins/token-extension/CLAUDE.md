@@ -161,7 +161,7 @@ Every Lexical host keeps a registry of the token families it knows about
 the page editor). Both need a second kind of entry: not an item, but a FUNCTION
 that produces items when asked.
 
-A plugin whose token set is itself a registry (active-data's inline chips)
+A plugin whose token set is itself a registry (`inline-chip`'s chips)
 cannot hand over a finished list at module eval — the chips fill in as the
 plugin tiers load, so a snapshot taken by whoever evaluated first silently
 under-reports and those tokens render as plain characters forever. Registering

@@ -1,6 +1,6 @@
 import { insertIntoImproveDraft } from "@plugins/improve/web";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
-import { PickerButton } from "./picker-button";
+import { PickerButton } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 
 /**
  * ActionBar entry: pick an element, then insert it into the Improve draft,

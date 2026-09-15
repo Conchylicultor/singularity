@@ -3,13 +3,13 @@ import {
   type InlineTokenExtension,
 } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
 import { inlineChips, type ChipSurface } from "./inline-registry";
-import { activeDataInlineWebNode } from "./active-data-inline-node";
+import { inlineChipWebNode } from "./inline-chip-node";
 
 /**
  * Every chip that declared `surface`, as ONE token extension a Lexical host can
  * register: a union of the chips' patterns feeding the single generic
- * `ActiveDataInlineNode`, which stores the raw matched substring and resolves
- * its chip at decorate time.
+ * `InlineChipNode`, which stores the raw matched substring and resolves its chip
+ * at decorate time.
  *
  * That is why declaring a chip lights the token up in the editor with zero
  * per-chip Lexical wiring — and why there is exactly one node type to register
@@ -22,7 +22,7 @@ import { activeDataInlineWebNode } from "./active-data-inline-node";
  * the plugin tiers load, so a union compiled too early is missing alternatives
  * and its tokens render as plain characters with nothing failing.
  */
-export function activeDataInlineExtension(
+export function inlineChipExtension(
   surface: ChipSurface,
 ): InlineTokenExtension | null {
   const chips = inlineChips(surface);
@@ -34,8 +34,8 @@ export function activeDataInlineExtension(
     "g",
   );
   return tokenExtension({
-    id: `active-data-inline-${surface}`,
+    id: `inline-chip-${surface}`,
     pattern: union,
-    node: activeDataInlineWebNode,
+    node: inlineChipWebNode,
   });
 }

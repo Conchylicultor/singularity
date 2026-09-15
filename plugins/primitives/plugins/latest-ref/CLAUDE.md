@@ -73,6 +73,7 @@ stability-independent and is suppressed at the site with an inline disable.)
     - `primitives/text-editor`
     - `primitives/text-editor/caret-trigger`
     - `primitives/text-editor/token-extension/node`
+    - `primitives/ui-context/element-picker`
     - `primitives/undo-redo`
     - `reorder`
     - `screenshot`

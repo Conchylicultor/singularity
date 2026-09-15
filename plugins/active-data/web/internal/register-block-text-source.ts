@@ -3,13 +3,18 @@ import {
   registerBlockTextExtensionSource,
 } from "@plugins/page/plugins/editor/web";
 import type { BlockTextExtension } from "@plugins/page/plugins/editor/web";
-import { activeDataInlineExtension } from "./inline-extension";
-import { activeDataInlineWebNode } from "./active-data-inline-node";
-import { renderInlineChip } from "./render-inline-chip";
+import {
+  inlineChipExtension,
+  inlineChipWebNode,
+  renderInlineChip,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 
-// Side-effect: teach every page block editor about active-data's inline chips,
-// so an id written in a page renders as the same chip it renders as in a
-// conversation.
+// Side-effect: teach every page block editor about the inline chips, so an id
+// written in a page renders as the same chip it renders as in a conversation.
+//
+// Here, in active-data, rather than in inline-chip (which knows nothing of pages)
+// or in page/editor (whose host must name no chip family — see
+// `no-token-identity-outside-owner`).
 //
 // A SOURCE, not an extension: the chip set is itself a registry that fills in as
 // the plugin tiers load, so what is registered here is the lookup, called afresh
@@ -18,14 +23,14 @@ import { renderInlineChip } from "./render-inline-chip";
 // and its doc-sourced projection would then be reading two different extension
 // sets, which round-trips a chip node into plain characters.
 //
-// `"document"` is the page's surface. The prompt editor asks for `"transcript"`
+// `"document"` is the page's surface. Every `TextEditor` asks for `"transcript"`
 // and gets a different union, which is how a chip that has no business in a page
 // stays out of one without anybody here naming a contributor.
 let cached: BlockTextExtension | null = null;
 let cachedUnion: string | null = null;
 
 registerBlockTextExtensionSource(() => {
-  const extension = activeDataInlineExtension("document");
+  const extension = inlineChipExtension("document");
   if (!extension) return [];
   // Hand back a STABLE object while the union is unchanged: the page editor
   // derives one `InlineTokenExtension` per registered object and caches it on
@@ -46,7 +51,7 @@ registerBlockTextExtensionSource(() => {
       // parsed with no `code` mark, so the id a person wrote as documentation
       // came back as a live chip.
       markdownSpan: "transparent",
-      node: activeDataInlineWebNode,
+      node: inlineChipWebNode,
       // `renderInlineChip` is the ONE rendering of an inline token — the
       // anchored full-match rule that picks the chip, inside its boundary. So a
       // read-only surface paints a chip through exactly the call the Lexical

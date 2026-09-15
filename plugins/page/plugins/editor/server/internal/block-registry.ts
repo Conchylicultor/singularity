@@ -149,7 +149,7 @@ export function blockTextProtectedSpans(): RegExp[] {
  *
  * Two contributions may share a node `type` — that is exactly how active-data's
  * four inline-chip sub-plugins each contribute their own pattern against ONE
- * shared `activeDataInlineNode` — but only when they name the SAME spec object.
+ * shared `inlineChipNode` — but only when they name the SAME spec object.
  * Two different objects claiming one type is a defect and throws, naming both
  * owners: Lexical keys its node registry by type string and rejects the second
  * class, so the two could never both be registered, and whichever won would be

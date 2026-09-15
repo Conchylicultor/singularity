@@ -85,11 +85,11 @@ the copy: they ring their own chips.
 
 | declaration | who | text |
 |---|---|---|
-| `copiesAsText(token)` | `active-data`'s `renderInlineChip` | the raw token |
+| `copiesAsText(token)` | `text-editor/inline-chip`'s `renderInlineChip` | the raw token |
 | ``copiesAsText(`\`${t}\``)`` | `active-data`'s code chain, claimed arm | the token **with backticks** — a code chip is reachable only from inside a backtick span |
 | `copiesAsOwnText` | `Badge` | its own label, unbroken |
 
-Those two active-data sites are where the source characters stop being on
+Those two chip sites are where the source characters stop being on
 screen, which is why they are the ones that can declare them. Block widgets
 (`<task>…</task>`) declare nothing on purpose: their rendered text is more
 useful than their tag source.

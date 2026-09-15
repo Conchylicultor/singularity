@@ -1,18 +1,12 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { CodeClaim, CodeResolver } from "./claim";
-import type { ActiveDataInlineContribution } from "./internal/inline-registry";
 
-// The `display:"inline"` arm is declared — and can ONLY be built — in
-// `./internal/inline-registry`, whose factory records the chip in the module
-// registry every headless reader uses. Re-exported here so the union below and
-// the plugin barrel name one type; see that module for why the two halves are
-// sealed together.
-export { inlineChip } from "./internal/inline-registry";
-export type {
-  ActiveDataInlineContribution,
-  ChipSurface,
-} from "./internal/inline-registry";
+// There is no `display:"inline"` arm: an inline chip (a bare substring spliced
+// into text) is declared to `InlineChip.Tag` in
+// `primitives/text-editor/plugins/inline-chip`, which owns the chip registry and
+// the one generic Lexical node every chip renders through. This slot keeps what
+// needs active-data's host machinery — block tags and claimed code spans.
 
 export interface ActiveDataBlockContribution {
   display: "block";
@@ -24,10 +18,10 @@ export interface ActiveDataBlockContribution {
 }
 
 /**
- * Like "inline" but only applied inside backtick-wrapped inline code elements,
- * never to regular text nodes. Use for tokens that are valid identifiers in prose
- * (e.g. plugin names, commit shas) but should only link when explicitly wrapped in
- * code.
+ * Like an inline chip, but only applied inside backtick-wrapped inline code
+ * elements, never to regular text nodes. Use for tokens that are valid
+ * identifiers in prose (e.g. plugin names, commit shas) but should only link when
+ * explicitly wrapped in code.
  *
  * A code contribution has TWO gates, and they are separate on purpose:
  *
@@ -42,8 +36,8 @@ export interface ActiveDataBlockContribution {
  *   by plugin load order.
  *
  * There is no `attrs`: a code contribution is reached from an inline code span,
- * which carries no attributes (it was permanently `{}`). `inline`/`block` keep it,
- * where it is real.
+ * which carries no attributes (it was permanently `{}`). `block` keeps it, where
+ * it is real.
  */
 export interface ActiveDataCodeContribution {
   display: "code";
@@ -88,9 +82,7 @@ export function codeTag<T>(spec: {
 }
 
 export type ActiveDataContribution =
-  | ActiveDataBlockContribution
-  | ActiveDataInlineContribution
-  | ActiveDataCodeContribution;
+  ActiveDataBlockContribution | ActiveDataCodeContribution;
 
 export const ActiveData = {
   Tag: defineSlot<ActiveDataContribution>({

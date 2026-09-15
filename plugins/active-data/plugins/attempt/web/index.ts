@@ -1,5 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData, inlineChip } from "@plugins/active-data/web";
+import {
+  InlineChip,
+  inlineChip,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 import { ATTEMPT_ID_RE } from "../core";
 import { AttemptChip } from "./components/attempt-chip";
 
@@ -9,7 +12,7 @@ export default {
   description:
     "Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed.",
   contributions: [
-    ActiveData.Tag(
+    InlineChip.Tag(
       inlineChip({
         id: "attempt",
         pattern: ATTEMPT_ID_RE,

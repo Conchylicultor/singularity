@@ -1,5 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData, inlineChip } from "@plugins/active-data/web";
+import {
+  InlineChip,
+  inlineChip,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 import { PageLinkChip } from "./components/page-link-chip";
 import { BLOCK_ID_RE } from "./internal/pattern";
 
@@ -9,7 +12,7 @@ export default {
   description:
     "Renders raw `block-<id>` strings inline as clickable chips that open the page displaying that block in the page-detail pane. Models emit the bare id, no tag wrapping needed.",
   contributions: [
-    ActiveData.Tag(
+    InlineChip.Tag(
       inlineChip({
         id: "page-link",
         pattern: BLOCK_ID_RE,

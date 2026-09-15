@@ -1,6 +1,6 @@
 import type { TaskDraftActionProps } from "@plugins/tasks/plugins/task-draft-form/web";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
-import { PickerButton } from "./picker-button";
+import { PickerButton } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 
 /**
  * Draft-form entry: pick an element and inject its `<ui-context/>` tag into the

@@ -38,7 +38,6 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `useHoverReveal`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `apps-core/surface/floating`
     - `apps/pages/page-tree`
     - `apps/prototypes/present`
@@ -56,6 +55,7 @@ remove button — the user is editing that row. The reveal ends when focus leave
     - `primitives/data-view`
     - `primitives/data-view/view-core`
     - `primitives/overlay/image-viewer`
+    - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `tasks/task-description`
     - `tasks/task-draft-form`

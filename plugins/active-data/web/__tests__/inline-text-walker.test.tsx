@@ -12,11 +12,14 @@ import {
   useInlineTextWalker,
 } from "@plugins/primitives/plugins/inline-text/web";
 import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { ActiveData, inlineChip } from "../index";
+import {
+  InlineChip,
+  inlineChip,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 import { ActiveDataInlineWalker } from "../internal/inline-walker";
 
 // End-to-end pin for the order-dependent footgun this primitive eliminates: a
-// raw string carrying BOTH an active-data inline pattern AND a file path must
+// raw string carrying BOTH an inline-chip pattern AND a file path must
 // render BOTH a chip and a file-link button. <InlineText> always seeds with the
 // string and runs active-data (order 0) before file-links (order 10) from the
 // registry — the composition the old hand-wiring silently got backwards.
@@ -47,7 +50,7 @@ const plugin = {
   id: "inline-text-active-data-test",
   description: "active-data + file-links inline-text composition fixture",
   contributions: [
-    ActiveData.Tag(
+    InlineChip.Tag(
       inlineChip({
         id: "inline-text-walker-test-chip",
         pattern: /chip-\w+/g,

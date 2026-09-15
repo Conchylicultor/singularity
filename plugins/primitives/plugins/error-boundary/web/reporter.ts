@@ -12,7 +12,7 @@ export interface BoundaryErrorReport {
   // `CrashFallback` can fill it in, from its own position in the DOM, after the
   // fallback has rendered. Absent or partial is a legitimate outcome: the
   // contribution half of the lineage is stamped by an opt-in middleware that
-  // lives in `improve/element-picker`.
+  // lives in `primitives/ui-context/element-picker`.
   uiContext?: UiContextMeta | null;
 }
 

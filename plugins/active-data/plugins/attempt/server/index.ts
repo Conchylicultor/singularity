@@ -1,18 +1,18 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Editor } from "@plugins/page/plugins/editor/server";
-import { activeDataInlineNode } from "@plugins/active-data/core";
+import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";
 import { ATTEMPT_ID_RE } from "../core";
 
 export default {
   description:
-    "The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.",
+    "The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.",
   contributions: [
     // The SAME pattern the chip declares to `inlineChip`, and the SAME node spec
-    // object the browser's `ActiveDataInlineNode` decorates. Every active-data
-    // inline chip feeds ONE node, so the four sub-plugins each contribute their
-    // own pattern against this one object — which is exactly the case the
-    // registry allows (identical spec object) and the case it refuses (two
-    // different objects claiming one type).
+    // object the browser's `InlineChipNode` decorates. Every inline chip feeds
+    // ONE node, so the four sub-plugins each contribute their own pattern
+    // against this one object — which is exactly the case the registry allows
+    // (identical spec object) and the case it refuses (two different objects
+    // claiming one type).
     //
     // `markdownSpan: "transparent"` — the pattern says WHERE the token is; it does
     // NOT ask for the token's bytes to be masked from the marks-aware inline
@@ -24,7 +24,7 @@ export default {
     Editor.InlineToken({
       pattern: ATTEMPT_ID_RE,
       markdownSpan: "transparent",
-      node: activeDataInlineNode,
+      node: inlineChipNode,
     }),
   ],
 } satisfies ServerPluginDefinition;

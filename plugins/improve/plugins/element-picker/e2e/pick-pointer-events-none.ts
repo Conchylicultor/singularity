@@ -23,9 +23,17 @@ await withBrowser(async (h) => {
   await page.goto(pathUrl("/"), { waitUntil: "domcontentloaded" });
 
   // 1. Reveal the collapsed floating action bar and arm the picker.
+  // The action bar floats collapsed at the top-right unless it is pinned into
+  // the tab bar: the floating one is hovered open, the pinned one is already.
   const bar = page.locator('[data-source*="floating-action"]').first();
-  await bar.waitFor({ state: "visible", timeout: 30_000 });
-  await bar.hover();
+  const revealBar = async () => {
+    if (await bar.isVisible()) await bar.hover();
+  };
+  await page
+    .getByRole("button", { name: "Improve" })
+    .first()
+    .waitFor({ state: "attached", timeout: 30_000 });
+  await revealBar();
   const picker = page.getByRole("button", { name: "Pick UI element" }).first();
   await picker.waitFor({ state: "visible", timeout: 10_000 });
   await picker.click();

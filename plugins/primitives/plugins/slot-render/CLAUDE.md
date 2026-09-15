@@ -295,7 +295,6 @@ the outcome too, with no separate code path.
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `debug/profiling`
     - `debug/trace/engine`
-    - `improve/element-picker`
     - `page/editor`
     - `page/page-reference`
     - `primitives/adaptive-bar`
@@ -309,6 +308,7 @@ the outcome too, with no separate code path.
     - `primitives/tabbed-view`
     - `primitives/text-editor`
     - `primitives/tree`
+    - `primitives/ui-context/element-picker`
     - `reorder`
     - `reports`
     - `review/plugin-changes`

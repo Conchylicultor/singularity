@@ -144,7 +144,6 @@ primitive exists to name.
     - `debug/trace/spans`
     - `debug/trace/stall`
     - `debug/worktree-cleanup`
-    - `improve/element-picker`
     - `infra/events-test`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
@@ -174,6 +173,7 @@ primitive exists to name.
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/prompt-editor`
     - `primitives/setup-steps`
+    - `primitives/ui-context/element-picker`
     - `review/code-review`
     - `review/plugin-changes`
     - `review/plugin-changes/file-changes`

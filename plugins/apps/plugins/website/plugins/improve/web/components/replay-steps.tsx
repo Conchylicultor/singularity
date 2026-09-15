@@ -16,12 +16,12 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { issueTitle } from "../../core";
+import { issueTitle, readableIdea } from "../../core";
 import "./replay-steps.css";
 
 /** What one replay plays: the visitor's idea, and the facts drawn for it. */
 export interface ReplayRun {
-  /** The idea as submitted. */
+  /** The idea as submitted — raw `<ui-context>` tags for its picks included. */
   text: string;
   /** Whether the visitor asked to ship without a review — picks the last step. */
   autoDeploy: boolean;
@@ -55,12 +55,16 @@ function Detail({ children }: { children: ReactNode }) {
  */
 function script({ text, autoDeploy, branch }: ReplayRun): ScriptStep[] {
   const branchChip = <Badge mono>{branch}</Badge>;
+  // The code behind the first pick the build stamped a source on. A pick is
+  // the visitor saying "this part", so it is what the agent would open first.
+  const pickedFile = readableIdea(text).picks.find((pick) => pick.file)?.file;
   return [
     {
       title: "Task filed",
       durationMs: 500,
-      // The idea's first line, as the task's title would read — one line,
-      // ellipsized to the column rather than wrapped into a paragraph.
+      // The idea's first line, as the task's title would read — picks as their
+      // readable labels, never a raw tag — one line, ellipsized to the column
+      // rather than wrapped into a paragraph.
       detail: (
         <Line>
           <Text variant="caption" tone="muted" className="italic">
@@ -77,7 +81,14 @@ function script({ text, autoDeploy, branch }: ReplayRun): ScriptStep[] {
     {
       title: "An agent makes the change",
       durationMs: 1600,
-      detail: <Detail>Finds the code behind this page and edits it</Detail>,
+      detail: pickedFile ? (
+        <Detail>
+          Reads <Badge mono>{pickedFile}</Badge>, the code behind what you
+          pointed at
+        </Detail>
+      ) : (
+        <Detail>Finds the code behind this page and edits it</Detail>
+      ),
     },
     {
       title: "Checks pass",

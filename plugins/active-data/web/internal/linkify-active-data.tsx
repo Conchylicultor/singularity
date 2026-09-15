@@ -9,16 +9,16 @@ import {
 } from "react";
 import {
   inlineChips,
-  type ActiveDataInlineContribution,
-} from "./inline-registry";
-import { renderInlineChip } from "./render-inline-chip";
+  renderInlineChip,
+  type InlineChipContribution,
+} from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/web";
 
 // Always skip these element types (don't linkify inside anchors)
 const ALWAYS_SKIP = new Set(["a"]);
 // Skip code blocks only when inside a <pre> (fenced code); inline `code` is linkified
 const SKIP_IN_PRE = new Set(["pre", "code"]);
 
-type Chip = ActiveDataInlineContribution;
+type Chip = InlineChipContribution;
 
 type Match = {
   start: number;
@@ -83,9 +83,10 @@ function applyPatterns(text: string, chips: readonly Chip[]): ReactNode {
       );
     }
     // One registry read renders the chip AND applies the boundary an inline
-    // chip needs (see ./render-inline-chip). The span was produced by a chip's
-    // own pattern, so the anchored re-resolve inside finds one — the `?? m.text`
-    // arm keeps the characters rather than dropping them if it ever does not.
+    // chip needs (see `renderInlineChip` in inline-chip). The span was produced
+    // by a chip's own pattern, so the anchored re-resolve inside finds one — the
+    // `?? m.text` arm keeps the characters rather than dropping them if it ever
+    // does not.
     out.push(
       <Fragment key={`m-${i}`}>{renderInlineChip(m.text) ?? m.text}</Fragment>,
     );

@@ -1,35 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ActiveData, inlineChip } from "@plugins/active-data/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { TaskDraftFormSlots } from "@plugins/tasks/plugins/task-draft-form/web";
-import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPickerButton } from "./components/element-picker-button";
 import { TaskDraftPickerButton } from "./components/task-draft-picker-button";
-import { UiContextTag } from "./components/ui-context-tag";
-import "./internal/marker-middleware";
 
 export default {
   description:
-    "Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.",
+    "The element picker wired into Singularity's Improve flow: a 'Pick UI element' action-bar button that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.",
   contributions: [
     ActionBar.Item({ id: "element-picker", component: ElementPickerButton }),
     TaskDraftFormSlots.Action({
       id: "element-picker",
       component: TaskDraftPickerButton,
     }),
-    // The chip renders the same everywhere via the active-data inline registry:
-    // composing (the prompt editor's token extension) and on display (markdown /
-    // user-text linkify).
-    ActiveData.Tag(
-      inlineChip({
-        id: "ui-context",
-        pattern: UI_CONTEXT_RE,
-        // TRANSCRIPT ONLY. A `<ui-context>` tag is a pointer at a live UI
-        // element captured for one agent turn — it is addressed to the model
-        // reading that conversation, and means nothing in a page a person wrote.
-        surfaces: ["transcript"],
-        component: UiContextTag,
-      }),
-    ),
   ],
 } satisfies PluginDefinition;

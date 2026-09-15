@@ -1,24 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 import { InlineTextWalkerSlot } from "@plugins/primitives/plugins/inline-text/web";
-// Side-effect: registers the inline-chip union as a lazy source of the prompt
-// editor's token extensions, so a chip renders while composing too.
-import "./internal/register-node-source";
-// Side-effect: the same union, as a lazy source of the PAGE editor's block-text
-// extensions — so an id written in a page block is a chip there too.
+// Side-effect: the inline-chip union (primitives/text-editor/inline-chip), as a
+// lazy source of the PAGE editor's block-text extensions — so an id written in a
+// page block is a chip there too.
 import "./internal/register-block-text-source";
 
-export { ActiveData, codeTag, inlineChip } from "./slots";
+export { ActiveData, codeTag } from "./slots";
 export type {
   ActiveDataContribution,
   ActiveDataBlockContribution,
-  ActiveDataInlineContribution,
   ActiveDataCodeContribution,
-  ChipSurface,
 } from "./slots";
-export { inlineChips } from "./internal/inline-registry";
-export { renderInlineChip } from "./internal/render-inline-chip";
-export { activeDataInlineExtension } from "./internal/inline-extension";
 export { claimPending, declined, claimed } from "./claim";
 export type { CodeClaim, CodeResolver } from "./claim";
 export { useActiveDataSegments } from "./internal/segment-active-data";
@@ -39,7 +32,7 @@ import { ActiveDataInlineWalker } from "./internal/inline-walker";
 export default {
   collapsed: true,
   description:
-    "Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify().",
+    "Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute block (tag) and code (claimed code-span) renderers, and declare inline chips through primitives/text-editor/inline-chip; hosts use useActiveDataSegments() + useActiveDataLinkify().",
   contributions: [
     MarkdownEnhancerSlot({
       id: "active-data",

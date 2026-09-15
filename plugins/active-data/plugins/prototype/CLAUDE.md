@@ -54,17 +54,17 @@ conversation.
 
 ## Plugin reference
 
-- Description: Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+- Description: Renders raw `proto-<id>` strings inline as clickable chips that open the mock in the prototype-detail pane. Models emit the bare id, no tag wrapping needed. The prototype-id token at the page-editor's server boundary: locates `proto-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
 - Web:
-  - Contributes: `ActiveData.Tag` "prototype" → `PrototypeChip`
+  - Contributes: `InlineChip.Tag` "prototype" → `PrototypeChip`
   - Uses:
-    - `active-data.ActiveData`
-    - `active-data.inlineChip`
     - `apps/prototypes/gallery.prototypeDetailPane`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
+    - `primitives/text-editor/inline-chip.inlineChip`
+    - `primitives/text-editor/inline-chip.InlineChip`
   - Exports (values): `PrototypeChip`
 - Server:
   - Contributes: `page.inline-token` "(?<!\/)proto-\d+-[a-z0-9]{4}(?!\/)(?!\.[0-9A-Za-z])\b"

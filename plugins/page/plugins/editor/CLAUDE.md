@@ -3380,8 +3380,8 @@ renderer that raced two hardcoded token patterns is exactly how `[[date:…]]`
 shipped as literal brackets — and the governed set is discovered from the
 registrations themselves, so a new family is covered with no edit. A family's
 identity is co-owned by the plugin that declares the shape and the plugin that
-registers it as a token, which is what leaves `improve/element-picker` free to
-build a chip out of `ui-context`'s own `UI_CONTEXT_RE`.
+registers it as a token, which is what leaves `ui-context/element-picker` free
+to build a chip out of `ui-context`'s own `UI_CONTEXT_RE`.
 
 ### Pasting a token materializes it
 

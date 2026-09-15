@@ -53,7 +53,7 @@ describe("a contribution's own box resolves to the contribution", () => {
     // whatever region enclosed the slot's host.
     const meta = collectMeta(cell);
     expect(meta.pluginId).toBe("ui.segmented-progress-bar");
-    expect(meta.slotId).toBe("element-picker-test.row");
+    expect(meta.slotId).toBe("ui.segmented-progress-bar.row");
     expect(meta.contributionId).toBe("ui.segmented-progress-bar:bar");
 
     // A real box the user can point at, so it is NOT marked boxless — its own

@@ -8,14 +8,18 @@ portal-crossing chain helpers, the `<UiRegion>` producer, and the
 
 ## Why it is its own neutral leaf
 
-Two unrelated consumers need the same answer: `improve/element-picker` (the
-`<ui-context …>` tag a user hands an agent) and `reports/render-loop` (which
-culprit component caused a render loop). Neither may depend on the other — a
-reports plugin reaching into the Improve *app's* subtree is a layering
-inversion — so the shared vocabulary lives below both, in a leaf whose only
-cross-plugin dependency is `primitives/css/ui-kit` (for the portal-forward
-bridge). No cycle is possible. Same carve-out reasoning as
-`primitives/scope/surface-id`.
+Two unrelated consumers need the same answer: the element picker (the
+`<ui-context …>` tag a user hands an agent — this plugin's own `element-picker`
+sub-plugin) and `reports/render-loop` (which culprit component caused a render
+loop). Neither may depend on the other, so the shared vocabulary lives below
+both, in a leaf whose only cross-plugin dependency is `primitives/css/ui-kit`
+(for the portal-forward bridge). No cycle is possible. Same carve-out reasoning
+as `primitives/scope/surface-id`.
+
+The picker is a SUB-plugin, not part of this barrel, for two reasons: its
+contribution producer must stay opt-in (below), and its `<ui-context>` chip
+needs `error-boundary`, which imports this plugin — the parent never imports its
+child, so there is no cycle.
 
 The name is the concept the repo already has (`<ui-context>`, `UiContextMeta`),
 and it holds the walk **next to the model the walk produces**.
@@ -26,10 +30,11 @@ A lineage node is stamped onto the DOM by exactly one of two mechanisms, and the
 split is deliberate:
 
 - **Contributions — opt-in, via the picker's slot-item middleware.** It wraps
-  *every* slot contribution repo-wide. That cost should only be paid when the element-picker is actually in the app
-  composition, so the middleware stays in `improve/element-picker` and registers
-  itself there. This plugin supplies only the grammar it stamps
-  (`contributionNodeAttrs`, `appendLineage`).
+  *every* slot contribution repo-wide. That cost should only be paid when the
+  picker is actually in the app composition, so the middleware lives in the
+  `element-picker` sub-plugin and registers itself from its barrel. This plugin
+  supplies only the grammar it stamps (`contributionNodeAttrs`,
+  `appendLineage`).
 
   It hands slot-render **attributes** (`registerSlotItemAttrs`), which slot-render
   stamps on the one element it draws around each contribution. Not a wrapper: a
@@ -157,6 +162,13 @@ the model never disentangles framing from data. Values are sanitized
 quote/angle-bracket/newline-free so the tag stays single-line and survives the
 editor's line-based markdown sync.
 
+A consumer that has to treat the tokens in a text apart from the words around
+them uses `splitUiContext(text)`, not the pattern (which
+`no-token-identity-outside-owner` keeps to the token's owners): prose runs and
+tags in order, each tag with its raw text and parsed meta. A match
+`parseUiContext` refuses (no `url` or no label) is its own `malformed` arm, not
+prose, so the caller decides what it means.
+
 ### Provenance
 
 `serializeUiContext(meta, provenance)`'s second argument (`"picked" | "crash"`)
@@ -194,7 +206,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
 
 ## Plugin reference
 
-- Description: The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both improve/element-picker and reports/render-loop can ask 'what composed this element?' without either depending on the other.
+- Description: The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both the element picker (its element-picker sub-plugin) and reports/render-loop can ask 'what composed this element?' without either depending on the other.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.PortalForwardProvider`
@@ -220,11 +232,12 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `UiRegion`
 - Cross-plugin:
   - Imported by:
-    - `improve/element-picker`
+    - `apps/website/improve`
     - `layouts/full-pane`
     - `layouts/miller`
     - `primitives/adaptive-bar`
     - `primitives/error-boundary`
+    - `primitives/ui-context/element-picker`
     - `reports/crash`
     - `reports/render-loop`
 - Core:
@@ -235,6 +248,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `UiContextField`
     - `UiContextMeta`
     - `UiContextProvenance`
+    - `UiContextSegment`
   - Exports (values):
     - `formatLineageNode`
     - `formatLineagePath`
@@ -242,8 +256,11 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `parseLineagePath`
     - `parseUiContext`
     - `serializeUiContext`
+    - `splitUiContext`
     - `UI_CONTEXT_FIELDS`
     - `UI_CONTEXT_RE`
     - `UiContextMetaSchema`
+- Sub-plugins:
+  - **`element-picker`** — Chrome-inspector-style element picker: <ElementPicker> arms a full-screen overlay, the user hovers and clicks any element, and onPick receives its <ui-context> metadata (plugin/slot lineage, selector, source). Also declares the <ui-context> inline chip, so whatever can make the token can display it, and stamps every slot contribution with its lineage while in the composition.
 
 <!-- AUTOGENERATED:END -->

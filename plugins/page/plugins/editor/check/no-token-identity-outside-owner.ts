@@ -60,14 +60,15 @@ import type {
  * A family's identity is held JOINTLY by the plugin that declares the shape
  * (`export const X`) and every plugin that registers it as a token. Both are
  * acts of declaring the family; what is banned is a THIRD party — a consumer —
- * naming it. So `improve/element-picker` may name `UI_CONTEXT_RE`, which the
+ * naming it. So `ui-context/element-picker` may name `UI_CONTEXT_RE`, which the
  * `ui-context` primitive declares and the picker turns into a chip, while a
  * renderer that merely wants to draw the result may not name either.
  *
  * Ownership is by SUBTREE: a plugin directory is the nearest ancestor with a
- * `package.json`, and everything under it is inside — that is how active-data's
- * four chip sub-plugins each name the one shared `activeDataInlineNode` from
- * their parent's `core/`.
+ * `package.json`, and everything under it is inside. The shared
+ * `inlineChipNode` shows both rules at once: `text-editor/inline-chip` declares
+ * it, and each of active-data's four chip sub-plugins REGISTERS it (as their
+ * server `Editor.InlineToken` node), which is what lets them name it.
  *
  * Only IMPORTS count as naming it. A local `const corpusTokenNode = …` in
  * someone else's test is a different binding that happens to share a name, not

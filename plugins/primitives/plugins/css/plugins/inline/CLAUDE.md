@@ -52,7 +52,6 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
   - Exports (values): `Inline`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `apps/deploy/ssh-setup`
     - `apps/events/shell`
     - `apps/mail/reading-pane`
@@ -109,6 +108,7 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
     - `primitives/data-view/tree`
     - `primitives/detail-sections`
     - `primitives/overlay/tooltip`
+    - `primitives/text-editor/inline-chip`
     - `reorder/editor`
     - `reports/adaptive-bar`
     - `reports/caret-flight`

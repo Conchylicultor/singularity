@@ -19,17 +19,17 @@ which renders `<task>prompt</task>` *block* tags as editable creation cards.
 
 ## Plugin reference
 
-- Description: Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+- Description: Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed. The task-id token at the page-editor's server boundary: locates `task-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
 - Web:
-  - Contributes: `ActiveData.Tag` "task-link" → `TaskLinkChip`
+  - Contributes: `InlineChip.Tag` "task-link" → `TaskLinkChip`
   - Uses:
-    - `active-data.ActiveData`
-    - `active-data.inlineChip`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
+    - `primitives/text-editor/inline-chip.inlineChip`
+    - `primitives/text-editor/inline-chip.InlineChip`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-status.STATUS_META`
   - Exports (values): `TaskLinkChip`

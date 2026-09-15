@@ -1,4 +1,6 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import { MdAdsClick } from "react-icons/md";
 import { SiGithub } from "react-icons/si";
 import {
   Button,
@@ -14,6 +16,11 @@ import {
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import {
+  serializeUiContext,
+  type UiContextMeta,
+} from "@plugins/primitives/plugins/ui-context/core";
+import { ElementPicker } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 import { SOURCE_URL } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { buildIssueUrl } from "../../core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
@@ -68,14 +75,21 @@ function focusOnMount(el: HTMLElement | null) {
  *
  * The view is local — reopening the popover starts back at Compose — but the
  * draft is the caller's, so closing the popover never loses what was written.
+ * So is `picking`: the popover that holds this panel is what hides while the
+ * visitor points at the page.
  */
 export function ImprovePanel({
   draft,
   onDraftChange,
+  picking,
+  onPickingChange,
   onFiled,
 }: {
   draft: ImproveDraft;
   onDraftChange: (draft: ImproveDraft) => void;
+  /** The element picker is up, and the caller has hidden the popover for it. */
+  picking: boolean;
+  onPickingChange: (picking: boolean) => void;
   /** "File it" was clicked: the browser is opening the issue form. */
   onFiled: () => void;
 }) {
@@ -103,6 +117,8 @@ export function ImprovePanel({
         <ComposeView
           draft={draft}
           onDraftChange={onDraftChange}
+          picking={picking}
+          onPickingChange={onPickingChange}
           onShowMe={showMe}
         />
       ) : (
@@ -126,16 +142,62 @@ function PanelFooter({ children }: { children: ReactNode }) {
   );
 }
 
+/** The token appended to the end of the text: the fallback before Lexical loads. */
+function appendToken(text: string, token: string): string {
+  return text === "" || /\s$/.test(text)
+    ? `${text}${token}`
+    : `${text} ${token}`;
+}
+
 function ComposeView({
   draft,
   onDraftChange,
+  picking,
+  onPickingChange,
   onShowMe,
 }: {
   draft: ImproveDraft;
   onDraftChange: (draft: ImproveDraft) => void;
+  picking: boolean;
+  onPickingChange: (picking: boolean) => void;
   onShowMe: () => void;
 }) {
   const switchId = useId();
+  const insertRef = useRef<((text: string) => void) | null>(null);
+  const pointRef = useRef<HTMLButtonElement>(null);
+  // Set by a pick, so the end of picking can tell a pick from a cancel.
+  const pickedRef = useRef(false);
+
+  // The end of picking, either way out. A cleanup of the `picking` run, so it
+  // runs once the popover's un-hiding is in the DOM: focus cannot land in a
+  // hidden subtree. After a cancel (Esc or the hint's Cancel), focus goes back
+  // to the button that started it. After a pick, the insert has already put
+  // the caret in the field, so nothing moves it.
+  useEffect(() => {
+    if (!picking) return;
+    // The button that armed the picker, mounted for as long as this view is.
+    const point = pointRef.current;
+    return () => {
+      if (!pickedRef.current) point?.focus();
+      pickedRef.current = false;
+    };
+  }, [picking]);
+
+  const onPick = (meta: UiContextMeta) => {
+    pickedRef.current = true;
+    // Un-hide FIRST, committed now: the insert focuses the field, and a focus
+    // inside a still-hidden popover fails without a word. The picker reports
+    // `onArmedChange(false)` too, but from an effect after this handler, which
+    // is too late for the insert below.
+    flushSync(() => onPickingChange(false));
+    const token = serializeUiContext(meta, "picked");
+    const insert = insertRef.current;
+    // Lexical is code-split: a visitor fast enough to pick before it loads
+    // gets the token at the end of the text instead of at a caret.
+    if (insert) insert(token);
+    else onDraftChange({ ...draft, text: appendToken(draft.text, token) });
+  };
+
   return (
     <Stack gap="md">
       <Stack gap="xs">
@@ -151,16 +213,34 @@ function ComposeView({
           app while you keep working.
         </Text>
       </Stack>
-      <TextEditor
-        value={draft.text}
-        onChange={(text) => onDraftChange({ ...draft, text })}
-        onSubmit={onShowMe}
-        submitMode="cmd-enter"
-        minRows={4}
-        autoFocus
-        namespace="website-improve"
-        placeholder="e.g. Show a 20-second demo under the headline"
-      />
+      <Stack gap="xs">
+        <TextEditor
+          value={draft.text}
+          onChange={(text) => onDraftChange({ ...draft, text })}
+          onSubmit={onShowMe}
+          submitMode="cmd-enter"
+          minRows={4}
+          autoFocus
+          namespace="website-improve"
+          placeholder="e.g. Show a 20-second demo under the headline"
+          insertRef={insertRef}
+        />
+        {/* The whole page is pickable while this is up, so the popover hides
+            (see ImproveNavItem) and the pick lands as a chip at the caret. */}
+        <Stack direction="row" gap="none">
+          <ElementPicker
+            hint="Click the part you mean"
+            onArmedChange={onPickingChange}
+            onPick={onPick}
+            trigger={({ arm }) => (
+              <Button ref={pointRef} variant="outline" onClick={arm}>
+                <MdAdsClick />
+                Point at the part you mean
+              </Button>
+            )}
+          />
+        </Stack>
+      </Stack>
       <PanelFooter>
         <Fill>
           <Stack direction="row" gap="sm" align="start">

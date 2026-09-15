@@ -42,7 +42,6 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
   - Exports (values): `Center`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `active-data/plugin-link`
     - `apps-core/app-rail`
     - `apps-core/layout`
@@ -114,6 +113,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `primitives/overlay/image-viewer`
     - `primitives/pane`
     - `primitives/setup-steps`
+    - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
     - `reorder/node-types/header`

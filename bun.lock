@@ -4534,6 +4534,14 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/primitives/plugins/text-editor/plugins/inline-chip": {
+      "name": "@singularity/plugin-primitives-text-editor-inline-chip",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/primitives/plugins/text-editor/plugins/paste-images": {
       "name": "@singularity/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
@@ -4562,6 +4570,10 @@
     },
     "plugins/primitives/plugins/ui-context": {
       "name": "@singularity/plugin-primitives-ui-context",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/ui-context/plugins/element-picker": {
+      "name": "@singularity/plugin-primitives-ui-context-element-picker",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/undo-redo": {
@@ -8032,6 +8044,8 @@
 
     "@singularity/plugin-primitives-text-editor-decorator-nav": ["@singularity/plugin-primitives-text-editor-decorator-nav@workspace:plugins/primitives/plugins/text-editor/plugins/decorator-nav"],
 
+    "@singularity/plugin-primitives-text-editor-inline-chip": ["@singularity/plugin-primitives-text-editor-inline-chip@workspace:plugins/primitives/plugins/text-editor/plugins/inline-chip"],
+
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
 
     "@singularity/plugin-primitives-text-editor-token-extension": ["@singularity/plugin-primitives-text-editor-token-extension@workspace:plugins/primitives/plugins/text-editor/plugins/token-extension"],
@@ -8041,6 +8055,8 @@
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
     "@singularity/plugin-primitives-ui-context": ["@singularity/plugin-primitives-ui-context@workspace:plugins/primitives/plugins/ui-context"],
+
+    "@singularity/plugin-primitives-ui-context-element-picker": ["@singularity/plugin-primitives-ui-context-element-picker@workspace:plugins/primitives/plugins/ui-context/plugins/element-picker"],
 
     "@singularity/plugin-primitives-undo-redo": ["@singularity/plugin-primitives-undo-redo@workspace:plugins/primitives/plugins/undo-redo"],
 

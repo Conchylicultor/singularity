@@ -49,7 +49,12 @@ function containsPoint(el: Element, x: number, y: number): boolean {
  * positioning under `overflow: visible`) — but those are hit-testable in their
  * own right, so `elementFromPoint` seeds the search at them directly.
  */
-function deepestAt(el: Element, x: number, y: number, depth: number): Hit | null {
+function deepestAt(
+  el: Element,
+  x: number,
+  y: number,
+  depth: number,
+): Hit | null {
   // Never report the inspector's own chrome. The seed check can't cover this:
   // the overlay portals to `document.body`, so it is a *descendant* of the seed
   // whenever the pointer is over a body-level element.
@@ -67,7 +72,8 @@ function deepestAt(el: Element, x: number, y: number, depth: number): Hit | null
   // middleware's marker spans) and empty inlines — are traversed but never
   // selected: there is no box to have pointed at, and their children carry the
   // real geometry.
-  const boxless = style.display === "contents" || el.getClientRects().length === 0;
+  const boxless =
+    style.display === "contents" || el.getClientRects().length === 0;
   if (!boxless && !containsPoint(el, x, y)) return null;
 
   let best: Hit | null = boxless ? null : { el, depth };

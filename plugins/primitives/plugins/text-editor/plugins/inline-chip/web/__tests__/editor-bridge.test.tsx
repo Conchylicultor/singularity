@@ -5,15 +5,15 @@ import {
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-// The BARREL, not the internals: importing it is what registers active-data's
+// The BARREL, not the internals: importing it is what registers inline-chip's
 // lazy node-extension source with the editor, which is exactly the wiring under
 // test. Declaring the chip below is then the only thing the fixture does.
-import { ActiveData, inlineChip } from "../index";
+import { InlineChip, inlineChip } from "../index";
 
-// Proves the editor bridge: an active-data inline chip renders as a chip
-// *inside the Lexical editor* (not just on read surfaces), driven entirely by
-// the generic union-pattern node — no per-chip Lexical wiring. Uses a throwaway
-// chip so the test doesn't couple active-data to any specific contributor.
+// Proves the editor bridge: an inline chip renders as a chip *inside the Lexical
+// editor* (not just on read surfaces), driven entirely by the generic
+// union-pattern node — no per-chip Lexical wiring. Uses a throwaway chip so the
+// test doesn't couple inline-chip to any specific contributor.
 function TestChip({
   content,
 }: {
@@ -27,7 +27,7 @@ const plugin = {
   id: "editor-bridge-test",
   description: "editor bridge fixture",
   contributions: [
-    ActiveData.Tag(
+    InlineChip.Tag(
       inlineChip({
         id: "editor-bridge-test-chip",
         pattern: /@mention-\w+/g,
@@ -46,7 +46,7 @@ afterEach(cleanup);
 // of the DOM suite (whole-suite runs failed here on a mid-init empty editor).
 const MOUNT_TIMEOUT = { timeout: 10_000 };
 
-describe("active-data inline tags render as chips in the Lexical editor", () => {
+describe("inline chips render as chips in the Lexical editor", () => {
   it("deserializes an inline token into a chip via the generic node bridge", async () => {
     render(
       <PluginProvider plugins={[plugin]}>

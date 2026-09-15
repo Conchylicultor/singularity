@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { inlineChip, inlineChipFor, inlineChips } from "./inline-registry";
-import { activeDataInlineExtension } from "./inline-extension";
+import { inlineChipExtension } from "./inline-extension";
 
 const stub = () => null;
 
@@ -25,7 +25,6 @@ describe("inlineChip", () => {
       component: stub,
     });
 
-    expect(chip.display).toBe("inline");
     expect(chip.id).toBe("test-records");
     expect(inlineChips("transcript").filter((c) => c.id === chip.id)).toEqual([
       chip,
@@ -76,7 +75,7 @@ describe("inlineChips(surface)", () => {
   });
 });
 
-describe("activeDataInlineExtension(surface)", () => {
+describe("inlineChipExtension(surface)", () => {
   test("unions only the chips that declared the surface", () => {
     inlineChip({
       id: "test-union-transcript",
@@ -91,13 +90,11 @@ describe("activeDataInlineExtension(surface)", () => {
       component: stub,
     });
 
-    const documentSource =
-      activeDataInlineExtension("document")!.pattern.source;
+    const documentSource = inlineChipExtension("document")!.pattern.source;
     expect(documentSource).toContain("uniondocument-");
     expect(documentSource).not.toContain("uniontranscript-");
 
-    const transcriptSource =
-      activeDataInlineExtension("transcript")!.pattern.source;
+    const transcriptSource = inlineChipExtension("transcript")!.pattern.source;
     expect(transcriptSource).toContain("uniontranscript-");
     expect(transcriptSource).toContain("uniondocument-");
   });
@@ -109,7 +106,7 @@ describe("activeDataInlineExtension(surface)", () => {
       surfaces: ["document"],
       component: stub,
     });
-    const extension = activeDataInlineExtension("document")!;
+    const extension = inlineChipExtension("document")!;
 
     // The scan re-mints the pattern per call, so `lastIndex` cannot leak; this
     // asserts the union's SHAPE, which is what a host compiles.

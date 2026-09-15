@@ -27,8 +27,8 @@ report to both the sink and the `ErrorBoundary.Action` contributions.
 Ancestors-only (`collectLineageMeta`, not `collectMeta`) — the fallback's own
 `<Line>` would otherwise report `crash-fallback.tsx` as the source; what threw is
 already in `componentStack`. A partial/empty `path` is legitimate: contribution
-nodes come from an opt-in middleware in `improve/element-picker`, which this
-plugin must not import.
+nodes come from an opt-in middleware in `primitives/ui-context/element-picker`,
+which this plugin must not import (that picker's chip imports this plugin).
 
 ## Actions
 
@@ -70,12 +70,12 @@ barrel.
     - `PluginErrorBoundary`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `apps/prototypes/compare`
     - `framework/web-core`
     - `layouts/full-pane`
     - `layouts/miller`
     - `primitives/css/layout-harness`
+    - `primitives/text-editor/inline-chip`
     - `reports/crash`
     - `reports/launch-fix`
     - `shell/health-report`

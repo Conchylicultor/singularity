@@ -106,7 +106,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `debug/queue-health`
     - `debug/timeline`
     - `debug/worktree-cleanup`
-    - `improve/element-picker`
     - `page/bookmark`
     - `page/code-block`
     - `page/file`
@@ -124,6 +123,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `primitives/data-view/list`
     - `primitives/graph-canvas`
     - `primitives/loading`
+    - `primitives/ui-context/element-picker`
     - `reorder/node-types/header`
     - `review/code-review`
     - `review/plugin-changes`

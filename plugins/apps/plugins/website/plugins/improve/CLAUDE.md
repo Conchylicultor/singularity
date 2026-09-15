@@ -1,12 +1,13 @@
 # improve
 
 The website's **Improve** button, the header's one call to action on every page.
-A visitor writes what they would change about the page and picks
-**Auto-deploy** or not. **Show me** (or ⌘↵) plays a short, labelled replay of
-what equin would do with it: file a task, make its own copy of the app, have an
-agent edit it, run the checks, then put up a preview for review or merge and
-deploy. **File it** opens GitHub's new-issue form, prefilled with the idea, the
-page and the auto-deploy choice.
+A visitor writes what they would change about the page, can point at the part
+they mean (**Point at the part you mean** runs the element picker, and the pick
+lands in the text as a chip), and picks **Auto-deploy** or not. **Show me** (or
+⌘↵) plays a short, labelled replay of what equin would do with it: file a task,
+make its own copy of the app, have an agent edit it, run the checks, then put up
+a preview for review or merge and deploy. **File it** opens GitHub's new-issue
+form, prefilled with the idea, its picks, the page and the auto-deploy choice.
 
 ## What it does not do
 
@@ -24,12 +25,24 @@ draft.
 
 ## The rules that are easy to break
 
-**Import only `apps/website/shell` and generic primitives.** Anything from the
-app's own Improve, tasks, conversations, active-data, auth or the page editor
-drags those plugins into the `website` build, and `composition-closure` fails.
-The field is the plain `TextEditor` primitive for the same reason. It is already
-the real Lexical editor, so "point at the part you mean" (the element picker and
-its chip) can be added later without swapping the field.
+**Import only `apps/website/shell` and primitives** — `ui-context` and its
+`element-picker` included. Anything from the app's own Improve, tasks,
+conversations, active-data, auth or the page editor drags those plugins into the
+`website` build, and `composition-closure` fails. The field is the plain
+`TextEditor` primitive for the same reason. Importing `ElementPicker` is also
+what brings the `<ui-context>` chip into the website build: the picker's barrel
+registers it with every `TextEditor`.
+
+**While picking, the popover hides; it never closes.** `ImproveNavItem` gives it
+`hidden` (`display:none`) while the picker is up, so the whole page can be
+picked. Closing it would unmount the editor and lose the caret the chip goes in
+at. Not `invisible`: visibility is inherited and transitionable, so every
+`transition-all` button in the panel would lag it, floating over the page as it
+hides and still hidden for a frame when it returns. On a pick, the
+un-hiding is committed with `flushSync` BEFORE the insert: the insert focuses the
+field, and focus inside a hidden popover fails silently. The picker's own
+`onArmedChange(false)` comes from an effect, too late for that. After Esc or
+Cancel, focus goes back to the button that started the pick.
 
 **The replay is paced by its own CSS, not by timers.** Only the active step
 mounts its progress hairline, and that hairline's `animationend` advances the
@@ -37,10 +50,26 @@ replay (`replay-steps.css`). Under `prefers-reduced-motion` (read once, when the
 replay starts) every step renders done and no animation mounts. A `setTimeout`
 chain beside it would put the pacing in two places.
 
-**`buildIssueUrl` (`core/`) keeps the link under 7,500 characters** (GitHub
-rejects longer ones) by cutting the visitor's text, never the title, page or
-auto-deploy line. `labels=idea` only applies for visitors with triage rights on
-the repository; everyone else files unlabelled.
+**The issue reads as prose; the picks ride below it.** `readableIdea` (`core/`)
+turns each `<ui-context>` tag in the text into `` `<label>` [n] ``, and the title,
+the body and the replay's "Task filed" line are all built from that, never from a
+raw tag. It splits with `splitUiContext` because the website may not name the
+token's pattern (`no-token-identity-outside-owner`). Under the body's rule, each
+pick gets a `<details>` block holding its raw tag for an agent. The tag sits in a
+code fence, or GitHub strips it as HTML, and the blank lines around the fence are
+what make GitHub render it inside `<details>`.
+
+**`buildIssueUrl` keeps the link under 7,500 characters** (GitHub rejects longer
+ones). A tag runs to several hundred characters, so the tags go before any word
+the visitor wrote. When the whole issue is too long, it gives up, in order:
+
+1. the raw tags, last pick first (that pick keeps a plain `[n] <label>` line);
+2. the end of the visitor's text, which is then ended with "…";
+3. the trailing `[n]` lines, counted instead as "+N more".
+
+It never cuts the title, the page or the auto-deploy line, and throws only when
+the page URL alone is over the cap. `labels=idea` only applies for visitors with
+triage rights on the repository; everyone else files unlabelled.
 
 **The draft lives in the header item, not the panel.** The popover unmounts the
 panel on close, so a visitor who clicks away mid-sentence gets their words back.
@@ -74,11 +103,17 @@ Verify with `e2e/improve-verify.ts` after `./singularity build`.
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/text-editor.TextEditor`
+    - `primitives/ui-context/element-picker.ElementPicker`
 - Core:
-  - Exports (types): `IssueDraft`
+  - Uses: `primitives/ui-context.splitUiContext`
+  - Exports (types):
+    - `IssueDraft`
+    - `IssuePick`
+    - `ReadableIdea`
   - Exports (values):
     - `buildIssueUrl`
     - `issueTitle`
     - `MAX_ISSUE_URL_LENGTH`
+    - `readableIdea`
 
 <!-- AUTOGENERATED:END -->

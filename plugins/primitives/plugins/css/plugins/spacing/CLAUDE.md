@@ -282,7 +282,6 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `fields/tags/inline`
     - `fields/tags/table`
     - `history/dialog`
-    - `improve/element-picker`
     - `infra/events-test`
     - `layouts/miller`
     - `layouts/route-fallback`
@@ -357,6 +356,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `primitives/setup-steps`
     - `primitives/tabbed-view`
     - `primitives/tree`
+    - `primitives/ui-context/element-picker`
     - `reorder/editor`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`

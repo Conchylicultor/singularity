@@ -14,7 +14,7 @@ import { boundaryReportSink, type BoundaryErrorReport } from "../reporter";
 //
 // The region half is asserted because it is the unconditional one: <UiRegion> is
 // always on, while contribution nodes come from an opt-in middleware living in
-// improve/element-picker, which error-boundary must not depend on.
+// primitives/ui-context/element-picker, which error-boundary must not depend on.
 
 function Boom(): never {
   throw new Error("boom");

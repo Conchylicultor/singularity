@@ -368,7 +368,6 @@ fixed raw size escapes per-site via
     - `fields/variant/config`
     - `framework/web-core`
     - `history/dialog`
-    - `improve/element-picker`
     - `infra/claude-cli`
     - `infra/events-test`
     - `layouts/route-fallback`
@@ -428,6 +427,7 @@ fixed raw size escapes per-site via
     - `primitives/pane`
     - `primitives/rank-reorder`
     - `primitives/setup-steps`
+    - `primitives/ui-context/element-picker`
     - `reorder/editor`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`

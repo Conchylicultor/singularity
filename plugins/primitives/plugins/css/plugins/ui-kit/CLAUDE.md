@@ -407,7 +407,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `active-data/task`
     - `apps-core/app-rail`
     - `apps-core/layout`
@@ -564,7 +563,6 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `framework/web-core`
     - `history/dialog`
     - `improve`
-    - `improve/element-picker`
     - `infra/events-test`
     - `integrations/gmail`
     - `integrations/google-maps`
@@ -679,9 +677,11 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/setup-steps`
     - `primitives/slot-render`
     - `primitives/text-editor`
+    - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
     - `primitives/ui-context`
+    - `primitives/ui-context/element-picker`
     - `reorder`
     - `reorder/editor`
     - `reorder/node-types/header`

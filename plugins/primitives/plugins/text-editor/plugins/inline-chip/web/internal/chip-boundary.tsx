@@ -42,7 +42,7 @@ export function ChipBoundary({
   children: ReactNode;
 }) {
   return (
-    <PluginErrorBoundary slot="active-data.inline" label={chipId || token}>
+    <PluginErrorBoundary slot="inline-chip" label={chipId || token}>
       {children}
     </PluginErrorBoundary>
   );

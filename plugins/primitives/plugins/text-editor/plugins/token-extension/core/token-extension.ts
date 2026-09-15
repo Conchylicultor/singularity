@@ -12,7 +12,7 @@ import type { InlineTokenNodeRef } from "./inline-token-types";
  * the same extension reads back.
  *
  * Pattern and node are SEPARATE because they are genuinely many-to-one: one
- * node class can be fed by a union of patterns (active-data's inline chips), and
+ * node class can be fed by a union of patterns (`inline-chip`'s chips), and
  * a server contribution may carry the pattern alone (a protected span with no
  * decorator to build).
  *

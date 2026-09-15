@@ -25,12 +25,10 @@ The id pattern matches attempt ids derived from the worktree basename
 
 ## Plugin reference
 
-- Description: Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared active-data inline node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
+- Description: Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none). Models emit the bare id, no tag wrapping needed. The attempt-id token at the page-editor's server boundary: locates `att-<id>` spans and names the shared inline-chip node, so a page block holding one of these chips stays agent-readable and agent-editable. Declares itself markdown-TRANSPARENT — a bare id has no character the inline scan could misread.
 - Web:
-  - Contributes: `ActiveData.Tag` "attempt" → `AttemptChip`
+  - Contributes: `InlineChip.Tag` "attempt" → `AttemptChip`
   - Uses:
-    - `active-data.ActiveData`
-    - `active-data.inlineChip`
     - `conversations/conversation-view.useConversationOpener`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/status-dot.StatusDot`
@@ -38,6 +36,8 @@ The id pattern matches attempt ids derived from the worktree basename
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/pane.useOpenPane`
+    - `primitives/text-editor/inline-chip.inlineChip`
+    - `primitives/text-editor/inline-chip.InlineChip`
     - `tasks/attempt-status.ATTEMPT_STATUS_META`
     - `tasks/attempt-status.attemptStatusLabel`
     - `tasks/attempt-view.attemptPane`

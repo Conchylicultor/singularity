@@ -122,7 +122,6 @@ icon+count button it stands in for — carries a per-site
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `fields/enum/column-config`
-    - `improve/element-picker`
     - `infra/events-test`
     - `page/editor`
     - `page/formatting/color`
@@ -142,6 +141,7 @@ icon+count button it stands in for — carries a per-site
     - `primitives/prompt-editor/voice-input`
     - `primitives/sync-status`
     - `primitives/tree`
+    - `primitives/ui-context/element-picker`
     - `screenshot`
     - `screenshot/draw-on-app`
     - `shell/global-action-bar`

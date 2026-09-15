@@ -27,7 +27,6 @@
     - `conversations/conversation-view/jsonl-viewer`
     - `fields/enum/inline`
     - `fields/tags/inline`
-    - `improve/element-picker`
     - `page/formatting/color`
     - `page/formatting/link`
     - `page/inline-date`
@@ -37,6 +36,7 @@
     - `primitives/date-picker`
     - `primitives/folder-picker`
     - `primitives/launch`
+    - `primitives/ui-context/element-picker`
     - `reorder`
     - `reorder/editor`
     - `shell/health-report`

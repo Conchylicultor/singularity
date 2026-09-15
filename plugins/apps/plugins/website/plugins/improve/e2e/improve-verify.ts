@@ -11,6 +11,11 @@
 //     "Merged & deployed" with it on; ⌘↵ in the field starts the replay;
 //   - clicking "File it" opens the form in a new tab, closes the panel and
 //     clears the draft;
+//   - "Point at the part you mean" hides the panel and shows the hint; hovering
+//     the hero headline outlines it, and clicking it brings the panel back with
+//     one chip at the caret, the text on both sides kept; Esc while pointing
+//     brings the panel back with nothing added; the issue then titles the pick
+//     by its label, and carries its raw tag in a collapsed, fenced block;
 //   - under reduced motion the replay opens already finished;
 //   - screenshots at 1280px and 420px.
 //
@@ -43,6 +48,9 @@ const out = arg("out", "/tmp/improve");
 const FIRST_LINE = "Show a 20-second demo under the headline";
 const SECOND_LINE = "Muted, looping, no controls.";
 const NEW_ISSUE = `${SOURCE_URL}/issues/new?`;
+// The pick goes between these two, at a caret put there with the arrow keys.
+const BEFORE_PICK = "Make the";
+const AFTER_PICK = " bigger";
 const MARKER = "text=Curious how equin came to be?";
 
 /** The panel: base-ui's popover popup, found by its title in either view. */
@@ -86,6 +94,33 @@ async function fieldHasFocus(page: Page): Promise<boolean> {
       el.closest('[role="dialog"]') !== null
     );
   });
+}
+
+/** The pick chips in the field: the inline chip renders as a non-editable button. */
+function chips(page: Page): Locator {
+  return field(page).locator('button[contenteditable="false"]');
+}
+
+/** The field's text on either side of its one chip. */
+async function aroundChip(
+  page: Page,
+): Promise<{ before: string; after: string } | null> {
+  return field(page).evaluate((root) => {
+    const chip = root.querySelector('button[contenteditable="false"]');
+    if (!chip) return null;
+    const before = document.createRange();
+    before.setStart(root, 0);
+    before.setEndBefore(chip);
+    const after = document.createRange();
+    after.setStartAfter(chip);
+    after.setEnd(root, root.childNodes.length);
+    return { before: before.toString(), after: after.toString() };
+  });
+}
+
+/** The picker's overlay, which draws the hover outline and its label. */
+function pickerOverlay(page: Page): Locator {
+  return page.locator("[data-element-picker]");
 }
 
 async function openPanel(page: Page): Promise<void> {
@@ -335,6 +370,112 @@ await withBrowser(async (h) => {
   await expectFinished(r, page, "Merged & deployed", "Auto-deploy on");
   r.eq("the replay opens no tab by itself", tabsOpened, tabsBefore);
   await snap(page, `${out}-1280`, "replay-deployed");
+
+  // --- pointing at the part you mean -------------------------------------------------
+  await page.keyboard.press("Escape");
+  await panel(page).waitFor({ state: "hidden", timeout: 5_000 });
+  await openPanel(page);
+  await field(page).click();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.type(BEFORE_PICK + AFTER_PICK);
+  for (let i = 0; i < AFTER_PICK.length; i++) {
+    await page.keyboard.press("ArrowLeft");
+  }
+  const point = panel(page).getByRole("button", {
+    name: "Point at the part you mean",
+  });
+  await point.click();
+  await panel(page).waitFor({ state: "hidden", timeout: 5_000 });
+  r.ok("pointing hides the panel", !(await panel(page).isVisible()));
+  const hint = page.getByText("Click the part you mean", { exact: true });
+  await hint.waitFor({ state: "visible", timeout: 5_000 });
+  r.ok("pointing shows the hint", await hint.isVisible());
+
+  const headline = page.locator("h1").filter({ hasText: "shaped by agents" });
+  const target = await headline.boundingBox();
+  if (!target) throw new Error("the hero headline has no box to point at");
+  const at = {
+    x: target.x + target.width / 2,
+    y: target.y + target.height / 2,
+  };
+  await page.mouse.move(at.x, at.y);
+  const outlined = await waitFor(
+    () => pickerOverlay(page).innerText(),
+    (text) => /\bh1\b|\bspan\b/.test(text),
+    { timeoutMs: 3_000, intervalMs: 100 },
+  );
+  r.ok(
+    "hovering the headline outlines it",
+    outlined.ok,
+    JSON.stringify(outlined.value),
+  );
+  await snap(page, `${out}-1280`, "pointing");
+  await page.mouse.click(at.x, at.y);
+
+  await panel(page).waitFor({ state: "visible", timeout: 5_000 });
+  r.ok("a pick brings the panel back", await panel(page).isVisible());
+  r.eq("the pick lands as one chip", await chips(page).count(), 1);
+  const around = await aroundChip(page);
+  r.ok(
+    "the chip sits at the caret, the text on both sides kept",
+    around?.before === BEFORE_PICK && around.after === AFTER_PICK,
+    JSON.stringify(around),
+  );
+  // Polled: the insert focuses the field from Lexical's update callback, not
+  // synchronously with the click.
+  const refocused = await waitFor(
+    () => fieldHasFocus(page),
+    (f) => f,
+    { timeoutMs: 3_000, intervalMs: 100 },
+  );
+  r.ok("after a pick the field has focus", refocused.ok);
+  await snap(page, `${out}-1280`, "picked");
+
+  await point.click();
+  await panel(page).waitFor({ state: "hidden", timeout: 5_000 });
+  await page.keyboard.press("Escape");
+  await panel(page).waitFor({ state: "visible", timeout: 5_000 });
+  r.ok(
+    "Esc while pointing brings the panel back",
+    await panel(page).isVisible(),
+  );
+  r.eq("Esc while pointing adds no chip", await chips(page).count(), 1);
+  // Polled: focus moves in the effect that runs once the panel is back, a
+  // beat after it becomes visible.
+  const returned = await waitFor(
+    () => point.evaluate((el) => el === document.activeElement),
+    (f) => f,
+    { timeoutMs: 3_000, intervalMs: 100 },
+  );
+  r.ok("after Esc, focus is back on the button that started it", returned.ok);
+
+  await panel(page).getByRole("button", { name: "Show me" }).click();
+  const picked = readIssue(
+    await panel(page)
+      .getByRole("link", { name: "File it" })
+      .getAttribute("href"),
+  );
+  r.ok(
+    "the issue's title names the pick, never its raw tag",
+    picked.title.startsWith(BEFORE_PICK) &&
+      picked.title.includes("[1]") &&
+      !picked.title.includes("<ui-context"),
+    picked.title,
+  );
+  r.ok(
+    "the issue's body numbers the pick in the text",
+    picked.body.split("\n---\n")[0]?.includes("[1]") ?? false,
+    picked.body,
+  );
+  r.ok(
+    "the issue's body carries the raw tag in a collapsed, fenced block",
+    /<details><summary>\[1\] [^\n]*<\/summary>\n\n```html\n<ui-context [^\n]*<\/ui-context>\n```\n\n<\/details>/.test(
+      picked.body,
+    ),
+    picked.body,
+  );
+  await snap(page, `${out}-1280`, "replay-picked");
 
   // --- 420px, reduced motion ----------------------------------------------------------
   const narrow = await h.session({

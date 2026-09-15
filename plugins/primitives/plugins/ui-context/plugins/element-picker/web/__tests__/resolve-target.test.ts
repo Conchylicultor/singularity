@@ -7,9 +7,25 @@ import { resolveTarget } from "../internal/resolve-target";
 // `resolveTarget` is built to *distrust*, so faking it is the point).
 
 /** Give an element a single box, the way a laid-out browser would. */
-function box(el: Element, left: number, top: number, right: number, bottom: number): void {
-  const rect = { left, top, right, bottom, width: right - left, height: bottom - top };
-  Object.defineProperty(el, "getClientRects", { value: () => [rect], configurable: true });
+function box(
+  el: Element,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+): void {
+  const rect = {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
+  Object.defineProperty(el, "getClientRects", {
+    value: () => [rect],
+    configurable: true,
+  });
 }
 
 /**

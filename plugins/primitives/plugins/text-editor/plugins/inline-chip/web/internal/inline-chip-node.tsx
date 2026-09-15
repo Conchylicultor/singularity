@@ -10,7 +10,8 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { activeDataInlineNode } from "../../core";
+import type { InlineTokenNode } from "@plugins/primitives/plugins/text-editor/plugins/token-extension/core";
+import { inlineChipNode, type InlineChipFields } from "../../core";
 import { renderInlineChip } from "./render-inline-chip";
 
 /**
@@ -18,16 +19,20 @@ import { renderInlineChip } from "./render-inline-chip";
  * rendering added. Extending the core spec rather than re-declaring one is what
  * makes the browser's class and the server's the same token type by
  * construction — see that module for why the declaration lives there.
+ *
+ * Exported from the barrel because a second Lexical host (active-data's
+ * page-editor bridge) registers this same node with its own extension shape.
  */
-export const activeDataInlineWebNode = activeDataInlineNode.decorated({
-  className: "inline-flex align-middle mx-0.5",
-  render: ({ text }, node) => (
-    <ActiveDataInlineChip text={text} nodeKey={node.getKey()} />
-  ),
-});
+export const inlineChipWebNode: InlineTokenNode<InlineChipFields> =
+  inlineChipNode.decorated({
+    className: "inline-flex align-middle mx-0.5",
+    render: ({ text }, node) => (
+      <InlineChipDecoration text={text} nodeKey={node.getKey()} />
+    ),
+  });
 
 /** The Lexical class to register in an editor's `nodes` config. */
-export const ActiveDataInlineNode = activeDataInlineWebNode.Node;
+export const InlineChipNode = inlineChipWebNode.Node;
 
 // Renders the chip that owns this token, through the one registry read that
 // also applies the boundary (`renderInlineChip`). An unclaimed token stays raw
@@ -40,7 +45,7 @@ export const ActiveDataInlineNode = activeDataInlineWebNode.Node;
 // free, with zero per-chip wiring. Read surfaces render the chip directly (via
 // linkify/segments), never through this node, so they never get the × (mirrors
 // paste-images' ImageNode).
-function ActiveDataInlineChip({
+function InlineChipDecoration({
   text,
   nodeKey,
 }: {
@@ -97,12 +102,6 @@ function ActiveDataInlineChip({
   );
 }
 
-export function $createActiveDataInlineNode(text: string): LexicalNode {
-  return activeDataInlineWebNode.create({ text });
-}
-
-export function $isActiveDataInlineNode(
-  node: LexicalNode | null | undefined,
-): boolean {
-  return activeDataInlineNode.is(node);
+export function $createInlineChipNode(text: string): LexicalNode {
+  return inlineChipWebNode.create({ text });
 }

@@ -1,10 +1,9 @@
 import type { ComponentType } from "react";
 
 /**
- * THE registry of active-data's inline chips, and the only factory that can
- * make one.
+ * THE registry of inline chips, and the only factory that can make one.
  *
- * ## Why a module registry at all, when `ActiveData.Tag` is already a registry
+ * ## Why a module registry at all, when `InlineChip.Tag` is already a registry
  *
  * Slot contributions are readable ONLY through a React hook — `bySlot` is built
  * inside `PluginProvider`'s `useMemo`. Every reader of a chip that is not a
@@ -12,12 +11,12 @@ import type { ComponentType } from "react";
  * projection) therefore cannot see them at all. So the chips also live here, in
  * a plain module registry any caller can read.
  *
- * `ActiveData.Tag` stays the DECLARATION surface — it is what puts a chip in
+ * `InlineChip.Tag` stays the DECLARATION surface — it is what puts a chip in
  * `docs/plugins-details.md` and the reverse index — and {@link inlineChip} is
  * the only thing that can build the contribution it takes. The two halves are
- * sealed together the way `codeTag()` seals a code contribution's claim to its
- * renderer: one call both mints the contribution and records it, so a chip
- * cannot be declared-but-unrecorded, and it cannot be recorded twice.
+ * sealed together the way active-data's `codeTag()` seals a code contribution's
+ * claim to its renderer: one call both mints the contribution and records it,
+ * so a chip cannot be declared-but-unrecorded, and it cannot be recorded twice.
  *
  * ## The brand is a REAL symbol
  *
@@ -25,9 +24,8 @@ import type { ComponentType } from "react";
  * must be a value, not a `declare const` (which emits nothing and dies at
  * module eval). It is exported from this module so the interface can name it,
  * and deliberately NOT re-exported from `web/index.ts` — outside this plugin
- * there is no way to spell the key, so hand-writing
- * `ActiveData.Tag({ display: "inline", … })` is a tsc error and unforgeable at
- * runtime too.
+ * there is no way to spell the key, so hand-writing `InlineChip.Tag({ … })` is a
+ * tsc error and unforgeable at runtime too.
  */
 
 /**
@@ -39,15 +37,17 @@ import type { ComponentType } from "react";
  * contributor. The chip declares where it belongs; the host asks for its own
  * surface (`inlineChips("document")`) and gets exactly the chips that said yes.
  *
- * - `"transcript"` — conversation surfaces: assistant markdown, user text, the
- *   prompt editor.
+ * - `"transcript"` — text addressed to an agent: every `TextEditor` (a prompt,
+ *   a task description, an Improve draft — the editor registry is global), plus
+ *   the markdown and user-text read surfaces that render those drafts and the
+ *   messages of a conversation.
  * - `"document"` — page content: the block editor and every read-only rendering
  *   of a page's runs.
  */
 export type ChipSurface = "transcript" | "document";
 
 // See the module header: a real symbol, unreachable outside this module.
-export const INLINE_CHIP: unique symbol = Symbol("active-data-inline-chip");
+export const INLINE_CHIP: unique symbol = Symbol("inline-chip");
 
 /**
  * INVARIANT — inline patterns must be SELF-CERTIFYING: the pattern alone is the
@@ -58,15 +58,14 @@ export const INLINE_CHIP: unique symbol = Symbol("active-data-inline-chip");
  * there would still be a committed node in the user's document; there is no
  * host to render a fallback.
  *
- * So: a pattern whose validity requires I/O belongs in `display:"code"`, which
- * has a real claim protocol (see `../claim`). Namespaced prefixes (`att-`,
- * `conv-`, `task-`, `proto-`) are the shape that qualifies as inline.
+ * So: a pattern whose validity requires I/O belongs in active-data's
+ * `display:"code"`, which has a real claim protocol. Namespaced prefixes
+ * (`att-`, `conv-`, `task-`, `proto-`) are the shape that qualifies as inline.
  *
  * Build one with {@link inlineChip} — there is no other way.
  */
-export interface ActiveDataInlineContribution {
+export interface InlineChipContribution {
   readonly [INLINE_CHIP]: true;
-  display: "inline";
   /**
    * Stable id, unique across every inline chip.
    *
@@ -84,13 +83,13 @@ export interface ActiveDataInlineContribution {
   }>;
 }
 
-const chips: ActiveDataInlineContribution[] = [];
+const chips: InlineChipContribution[] = [];
 
 /**
  * THE way to declare an inline chip: mints the contribution AND records it.
  *
  * ```ts
- * ActiveData.Tag(inlineChip({ id, pattern, surfaces, component }))
+ * InlineChip.Tag(inlineChip({ id, pattern, surfaces, component }))
  * ```
  *
  * A duplicate id THROWS rather than winning or losing silently: two chips
@@ -104,18 +103,17 @@ export function inlineChip(spec: {
   pattern: RegExp;
   surfaces: readonly ChipSurface[];
   component: ComponentType<{ content: string; attrs: Record<string, string> }>;
-}): ActiveDataInlineContribution {
+}): InlineChipContribution {
   const existing = chips.find((c) => c.id === spec.id);
   if (existing) {
     throw new Error(
-      `[active-data] two inline chips declare the id "${spec.id}" ` +
+      `[inline-chip] two inline chips declare the id "${spec.id}" ` +
         `(/${existing.pattern.source}/ and /${spec.pattern.source}/). An id names ` +
         `the chip in its error boundary and in the docs, so it must be unique.`,
     );
   }
-  const chip: ActiveDataInlineContribution = {
+  const chip: InlineChipContribution = {
     [INLINE_CHIP]: true,
-    display: "inline",
     id: spec.id,
     pattern: spec.pattern,
     surfaces: spec.surfaces,
@@ -134,7 +132,7 @@ export function inlineChip(spec: {
  */
 export function inlineChips(
   surface: ChipSurface,
-): readonly ActiveDataInlineContribution[] {
+): readonly InlineChipContribution[] {
   return chips.filter((c) => c.surfaces.includes(surface));
 }
 
@@ -150,9 +148,7 @@ export function inlineChips(
  * surface's own extension matched it, and the answer to "which chip owns these
  * characters" cannot depend on who is asking.
  */
-export function inlineChipFor(
-  token: string,
-): ActiveDataInlineContribution | null {
+export function inlineChipFor(token: string): InlineChipContribution | null {
   return (
     chips.find((c) =>
       new RegExp(

@@ -101,7 +101,6 @@ offsets expressible on the semantic ramp.
     - `pinClasses`
 - Cross-plugin:
   - Imported by:
-    - `active-data`
     - `apps-core/app-rail`
     - `apps-core/surface/floating/wallpaper`
     - `apps-core/surface/solo`
@@ -126,7 +125,6 @@ offsets expressible on the semantic ramp.
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `conversations/conversation-view/notes`
     - `debug/logs`
-    - `improve/element-picker`
     - `page/audio`
     - `page/bookmark`
     - `page/code-block`
@@ -149,8 +147,10 @@ offsets expressible on the semantic ramp.
     - `primitives/row-actions`
     - `primitives/search`
     - `primitives/sync-status`
+    - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `primitives/tree`
+    - `primitives/ui-context/element-picker`
     - `reorder/editor`
     - `screenshot/draw-on-app`
     - `shell/notifications`

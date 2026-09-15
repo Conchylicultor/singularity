@@ -85,7 +85,7 @@ const check: Check = {
  * ## Generic by construction
  *
  * Nothing below names a chip. The web side is every contribution to the
- * `ActiveData.Tag` slot that `inlineChip` minted and that declared
+ * `InlineChip.Tag` slot (which only `inlineChip` can mint) that declared
  * `"document"`; the server side is every `Editor.InlineToken` contribution's
  * pattern. A fifth chip is covered the day it declares the surface, and a chip
  * that drops `"document"` drops out of the set — no list to update.
@@ -102,7 +102,11 @@ const check: Check = {
 // `<key>`, see slot-declaration/core `slotIdFor`) resolved to the slot OBJECT so
 // the loop below compares by identity; the server one is the literal registry
 // token `defineServerContribution` was given in page/editor's block-registry.
-const TAG_SLOT = "active-data.tag"; // ActiveData.Tag
+//
+// The chip slot is declared by `primitives/text-editor/plugins/inline-chip`, not
+// by active-data: the check stays here because the chips that owe a server half
+// are active-data's sub-plugins, and the hint below is written for them.
+const TAG_SLOT = "primitives.text-editor.inline-chip.tag"; // InlineChip.Tag
 const SERVER_INLINE_TOKEN_SLOT = "page.inline-token"; // Editor.InlineToken
 const DOCUMENT_SURFACE = "document";
 
@@ -133,8 +137,8 @@ const documentChipHasServerToken: Check = {
         message:
           `No slot is declared under "${TAG_SLOT}" in the registry-scoped declaration pass, so no ` +
           "chip contribution could be recognized and nothing was verified. A slot id derives from " +
-          "its declaring plugin's id plus its `slots` key, so moving or renaming active-data " +
-          "renames it. This is a check/tooling failure, not a clean pass.",
+          "its declaring plugin's id plus its `slots` key, so moving or renaming the inline-chip " +
+          "plugin renames it. This is a check/tooling failure, not a clean pass.",
       };
     }
 
@@ -164,7 +168,7 @@ const documentChipHasServerToken: Check = {
       return {
         ok: false,
         message:
-          `No \`ActiveData.Tag\` contributions found in the enriched plugin tree — the ` +
+          `No \`InlineChip.Tag\` contributions found in the enriched plugin tree — the ` +
           "barrel-imported contributions facet is empty, so the chip↔server-token invariant could " +
           "not be verified. This is a check/tooling failure, not a clean pass.",
       };
@@ -192,12 +196,11 @@ const documentChipHasServerToken: Check = {
       for (const raw of def.contributions) {
         const c = raw as {
           _slot?: SlotHandle;
-          display?: unknown;
           id?: unknown;
           pattern?: unknown;
           surfaces?: unknown;
         };
-        if (c._slot !== tagSlot || c.display !== "inline") continue;
+        if (c._slot !== tagSlot) continue;
         inlineChipCount++;
         if (
           !Array.isArray(c.surfaces) ||
@@ -218,7 +221,7 @@ const documentChipHasServerToken: Check = {
       return {
         ok: false,
         message:
-          `${candidateDirs.size} plugin(s) contribute to \`ActiveData.Tag\`, but no contribution off ` +
+          `${candidateDirs.size} plugin(s) contribute to \`InlineChip.Tag\`, but no contribution off ` +
           "them was recognized as an inline chip, so nothing was verified. This is a check/tooling " +
           "failure, not a clean pass.",
       };
@@ -246,9 +249,9 @@ const documentChipHasServerToken: Check = {
         "  // plugins/active-data/plugins/<chip>/server/index.ts\n" +
         '  import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";\n' +
         '  import { Editor } from "@plugins/page/plugins/editor/server";\n' +
-        '  import { activeDataInlineNode } from "@plugins/active-data/core";\n' +
+        '  import { inlineChipNode } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/core";\n' +
         '  import { <PATTERN> } from "../core";\n' +
-        '  export default { description: "…", contributions: [Editor.InlineToken({ pattern: <PATTERN>, markdownSpan: "transparent", node: activeDataInlineNode })] } satisfies ServerPluginDefinition;\n' +
+        '  export default { description: "…", contributions: [Editor.InlineToken({ pattern: <PATTERN>, markdownSpan: "transparent", node: inlineChipNode })] } satisfies ServerPluginDefinition;\n' +
         '`markdownSpan: "transparent"` is right for every bare-id chip: the pattern says WHERE the ' +
         "token is, it does NOT ask for the bytes to be masked from the marks-aware inline markdown " +
         "scan — and a bare id must not be, since a masked span becomes its own UNMARKED run and an " +

@@ -1,44 +1,23 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { cleanup, render } from "@testing-library/react";
-import {
-  PluginProvider,
-  type LoadedPlugin,
-} from "@plugins/framework/plugins/web-sdk/core";
-import {
-  ActiveData,
-  inlineChip,
-  useActiveDataLinkify,
-} from "@plugins/active-data/web";
+import { useActiveDataLinkify } from "@plugins/active-data/web";
 import {
   FileLinkText,
   linkifyChildren,
 } from "@plugins/primitives/plugins/file-links/web";
-import { UI_CONTEXT_RE } from "@plugins/primitives/plugins/ui-context/core";
-import { UiContextTag } from "../components/ui-context-tag";
+// The REAL chip: evaluating the picker's barrel is what declares the one
+// `<ui-context>` inline chip, and the read surfaces below read the chip registry
+// at render time. No fixture re-declares it — that would be a second
+// registration of the same token, and would pin a copy rather than the chip the
+// app ships.
+import "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 
 // The reported bug: a `<ui-context …>` token rendered as a chip while composing
-// but printed as raw text once sent. The fix registers it as an active-data
-// inline contribution, so every read surface (user-text, assistant markdown)
-// renders it through useActiveDataLinkify. This pins that the raw tag is
-// replaced by the chip — including a realistic tag whose `url=`/`selector=`
-// attributes carry slashes and `>` chars.
-const plugin = {
-  id: "ui-context-read-test",
-  description: "ui-context read-render fixture",
-  contributions: [
-    ActiveData.Tag(
-      inlineChip({
-        // A fixture id of its own: the real barrel declares "ui-context", and two
-        // chips sharing an id is (rightly) an error.
-        id: "ui-context-read-test-chip",
-        pattern: UI_CONTEXT_RE,
-        surfaces: ["transcript"],
-        component: UiContextTag,
-      }),
-    ),
-  ],
-} as unknown as LoadedPlugin;
-
+// but printed as raw text once sent. The fix registers it as an inline chip, so
+// every read surface (user-text, assistant markdown) renders it through
+// useActiveDataLinkify. This pins that the raw tag is replaced by the chip —
+// including a realistic tag whose `url=`/`selector=` attributes carry slashes
+// and `>` chars.
 function ReadView({ text }: { text: string }) {
   const linkify = useActiveDataLinkify();
   return <div data-testid="read">{linkify(text)}</div>;
@@ -73,11 +52,7 @@ describe("ui-context renders as a chip on read surfaces", () => {
     '<ui-context url="http://x.localhost:9000/agents/c/conv-1781335518-caii" plugin="apps.sonata.track-mixer" selector="div>div>div"><hint>h</hint><picked-content>div — Track mixer</picked-content></ui-context>';
 
   it("replaces the raw tag with the chip (label visible, tag text gone)", () => {
-    const { getByTestId } = render(
-      <PluginProvider plugins={[plugin]}>
-        <ReadView text={`Look at ${tag} please`} />
-      </PluginProvider>,
-    );
+    const { getByTestId } = render(<ReadView text={`Look at ${tag} please`} />);
     const el = getByTestId("read");
     expect(el.textContent).toContain("div — Track mixer");
     expect(el.textContent).not.toContain("<ui-context");
@@ -87,9 +62,7 @@ describe("ui-context renders as a chip on read surfaces", () => {
 
   it("composes with file-links (user-text row): chip renders, file path still links", () => {
     const { getByTestId } = render(
-      <PluginProvider plugins={[plugin]}>
-        <ComposedView text={`See ${tag} and research/foo.md`} />
-      </PluginProvider>,
+      <ComposedView text={`See ${tag} and research/foo.md`} />,
     );
     const el = getByTestId("composed");
     expect(el.textContent).toContain("div — Track mixer");
@@ -101,11 +74,7 @@ describe("ui-context renders as a chip on read surfaces", () => {
   });
 
   it("regression: wrapping in <FileLinkText> first leaves the tag raw", () => {
-    const { getByTestId } = render(
-      <PluginProvider plugins={[plugin]}>
-        <BrokenOrderView text={`See ${tag}`} />
-      </PluginProvider>,
-    );
+    const { getByTestId } = render(<BrokenOrderView text={`See ${tag}`} />);
     // The walk bails at the opaque <FileLinkText> root, so the tag is never
     // replaced — this is exactly the bug the composed order above fixes.
     expect(getByTestId("broken").textContent).toContain("<ui-context");

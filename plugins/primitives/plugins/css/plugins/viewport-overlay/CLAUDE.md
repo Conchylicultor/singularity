@@ -178,11 +178,11 @@ looks equivalent and silently discards the caller's.
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `debug/queue`
-    - `improve/element-picker`
     - `page/editor`
     - `primitives/adaptive-bar`
     - `primitives/overlay/floating-surface`
     - `primitives/overlay/image-viewer`
+    - `primitives/ui-context/element-picker`
     - `reports/viewport-escape`
     - `screenshot/draw-on-app`
 

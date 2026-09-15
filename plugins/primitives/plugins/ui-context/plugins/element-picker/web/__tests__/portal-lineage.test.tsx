@@ -166,7 +166,7 @@ describe("plugin lineage survives a portal", () => {
     expect(meta.slotId).toBeUndefined();
     expect(meta.contributionId).toBeUndefined();
     expect(meta.path).toBe(
-      "apps.deploy.shell@element-picker-test.apps.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3]",
+      "apps.deploy.shell@apps.deploy.shell.app > apps/deploy/deployments#pane:deploy-deployment-detail[column 3 of 3]",
     );
   });
 });
