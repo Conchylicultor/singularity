@@ -7,7 +7,7 @@ import { TabCloseButton, TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import type { TabProps } from "@plugins/ui/plugins/tab-bar/core";
 
 /**
- * The skeuomorphic folder tab. The strip declares `fillHeight` (see the variant
+ * The skeuomorphic folder tab. The variant declares `strip: "folder"` (see its
  * contribution), so every tab fills the strip's full height and the strip drops
  * its bottom padding + `border-b`. The active tab is then a bordered,
  * background-filled folder whose open bottom edge sits flush on the strip's
@@ -46,8 +46,8 @@ export function ConnectedTab({
       className={cn(
         hoverRevealGroup,
         // h-full: fill the strip's full height so the active folder's bottom
-        // edge lands on the content seam (the strip is fillHeight — no centering
-        // moat below the tab).
+        // edge lands on the content seam (a `folder` strip — no centering moat
+        // below the tab).
         // select-none: a tab is a button, not document text — mirror a native
         // <button> (which this `role="button"` div otherwise loses) so a
         // press-and-drag (e.g. dragging a floating-window tab) never starts a

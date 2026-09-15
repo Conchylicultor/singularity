@@ -1,5 +1,6 @@
 import {
   Button,
+  ButtonGroup,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -10,6 +11,8 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { ElapsedTime } from "@plugins/primitives/plugins/relative-time/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
@@ -22,7 +25,7 @@ import {
   type BuildRun,
 } from "../../shared";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
-import { ReloadChip } from "./reload-chip";
+import { ReloadSegment } from "./reload-segment";
 import { BuildPopoverContent } from "./build-popover-content";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -49,10 +52,10 @@ function BuildButtonInner({
   const staleTab =
     advice.kind === "stale" || (advice.kind === "broken" && advice.stale);
 
-  // The label and the Reload chip answer different questions. The label is
-  // about the SERVER (what the build is doing); the chip is about THIS TAB
+  // The label and the Reload segment answer different questions. The label is
+  // about the SERVER (what the build is doing); the segment is about THIS TAB
   // (whether it needs a reload), so a plugin that failed to load mid-build still
-  // shows the red chip beside "Building…".
+  // shows the red Reload beside "Building".
   //
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.
@@ -77,7 +80,7 @@ function BuildButtonInner({
     building && latestRun != null && !isMainCompositionBuild(latestRun.targets);
   const label = {
     idle: "Builds",
-    building: buildingComposition ? `Building ${targetsLabel}…` : "Building…",
+    building: buildingComposition ? `Building ${targetsLabel}` : "Building",
     restarting: "Server restarting…",
     updated: "Server updated",
     failed: "Build failed",
@@ -110,21 +113,43 @@ function BuildButtonInner({
     latestRun?.finishedAt,
   ]);
 
-  return (
+  // The look IS the state. At rest, with nothing to say, the control is one
+  // quiet icon like the bar's other utilities. Anything to report — a build
+  // running, the server updated under this tab, a failed build, a tab that
+  // needs a reload — turns it into an outlined pill that says it in words, and
+  // a due reload joins it as the pill's own Reload segment.
+  const quiet = status === "idle" && advice.kind === "none";
+  const trigger = quiet ? (
+    <IconButton icon={MdBuild} label="Builds" />
+  ) : (
+    <Button
+      variant="outline"
+      aspect={status === "idle" ? "icon" : "text"}
+      aria-label={status === "idle" ? "Builds" : undefined}
+      // A failed build tints the pill's frame; its words stay in the text colour.
+      className={
+        status === "failed"
+          ? "border-destructive/50 dark:border-destructive/50"
+          : undefined
+      }
+    >
+      {spinning && <Spinner spinning className="size-4" />}
+      {status === "failed" && <StatusDot colorClass="bg-destructive" />}
+      {status === "idle" ? <MdBuild className="size-4" /> : label}
+      {status === "building" && latestRun && (
+        <ElapsedTime
+          since={latestRun.startedAt}
+          className="text-muted-foreground tabular-nums"
+        />
+      )}
+    </Button>
+  );
+
+  const popover = (
     <InlinePopover
       open={open}
       onOpenChange={setOpen}
-      trigger={
-        <Button
-          variant="outline"
-          className={status === "failed" ? "text-destructive" : undefined}
-        >
-          {spinning && <Spinner spinning className="size-4" />}
-          {status === "idle" && <MdBuild className="size-4" />}
-          {label}
-          <ReloadChip advice={advice} />
-        </Button>
-      }
+      trigger={trigger}
       align="end"
       width="3xl"
       padding="none"
@@ -161,6 +186,14 @@ function BuildButtonInner({
       />
     </InlinePopover>
   );
+
+  if (quiet) return popover;
+  return (
+    <ButtonGroup shape="pill" className="text-foreground">
+      {popover}
+      <ReloadSegment advice={advice} />
+    </ButtonGroup>
+  );
 }
 
 export function BuildButton() {
@@ -178,17 +211,11 @@ export function BuildButton() {
   // --- Build history ---
   const historyResult = useResource(buildHistoryResource);
 
-  // Render a neutral "Builds" button while the history resource is still loading —
-  // no fake "idle" status and no misleading useEffect trace before data arrives.
-  // The Reload chip does not wait for it: it is about this tab, not the builds.
+  // Render the neutral wrench, inert, while the history resource is still
+  // loading — no fake "idle" status and no misleading useEffect trace before
+  // data arrives. The popover needs the history, so it cannot open yet.
   if (historyResult.pending) {
-    return (
-      <Button variant="outline">
-        <MdBuild className="size-4" />
-        Builds
-        <ReloadChip advice={advice} />
-      </Button>
-    );
+    return <IconButton icon={MdBuild} label="Builds" disabled />;
   }
 
   return (

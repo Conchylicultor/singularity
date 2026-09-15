@@ -22,10 +22,10 @@ import {
   type DeploymentState,
 } from "@plugins/build/plugins/deployment/core";
 import { useReloadAdvice, type ReloadAdvice } from "../hooks/use-reload-advice";
-import { ReloadChip } from "../components/reload-chip";
+import { ReloadSegment } from "../components/reload-segment";
 
 /**
- * The Reload chip on the Build button, and the one signal behind it.
+ * The Reload segment of the Build pill, and the one signal behind it.
  *
  * `useReloadAdvice` reads two things: the deployment resource (is the server
  * serving a different frontend than this tab runs?) and the page-global
@@ -141,9 +141,9 @@ const BROKEN_ONLY = "Part of the app didn't load — reload to fix";
 const BOTH =
   "This tab is out of date and part of the app didn't load — reload to fix";
 
-describe("ReloadChip", () => {
+describe("ReloadSegment", () => {
   it("renders nothing when no reload is needed", () => {
-    const { container } = render(<ReloadChip advice={{ kind: "none" }} />);
+    const { container } = render(<ReloadSegment advice={{ kind: "none" }} />);
     expect(container.textContent).toBe("");
   });
 
@@ -179,40 +179,40 @@ describe("ReloadChip", () => {
 
   for (const c of cases) {
     it(c.name, () => {
-      const { getByRole } = render(<ReloadChip advice={c.advice} />);
+      const { getByRole } = render(<ReloadSegment advice={c.advice} />);
       // The accessible name carries the whole message: colour and a hover
       // tooltip are otherwise the only difference between the two states.
-      const chip = getByRole("button", { name: c.message });
-      expect(chip.textContent).toBe("Reload");
-      expect(chip.className).toContain(c.tint);
-      expect(chip.className).not.toContain(c.notTint);
+      const segment = getByRole("button", { name: c.message });
+      expect(segment.textContent).toBe("Reload");
+      expect(segment.className).toContain(c.tint);
+      expect(segment.className).not.toContain(c.notTint);
     });
   }
 
-  it("is a span that behaves as a button, never a <button> nested in the Build button", () => {
+  it("is a real <button> of its own, not nested in the Build button", () => {
     const { getByRole } = render(
-      <button type="button">
-        Builds
-        <ReloadChip advice={{ kind: "broken", stale: false, failedCount: 1 }} />
-      </button>,
+      <ReloadSegment
+        advice={{ kind: "broken", stale: false, failedCount: 1 }}
+      />,
     );
-    const chip = getByRole("button", { name: BROKEN_ONLY });
-    expect(chip.tagName).toBe("SPAN");
-    expect(chip.getAttribute("tabindex")).toBe("0");
-    expect(chip.parentElement?.closest("button")).not.toBeNull();
+    const segment = getByRole("button", { name: BROKEN_ONLY });
+    expect(segment.tagName).toBe("BUTTON");
+    expect(segment.parentElement?.closest("button")).toBeNull();
   });
 
   it("shows its message as a tooltip on hover", async () => {
     const { getByRole, findByText } = render(
-      <ReloadChip advice={{ kind: "broken", stale: true, failedCount: 1 }} />,
+      <ReloadSegment
+        advice={{ kind: "broken", stale: true, failedCount: 1 }}
+      />,
     );
-    const chip = getByRole("button", { name: BOTH });
-    fireEvent.pointerEnter(chip, { pointerType: "mouse" });
-    fireEvent.mouseEnter(chip);
-    fireEvent.focus(chip);
-    // The tooltip popup, not the chip's own aria-label.
+    const segment = getByRole("button", { name: BOTH });
+    fireEvent.pointerEnter(segment, { pointerType: "mouse" });
+    fireEvent.mouseEnter(segment);
+    fireEvent.focus(segment);
+    // The tooltip popup, not the segment's own aria-label.
     expect(
-      await findByText(BOTH, { selector: "*:not([role=button])" }),
+      await findByText(BOTH, { selector: "*:not([role=button]):not(button)" }),
     ).not.toBeNull();
   });
 
@@ -235,39 +235,12 @@ describe("ReloadChip", () => {
       });
     });
 
-    function renderInTrigger() {
-      const onTrigger = vi.fn();
-      const utils = render(
-        // The Build button opens the Builds popover on click; the chip must
-        // reload without also opening it.
-        <button type="button" onClick={onTrigger} onKeyDown={onTrigger}>
-          Builds
-          <ReloadChip advice={{ kind: "stale" }} />
-        </button>,
+    it("reloads the tab", () => {
+      const { getByRole } = render(
+        <ReloadSegment advice={{ kind: "stale" }} />,
       );
-      return {
-        ...utils,
-        onTrigger,
-        chip: utils.getByRole("button", { name: STALE_ONLY }),
-      };
-    }
-
-    it("reloads on click without reaching the trigger", () => {
-      const { chip, onTrigger } = renderInTrigger();
-      fireEvent.click(chip);
+      fireEvent.click(getByRole("button", { name: STALE_ONLY }));
       expect(reload).toHaveBeenCalledTimes(1);
-      expect(onTrigger).not.toHaveBeenCalled();
-    });
-
-    it("reloads on Enter and Space, and ignores other keys", () => {
-      const { chip, onTrigger } = renderInTrigger();
-      fireEvent.keyDown(chip, { key: "a" });
-      expect(reload).not.toHaveBeenCalled();
-      fireEvent.keyDown(chip, { key: "Enter" });
-      fireEvent.keyDown(chip, { key: " " });
-      expect(reload).toHaveBeenCalledTimes(2);
-      // Only the ignored key bubbled to the trigger.
-      expect(onTrigger).toHaveBeenCalledTimes(1);
     });
   });
 });

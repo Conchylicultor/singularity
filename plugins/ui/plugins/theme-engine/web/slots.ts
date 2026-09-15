@@ -1,7 +1,13 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
-import type { SubTheme, Theme, ThemeId, TokenGroupDescriptor } from "../core";
+import type {
+  FixedTheme,
+  SubTheme,
+  Theme,
+  ThemeId,
+  TokenGroupDescriptor,
+} from "../core";
 
 export interface VariantGroupContribution {
   id: string;
@@ -142,5 +148,11 @@ export const ThemeEngine = {
    * holds them and a region that mounts later never repaints.
    */
   SubTheme: defineSlot<SubTheme>({ docLabel: (p) => p.label }),
+  /**
+   * Fixed themes (`defineFixedTheme`): whole themes a region always wears,
+   * whatever its scope selects (the app chrome). Painted for as long as they
+   * are contributed, like sub-themes, so they are in the pre-paint cache.
+   */
+  FixedTheme: defineSlot<FixedTheme>({ docLabel: (p) => p.label }),
   ThemeSource: defineSlot<ThemeSourceContribution>({ docLabel: (p) => p.id }),
 };

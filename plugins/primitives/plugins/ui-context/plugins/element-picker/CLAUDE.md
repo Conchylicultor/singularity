@@ -117,6 +117,7 @@ every build — including a composition this plugin is not in.
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/icon-button.IconButton`
+    - `primitives/icon-button.IconButtonProps`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/tooltip.Kbd`

@@ -63,6 +63,7 @@ export {
   usePortalThemeScope,
   appThemeScope,
   subThemeScope,
+  fixedThemeScope,
   isSubThemeScope,
   themeScopeSelectors,
 } from "./components/portal-theme-scope";

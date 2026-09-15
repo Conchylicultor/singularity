@@ -7,8 +7,13 @@ import { TabCloseButton, TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import type { TabProps } from "@plugins/ui/plugins/tab-bar/core";
 
 /**
- * The flat (GitHub / Linear) tab. No fill; the active tab carries a primary
- * underline that sits flush on the strip's bottom border. Composes `Line` (the
+ * The flat (GitHub / Linear) tab. No fill; the active tab carries an underline
+ * in the text colour that sits flush on the strip's bottom border (the variant
+ * declares a `flush` strip, so the tab fills the strip's height and its bottom
+ * edge IS that border). Hovering an inactive tab previews the underline in the
+ * hairline colour. The underline is in the text colour, not the accent: the
+ * tab strip is chrome, and the only accent on screen belongs to the app.
+ * Composes `Line` (the
  * single-line shell + ref forwarding) with `Text` as the direct-child truncation
  * leaf, so the chip needs no ad-hoc flex/min-w-0. The whole chip is the activate
  * target (keyboard-operable); `hoverRevealGroup` drives the trailing close's
@@ -44,10 +49,12 @@ export function UnderlineTab({
         // <button> (which this `role="button"` div otherwise loses), so a
         // press-and-drag — e.g. dragging a floating-window tab — never starts a
         // text selection of the label.
-        "max-w-40 select-none gap-xs py-2xs pl-xs pr-2xs transition-colors",
+        // A transparent 2px band top AND bottom keeps the label centred; the
+        // bottom one is the underline.
+        "h-full max-w-48 select-none gap-xs border-y-2 border-transparent pl-sm pr-2xs transition-colors",
         active
-          ? "border-b-2 border-primary text-foreground"
-          : "text-muted-foreground hover:text-foreground",
+          ? "border-b-foreground text-foreground"
+          : "text-muted-foreground hover:border-b-border hover:text-foreground",
         className,
       )}
       {...rest}

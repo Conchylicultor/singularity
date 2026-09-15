@@ -122,6 +122,10 @@
       "name": "@singularity/plugin-apps-core-app-rail-framing-rail",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/chrome-theme": {
+      "name": "@singularity/plugin-apps-core-chrome-theme",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/layout": {
       "name": "@singularity/plugin-apps-core-layout",
       "version": "0.0.1",
@@ -5991,6 +5995,8 @@
     "@singularity/plugin-apps-core-app-rail-framing-hidden": ["@singularity/plugin-apps-core-app-rail-framing-hidden@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/hidden"],
 
     "@singularity/plugin-apps-core-app-rail-framing-rail": ["@singularity/plugin-apps-core-app-rail-framing-rail@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/rail"],
+
+    "@singularity/plugin-apps-core-chrome-theme": ["@singularity/plugin-apps-core-chrome-theme@workspace:plugins/apps-core/plugins/chrome-theme"],
 
     "@singularity/plugin-apps-core-layout": ["@singularity/plugin-apps-core-layout@workspace:plugins/apps-core/plugins/layout"],
 

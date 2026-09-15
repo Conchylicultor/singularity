@@ -102,6 +102,8 @@ errors until they have an entry.
     - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
     - `primitives/overlay/tooltip.WithTooltip`
+    - `primitives/relative-time.formatElapsed`
+    - `primitives/relative-time.useNow`
 - Server:
   - Contributes: `resource.declare` "worktree-ops"
   - Uses:

@@ -295,6 +295,7 @@ the outcome too, with no separate code path.
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `debug/profiling`
     - `debug/trace/engine`
+    - `improve`
     - `page/editor`
     - `page/page-reference`
     - `primitives/adaptive-bar`

@@ -234,6 +234,7 @@ skipped for those scripts, leaking a Chromium process per run.
   - Imported by:
     - `active-data/page-link`
     - `active-data/prototype`
+    - `apps-core/chrome-theme`
     - `apps-core/layout`
     - `apps-core/surface`
     - `apps-core/tabs`

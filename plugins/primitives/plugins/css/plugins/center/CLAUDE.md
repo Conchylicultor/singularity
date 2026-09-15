@@ -46,6 +46,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps-core/app-rail`
     - `apps-core/layout`
     - `apps-core/surface/floating`
+    - `apps-core/tab-bar`
     - `apps/agent-manager/welcome`
     - `apps/browser/webview`
     - `apps/events/shell`

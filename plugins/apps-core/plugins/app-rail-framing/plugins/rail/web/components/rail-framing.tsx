@@ -1,9 +1,9 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { RailFramingProps } from "@plugins/apps-core/core";
+import { APP_RAIL_WIDTH, type RailFramingProps } from "@plugins/apps-core/core";
 import { AppRail } from "@plugins/apps-core/plugins/app-rail/web";
 
 /**
- * The default rail: a 2.5rem icon rail beside the app content. Sets
+ * The default rail: an icon rail (`APP_RAIL_WIDTH`) beside the app content. Sets
  * `--app-rail-width` (the rail's own width, read by AppRail) and places the
  * rail as a flex sibling of `body`, so the body starts after the rail. The app
  * shell's sidebar — fixed but bounded to `body` — pins to `body`'s left edge
@@ -15,7 +15,7 @@ export function RailFraming({ body }: RailFramingProps) {
       direction="row"
       gap="none"
       className="h-full min-h-0"
-      style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
+      style={{ "--app-rail-width": APP_RAIL_WIDTH } as React.CSSProperties}
     >
       <AppRail />
       {body}

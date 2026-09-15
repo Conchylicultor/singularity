@@ -7,7 +7,7 @@
 - Description: Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both.
 - Web:
   - Slots:
-    - `ActionBar.Item` ← `build`, `improve`, `improve.element-picker`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
+    - `ActionBar.Item` ← `build`, `improve`, `screenshot`, `screenshot.draw-on-app`, `shell.global-action-bar`, `shell.notifications`, `ui.theme-engine.quick-theme`
     - `ActionBar.ViewOption` ← `apps-core.surface`, `fullscreen`, `reorder.edit-mode`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `ActionBar`
@@ -17,7 +17,6 @@
     - `build`
     - `fullscreen`
     - `improve`
-    - `improve/element-picker`
     - `reorder/edit-mode`
     - `screenshot`
     - `screenshot/draw-on-app`

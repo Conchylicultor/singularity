@@ -9,12 +9,17 @@ switch sticks it expanded inline, persisted in localStorage. Pinned is the
 default, so a fresh origin (every new worktree's `<wt>.localhost:9000`) shows the
 docked strip until the user unpins it there. Owns the `enabled` config.
 
-Its trailing item is one gear button (`ViewOptionsButton`) opening a
-control-panel popover: the `ActionBar.ViewOption` rows (surface mode, browser
-fullscreen, edit layout — whatever is contributed) followed by the bar's own
-"Pin action bar" switch. Options about how the app is shown are set once and
-left alone, so they share that one button rather than each taking a slot in
-the bar.
+One gear button (`ViewOptionsButton`) opens a control-panel popover: the
+`ActionBar.ViewOption` rows (surface mode, browser fullscreen, edit layout —
+whatever is contributed) followed by the bar's own "Pin action bar" switch.
+Options about how the app is shown are set once and left alone, so they share
+that one button rather than each taking a slot in the bar. The gear is itself
+an `ActionBar.Item` this plugin contributes, so the slot's order places it
+(today: after the utilities, before Build and Improve).
+
+Both hosts wear the app chrome's fixed theme (`apps-core/chrome-theme`): the
+docked strip by living in the tab bar, the floating one through its own
+boundary.
 
 The two hosts are mutually exclusive (the pin), which is what keeps exactly one
 `HealthReportButton` — and so one set of health probes — mounted at a time.
@@ -32,9 +37,11 @@ tab bar, which an embed does not paint.
   - Contributes:
     - `Core.Root` → `FloatingActionBarHost`
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
+    - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps-core.Apps`
+    - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.getSurfaceMode`
     - `apps-core/tabs.setSurfaceMode`
     - `apps-core/tabs.useSurfaceMode`
@@ -43,6 +50,7 @@ tab bar, which an embed does not paint.
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/embed.isChromelessDocument`
     - `primitives/icon-button.IconButton`

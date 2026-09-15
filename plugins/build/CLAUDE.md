@@ -207,15 +207,16 @@ The two other edges of the same argument:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/app-shell.sidebarNavItem`
-    - `primitives/css/badge.Badge`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
+    - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/css/text.textVariantClass`
     - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/detail-sections.defineDetailSections`
@@ -233,6 +234,7 @@ The two other edges of the same argument:
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/relative-time.ElapsedTime`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
     - `shell/notifications.toast`

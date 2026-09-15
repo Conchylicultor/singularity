@@ -10,6 +10,9 @@ export default {
       label: "Underline",
       match: "underline",
       component: UnderlineTab,
+      // Full-height tabs over a kept bottom border, so the active underline
+      // sits ON the strip's border — see `strip`.
+      strip: "flush",
     }),
   ],
 } satisfies PluginDefinition;

@@ -3,6 +3,9 @@ import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/c
 
 export const tabBarConfig = defineConfig({
   fields: {
-    variant: dynamicEnumField({ default: "chip", label: "Tab bar variant" }),
+    variant: dynamicEnumField({
+      default: "underline",
+      label: "Tab bar variant",
+    }),
   },
 });

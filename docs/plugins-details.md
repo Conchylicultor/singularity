@@ -5488,7 +5488,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types):
       - `Placement`
       - `RailFramingProps`
-    - Exports (values): `desktopApp`
+    - Exports (values):
+      - `APP_RAIL_WIDTH`
+      - `desktopApp`
   - Plugins:
     - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
       - Web:
@@ -5533,8 +5535,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.Apps`
           - `apps-core.useActiveApp`
           - `apps-core/app-icon.AppIconView`
+          - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.useTabs`
-          - `apps-core/theme-scope.useChromeThemeScope`
           - `primitives/css/center.Center`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
@@ -5580,6 +5582,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-rail-framing.AppRailFraming`
               - `apps-core/app-rail.AppRail`
               - `primitives/css/spacing.Stack`
+    - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
+      - Web:
+        - Contributes: `ThemeEngine.FixedTheme` "Chrome"
+        - Uses:
+          - `primitives/css/ui-kit.fixedThemeScope`
+          - `ui/theme-engine.ThemeEngine`
+        - Exports (values):
+          - `chromeTheme`
+          - `chromeThemeScope`
+      - Cross-plugin:
+        - Imported by:
+          - `apps-core/app-rail`
+          - `apps-core/tab-bar`
+          - `shell/global-action-bar`
+          - `shell/toast`
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
@@ -5848,12 +5865,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `apps-core.Apps`
           - `apps-core/app-icon.appIconComponent`
+          - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.placementIsNewTabFollows`
           - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useTabs`
-          - `apps-core/theme-scope.useChromeThemeScope`
           - `primitives/action-presentation.useActionForm`
           - `primitives/adaptive-bar.AdaptiveBar`
+          - `primitives/css/center.Center`
           - `primitives/css/grow-relay.GrowRelay`
           - `primitives/css/line.Line`
           - `primitives/css/spacing.Stack`
@@ -5990,7 +6008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/notifications`
           - `tasks/worktree-identity`
           - `ui/theme-engine/quick-theme`
-    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, shared by the cross-app chrome (rail, tab bar, toaster) and the :root token layer.
+    - **`theme-scope`** — Theme-scope helper: the single definition of the focused full-surface app's theme scope, which decides the :root token layer.
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
@@ -5998,15 +6016,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/tabs.usePlacementCapabilities`
           - `apps-core/tabs.useSurfaceMode`
           - `primitives/css/ui-kit.appThemeScope`
-        - Exports (values):
-          - `useChromeThemeScope`
-          - `useRootThemeScope`
+        - Exports (values): `useRootThemeScope`
       - Cross-plugin:
-        - Imported by:
-          - `apps-core/app-rail`
-          - `apps-core/tab-bar`
-          - `shell/toast`
-          - `ui/theme-engine`
+        - Imported by: `ui/theme-engine`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
@@ -6617,15 +6629,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
       - `primitives/app-shell.sidebarNavItem`
-      - `primitives/css/badge.Badge`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
       - `primitives/css/spacing.Stack`
       - `primitives/css/spinner.Spinner`
+      - `primitives/css/status-dot.StatusDot`
       - `primitives/css/text.Text`
       - `primitives/css/text.textVariantClass`
       - `primitives/css/ui-kit.Button`
+      - `primitives/css/ui-kit.ButtonGroup`
       - `primitives/css/ui-kit.cn`
       - `primitives/css/ui-kit.ControlSizeProvider`
       - `primitives/detail-sections.defineDetailSections`
@@ -6643,6 +6656,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/pane.openPane`
       - `primitives/pane.Pane`
       - `primitives/pane.PaneChrome`
+      - `primitives/relative-time.ElapsedTime`
       - `runs.RunsDataView`
       - `shell/action-bar.ActionBar`
       - `shell/notifications.toast`
@@ -10126,6 +10140,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.cn`
               - `primitives/live-state.useResource`
               - `primitives/overlay/tooltip.WithTooltip`
+              - `primitives/relative-time.formatElapsed`
+              - `primitives/relative-time.useNow`
           - Server:
             - Contributes: `resource.declare` "worktree-ops"
             - Uses:
@@ -15733,6 +15749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/page-link`
               - `active-data/prototype`
+              - `apps-core/chrome-theme`
               - `apps-core/layout`
               - `apps-core/surface`
               - `apps-core/tabs`
@@ -16171,16 +16188,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps/pages/history`
 
-- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Web:
+    - Slots: `ImproveSlots.Segment` ← `improve.element-picker`
     - Contributes: `ActionBar.Item` → `ImproveButton`
     - Uses:
       - `primitives/css/ui-kit.Button`
+      - `primitives/css/ui-kit.ButtonGroup`
+      - `primitives/slot-render.renderIsolated`
       - `shell/action-bar.ActionBar`
       - `tasks/task-draft-form.draftInsert`
       - `tasks/task-draft-form.TaskDraftInsert`
       - `tasks/task-draft-form.TaskDraftPopover`
-    - Exports (values): `insertIntoImproveDraft`
+    - Exports (types): `ImproveSegmentContribution`
+    - Exports (values):
+      - `ImproveSlots`
+      - `insertIntoImproveDraft`
   - Server:
     - Contributes:
       - `trigger` "improve.apply-group"
@@ -16202,15 +16225,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `improve/element-picker`
       - `screenshot/draw-on-app`
   - Plugins:
-    - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' action-bar button that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
+    - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
       - Web:
         - Contributes:
-          - `ActionBar.Item` → `ElementPickerButton`
+          - `ImproveSlots.Segment` "element-picker" → `ElementPickerButton`
           - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
         - Uses:
+          - `improve.ImproveSlots`
           - `improve.insertIntoImproveDraft`
           - `primitives/ui-context/element-picker.PickerButton`
-          - `shell/action-bar.ActionBar`
           - `tasks/task-draft-form.TaskDraftFormSlots`
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -22046,7 +22069,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup/runs-arm`
-              - `build`
               - `build/build-info`
               - `build/build-status`
               - `build/deployment`
@@ -22213,6 +22235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-rail`
               - `apps-core/layout`
               - `apps-core/surface/floating`
+              - `apps-core/tab-bar`
               - `apps/agent-manager/welcome`
               - `apps/browser/webview`
               - `apps/events/shell`
@@ -23920,6 +23943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release`
               - `apps/studio/compositions/release/release-info`
               - `apps/website/landing/fork`
+              - `build`
               - `build/build-status`
               - `config_v2/settings`
               - `conversations/agents`
@@ -24374,6 +24398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/website/shell`
               - `layouts/miller`
               - `primitives/pane`
+              - `shell/global-action-bar`
               - `shell/toast`
         - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
           - Web:
@@ -24493,6 +24518,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `DropdownMenuSubContent`
               - `DropdownMenuSubTrigger`
               - `DropdownMenuTrigger`
+              - `fixedThemeScope`
               - `iconSizeFor`
               - `Input`
               - `isSubThemeScope`
@@ -24572,6 +24598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `active-data/task`
               - `apps-core/app-rail`
+              - `apps-core/chrome-theme`
               - `apps-core/layout`
               - `apps-core/surface`
               - `apps-core/surface/floating`
@@ -28095,7 +28122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/tree`
-    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
+    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
         - Imported by:
           - `active-data/commit-link`
@@ -28118,11 +28145,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/playback-history`
           - `apps/studio/compositions/release`
           - `apps/studio/compositions/release/release-info`
+          - `build`
           - `build/build-info`
           - `build/serve-composition`
           - `conversations/all-conversations`
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/op-status`
           - `debug/boot-profile`
           - `debug/claude-cli-calls`
           - `debug/config-orphans`
@@ -28143,8 +28172,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-list`
       - Web:
         - Exports (values):
+          - `ElapsedTime`
+          - `formatElapsed`
           - `formatRelativeTime`
           - `RelativeTime`
+          - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Core:
         - Exports (types):
@@ -28487,6 +28519,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `debug/profiling`
           - `debug/trace/engine`
+          - `improve`
           - `page/editor`
           - `page/page-reference`
           - `primitives/adaptive-bar`
@@ -28996,6 +29029,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.usePortalForwardedAttrs`
               - `primitives/css/viewport-overlay.ViewportOverlay`
               - `primitives/icon-button.IconButton`
+              - `primitives/icon-button.IconButtonProps`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/tooltip.Kbd`
@@ -30268,7 +30302,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout editing) folded behind the bar's gear popover; the global-action-bar plugin renders both.
       - Web:
         - Slots:
-          - `ActionBar.Item` ← `build`, `improve`, `improve.element-picker`, `screenshot`, `screenshot.draw-on-app`, `shell.notifications`, `ui.theme-engine.quick-theme`
+          - `ActionBar.Item` ← `build`, `improve`, `screenshot`, `screenshot.draw-on-app`, `shell.global-action-bar`, `shell.notifications`, `ui.theme-engine.quick-theme`
           - `ActionBar.ViewOption` ← `apps-core.surface`, `fullscreen`, `reorder.edit-mode`
         - Uses: `primitives/slot-render.defineRenderSlot`
         - Exports (values): `ActionBar`
@@ -30278,7 +30312,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build`
           - `fullscreen`
           - `improve`
-          - `improve/element-picker`
           - `reorder/edit-mode`
           - `screenshot`
           - `screenshot/draw-on-app`
@@ -30290,9 +30323,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Core.Root` → `FloatingActionBarHost`
           - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
+          - `ActionBar.Item` → `ViewOptionsButton`
           - `ConfigV2.WebRegister` "config"
         - Uses:
           - `apps-core.Apps`
+          - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/tabs.getSurfaceMode`
           - `apps-core/tabs.setSurfaceMode`
           - `apps-core/tabs.useSurfaceMode`
@@ -30301,6 +30336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
+          - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/embed.isChromelessDocument`
           - `primitives/icon-button.IconButton`
@@ -30479,13 +30515,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Core.Root` → `ToasterHost`
         - Uses:
-          - `apps-core/theme-scope.useChromeThemeScope`
+          - `apps-core/chrome-theme.chromeTheme`
+          - `apps-core/chrome-theme.chromeThemeScope`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.ControlSizeProvider`
           - `primitives/dom/element-size.useElementSize`
           - `primitives/select-scope.ContentScope`
-          - `ui/theme-engine.useColorMode`
         - Exports (types):
           - `ToastArgs`
           - `ToastVariant`
@@ -32097,6 +32133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.renderIsolated`
         - Exports (types):
           - `TabProps`
+          - `TabStrip`
           - `TabVariantContribution`
         - Exports (values):
           - `Tab`
@@ -32172,11 +32209,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
           - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
+          - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
         - Contributes:
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
           - `Core.Root` → `SubThemeStyles`
+          - `Core.Root` → `FixedThemeStyles`
           - `Core.Root` → `ThemeSelectionsCollector`
           - `ConfigV2.WebRegister` "theme"
           - `DynamicEnum.Options` "Theme"
@@ -32192,6 +32231,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `config_v2.useSetConfig`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/css/ui-kit.appThemeScope`
+          - `primitives/css/ui-kit.fixedThemeScope`
           - `primitives/css/ui-kit.subThemeScope`
           - `primitives/css/ui-kit.themeScopeSelectors`
           - `primitives/slot-render.defineRenderSlot`
@@ -32232,6 +32272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `fields/enum/config.enumField`
         - Exports (types):
           - `ColorAdjustment`
+          - `FixedTheme`
           - `GroupValues`
           - `ResolvedTheme`
           - `SkippedThemeValue`
@@ -32249,12 +32290,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `both`
           - `ColorAdjustmentSchema`
           - `DEFAULT_THEME_ID`
+          - `defineFixedTheme`
           - `defineSubTheme`
           - `defineTheme`
           - `defineTokenGroup`
           - `isBuiltInThemeId`
           - `mergeGroupValues`
           - `NEUTRAL_COLOR_ADJUSTMENT`
+          - `resolveFixedTheme`
           - `resolveTheme`
           - `themeSelectionConfig`
           - `TokenGroupFragmentSchema`
@@ -32262,10 +32305,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tokenGroupMatchesSearch`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/chrome-theme`
           - `apps-core/surface/floating`
           - `apps/website/shell`
           - `reports/theme-resolution`
-          - `shell/toast`
           - `ui/segmented-progress-bar`
           - `ui/tab-bar/customizer`
           - `ui/theme-engine/quick-theme`

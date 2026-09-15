@@ -10,8 +10,8 @@ export default {
       label: "Connected",
       match: "connected",
       component: ConnectedTab,
-      // Full-height folder tabs fused to the content seam — see fillHeight.
-      fillHeight: true,
+      // Full-height folder tabs fused to the content seam — see `strip`.
+      strip: "folder",
     }),
   ],
 } satisfies PluginDefinition;

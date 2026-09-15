@@ -1,4 +1,4 @@
-// @hash 0d675211e194
+// @hash a13efae4ee70
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,9 +8,9 @@
   "items": [
     "build:build",
     "improve:improve",
-    "improve.element-picker:element-picker",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
+    "shell.global-action-bar:view-options",
     "shell.notifications:notifications",
     "ui.theme-engine.quick-theme:quick-theme"
   ]

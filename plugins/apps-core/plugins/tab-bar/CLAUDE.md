@@ -10,12 +10,13 @@
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.appIconComponent`
+    - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.placementIsNewTabFollows`
     - `apps-core/tabs.usePlacementCapabilities`
     - `apps-core/tabs.useTabs`
-    - `apps-core/theme-scope.useChromeThemeScope`
     - `primitives/action-presentation.useActionForm`
     - `primitives/adaptive-bar.AdaptiveBar`
+    - `primitives/css/center.Center`
     - `primitives/css/grow-relay.GrowRelay`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.Stack`

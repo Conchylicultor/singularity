@@ -1,11 +1,16 @@
-import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  Core,
+  type PluginDefinition,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import {
   FloatingActionBarHost,
   DockedActionBarHost,
 } from "./components/global-action-bar";
+import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { actionBarConfig } from "../shared/config";
+import { ViewOptionsButton } from "./components/view-options-button";
 
 export default {
   description:
@@ -21,6 +26,9 @@ export default {
       excludeFromReorder: true,
       component: DockedActionBarHost,
     }),
+    // The gear (view options + the pin switch) is an ordinary action, so the
+    // slot's order places it like every other button.
+    ActionBar.Item({ id: "view-options", component: ViewOptionsButton }),
     ConfigV2.WebRegister({ descriptor: actionBarConfig }),
   ],
 } satisfies PluginDefinition;

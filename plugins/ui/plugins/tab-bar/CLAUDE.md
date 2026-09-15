@@ -33,6 +33,7 @@ needing a DOM handle wraps `<Tab>` in its own element.
     - `primitives/slot-render.renderIsolated`
   - Exports (types):
     - `TabProps`
+    - `TabStrip`
     - `TabVariantContribution`
   - Exports (values):
     - `Tab`

@@ -19,6 +19,15 @@ const SUB_THEME_PREFIX = "sub:";
 export const subThemeScope = (subTheme: { kind: "sub-theme"; id: string }) =>
   `${SUB_THEME_PREFIX}${subTheme.id}`;
 
+/** A fixed theme's token: `fixed:<id>`. Takes the declared fixed theme itself
+ *  (from theme-engine's `defineFixedTheme`), not its id, so a misspelled id has
+ *  no spelling. A fixed theme is a WHOLE theme a region always wears (the app
+ *  chrome), so — unlike a sub-theme — popups opened from inside keep it. */
+export const fixedThemeScope = (fixedTheme: {
+  kind: "fixed-theme";
+  id: string;
+}) => `fixed:${fixedTheme.id}`;
+
 /** Whether a scope token names a sub-theme rather than a whole theme. A
  *  sub-theme sets a few tokens over the theme around it; popups opened from
  *  inside it go back to that surrounding theme (see theme-boundary). */

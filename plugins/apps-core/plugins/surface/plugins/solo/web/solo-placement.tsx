@@ -29,8 +29,8 @@ export const soloDef: PlacementDef = {
   icon: MdFullscreen,
   order: 2,
   frame: "viewport",
-  // A single app fills the viewport, so the chrome wears the app's theme (like
-  // docked, unlike floating's multi-window backdrop) — see useChromeThemeScope.
+  // A single app fills the viewport, so `:root` carries the app's theme (like
+  // docked, unlike floating's multi-window backdrop) — see useRootThemeScope.
   themeScope: "app",
   // No frame chrome: a fullscreen tab is edge to edge, and its canvas comes from
   // the host's `<Theme surface="canvas">` container like every other mode's.

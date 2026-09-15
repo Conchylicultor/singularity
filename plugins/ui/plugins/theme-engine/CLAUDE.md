@@ -88,13 +88,39 @@ the light block also matches in dark mode, so a light-only token would leak.
 Sub-themes are painted for as long as they are contributed, not when a region
 mounts, so they are in the pre-paint cache and a region never repaints.
 
+## Fixed themes: a region that always wears one whole theme
+
+A **fixed theme** (`defineFixedTheme`, contributed through
+`ThemeEngine.FixedTheme`) is a whole theme one region always wears, whatever
+its scope selects. The app chrome is the case (`apps-core/chrome-theme`): the
+rail, tab bar, action bar and toasts stay graphite while the focused app —
+and its theme — changes underneath them.
+
+```tsx
+<Theme name={fixedThemeScope(chromeTheme)} surface="chrome">…</Theme>
+```
+
+- **Resolved like a theme, worn like a sub-theme.** It resolves over every
+  group's schema defaults, so nothing from the surrounding app's theme leaks in;
+  but no scope selects it and the picker never lists it.
+- **One scheme in both modes.** `scheme: "dark"` paints the dark half of the
+  resolution under both the light and the dark selector — the frame does not
+  flip with the light/dark switch. Tailwind `dark:` variants inside still follow
+  the global class (per-scope color mode is deferred).
+- **Popups keep it** — the forward is not region-only: a menu opened from the
+  chrome is more of the chrome.
+- Painted for as long as it is contributed and never pending, so it is in the
+  pre-paint cache.
+
 ## Painting
 
 `ThemeInjector` paints the focused full-surface app's theme into `:root` (the
 desktop's when nothing is focused or the focus is a floating window).
 `AppScopeThemes` adds a `[data-theme-scope="app:<id>"]` block for each other
-visible app with its own theme document, and `SubThemeStyles` one sparse
-`[data-theme-scope="sub:<id>"]` block per sub-theme fragment. Nothing is
+visible app with its own theme document, `SubThemeStyles` one sparse
+`[data-theme-scope="sub:<id>"]` block per sub-theme fragment, and
+`FixedThemeStyles` a complete `[data-theme-scope="fixed:<id>"]` block per
+fixed theme. Nothing is
 injected while a resident
 source loads, so the CSS replayed before first paint stays up (pre-paint cache:
 `.claude/skills/theme/SKILL.md`). Picking a theme is `theme-gallery`'s job.
@@ -110,11 +136,13 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
     - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
     - `ThemeEngine.SubTheme` ← `apps.website.shell`
+    - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
     - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
   - Contributes:
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
     - `Core.Root` → `SubThemeStyles`
+    - `Core.Root` → `FixedThemeStyles`
     - `Core.Root` → `ThemeSelectionsCollector`
     - `ConfigV2.WebRegister` "theme"
     - `DynamicEnum.Options` "Theme"
@@ -130,6 +158,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `config_v2.useSetConfig`
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/css/ui-kit.appThemeScope`
+    - `primitives/css/ui-kit.fixedThemeScope`
     - `primitives/css/ui-kit.subThemeScope`
     - `primitives/css/ui-kit.themeScopeSelectors`
     - `primitives/slot-render.defineRenderSlot`
@@ -170,6 +199,7 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `fields/enum/config.enumField`
   - Exports (types):
     - `ColorAdjustment`
+    - `FixedTheme`
     - `GroupValues`
     - `ResolvedTheme`
     - `SkippedThemeValue`
@@ -187,12 +217,14 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `both`
     - `ColorAdjustmentSchema`
     - `DEFAULT_THEME_ID`
+    - `defineFixedTheme`
     - `defineSubTheme`
     - `defineTheme`
     - `defineTokenGroup`
     - `isBuiltInThemeId`
     - `mergeGroupValues`
     - `NEUTRAL_COLOR_ADJUSTMENT`
+    - `resolveFixedTheme`
     - `resolveTheme`
     - `themeSelectionConfig`
     - `TokenGroupFragmentSchema`
@@ -200,10 +232,10 @@ source loads, so the CSS replayed before first paint stays up (pre-paint cache:
     - `tokenGroupMatchesSearch`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/chrome-theme`
     - `apps-core/surface/floating`
     - `apps/website/shell`
     - `reports/theme-resolution`
-    - `shell/toast`
     - `ui/segmented-progress-bar`
     - `ui/tab-bar/customizer`
     - `ui/theme-engine/quick-theme`

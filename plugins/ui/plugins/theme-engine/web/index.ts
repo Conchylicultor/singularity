@@ -9,6 +9,7 @@ import {
   ThemeInjector,
   AppScopeThemes,
   SubThemeStyles,
+  FixedThemeStyles,
 } from "./components/theme-injector";
 import { ThemeSelectionsCollector } from "./theme-selections";
 import { ThemeEngine } from "./slots";
@@ -50,6 +51,7 @@ export default {
     Core.Root({ component: ThemeInjector }),
     Core.Root({ component: AppScopeThemes }),
     Core.Root({ component: SubThemeStyles }),
+    Core.Root({ component: FixedThemeStyles }),
     Core.Root({ component: ThemeSelectionsCollector }),
     ConfigV2.WebRegister({ descriptor: themeSelectionConfig }),
     DynamicEnum.Options({

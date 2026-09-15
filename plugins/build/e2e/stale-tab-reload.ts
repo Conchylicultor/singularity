@@ -7,7 +7,7 @@
  * leak into the other:
  *
  *  a. **A background (deferred) plugin 404s.** No top banner. The Build
- *     button's Reload chip is red, named "Part of the app didn't load", and the
+ *     pill's Reload segment is red, named "Part of the app didn't load", and the
  *     collapsed action-bar dot is red. A `plugin-load` report is filed.
  *  b. **A core (eager) plugin 404s.** The explicit top banner lists it, and a
  *     `plugin-load` report is filed — which only happens once the report sink
@@ -138,9 +138,8 @@ async function breakArtifact(page: Page, url: string): Promise<void> {
 
 // ---------------------------------------------------------------- the app
 /**
- * The Reload chip, reachable while the floating bar is still collapsed. Matched
- * by its OWN label: a role query would hit the Build button first, whose
- * accessible name is computed from its children and so contains the chip's.
+ * The Reload segment of the Build pill, reachable while the floating bar is
+ * still collapsed. Matched by its own label (the full message).
  */
 function reloadChip(page: Page) {
   return page.getByLabel(BROKEN_NAME);
@@ -278,24 +277,25 @@ await withBrowser(async (h) => {
     const chip = reloadChip(page).first();
     const appeared = await appears(reloadChip(page));
     r.ok(
-      "deferred failure: the Build button carries a red Reload chip",
+      "deferred failure: the Build pill carries a red Reload segment",
       appeared,
     );
 
     if (appeared) {
       const cls = (await chip.getAttribute("class")) ?? "";
       r.ok(
-        "deferred failure: the chip is destructive",
+        "deferred failure: the segment is destructive",
         cls.includes("text-destructive"),
         cls,
       );
       r.eq(
-        "deferred failure: the chip is a span inside the Build button, not a nested <button>",
+        "deferred failure: the segment is its own <button> in the Build pill, not nested in the Build button",
         await chip.evaluate((el) => ({
           tag: el.tagName,
           inButton: el.parentElement?.closest("button") != null,
+          inGroup: el.closest('[data-slot="button-group"]') != null,
         })),
-        { tag: "SPAN", inButton: true },
+        { tag: "BUTTON", inButton: false, inGroup: true },
       );
     }
 
@@ -324,15 +324,15 @@ await withBrowser(async (h) => {
     await revealActionBar(page);
     if (appeared) {
       await chip.hover();
-      // The chip's own text is "Reload" (the message is its aria-label, which
-      // is not text), so anything showing the message as TEXT is a tooltip.
+      // The segment's own text is "Reload" (the message is its aria-label,
+      // which is not text), so anything showing the message as TEXT is a tooltip.
       const shown = await waitFor(
         () => page.getByText(BROKEN_NAME).first().isVisible(),
         (v) => v,
         { timeoutMs: 5000 },
       );
       r.ok(
-        "deferred failure: hovering the chip shows the didn't-load tooltip",
+        "deferred failure: hovering the segment shows the didn't-load tooltip",
         shown.ok,
       );
     }

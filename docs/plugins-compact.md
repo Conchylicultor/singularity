@@ -31,6 +31,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
+    - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
     - **`layout`** [load-bearing] — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Plugins:
@@ -46,7 +47,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
-    - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, shared by the cross-app chrome (rail, tab bar, toaster) and the :root token layer.
+    - **`theme-scope`** — Theme-scope helper: the single definition of the focused full-surface app's theme scope, which decides the :root token layer.
 
 - **`auth`** [load-bearing] [7 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
@@ -127,9 +128,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`dialog`** — Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
     - **`engine`** — Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
 
-- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Plugins:
-    - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' action-bar button that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
+    - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -330,7 +331,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`voice-input`** — Voice dictation for the prompt editor via the Web Speech API.
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use rankAdjacentTo() from the server barrel to resolve a DnD move's anchor. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
     - **`rank-reorder`** — Flat rank-based drag-reorder primitive: a RankReorderProvider (lifted DnD shell + computeFlatReorder drop resolution, group-by aware) and useRankReorderItem (per-row draggable + before/after droppables). Shared by the tree's sibling zones and the data-view manual-order; depends only on rank + dnd-kit.
-    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
+    - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
     - **`row-actions`** — Hover-revealed row-action cluster: a row of ordinary IconButtons revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the icon-xs sizing it applies to its children — so it ships no button of its own and stays BELOW icon-button, which is what lets css/row compose it. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).

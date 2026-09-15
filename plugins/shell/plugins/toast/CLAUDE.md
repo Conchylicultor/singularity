@@ -8,13 +8,13 @@
 - Web:
   - Contributes: `Core.Root` → `ToasterHost`
   - Uses:
-    - `apps-core/theme-scope.useChromeThemeScope`
+    - `apps-core/chrome-theme.chromeTheme`
+    - `apps-core/chrome-theme.chromeThemeScope`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/select-scope.ContentScope`
-    - `ui/theme-engine.useColorMode`
   - Exports (types):
     - `ToastArgs`
     - `ToastVariant`

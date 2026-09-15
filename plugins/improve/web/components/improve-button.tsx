@@ -1,5 +1,10 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useSyncExternalStore } from "react";
+import {
+  Button,
+  ButtonGroup,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { Fragment, useSyncExternalStore } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import {
@@ -8,27 +13,45 @@ import {
   subscribeImproveOpen,
 } from "../internal/open-store";
 import { IMPROVEMENTS_CATEGORY_ID } from "../../shared/constants";
+import { ImproveSlots } from "../slots";
 
+/**
+ * The Improve pill: the Improve button (opening the draft popover) joined with
+ * every contributed `ImproveSlots.Segment` — companion actions that feed the
+ * same draft, such as picking a UI element — as one split capsule.
+ */
 export function ImproveButton() {
   const { open, insert } = useSyncExternalStore(
     subscribeImproveOpen,
     getImproveOpenState,
   );
+  const segments = ImproveSlots.Segment.useContributions();
 
   return (
-    <TaskDraftPopover
-      open={open}
-      onOpenChange={setImproveOpen}
-      trigger={
-        <Button variant="outline">
-          <MdAutoAwesome />
-          Improve
-        </Button>
-      }
-      tooltip="Improve"
-      target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
-      insert={insert}
-      heading="Improve this app"
-    />
+    <ButtonGroup shape="pill" className="text-foreground">
+      <TaskDraftPopover
+        open={open}
+        onOpenChange={setImproveOpen}
+        trigger={
+          <Button variant="outline">
+            <MdAutoAwesome />
+            Improve
+          </Button>
+        }
+        tooltip="Improve"
+        target={{ kind: "category", categoryId: IMPROVEMENTS_CATEGORY_ID }}
+        insert={insert}
+        heading="Improve this app"
+      />
+      {segments.map((segment) => (
+        <Fragment key={segment.id}>
+          {renderIsolated(
+            ImproveSlots.Segment,
+            segment as unknown as Contribution,
+            {},
+          )}
+        </Fragment>
+      ))}
+    </ButtonGroup>
   );
 }

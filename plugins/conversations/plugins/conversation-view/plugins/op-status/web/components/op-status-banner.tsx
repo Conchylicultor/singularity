@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
@@ -18,6 +18,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { OP_KINDS } from "@plugins/infra/plugins/worktree/core";
+import {
+  formatElapsed,
+  useNow,
+} from "@plugins/primitives/plugins/relative-time/web";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
 // The op markers are keyed on the worktree directory basename, exactly how the
@@ -66,26 +70,6 @@ function useTitleBySlug(): Record<string, string> {
     // a live `active` title wins over a stale gone/system one.
     return { ...system.data, ...gone.data, ...active.data };
   }, [active, gone, system]);
-}
-
-// Presentational 1s ticker: the op STATE is push-driven via the resource; this
-// only re-renders the elapsed clock. Returns the current epoch ms.
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), intervalMs);
-    return () => clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
-function formatElapsed(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const s = total % 60;
-  const m = Math.floor(total / 60) % 60;
-  const h = Math.floor(total / 3600);
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
 // The instant the op's CURRENT phase began. A running op (of any kind) clocks

@@ -75,12 +75,11 @@ const THEME_SURFACES: Record<ThemeSurface, string> = {
 
 export interface ThemeProps extends Passthrough {
   /**
-   * Scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`, or
-   * `subThemeScope(subTheme)` for a sub-theme. `undefined` = inherit `:root` —
-   * the legitimate answer `useChromeThemeScope()` returns when there is no app
-   * theme to wear. Both halves agree on it by construction: no attribute is
-   * stamped, and `PortalForwardProvider` already treats an undefined value as a
-   * no-op.
+   * Scope token, from `appThemeScope(id)` / `paneThemeScope(pane)`,
+   * `subThemeScope(subTheme)` for a sub-theme, or `fixedThemeScope(fixedTheme)`
+   * for a fixed theme (the app chrome's). `undefined` = inherit the enclosing
+   * theme. Both halves agree on it by construction: no attribute is stamped,
+   * and `PortalForwardProvider` already treats an undefined value as a no-op.
    */
   name: string | undefined;
   /**

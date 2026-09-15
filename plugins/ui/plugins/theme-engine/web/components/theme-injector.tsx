@@ -4,6 +4,7 @@ import { useActiveApp, Apps } from "@plugins/apps-core/web";
 import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   appThemeScope,
+  fixedThemeScope,
   subThemeScope,
   themeScopeSelectors,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -19,9 +20,12 @@ import {
   type ResolvedThemeState,
 } from "../use-resolved-theme";
 import {
+  resolveFixedTheme,
   themeSelectionConfig,
   type ColorAdjustment,
+  type FixedTheme,
   type GroupValues,
+  type SkippedThemeValue,
   type SubTheme,
   type TokenGroupFragment,
   type TokenValues,
@@ -207,24 +211,23 @@ function useReportResolutionFaults(
     if (state.missing !== undefined) {
       faults.push({ kind: "missing-theme", scopeId, themeId: state.missing });
     }
-    for (const skipped of state.skipped) {
-      faults.push(
-        skipped.reason === "unregistered-group"
-          ? {
-              kind: "unregistered-group",
-              themeId: skipped.themeId,
-              groupId: skipped.groupId,
-            }
-          : {
-              kind: "unknown-tokens",
-              themeId: skipped.themeId,
-              groupId: skipped.groupId,
-              tokens: skipped.tokens,
-            },
-      );
-    }
+    faults.push(...skippedFaults(state.skipped));
   }
   useReportFaults(faults);
+}
+
+/** The faults for the stored values a resolution dropped. */
+function skippedFaults(skipped: SkippedThemeValue[]): ThemeResolutionFault[] {
+  return skipped.map((s) =>
+    s.reason === "unregistered-group"
+      ? { kind: "unregistered-group", themeId: s.themeId, groupId: s.groupId }
+      : {
+          kind: "unknown-tokens",
+          themeId: s.themeId,
+          groupId: s.groupId,
+          tokens: s.tokens,
+        },
+  );
 }
 
 /** Report each distinct fault once per mount. */
@@ -256,9 +259,9 @@ export function ThemeInjector() {
   // "Base layer owns `:root`": `:root` carries the FOCUSED full-surface app's
   // theme. `useRootThemeScope()` returns `app:<id>` when the focused placement is
   // `themeScope:"app"` (docked/solo) and an app is active, else `undefined`
-  // (desktop/floating → global). The chrome surfaces (rail, tab bar, toaster)
-  // share this exact definition via `useChromeThemeScope`, so they can never
-  // disagree about which app owns the surface.
+  // (desktop/floating → global). The app chrome (rail, tab bar, toaster) does
+  // NOT follow it: it wears its own fixed theme (see FixedThemeStyles), so it
+  // stays the same while the focused app changes underneath it.
   const rootScopeId = useRootThemeScope();
   const rootIsGlobal = rootScopeId === undefined;
 
@@ -458,6 +461,78 @@ function SubThemeFragmentStyle({
   );
   usePaintedStyle(scopedStyleIdFor(scopeToken, group.id), text);
   return null;
+}
+
+/**
+ * Every contributed fixed theme's blocks: one `<style>` per token group,
+ * targeting `[data-theme-scope="fixed:<id>"]` and holding the group's COMPLETE
+ * values — resolved over the schema defaults exactly like a selected theme, so
+ * nothing from the surrounding app's theme reaches the region.
+ *
+ * A fixed theme is one color scheme in both modes, so the `scheme` half of the
+ * resolution is written under both the light and the dark selector.
+ *
+ * Painted for as long as it is contributed (not when a region wearing it
+ * mounts), and never pending — it resolves against itself alone — so it is in
+ * the pre-paint cache and on screen in the first commit.
+ */
+export function FixedThemeStyles() {
+  const fixedThemes = ThemeEngine.FixedTheme.useContributions();
+  const groups = ThemeEngine.TokenGroup.useContributions();
+
+  const seen = new Set<string>();
+  for (const fixed of fixedThemes) {
+    if (seen.has(fixed.id)) {
+      throw new Error(
+        `[theme-engine] two fixed themes claim the id "${fixed.id}" — fixed theme ids must be unique.`,
+      );
+    }
+    seen.add(fixed.id);
+  }
+
+  return (
+    <>
+      {fixedThemes.map((fixed) => (
+        <FixedThemeScopeStyles key={fixed.id} fixed={fixed} groups={groups} />
+      ))}
+    </>
+  );
+}
+
+function FixedThemeScopeStyles({
+  fixed,
+  groups,
+}: {
+  fixed: FixedTheme;
+  groups: readonly TokenGroupContribution[];
+}) {
+  const { theme, skipped } = useMemo(
+    () =>
+      resolveFixedTheme(
+        fixed,
+        groups.map((g) => g.descriptor),
+      ),
+    [fixed, groups],
+  );
+  useReportFaults(skippedFaults(skipped));
+  const scopeToken = fixedThemeScope(fixed);
+
+  return (
+    <>
+      {groups.map((g) => {
+        const painted = theme.groups[g.id]![fixed.scheme];
+        return (
+          <GroupStyle
+            key={g.id}
+            group={g}
+            values={{ light: painted, dark: painted }}
+            colorAdjust={theme.colorAdjust}
+            scopeToken={scopeToken}
+          />
+        );
+      })}
+    </>
+  );
 }
 
 function definedValues(values: TokenValues): Record<string, string> {

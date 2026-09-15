@@ -6,7 +6,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Apps, useActiveApp } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
-import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
+import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 
 export function AppRail() {
@@ -16,30 +16,19 @@ export function AppRail() {
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
   const { focusedTabId, replaceTabApp } = useTabs();
-  // Docked/solo → wear the focused app's theme so the rail reads as one surface
-  // with it; floating/no-app → inherit the desktop `:root` theme (no attribute).
-  // See useChromeThemeScope.
-  const themeScope = useChromeThemeScope();
   return (
     <Theme
       as={Stack}
       align="center"
-      gap="xs"
-      // The rail is now a complete theme boundary. The portal forward is NEW:
-      // the rail carried the scope attribute and painted, but forwarded nothing,
-      // so a menu or tooltip opened from a rail button portaled out of the
-      // subtree and came back wearing the desktop theme instead of the app's.
-      name={themeScope}
-      // `canvas`, NOT `chrome`, and deliberately so: the rail is chrome
-      // furniture, but today it paints from the content palette (`--background`)
-      // while the tab strip beside it paints from the sidebar palette
-      // (`--sidebar`). Saying `chrome` here would restyle the rail, which is a
-      // real design question about its tone — filed as its own task — not
-      // something to smuggle into a mechanical conversion. Leave it as `canvas`
-      // until that question is answered.
-      surface="canvas"
+      gap="2xs"
+      // The rail wears the chrome's fixed theme, the same whichever app is
+      // focused — the frame never changes colour when the app inside does.
+      name={chromeThemeScope}
+      // The chrome frame's tone, the same ground the tab strip above paints, so
+      // the rail and the strip read as one L-shaped frame around the app.
+      surface="chrome"
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid rail sibling of the flexible body in the framing row; shrink-0 keeps its fixed width
-      className="relative z-nav w-(--app-rail-width) shrink-0 border-r pt-md"
+      className="relative z-nav w-(--app-rail-width) shrink-0 border-r py-xs"
     >
       <Apps.App.Render>
         {(entry) => (
@@ -52,13 +41,16 @@ export function AppRail() {
               onClick={
                 entry.onClick ?? (() => replaceTabApp(focusedTabId, entry.id))
               }
+              // Idle apps are dim and step up on hover; the selected app sits
+              // one step further (`accent`) in full text colour. Monochrome on
+              // purpose: the only accent on screen belongs to the app itself.
               className={cn(
-                "relative size-8 rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "relative size-7.5 rounded-md text-muted-foreground transition-colors hover:bg-hover-fill hover:text-foreground",
                 entry.id === activeAppId &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground",
+                  "bg-accent text-accent-foreground hover:bg-accent",
               )}
             >
-              <AppIconView icon={entry.icon} className="size-4" />
+              <AppIconView icon={entry.icon} className="size-4.5" />
               {entry.badge && (
                 <Pin to="top-right" offset="xs" decorative>
                   <entry.badge />

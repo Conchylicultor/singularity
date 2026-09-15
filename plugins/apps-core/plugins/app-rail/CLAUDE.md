@@ -10,8 +10,8 @@
     - `apps-core.Apps`
     - `apps-core.useActiveApp`
     - `apps-core/app-icon.AppIconView`
+    - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useTabs`
-    - `apps-core/theme-scope.useChromeThemeScope`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`

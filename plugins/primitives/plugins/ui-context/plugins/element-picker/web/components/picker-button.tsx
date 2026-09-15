@@ -1,5 +1,8 @@
 import { MdAdsClick } from "react-icons/md";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  IconButton,
+  type IconButtonProps,
+} from "@plugins/primitives/plugins/icon-button/web";
 import type { UiContextMeta } from "@plugins/primitives/plugins/ui-context/core";
 import { ElementPicker } from "./element-picker";
 
@@ -12,9 +15,12 @@ import { ElementPicker } from "./element-picker";
 export function PickerButton({
   onPick,
   label = "Pick UI element",
+  variant,
 }: {
   onPick: (meta: UiContextMeta) => void;
   label?: string;
+  /** The button's look — ghost by default; `outline` as a segment of a split pill. */
+  variant?: IconButtonProps["variant"];
 }) {
   return (
     <ElementPicker
@@ -29,6 +35,7 @@ export function PickerButton({
         <IconButton
           icon={MdAdsClick}
           label={label}
+          variant={variant}
           disabled={armed}
           onClick={arm}
         />

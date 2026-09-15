@@ -14,19 +14,23 @@ export interface TabVariantContribution {
   match: string;
   component: ComponentType<TabProps>;
   /**
-   * Strip geometry hint read by the host (`AppTabBar`), not per-tab. When true,
-   * tabs fill the strip's full height and the strip drops its centering moat
-   * (no bottom padding, no `border-b`) so the active tab's bottom edge IS the
-   * content seam — the "folder" look (a content-colored notch in the recessed
-   * strip, fused with the content below, à la Chrome). When false/undefined the
-   * strip centers compact tabs with breathing room and a bottom border (the
-   * floating-pill look of chip/underline). This is a strip-level property of the
-   * *active* variant — the strip's vertical layout differs between a folder and
-   * a floating pill — so a single padded-and-centered strip can't serve both;
-   * the host switches on it.
+   * Strip geometry read by the host (`AppTabBar`), not per-tab — the strip's
+   * vertical layout differs between the variants, so one strip can't serve all
+   * of them and the host switches on the ACTIVE variant's value:
+   *
+   * - `padded` (default) — compact tabs centred with breathing room above a
+   *   bottom border: the floating-pill look (chip).
+   * - `flush` — tabs fill the strip's full height and the bottom border stays,
+   *   so a mark on a tab's bottom edge lands ON that border: the underline look.
+   * - `folder` — tabs fill the full height and the strip drops its bottom
+   *   border too, so the active tab's bottom edge IS the content seam: a
+   *   content-coloured notch fused with the content below, à la Chrome.
    */
-  fillHeight?: boolean;
+  strip?: TabStrip;
 }
+
+/** How a tab variant wants the strip laid out — see {@link TabVariantContribution.strip}. */
+export type TabStrip = "padded" | "flush" | "folder";
 
 export const TabBar = {
   Variant: defineSlot<TabVariantContribution>({

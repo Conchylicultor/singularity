@@ -1,6 +1,6 @@
-import type { ComponentProps } from "react"
+import type { ComponentProps } from "react";
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 
 /**
  * ButtonGroup joins 2+ controls into a single segmented/split control.
@@ -20,8 +20,23 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
  * the `in-data-[slot=button-group]:rounded-lg` rule already baked into the
  * Button size variants, then squares the inner corners and collapses the
  * doubled border between adjacent segments into a single seam.
+ *
+ * `shape="pill"` rounds the group's two OUTER ends fully — the split pill: a
+ * main action with its companions as segments, read as one capsule. It is a
+ * group property, not a Button one: `<Button shape="pill">` rounds all four
+ * corners of one button, which inside a group would round the seams too.
+ *
+ * A `display:contents` child is see-through: the segment is the element inside
+ * it. That is the box a slot contribution rendered with `renderIsolated` sits
+ * in (it carries the contribution's lineage attributes and generates no box),
+ * so a group can take segments other plugins contribute.
  */
-function ButtonGroup({ className, children, ...props }: ComponentProps<"div">) {
+function ButtonGroup({
+  className,
+  children,
+  shape = "default",
+  ...props
+}: ComponentProps<"div"> & { shape?: "default" | "pill" }) {
   return (
     <div
       data-slot="button-group"
@@ -30,15 +45,18 @@ function ButtonGroup({ className, children, ...props }: ComponentProps<"div">) {
         // Segment radii: first child keeps its left corners, last child keeps
         // its right corners, every inner corner is squared.
         "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:last-child)]:rounded-r-none",
+        "[&>.contents:not(:first-child)>*]:rounded-l-none [&>.contents:not(:last-child)>*]:rounded-r-none",
+        shape === "pill" &&
+          "[&>*:first-child]:rounded-l-full [&>*:last-child]:rounded-r-full [&>.contents:first-child>*]:rounded-l-full [&>.contents:last-child>*]:rounded-r-full",
         // Collapse the doubled border between adjacent segments into one seam.
-        "[&>*:not(:first-child)]:-ml-px",
-        className
+        "[&>*:not(:first-child)]:-ml-px [&>.contents:not(:first-child)>*]:-ml-px",
+        className,
       )}
       {...props}
     >
       {children}
     </div>
-  )
+  );
 }
 
-export { ButtonGroup }
+export { ButtonGroup };

@@ -333,6 +333,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `DropdownMenuSubContent`
     - `DropdownMenuSubTrigger`
     - `DropdownMenuTrigger`
+    - `fixedThemeScope`
     - `iconSizeFor`
     - `Input`
     - `isSubThemeScope`
@@ -412,6 +413,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
   - Imported by:
     - `active-data/task`
     - `apps-core/app-rail`
+    - `apps-core/chrome-theme`
     - `apps-core/layout`
     - `apps-core/surface`
     - `apps-core/surface/floating`

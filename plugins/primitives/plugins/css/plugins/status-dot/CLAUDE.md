@@ -36,6 +36,7 @@ no-provider default is `md`.
     - `apps/studio/compositions/release`
     - `apps/studio/compositions/release/release-info`
     - `apps/website/landing/fork`
+    - `build`
     - `build/build-status`
     - `config_v2/settings`
     - `conversations/agents`

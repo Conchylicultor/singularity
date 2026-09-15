@@ -5,7 +5,7 @@ import { tabBarConfig } from "./config";
 /**
  * The single source of truth for "which tab variant is active" — the configured
  * variant, falling back to the first registered one. Both the per-tab dispatcher
- * (`Tab`) and the strip host (`AppTabBar`, for `fillHeight`) read it, so they can
+ * (`Tab`) and the strip host (`AppTabBar`, for `strip`) read it, so they can
  * never disagree about the active variant. Returns the (sealed) contribution as
  * exposed by the slot; the render site casts it for `renderIsolated`.
  */

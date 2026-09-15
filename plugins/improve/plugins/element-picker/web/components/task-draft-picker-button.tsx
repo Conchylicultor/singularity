@@ -5,7 +5,7 @@ import { PickerButton } from "@plugins/primitives/plugins/ui-context/plugins/ele
 /**
  * Draft-form entry: pick an element and inject its `<ui-context/>` tag into the
  * head card at the caret. Pick several elements in a row and each lands as its
- * own chip, where the cursor was. The ActionBar twin (`ElementPickerButton`)
+ * own chip, where the cursor was. The Improve-pill twin (`ElementPickerButton`)
  * reaches the same insertion path from outside the form.
  */
 export function TaskDraftPickerButton({ insertText }: TaskDraftActionProps) {

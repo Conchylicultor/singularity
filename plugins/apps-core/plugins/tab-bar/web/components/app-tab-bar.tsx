@@ -20,12 +20,13 @@ import {
 import { Tab, useActiveTabVariant } from "@plugins/ui/plugins/tab-bar/web";
 import { Apps } from "@plugins/apps-core/web";
 import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
-import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
+import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import {
   useTabs,
   placementIsNewTabFollows,
   usePlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
+import { ChromeMark } from "./chrome-mark";
 
 /** Bar-item id of the trailing `+`; tab ids are uuids, so it can't collide. */
 const NEW_TAB_ITEM_ID = "new-tab";
@@ -63,16 +64,14 @@ export function AppTabBar() {
     titles,
   } = useTabs();
   const apps = Apps.App.useContributions();
-  // Docked/solo → wear the focused app's theme so the tab bar reads as one
-  // surface with it; floating/no-app → inherit the desktop `:root` theme (no
-  // attribute). See useChromeThemeScope.
-  const themeScope = useChromeThemeScope();
 
-  // The active variant decides the strip's vertical geometry. A "folder" variant
-  // (connected) fills tabs to full height and removes the strip's centering moat
-  // (bottom padding + border-b) so the active tab's bottom edge is the content
-  // seam; chip/underline keep centered, padded, bottom-bordered tabs.
-  const fillHeight = !!useActiveTabVariant()?.fillHeight;
+  // The active variant decides the strip's vertical geometry (see the variant's
+  // `strip`): `padded` centres compact tabs above a bottom border; `flush` and
+  // `folder` stretch every tab to the strip's full height — `flush` keeping the
+  // border so an underline lands on it, `folder` dropping it so the active tab's
+  // bottom edge is the content seam.
+  const strip = useActiveTabVariant()?.strip ?? "padded";
+  const fillHeight = strip !== "padded";
 
   // The surface mode determines how `+` reads: in windows mode it opens a "new
   // window", otherwise a "new tab". Either way `openTab` adds a tab under the
@@ -109,8 +108,9 @@ export function AppTabBar() {
         // forward that used to be a separate wrapper outside `GrowRelay.Stop`,
         // and the paint. (Context crosses the DOM freely, so collapsing the
         // wrapper onto the strip itself changes nothing about what portaled
-        // popovers read.)
-        name={themeScope}
+        // popovers read.) It wears the chrome's fixed theme, the same whichever
+        // app is focused, and so does everything opened from it.
+        name={chromeThemeScope}
         // The tab strip is chrome frame (like the sidebar/rail), so it wears the
         // recessed `--sidebar` surface — distinct from `--background`. That
         // figure/ground gap is what lets the active "connected" tab (which is
@@ -123,15 +123,20 @@ export function AppTabBar() {
         // trailing action zone hovers to `--sidebar-accent`, not to the page
         // canvas's `--muted`, which would read as no hover at all).
         surface="chrome"
-        // When fillHeight, the strip drops its bottom padding AND its border-b so
-        // the full-height active tab's bottom edge IS the content seam (no moat,
-        // no line) — the recessed color step alone separates strip from content.
+        // One chrome-bar height whatever the variant. A `folder` strip drops
+        // its border-b so the full-height active tab's bottom edge IS the
+        // content seam (no line) — the colour step alone separates strip from
+        // content. Idle controls in the strip (the `+`, the action bar's icons)
+        // read the muted text colour and step up to full on hover.
         // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body
         className={cn(
-          "shrink-0 px-xs",
-          fillHeight ? "pt-2xs" : "border-b py-2xs",
+          "h-chrome-bar shrink-0 pr-sm text-muted-foreground",
+          strip === "padded" && "border-b py-2xs",
+          strip === "flush" && "border-b",
+          strip === "folder" && "pt-2xs",
         )}
       >
+        <ChromeMark />
         {/* The bar IS the strip's grow cell (`min-w-0 flex-1`), which is why the
         old `flex-1` spacer below the `+` is gone: a second claimant on the
         same slack would leave the bar reading half the width it actually has,
@@ -223,7 +228,7 @@ interface TabChipProps {
   badge?: ComponentType<{ className?: string }>;
   label: string;
   active: boolean;
-  /** Full-height strip (folder variant) — the wrapper fills the row so the
+  /** Full-height strip (flush / folder variants) — the wrapper fills the row so the
    *  variant's own `h-full` can reach the bottom seam. */
   fillHeight?: boolean;
   onActivate?: () => void;
