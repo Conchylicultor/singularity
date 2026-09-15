@@ -10,7 +10,7 @@ import {
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getPluginStaleness, getPluginHealthTasks } from "../../core/endpoints";
+import { getPluginStaleness, getPluginHealthTasks } from "../../core";
 import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
 import type {
   PluginHealthReview,

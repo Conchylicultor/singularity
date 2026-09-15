@@ -5,6 +5,6 @@ export {
   extractAttachmentIds,
   isAttachmentUrl,
   rewriteAttachmentMarkdown,
-} from "../../core/internal/markdown";
-export { imageNode } from "../../core/node";
-export type { ImageFields } from "../../core/node";
+  imageNode,
+} from "../../core";
+export type { ImageFields } from "../../core";

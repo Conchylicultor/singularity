@@ -6,7 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import type { PluginNode } from "../../core/types";
+import type { PluginNode } from "../../core";
 import { PluginView } from "../slots";
 
 interface PluginDetailProps {
@@ -17,7 +17,11 @@ export function PluginDetail({ node }: PluginDetailProps) {
   if (!node) {
     return (
       <Center axis="both" className="h-full p-2xl text-center">
-        <Text as="div" variant="body" className="max-w-sm text-muted-foreground">
+        <Text
+          as="div"
+          variant="body"
+          className="max-w-sm text-muted-foreground"
+        >
           Select a plugin to inspect what would be included in its release.
         </Text>
       </Center>
@@ -49,7 +53,11 @@ export function PluginDetail({ node }: PluginDetailProps) {
             </Stack>
           </Text>
           {node.description && (
-            <Text as="p" variant="body" className="max-w-prose text-muted-foreground">
+            <Text
+              as="p"
+              variant="body"
+              className="max-w-prose text-muted-foreground"
+            >
               {node.description}
             </Text>
           )}

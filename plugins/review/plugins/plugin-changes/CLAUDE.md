@@ -63,7 +63,9 @@
     - `PluginChangeDiff`
     - `PluginChangesResponse`
     - `PluginReviewProps`
-  - Exports (values): `getPluginChanges`
+  - Exports (values):
+    - `getPluginChanges`
+    - `PluginChangesSchema`
 - Cross-plugin:
   - Imported by:
     - `plugin-meta/facets/contributions/render-diff`

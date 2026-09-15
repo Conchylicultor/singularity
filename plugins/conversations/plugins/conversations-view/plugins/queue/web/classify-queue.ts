@@ -4,7 +4,7 @@ import type {
   TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { QueueData } from "../core/resources";
+import type { QueueData } from "../core";
 
 /** A live conversation carrying its resolved queue rank and pin. */
 export type RankedConversation = Conversation & { rank: Rank; pinned: boolean };

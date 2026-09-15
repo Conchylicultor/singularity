@@ -10,8 +10,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
-import { getPluginFacetsTree } from "../core/endpoints";
-import type { PluginNode } from "../core/types";
+import { getPluginFacetsTree } from "../core";
+import type { PluginNode } from "../core";
 import { PluginDetail } from "./components/plugin-detail";
 
 export const pluginViewPane = Pane.define({

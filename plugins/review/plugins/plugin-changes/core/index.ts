@@ -6,4 +6,5 @@ export type {
   PluginChangesResponse,
   PluginReviewProps,
 } from "./protocol";
+export { PluginChangesSchema } from "./protocol";
 export { getPluginChanges } from "./endpoints";

@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { LaunchOptionDef } from "../core/internal/define";
+import type { LaunchOptionDef } from "../core";
 import { defineSlotFacade } from "@plugins/framework/plugins/web-sdk/core";
 
 /**

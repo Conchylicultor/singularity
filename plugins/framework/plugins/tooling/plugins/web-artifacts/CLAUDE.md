@@ -52,6 +52,14 @@ Key invariants:
   `@plugins/<path>/<folder>` barrel (never inlined); vendors are one esbuild
   split build so stateful transitives are shared. Guarded by the
   `web-artifacts:no-vendored-state-inlined` check.
+- **Across own folders, only the barrel is importable.** The rewrite above
+  accepts only the barrel spelling (`../core`, `@plugins/<own>/core`) and
+  throws on a deep path (`../core/x`). Rewriting a deep path made it mean the
+  barrel in the browser while `tsc` read the file, so a symbol the barrel did
+  not export passed every check and failed ~5 minutes later at compose. The
+  `runtime-isolation/no-deep-own-folder-import` lint rule rejects the same
+  import in the editor for every browser-built folder (`web`, `core`,
+  `shared`, `fixtures`); the throw covers what lint cannot see.
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is

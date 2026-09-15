@@ -1,2 +1,2 @@
-export { getBuildRunLogs, BuildLogsResponseSchema } from "../core/endpoints";
-export type { BuildStepLog, BuildLogsResponse } from "../core/endpoints";
+export { getBuildRunLogs, BuildLogsResponseSchema } from "../core";
+export type { BuildStepLog, BuildLogsResponse } from "../core";

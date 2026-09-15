@@ -8,7 +8,7 @@ export {
   browserBookmarksResource,
   BookmarkRowSchema,
   type BookmarkRow,
-} from "../core/resources";
+} from "../core";
 
 export default {
   description:

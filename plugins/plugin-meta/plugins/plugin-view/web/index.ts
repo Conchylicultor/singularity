@@ -10,7 +10,7 @@ export { PluginLink } from "./components/plugin-link";
 export { ConsumerList } from "./components/consumer-list";
 export { SubHeading } from "./components/sub-heading";
 export { PluginView as PluginViewSlots } from "./slots";
-export type { PluginNode, PluginTreePayload } from "../core/types";
+export type { PluginNode, PluginTreePayload } from "../core";
 export { RUNTIME_COLORS } from "./runtime-colors";
 export type { ExportRuntime } from "./runtime-colors";
 

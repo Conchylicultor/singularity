@@ -3,7 +3,7 @@ import {
   useQueryClient,
   type UseMutationResult,
 } from "@tanstack/react-query";
-import type { EndpointDef } from "../../core/define-endpoint";
+import type { EndpointDef } from "../../core";
 import { EndpointError, fetchEndpoint } from "./fetch-endpoint";
 
 // Global mutation meta type — available on any useMutation/useEndpointMutation call.

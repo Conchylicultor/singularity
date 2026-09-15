@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { isScannableFile, type PrototypeFolder } from "../core/validate";
+import { isScannableFile, type PrototypeFolder } from "../core";
 
 // Reading one prototype folder off disk, for the two callers that validate it:
 // the server's lister (over `~/.singularity/apps/prototypes/`) and the check (over

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
-import { restoreTrash } from "../../core/endpoints";
-import type { TrashOutcome } from "../../core/schemas";
+import { restoreTrash } from "../../core";
+import type { TrashOutcome } from "../../core";
 
 export interface UndoableTrashArgs {
   /** Human label for the history entry ("Delete Roadmap"). */

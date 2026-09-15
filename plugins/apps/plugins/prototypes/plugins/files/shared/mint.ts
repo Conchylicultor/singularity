@@ -2,8 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { newPrototypeId } from "../core/id";
-import { PROTOTYPE_ENTRY_FILE } from "../core/validate";
+import { newPrototypeId, PROTOTYPE_ENTRY_FILE } from "../core";
 import { openHistoryStore } from "./history/store";
 import { copyFolderOnce, seededTemplateDir } from "./template";
 

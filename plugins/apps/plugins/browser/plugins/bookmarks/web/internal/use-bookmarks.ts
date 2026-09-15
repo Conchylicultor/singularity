@@ -2,10 +2,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { addBookmark, deleteBookmark } from "../../shared/endpoints";
-import {
-  browserBookmarksResource,
-  type BookmarkRow,
-} from "../../core/resources";
+import { browserBookmarksResource, type BookmarkRow } from "../../core";
 
 /**
  * Shared read + mutate logic for the bookmark surfaces (star toggle + bar).

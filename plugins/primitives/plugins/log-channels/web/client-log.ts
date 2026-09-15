@@ -3,7 +3,7 @@ import {
   fetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { emitLogs, MAX_EMIT_LINES } from "../core/endpoints";
+import { emitLogs, MAX_EMIT_LINES } from "../core";
 
 // Browser console.log-style logging that persists to a per-worktree JSONL file
 // the agent can read with `tail`/`cat` — no browser/Playwright needed. Lines are

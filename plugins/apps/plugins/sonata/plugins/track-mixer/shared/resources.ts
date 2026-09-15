@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import { TrackViewRowSchema, type TrackViewRow } from "../core/schemas";
+import { TrackViewRowSchema, type TrackViewRow } from "../core";
 
-export type { TrackViewRow } from "../core/schemas";
+export type { TrackViewRow } from "../core";
 
 /**
  * Flat list of every persisted track-view override across all songs (mirrors

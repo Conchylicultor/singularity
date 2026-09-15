@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import type { PitchPlane } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { asPitchLayoutId, pitchLayoutConfig } from "../../core/config";
-import { pitchGeometry } from "../../core/geometry";
+import { asPitchLayoutId, pitchGeometry, pitchLayoutConfig } from "../../core";
 
 /**
  * The ACTIVE layout's plane for a requested range — the one read every renderer

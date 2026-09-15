@@ -9,8 +9,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { usePageNavigation } from "@plugins/page/plugins/page-reference/web";
-import { backlinksResource } from "../../core/resources";
-import type { BacklinkRow } from "../../core/schemas";
+import { backlinksResource } from "../../core";
+import type { BacklinkRow } from "../../core";
 
 export interface BacklinksProps {
   /** The target page whose backlinks (referencing pages) to show. */

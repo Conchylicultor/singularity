@@ -15,7 +15,7 @@ import type {
   LongTask,
   AssetTiming,
   BootTrace,
-} from "../../core/types";
+} from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];

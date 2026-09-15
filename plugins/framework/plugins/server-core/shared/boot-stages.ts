@@ -3,10 +3,15 @@ import {
   computeLoadWaves,
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
+// eslint-disable-next-line runtime-isolation/no-deep-own-folder-import -- the boot-mode SETTER stays off the core barrel on purpose (only the boot sequence may call it), and server-core ships no browser bundle
 import { setBootMode } from "../core/boot-mode";
-import { collectContributions } from "../core/contributions";
-import { profilerStart, recordMemoryCheckpoint } from "../core/profiler";
-import type { LoadedServerPlugin, ServerPluginDefinition } from "../core/types";
+import {
+  collectContributions,
+  profilerStart,
+  recordMemoryCheckpoint,
+  type LoadedServerPlugin,
+  type ServerPluginDefinition,
+} from "../core";
 
 // ── The boot sequence, once, for both boot MODES ────────────────────────────
 //

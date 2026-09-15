@@ -1,5 +1,5 @@
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { Report } from "../core/resources";
+import type { Report } from "../core";
 import { ReportSummaryFallback } from "./internal/report-summary-fallback";
 
 // Per-kind report rendering registry. Each report kind contributes one KindView

@@ -1,4 +1,4 @@
-import { compareTxWatermark } from "../core/watermark";
+import { compareTxWatermark } from "../core";
 
 // Client-side registry of the newest commit watermark seen per (key, params) —
 // the causal floor the optimistic-mutation primitive compares mutation ack

@@ -57,19 +57,18 @@ export {
   keyedResourceDescriptor,
   centralResourceDescriptor,
   resourceDescriptorByKey,
-} from "../core/resource";
-export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";
-export {
   windowResourceDescriptor,
   pointResourceDescriptor,
-} from "../core/window";
+} from "../core";
 export type {
+  ResourceDescriptor,
+  ResourceOrigin,
   WindowResourceDescriptor,
   PointResourceDescriptor,
   WindowParams,
   PointParams,
   WindowSelector,
-} from "../core/window";
+} from "../core";
 export {
   useWindowResource,
   usePointResource,

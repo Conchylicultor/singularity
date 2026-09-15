@@ -70,29 +70,41 @@ const ARTIFACT_DEFINE: Record<string, string> = {
   "process.env.NODE_ENV": JSON.stringify("production"),
 };
 
+/** Path segments below an own folder that still name its barrel. */
+function isBarrelPath(below: readonly string[]): boolean {
+  return (
+    below.length === 0 ||
+    (below.length === 1 && /^index\.(ts|tsx|js)$|^index$/.test(below[0]!))
+  );
+}
+
 /**
  * Route EVERY import that lands in one of the plugin's own NON-inlined folders
- * through that folder's external `@plugins/<path>/<folder>` barrel — the barrel
- * itself AND deep files (`../core/resource`, `@plugins/<own>/core/x`). One URL =
- * one module instance: inlining any such file next to the artifact everyone
- * else loads would double-instantiate its module state (live-state's descriptor
- * registry and config_v2's descriptor identities were real casualties, and the
- * Layout Lab ran two copies of a plugin's web module for the same reason).
- * It is also what keeps the artifact's address honest: only the inlined roots
- * are hashed, so any other own folder reaching the bytes would fossilise the
- * artifact — see `../own-roots.ts`.
+ * through that folder's external `@plugins/<path>/<folder>` barrel. One URL =
+ * one module instance: inlining any file of that folder next to the artifact
+ * everyone else loads would double-instantiate its module state (live-state's
+ * descriptor registry and config_v2's descriptor identities were real
+ * casualties, and the Layout Lab ran two copies of a plugin's web module for
+ * the same reason). It is also what keeps the artifact's address honest: only
+ * the inlined roots are hashed, so any other own folder reaching the bytes
+ * would fossilise the artifact — see `../own-roots.ts`.
  *
  * Which folders are inlined is `inlinedRootsFor(kind)`, so the rule needs no
  * per-kind special case: building `core` inlines core's internal edges because
  * `core` IS its inlined root, and building `web` never reaches a file under
- * `core/` at all because every entry into it is rewritten here.
+ * `core/` at all because every entry into it is rewritten (or refused) here.
  *
- * Named bindings are preserved by the rewrite, so a deep import of a symbol the
- * target barrel does not re-export fails LOUDLY as a missing-export error at
- * load — the fix is to re-export it from the barrel (own symbols consumed
- * across a folder boundary are public API by construction).
+ * Only the BARREL spelling is rewritten; a deep path (`../core/resource`,
+ * `@plugins/<own>/core/x`) is refused. Rewriting it would make the import mean
+ * the barrel in the browser while `tsc` reads it as the file, so a symbol the
+ * barrel does not export type-checked green and failed only at compose, ~5
+ * minutes into a build. Own symbols consumed across a folder boundary are the
+ * folder's public API by construction — export them from its barrel. The
+ * `runtime-isolation/no-deep-own-folder-import` lint rule catches the same
+ * import in the editor; this throw is for what lint cannot see (generated
+ * files, disabled lines, `--skip-checks`).
  */
-function ownFolderBarrelPlugin(
+export function ownFolderBarrelPlugin(
   pluginPath: string,
   pluginDir: string,
   kind: string,
@@ -116,10 +128,20 @@ function ownFolderBarrelPlugin(
       if (target === null) return null;
       const rel = relative(pluginDir, target);
       if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) return null; // outside our tree
-      const folder = rel.split(sep)[0]!;
+      const [folder, ...below] = rel.split(sep) as [string, ...string[]];
       if (folder === "node_modules") return null; // plugin-local npm deps
       if (folder === "plugins") return null; // sub-plugins are other plugins (external by specifier)
       if (inlinedRoots.includes(folder)) return null;
+      if (!isBarrelPath(below)) {
+        throw new Error(
+          `web-artifact ${pluginPath} (kind "${kind}"): ${importer} imports "${id}", a file ` +
+            `inside the plugin's own "${folder}/". The browser can only load "${folder}/" as ` +
+            `its barrel artifact (@plugins/${pluginPath}/${folder}), so this import would ` +
+            `silently mean the barrel — and fail at compose if the barrel does not export ` +
+            `what it names. Import from the "${folder}/" barrel and export the symbol from ` +
+            `${folder}/index.ts (lint: runtime-isolation/no-deep-own-folder-import).`,
+        );
+      }
       if (!existsSync(join(pluginDir, folder, "index.ts"))) {
         throw new Error(
           `web-artifact ${pluginPath} (kind "${kind}"): ${importer} imports "${id}", which ` +

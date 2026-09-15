@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import type { ResourceOrigin } from "../core/resource";
+import type { ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
 import { noteResourceWatermark } from "./watermark-registry";
 import { noteResourceTxAcks } from "./tx-ack-registry";

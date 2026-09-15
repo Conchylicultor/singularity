@@ -1,7 +1,4 @@
-import {
-  PROTOTYPE_VERSION_KINDS,
-  type PrototypeVersionKind,
-} from "../../core/history";
+import { PROTOTYPE_VERSION_KINDS, type PrototypeVersionKind } from "../../core";
 
 // A version's commit message — the one place its format is written AND read.
 //

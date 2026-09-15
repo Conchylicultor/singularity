@@ -3,7 +3,7 @@ import {
   type UseQueryResult,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import type { EndpointDef } from "../../core/define-endpoint";
+import type { EndpointDef } from "../../core";
 import { fetchEndpoint, EndpointError } from "./fetch-endpoint";
 import { endpointQueryKey } from "./query-key";
 

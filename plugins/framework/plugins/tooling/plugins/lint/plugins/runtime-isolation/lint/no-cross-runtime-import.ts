@@ -1,4 +1,5 @@
 import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { locate, ownTargetOf, toPosix } from "./own-tree";
 
 /**
  * no-cross-runtime-import
@@ -48,73 +49,6 @@ const FORBIDDEN: Record<string, ReadonlySet<string>> = {
   central: new Set(["web", "provision"]),
 };
 
-/** Normalize a path to `/` separators (the rule reasons in posix segments). */
-function toPosix(p: string): string {
-  return p.split("\\").join("/");
-}
-
-/**
- * Walk the alternating `<name>(/plugins/<name>)*` grammar a plugin dir follows,
- * from `segs[start]`, and return the index of the plugin dir's LAST segment.
- * The plugin dir ends at the first non-`plugins` interstitial — a runtime folder.
- */
-function pluginDirEnd(segs: string[], start: number): number {
-  let i = start;
-  while (segs[i + 1] === "plugins" && segs[i + 2] !== undefined) i += 2;
-  return i;
-}
-
-/** The plugin dir and the runtime folder of an absolute source file, if any. */
-function locate(absPath: string): { pluginDir: string; folder: string } | null {
-  const segs = toPosix(absPath).split("/");
-  const pluginsRoot = segs.indexOf("plugins");
-  if (pluginsRoot === -1 || segs[pluginsRoot + 1] === undefined) return null;
-  const end = pluginDirEnd(segs, pluginsRoot + 1);
-  const folder = segs[end + 1];
-  if (folder === undefined) return null;
-  return { pluginDir: segs.slice(0, end + 1).join("/"), folder };
-}
-
-/**
- * Resolve a relative specifier against the importing file — pure segment
- * arithmetic, so the rule stays dependency-free like its siblings (no node:path,
- * no filesystem: the folder names are all this rule needs).
- */
-function resolveRelative(fromFile: string, specifier: string): string {
-  const out = toPosix(fromFile).split("/").slice(0, -1);
-  for (const seg of specifier.split("/")) {
-    if (seg === "" || seg === ".") continue;
-    if (seg === "..") out.pop();
-    else out.push(seg);
-  }
-  return out.join("/");
-}
-
-/**
- * The runtime folder a specifier names WITHIN the importing file's own plugin,
- * or null when the specifier leaves the plugin (or is a bare npm package).
- */
-function ownFolderOf(
-  specifier: string,
-  file: string,
-  source: { pluginDir: string },
-): string | null {
-  if (specifier.startsWith("./") || specifier.startsWith("../")) {
-    const target = locate(resolveRelative(file, specifier));
-    return target !== null && target.pluginDir === source.pluginDir
-      ? target.folder
-      : null;
-  }
-  if (!specifier.startsWith("@plugins/")) return null;
-  // The plugin's own absolute self-specifier: `@plugins/<own path>/<folder>`.
-  const segs = specifier.slice("@plugins/".length).split("/");
-  const end = pluginDirEnd(segs, 0);
-  const folder = segs[end + 1];
-  if (folder === undefined) return null;
-  const pluginPath = segs.slice(0, end + 1).join("/");
-  return source.pluginDir.endsWith(`/plugins/${pluginPath}`) ? folder : null;
-}
-
 export default createRule({
   name: "no-cross-runtime-import",
   meta: {
@@ -152,7 +86,7 @@ export default createRule({
     if (forbidden === undefined) return {};
 
     const report = (node: TSESTree.Node, specifier: string): void => {
-      const folder = ownFolderOf(specifier, file, source);
+      const folder = ownTargetOf(specifier, file, source)?.folder ?? null;
       if (folder === null || !forbidden.has(folder)) return;
       context.report({
         node,

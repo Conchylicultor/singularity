@@ -5,11 +5,7 @@ import {
   TaskGraph,
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import {
-  updateTask,
-  setTaskAutoStart,
-  clearTaskAutoStart,
-} from "../core/endpoints";
+import { updateTask, setTaskAutoStart, clearTaskAutoStart } from "../core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 // No `rank`: repositioning goes through the `moveTask` endpoint, which carries

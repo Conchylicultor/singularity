@@ -10,7 +10,7 @@ import {
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { triggerBuildEndpoint } from "../../core/endpoints";
+import { triggerBuildEndpoint } from "../../core";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";

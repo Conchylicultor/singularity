@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { sonataLookConfig } from "../core/config";
+import { sonataLookConfig } from "../core";
 
 // Registration + one view-option contribution is the WHOLE UI: the view-options
 // chip renders enum fields generically through FieldRenderer, so the Look switch

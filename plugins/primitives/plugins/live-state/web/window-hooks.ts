@@ -4,7 +4,7 @@ import type {
   PointResourceDescriptor,
   WindowResourceDescriptor,
   WindowSelector,
-} from "../core/window";
+} from "../core";
 
 /**
  * Subscribe to a bounded ordered window of a window resource. Defaults to the
@@ -17,7 +17,10 @@ export function useWindowResource<El>(
   window?: WindowSelector,
 ): ResourceResult<El[]> {
   const limit = window?.limit;
-  const params = useMemo(() => resource.window.encode({ limit }), [resource, limit]);
+  const params = useMemo(
+    () => resource.window.encode({ limit }),
+    [resource, limit],
+  );
   return useResource(resource, params);
 }
 

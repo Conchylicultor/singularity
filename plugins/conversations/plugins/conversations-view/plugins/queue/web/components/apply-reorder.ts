@@ -1,6 +1,6 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import type { QueueRankRow } from "../../core/resources";
+import type { QueueRankRow } from "../../core";
 
 export interface ReorderVars {
   conversationId: string;
@@ -25,7 +25,10 @@ export interface ReorderVars {
 // between drag-start and drop). The overlay drops such a stale op, so the
 // authoritative push still reconciles. Any other throw would be a real bug and
 // propagates loudly.
-export function applyReorder(rows: QueueRankRow[], vars: ReorderVars): QueueRankRow[] {
+export function applyReorder(
+  rows: QueueRankRow[],
+  vars: ReorderVars,
+): QueueRankRow[] {
   const { conversationId, targetId, zone } = vars;
   if (conversationId === targetId) return rows;
 
@@ -70,7 +73,8 @@ function rankAdjacentTo(
     const pred = targetIdx > 0 ? others[targetIdx - 1]!.rank : null;
     return safeBetween(pred, target);
   }
-  const succ = targetIdx < others.length - 1 ? others[targetIdx + 1]!.rank : null;
+  const succ =
+    targetIdx < others.length - 1 ? others[targetIdx + 1]!.rank : null;
   return safeBetween(target, succ);
 }
 

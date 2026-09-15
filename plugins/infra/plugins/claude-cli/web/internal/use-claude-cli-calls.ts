@@ -1,9 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  listClaudeCliCallsFor,
-  type ClaudeCliCallsResult,
-} from "../../core/endpoints";
+import { listClaudeCliCallsFor, type ClaudeCliCallsResult } from "../../core";
 
 /**
  * The model calls recorded for one domain record, oldest first.
@@ -23,6 +20,8 @@ export function useClaudeCliCalls(args: {
   return useEndpoint(
     listClaudeCliCallsFor,
     {},
-    { query: { correlationId: args.correlationId, occurredAt: args.occurredAt } },
+    {
+      query: { correlationId: args.correlationId, occurredAt: args.occurredAt },
+    },
   );
 }

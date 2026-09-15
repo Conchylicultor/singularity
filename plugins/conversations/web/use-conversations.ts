@@ -14,10 +14,15 @@ import {
   RECENT_GONE_LIMIT,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { isActiveStatus } from "../core";
-import { getConversation } from "../core/endpoints";
-import { type ConversationEntry } from "../core/resources";
+import {
+  fetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
+import {
+  isActiveStatus,
+  getConversation,
+  type ConversationEntry,
+} from "../core";
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
@@ -62,9 +67,13 @@ export function useConversation(id: string): ConversationEntry | null {
       rows.find((x) => x.id === id) ?? null,
     [id],
   );
-  const active = useResource(conversationsActiveResource, undefined, { select });
+  const active = useResource(conversationsActiveResource, undefined, {
+    select,
+  });
   const gone = useResource(conversationsGoneResource, undefined, { select });
-  const system = useResource(conversationsSystemResource, undefined, { select });
+  const system = useResource(conversationsSystemResource, undefined, {
+    select,
+  });
   // Priority active → gone (recentGone) → system, matching the previous order.
   const activeHit = active.pending ? null : active.data;
   const goneHit = gone.pending ? null : gone.data;
@@ -89,7 +98,10 @@ export function useHasActiveSiblings(
       active.some((c) => c.taskId === taskId && c.id !== excludeId),
     [taskId, excludeId],
   );
-  return useResource(conversationsActiveResource, undefined, { select, gate: true });
+  return useResource(conversationsActiveResource, undefined, {
+    select,
+    gate: true,
+  });
 }
 
 // Derived SLICE: is there another active conversation in this worktree? Used by
@@ -109,7 +121,10 @@ export function useHasActiveSiblingInWorktree(
       ),
     [worktreePath, excludeId],
   );
-  return useResource(conversationsActiveResource, undefined, { select, gate: true });
+  return useResource(conversationsActiveResource, undefined, {
+    select,
+    gate: true,
+  });
 }
 
 // The active conversations list. The whole keyed resource IS the active list,
@@ -123,7 +138,9 @@ export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
 // Point lookup by id. Checks the live WS-backed resource first (real-time
 // updates for recent conversations), falling back to a one-shot fetch for
 // conversations older than the sidebar's bounded recent-gone window.
-export function useConversationById(id: string | null): ConversationEntry | null {
+export function useConversationById(
+  id: string | null,
+): ConversationEntry | null {
   const liveConv = useConversation(id ?? "");
   const q = useQuery({
     queryKey: ["conversation", id],

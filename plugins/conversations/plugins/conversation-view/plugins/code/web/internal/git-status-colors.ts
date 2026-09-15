@@ -1,4 +1,4 @@
-import type { EditedFileStatus } from "../../core/protocol";
+import type { EditedFileStatus } from "../../core";
 
 /** Solid dot indicator class per git status. */
 const GIT_STATUS_DOT: Record<EditedFileStatus, string> = {
@@ -32,5 +32,7 @@ export function gitStatusDot(status: string): string {
 }
 
 export function gitStatusBadge(status: string): string {
-  return GIT_STATUS_BADGE[status as EditedFileStatus] ?? GIT_STATUS_BADGE.modified;
+  return (
+    GIT_STATUS_BADGE[status as EditedFileStatus] ?? GIT_STATUS_BADGE.modified
+  );
 }

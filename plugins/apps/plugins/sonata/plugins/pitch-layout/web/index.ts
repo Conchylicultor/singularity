@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { pitchLayoutConfig } from "../core/config";
+import { pitchLayoutConfig } from "../core";
 
 export { usePitchGeometry } from "./internal/use-pitch-geometry";
 

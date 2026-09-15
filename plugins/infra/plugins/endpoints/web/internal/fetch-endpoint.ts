@@ -2,8 +2,8 @@ import {
   fetchWithRetry,
   type FetchWithRetryOptions,
 } from "@plugins/primitives/plugins/networking/web";
-import type { EndpointDef } from "../../core/define-endpoint";
-import { extractMethod, interpolatePath } from "../../core/route-params";
+import type { EndpointDef } from "../../core";
+import { extractMethod, interpolatePath } from "../../core";
 import { endpointErrorSink } from "./error-reporter";
 
 export class EndpointError extends Error {

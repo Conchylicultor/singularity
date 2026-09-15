@@ -1,8 +1,8 @@
 import { existsSync, statSync } from "node:fs";
 import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { isPrototypeId } from "../../core/id";
-import type { PrototypeHistory, PrototypeVersion } from "../../core/history";
+import { isPrototypeId } from "../../core";
+import type { PrototypeHistory, PrototypeVersion } from "../../core";
 import { listPrototypeDirNames } from "../read-folder";
 import { historyGit, initBareRepo, type HistoryGit } from "./git";
 import { withHistoryLock } from "./lock";

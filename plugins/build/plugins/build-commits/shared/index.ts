@@ -1,1 +1,1 @@
-export { getBuildRunCommits } from "../core/endpoints";
+export { getBuildRunCommits } from "../core";

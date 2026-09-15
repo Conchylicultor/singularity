@@ -3,5 +3,5 @@ export {
   AgentSchema,
   AgentLaunchSchema,
   AgentLaunchWithStatusSchema,
-} from "../core/schemas";
-export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "../core/schemas";
+} from "../core";
+export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "../core";
