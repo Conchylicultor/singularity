@@ -325,6 +325,12 @@ export const compositionsConfig = defineConfig({
           "ui.tokens.font-family",
           "ui.tokens.sidebar-palette",
           "ui.tokens.shadow",
+          // `--chart-*`: a theme's chart fragment paints nothing unless this
+          // group is registered, and `ui.tokens.chart/core` (all a theme imports
+          // to spell those values) does not pull in the web half that registers
+          // it. equin.ai shipped that way — the hero's wash, its headline
+          // gradient and the developers' dot all read `--chart-1`.
+          "ui.tokens.chart",
         ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────

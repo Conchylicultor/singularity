@@ -1,4 +1,4 @@
-// @hash fb505fced0f0
+// @hash 62315c06c639
 {
   "manifests": [
     {
@@ -374,7 +374,8 @@
         "ui.tokens.type-scale.**",
         "ui.tokens.font-family.**",
         "ui.tokens.sidebar-palette.**",
-        "ui.tokens.shadow.**"
+        "ui.tokens.shadow.**",
+        "ui.tokens.chart.**"
       ],
       "selectedContributors": [],
       "extends": [],
