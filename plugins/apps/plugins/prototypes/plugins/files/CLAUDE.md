@@ -5,9 +5,16 @@ that drive gallery refresh and iframe auto-reload.
 
 ## Where the content lives: the `apps/prototypes` data dir (`prototypesDir`)
 
-This plugin DECLARES it (`data-dirs/index.ts`) and exports it from its server
-barrel — it creates the dir, seeds `_template/` into it, serves it and watches
-it. `thumbnails` takes the same declaration from here; never re-derive the path.
+This plugin creates the dir, seeds `_template/` into it, serves it and watches
+it — but it does not DECLARE it. The dir is the Prototypes app's one data dir,
+declared at the app root (`plugins/apps/plugins/prototypes/data-dirs/index.ts`,
+via `defineAppDataDir(prototypesApp, …)`), because an app owns exactly one
+`apps/<app>` dir and everything it keeps durably lives inside it. Every consumer
+(this plugin, `thumbnails`, the `prototypes` backup source, the main-edits
+guard) imports `prototypesDir` from `@plugins/apps/plugins/prototypes/data-dirs`
+directly; never re-derive the path, and never re-export it from a barrel.
+Something new that belongs to the app goes inside it
+(`prototypesDir.subdir("<area>")`), not in a second `apps/*` dir.
 
 Host-global, outside every checkout, and NOT in git. One shared set that every
 worktree backend and main serve, so a mock is visible on the always-running main
@@ -298,9 +305,9 @@ an fsevent parcel dropped, and on an idle machine it is a few stats that agree
 with the last few stats and end there.
 
 **This is the only watcher over that tree, so the signal is exported rather than
-re-derived**: `onPrototypesChanged` (plus `prototypesDir` and
-`listPrototypeMetas`) is what lets `thumbnails` react to an edit without a
-second `@parcel/watcher` subscription doubling every filesystem event.
+re-derived**: `onPrototypesChanged` (plus `listPrototypeMetas`) is what lets
+`thumbnails` react to an edit without a second `@parcel/watcher` subscription
+doubling every filesystem event.
 
 ## The check
 
@@ -346,7 +353,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `checkpointPrototype`
     - `listPrototypeMetas`
     - `onPrototypesChanged`
-    - `prototypesDir`
   - Resources:
     - `prototypes.history` (push)
     - `prototypes.list` (push)

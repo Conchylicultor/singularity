@@ -2,7 +2,12 @@
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
 import { DATA_DIR_KINDS } from "./data-dir";
-import type { DataDirKind } from "./data-dir";
+import type { DataDirRef } from "./data-dir";
+
+// `DataDirRef` is defined beside the registry now — `MovedFrom` needs it, and
+// this file imports `data-dir`, so defining it here would close a cycle. Still
+// re-exported, so this module's surface is unchanged.
+export type { DataDirRef } from "./data-dir";
 
 // Where every pre-registry entry under the data root sits TODAY, and where it
 // goes — ONE table, with two consumers that cannot drift from each other:
@@ -29,11 +34,6 @@ import type { DataDirKind } from "./data-dir";
 // Node-free by construction — no `node:fs`, no `node:path`. Every path below is
 // RELATIVE TO THE DATA ROOT and spelled with `/`. `planMigration` is pure: the
 // script supplies the filesystem facts and executes the returned steps.
-
-/**
- * A declared directory, spelled the way `getDataDirs()` keys it: `${kind}/${name}`.
- */
-export type DataDirRef = `${DataDirKind}/${string}`;
 
 export type LegacyMove =
   /**

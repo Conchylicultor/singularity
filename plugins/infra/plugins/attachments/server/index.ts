@@ -23,7 +23,7 @@ export type { AttachmentLink } from "./internal/define-link";
 
 export default {
   description:
-    "Attachments on disk (UUID-named under ~/.singularity/apps/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
+    "Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
   loadBearing: true,
   httpRoutes: {
     [uploadAttachment.route]: handleUpload,

@@ -47,17 +47,30 @@ export type {
 // it — the plain `SINGULARITY_DIR` string that used to sit above is gone, and
 // `paths:data-root-not-joined` fails on both ways back to it (joining the root,
 // or re-reading its environment variable).
+//
+// An app's ONE directory, `apps/<app>/`, comes from `defineAppDataDir` at the
+// app's root plugin instead — `defineDataDir` refuses the `apps` kind — and a
+// sub-plugin's space inside it is a `subdir()` area, never a second dir.
+// `META_APP_ROOTS` is the closed table of apps whose root is not
+// `apps/plugins/<id>`.
 export {
   DATA_DIR_KINDS,
+  META_APP_ROOTS,
   dataRoot,
+  defineAppDataDir,
   defineDataDir,
   getDataDirs,
   relativeToDataRoot,
 } from "./internal/data-dir";
 export type {
+  AppIdentity,
   DataDir,
+  DataDirArea,
+  DataDirInput,
   DataDirKind,
+  DataDirRef,
   DataDirSpec,
+  MovedFrom,
   ReclaimPolicy,
 } from "./internal/data-dir";
 

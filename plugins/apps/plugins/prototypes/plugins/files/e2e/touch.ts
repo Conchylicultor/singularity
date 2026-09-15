@@ -1,5 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
-import { prototypesDir } from "../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /**
  * Rewrite a prototype's `index.html` with its own bytes. The watcher sees the

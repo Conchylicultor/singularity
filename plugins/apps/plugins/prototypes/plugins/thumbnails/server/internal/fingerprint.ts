@@ -1,4 +1,4 @@
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { fingerprintDir } from "./hash-dir";
 
 /** The content fingerprint of one prototype folder — the thumbnail cache key. */

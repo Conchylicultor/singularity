@@ -1,6 +1,6 @@
 import { join, resolve, sep } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
-import { prototypesDir } from "../../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { TEMPLATE_DIR_NAME } from "../../shared/template";
 
 /**

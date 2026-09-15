@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { runHook } from "../core/runner";
 
 /**

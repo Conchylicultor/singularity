@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import type { Browser } from "playwright";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/server";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { classifyRenderOutcome } from "./decide";
 import { ThumbnailRenderError } from "./errors";

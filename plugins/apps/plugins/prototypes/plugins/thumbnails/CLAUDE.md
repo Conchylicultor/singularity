@@ -21,10 +21,11 @@ change are the same call.
 **The change signal is borrowed.** `files` owns the prototypes tree and already
 watches it; a second `@parcel/watcher` over the same tree doubles every event.
 So `files` exports `onPrototypesChanged` / `listPrototypeMetas` and this plugin
-listens instead of watching. `prototypesDir` comes from `files` too — `files`
-DECLARES that data dir (`data-dirs/`, `apps/prototypes`), so taking it from
-there is reading a symbol at its home, not a cross-plugin re-export. A data dir
-is declared exactly once, so re-deriving the path here would be the bug.
+listens instead of watching. `prototypesDir` comes from the app root's
+`data-dirs/` (`@plugins/apps/plugins/prototypes/data-dirs`, the app's one
+`apps/prototypes` dir) — imported at its home, never through `files`' barrel,
+which would be a cross-plugin re-export. A data dir is declared exactly once,
+so re-deriving the path here would be the bug.
 
 **The cache is content-addressed and host-global** (a `cache/`-kind data dir,
 `<sha256>.png` per prototype, `asset-mirror`'s shape).
@@ -139,7 +140,6 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Uses:
     - `apps/prototypes/files.listPrototypeMetas`
     - `apps/prototypes/files.onPrototypesChanged`
-    - `apps/prototypes/files.prototypesDir`
     - `infra/jobs.defineJob`
   - Register:
     - `defineJob('prototypes.render-thumbnail')`

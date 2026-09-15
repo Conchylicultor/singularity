@@ -11,8 +11,15 @@ its metadata read out of that HTML (`<title>`, `<meta name="description">`,
 harness, no tokens, no `meta.json`. `prototypes/CLAUDE.md` is the authoring
 contract; **do not edit a prototype from here without reading it.**
 
-This top-level plugin is an empty namespace (create-app rule). All content lives
-in sub-plugins:
+This top-level plugin is an empty namespace (create-app rule) with one
+exception: `data-dirs/index.ts` declares the app's ONE data dir,
+`apps/prototypes` (`prototypesDir`, via `defineAppDataDir(prototypesApp, …)`).
+It holds the prototype folders and their `_history/`; every sub-plugin that
+touches the tree imports it from `@plugins/apps/plugins/prototypes/data-dirs`,
+and anything new the app must keep durably goes inside it
+(`prototypesDir.subdir("<area>")`), never in a second `apps/*` dir. `shell/core`
+must never import it — the declaration reads `prototypesApp` from there. All
+other content lives in sub-plugins:
 
 - **`files`** — server-side raw file serving out of the data dir, seeding of the
   repo's `_template/` into it, the live-state

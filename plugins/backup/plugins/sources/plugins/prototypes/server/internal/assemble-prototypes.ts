@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { cp, readdir, stat } from "node:fs/promises";
 import { getConfig } from "@plugins/config_v2/server";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/plugins/files/data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { prototypesSourceConfig } from "../../shared/config";
 

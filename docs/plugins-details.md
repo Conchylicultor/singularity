@@ -2835,7 +2835,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `checkpointPrototype`
               - `listPrototypeMetas`
               - `onPrototypesChanged`
-              - `prototypesDir`
             - Resources:
               - `prototypes.history` (push)
               - `prototypes.list` (push)
@@ -3034,7 +3033,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `apps/prototypes/files.listPrototypeMetas`
               - `apps/prototypes/files.onPrototypesChanged`
-              - `apps/prototypes/files.prototypesDir`
               - `infra/jobs.defineJob`
             - Register:
               - `defineJob('prototypes.render-thumbnail')`
@@ -5476,6 +5474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (types):
       - `Placement`
       - `RailFramingProps`
+    - Exports (values): `desktopApp`
   - Plugins:
     - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
       - Web:
@@ -16274,7 +16273,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineAssetMirror`
           - `runAssetMirrorPrewarm`
           - `seedAssetMirrorCache`
-    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/apps/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`
         - Exports (types): `UploadedAttachment`
@@ -17689,13 +17688,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/namespace.namespaceFor`
           - `infra/spawn.getMainRepoRoot`
         - Exports (types):
+          - `AppIdentity`
           - `CheckoutDeploy`
           - `CheckoutDeployResolution`
           - `DataDir`
+          - `DataDirArea`
+          - `DataDirInput`
           - `DataDirKind`
+          - `DataDirRef`
           - `DataDirSpec`
           - `LegacyMove`
           - `MigrationStep`
+          - `MovedFrom`
           - `ReclaimPolicy`
           - `ReleaseIdentity`
         - Exports (values):
@@ -17710,6 +17714,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `currentWorktreeName`
           - `DATA_DIR_KINDS`
           - `dataRoot`
+          - `defineAppDataDir`
           - `defineDataDir`
           - `deploysForCheckout`
           - `getDataDirs`
@@ -17720,6 +17725,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `LEGACY_LAYOUT`
           - `listWorktreeDirs`
           - `MAIN_WORKTREE_NAME`
+          - `META_APP_ROOTS`
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifacts`
@@ -17803,9 +17809,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
       - Server:
         - Exports (types):
+          - `AppIdentity`
           - `DataDir`
+          - `DataDirArea`
+          - `DataDirInput`
           - `DataDirKind`
+          - `DataDirRef`
           - `DataDirSpec`
+          - `MovedFrom`
           - `ReclaimPolicy`
           - `ReleaseIdentity`
         - Exports (values):
@@ -17822,6 +17833,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `currentWorktreeName`
           - `DATA_DIR_KINDS`
           - `dataRoot`
+          - `defineAppDataDir`
           - `defineDataDir`
           - `getDataDirs`
           - `GIT`
@@ -17831,6 +17843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `isRelease`
           - `listWorktreeDirs`
           - `MAIN_WORKTREE_NAME`
+          - `META_APP_ROOTS`
           - `PGREP`
           - `PLUGINS_DIR`
           - `pruneWorktreeBuildArtifacts`

@@ -17,8 +17,9 @@ the answer differs by kind:
   card.
 
 **The image row deliberately shows no path.** An attached image lives at
-`~/.singularity/apps/attachments/<uuid>.png` — every one of the 60 in the
-sample — so its name identifies nothing a reader can use, and the path is not
+`~/.singularity/state/attachments/<uuid>.png` (`apps/attachments/` in older
+transcripts — every one of the 60 in the sample) — so its name identifies
+nothing a reader can use, and the path is not
 reachable from the file-peek pane either. The picture is its own identity. The
 raw payload is one click away on the row action strip for anyone who wants the
 blob name.

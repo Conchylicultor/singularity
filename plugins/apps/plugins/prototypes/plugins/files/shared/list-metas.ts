@@ -24,7 +24,7 @@ import {
   type PrototypeProblem,
 } from "../core";
 import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
-import { prototypesDir } from "../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /** Canvas size used when the HTML declares no `prototype-viewport`. */
 const DEFAULT_VIEWPORT = { w: 1280, h: 800 } as const;

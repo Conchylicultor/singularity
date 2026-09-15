@@ -1,7 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { listPrototypeDirNames } from "../../shared/read-folder";
-import { prototypesDir } from "../../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 /**
  * What the prototypes tree looks like right now, one comparable string per

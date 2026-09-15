@@ -6,7 +6,7 @@ import {
   restorePrototypeVersion,
   type PrototypeVersion,
 } from "../../core";
-import { prototypesDir } from "../../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   isFlatFileName,
   isVersionSha,

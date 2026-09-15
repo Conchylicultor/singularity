@@ -29,7 +29,7 @@ test("every root name the table accounts for is unique", () => {
   expect(dupes).toEqual([]);
 });
 
-test("every `to` names a <kind>/<name> that a declaration produces", async () => {
+test("every `to` names a <kind>/<name> that a declaration produces, or records as moved", async () => {
   // Evaluate every owner's `data-dirs/index.ts` — the `defineDataDir` calls in
   // them are what populate the registry.
   //
@@ -43,9 +43,22 @@ test("every `to` names a <kind>/<name> that a declaration produces", async () =>
     await import(`${REPO_ROOT}/${rel}`);
   }
   const declared = new Set(getDataDirs().keys());
+  // A `to` may also be a location some declaration records it MOVED AWAY from
+  // (`movedFrom.from`). The legacy shim then resolves in two hops —
+  // `attachments → apps/attachments → ../state/attachments` — and both hops are
+  // verified: this row's one hop by the audit's rule 2 (`readlinkSync`, one
+  // level), the second by the move's own rule-3 verification.
+  const movedAway = new Set(
+    [...getDataDirs().values()].flatMap((dir) =>
+      (dir.spec.movedFrom ?? []).map((move) => move.from),
+    ),
+  );
 
   const undeclared = LEGACY_LAYOUT.filter(
-    (row) => row.move !== "quarantine" && !declared.has(row.to),
+    (row) =>
+      row.move !== "quarantine" &&
+      !declared.has(row.to) &&
+      !movedAway.has(row.to),
   ).map((row) => `${row.from} → ${row.move === "quarantine" ? "" : row.to}`);
 
   expect(undeclared).toEqual([]);

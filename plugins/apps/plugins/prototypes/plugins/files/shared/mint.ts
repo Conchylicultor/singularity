@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { prototypesDir } from "../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { newPrototypeId } from "../core/id";
 import { PROTOTYPE_ENTRY_FILE } from "../core/validate";
 import { openHistoryStore } from "./history/store";

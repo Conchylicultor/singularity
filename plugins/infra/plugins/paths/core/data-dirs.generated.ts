@@ -13,10 +13,10 @@ export interface CollectedEntry {
 }
 
 export const dataDirsEntries: CollectedEntry[] = [
-  { pluginPath: "apps-core/plugins/surface/plugins/floating/plugins/wallpaper", id: "apps-core.surface.floating.wallpaper", loader: () => import("@plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/data-dirs"), dependsOn: [] },
-  { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps-core", id: "apps-core", loader: () => import("@plugins/apps-core/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/prototypes", id: "apps.prototypes", loader: () => import("@plugins/apps/plugins/prototypes/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/thumbnails", id: "apps.prototypes.thumbnails", loader: () => import("@plugins/apps/plugins/prototypes/plugins/thumbnails/data-dirs"), dependsOn: [] },
-  { pluginPath: "apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders", id: "apps.sonata.sources.midi.folders", loader: () => import("@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/sonata", id: "apps.sonata", loader: () => import("@plugins/apps/plugins/sonata/data-dirs"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/data-dirs"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/data-dirs"), dependsOn: [] },
   { pluginPath: "database/plugins/embedded", id: "database.embedded", loader: () => import("@plugins/database/plugins/embedded/data-dirs"), dependsOn: [] },

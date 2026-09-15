@@ -1,17 +1,26 @@
 import { writeFile, readFile } from "node:fs/promises";
-import { wallpaperDir } from "../../data-dirs";
+import { desktopDir } from "@plugins/apps-core/data-dirs";
 
-// Machine-global wallpaper store, in the `apps/wallpaper` data dir this plugin
-// declares. A SINGLETON: there is exactly one current desktop wallpaper, so the
-// image always lands at the same path (a fixed name) and is overwritten on each
-// save. The mime is sidecar metadata so the image route can serve the right
-// content-type after a restart.
+// Machine-global wallpaper store, at `apps/desktop/wallpaper/` — this plugin's
+// area inside the desktop meta-app's one data dir (`apps-core/data-dirs`). The
+// wallpaper is the desktop's content, not an app of its own, so it takes a
+// subdir there rather than declaring an `apps/*` dir. A SINGLETON: there is
+// exactly one current desktop wallpaper, so the image always lands at the same
+// path (a fixed name) and is overwritten on each save. The mime is sidecar
+// metadata so the image route can serve the right content-type after a restart.
 //
-// Functions, not consts: `DataDir.path` is a getter resolved per read, because
-// the data root is env-overridable and a value frozen at module eval would
-// capture whatever the environment said when this module was first imported.
-const imagePath = (): string => wallpaperDir.file("current");
-const metaPath = (): string => wallpaperDir.file("current.json");
+// Until main has moved them, the bytes still sit at the old `apps/wallpaper/`.
+// That is the desktop dir's business, not this file's: its `movedFrom` entry
+// resolves this area to the old location in every process that is not the host
+// singleton, so the store reads and writes the same bytes before and after.
+//
+// Functions, not consts — the subdir handle included: `DataDir.path` is
+// resolved per read, because the data root is env-overridable (and the pending
+// move settles at runtime), so a value frozen at module eval would capture
+// whatever was true when this module was first imported.
+const wallpaperArea = () => desktopDir.subdir("wallpaper");
+const imagePath = (): string => wallpaperArea().file("current");
+const metaPath = (): string => wallpaperArea().file("current.json");
 
 interface WallpaperMeta {
   mime: string;
@@ -45,7 +54,7 @@ export async function writeWallpaper(
   bytes: Uint8Array,
   mime: string,
 ): Promise<{ version: number; mime: string }> {
-  wallpaperDir.ensure();
+  wallpaperArea().ensure();
   const prev = await readMeta();
   const version = (prev?.version ?? 0) + 1;
   await writeFile(imagePath(), bytes);

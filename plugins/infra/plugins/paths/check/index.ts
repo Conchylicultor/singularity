@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readlinkSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type {
   Check,
   CheckContext,
@@ -16,11 +16,19 @@ import { checkoutWorktreeName } from "../core/internal/paths";
 import { dataDirsEntries } from "../core/data-dirs.generated";
 import {
   DATA_DIR_KINDS,
+  META_APP_ROOTS,
   dataRoot,
   getDataDirs,
   isDataDir,
+  moveDestination,
 } from "../core/internal/data-dir";
 import type { DataDir } from "../core/internal/data-dir";
+import {
+  DECLARATION_CALL_PATTERN,
+  evaluateDataDirDeclarations,
+  evaluateDeclarationCallSites,
+} from "../core/internal/app-data-dirs";
+import type { DataDirDeclaration } from "../core/internal/app-data-dirs";
 import {
   declaredSets,
   describeAttribution,
@@ -126,7 +134,7 @@ const noHardcodedPathsCheck: Check = {
     return {
       ok: false,
       message: `hardcoded path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, CLAUDE, TMUX) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — there is no root constant to join.",
+      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, REPO_ROOT) or `@plugins/infra/plugins/paths/server` (e.g. GIT, CLAUDE, TMUX) instead of constructing paths from homedir() or hardcoding binary paths. For anything under the singularity data root, declare it with `defineDataDir` — or, for an app's content, use an area of that app's one data dir (`defineAppDataDir` at the app's root, `.subdir(…)` from sub-plugins) — there is no root constant to join.",
     };
   },
 };
@@ -279,6 +287,17 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 //      moment the top level is seven kind dirs: `state` is a kind, so a
 //      hand-made `state/foo` would pass rule 1 forever.
 //
+//      The one other thing that may sit there is a declared MOVE's old location
+//      (`movedFrom.from` on some declaration — see `MovedFrom` in
+//      `core/internal/data-dir.ts`), verified the way rule 2 verifies a legacy
+//      name: the symlink the move planted, resolving to its destination; or,
+//      while the move is pending (main has not booted on the merged code yet),
+//      the real directory with its destination still absent. A real directory
+//      with its destination ALSO present is a split copy and fails. This runs
+//      before the foreign-manifest attribution, so a move's own old name is
+//      judged by the move rather than excused by some older checkout that still
+//      declares it.
+//
 // "DECLARED" MEANS DECLARED ON THIS MACHINE, not declared in this checkout.
 // Rules 1 and 3 both read the union of this checkout's registry and every other
 // live namespace's published manifest (`core/internal/data-dirs-manifest.ts`).
@@ -326,13 +345,21 @@ type RootNode =
 
 const ABSENT: RootNode = { node: "absent" };
 
+/**
+ * What sits at `name` — a root-relative `/`-path, top-level (`attachments`) or
+ * deeper (`apps/wallpaper`). A symlink's relative target is resolved against the
+ * LINK'S OWN directory, which is how the kernel reads it: `apps/wallpaper →
+ * desktop/wallpaper` means `apps/desktop/wallpaper`, not `desktop/wallpaper`. For
+ * a top-level name that directory is the root itself, so the legacy shims read
+ * exactly as they always did.
+ */
 function inspect(root: string, name: string): RootNode {
   const full = join(root, name);
   const st = lstatSync(full, { throwIfNoEntry: false });
   if (!st) return ABSENT;
   if (st.isSymbolicLink()) {
     const raw = readlinkSync(full);
-    const abs = isAbsolute(raw) ? raw : resolve(root, raw);
+    const abs = isAbsolute(raw) ? raw : resolve(dirname(full), raw);
     return {
       node: "symlink",
       target: relative(root, abs).split(sep).join("/"),
@@ -368,6 +395,19 @@ interface RootObservation {
   entries: string[] | null;
   /** kind → its listing. Kinds with no directory on disk are absent from the map. */
   kinds: Map<string, string[]>;
+  /**
+   * `${kind}/${child}` → what that entry IS, for every listed kind child. A
+   * listing says a name exists; a declared move's verdict turns on whether that
+   * name is a symlink (settled) or a real directory (pending, or a split copy),
+   * so the node itself is part of what the verdict reads.
+   */
+  kindNodes: Map<string, RootNode>;
+  /**
+   * For every kind child that is a symlink: what sits at its target. A settled
+   * move passes only while its shim resolves to the destination, so the target
+   * vanishing is a change the signature must see.
+   */
+  linkTargets: Map<string, RootNode>;
   /** Every legacy name the table accounts for → what actually sits there. */
   legacy: Map<string, RootNode>;
   /**
@@ -388,15 +428,33 @@ function observeRoot(): RootObservation {
   const root = dataRoot();
   const entries = readEntries(root);
   const kinds = new Map<string, string[]>();
+  const kindNodes = new Map<string, RootNode>();
+  const linkTargets = new Map<string, RootNode>();
   const legacy = new Map<string, RootNode>();
   const unmigratedKinds = new Map<string, string>();
   if (entries === null)
-    return { root, entries, kinds, legacy, unmigratedKinds };
+    return {
+      root,
+      entries,
+      kinds,
+      kindNodes,
+      linkTargets,
+      legacy,
+      unmigratedKinds,
+    };
 
   for (const kind of DATA_DIR_KINDS) {
     if (OPEN_KINDS.has(kind)) continue;
     const children = readEntries(join(root, kind));
-    if (children !== null) kinds.set(kind, children);
+    if (children === null) continue;
+    kinds.set(kind, children);
+    for (const child of children) {
+      const key = `${kind}/${child}`;
+      const node = inspect(root, key);
+      kindNodes.set(key, node);
+      if (node.node === "symlink")
+        linkTargets.set(key, inspect(root, node.target));
+    }
   }
   for (const entry of legacyRootEntries()) {
     legacy.set(entry.name, inspect(root, entry.name));
@@ -408,7 +466,15 @@ function observeRoot(): RootObservation {
     if (inspect(root, entry.destination).node !== "dir")
       unmigratedKinds.set(entry.name, entry.destination);
   }
-  return { root, entries, kinds, legacy, unmigratedKinds };
+  return {
+    root,
+    entries,
+    kinds,
+    kindNodes,
+    linkTargets,
+    legacy,
+    unmigratedKinds,
+  };
 }
 
 const SAMPLE_CAP = 10;
@@ -501,10 +567,77 @@ function verifyLegacy(entry: LegacyRootEntry, node: RootNode): string | null {
   }
 }
 
+/** A declared move's old location, as rule 3 needs it. */
+interface DeclaredMove {
+  /** Root-relative destination — the new dir, or its area. */
+  destination: string;
+  /** The declaration that records the move. */
+  declaredBy: string;
+}
+
+/** Every `movedFrom.from` this checkout declares → where it went and who says so. */
+function declaredMoves(
+  declared: ReadonlyMap<string, DataDir>,
+): Map<string, DeclaredMove> {
+  const out = new Map<string, DeclaredMove>();
+  for (const [key, dir] of declared)
+    for (const move of dir.spec.movedFrom ?? [])
+      out.set(move.from, {
+        destination: moveDestination(dir.spec, move),
+        declaredBy: key,
+      });
+  return out;
+}
+
+type MoveVerdict =
+  | { kind: "settled" }
+  | { kind: "pending" }
+  | { kind: "problem"; message: string };
+
+/**
+ * Verify one declared move's OLD location — the rule-3 twin of
+ * {@link verifyLegacy}, and it mirrors what the resolution in `data-dir.ts`
+ * does with the same two facts, so the audit and the mover cannot disagree
+ * about which state a root is in.
+ */
+function verifyMove(
+  from: string,
+  node: RootNode,
+  move: DeclaredMove,
+  destination: RootNode,
+): MoveVerdict {
+  switch (node.node) {
+    case "absent":
+      return { kind: "settled" };
+    case "symlink":
+      if (node.target === move.destination) return { kind: "settled" };
+      return {
+        kind: "problem",
+        message:
+          `${from} is ${describe(node)}, but ${move.declaredBy} records that it moved to ${move.destination} — ` +
+          `the shim at the old location must point there, or older checkouts write somewhere nobody reads.`,
+      };
+    case "dir":
+      if (destination.node === "absent") return { kind: "pending" };
+      return {
+        kind: "problem",
+        message:
+          `${from} and ${move.destination} are both present (${move.declaredBy} records that the first moved to the ` +
+          `second) — a SPLIT COPY. Every read of ${move.declaredBy} throws until a human merges them: move whatever ` +
+          `only ${from} holds into ${move.destination}, then replace ${from} with a relative symlink to it.`,
+      };
+    case "file":
+      return {
+        kind: "problem",
+        message: `${from} is ${describe(node)}, but ${move.declaredBy} records that a directory moved from there to ${move.destination}.`,
+      };
+  }
+}
+
 const noUndeclaredDataDirsCheck: Check = {
   id: "paths:no-undeclared-data-dirs",
   description:
-    "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>.",
+    "Every top-level entry under the singularity data root is a declared data dir (defineDataDir), one of the closed set of kinds, or a legacy name verified as the compatibility symlink to its declared target — and every entry INSIDE a kind directory is itself a declared <kind>/<name>, or a declared move's old location (movedFrom) verified as its shim or as a pending move.",
   // The subject is the MACHINE — one data root shared by every checkout on this
   // box, holding the union of every branch that has ever run here. Not the tree,
   // and not the dist this build produced, so no per-worktree caller can assert
@@ -537,6 +670,26 @@ const noUndeclaredDataDirsCheck: Check = {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([name, node]) => `${name}=${describe(node)}`),
       `unmigrated:${[...obs.unmigratedKinds.keys()].sort().join(",")}`,
+      // What each kind child IS, and what each symlinked one points at — the
+      // facts a declared move's verdict turns on (settled shim vs pending real
+      // directory). Derived from the root rather than from the registry, which
+      // is not loaded yet when the signature is taken: the move SET is a
+      // declaration, so the tree hash already covers it.
+      //
+      // One fact a move's verdict reads is NOT here: whether an AREA move's
+      // destination (`apps/desktop/wallpaper`) exists while its old location is
+      // still a real directory. Finding that path needs the registry. The gap is
+      // one transition — a pending move turning into a split copy — and the
+      // primitive never produces it (the mover renames; every other process
+      // writes the OLD location), so a cached pass can only be outlived by
+      // something writing the new location behind the primitive's back. The
+      // resolution itself throws on the first read of such a root.
+      ...[...obs.kindNodes.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, node]) => {
+          const target = obs.linkTargets.get(key);
+          return `${key}=${describe(node)}${target ? ` (target ${describe(target)})` : ""}`;
+        }),
     ];
     return createHash("sha256").update(lines.join("\n")).digest("hex");
   },
@@ -592,6 +745,9 @@ const noUndeclaredDataDirsCheck: Check = {
     const table = legacyRootEntries();
     const tableNames = new Set(table.map((e) => e.name));
     const offenders: string[] = [];
+    const moves = declaredMoves(declared);
+    /** Declared moves whose old location is still a real directory, for one log line. */
+    const pending: string[] = [];
 
     // Rule 1 — the top level. Every entry is a kind, a permanently-grandfathered
     // service, OS noise, or a name the legacy table accounts for.
@@ -640,13 +796,28 @@ const noUndeclaredDataDirsCheck: Check = {
         );
         continue;
       }
-      const candidates = children
-        .sort()
-        .filter(
-          (child) =>
-            !OS_NOISE.has(child) && !declaredKeys.has(`${kind}/${child}`),
-        )
-        .map((child) => `${kind}/${child}`);
+      const candidates: string[] = [];
+      for (const child of [...children].sort()) {
+        if (OS_NOISE.has(child)) continue;
+        const key = `${kind}/${child}`;
+        if (declaredKeys.has(key)) continue;
+        // A declared move's old location is judged by the move, BEFORE any
+        // foreign manifest gets a say — see the rule 3 block comment.
+        const move = moves.get(key);
+        if (move !== undefined) {
+          const verdict = verifyMove(
+            key,
+            obs.kindNodes.get(key) ?? ABSENT,
+            move,
+            inspect(obs.root, move.destination),
+          );
+          if (verdict.kind === "pending")
+            pending.push(`${key} → ${move.destination}`);
+          else if (verdict.kind === "problem") offenders.push(verdict.message);
+          continue;
+        }
+        candidates.push(key);
+      }
       for (const key of owned(candidates, "keys"))
         offenders.push(
           `${key} — inside a kind directory but not a declared \`${key}\``,
@@ -663,6 +834,18 @@ const noUndeclaredDataDirsCheck: Check = {
           : ""),
       "stdout",
     );
+
+    // A pending move is not a fault — it is the state between a declaration
+    // merging and main booting on it. Said out loud so "the move has not
+    // happened" is never mistaken for "the move is not needed".
+    if (pending.length > 0) {
+      ctx.log?.(
+        `paths:no-undeclared-data-dirs: ${pending.length} declared move(s) pending under ${obs.root} — ` +
+          `${pending.join(", ")}. The main backend performs each on its next boot on the merged code ` +
+          `(it is the only process allowed to move shared data); until then every process reads the old location.`,
+        "stdout",
+      );
+    }
 
     // Attributed entries are NOT offenders and are not silent either. This is a
     // normal state on a machine running several agents at once: the owning
@@ -707,7 +890,12 @@ const noUndeclaredDataDirsCheck: Check = {
         "`plugins/<owner>/data-dirs/index.ts` default-exporting a `DataDir[]` built with " +
         "`defineDataDir({ kind, name, owner, description, reclaim })` from " +
         "`@plugins/infra/plugins/paths/core`, then read `.path` / `.file(…)` / `.ensure()` from it " +
-        "instead of joining the root by hand (see plugins/infra/plugins/paths/CLAUDE.md). If nothing " +
+        "instead of joining the root by hand (see plugins/infra/plugins/paths/CLAUDE.md). An app's " +
+        "content is NOT a new directory: each app owns exactly one, `apps/<app>/`, declared with " +
+        "`defineAppDataDir(<app>, …)` in `plugins/apps/plugins/<app>/data-dirs/index.ts`, and a " +
+        'sub-plugin\'s space inside it is `<app>Dir.subdir("<area>")`. A directory that MOVED ' +
+        "records its old location on its declaration (`movedFrom`), which is what excuses the old " +
+        "name here while the move is pending. If nothing " +
         "owns the entry any more, move it into `deprecated/` by hand — it is an orphan, and that is " +
         "the quarantine this check drains into. A legacy name reported as a real directory or file " +
         "where a shim belongs means either that the layout migration has not run on this root, or " +
@@ -862,6 +1050,9 @@ const dataRootNotJoinedCheck: Check = {
         "`plugins/<owner>/data-dirs/index.ts` default-exporting a `DataDir[]` built with " +
         "`defineDataDir({ kind, name, owner, description, reclaim })`, then read `.path` / " +
         "`.file(…)` / `.ensure()` from it — see plugins/infra/plugins/paths/CLAUDE.md. " +
+        "For an app's content, do not declare a directory at all: use an area of the app's one " +
+        'data dir, `<app>Dir.subdir("<area>")` (declared once with `defineAppDataDir` at the ' +
+        "app's root). " +
         "`dataRoot()` names the ROOT ITSELF and its only use is handing that root to a child " +
         "process (or reporting it); to express a declared location under a root that is not this " +
         "process's own, use `relativeToDataRoot(dir, …)` rather than re-deriving the layout. " +
@@ -871,9 +1062,95 @@ const dataRootNotJoinedCheck: Check = {
   },
 };
 
+// ── app-data-dirs ───────────────────────────────────────────────────────────
+//
+// One data dir per app, `apps/<app>/`, holding everything that app keeps
+// durably. `defineDataDir` refusing the `apps` kind is the type-level half; this
+// is the half a type cannot see — WHERE each declaration is made, and whether
+// the app it names is the app it is made from. The rules themselves are pure
+// and live in `core/internal/app-data-dirs.ts`; this check only gathers facts.
+//
+// Unlike `no-undeclared-data-dirs` it reads no filesystem state, only the tree:
+// the declarations (each generated entry's module, evaluated) and the call
+// sites (grep). So it is `scope: "tree"` and runs in every build, check and
+// push — the moment a second `apps/*` dir is written, not after it exists on
+// somebody's disk.
+//
+// Each entry's loader is called HERE rather than read back off the registry,
+// because the registry has forgotten who declared what: pairing an item with
+// the entry whose default export listed it is the only way to know its real
+// declaring plugin, which is what rules A–C are about.
+
+const appDataDirsCheck: Check = {
+  id: "paths:app-data-dirs",
+  description:
+    "Each app owns exactly one data dir, apps/<app>/, declared by the app's root plugin with defineAppDataDir; an app's durable (reclaim: never) data lives inside it, never beside it; every declaration's owner is its declaring plugin; and declarations are made only in a data-dirs/index.ts.",
+  async run() {
+    const declarations: DataDirDeclaration[] = [];
+    const offenders: string[] = [];
+
+    for (const entry of dataDirsEntries) {
+      let mod: { default: unknown };
+      try {
+        mod = await entry.loader();
+      } catch (err) {
+        // Not absorbed: rethrown with the one fact the raw error lacks — which
+        // entry it was, and that a stale registry is the usual cause.
+        throw new Error(
+          `[paths:app-data-dirs] loading plugins/${entry.pluginPath}/data-dirs/index.ts failed: ` +
+            `${err instanceof Error ? err.message : String(err)}. ` +
+            `(If that file was moved or deleted, run \`./singularity build\` to regenerate core/data-dirs.generated.ts.)`,
+          { cause: err },
+        );
+      }
+      const items = Array.isArray(mod.default) ? mod.default : [mod.default];
+      for (const item of items) {
+        if (!isDataDir(item)) {
+          offenders.push(
+            `plugins/${entry.pluginPath}/data-dirs/index.ts default-exports something that is not a DataDir ` +
+              `(${typeof item}). Its default export must be a DataDir or a DataDir[] of the declarations it makes.`,
+          );
+          continue;
+        }
+        declarations.push({ pluginPath: entry.pluginPath, spec: item.spec });
+      }
+    }
+    offenders.push(
+      ...evaluateDataDirDeclarations(declarations, META_APP_ROOTS),
+    );
+
+    const matches = await grepCode({
+      root: await getWorktreeRoot(),
+      pattern: DECLARATION_CALL_PATTERN,
+      grepArg: "DataDir",
+      fixed: true,
+      // Strings AND comments masked (the default): prose that names the two
+      // functions — a docblock, a hint message — is never a call.
+    });
+    offenders.push(...evaluateDeclarationCallSites(matches));
+
+    if (offenders.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `${offenders.length} data-dir declaration problem(s):\n    ${offenders.join("\n    ")}`,
+      hint:
+        "Each app owns exactly ONE data dir, `apps/<app>/`: declared once with " +
+        "`defineAppDataDir(<app>App, { owner, description })` in the app's root " +
+        "`plugins/apps/plugins/<app>/data-dirs/index.ts` (a meta-app's root is its META_APP_ROOTS entry, " +
+        "e.g. desktop → plugins/apps-core). Everything the app and its sub-plugins keep durably goes " +
+        'inside it: a sub-plugin imports that declaration and takes an area with `.subdir("<area>")`. ' +
+        "Re-derivable output stays outside, under cache/. Every other directory is " +
+        "`defineDataDir({ kind, name, owner, description, reclaim })` in the owning plugin's own " +
+        "data-dirs/index.ts, with `owner` = that plugin's path minus its `/plugins/` segments. " +
+        "See plugins/infra/plugins/paths/CLAUDE.md.",
+    };
+  },
+};
+
 export default [
   noHardcodedPathsCheck,
   noInlinedWorktreeArtifactsCheck,
   noUndeclaredDataDirsCheck,
   dataRootNotJoinedCheck,
+  appDataDirsCheck,
 ];

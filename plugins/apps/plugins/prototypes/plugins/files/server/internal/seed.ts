@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { prototypesDir } from "../../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { copyFolderOnce, TEMPLATE_DIR_NAME } from "../../shared/template";
 import { TEMPLATE_SEED_DIR } from "./paths";
 

@@ -42,7 +42,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 
 ## Plugin reference
 
-- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/apps/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+- Description: Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/state/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.fetchEndpoint`

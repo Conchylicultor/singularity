@@ -100,6 +100,8 @@ is what once made a release report a null build id.
 
 ### Adding a new data dir
 
+0. Inside an app? Durable content does not get a new dir — take an area of the
+   app's one dir (`<app>Dir.subdir("<area>")`, see below).
 1. Create `plugins/<your-plugin>/data-dirs/index.ts` and default-export a
    `DataDir[]` of your `defineDataDir(...)` calls. `data-dirs` is a
    **collected dir** (marked by `defineCollectedDir("data-dirs")` in this
@@ -111,6 +113,82 @@ is what once made a release report a null build id.
 
 A directory is declared **exactly once** — a duplicate `${kind}/${name}` throws,
 mirroring `defineFileSink`. Two owners claiming one directory is always a bug.
+
+A declaration is made **only** in a `data-dirs/index.ts`, and its `owner` is the
+declaring plugin's path minus its `/plugins/` segments
+(`apps/plugins/prototypes/plugins/thumbnails` → `apps/prototypes/thumbnails`).
+A call anywhere else is invisible to the collected dir, so the manifest and the
+audit miss it. Both are enforced by `paths:app-data-dirs` (below).
+
+### One data dir per app: `defineAppDataDir`
+
+Each app owns **exactly one** data dir, `apps/<app>/`, and everything the app and
+its sub-plugins keep durably lives inside it. `defineDataDir` refuses the `apps`
+kind (a type error, and a throw past a cast); an app's dir is spelled only from
+the app's identity, at the **app root** (`plugins/apps/plugins/<id>/data-dirs/index.ts`):
+
+```ts
+export const prototypesDir = defineAppDataDir(prototypesApp, { owner: "apps/prototypes", description: "…" });
+```
+
+- No `name` (it is the app id), no `reclaim` (always `never`). Re-derivable
+  output still goes to `cache/`, declared normally.
+- Sub-plugins import the root's declaration. The app's `shell/core` must never
+  import it back: the root's `data-dirs` imports `shell/core`, so that edge is a cycle.
+- A **meta-app** (root not at `apps/plugins/<id>`) is a row in the closed
+  `META_APP_ROOTS` table (`core/internal/data-dir.ts`): today `desktop → apps-core`.
+  Adding a row is a reviewed edit, like adding a kind.
+- A second `defineAppDataDir` for the same app throws, naming the fix.
+
+**A sub-plugin's space is an area, not a directory:** `desktopDir.subdir("wallpaper")`
+returns `{ path, file(…), ensure() }` — one lowercase segment, NOT registered.
+
+### Moving a declared dir: `movedFrom`
+
+A declaration records where its bytes used to live, and **resolution performs
+the move** — no script:
+
+```ts
+defineDataDir({ kind: "state", name: "attachments", …, movedFrom: [{ from: "apps/attachments" }] });
+defineAppDataDir(desktopApp, { …, movedFrom: [{ from: "apps/wallpaper", to: "wallpaper" }] });
+```
+
+`from` is the old `<kind>/<name>`; `to` is the area the bytes land in (absent =
+the whole dir). Every read (`.path`, `.file()`, `.ensure()`, a `subdir()`) goes
+through the move first, so nothing reads the new spot before the bytes are there:
+
+| on this root | resolves to |
+|---|---|
+| `from` absent, or a symlink (**settled**) | new location — memoized per root |
+| `from` a real dir, destination absent (**pending**) | the mover `rename`s + plants a relative symlink at `from`, then new; every other process: OLD |
+| `from` a real dir AND destination exists (**split copy**) | throws on every read — a human merges |
+
+**Only the host singleton running merged code moves**: the main backend from
+the main checkout, or a release's backend on its own root. Not
+`isHostSingleton()` alone — every process an agent pane spawns inherits
+`SINGULARITY_WORKTREE=singularity`, so a worktree's CLI, tests and hooks read as
+the singleton, and an unmerged branch must never mutate the shared root. The
+**symlink** keeps older checkouts on the same bytes instead of a fresh empty dir.
+Not a `LEGACY_LAYOUT` row: that table is top-level, self-liquidating, and its
+script refuses while a gateway is alive. Drop a `movedFrom` entry (and its
+symlink) once no live checkout declares the old location.
+
+### `paths:app-data-dirs`
+
+Tree-scoped, so it runs in every build, check and push. It calls each generated
+`data-dirs` entry's loader itself, pairing every declaration with the plugin that
+really made it (the registry has forgotten), and fails on:
+
+- **A** — `apps/<n>` not declared by `apps/plugins/<n>` (or `META_APP_ROOTS[n]`).
+  What makes the structural `app` param honest: `{ id: "prototype-history" }`
+  type-checks, and fails here.
+- **B** — a `reclaim: never` dir declared inside an app's subtree other than the
+  app dir (`state/prototype-history`). Reclaimable kinds are allowed.
+- **C** — `owner` ≠ the declaring plugin's path (also catches re-exporting
+  another plugin's `DataDir` in your default export).
+- **D** — a declaring call outside a `data-dirs/index.ts` (tests and this plugin exempt).
+
+Rules are pure, in `core/internal/app-data-dirs.ts`.
 
 ### "Declared" means declared on this MACHINE, not in this checkout
 
@@ -154,8 +232,9 @@ neither side, and stops with the sizes when the two readings (a replaced shim,
 or the original never moved) are indistinguishable.
 
 The check also polices the second level:
-every entry inside a kind directory must itself be a declared `${kind}/${name}`.
-Table, script and check rule are all deleted together once `--drop-legacy` has
+every entry inside a kind directory must itself be a declared `${kind}/${name}`
+— or a declared move's old location, passing as its shim or as a pending move
+(a split copy fails). Table, script and check rule are all deleted together once `--drop-legacy` has
 run everywhere.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
@@ -174,13 +253,18 @@ run everywhere.
     - `infra/namespace.namespaceFor`
     - `infra/spawn.getMainRepoRoot`
   - Exports (types):
+    - `AppIdentity`
     - `CheckoutDeploy`
     - `CheckoutDeployResolution`
     - `DataDir`
+    - `DataDirArea`
+    - `DataDirInput`
     - `DataDirKind`
+    - `DataDirRef`
     - `DataDirSpec`
     - `LegacyMove`
     - `MigrationStep`
+    - `MovedFrom`
     - `ReclaimPolicy`
     - `ReleaseIdentity`
   - Exports (values):
@@ -195,6 +279,7 @@ run everywhere.
     - `currentWorktreeName`
     - `DATA_DIR_KINDS`
     - `dataRoot`
+    - `defineAppDataDir`
     - `defineDataDir`
     - `deploysForCheckout`
     - `getDataDirs`
@@ -205,6 +290,7 @@ run everywhere.
     - `LEGACY_LAYOUT`
     - `listWorktreeDirs`
     - `MAIN_WORKTREE_NAME`
+    - `META_APP_ROOTS`
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifacts`
@@ -288,9 +374,14 @@ run everywhere.
     - `tasks`
 - Server:
   - Exports (types):
+    - `AppIdentity`
     - `DataDir`
+    - `DataDirArea`
+    - `DataDirInput`
     - `DataDirKind`
+    - `DataDirRef`
     - `DataDirSpec`
+    - `MovedFrom`
     - `ReclaimPolicy`
     - `ReleaseIdentity`
   - Exports (values):
@@ -307,6 +398,7 @@ run everywhere.
     - `currentWorktreeName`
     - `DATA_DIR_KINDS`
     - `dataRoot`
+    - `defineAppDataDir`
     - `defineDataDir`
     - `getDataDirs`
     - `GIT`
@@ -316,6 +408,7 @@ run everywhere.
     - `isRelease`
     - `listWorktreeDirs`
     - `MAIN_WORKTREE_NAME`
+    - `META_APP_ROOTS`
     - `PGREP`
     - `PLUGINS_DIR`
     - `pruneWorktreeBuildArtifacts`

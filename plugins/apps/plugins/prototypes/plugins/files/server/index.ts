@@ -29,13 +29,12 @@ import {
 } from "./internal/watcher";
 
 // What this plugin knows about the prototypes tree that a sibling cannot
-// re-derive without duplicating it: where it IS, what is in it, and when it
-// changed. `onPrototypesChanged` in particular is what keeps a second file
-// watcher off the same directory. `prototypesDir` is this plugin's OWN data-dir
-// declaration (`data-dirs/`) — a data dir is declared exactly once, by the plugin
-// that creates, seeds, serves and watches the tree — so surfacing it here is
-// exporting a symbol from its home, not proxying another plugin's.
-export { prototypesDir } from "../data-dirs";
+// re-derive without duplicating it: what is in it, and when it changed.
+// `onPrototypesChanged` in particular is what keeps a second file watcher off
+// the same directory. WHERE the tree is is not exported from here: the app
+// declares its one data dir at its root (`@plugins/apps/plugins/prototypes/data-dirs`),
+// and a sibling imports `prototypesDir` from there — re-exporting it through
+// this barrel would be proxying another plugin's symbol.
 export { listPrototypeMetas } from "./internal/list";
 export { onPrototypesChanged } from "./internal/watcher";
 // The version store's one write a sibling needs: the `checkpoints` plugin

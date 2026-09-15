@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { cp, mkdtemp, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { prototypesDir } from "../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 
 // Getting a folder into the prototypes data dir, for the two callers that do it:
 // `seedTemplate()` on boot (the repo's `_template/` → the data dir) and

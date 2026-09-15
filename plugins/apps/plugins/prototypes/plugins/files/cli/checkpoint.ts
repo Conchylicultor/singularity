@@ -1,5 +1,5 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { prototypesDir } from "../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { openHistoryStore } from "../shared/history/store";
 
 /**

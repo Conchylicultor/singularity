@@ -38,15 +38,22 @@ export type { ReleaseIdentity } from "../core/internal/paths";
 // it or on re-reading its environment variable.
 export {
   DATA_DIR_KINDS,
+  META_APP_ROOTS,
   dataRoot,
+  defineAppDataDir,
   defineDataDir,
   getDataDirs,
   relativeToDataRoot,
 } from "../core/internal/data-dir";
 export type {
+  AppIdentity,
   DataDir,
+  DataDirArea,
+  DataDirInput,
   DataDirKind,
+  DataDirRef,
   DataDirSpec,
+  MovedFrom,
   ReclaimPolicy,
 } from "../core/internal/data-dir";
 

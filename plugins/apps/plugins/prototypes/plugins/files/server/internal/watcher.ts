@@ -4,7 +4,7 @@ import {
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isPrototypeId } from "../../core";
-import { prototypesDir } from "../../data-dirs";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
   adoptPrototypeHistories,
   prototypeHistoryLiveResource,
