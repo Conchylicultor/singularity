@@ -68,6 +68,22 @@ const SHIKI_PRE = cn(
   "[&>pre]:whitespace-pre-wrap [&>pre]:break-words [&>pre]:[tab-size:2]",
 );
 
+/**
+ * The text the sizing underlay renders — the textarea's own text, plus the one
+ * line a `<pre>` would otherwise drop.
+ *
+ * A textarea gives a trailing newline its own (empty) line, and puts the caret
+ * on it. A `<pre>` does not: a line box needs something in it, so `"asd\n"`
+ * lays out as ONE line. Since the underlay is what sizes the box, pressing
+ * Enter at the end left the block a line short, with the caret clipped below
+ * its bottom edge, until the next character filled the line. A trailing space
+ * gives that line something to hold. The empty block takes the same space, so
+ * it keeps one line of height before anything is typed.
+ */
+function underlayText(code: string): string {
+  return code === "" || code.endsWith("\n") ? `${code} ` : code;
+}
+
 export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   const parsed = codeBlock.parse(block.data);
   const dark = useDarkMode();
@@ -112,7 +128,8 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // Re-highlight on every keystroke via the shared async-Shiki primitive (its
   // cancel guard drops stale results from earlier keystrokes). No cacheKey: the
   // editor recomputes per keystroke, matching the pre-hook behavior.
-  const { html } = useHighlightedHtml(code, resolved, { dark });
+  const underlay = underlayText(code);
+  const { html } = useHighlightedHtml(underlay, resolved, { dark });
 
   function onLanguageChange(value: string | null) {
     // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
@@ -215,7 +232,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
             className={cn("m-0", METRICS)}
           >
-            {code || " "}
+            {underlay}
           </pre>
         )}
 

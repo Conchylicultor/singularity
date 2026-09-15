@@ -73,10 +73,22 @@ function FootContent({
  *   the box and clears its right edge exactly as a line of the card does.
  * - BOTTOM: the pads of every frame that closes on THIS foot, which is the whole
  *   point of the closing-slot rule (`internal/frame-foot.ts`).
- * - TOP: one pad, always — the gap between the card's last line and its foot. It
+ * - TOP: one pad — the gap between the card's last line and its foot. It
  *   belongs to the surface, not to the contribution, for the same reason the
  *   other three do: the surface owns the box's geometry, and a contribution that
  *   padded itself would be a second opinion about the card's rhythm.
+ *
+ * ## An empty foot is exactly as tall as no foot
+ *
+ * Whether a card HAS a foot is decided by its type (`hasFoot`), but whether the
+ * foot has anything in it is the contribution's answer, and usually "no": most
+ * TODO cards never dispatch a run. So the top gap sits on an inner box that is
+ * `hidden` while `:empty` — a contribution that renders `null` leaves it with no
+ * children. What remains is the outer strip's `padding-bottom`, which is the
+ * card's own bottom pad (moved here from its last row), so the card's box comes
+ * out pixel-identical to an unfooted one. The gap is decided by the DOM rather
+ * than by a second "is there content?" answer from the contribution, so the two
+ * cannot disagree, and no future foot has to remember to report it.
  */
 export function FrameFoot({ seat }: { seat: FootSeat }) {
   const feet = useBlockFeet();
@@ -102,11 +114,12 @@ export function FrameFoot({ seat }: { seat: FootSeat }) {
       style={{
         paddingLeft: seat.left,
         paddingRight: framePadX(seat.padFrames),
-        paddingTop: framePadY(1),
         paddingBottom: framePadY(seat.padClosing),
       }}
     >
-      <FootContent component={foot} block={seat.block} editor={api} />
+      <div className="empty:hidden" style={{ paddingTop: framePadY(1) }}>
+        <FootContent component={foot} block={seat.block} editor={api} />
+      </div>
     </div>
   );
 }
