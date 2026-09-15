@@ -11,7 +11,7 @@
 //     "Merged & deployed" with it on; ⌘↵ in the field starts the replay;
 //   - clicking "File it" opens the form in a new tab, closes the panel and
 //     clears the draft;
-//   - "Point at the part you mean" hides the panel and shows the hint; hovering
+//   - "Point to it on the page" hides the panel and shows the hint; hovering
 //     the hero headline outlines it, and clicking it brings the panel back with
 //     one chip at the caret, the text on both sides kept; Esc while pointing
 //     brings the panel back with nothing added; the issue then titles the pick
@@ -371,7 +371,7 @@ await withBrowser(async (h) => {
   r.eq("the replay opens no tab by itself", tabsOpened, tabsBefore);
   await snap(page, `${out}-1280`, "replay-deployed");
 
-  // --- pointing at the part you mean -------------------------------------------------
+  // --- pointing at the part to change -----------------------------------------------
   await page.keyboard.press("Escape");
   await panel(page).waitFor({ state: "hidden", timeout: 5_000 });
   await openPanel(page);
@@ -383,12 +383,12 @@ await withBrowser(async (h) => {
     await page.keyboard.press("ArrowLeft");
   }
   const point = panel(page).getByRole("button", {
-    name: "Point at the part you mean",
+    name: "Point to it on the page",
   });
   await point.click();
   await panel(page).waitFor({ state: "hidden", timeout: 5_000 });
   r.ok("pointing hides the panel", !(await panel(page).isVisible()));
-  const hint = page.getByText("Click the part you mean", { exact: true });
+  const hint = page.getByText("Click the part you'd change", { exact: true });
   await hint.waitFor({ state: "visible", timeout: 5_000 });
   r.ok("pointing shows the hint", await hint.isVisible());
 

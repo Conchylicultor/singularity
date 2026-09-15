@@ -111,8 +111,11 @@ export function ImprovePanel({
     });
   };
 
+  // `md`, named here because the popover's content otherwise inherits the site
+  // header's compact `sm` toolbar density across the portal: this panel is a
+  // form, and its controls are sized for one.
   return (
-    <ControlSizeProvider size="sm">
+    <ControlSizeProvider size="md">
       {view.kind === "compose" ? (
         <ComposeView
           draft={draft}
@@ -213,7 +216,7 @@ function ComposeView({
           app while you keep working.
         </Text>
       </Stack>
-      <Stack gap="xs">
+      <Stack gap="sm">
         <TextEditor
           value={draft.text}
           onChange={(text) => onDraftChange({ ...draft, text })}
@@ -229,13 +232,18 @@ function ComposeView({
             (see ImproveNavItem) and the pick lands as a chip at the caret. */}
         <Stack direction="row" gap="none">
           <ElementPicker
-            hint="Click the part you mean"
+            hint="Click the part you'd change"
             onArmedChange={onPickingChange}
             onPick={onPick}
             trigger={({ arm }) => (
-              <Button ref={pointRef} variant="outline" onClick={arm}>
+              <Button
+                ref={pointRef}
+                variant="dashed"
+                shape="pill"
+                onClick={arm}
+              >
                 <MdAdsClick />
-                Point at the part you mean
+                Point to it on the page
               </Button>
             )}
           />

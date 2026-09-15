@@ -19,7 +19,10 @@ export const densityGroup = defineTokenGroup("density", {
   controlPadMd: { default: "0.625rem", label: "Control padding MD" },
   controlPadLg: { default: "0.625rem", label: "Control padding LG" },
   controlGapXs: { default: "0.25rem", label: "Control gap XS" },
-  controlGapSm: { default: "0.25rem", label: "Control gap SM" },
+  // `sm` sets the same 14px label as `md` (only `xs` drops a type rung), so
+  // its gap is `md`'s: a shorter box, never a tighter label. Every preset keeps
+  // the two equal.
+  controlGapSm: { default: "0.375rem", label: "Control gap SM" },
   controlGapMd: { default: "0.375rem", label: "Control gap MD" },
   controlGapLg: { default: "0.375rem", label: "Control gap LG" },
   chromeBarH: { default: "3rem", label: "Chrome bar height" },

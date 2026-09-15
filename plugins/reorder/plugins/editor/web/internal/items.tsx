@@ -359,11 +359,7 @@ export function RestoreButton({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <Button
-          variant="outline"
-          aria-label="Add items"
-          className="border-dashed border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground"
-        >
+        <Button variant="dashed" aria-label="Add items">
           <MdAdd className="size-3.5" />
           {hasHidden
             ? hiddenItems.length === 1

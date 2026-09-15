@@ -2,7 +2,7 @@
 
 The website's **Improve** button, the header's one call to action on every page.
 A visitor writes what they would change about the page, can point at the part
-they mean (**Point at the part you mean** runs the element picker, and the pick
+they mean (**Point to it on the page** runs the element picker, and the pick
 lands in the text as a chip), and picks **Auto-deploy** or not. **Show me** (or
 ⌘↵) plays a short, labelled replay of what equin would do with it: file a task,
 make its own copy of the app, have an agent edit it, run the checks, then put up

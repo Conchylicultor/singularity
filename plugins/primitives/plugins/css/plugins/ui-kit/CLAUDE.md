@@ -41,7 +41,14 @@ The global UI kit — one cohesive design-system unit. It owns:
   *content* density, not chrome affordance, and `Bar` defaults to `sm`, so
   stepping at `sm` would shrink every toolbar/header label. (The legacy shadcn
   `Button` stepped at `sm`; unifying onto `textStepFor` grows toolbar button
-  labels back to the comfortable 14px — the intended correction.)
+  labels back to the comfortable 14px — the intended correction.) Because `sm`
+  shares `md`'s 14px label, it shares its 16px icon and every density preset
+  gives `controlGapSm` the same value as `controlGapMd` — a shorter box, never
+  a tighter label. Only `xs`, whose text drops a rung, tightens them.
+- **`Button variant="dashed"`** is the *optional* affordance beside the main
+  action (attach, add, point at): no fill, muted dashed hairline and label, full
+  strength on hover. Use it instead of restyling an `outline` with
+  `border-dashed text-muted-foreground`; `shape="pill"` for the chip form.
 - **The portal-forward bridge** (`web/components/portal-forward.tsx`) —
   `PortalForwardProvider` / `usePortalForwardedAttrs`. Portals relocate content to
   `document.body`, severing it from the DOM ancestry that carries ancestry-derived

@@ -38,6 +38,12 @@ const buttonVariants = cva(
           "hover:bg-hover-fill hover:text-foreground aria-expanded:bg-hover-fill aria-expanded:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        // The OPTIONAL affordance — attach, add, point at: something the user
+        // may do beside the main action, so it sits quieter than `outline`. No
+        // fill, a dashed hairline and a muted label, all brought to full
+        // strength on hover (and while its popover is open).
+        dashed:
+          "border-dashed border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground aria-expanded:border-muted-foreground/70 aria-expanded:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // A text size is the density token group's bundle for that size: height
@@ -45,11 +51,14 @@ const buttonVariants = cva(
       // (`gap-control-*`) — so a preset sets a button's width rhythm, not only
       // its height. Never a numeric `px-`/`gap-` here: that is the width a
       // theme cannot reach.
+      // The icon follows the TEXT, not the box: `sm` sets the same 14px label
+      // as `md` (`buttonTextClassFor`), so it keeps the base 16px icon. Only
+      // `xs`, whose text drops a rung, shrinks it.
       size: {
         md: "control-md gap-control-md px-control-md",
         default: "control-md gap-control-md px-control-md",
         xs: "control-xs gap-control-xs px-control-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3.5",
+        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         lg: "control-lg gap-control-lg px-control-lg",
         icon: "control-icon-md",
         "icon-xs":
