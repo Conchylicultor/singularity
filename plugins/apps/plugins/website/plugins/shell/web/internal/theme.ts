@@ -182,8 +182,6 @@ const density = densityGroup.fragment(
   both({
     padChipX: "0.375rem",
     padChipY: "0.125rem",
-    padControlX: "0.75rem",
-    padControlY: "0.375rem",
     padRowX: "0.5rem",
     padRowY: "0.375rem",
     // 34px — a card's inset.
@@ -194,6 +192,8 @@ const density = densityGroup.fragment(
     // 44.4px — a contact card's button (14px on a 1.6 line + 11px × 2).
     controlHeightMd: "2.775rem",
     controlHeightLg: "3rem",
+    // 18px — the call-to-action pill's inline padding.
+    controlPadSm: "1.125rem",
     chromeBarH: "3rem",
     // 72px — the site header.
     chromePaneH: "4.5rem",

@@ -88,10 +88,12 @@ export function ToggleChip({
       // eslint-disable-next-line control-size/no-adhoc-density -- ToggleChip IS the density-deriving primitive: control-xs/control-sm here is the height it maps from ambient density (chipSizeForDensity), applied to the composed Badge shell — not a per-instance consumer override.
       className={cn(
         // ToggleChip's identity over the shared chip shell: a control that
-        // height-matches the buttons beside it, with hover/disabled transitions.
+        // matches the buttons beside it — at `md`, the small button's height,
+        // inline padding and gap — with hover/disabled transitions.
         "transition-colors disabled:pointer-events-none disabled:opacity-50",
         effectiveSize === "sm" && "control-xs p-chip text-2xs",
-        effectiveSize === "md" && "control-sm p-control text-caption",
+        effectiveSize === "md" &&
+          "control-sm px-control-sm gap-control-sm text-caption",
         className,
       )}
       {...rest}

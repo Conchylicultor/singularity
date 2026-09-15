@@ -49,7 +49,7 @@ ruleTester.run(
       // Composed through the primitive.
       `const a = <Row hover="muted" onClick={f}>x</Row>;`,
       // Named padding tokens that are NOT Row's own stay pure escapes.
-      `const a = <button className="rounded-md p-control hover:bg-muted">x</button>;`,
+      `const a = <button className="rounded-md p-card hover:bg-muted">x</button>;`,
       `const a = <span className="rounded-md p-chip hover:bg-muted">x</span>;`,
       // Positioned overlay escapes structurally.
       `const a = <div className="absolute rounded-md px-2 py-1 hover:bg-muted">x</div>;`,

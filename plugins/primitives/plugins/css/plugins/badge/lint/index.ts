@@ -12,7 +12,7 @@ import noBadgeTextTransform from "./no-badge-text-transform";
  * genuine chips (all of which have a sanctioned primitive home), and the few
  * irreducible non-chips escape via per-site markers that travel WITH the code:
  *   - render through a component (capitalized host tag — skipped by the rule),
- *   - use a named padding token (`p-chip`/`p-control` — excluded by the rule),
+ *   - use a named padding token (`p-chip`/`p-card` — excluded by the rule),
  *   - or `// eslint-disable-next-line badge/no-adhoc-chip -- <reason>` as a last
  *     resort.
  */

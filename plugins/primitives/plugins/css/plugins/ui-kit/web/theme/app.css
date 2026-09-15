@@ -435,15 +435,15 @@
  * token group (--pad-* runtime vars, overridden by ThemeInjector).
  * @twmerge group sg-pad excludes: p */
 @utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }     /* twmerge: sg-pad */
-@utility p-control { padding: var(--pad-control-y) var(--pad-control-x); } /* twmerge: sg-pad */
-@utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }       /* twmerge: sg-pad */
+@utility p-row    { padding: var(--pad-row-y) var(--pad-row-x); }       /* twmerge: sg-pad */
 @utility p-card    { padding: var(--pad-card); }                         /* twmerge: sg-pad */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
  * token group (--control-height-* runtime vars, overridden by ThemeInjector),
  * so every control scales together with the active density preset. Height only:
- * padding/font/icon stay per-primitive.
+ * the same size's inline padding and gap are `px-control-*` / `gap-control-*`
+ * below; font and icon stay per-primitive.
  * Only `h` / `w` are listed: `size` writes both and is therefore BROADER, so the
  * closure in lib/utils.ts adds it as a one-way overrider — a later `size-8` drops
  * `control-sm`, but a later `control-sm` (height only) must not drop `size-8` and
@@ -466,6 +466,20 @@
 @utility control-min-sm { min-height: var(--control-height-sm); } /* twmerge: sg-control-min */
 @utility control-min-md { min-height: var(--control-height-md); } /* twmerge: sg-control-min */
 @utility control-min-lg { min-height: var(--control-height-lg); } /* twmerge: sg-control-min */
+/* A control size's width rhythm — the other two thirds of its bundle: the inline
+ * padding and the icon-to-label gap, from the density token group
+ * (--control-pad-* / --control-gap-*). So a preset owns how wide a control is,
+ * not only how tall. `padding-inline` is the property Tailwind's own `px-*`
+ * writes, so a caller's `pl-*` / `pr-*` / `px-0` override resolves exactly as it
+ * did against a numeric `px-2.5`. */
+@utility px-control-xs { padding-inline: var(--control-pad-xs); } /* twmerge: extend px */
+@utility px-control-sm { padding-inline: var(--control-pad-sm); } /* twmerge: extend px */
+@utility px-control-md { padding-inline: var(--control-pad-md); } /* twmerge: extend px */
+@utility px-control-lg { padding-inline: var(--control-pad-lg); } /* twmerge: extend px */
+@utility gap-control-xs { gap: var(--control-gap-xs); } /* twmerge: extend gap */
+@utility gap-control-sm { gap: var(--control-gap-sm); } /* twmerge: extend gap */
+@utility gap-control-md { gap: var(--control-gap-md); } /* twmerge: extend gap */
+@utility gap-control-lg { gap: var(--control-gap-lg); } /* twmerge: extend gap */
 
 /* Chrome dimension utilities — the single source of truth for app-chrome
  * heights and horizontal padding (toolbar, sidebar header, pane headers).
@@ -672,7 +686,7 @@
  * `extend px` gives it today. Until then: do not pair `rail-bleed` with a width
  * utility.
  * `py` is untouched by design: this is inline-axis only, and a bled row wants
- * its own block padding (`py-control` on a data-table row is exactly that).
+ * its own block padding (`py-row` on a data-table row is exactly that).
  * The one cost: `rail-lg rail-bleed` on ONE element now resolves to the bleed
  * alone. Escaping a region and opening a new one are two jobs; give them two
  * elements. */
@@ -706,9 +720,9 @@
  * NESTED followers each pay, exactly as two nested gutter classes did before. */
 @utility rail-follow { padding-inline: var(--rail-owed-start, var(--rail-start, var(--chrome-pad-x))) var(--rail-owed-end, var(--rail-end, var(--chrome-pad-x))); } /* twmerge: extend px */
 
-/* The vertical half of `p-control`, for a row that takes its inline inset from
- * the rail but its block padding from the control scale. */
-@utility py-control { padding-top: var(--pad-control-y); padding-bottom: var(--pad-control-y); } /* twmerge: extend py */
+/* The vertical half of `p-row`, for a row that takes its inline inset from the
+ * rail but its block padding from the row density token. */
+@utility py-row { padding-top: var(--pad-row-y); padding-bottom: var(--pad-row-y); } /* twmerge: extend py */
 
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the

@@ -160,15 +160,40 @@ it("Button: a caller's h-* replaces the control height token", () => {
   expect<string>(cn("control-md", "h-8")).toBe("h-8");
 });
 
+it("Button: a caller's px-* / p-* replaces the control padding token", () => {
+  expect<string>(cn("px-control-md", "px-0")).toBe("px-0");
+  expect<string>(cn("px-control-md", "p-0")).toBe("p-0");
+});
+
+it("Button: a caller's pl-* composes with the control padding token", () => {
+  // Same relation as built-in px-2.5 → pl-2: both kept, the side wins in CSS.
+  const result = cn("px-control-md", "pl-2");
+  expect<string>(result).toContain("px-control-md");
+  expect<string>(result).toContain("pl-2");
+});
+
+it("Button: a caller's gap-* replaces the control gap token", () => {
+  expect<string>(cn("gap-control-md", "gap-xs")).toBe("gap-xs");
+});
+
+it("ToggleChip: the control padding and gap override the chip shell's", () => {
+  // Badge's shell carries gap-xs + p-chip; the chip's md form layers the
+  // control size's inline padding and gap over them.
+  const result = cn("gap-xs p-chip", "px-control-sm gap-control-sm");
+  expect<string>(result).toContain("px-control-sm");
+  expect<string>(result).toContain("gap-control-sm");
+  expect<string>(result).not.toContain("gap-xs");
+});
+
 it("SectionCard: rail-x-lg pb-lg composes — different axes", () => {
   const result = cn("rail-x-lg pb-lg");
   expect<string>(result).toContain("rail-x-lg");
   expect<string>(result).toContain("pb-lg");
 });
 
-it("data-table: py-control rail-follow composes — different axes", () => {
-  const result = cn("py-control rail-follow");
-  expect<string>(result).toContain("py-control");
+it("data-table: py-row rail-follow composes — different axes", () => {
+  const result = cn("py-row rail-follow");
+  expect<string>(result).toContain("py-row");
   expect<string>(result).toContain("rail-follow");
 });
 

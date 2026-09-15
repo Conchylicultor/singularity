@@ -167,6 +167,8 @@ Rung on the fix ladder in parentheses.
    file only the website knows about.
 4. **Button reads density padding** (token). `padControlX/Y` exist and are
    ignored. Make the cva read them so a density preset owns width rhythm too.
+   *Done: per-size `controlPad*` / `controlGap*` tokens replace them — see
+   `2026-09-15-global-button-density-padding.md`.*
 5. **A third text tone / muted tier** (token + closed union). `subtle` tone
    backed by a `muted-foreground-subtle` token.
 6. **A header-less or in-document pane header option** (primitive). Needed

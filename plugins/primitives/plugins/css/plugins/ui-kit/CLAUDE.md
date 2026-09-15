@@ -27,7 +27,10 @@ The global UI kit — one cohesive design-system unit. It owns:
   foundational `Button` derives its **density** (height) purely from this ambient
   context — it has no `size` prop; passing one is a compile error. **Shape**
   (text vs square-icon vs inline) is a separate `aspect` prop (`"text"` default |
-  `"icon"` | `"inline"`). `ControlSize` must sit beside `Button` here (not in the
+  `"icon"` | `"inline"`). A text size's height, inline padding and icon gap all
+  come from the density token group (`control-*`, `px-control-*`,
+  `gap-control-*`) — never a numeric `px-`/`gap-` in the cva, which no theme can
+  reach. `ControlSize` must sit beside `Button` here (not in the
   `control-size` primitive, which only owns the CSS scale + lint rule).
   This module is also the home of the **single density→text policy**:
   `textStepFor(density): 0 | 1` is THE threshold (1 only at `xs`, the compact

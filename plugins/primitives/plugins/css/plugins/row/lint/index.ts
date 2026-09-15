@@ -23,7 +23,7 @@ import noRowFocusClass from "./no-row-focus-class";
  * element. The few irreducible non-rows escape via per-site markers that travel
  * WITH the code:
  *   - render through a component (capitalized host tag — skipped by fingerprint A),
- *   - use a named padding token (`p-control`/`p-chip` — excluded by A; note
+ *   - use a named padding token (`p-card`/`p-chip` — excluded by A; note
  *     `p-row` is NOT an escape, it is fingerprint B's signal),
  *   - or `// eslint-disable-next-line row/no-adhoc-row -- <reason>` as a last
  *     resort.

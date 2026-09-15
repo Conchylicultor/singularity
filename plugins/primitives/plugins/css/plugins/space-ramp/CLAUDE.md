@@ -42,7 +42,7 @@ The classes are what actually exists; the TypeScript is derived — so a step in
 the union with no `@utility` behind it is unspellable. `space-ramp-gen.ts`
 requires every declared family to carry every declared step (14 × 8), and
 `space-ramp-in-sync` fails otherwise. The reverse is deliberately unchecked:
-`p-chip`/`p-control`/`p-row`/`p-card` are legitimate non-ramp `p-` members.
+`p-chip`/`p-row`/`p-card` are legitimate non-ramp `p-` members.
 
 Families are declared, **never inferred from suffixes** — `control-*`,
 `control-icon-*` and `control-min-*` share four suffixes with the ramp but are a

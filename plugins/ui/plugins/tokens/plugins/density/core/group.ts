@@ -3,15 +3,25 @@ import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 export const densityGroup = defineTokenGroup("density", {
   padChipX: { default: "0.375rem", label: "Chip padding X" },
   padChipY: { default: "0.125rem", label: "Chip padding Y" },
-  padControlX: { default: "0.75rem", label: "Control padding X" },
-  padControlY: { default: "0.375rem", label: "Control padding Y" },
   padRowX: { default: "0.5rem", label: "Row padding X" },
   padRowY: { default: "0.375rem", label: "Row padding Y" },
   padCard: { default: "0.75rem", label: "Card padding" },
+  // One control size = one bundle: its height, its inline padding and the gap
+  // between its icon and its label. All three are tokens, so a preset owns a
+  // control's width rhythm as well as its height. There is no block padding: a
+  // control's height is fixed and its content centred, so it would do nothing.
   controlHeightXs: { default: "1.5rem", label: "Control height XS" },
   controlHeightSm: { default: "1.75rem", label: "Control height SM" },
   controlHeightMd: { default: "2rem", label: "Control height MD" },
   controlHeightLg: { default: "2.25rem", label: "Control height LG" },
+  controlPadXs: { default: "0.5rem", label: "Control padding XS" },
+  controlPadSm: { default: "0.625rem", label: "Control padding SM" },
+  controlPadMd: { default: "0.625rem", label: "Control padding MD" },
+  controlPadLg: { default: "0.625rem", label: "Control padding LG" },
+  controlGapXs: { default: "0.25rem", label: "Control gap XS" },
+  controlGapSm: { default: "0.25rem", label: "Control gap SM" },
+  controlGapMd: { default: "0.375rem", label: "Control gap MD" },
+  controlGapLg: { default: "0.375rem", label: "Control gap LG" },
   chromeBarH: { default: "3rem", label: "Chrome bar height" },
   chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
   chromePadX: { default: "0.75rem", label: "Chrome padding X" },

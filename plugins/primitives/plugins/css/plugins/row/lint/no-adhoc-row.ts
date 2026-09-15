@@ -64,12 +64,12 @@ const SMALL_PX = new Set([
 const SMALL_PY = new Set(["py-px", "py-0.5", "py-1", "py-1.5", "py-2"]);
 // interactive-row marker: any `hover:bg-*` (menus/list rows, not chips).
 const HOVER_BG = /^hover:bg-/;
-// named padding token (e.g. `p-row`, `p-control`, `p-chip`) — the sanctioned
+// named padding token (e.g. `p-row`, `p-card`, `p-chip`) — the sanctioned
 // token escape. Defensive: such tokens preclude raw px/py anyway, but listing
 // them documents the escape hatch. `p-[a-z]` avoids matching numeric `p-2`.
 const NAMED_PAD = /^p-[a-z]/;
 // `Row`'s OWN padding token — a sanctioned escape for fingerprint A, and the
-// positive signal for fingerprint B. `p-control` / `p-chip` stay pure escapes.
+// positive signal for fingerprint B. `p-card` / `p-chip` stay pure escapes.
 const P_ROW = "p-row";
 
 const HOST_TAGS = new Set(["span", "div", "button", "a"]);
@@ -91,7 +91,7 @@ export default function buildRule({ collectTokens }: LintToolkit) {
           "tree, and collapsible section-header rows), `Button`/`IconButton` (single actions), or " +
           "`SegmentedControl` (tab / segment groups). If intentionally bespoke (positioned overlay, " +
           "a primitive's own internals), render through a component, use a named padding token " +
-          "(`p-row`/`p-control`), or `// eslint-disable-next-line row/no-adhoc-row -- <reason>`.",
+          "(`p-chip`/`p-card`), or `// eslint-disable-next-line row/no-adhoc-row -- <reason>`.",
         rowCopy:
           "This rebuilds `Row` out of `Row`'s own padding token (`p-row` + a hover tint / " +
           "`w-full`+`text-left`) — compose `Row` (`primitives/css/row`) instead. If you are here " +

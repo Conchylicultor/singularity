@@ -5,12 +5,13 @@
 ## Row inset: the ambient rail
 
 Every subgrid row — the column header, each data row, each `col-span-full` group
-header — carries `py-control rail-follow`: block padding from the control ramp,
-inline padding from the ambient rail (`var(--rail-start, var(--chrome-pad-x))`).
-There is no per-table opt-out, and column alignment holds for the same reason the
-old fixed `p-control` worked: every row reads the *same* value.
+header — carries `py-row rail-follow`: block padding from the row density token
+(`--pad-row-y`), inline padding from the ambient rail
+(`var(--rail-start, var(--chrome-pad-x))`). There is no per-table opt-out, and
+column alignment holds for the same reason the old fixed padding worked: every
+row reads the *same* value.
 
-The default resolves to `--chrome-pad-x` ≡ `--pad-control-x` (0.75rem), so a table
+The default resolves to `--chrome-pad-x` (0.75rem), so a table
 in a plain pane looks unchanged. A table inside a host that opened a rail region
 (any `detail-sections` card body, the app-shell sidebar) follows that host's rail
 instead — which is the point: the table stops being the one band that ignores it.

@@ -53,7 +53,7 @@ The single source of truth is the co-located `/* twmerge: … */` marker on each
 To add a `@utility`: declare it in `app.css` **and** add it to a `*_UTILITIES` array + a registry entry. The `app-css-utilities-in-sync` check is **total** — any unregistered `@utility` fails `./singularity check`, so the silent-strip class cannot recur.
 
 ## Control size = density inherited from context
-A control's size is a **bundle** (height + padding + radius + text + gap + icon), named by a density `ControlSize = xs|sm|md|lg`. Don't size buttons individually.
+A control's size is a **bundle** (height + padding + radius + text + gap + icon), named by a density `ControlSize = xs|sm|md|lg`. Don't size buttons individually. Height, inline padding and icon gap are density tokens per size (`controlHeight*` / `controlPad*` / `controlGap*` → the `control-*` / `px-control-*` / `gap-control-*` utilities), so a theme owns a button's width as well as its height.
 - **Region primitives declare intrinsic density** (Phase 3): `Bar` (toolbars/headers) is `sm` by construction; `DataTable` is compact (`xs`) by default; `Card` opts in via an explicit `controlSize` prop. This means you declare *where you are* by composing the region primitive — you no longer hand-wrap `ControlSizeProvider` around chrome or table content in the common cases.
 - For bespoke markup that isn't a `Bar`/`DataTable`/`Card`, **declare density once** at the root — `defineRenderSlot(id, { controlSize })` (auto-wraps contributions; a host can't forget), or wrap a subtree in `<ControlSizeProvider size>`. Every control inside inherits via React context. Innermost wins.
 - Each control maps that density to **its own shape**: text→`control-sm`, icon→`control-icon-sm`, chip→its `sm`. Same height, different shapes.

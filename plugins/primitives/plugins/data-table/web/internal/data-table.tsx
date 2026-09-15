@@ -168,9 +168,9 @@ export function DataTable<TRow>({
             "col-span-full grid grid-cols-subgrid border-b text-3xs font-medium uppercase tracking-wider text-muted-foreground",
             // Every subgrid row — this header, each data row, each group header —
             // takes its inline padding from the ambient rail and its block padding
-            // from the control ramp. Column alignment holds because they all read
-            // the SAME rail, which is what made the old fixed `p-control` work.
-            "py-control rail-follow",
+            // from the row density token. Column alignment holds because they all
+            // read the SAME rail, which is what made the old fixed padding work.
+            "py-row rail-follow",
           )}
           style={{ top: stickyHeaderOffset }}
         >
@@ -271,7 +271,7 @@ function DataTableRow<TRow>({
       className={cn(
         "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 text-caption hover:bg-accent/30",
         // Same rail as the column header and the group headers — see there.
-        "py-control rail-follow",
+        "py-row rail-follow",
         // Reveals the trailing RowActions cluster; its bundled `relative` also
         // hosts the decoration overlay (a positioned row with `z-index: auto`
         // lays out and stacks identically, so it is inert on plain rows).

@@ -164,8 +164,8 @@ export function parseRampDecl(css: string): RampDecl {
  * adding the CSS" impossible, and what catches a rename that lands in some
  * families but not others.
  *
- * The reverse direction is deliberately NOT an error — `p-chip`, `p-control`,
- * `p-row` and `p-card` are legitimate non-ramp members of the `p` prefix.
+ * The reverse direction is deliberately NOT an error — `p-chip`, `p-row`
+ * and `p-card` are legitimate non-ramp members of the `p` prefix.
  */
 export function parseSpaceRamp(css: string): RampDecl {
   const ramp = parseRampDecl(css);

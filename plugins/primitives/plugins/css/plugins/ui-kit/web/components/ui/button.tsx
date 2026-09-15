@@ -1,9 +1,9 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
-import { useEffect, useRef, useState } from "react"
-import { MdRefresh } from "react-icons/md"
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
+import { cva, type VariantProps } from "class-variance-authority";
+import { useEffect, useRef, useState } from "react";
+import { MdRefresh } from "react-icons/md";
 
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import {
   useControlSize,
   textSizeFor,
@@ -11,7 +11,7 @@ import {
   buttonTextClassFor,
   type ControlSize,
   type DensityControlled,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size"
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 
 const buttonVariants = cva(
   "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -40,13 +40,17 @@ const buttonVariants = cva(
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
       },
+      // A text size is the density token group's bundle for that size: height
+      // (`control-*`), inline padding (`px-control-*`) and icon gap
+      // (`gap-control-*`) — so a preset sets a button's width rhythm, not only
+      // its height. Never a numeric `px-`/`gap-` here: that is the width a
+      // theme cannot reach.
       size: {
-        md: "control-md gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        default:
-          "control-md gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "control-xs gap-1 rounded-[min(var(--radius-md),10px)] px-2 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "control-sm gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "control-lg gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        md: "control-md gap-control-md px-control-md",
+        default: "control-md gap-control-md px-control-md",
+        xs: "control-xs gap-control-xs px-control-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+        sm: "control-sm gap-control-sm px-control-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "control-lg gap-control-lg px-control-lg",
         icon: "control-icon-md",
         "icon-xs":
           "control-icon-xs rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
@@ -66,8 +70,8 @@ const buttonVariants = cva(
       size: "default",
       shape: "default",
     },
-  }
-)
+  },
+);
 
 /**
  * `loading` shows a spinner and disables the button. It is also driven
@@ -79,8 +83,10 @@ const buttonVariants = cva(
  */
 type ButtonOwnProps = ButtonPrimitive.Props &
   Omit<VariantProps<typeof buttonVariants>, "size"> &
-  DensityControlled &
-  { aspect?: "text" | "icon" | "inline"; loading?: boolean }
+  DensityControlled & {
+    aspect?: "text" | "icon" | "inline";
+    loading?: boolean;
+  };
 
 function Button({
   className,
@@ -99,44 +105,51 @@ function Button({
   // "icon" → a square icon box at that same density, "inline" → the inline escape
   // (collapses to surrounding text height). There is no per-instance density
   // override.
-  const density = useControlSize()
+  const density = useControlSize();
   const resolvedSize =
     aspect === "inline"
       ? "inline"
       : aspect === "icon"
         ? iconSizeFor(density)
-        : textSizeFor(density)
+        : textSizeFor(density);
 
   // Text size flows through the shared density→text policy (textStepFor, also
   // consumed by Badge + Text). The `inline` aspect keeps its own `text-[1em]`
   // (collapses to surrounding text height), so it opts out.
-  const textClass = aspect === "inline" ? undefined : buttonTextClassFor(density)
+  const textClass =
+    aspect === "inline" ? undefined : buttonTextClassFor(density);
 
   // Auto-pending: if the handler returns a promise, reflect in-flight state
   // until it settles. Guard setState against unmount mid-flight.
-  const [autoPending, setAutoPending] = useState(false)
-  const mounted = useRef(true)
-  useEffect(() => () => void (mounted.current = false), [])
+  const [autoPending, setAutoPending] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => () => void (mounted.current = false), []);
 
-  const handleClick: NonNullable<ButtonPrimitive.Props["onClick"]> = (event) => {
-    const result = onClick?.(event) as unknown
+  const handleClick: NonNullable<ButtonPrimitive.Props["onClick"]> = (
+    event,
+  ) => {
+    const result = onClick?.(event) as unknown;
     if (result && typeof (result as { then?: unknown }).then === "function") {
-      setAutoPending(true)
+      setAutoPending(true);
       void Promise.resolve(result).finally(() => {
-        if (mounted.current) setAutoPending(false)
-      })
+        if (mounted.current) setAutoPending(false);
+      });
     }
-  }
+  };
 
-  const isLoading = loading || autoPending
+  const isLoading = loading || autoPending;
   // Icon-shaped buttons have no label, so the spinner replaces the glyph;
   // text buttons keep their label with the spinner as a leading indicator.
-  const iconOnly = resolvedSize.startsWith("icon")
+  const iconOnly = resolvedSize.startsWith("icon");
 
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size: resolvedSize, shape }), textClass, className)}
+      className={cn(
+        buttonVariants({ variant, size: resolvedSize, shape }),
+        textClass,
+        className,
+      )}
       disabled={disabled || isLoading}
       data-loading={isLoading || undefined}
       onClick={onClick ? handleClick : undefined}
@@ -155,8 +168,8 @@ function Button({
         children
       )}
     </ButtonPrimitive>
-  )
+  );
 }
 
-export { Button, buttonVariants }
-export type { ControlSize }
+export { Button, buttonVariants };
+export type { ControlSize };

@@ -6,6 +6,8 @@
 //   - the band hairlines span the reading measure, not the viewport;
 //   - the wordmark's full stop sits on the text's line, not above it;
 //   - a quiet nav link's hover changes only its colour (no hover box);
+//   - the call-to-action pill takes its height and inline padding from the
+//     theme's small-control density tokens;
 //   - a fork card lifts 3px under the pointer;
 //   - the forward arrows (story link, contact call to action) step 4px toward
 //     their destination on hover.
@@ -148,6 +150,35 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(250);
   const navBg = await computed(forUsers, "background-color");
   r.ok("a quiet nav link paints no hover box", alphaOf(navBg) === 0, navBg);
+
+  // --- the call to action's width comes from the theme -----------------------
+  // The pill is a small control: its height AND its inline padding are the equin
+  // density preset's small-control tokens (38.4px, 18px), not Button's own.
+  // The app's own action bar has an "Improve" button too (a tooltip trigger);
+  // the site's is the one that opens its panel (a popover trigger).
+  const cta = page
+    .getByRole("button", { name: "Improve", exact: true })
+    .and(page.locator('[data-slot="popover-trigger"]'));
+  const ctaBox = await cta.evaluate((el) => {
+    const s = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return {
+      padStart: s.paddingInlineStart,
+      padEnd: s.paddingInlineEnd,
+      height: rect.height,
+      width: rect.width,
+    };
+  });
+  r.ok(
+    "the call to action's inline padding is the preset's 18px",
+    ctaBox.padStart === "18px" && ctaBox.padEnd === "18px",
+    JSON.stringify(ctaBox),
+  );
+  r.ok(
+    "the call to action's height is the preset's 38.4px",
+    Math.abs(ctaBox.height - 38.4) < 0.5,
+    `${ctaBox.height}px`,
+  );
 
   // --- band hairlines span the measure ----------------------------------------
   // A hairline is a top border alone — a card's all-round border is not one.

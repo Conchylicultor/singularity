@@ -29,7 +29,7 @@ const SMALL_PX = new Set(["px-0.5", "px-1", "px-1.5", "px-2"]);
 const SMALL_PY = new Set(["py-px", "py-0.5", "py-1"]);
 // interactive-row marker: any `hover:bg-*` (menus/list rows, not chips).
 const HOVER_BG = /^hover:bg-/;
-// named padding token (e.g. `p-chip`, `p-control`) — the sanctioned token
+// named padding token (e.g. `p-chip`, `p-card`) — the sanctioned token
 // escape. Defensive: such tokens preclude raw px/py anyway, but listing them
 // documents the escape hatch. `p-[a-z]` avoids matching numeric `p-2`.
 const NAMED_PAD = /^p-[a-z]/;
@@ -54,7 +54,7 @@ export default function buildRule({ collectTokens }: LintToolkit) {
           "FilterChip (filter rows), or LinkChip (inline navigation). For a color from a dynamic " +
           "class map, pass colorClass to Badge. If this is intentionally not a chip (positioned " +
           "overlay, container), render it through a component or use a named padding token " +
-          "(p-chip/p-control) instead of raw px-/py-.",
+          "(p-chip/p-card) instead of raw px-/py-.",
       },
     },
     defaultOptions: [],
