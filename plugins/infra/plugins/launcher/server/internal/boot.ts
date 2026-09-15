@@ -60,6 +60,9 @@ import {
   socketsDir,
 } from "../../data-dirs";
 import { listenFlag } from "./listen";
+// Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
+// would name this plugin from inside itself.
+import { pickRuntimeEnv, runtimeEnvNames } from "../../core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -454,15 +457,25 @@ export async function buildOrLocateGateway(
 
 /**
  * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
- * file, and return the handle. We pass `env: { ...process.env }` EXPLICITLY — Bun
- * snapshots the real environment at process start, so runtime mutations to
- * `process.env` (the release launcher's `SINGULARITY_DIR` + PG bin-dir overrides,
- * set in launch.ts before any import) are NOT reflected in a child's inherited
- * env unless we spread the live `process.env` into the spawn. Spreading it
- * forwards those overrides to the gateway, which re-roots its registry / sockets
- * / cluster dirs and the supervised PG/PgBouncer start binaries (and every
- * spawned backend) under the release dir. The `-listen <bindHost>:<port>` flag
- * pins the listen address.
+ * file, and return the handle.
+ *
+ * The gateway starts from the DECLARED runtime environment, not from ours:
+ * `pickRuntimeEnv(process.env)` keeps only the names `launcher/core` declares.
+ * Whatever else the starting shell carries — an agent's
+ * `SINGULARITY_CONVERSATION_ID`, its `TMUX`, its `CLAUDE_*` — stays here instead
+ * of reaching every backend on the host. `-child-env` hands the gateway the same
+ * list of names, and the gateway forwards only those to the backends,
+ * zero-cache sidecars and Postgres / PgBouncer it starts.
+ *
+ * `env` is still set EXPLICITLY, from the LIVE `process.env`. Bun snapshots the
+ * real environment at process start, so runtime mutations to `process.env` (the
+ * release launcher's `SINGULARITY_DIR`, PG bin-dir and other relocation
+ * overrides, set in launch.ts before any import, and the release identity
+ * stamped by `bootSelfContainedApp`) would NOT reach an implicitly inherited
+ * env. Filtering the live object keeps them, because each is a forwarded name:
+ * the gateway re-roots its registry / sockets / cluster dirs under the release
+ * dir and hands the rest to the supervised start binaries and the backend. The
+ * `-listen <bindHost>:<port>` flag pins the listen address.
  */
 export function spawnGatewayDaemon(opts: {
   gatewayDir: string;
@@ -523,16 +536,22 @@ export function spawnGatewayDaemon(opts: {
       ...(opts.defaultNamespace
         ? ["-default-namespace", opts.defaultNamespace]
         : []),
+      // Which of its own variables the gateway may hand its children. Required
+      // by the gateway, and the same declaration as `env` below, so the two
+      // boundaries (us → gateway, gateway → child) cannot disagree.
+      "-child-env",
+      runtimeEnvNames().join(","),
     ],
     {
       cwd: opts.gatewayDir,
       stdout: logFd,
       stderr: logFd,
       stdin: "ignore",
-      // Explicit spread (not implicit inherit) so runtime `process.env`
-      // mutations — SINGULARITY_DIR + the PG bin-dir overrides set by the
-      // release launcher — actually reach the gateway. See the docstring.
-      env: { ...process.env },
+      // The declared subset of the LIVE `process.env` — never an implicit
+      // inherit (which would miss the release launcher's mutations) and never
+      // the whole thing (which hands the starter's shell to every backend).
+      // See the docstring.
+      env: pickRuntimeEnv(process.env),
     },
   );
 
@@ -732,7 +751,8 @@ async function awaitAppReady(name: Namespace, port: number): Promise<void> {
  * Ordering (each step gates the next):
  *   1. Build/locate the gateway binary.
  *   2. ensureDatabaseConfig — write the release database.json under the root.
- *   3. Spawn the gateway daemon (inherits SINGULARITY_DIR, listens on `port`);
+ *   3. Spawn the gateway daemon (receives SINGULARITY_DIR and the rest of the
+ *      declared runtime environment, listens on `port`);
  *      the gateway is the sole supervisor of embedded PG + PgBouncer.
  *   4. awaitGatewayReady — the gateway is serving, which (because it exits on a
  *      failed service start) means every managed service came up. Gating here
@@ -788,9 +808,9 @@ export async function bootSelfContainedApp(opts: {
   const { gatewayDir, gatewayBin } = await buildOrLocateGateway(repoRoot, log);
   ensureDatabaseConfig(repoRoot, log);
   // Stamp the release identity BEFORE the gateway spawn: a child's env is
-  // snapshotted at spawn, and the backend inherits its env from the gateway, so
-  // this is the last moment it can still reach the process that serves
-  // /api/health.
+  // snapshotted at spawn, and the backend gets its env from the gateway (both
+  // names are forwarded names of the declared runtime environment), so this is
+  // the last moment it can still reach the process that serves /api/health.
   if (opts.releaseIdentity) setReleaseIdentity(opts.releaseIdentity);
   // A self-contained app is single-namespace: route subdomain-less requests
   // (the desktop webview, single-origin web) to it via the gateway default.

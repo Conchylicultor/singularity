@@ -34,6 +34,12 @@ import {
 // root (the extracted bundle dir when packed, or the staged dir for `--dev`).
 const bundleRoot = dirname(process.execPath);
 
+// Every variable set below reaches the gateway, and through it the backend and
+// the supervised start binaries, only because it is a FORWARDED name in the
+// declared runtime environment (`RUNTIME_FORWARDED_ENV` in launcher/core). The
+// gateway spawn drops every other name. A new relocation variable therefore
+// goes on that list too; the `launcher:runtime-env-declared` check makes you
+// decide.
 // Re-root the entire install under the bundle (data, logs, the PG cluster, the
 // registry, the pid file) so a release never touches the dev `~/.singularity`.
 // `??=` lets an operator override the data root (e.g. point at a persistent
@@ -42,11 +48,13 @@ process.env.SINGULARITY_DIR ??= join(bundleRoot, "data");
 // Mark this as a compiled release so host-singleton work that keys on the dev
 // "main" worktree (the cluster sentinel + duress latch) also runs on a
 // release's single backend, whose runtime namespace is the composition name
-// (so isMain() is false). Propagates launch → gateway (env spread) → backend
-// (gateway forwards os.Environ()). Read via isRelease() in infra/paths.
+// (so isMain() is false). Travels launch → gateway → backend because it is a
+// forwarded name in the declared runtime environment (launcher/core). Read via
+// isRelease() in infra/paths.
 process.env.SINGULARITY_RELEASE ??= "1";
 // Point the compiled pg-start / pgbouncer-start at the vendored native trees.
-// The gateway inherits this env and passes it to the supervised start binaries.
+// Both are forwarded names, so the gateway receives them and passes them to the
+// supervised start binaries.
 process.env.SINGULARITY_PG_BIN_DIR ??= join(bundleRoot, "pg", "native", "bin");
 process.env.SINGULARITY_PGBOUNCER_BIN ??= join(
   bundleRoot,
@@ -57,16 +65,17 @@ process.env.SINGULARITY_PGBOUNCER_BIN ??= join(
 );
 // The migration runner reads its `.sql` files from disk; `import.meta.dir`
 // resolves into the compiled binary's virtual FS, so point it at the vendored
-// `migrations/data` tree. The gateway inherits this and forwards it to the
-// spawned backend, which is the process that actually runs migrations.
+// `migrations/data` tree. A forwarded name, so the gateway receives it and
+// hands it to the spawned backend, which is the process that actually runs
+// migrations.
 process.env.SINGULARITY_MIGRATIONS_DIR ??= join(
   bundleRoot,
   "migrations",
   "data",
 );
 // @parcel/watcher's native .node can't be embedded by `bun --compile`; point the
-// file-watcher loader at the vendored addon. The gateway inherits this env and
-// forwards it to the spawned backend, which is the process that starts watchers.
+// file-watcher loader at the vendored addon. A forwarded name, so the gateway
+// hands it to the spawned backend, which is the process that starts watchers.
 process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
   bundleRoot,
   "parcel-watcher",
@@ -74,9 +83,8 @@ process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
 );
 // The cluster sentinel's Bun Worker entry can't be embedded by `bun --compile`
 // (the `new Worker(new URL(...))` module is not traced), so release.ts vendors
-// it as a standalone bundled .js; point worker-host.ts at it. The gateway
-// inherits this env and forwards it to the spawned backend, which spawns the
-// worker.
+// it as a standalone bundled .js; point worker-host.ts at it. A forwarded
+// name, so the gateway hands it to the spawned backend, which spawns the worker.
 process.env.SINGULARITY_SENTINEL_WORKER_JS ??= join(
   bundleRoot,
   "sentinel",
@@ -91,7 +99,7 @@ process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
 // tree is vendored at `<bundleRoot>/web` (already carrying `.build-graph` /
 // `.build-commit` / `.build-id`, copied by release.ts), so point the backend's
 // readers — the stale-tab graph pin, the build-commit base, the producing run —
-// at it. Inherited launch → gateway → backend, like every var above.
+// at it. Travels launch → gateway → backend, like every var above.
 process.env.SINGULARITY_WEB_DIST ??= join(bundleRoot, "web");
 // Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
 // backend sockets onto short `/tmp` paths (each reads a single env override).

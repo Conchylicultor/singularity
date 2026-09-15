@@ -1,0 +1,225 @@
+// What environment does the runtime tree start from?
+//
+// The runtime tree is the gateway and everything it starts: every backend
+// (main, central, each worktree), each zero-cache, and Postgres / PgBouncer.
+// It used to start from whatever its STARTER happened to carry. The launcher
+// spawned the gateway with `{ ...process.env }`, and the gateway handed every
+// child its own `os.Environ()` plus a few additions. So `./singularity start`
+// run from an agent shell gave every backend on the host that shell's
+// SINGULARITY_CONVERSATION_ID, its TMUX socket and its CLAUDE_* session
+// variables (observed 2026-09-15). Every op-log record and every commit a
+// backend's build made was then stamped with one agent's conversation, and
+// tmux clients the backend ran talked to whichever tmux server the starter was
+// inside instead of the default one.
+//
+// So what travels is DECLARED here, as a closed list. The launcher spawns the
+// gateway with exactly this subset of its own environment (`pickRuntimeEnv`),
+// and passes the names as the gateway's required `-child-env` flag
+// (`runtimeEnvNames`). The gateway holds no list of its own: it forwards to its
+// children only the names this file declares, plus what it sets per child
+// (SOCKET_PATH, ZERO_*). That makes two boundaries, starter → gateway and
+// gateway → child, and one declaration for both.
+//
+// An allowlist, not a denylist of known-bad names: what a starter's environment
+// may carry is an open set, so naming the bad ones only ever catches the last
+// leak somebody noticed. The agent pane already works this way, one level
+// down: runtime-tmux/server/internal/agent-session-env.ts rebuilds each pane's
+// environment from a closed list under `env -i`.
+//
+// Deliberately NOT on the list:
+//
+// - Session and terminal state: TMUX*, CLAUDE*, TERM*, WARP_*, SSH_*, XPC_*,
+//   SECURITYSESSIONID. They describe the starter's terminal, not the host. The
+//   keychain works without them (secrets use the native keyring addon), and
+//   agent panes already run `claude` under `env -i`.
+// - SOCKET_PATH: the gateway sets it per backend.
+// - PG*: the database location is declared in `database.json`. libpq lets the
+//   environment win over that file, so a stray PGHOST in the starting shell
+//   would silently point a toolbar build's readiness probes at another server.
+// - EQUIN_RELEASE_DIR: set by the systemd unit, but read only by the release
+//   self-extractor, before the launcher runs. No runtime reads it.
+// - Toolchain variables (GOROOT, CARGO_HOME, RUSTUP_*, HOMEBREW_*, __MISE_SHIM):
+//   PATH is forwarded, and each tool either defaults these or recomputes them
+//   from its own install location.
+//
+// Every SINGULARITY_* name the code reads or sets must appear in
+// RUNTIME_FORWARDED_ENV or RUNTIME_WITHHELD_ENV (or match a forwarded prefix),
+// and every name listed here must still be read or set somewhere. The
+// `launcher:runtime-env-declared` check enforces both, so a new variable cannot
+// be added without deciding whether it travels, and a dead one cannot linger.
+// (The retired SINGULARITY_WORKTREE is not listed: the namespace-identity lint
+// rule bans that name outright.)
+//
+// Design: research/2026-09-15-global-declared-runtime-environment.md
+
+/**
+ * Facts about the host and the user, passed through from the starter when set
+ * and never invented. Under systemd, HOME / USER / LOGNAME / SHELL come from
+ * the unit's `User=`.
+ */
+export const RUNTIME_HOST_ENV = [
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "PATH",
+  "TMPDIR",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+] as const;
+
+/**
+ * Installation settings that must reach the runtime, each with the reason it
+ * travels and who reads it there. Most are set by the release launcher
+ * (`launcher/bin/launch.ts`) to point the runtime at the bundle's vendored
+ * files; the rest are operator knobs an installation may set once.
+ */
+export const RUNTIME_FORWARDED_ENV = {
+  SINGULARITY_DIR:
+    "the data root every path derives from; a release and a preview re-root their whole install with it (paths/core dataRoot(), gateway/main.go flag defaults)",
+  SINGULARITY_SOCKETS_DIR:
+    "short /tmp dir for backend sockets when the data root is too deep for the AF_UNIX cap; the launcher passes it as -sockets-dir and gateway/main.go reads it as that flag's default",
+  SINGULARITY_RELEASE:
+    "marks a compiled release, so its single backend takes the host-singleton work (paths/core isRelease())",
+  SINGULARITY_RELEASE_RUN_ID:
+    "which release run is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
+  SINGULARITY_RELEASE_COMPOSITION:
+    "which composition is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
+  SINGULARITY_PG_BIN_DIR:
+    "vendored Postgres binaries for the supervised start script (database/embedded/scripts/start.ts)",
+  SINGULARITY_PGBOUNCER_BIN:
+    "vendored PgBouncer binary for the supervised start script (database/pgbouncer/scripts/start.ts)",
+  SINGULARITY_PG_PORT:
+    "the embedded cluster's port, which a preview moves off the default (database/embedded/shared/internal/paths.ts, database/pgbouncer/scripts/start.ts)",
+  SINGULARITY_PG_SOCKET_DIR:
+    "short /tmp dir for the Postgres / PgBouncer sockets under a deep release root (database/embedded/shared/internal/paths.ts, database/pgbouncer/shared/internal/paths.ts)",
+  SINGULARITY_MIGRATIONS_DIR:
+    "the vendored .sql tree, since a compiled backend cannot read its own (database/migrations/server/internal/runner.ts)",
+  SINGULARITY_PARCEL_WATCHER_NODE:
+    "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher create-file-watcher.ts)",
+  SINGULARITY_SENTINEL_WORKER_JS:
+    "the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
+  SINGULARITY_REPO_CONFIG_DIR:
+    "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
+  SINGULARITY_WEB_DIST:
+    "the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
+  SINGULARITY_ZERO_CACHE:
+    "the Zero opt-in, read by the backend, by the supervised Postgres start script and by a toolbar build (database/zero/core flag.ts, database/embedded/scripts/start.ts)",
+  SINGULARITY_ZERO_NODE:
+    "the Node binary zero-cache runs under, for the sidecar the gateway starts (database/zero/cache-service/scripts/start.ts)",
+  SINGULARITY_CLAUDE_BIN:
+    "where the backend finds the claude CLI (infra/paths/server bins.ts)",
+  SINGULARITY_PROFILING:
+    "operator kill-switch for the runtime profiler (infra/runtime-profiler/core recorder.ts)",
+  SINGULARITY_NO_SPAWN_PRIORITY:
+    "operator escape hatch that turns off darwinbg demotion of background work (packages/spawn-priority background.ts)",
+  SINGULARITY_NO_SIGNAL_ORIGIN:
+    "operator escape hatch that turns off the native signal-origin tap (packages/signal-origin signal-origin.ts)",
+  SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY:
+    "operator tuning for the per-backend heavy-read gate (infra/host/host-read-pool pool.ts)",
+} as const satisfies Record<`SINGULARITY_${string}`, string>;
+
+/**
+ * Name PREFIXES that travel: every variable starting with one is forwarded.
+ * Passed to the gateway as `<prefix>*`.
+ */
+export const RUNTIME_FORWARDED_PREFIXES = {
+  SINGULARITY_AUTH_:
+    "operator-set OAuth client credentials, SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID / _CLIENT_SECRET, read by central (auth/google, auth/notion central descriptor.ts)",
+} as const satisfies Record<`SINGULARITY_${string}`, string>;
+
+/**
+ * Third-party tool locations an operator may set, where the install-time
+ * reader and the run-time reader must agree.
+ */
+export const RUNTIME_FORWARDED_TOOL_ENV = {
+  PLAYWRIGHT_BROWSERS_PATH:
+    "browser-fetch's provision step installs chromium there, and chromium.launch() inside the backend must look in the same place (safe-fetch/browser-fetch provision/index.ts, server/internal/browser-fetch.ts)",
+} as const;
+
+/**
+ * Names that exist in the code but must NEVER be inherited by the runtime tree,
+ * each with who delivers it instead. A backend that inherited one of these
+ * would act as whichever process happened to start the gateway.
+ */
+export const RUNTIME_WITHHELD_ENV = {
+  SINGULARITY_CONVERSATION_ID:
+    "agent-session identity; the tmux runtime delivers it into that agent's own pane with `tmux -e`, where the commit hook and op-log read it",
+  SINGULARITY_PARENT_HOST:
+    "the host an agent's MCP client dials back to; delivered into that agent's own pane with `tmux -e`",
+  SINGULARITY_HOST_GRANT:
+    "a host CPU admission grant, set by a grant holder for the subprocess it spawns (infra/host/host-admission grant.ts)",
+  SINGULARITY_LANE:
+    "the admission lane of a CLI op, set by the op for the subprocesses it spawns (cli/op-runtime lane.ts)",
+  SINGULARITY_BUILD_ID:
+    "the build_runs row a UI-triggered build writes to, set by the backend for the build it spawns (build/server run-build.ts)",
+  SINGULARITY_BUILD_DETACHED:
+    "marks a supervised build that must outlive its backend, set by the backend for the build it spawns (build/server run-build.ts)",
+  SINGULARITY_BUILD_IN_PROGRESS:
+    "marks the check pass a build spawns, set by that build (tooling/checks/core run-context.ts)",
+  SINGULARITY_CHECK_JOBS:
+    "check fan-out width for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
+  SINGULARITY_CHECK_NO_CACHE:
+    "cache bypass for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
+  SINGULARITY_CHECK_SHADOW:
+    "shadow-mode switch for one check run, typed by whoever runs it; reaches that run's subprocesses, never a backend",
+  SINGULARITY_DEPS_REEXEC:
+    "re-exec budget the CLI carries across its own dependency-install re-exec (cli/bootstrap reexec.ts)",
+  SINGULARITY_SKIP_POST_REWRITE:
+    "recursion guard the post-rewrite git hook sets for the command it runs (.githooks/post-rewrite)",
+  SINGULARITY_LISTEN:
+    "a launcher input; the launcher reads it and passes the gateway -listen",
+} as const satisfies Record<`SINGULARITY_${string}`, string>;
+
+const HOST_NAMES: ReadonlySet<string> = new Set(RUNTIME_HOST_ENV);
+const FORWARDED_NAMES: ReadonlySet<string> = new Set([
+  ...Object.keys(RUNTIME_FORWARDED_ENV),
+  ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
+]);
+const FORWARDED_PREFIXES: readonly string[] = Object.keys(
+  RUNTIME_FORWARDED_PREFIXES,
+);
+
+/** True when `name` is part of the declared runtime environment. */
+export function isRuntimeEnvName(name: string): boolean {
+  return (
+    HOST_NAMES.has(name) ||
+    FORWARDED_NAMES.has(name) ||
+    FORWARDED_PREFIXES.some((prefix) => name.startsWith(prefix))
+  );
+}
+
+/**
+ * The declared part of `source`: every host, forwarded or tool name, and every
+ * name starting with a forwarded prefix, whose value is set. Anything else —
+ * withheld names and names this file has never heard of alike — is dropped.
+ *
+ * Takes the environment as an argument rather than reading `process.env`, so
+ * the caller decides which environment it filters (the launcher passes its
+ * LIVE `process.env`, mutations included) and a test can pass a plain record.
+ */
+export function pickRuntimeEnv(
+  source: Record<string, string | undefined>,
+): Record<string, string> {
+  const picked: Record<string, string> = {};
+  for (const [name, value] of Object.entries(source)) {
+    if (value === undefined) continue;
+    if (isRuntimeEnvName(name)) picked[name] = value;
+  }
+  return picked;
+}
+
+/**
+ * Every declared name, with each prefix spelled `<prefix>*` — the value of the
+ * gateway's `-child-env` flag (joined with commas), which tells the gateway
+ * which of its own variables its children may see.
+ */
+export function runtimeEnvNames(): string[] {
+  return [
+    ...RUNTIME_HOST_ENV,
+    ...Object.keys(RUNTIME_FORWARDED_ENV),
+    ...Object.keys(RUNTIME_FORWARDED_TOOL_ENV),
+    ...FORWARDED_PREFIXES.map((prefix) => `${prefix}*`),
+  ];
+}

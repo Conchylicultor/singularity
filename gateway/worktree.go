@@ -446,7 +446,7 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	}
 
 	// Boot burst over — lift the darwinbg demotion for steady-state serving.
-	promoteBackend(bk, w.Name)
+	w.promoteBackend(bk)
 
 	w.mu.Lock()
 	w.state = StateRunning
@@ -545,7 +545,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 
 	// --- Step 4 (success): atomic swap ---
 	// Boot burst over — lift the darwinbg demotion for steady-state serving.
-	promoteBackend(newBk, w.Name)
+	w.promoteBackend(newBk)
 	newBk.proxy = newReverseProxy(newSocketPath)
 	w.mu.Lock()
 	w.active = newBk
@@ -744,12 +744,13 @@ func (w *Worktree) startZeroCache(spec *ZeroCacheSpec) (*zeroCache, error) {
 	replicaFile := w.zeroReplicaPath()
 	pidPath := w.zeroPidPath()
 
-	cmd := exec.Command(spec.Command[0], spec.Command[1:]...)
+	cmd := w.cfg.ChildEnv.Command(spec.Command[0], spec.Command[1:]...)
 	cmd.Dir = spec.Cwd
-	// ZERO_* only: the zero-cache start script reads nothing else. It used to be
-	// handed SINGULARITY_WORKTREE as well, which nothing read — and which every
-	// process the sidecar ever spawned would have inherited.
-	cmd.Env = append(os.Environ(),
+	// The declared runtime environment (the same base every backend gets — see
+	// env.go) plus ZERO_* only: the zero-cache start script reads nothing else.
+	// It used to be handed SINGULARITY_WORKTREE as well, which nothing read —
+	// and which every process the sidecar ever spawned would have inherited.
+	cmd.Env = w.cfg.ChildEnv.With(
 		fmt.Sprintf("ZERO_UPSTREAM_DB=%s", spec.UpstreamDb),
 		fmt.Sprintf("ZERO_PORT=%d", port),
 		fmt.Sprintf("ZERO_REPLICA_FILE=%s", replicaFile),
@@ -938,18 +939,20 @@ const taskpolicyPath = "/usr/sbin/taskpolicy"
 // all cores. Best-effort: a failed promote just leaves the backend on the
 // efficiency cores, which is safe. Idempotent: success clears bk.demoted, so
 // the post-ready call after a mid-boot escalation promote is a no-op.
-func promoteBackend(bk *backend, name string) {
+// taskpolicy runs with the declared base environment like every other child,
+// so no gateway exec falls back to Go's implicit inherit.
+func (w *Worktree) promoteBackend(bk *backend) {
 	if bk == nil || !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
 		return
 	}
-	out, err := exec.Command(taskpolicyPath, "-B", "-p", fmt.Sprint(bk.cmd.Process.Pid)).CombinedOutput()
+	out, err := w.cfg.ChildEnv.Command(taskpolicyPath, "-B", "-p", fmt.Sprint(bk.cmd.Process.Pid)).CombinedOutput()
 	if err != nil {
 		slog.Warn("taskpolicy -B failed; backend stays demoted",
-			"worktree", name, "pid", bk.cmd.Process.Pid, "err", err, "out", strings.TrimSpace(string(out)))
+			"worktree", w.Name, "pid", bk.cmd.Process.Pid, "err", err, "out", strings.TrimSpace(string(out)))
 		return
 	}
 	bk.demoted = false
-	slog.Info("backend promoted to default priority", "worktree", name, "pid", bk.cmd.Process.Pid)
+	slog.Info("backend promoted to default priority", "worktree", w.Name, "pid", bk.cmd.Process.Pid)
 }
 
 // startBackend builds and starts a backend process on the given socketPath.
@@ -969,7 +972,7 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	// (taskpolicy -b execs the target in place, so cmd.Process.Pid stays the
 	// backend pid) so their boot burst (catch-up, derived-table rebuild, pool
 	// warm) runs on the efficiency cores and cannot starve the interactive
-	// main backend. Once ready, promoteBackend lifts the demotion (-B -p) so
+	// main backend. Once ready, w.promoteBackend lifts the demotion (-B -p) so
 	// steady-state serving is back on all cores. main ("singularity") and
 	// "central" are the interactive/always-on backends — never demoted.
 	// See research/2026-07-07-global-background-work-priority-isolation.md.
@@ -989,9 +992,16 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	// server-core/bin/declare-namespace.ts. See
 	// research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md.
 	argv = append(append([]string{}, argv...), "--namespace", w.Name)
-	cmd := exec.Command(argv[0], argv[1:]...)
+	cmd := w.cfg.ChildEnv.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
-	cmd.Env = append(os.Environ(),
+	// The backend's environment is exactly the declared runtime environment
+	// (-child-env, captured once at boot — see env.go) plus its socket. Nothing
+	// the gateway's starter carried reaches a backend unless it was declared:
+	// this line used to append SOCKET_PATH to the gateway's whole environment,
+	// which handed every backend on the host the identity of whichever agent
+	// shell last ran `./singularity start`. With overrides by name, so a
+	// SOCKET_PATH in the base could never win over this backend's own.
+	cmd.Env = w.cfg.ChildEnv.With(
 		fmt.Sprintf("SOCKET_PATH=%s", socketPath),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -1094,7 +1104,7 @@ func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) (escalated,
 		slog.Warn("backend slow to become ready; lifting demotion and extending wait instead of killing",
 			"worktree", w.Name, "respondedHTTP", responded,
 			"base", base, "extension", w.cfg.ReadyTimeoutMax)
-		promoteBackend(bk, w.Name)
+		w.promoteBackend(bk)
 	}, bk.exitCh)
 	return escalated, respondedHTTP, err
 }

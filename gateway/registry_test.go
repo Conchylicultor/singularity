@@ -26,6 +26,7 @@ func newTestRegistry(t *testing.T) (*Registry, string) {
 		SocketsDir:     sockDir,
 		LogDir:         t.TempDir(),
 		LogBufferLines: 16,
+		ChildEnv:       testChildEnv(t),
 	}
 	return NewRegistry(cfg), regDir
 }

@@ -17606,6 +17606,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `zeroCacheSpec`
       - Cross-plugin:
         - Imported by: `release`
+      - Core:
+        - Exports (values):
+          - `isRuntimeEnvName`
+          - `pickRuntimeEnv`
+          - `RUNTIME_FORWARDED_ENV`
+          - `RUNTIME_FORWARDED_PREFIXES`
+          - `RUNTIME_FORWARDED_TOOL_ENV`
+          - `RUNTIME_HOST_ENV`
+          - `RUNTIME_WITHHELD_ENV`
+          - `runtimeEnvNames`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by:

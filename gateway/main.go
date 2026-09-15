@@ -32,6 +32,13 @@ type Config struct {
 	CentralRoutesFile string
 	DbConfigFile      string
 	DefaultNamespace  string
+
+	// ChildEnv is the environment every child process starts from: the names
+	// declared by -child-env, captured from the gateway's own environment once
+	// at boot (see env.go). Not a flag itself — main resolves it from the flag
+	// after logging is up, so a bad declaration is reported like any other
+	// fatal startup error.
+	ChildEnv ChildEnv
 }
 
 // dataRoot resolves the Singularity data root (`~/.singularity` by default).
@@ -48,7 +55,10 @@ func dataRoot() string {
 	return filepath.Join(home, ".singularity")
 }
 
-func parseFlags() Config {
+// parseFlags parses the command line into a Config, and returns the raw
+// -child-env value alongside it: that one is validated and resolved into
+// cfg.ChildEnv by main, once logging is set up to report a bad one.
+func parseFlags() (Config, string) {
 	var cfg Config
 	flag.StringVar(&cfg.Listen, "listen", ":9000", "address to listen on")
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
@@ -85,12 +95,17 @@ func parseFlags() Config {
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
 	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin
 	// web) sets it to the app's name so a bare-localhost webview reaches the
-	// backend. Env-defaulted so the release launcher can pass it through inherited
-	// process env as well as the flag.
-	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", os.Getenv("SINGULARITY_DEFAULT_NAMESPACE"), "fallback namespace for requests with no subdomain")
+	// backend. The launcher passes it as this flag; the flag is the contract.
+	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", "", "fallback namespace for requests with no subdomain")
+	// The environment names every child process may receive (see env.go).
+	// Required and deliberately default-less: the declaration lives in
+	// plugins/infra/plugins/launcher/core (runtimeEnvNames), and a default here
+	// would be a second copy of it.
+	var childEnv string
+	flag.StringVar(&childEnv, "child-env", "", "REQUIRED: comma-separated environment variable names children receive (NAME_* matches a prefix); ./singularity start passes launcher/core runtimeEnvNames()")
 
 	flag.Parse()
-	return cfg
+	return cfg, childEnv
 }
 
 func setupLogging(cfg Config) {
@@ -134,8 +149,25 @@ func fatal(stderrMsg string, logMsg string, err error) {
 }
 
 func main() {
-	cfg := parseFlags()
+	cfg, childEnvFlag := parseFlags()
 	setupLogging(cfg)
+
+	// Resolve the declared child environment before anything can spawn. The
+	// names the gateway itself carries but will not forward are logged at warn:
+	// the normal ./singularity start path drops nothing (the launcher already
+	// filtered the gateway's own environment to the same list), so a non-empty
+	// list means a hand-run gateway, and its would-be leak is visible in
+	// gateway.log rather than silently absent. Names only — never values.
+	declared, err := parseChildEnvFlag(childEnvFlag)
+	if err != nil {
+		fatal(fmt.Sprintf("gateway: fatal: %v", err), "invalid -child-env", err)
+	}
+	childEnv, dropped := captureChildEnv(declared)
+	cfg.ChildEnv = childEnv
+	slog.Info("child environment", "forwarded", childEnv.Names())
+	if len(dropped) > 0 {
+		slog.Warn("child environment: not forwarding undeclared variables from the gateway's own environment", "dropped", dropped)
+	}
 
 	if err := os.MkdirAll(cfg.SocketsDir, 0o755); err != nil {
 		slog.Error("create sockets dir failed", "err", err, "dir", cfg.SocketsDir)
@@ -154,7 +186,7 @@ func main() {
 	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	sup, err := NewSupervisor(cfg.DbConfigFile)
+	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv)
 	if err != nil {
 		// A malformed database.json is a misconfiguration, not a signal. The
 		// benign "I manage my own database" case is a *missing* file, which
@@ -223,7 +255,7 @@ func main() {
 	go func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
-		logSigtermSender()
+		logSigtermSender(cfg.ChildEnv)
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer shutCancel()
 		_ = srv.Shutdown(shutCtx)

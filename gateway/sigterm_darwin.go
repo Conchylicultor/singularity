@@ -40,7 +40,6 @@ import "C"
 
 import (
 	"log/slog"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -49,18 +48,20 @@ func init() {
 	C.installSigtermSAInfo()
 }
 
-func logSigtermSender() {
+// logSigtermSender logs who sent the shutdown signal. env is the declared base
+// environment `ps` runs with, like every other gateway child (see env.go).
+func logSigtermSender(env ChildEnv) {
 	pid := int(C.sigtermSenderPid())
 	if pid == 0 {
 		slog.Info("shutdown signal received")
 		return
 	}
-	name := pidComm(pid)
+	name := pidComm(pid, env)
 	slog.Info("shutdown signal received", "sigterm_from_pid", pid, "sigterm_from_name", name)
 }
 
-func pidComm(pid int) string {
-	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output()
+func pidComm(pid int, env ChildEnv) string {
+	out, err := env.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output()
 	if err != nil {
 		return "unknown"
 	}

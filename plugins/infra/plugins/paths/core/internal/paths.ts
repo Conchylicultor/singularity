@@ -64,7 +64,8 @@ export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
 /**
  * True when this backend is running inside a compiled release artifact (the
  * `launch` binary sets `SINGULARITY_RELEASE=1` before bringing up the app; it
- * propagates launch → gateway → backend). A release runs exactly ONE backend
+ * travels launch → gateway → backend as a forwarded name of the declared runtime
+ * environment, `launcher/core`). A release runs exactly ONE backend
  * per host, so this is the release-side twin of `isMain()` for host-singleton
  * work (e.g. the cluster sentinel + duress latch): in a release the backend's
  * runtime namespace is the composition name, so `isMain()` is false, yet that
@@ -98,10 +99,13 @@ export interface ReleaseIdentity {
 }
 
 // Where the identity rides: the same launch → gateway → backend env chain
-// `isRelease()` uses (the gateway spreads `process.env` into the gateway spawn
-// and forwards `os.Environ()` to the backend). Private to this module on
-// purpose — `setReleaseIdentity` / `releaseIdentity` are the only surface, so
-// the names exist once and no consumer can spell one of them wrong.
+// `isRelease()` uses. Both names are forwarded names of the declared runtime
+// environment (`RUNTIME_FORWARDED_ENV` in `launcher/core`): the launcher spawns
+// the gateway with that subset of its live `process.env`, and the gateway hands
+// the same subset to the backend — so a name missing from that list would
+// silently never arrive. Private to this module on purpose —
+// `setReleaseIdentity` / `releaseIdentity` are the only surface, so the names
+// exist once and no consumer can spell one of them wrong.
 const RUN_ID_ENV = "SINGULARITY_RELEASE_RUN_ID";
 const COMPOSITION_ENV = "SINGULARITY_RELEASE_COMPOSITION";
 

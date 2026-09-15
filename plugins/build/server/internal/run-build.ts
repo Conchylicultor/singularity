@@ -130,7 +130,10 @@ export const buildJob = defineSupervisedJob({
       argv,
       cwd: REPO_ROOT,
       // ADDED to this backend's environment, never a replacement for it: the
-      // CLI needs everything the backend was started with, plus these two.
+      // CLI needs the declared runtime environment the backend was started
+      // with (`launcher/core` — PATH, HOME, the data root and the other
+      // installation settings), plus these two. That environment is a closed
+      // list, so spreading it hands the build no stray session state.
       //
       // SINGULARITY_BUILD_DETACHED is load-bearing: the CLI's orphan guard
       // exits a command whose invoking shell dies, and a supervised build is

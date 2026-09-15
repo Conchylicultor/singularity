@@ -80,6 +80,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/namespace", id: "infra.namespace", loader: () => import("@plugins/infra/plugins/namespace/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "page/plugins/annotations", id: "page.annotations", loader: () => import("@plugins/page/plugins/annotations/check"), dependsOn: ["page/plugins/editor", "plugin-meta/plugins/facets"] },

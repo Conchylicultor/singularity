@@ -16,7 +16,7 @@ import (
 // these routing tests assert on.
 func newTestProxy(t *testing.T, defaultNamespace string) *Proxy {
 	t.Helper()
-	cfg := &Config{SocketsDir: t.TempDir()}
+	cfg := &Config{SocketsDir: t.TempDir(), ChildEnv: testChildEnv(t)}
 	reg := NewRegistry(cfg)
 	routes := NewCentralRoutesStore(filepath.Join(t.TempDir(), "central-routes.json")) // unloaded ⇒ Match==""
 	return NewProxy(reg, routes, &Supervisor{}, defaultNamespace)
@@ -112,6 +112,7 @@ func newStaticProxyNamed(t *testing.T, name string) staticFixture {
 		SocketsDir:     sockDir,
 		LogDir:         t.TempDir(),
 		LogBufferLines: 16,
+		ChildEnv:       testChildEnv(t),
 	}
 	reg := NewRegistry(cfg)
 

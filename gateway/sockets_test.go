@@ -239,7 +239,7 @@ func TestReconcileRemovesDeadSockets(t *testing.T) {
 	mustTouch(t, filepath.Join(dir, "orphan.next.sock"))
 	mustTouch(t, filepath.Join(dir, "ignore.txt"))
 
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	reg := NewRegistry(cfg)
 	wt, err := NewWorktree("alive", &Spec{Server: "/tmp/server"}, cfg)
 	if err != nil {
@@ -287,7 +287,7 @@ func TestReconcileReapsLiveOrphan(t *testing.T) {
 		t.Fatalf("writeBackendSidecar: %v", err)
 	}
 
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	reg := NewRegistry(cfg)
 	reconcileOrphanBackends(dir, reg)
 
@@ -311,7 +311,7 @@ func TestReconcileLeavesLiveBackendWithoutSidecar(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = l.Close() })
 
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	reconcileOrphanBackends(dir, NewRegistry(cfg))
 
 	if _, err := os.Stat(sockPath); err != nil {
@@ -325,7 +325,7 @@ func TestReconcileGCsOrphanSidecar(t *testing.T) {
 	orphanPid := filepath.Join(dir, "gone.sock.pid")
 	mustTouch(t, orphanPid)
 
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	reconcileOrphanBackends(dir, NewRegistry(cfg))
 
 	if _, err := os.Stat(orphanPid); !errors.Is(err, os.ErrNotExist) {
@@ -372,7 +372,7 @@ func TestNewWorktreeRejectsOverlongSocketPath(t *testing.T) {
 	// .next.sock is 10 bytes + "/" separator + name. SocketsDir=80 chars +
 	// "/bbbbbbbbbb.next.sock" = 80+1+10+10 = 101 which is under 104.
 	// Push it past 104 to trigger rejection.
-	cfg := &Config{SocketsDir: strings.Repeat("a", 90)}
+	cfg := &Config{SocketsDir: strings.Repeat("a", 90), ChildEnv: testChildEnv(t)}
 	_, err := NewWorktree("bbbbbbbbbbbbbbbb", &Spec{Server: "/tmp/server"}, cfg)
 	if err == nil {
 		t.Fatal("expected error for overlong path, got nil")
@@ -384,7 +384,7 @@ func TestNewWorktreeRejectsOverlongSocketPath(t *testing.T) {
 
 func TestSocketPathAlternation(t *testing.T) {
 	dir := t.TempDir()
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	wt, err := NewWorktree("test", &Spec{Server: "/tmp/server"}, cfg)
 	if err != nil {
 		t.Fatalf("NewWorktree: %v", err)
@@ -462,7 +462,7 @@ func TestBackendConnTracking(t *testing.T) {
 
 func TestOnBackendExitIgnoresDraining(t *testing.T) {
 	dir := shortTempDir(t)
-	cfg := &Config{SocketsDir: dir, ShutdownGrace: 5 * time.Second}
+	cfg := &Config{SocketsDir: dir, ShutdownGrace: 5 * time.Second, ChildEnv: testChildEnv(t)}
 	wt, err := NewWorktree("t", &Spec{Server: "/tmp/server"}, cfg)
 	if err != nil {
 		t.Fatalf("NewWorktree: %v", err)
@@ -494,7 +494,7 @@ func TestOnBackendExitIgnoresDraining(t *testing.T) {
 
 func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 	dir := shortTempDir(t)
-	cfg := &Config{SocketsDir: dir}
+	cfg := &Config{SocketsDir: dir, ChildEnv: testChildEnv(t)}
 	wt, err := NewWorktree("t", &Spec{Server: "/tmp/server"}, cfg)
 	if err != nil {
 		t.Fatalf("NewWorktree: %v", err)
@@ -526,7 +526,7 @@ func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 // requests but ignores long-lived WebSocket connections. bk.cmd is nil so the
 // kill step is skipped and only the drain-wait behavior is exercised.
 func TestDrainWaitsForHTTPNotWS(t *testing.T) {
-	cfg := &Config{SocketsDir: shortTempDir(t)}
+	cfg := &Config{SocketsDir: shortTempDir(t), ChildEnv: testChildEnv(t)}
 	wt, err := NewWorktree("t", &Spec{Server: "/tmp/s"}, cfg)
 	if err != nil {
 		t.Fatalf("NewWorktree: %v", err)

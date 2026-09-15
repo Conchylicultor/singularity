@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net"
 	"os"
-	"os/exec"
 	"sync"
 	"time"
 )
@@ -155,6 +154,10 @@ type ServiceSnapshot struct {
 // Supervisor manages a set of services read from database.json.
 type Supervisor struct {
 	services []*Service
+	// env is the declared base environment every start command runs with (see
+	// env.go). Postgres and PgBouncer are daemons that outlive the command, so
+	// whatever they inherit they keep for the life of the cluster.
+	env ChildEnv
 }
 
 const (
@@ -166,12 +169,13 @@ const (
 
 // NewSupervisor reads the config file and builds the supervisor. If the file
 // is missing or has no services, the supervisor is empty (nothing to manage).
-func NewSupervisor(configPath string) (*Supervisor, error) {
+// env is the environment every service start command runs with.
+func NewSupervisor(configPath string, env ChildEnv) (*Supervisor, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			slog.Info("supervisor: no database config file; no services to manage", "path", configPath)
-			return &Supervisor{}, nil
+			return &Supervisor{env: env}, nil
 		}
 		return nil, fmt.Errorf("supervisor: read config: %w", err)
 	}
@@ -181,7 +185,7 @@ func NewSupervisor(configPath string) (*Supervisor, error) {
 		return nil, fmt.Errorf("supervisor: parse config: %w", err)
 	}
 
-	sup := &Supervisor{}
+	sup := &Supervisor{env: env}
 	for _, sc := range cfg.Services {
 		probe, err := parseReadyProbe(sc.Ready)
 		if err != nil {
@@ -225,7 +229,7 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	svc.setState(ServiceStarting)
 	slog.Info("supervisor: starting service", "name", svc.config.Name)
 
-	if err := execStartCommand(svc.config); err != nil {
+	if err := sup.execStartCommand(svc.config); err != nil {
 		svc.setCrashed(err)
 		return err
 	}
@@ -244,11 +248,15 @@ func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	return nil
 }
 
-func execStartCommand(cfg ServiceConfig) error {
+// execStartCommand runs a service's start command to completion with the
+// declared base environment, set explicitly: a nil Env here used to mean the
+// command — and the daemon it leaves running — inherited the gateway's whole
+// environment, starter's shell and all.
+func (sup *Supervisor) execStartCommand(cfg ServiceConfig) error {
 	if len(cfg.Start) == 0 {
 		return fmt.Errorf("empty start command")
 	}
-	cmd := exec.Command(cfg.Start[0], cfg.Start[1:]...)
+	cmd := sup.env.Command(cfg.Start[0], cfg.Start[1:]...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("start command failed: %w: %s", err, string(out))
@@ -353,7 +361,7 @@ func (sup *Supervisor) runWatchdog(ctx context.Context, svc *Service, stop <-cha
 			}
 			slog.Error("supervisor: watchdog detected service down; attempting re-start", "name", svc.config.Name)
 			svc.setState(ServiceStarting)
-			if err := execStartCommand(svc.config); err != nil {
+			if err := sup.execStartCommand(svc.config); err != nil {
 				slog.Error("supervisor: re-start failed; not retrying", "name", svc.config.Name, "err", err)
 				svc.setCrashed(err)
 				return
