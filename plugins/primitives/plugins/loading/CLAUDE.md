@@ -81,6 +81,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/mail/search`
     - `apps/mail/shell`
     - `apps/pages/history`
+    - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`

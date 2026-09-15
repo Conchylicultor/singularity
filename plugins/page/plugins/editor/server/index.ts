@@ -9,6 +9,7 @@ import { handleUpdateBlock } from "./internal/handle-update-block";
 import { handleDeleteBlock } from "./internal/handle-delete-block";
 import { handleMoveBlock } from "./internal/handle-move-block";
 import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
+import { handleSetPageAuthor } from "./internal/handle-set-page-author";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
@@ -33,6 +34,7 @@ import {
   deleteBlock,
   moveBlock,
   turnIntoPage,
+  setPageAuthor,
   applyBlockOpEndpoint,
   patchBlocks,
 } from "../core/endpoints";
@@ -74,6 +76,10 @@ export {
 // The one sanctioned forest write for a caller holding a computed `BlockPatch`
 // (`page-editor/no-adhoc-forest-write` forbids every other route into `_blocks`).
 export { applyPageBlockPatch } from "./internal/handle-patch-blocks";
+// A page row's title, written server-side under the page's lock — an agent's
+// rename through `edit_page`'s `# Title` line. `requireAuthor` is judged under
+// that lock, so a page flipped to the human's mid-rename refuses (409).
+export { renamePage } from "./internal/rename-page";
 export type {
   BlockTextWriter,
   PageContentSnapshot,
@@ -98,6 +104,7 @@ export default {
     [deleteBlock.route]: handleDeleteBlock,
     [moveBlock.route]: handleMoveBlock,
     [turnIntoPage.route]: handleTurnIntoPage,
+    [setPageAuthor.route]: handleSetPageAuthor,
     [applyBlockOpEndpoint.route]: handleApplyBlockOp,
     [patchBlocks.route]: handlePatchBlocks,
   },

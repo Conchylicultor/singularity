@@ -480,6 +480,10 @@
       "name": "@singularity/plugin-apps-pages-history",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/page-author": {
+      "name": "@singularity/plugin-apps-pages-page-author",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-outline": {
       "name": "@singularity/plugin-apps-pages-page-outline",
       "version": "0.0.1",
@@ -6115,6 +6119,8 @@
     "@singularity/plugin-apps-pages-copy-id": ["@singularity/plugin-apps-pages-copy-id@workspace:plugins/apps/plugins/pages/plugins/copy-id"],
 
     "@singularity/plugin-apps-pages-history": ["@singularity/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
+
+    "@singularity/plugin-apps-pages-page-author": ["@singularity/plugin-apps-pages-page-author@workspace:plugins/apps/plugins/pages/plugins/page-author"],
 
     "@singularity/plugin-apps-pages-page-outline": ["@singularity/plugin-apps-pages-page-outline@workspace:plugins/apps/plugins/pages/plugins/page-outline"],
 

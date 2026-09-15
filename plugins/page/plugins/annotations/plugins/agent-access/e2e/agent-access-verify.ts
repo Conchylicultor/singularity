@@ -42,8 +42,16 @@
 //      marker (the 24h e2e sweep must never see it). An empty agent page a human
 //      inserts (`turn-into-page` with `author: "agent"`) is stamped by its first
 //      writer. Every refusal — a pointer given a body or an extra attribute, a
-//      pointer claiming a human's page is the agent's, a title rename, a PATCH
-//      flipping the marker — leaves both pages' snapshots unchanged.
+//      pointer claiming a human's page is the agent's, renaming a HUMAN's page
+//      through its `# Title` line, a PATCH flipping the marker — leaves both
+//      pages' snapshots unchanged.
+// P10. **An agent renames its page** by editing the `# Title` line
+//      (`research/2026-09-15-page-agent-page-follow-ups.md` §3). The stored
+//      title changes, the result says `renamed_to`, the page's content is not
+//      touched, and the parent's pointer follows. A formatted title is refused
+//      with nothing written. Flipped to the human's with the header toggle's
+//      endpoint (`POST /api/blocks/:id/page-author`), the same rename is refused
+//      and so is a body write; flipped back, writes are accepted again.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -190,6 +198,8 @@ interface ApplySummary {
   text_edited?: number;
   created_ids?: string[];
   created_page_ids?: string[];
+  /** The page's new title, when an `edit_page` renamed an agent page (P10). */
+  renamed_to?: string;
 }
 
 /** A write that must succeed, with its summary parsed. */
@@ -435,6 +445,41 @@ async function patchBlockStatus(
       ).status,
     { id: blockId, payload: body },
   );
+}
+
+/**
+ * `POST /api/blocks/:id/page-author` from the browser — the page header's
+ * agent-page toggle, and the one way a page's author changes after it is born.
+ * The HTTP status it answered.
+ *
+ * Through the browser for the same reason as the seeds above: no agent tool
+ * exposes this operation, so only the human flips a page.
+ */
+async function setPageAuthorStatus(
+  page: Page,
+  pageId: string,
+  author: "agent" | "human",
+): Promise<number> {
+  return page.evaluate(
+    async ({ id, who }) =>
+      (
+        await fetch(`/api/blocks/${id}/page-author`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ author: who }),
+        })
+      ).status,
+    { id: pageId, who: author },
+  );
+}
+
+/** A page row's stored `data.title` and `data.author`, read off its parent's rows. */
+async function pageRowFacts(
+  parentPageId: string,
+  pageId: string,
+): Promise<{ title?: string; author?: string } | undefined> {
+  const row = (await fetchBlocks(parentPageId)).find((b) => b.id === pageId);
+  return row?.data as { title?: string; author?: string } | undefined;
 }
 
 /**
@@ -1194,11 +1239,13 @@ await withBrowser(async (h) => {
       /cannot be changed through markdown/,
     ],
     [
-      "P9: renaming the agent page through its `# Title` line",
+      // The agent-page rename is P10's, and legal; a HUMAN's page title is the
+      // human's, as its prose is.
+      "P9: renaming a HUMAN's sub-page through its `# Title` line",
       "edit_page",
       {
-        block_id: agentPageId,
-        old_string: `# ${AGENT_PAGE_TITLE}`,
+        block_id: humanSubPage,
+        old_string: `# ${HUMAN_SUBPAGE_TITLE}`,
         new_string: "# Renamed by an agent",
       },
       /TITLE and not a block/,
@@ -1218,8 +1265,9 @@ await withBrowser(async (h) => {
       refused.text,
     );
   }
-  // The marker is the page's KIND, fixed at creation: a PATCH restating the
-  // page's data without it would hand the page back to the human.
+  // The marker is the page's KIND, never changed by a data edit (only the header
+  // toggle's `setPageAuthor` changes it): a PATCH restating the page's data
+  // without it would hand the page back to the human.
   const flipStatus = await patchBlockStatus(page, agentPageId, {
     data: { title: AGENT_PAGE_TITLE, icon: null },
   });
@@ -1245,6 +1293,162 @@ await withBrowser(async (h) => {
     )?.author === "agent",
     JSON.stringify(afterPageWrites.find((b) => b.id === agentPageId) ?? null),
   );
+
+  // --- P10. an agent renames its page through the `# Title` line -------------
+  // The banner stays a line the reader adds on top: the rename is written to the
+  // page ROW's data, and the page's content — the only thing the apply writes —
+  // must not move at all.
+  const RENAMED_TITLE = "Decoder findings, final";
+  const beforeRename = await snapshot(agentPageId);
+  const renamed = await mustWrite("edit_page", {
+    block_id: agentPageId,
+    old_string: `# ${AGENT_PAGE_TITLE}`,
+    new_string: `# ${RENAMED_TITLE}`,
+  });
+  r.ok(
+    "P10: editing an agent page's `# Title` line reports renamed_to",
+    renamed.renamed_to === RENAMED_TITLE,
+    JSON.stringify(renamed),
+  );
+  r.eq("P10: …and writes nothing into the page's content", counts(renamed), {
+    created: 0,
+    deleted: 0,
+    moved: 0,
+    text_edited: 0,
+  });
+  r.ok(
+    "P10: …and the content snapshot is byte-identical",
+    snapshotDiff(beforeRename, await snapshot(agentPageId)).length === 0,
+    JSON.stringify(snapshotDiff(beforeRename, await snapshot(agentPageId))),
+  );
+  r.ok(
+    "P10: the rename is attributed to the page",
+    (renamed.note_ids ?? []).includes(agentPageId),
+    JSON.stringify(renamed.note_ids ?? null),
+  );
+  const renamedFacts = await pageRowFacts(pageId, agentPageId);
+  r.ok(
+    "P10: the page row's stored title changed, and it is still an agent page",
+    renamedFacts?.title === RENAMED_TITLE && renamedFacts.author === "agent",
+    JSON.stringify(renamedFacts ?? null),
+  );
+  r.ok(
+    "P10: read_page on the page opens with the new title",
+    (await mustCall("read_page", { block_id: agentPageId })).startsWith(
+      `# ${RENAMED_TITLE}\n\n`,
+    ),
+    RENAMED_TITLE,
+  );
+  r.ok(
+    "P10: the parent's pointer shows the new title",
+    (await mustCall("read_page", { block_id: pageId })).includes(
+      `<${AGENT_PAGE_TAG} id="${agentPageId}" title="${RENAMED_TITLE}"/>`,
+    ),
+    RENAMED_TITLE,
+  );
+
+  // A title is plain text: a formatted one is refused, and nothing is written —
+  // neither the title nor the content.
+  const beforeBadRename = await snapshot(agentPageId);
+  const formatted = await callTool("edit_page", {
+    block_id: agentPageId,
+    old_string: `# ${RENAMED_TITLE}`,
+    new_string: "# **Bold** findings",
+  });
+  r.ok(
+    "P10: refused: renaming to a FORMATTED title, with the rename hint",
+    !formatted.ok &&
+      /agent page, so you may rename it/.test(formatted.text) &&
+      /plain text/.test(formatted.text),
+    formatted.text,
+  );
+  r.ok(
+    "P10: …and the refusal wrote nothing — title and content",
+    (await pageRowFacts(pageId, agentPageId))?.title === RENAMED_TITLE &&
+      snapshotDiff(beforeBadRename, await snapshot(agentPageId)).length === 0,
+    JSON.stringify(await pageRowFacts(pageId, agentPageId)),
+  );
+
+  // A rename is an edit of the title line ALONE: renaming and adding a block in
+  // one call is refused, and writes neither.
+  const beforeMixedRename = await snapshot(agentPageId);
+  const mixed = await callTool("edit_page", {
+    block_id: agentPageId,
+    old_string: `# ${RENAMED_TITLE}\n\n`,
+    new_string: "# Another title\n\nA paragraph added in the same edit\n",
+  });
+  r.ok(
+    "P10: refused: a rename that also changes the content, with the rename hint",
+    !mixed.ok &&
+      /agent page, so you may rename it/.test(mixed.text) &&
+      /nothing else/.test(mixed.text),
+    mixed.text,
+  );
+  r.ok(
+    "P10: …and the refusal wrote nothing — title and content",
+    (await pageRowFacts(pageId, agentPageId))?.title === RENAMED_TITLE &&
+      snapshotDiff(beforeMixedRename, await snapshot(agentPageId)).length === 0,
+    JSON.stringify(await pageRowFacts(pageId, agentPageId)),
+  );
+
+  // Flipped to the human's with the header toggle's endpoint, the page is an
+  // ordinary one: the same rename is refused, and so is a write to its body.
+  r.ok(
+    "P10: the header toggle's endpoint flips the page to the human's",
+    (await setPageAuthorStatus(page, agentPageId, "human")) === 200 &&
+      (await pageRowFacts(pageId, agentPageId))?.author === undefined,
+    JSON.stringify(await pageRowFacts(pageId, agentPageId)),
+  );
+  const beforeFlippedRefusals = await snapshot(agentPageId);
+  const flippedRename = await callTool("edit_page", {
+    block_id: agentPageId,
+    old_string: `# ${RENAMED_TITLE}`,
+    new_string: "# Renamed again",
+  });
+  r.ok(
+    "P10: refused: renaming the page once it is the human's",
+    !flippedRename.ok && /TITLE and not a block/.test(flippedRename.text),
+    flippedRename.text,
+  );
+  const flippedBody = await callTool("edit_page", {
+    block_id: agentPageId,
+    old_string: AGENT_PAGE_EDITED,
+    new_string: "rewritten after the flip",
+  });
+  r.ok(
+    "P10: refused: writing the page's body once it is the human's",
+    !flippedBody.ok &&
+      /outside every agent-authored block/.test(flippedBody.text),
+    flippedBody.text,
+  );
+  r.ok(
+    "P10: …and neither refusal wrote anything",
+    (await pageRowFacts(pageId, agentPageId))?.title === RENAMED_TITLE &&
+      snapshotDiff(beforeFlippedRefusals, await snapshot(agentPageId))
+        .length === 0,
+    JSON.stringify(
+      snapshotDiff(beforeFlippedRefusals, await snapshot(agentPageId)),
+    ),
+  );
+
+  // Flipped back, the page is the agent's again, all the way down.
+  r.ok(
+    "P10: the toggle flips the page back to an agent page",
+    (await setPageAuthorStatus(page, agentPageId, "agent")) === 200 &&
+      (await pageRowFacts(pageId, agentPageId))?.author === "agent",
+    JSON.stringify(await pageRowFacts(pageId, agentPageId)),
+  );
+  const afterFlipBack = await mustWrite("edit_page", {
+    block_id: agentPageId,
+    old_string: AGENT_PAGE_EDITED,
+    new_string: "rewritten after the flip back",
+  });
+  r.eq("P10: …and a body write is accepted again", counts(afterFlipBack), {
+    created: 0,
+    deleted: 0,
+    moved: 0,
+    text_edited: 1,
+  });
 
   await snap(page, out, "after-notes");
   await r.finish();

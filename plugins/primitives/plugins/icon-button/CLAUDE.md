@@ -79,6 +79,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/mail/reading-pane`
     - `apps/pages/copy-id`
     - `apps/pages/history`
+    - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/pages/starred`
     - `apps/pages/trash`

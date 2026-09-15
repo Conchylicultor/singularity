@@ -3599,13 +3599,25 @@ the serialize walk takes the wider `MarkdownNode` (`… id?: string`) and
 - A **body on a parsed `<page>` is a loud rejection** — its content lives in its
   own partition. An EXISTING page's content is written by its own id; the one tag
   that may carry a page's body is `<agent-page>`'s mint form.
-- **A page's author is fixed at creation.** `rewriteBlockData` (server) is the one
-  mint of the `BlockDataRewrite` brand that every UPDATE of `data` needs
-  (`BlockColumnChanges.data`), and it refuses (409) a same-type rewrite whose
-  `blockAuthorOf` differs — so the op writer, the patch writer, `PATCH
-  /api/blocks/:id` and history restore all refuse flipping the marker, by type
-  construction. Turn-into-page (a type change) is where a page's author is chosen
-  (`author: "agent"` is the `/agent-page` insert); creates stay free.
+- **A page's author changes only through its own op, never a data edit.**
+  `rewriteBlockData` (server) mints the `BlockDataRewrite` brand every UPDATE of
+  `data` needs (`BlockColumnChanges.data`), and it refuses (409) a same-type
+  rewrite whose `blockAuthorOf` differs — so the op writer, the patch writer and
+  `PATCH /api/blocks/:id` all refuse flipping the marker, by type construction.
+  The brand's one other mint is `reauthorPageData`, the whole write of
+  `setPageAuthor` (the page header's toggle): the stored data verbatim with only
+  the author set or removed, so a flip carries no other edit either. A page's
+  author is first chosen at birth — turn-into-page (`author: "agent"` is the
+  `/agent-page` insert) or a markdown mint; creates stay free. **History restore
+  keeps the CURRENT author**: `restorePageContent` carries the stored row's
+  author onto the version's page data, so a version taken before a flip restores
+  content, title, icon and cover but never the page's kind (as it never moves the
+  page).
+- **`renamePage` is the server-side title write** (an agent's rename via
+  `edit_page`'s `# Title` line): `{...stored, title}` through `rewriteBlockData`,
+  under the page row's lock. Its `requireAuthor` precondition is judged under
+  that same lock, because the human can flip the page between the tool's
+  decision and the write.
 - **A patch's creates stay in its world.** `applyPageBlockPatch` accepts a create
   whose `pageId` is the locked page or a page the same patch creates, and refuses
   any other with a 400. Every page a write inserts is announced with its own
@@ -3891,6 +3903,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `pageData`
     - `PageDataSchema`
     - `pagesLiveResource`
+    - `renamePage`
     - `resolveBlockAnnotations`
     - `restorePageContent`
     - `serializePageContent`
@@ -3908,6 +3921,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `DELETE /api/blocks/:id`
     - `POST /api/blocks/:id/move`
     - `POST /api/blocks/:id/turn-into-page`
+    - `POST /api/blocks/:id/page-author`
     - `POST /api/pages/:pageId/blocks/op`
     - `POST /api/pages/:pageId/blocks/patch`
 - Core:
@@ -3969,6 +3983,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `RowData`
     - `RunsXmlTextOptions`
     - `SerializedBlock`
+    - `SetPageAuthorBody`
     - `SoftBreaks`
     - `TextBearingSchema`
     - `TextData`
@@ -4058,6 +4073,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `SerializedBlockSchema`
     - `serializeForestToMarkdown`
     - `serializeInlineMarkdown`
+    - `setPageAuthor`
+    - `SetPageAuthorBodySchema`
     - `sortMarks`
     - `splitRuns`
     - `SvgNodeSchema`

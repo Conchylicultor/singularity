@@ -436,6 +436,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/events/sources/source-detail/schedule`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
+    - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome/recent-pages`

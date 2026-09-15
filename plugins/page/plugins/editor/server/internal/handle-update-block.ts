@@ -41,8 +41,9 @@ export const handleUpdateBlock = implement(
         // read above and this write would otherwise have `data` validated against a
         // type the row no longer holds — and a concurrent delete would have
         // trashed it, which is the same 404. `data` rides along because a rewrite
-        // is judged against the payload it replaces (`rewriteBlockData`: a page's
-        // author is fixed at creation), and that has to be the one under the lock.
+        // is judged against the payload it replaces (`rewriteBlockData`: a data
+        // edit never changes a page's author), and that has to be the one under
+        // the lock.
         const [row] = await ctx.tx
           .select({ type: liveBlocks.type, data: liveBlocks.data })
           .from(liveBlocks)

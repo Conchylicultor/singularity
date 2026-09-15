@@ -19,6 +19,11 @@ export type {
   WriteBoundary,
 } from "./touched";
 
-export { pageTitleBanner, stripPageTitleBanner } from "./page-title";
+export {
+  pageTitleBanner,
+  parsePageTitleBanner,
+  stripPageTitleBanner,
+} from "./page-title";
+export type { PageTitleBannerParse } from "./page-title";
 
 export type { StoredRow } from "./stored-row";

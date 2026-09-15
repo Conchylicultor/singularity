@@ -8,7 +8,16 @@ import {
   serverMarkdownContext,
   type ApplyReport,
 } from "@plugins/page/plugins/markdown-apply/server";
-import { pageTitleBanner } from "@plugins/page/plugins/markdown-apply/core";
+import {
+  pageTitleBanner,
+  parsePageTitleBanner,
+} from "@plugins/page/plugins/markdown-apply/core";
+import { renamePage } from "@plugins/page/plugins/editor/server";
+import {
+  blockAuthorOf,
+  pageBlockHandle,
+  type MarkdownContext,
+} from "@plugins/page/plugins/editor/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
 import {
   assertAgentAddressable,
@@ -124,6 +133,80 @@ async function stampAuthors(
     await recordAgentNotesAuthor(id, conversationId);
 }
 
+/**
+ * An edited page-rooted document read as a RENAME: the new title its `# …` line
+ * states, and the document with that line put back to the stored banner.
+ *
+ * Why the line is put BACK rather than stripped: the banner is a reader-side
+ * prefix, never a block (`markdown-apply/core/page-title.ts`), and the content
+ * apply takes it off by byte-identity with the STORED title's banner. Handing the
+ * apply the stored line keeps that the one rule — the apply sees an unchanged
+ * title, strips it as it always does, and the baseline subtraction (which strips
+ * the same line off the pre-edit read) sees the two documents agree about it. So
+ * the title never reaches the planner, where a changed one would be a created
+ * heading, and the rename is written separately, through the page row's `data`.
+ *
+ * The line is found by the strip's own rule — the first NON-EMPTY line — so the
+ * line replaced here is exactly the one the strip will compare. It must be
+ * followed by an empty line (the one the banner emits, which the strip consumes
+ * with it) or by the end of the document; anything else means the edit ran the
+ * title into the next block, and which half of that was the title is not
+ * something to guess.
+ *
+ * **A rename changes the title line and nothing else.** With the stored line put
+ * back, the document must be byte-identical to `original`, the read the edit was
+ * spliced into. Without that rule, deleting the banner of a page whose first
+ * block is an H1 would read as "rename to that heading, and delete it" — the two
+ * documents are the same bytes, and there is nothing else to tell them apart by.
+ * With it, the edit is a rename only when the title line is the one thing that
+ * moved, which is a fact about the two documents rather than a guess about one.
+ * A rename plus a content change is two `edit_page` calls — and the rename is
+ * then the call's only write, so it never lands half of an edit.
+ *
+ * Refusals are data, not throws: the caller owns the status and the wording.
+ */
+type TitleEdit =
+  { ok: true; title: string; document: string } | { ok: false; reason: string };
+
+function titleEditOf(
+  next: string,
+  original: string,
+  storedLine: string,
+  ctx: MarkdownContext,
+): TitleEdit {
+  const lines = next.split("\n");
+  let i = 0;
+  while (i < lines.length && lines[i]!.trim() === "") i += 1;
+  if (i >= lines.length) {
+    return {
+      ok: false,
+      reason: "the edit leaves no title line at all",
+    };
+  }
+  const parsed = parsePageTitleBanner(lines[i]!, ctx);
+  if (!parsed.ok) return parsed;
+  if (i + 1 < lines.length && lines[i + 1] !== "") {
+    return {
+      ok: false,
+      reason:
+        "the title line must be followed by a blank line, and here the next " +
+        `line is ${JSON.stringify(lines[i + 1])}`,
+    };
+  }
+  lines[i] = storedLine;
+  const document = lines.join("\n");
+  if (document !== original) {
+    return {
+      ok: false,
+      reason:
+        "a rename must change the title line and nothing else — this edit also " +
+        "changes the page's content (or removes the title line). Rename in one " +
+        "edit_page call and make the other change in another",
+    };
+  }
+  return { ok: true, title: parsed.title, document };
+}
+
 export const readPageTool = Mcp.tool({
   name: "read_page",
   description: `Read a Singularity page — or any block within one — as markdown.
@@ -237,7 +320,9 @@ emits:
   by its OWN id: \`content\` becomes the page's whole content. If it opens with
   the page's \`# Title\` line exactly as \`read_page\` showed it, that line is
   dropped rather than written. Any OTHER \`# …\` line is an ordinary heading
-  inside the page's content — the title itself is not writable here.
+  inside the page's content — the title itself is not writable here, because a
+  new \`# …\` line cannot be told apart from a first heading. To RENAME an agent
+  page, use \`edit_page\` on its \`# Title\` line.
 
 To CREATE one, use \`edit_page\` on the page that should hold it: a tagless
 \`<agent-inline>\` … \`</agent-inline>\` mints a card where you put it, and
@@ -357,11 +442,25 @@ block that already exists:
   \`created_page_ids\` names it. After that, a page's content is written by its
   OWN id — pass it as \`block_id\` (here or to \`write_agent_note\`); a pointer
   with a body, or with any attribute besides \`title\`, is refused. Its
-  \`title\` is read-only on the pointer: set it when you create the page.
+  \`title\` is read-only on the pointer: set it when you create the page, and
+  rename it later through the page's own \`# Title\` line (below).
 
 \`block_id\` is only the SCOPE the edit applies to (a page id for the whole
 page); what is allowed is judged by what the resulting diff TOUCHED, not by which
 id you passed. Scoped to an agent page's own id, every block in it is yours.
+
+**The \`# Title\` line.** Scoped to a page's own id, the document opens with the
+page's title as \`# Title\` and a blank line. It is not a block of the page.
+
+- **On an agent page it IS the page's title, and editing it renames the page.**
+  Change only the text after \`# \`, and keep it one \`# \` line followed by a
+  blank line; the result then carries \`renamed_to\`. A rename is an edit of
+  that line ALONE — to also change the page's content, make that a second
+  \`edit_page\` call. A title is plain text — no
+  bold, code or links — written the way \`read_page\` would show it (a literal
+  \`*\` stays escaped as \`\\*\`); anything else is refused with the spelling that
+  would be accepted.
+- **On any other page it is read-only.** An edit that changes it is refused.
 
 A blank line is an empty paragraph, the same as pressing Enter twice in the
 editor. Blocks are one per line in this document, so a blank line you add is a
@@ -432,10 +531,10 @@ Contract, matching the \`Edit\` file tool:
 
 Match against what \`read_page\` returns for this \`block_id\`, not against what
 you imagine it says. Everything outside your own blocks must come back
-byte-identical — including the \`# Title\` line (a page's title is not writable,
-an agent page's included), every \`<page id="…"/>\` and \`<agent-page id="…"/>\`
-pointer, and every \`<human>\` / \`<todo>\` card, which is the author's even when
-it sits in yours.`,
+byte-identical — including the \`# Title\` line of a page its author wrote (on an
+agent page, editing it renames the page, above), every \`<page id="…"/>\` and
+\`<agent-page id="…"/>\` pointer, and every \`<human>\` / \`<todo>\` card, which is
+the author's even when it sits in yours.`,
   inputSchema: {
     block_id: z
       .string()
@@ -510,29 +609,72 @@ it sits in yours.`,
     // The `# Title` banner is a READER-SIDE PREFIX, not a block: a page-rooted
     // read prepends it and the apply strips it back off by BYTE-IDENTITY. An edit
     // that rewrote it would therefore fail that test, fall through to the planner
-    // as a created heading, and be refused as a block outside every card — true,
-    // but an answer that names neither the title nor the fix. So it is caught
-    // here, where the two documents are both in hand and the diagnosis is exact.
+    // as a created heading, and — inside an agent page, where every block is the
+    // agent's — LAND as one. So it is caught here, where the two documents are
+    // both in hand and the diagnosis is exact, and it has exactly two outcomes:
+    //
+    //  - **On an agent-authored page it is a RENAME**, when the edited document
+    //    still opens with one well-formed `# …` line and that line is the only
+    //    thing the edit changed (`titleEditOf`). The page's title is then the
+    //    agent's to set, as every block of the page is. The line is put back to
+    //    the stored banner — which makes the content apply plan nothing — and the
+    //    new title is written through the page row's `data`: the banner never
+    //    becomes a node.
+    //  - **Anywhere else it is refused**, with a message naming the title and the
+    //    fix: a human's page title is the human's, as its prose is, and on an
+    //    agent page a deleted or mangled title line is not a title an agent
+    //    stated, so it is not guessed at.
+    //
+    // Whose page it is is asked off `scope.pageRow` through `blockAuthorOf`, the
+    // one resolution of the author axis — the same question the write policy
+    // asks of every row. It is asked here on the scope loaded above, and asked
+    // AGAIN under the page row's lock by `renamePage` (`requireAuthor`), because
+    // a human can flip the page between the two; a check only here would race.
+    let document = next;
+    let renamedTo: string | undefined;
     if (blockId === scope.pageId) {
-      const banner = pageTitleBanner(scope.title, serverMarkdownContext());
+      const mdCtx = serverMarkdownContext();
+      const banner = pageTitleBanner(scope.title, mdCtx);
       if (markdown.startsWith(banner) && !next.startsWith(banner)) {
-        throw new HttpError(
-          400,
-          `edit_page: this edit changes the document's first line, which is page ` +
-            `${scope.pageId}'s TITLE and not a block of the page — read_page ` +
-            `prepends it, and no edit can write it. Anchor old_string below the ` +
-            `blank line that follows the title, or scope the edit to a block ` +
-            `inside the page instead of the page itself.`,
+        const titleIs =
+          `this edit changes the document's first line, which is page ` +
+          `${scope.pageId}'s TITLE and not a block of the page`;
+        if (blockAuthorOf(pageBlockHandle, scope.pageRow.data) !== "agent") {
+          throw new HttpError(
+            400,
+            `edit_page: ${titleIs} — read_page prepends it, and no edit can write ` +
+              `it on a page its author wrote. Anchor old_string below the blank ` +
+              `line that follows the title, or scope the edit to a block inside ` +
+              `the page instead of the page itself.`,
+          );
+        }
+        const edit = titleEditOf(
+          next,
+          markdown,
+          banner.slice(0, banner.indexOf("\n")),
+          mdCtx,
         );
+        if (!edit.ok) {
+          throw new HttpError(
+            400,
+            `edit_page: ${titleIs}. This is an agent page, so you may rename it: ` +
+              `change only the text after "# ", and keep the title one "# " line ` +
+              `followed by a blank line. Not renamed, and nothing written, ` +
+              `because ${edit.reason}.`,
+          );
+        }
+        document = edit.document;
+        if (edit.title !== scope.title) renamedTo = edit.title;
       }
     }
 
     let authored: string[] = [];
-    const report = await applyMarkdownToBlock(blockId, next, {
-      // `markdown` is what this tool read a moment ago and `next` is that same
-      // string with one splice in it, so every write the two have in common is
-      // the round trip's own and not this edit's. Without it the boundary rule
-      // below judges the caller for blocks the projection touched.
+    const report = await applyMarkdownToBlock(blockId, document, {
+      // `markdown` is what this tool read a moment ago and `document` is that
+      // same string with one splice in it (a rename's title line put back to the
+      // stored one), so every write the two have in common is the round trip's
+      // own and not this edit's. Without it the boundary rule below judges the
+      // caller for blocks the projection touched.
       baseline: markdown,
       redact: redactHumanAudience,
       assertAcceptable: (plan, { rows, pageRow }) => {
@@ -549,10 +691,26 @@ it sits in yours.`,
     // block has no authorship to claim. A page it MINTED is among `authored` —
     // the new page is its own nearest agent-authored row — so it is stamped as
     // its creator here, after the commit.
+    //
     await stampAuthors(authored, ctx.conversationId);
+
+    // A rename is the call's ONLY write: `titleEditOf` admits a changed title
+    // line only when nothing else changed, so the apply above planned nothing
+    // and the title is written here, alone. A human flipping the page to theirs
+    // since the scope was read gets a 409 (`requireAuthor`, checked under the
+    // page row's lock) and nothing written.
+    const noteIds = [...authored];
+    if (renamedTo !== undefined) {
+      await renamePage(scope.pageId, renamedTo, { requireAuthor: "agent" });
+      // Renaming the page is writing it: the page is the agent-authored block the
+      // rename touched, so it is stamped like any block an edit wrote.
+      await stampAuthors([scope.pageId], ctx.conversationId);
+      if (!noteIds.includes(scope.pageId)) noteIds.push(scope.pageId);
+    }
     return jsonResult({
-      ...(applySummary(report, authored) as object),
+      ...(applySummary(report, noteIds) as object),
       replaced: replaceAll ? matches : 1,
+      ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
     });
   },
 });

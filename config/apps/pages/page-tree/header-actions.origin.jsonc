@@ -1,4 +1,4 @@
-// @hash a524e336b6ed
+// @hash e2e49c76bf6d
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "apps.pages.copy-id:copy-id",
     "apps.pages.history:history",
+    "apps.pages.page-author:page-author",
     "apps.pages.starred:star"
   ]
 }

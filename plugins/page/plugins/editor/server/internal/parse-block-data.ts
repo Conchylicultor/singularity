@@ -3,9 +3,9 @@ import type { BlockData } from "../../core";
 // Deep relative imports on purpose: this file is in every `tables.ts` schema
 // graph (via the server barrel), which drizzle-kit must load SYNCHRONOUSLY —
 // the core barrel would pull the async lexical/yjs bridges in with it.
-import { asBlockData } from "../../core/schemas";
+import { asBlockData, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { runsOf } from "../../core/rich-text";
-import { blockAuthorOf } from "../../core/define-block";
+import { blockAuthorOf, type BlockAuthor } from "../../core/define-block";
 import { resolveBlockHandle } from "./block-registry";
 
 /**
@@ -72,7 +72,8 @@ declare const blockDataRewriteBrand: unique symbol;
  * `BlockColumnChanges.data` (`forest-writer.ts`) takes THIS brand and not the
  * plain one, so every path that rewrites an existing row's payload — the op
  * reducer's persist, the patch writer, `PATCH /api/blocks/:id`, history restore,
- * turn-into-page — is a tsc error until it goes through {@link rewriteBlockData}.
+ * turn-into-page — is a tsc error until it goes through {@link rewriteBlockData}
+ * (or, for the one write that is ABOUT the author, {@link reauthorPageData}).
  * A create stays free: `NewBlockRow.data` is plain `BlockData`, because a new
  * row has no author to keep.
  */
@@ -81,18 +82,22 @@ export type BlockDataRewrite = BlockData & {
 };
 
 /**
- * THE minting site for {@link BlockDataRewrite}: validate `next` as a
+ * The DATA-EDIT minting site for {@link BlockDataRewrite}: validate `next` as a
  * {@link parseBlockData} does, and — when the row keeps its type — refuse a
- * payload that changes the row's AUTHOR (409).
+ * payload that changes the row's AUTHOR (409). The brand has one other minter,
+ * {@link reauthorPageData}, which changes the author and nothing else.
  *
  * The one row whose author lives in its data today is a page: `data.author ===
  * "agent"` makes it an agent-authored page, whose whole content an agent may
  * write (`research/2026-09-11-page-agent-pages.md`). That marker is the page's
- * KIND, set once at creation. Every page-data writer spreads `{...pageData(page),
- * title}` and so carries it through; one that did not — a stale client, a
- * hand-written PATCH, a history snapshot — would silently hand a human's page to
- * an agent's pen, or take an agent's page away from it. Neither is a data edit,
- * so neither is expressible as one.
+ * KIND, chosen when the page is born and changed afterwards only by
+ * `reauthorPageData` — the `setPageAuthor` op behind the page header's toggle
+ * (`research/2026-09-15-page-agent-page-follow-ups.md`). Every page-data writer
+ * spreads `{...pageData(page), title}` and so carries it through; one that did
+ * not — a stale client, a hand-written PATCH, a history snapshot — would
+ * silently hand a human's page to an agent's pen, or take an agent's page away
+ * from it. Neither is a data edit, so neither is expressible as one: a data edit
+ * cannot carry an author change, and an author change carries no data edit.
  *
  * Generic, and it names no field: the comparison is `blockAuthorOf` over the
  * handle, before and after, so a future data-decided author is covered by
@@ -123,12 +128,76 @@ export function rewriteBlockData(args: {
       throw new HttpError(
         409,
         `Cannot change whose words a "${type}" block holds (from ${was ?? "human"} to ` +
-          `${now ?? "human"}) by rewriting its data: authorship is fixed when the block ` +
-          `is created. Carry the stored value through unchanged.`,
+          `${now ?? "human"}) by rewriting its data: a data edit never changes the ` +
+          `author. Carry the stored value through unchanged.`,
       );
     }
   }
   // `data` came out of the strict parse above, and the author check has passed:
   // exactly the two facts the brand states.
+  return data as BlockDataRewrite;
+}
+
+/**
+ * The OTHER minting site for {@link BlockDataRewrite}: a page's stored `data`
+ * with its author set to `author`, and every other key copied verbatim — the
+ * whole write of the `setPageAuthor` op (`handle-set-page-author.ts`).
+ *
+ * It is the mirror of {@link rewriteBlockData}, and the pair is what keeps the
+ * two changes apart. `rewriteBlockData` takes a caller's payload and refuses one
+ * that moves the author; this takes NO payload — only the stored row and the
+ * author to give it — so an author change cannot smuggle a title, an icon or a
+ * cover along with it, and a data edit still cannot smuggle an author change.
+ *
+ * `"agent"` writes the marker; `"human"` DELETES the key rather than writing a
+ * value, because the human's page is the one with no marker (`PageDataSchema`'s
+ * `author` is `z.literal("agent").optional()`, and every page a human ever made
+ * was stored without it). The result is re-validated through
+ * {@link parseBlockData}, so a stored blob that no longer parses is still a loud
+ * 400 here rather than a brand minted over it.
+ *
+ * Page-specific on purpose, where `rewriteBlockData` is generic: the field it
+ * writes is the page's own, and no other type has a data-decided author to
+ * flip. A non-page row reaching it is a caller's bug, refused (400) rather than
+ * written.
+ */
+export function reauthorPageData(args: {
+  /** The page row as it is stored now, read under the page's lock. */
+  before: { type: string; data: unknown };
+  /** Whose page it becomes. */
+  author: BlockAuthor;
+}): BlockDataRewrite {
+  const { before, author } = args;
+  if (before.type !== PAGE_BLOCK_TYPE) {
+    throw new HttpError(
+      400,
+      `Only a page has an author to change; this block is a "${before.type}".`,
+    );
+  }
+  if (
+    typeof before.data !== "object" ||
+    before.data === null ||
+    Array.isArray(before.data)
+  ) {
+    throw new Error(
+      `A stored page's data is not an object (${JSON.stringify(before.data)}).`,
+    );
+  }
+  const next: Record<string, unknown> = { ...before.data };
+  if (author === "agent") next.author = "agent";
+  else delete next.author;
+  const data = parseBlockData(PAGE_BLOCK_TYPE, next);
+
+  // What the brand is minted FOR: the row now reads as `author`, through the
+  // same lens every consumer reads it with. A mismatch means the page's author
+  // declaration and the key written above have drifted apart — a bug in this
+  // file, not in the request.
+  const now =
+    blockAuthorOf(resolveBlockHandle(PAGE_BLOCK_TYPE)!, data) ?? "human";
+  if (now !== author) {
+    throw new Error(
+      `reauthorPageData wrote a page that reads as ${now}, not ${author}.`,
+    );
+  }
   return data as BlockDataRewrite;
 }

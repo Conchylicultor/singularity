@@ -318,17 +318,56 @@ read_page / edit_page / write_agent_note (block_id = the page)          ← its 
   gone stale since the read costs nothing. A human's sub-page and a link now show
   `<page id="…" title="…"/>` too — an annotated attribute supplied by
   `editor/server` and `page-link/server`.
-- **Renaming is still refused**, by `edit_page`'s title-line check — which is now
-  load-bearing: inside an agent page every block is writable, so a changed
-  `# Title` would otherwise land as a heading. `write_agent_note` on a page strips
-  an echoed banner (byte-identity, as for every page-rooted apply); any other
-  `# …` line in its content is an ordinary heading.
+- **An agent renames its page by editing the `# Title` line in `edit_page`** —
+  see *Renaming an agent page* below. The pointer's `title` stays read-only.
+  `write_agent_note` on a page strips an echoed banner (byte-identity, as for
+  every page-rooted apply); any other `# …` line in its content is an ordinary
+  heading.
 - **Nothing an agent does makes it one or unmakes it.** `<agent-page id="H"/>`
   naming a human's page is `unknown-ref` (the planner's canonical-spelling check),
   a pointer at an agent page cannot be turned into a link, and the server refuses
-  any data write that flips the marker (`rewriteBlockData`, 409). An agent page is
-  never deleted by an apply — leaving it out of a document re-homes it, the
-  sub-page rule.
+  any data write that flips the marker (`rewriteBlockData`, 409). The one thing
+  that flips it is the human's toggle in the page header (`setPageAuthor`), which
+  no MCP tool exposes. An agent page is never deleted by an apply — leaving it
+  out of a document re-homes it, the sub-page rule.
+
+### Renaming an agent page
+
+`read_page` on a page opens with its title as `# Title` and a blank line — the
+banner, a line the reader adds on top, never a block
+([`markdown-apply/core/page-title.ts`](../../../markdown-apply/core/page-title.ts)).
+On an AGENT-authored page, `edit_page` changing that line renames the page:
+
+1. **Only a page-rooted edit that changed the banner is looked at** — the case
+   that used to be a flat 400. The page's author is asked through `blockAuthorOf`
+   off `scope.pageRow`. A human's page keeps the 400.
+2. **The edited document's first non-empty line must be the whole title** —
+   `parsePageTitleBanner`: one `# ` line of plain text (no marks, links or
+   colors), spelled exactly as `read_page` would spell that title, and followed
+   by a blank line or the end of the document. Anything else (the line deleted,
+   run into the next block, or formatted) is the 400, with a hint: change only
+   the text after `# `, and keep it one `# ` line followed by a blank line.
+3. **That line must be the ONLY thing the edit changed.** With the stored banner
+   put back, the document must be byte-identical to the read. So the content
+   apply plans nothing, and the title never reaches the planner — where a changed
+   one would be a created heading, which inside an agent page is a writable one.
+   A rename plus a content change is two calls. This is also what keeps a deleted
+   banner from reading as a rename: on a page whose first block is an H1, the
+   document without its banner is byte-for-byte "rename to that heading and
+   delete it", and only the rest of the document staying put tells them apart.
+4. **Then `renamePage(pageId, title, { requireAuthor: "agent" })`** writes the
+   page ROW's data (editor/server) — the call's only write. The author check
+   runs again there, under the lock, because a human can flip the page between
+   step 1 and this write.
+5. The page is stamped with the conversation, and the result carries
+   `renamed_to`.
+
+**Why `edit_page` only.** `write_agent_note` composes the page's whole contents,
+so a `# …` line at its top that is not byte-identical to the banner cannot be
+told apart from a first heading the agent wants on the page. It stays a heading
+there, and the tool's description points to `edit_page` for renames. `edit_page`
+has the document the agent edited in hand, so "the banner line changed" is a
+fact, not a guess.
 - **No agent-origin marker.** `apps/pages/agent-origin` also says "agent pages" —
   for e2e debris its 24h sweep trashes. An MCP apply writes through
   `applyPageBlockPatch`, which never fires `BlockLifecycle.AfterCreate`, so an
@@ -381,13 +420,19 @@ would drift the day either moves.
   one `BlockScope` is loaded, serialized for the agent and diffed against, which
   is what makes "a write diffs against the document the agent saw" literally
   true rather than probably true.
-- **The `# Title` banner is not writable**, and `edit_page` refuses an edit that
+- **The `# Title` banner is writable only as an agent page's rename, and only
+  through `edit_page`.** On a human's page, `edit_page` refuses an edit that
   changes the document's first line with a message naming the title rather than
-  letting it fall through to the planner as a created heading. On a human's page
-  that is diagnosis, not authority — the planner would refuse the heading anyway.
-  Inside an agent page it IS the authority: every block there is the agent's, so
-  a changed banner would land as a writable heading. A later rename feature
-  should write the page row's `data`, not relax this.
+  letting it fall through to the planner as a created heading — diagnosis, not
+  authority, since the planner would refuse the heading anyway. On an agent page
+  the edit is a rename (see *Renaming an agent page*): the title is written to
+  the page row's `data`, and the banner is still never a block. `write_agent_note`
+  cannot rename, because there a new `# …` line is indistinguishable from a first
+  heading.
+- **A rename is an edit of the title line alone.** An `edit_page` that changes
+  the title AND the content is refused (the 400 above); the agent makes them two
+  calls. The price is one extra call, and what it buys is that a deleted banner
+  is never mistaken for a rename, and a rename is never half of an edit.
 - **Sending the same minting document twice creates two pages** — the same as a
   tagless `<agent-inline>` today. A mint has no identity to converge on.
 - **A crash between the commit and the authorship stamp** leaves an agent page
@@ -409,6 +454,7 @@ Spec: `e2e/agent-access-verify.ts`.
     - `infra/mcp.Mcp`
     - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
     - `page/editor.Editor`
+    - `page/editor.renamePage`
     - `page/editor.StoredBlock`
     - `page/markdown-apply.applyMarkdownToBlock`
     - `page/markdown-apply.ApplyReport`

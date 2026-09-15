@@ -2513,6 +2513,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
+        - **`page-author`** — Agent-page toggle in the page-detail header: pressed and blue on an agent-authored page, it flips the open page between agent-authored (agents may write all of it) and an ordinary page.
+          - Web:
+            - Contributes: `PageDetail.HeaderActions` → `PageAuthorToggle`
+            - Uses:
+              - `apps/pages/page-tree.PageDetail`
+              - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSize`
+              - `primitives/css/ui-kit.useControlSize`
+              - `primitives/icon-button.IconButton`
+              - `primitives/live-state.useResource`
+              - `primitives/loading.Loading`
         - **`page-outline`** — The open page's headings as an outline rail pinned to the right edge of the pane: one dash per heading, the current section highlighted, hover to expand into a click-to-jump outline. Headings are identified generically from each block type's declared `semantics`, so it names no block type.
           - Web:
             - Contributes: `PageDetail.Overlay` "outline" → `PageOutline`
@@ -2527,7 +2539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`
-              - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.starred`
+              - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
@@ -2618,6 +2630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/content-search`
               - `apps/pages/copy-id`
               - `apps/pages/history`
+              - `apps/pages/page-author`
               - `apps/pages/page-outline`
               - `apps/pages/prompt-origin`
               - `apps/pages/starred`
@@ -16516,6 +16529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/sync/auto-resume`
           - `apps/mail/threads`
           - `apps/pages/history`
+          - `apps/pages/page-author`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
@@ -18706,6 +18720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/mcp.Mcp`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
               - `page/editor.Editor`
+              - `page/editor.renamePage`
               - `page/editor.StoredBlock`
               - `page/markdown-apply.applyMarkdownToBlock`
               - `page/markdown-apply.ApplyReport`
@@ -19423,6 +19438,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `pageData`
           - `PageDataSchema`
           - `pagesLiveResource`
+          - `renamePage`
           - `resolveBlockAnnotations`
           - `restorePageContent`
           - `serializePageContent`
@@ -19440,6 +19456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DELETE /api/blocks/:id`
           - `POST /api/blocks/:id/move`
           - `POST /api/blocks/:id/turn-into-page`
+          - `POST /api/blocks/:id/page-author`
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
@@ -19501,6 +19518,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `RowData`
           - `RunsXmlTextOptions`
           - `SerializedBlock`
+          - `SetPageAuthorBody`
           - `SoftBreaks`
           - `TextBearingSchema`
           - `TextData`
@@ -19590,6 +19608,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SerializedBlockSchema`
           - `serializeForestToMarkdown`
           - `serializeInlineMarkdown`
+          - `setPageAuthor`
+          - `SetPageAuthorBodySchema`
           - `sortMarks`
           - `splitRuns`
           - `SvgNodeSchema`
@@ -20119,6 +20139,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor.namesField`
           - `page/editor.PAGE_BLOCK_TYPE`
           - `page/editor.pageBlockMarkdown`
+          - `page/editor.parseInlineMarkdown`
           - `page/editor.plainOf`
           - `page/editor.RichText`
           - `page/editor.runsOf`
@@ -20134,6 +20155,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MarkdownApplyPlan`
           - `MarkdownApplyResult`
           - `MarkdownTextEdit`
+          - `PageTitleBannerParse`
           - `StoredRow`
           - `TouchedBlocks`
           - `TouchedHow`
@@ -20143,6 +20165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `documentOrderRows`
           - `markdownNodesOfRows`
           - `pageTitleBanner`
+          - `parsePageTitleBanner`
           - `planMarkdownApply`
           - `planWriteCount`
           - `stripPageTitleBanner`
@@ -24615,6 +24638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/sources/source-detail/schedule`
               - `apps/mail/reading-pane`
               - `apps/mail/sync-status`
+              - `apps/pages/page-author`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/pages/welcome/recent-pages`
@@ -26303,6 +26327,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/reading-pane`
           - `apps/pages/copy-id`
           - `apps/pages/history`
+          - `apps/pages/page-author`
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
@@ -26711,6 +26736,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/threads`
           - `apps/pages/agent-origin`
           - `apps/pages/history`
+          - `apps/pages/page-author`
           - `apps/pages/page-outline`
           - `apps/pages/page-tree`
           - `apps/pages/prompt-origin`
@@ -26890,6 +26916,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/mail/search`
           - `apps/mail/shell`
           - `apps/pages/history`
+          - `apps/pages/page-author`
           - `apps/pages/page-tree`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`

@@ -5,7 +5,11 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { defineBlock, textBlockSchema, type BlockData } from "../../core";
 import { pageBlockHandle } from "../../core/schemas";
 import { Editor, resolveBlockHandle } from "./block-registry";
-import { parseBlockData, rewriteBlockData } from "./parse-block-data";
+import {
+  parseBlockData,
+  reauthorPageData,
+  rewriteBlockData,
+} from "./parse-block-data";
 
 // Throwaway handles registered via `collectContributions`, keeping this resolver
 // unit test decoupled from any concrete block-type plugin (importing one would form
@@ -163,13 +167,14 @@ test("a void type with an injected string text key is still a 400", () => {
   }
 });
 
-// ── rewriteBlockData: a row's author is fixed when it is created ─────────────
+// ── rewriteBlockData: a data edit never changes a row's author ───────────────
 //
-// The ONE minting site of the update brand, so every path that rewrites an
-// existing row's payload — the op writer, the patch writer, `PATCH
+// The data-edit minting site of the update brand, so every path that rewrites
+// an existing row's payload — the op writer, the patch writer, `PATCH
 // /api/blocks/:id`, history restore — refuses the same thing here: a data write
 // that changes whose words the row holds. The row that decides it per row today
-// is a page (`data.author === "agent"`).
+// is a page (`data.author === "agent"`), and its author changes only through
+// `reauthorPageData`, below.
 
 function registerPage(): void {
   collectContributions([
@@ -259,5 +264,87 @@ test("it still validates like parseBlockData — a malformed payload is a 400", 
     () =>
       rewriteBlockData({ type: "page", before: agentPage, next: { title: 1 } }),
     400,
+  );
+});
+
+// ── reauthorPageData: the author change, and nothing else ────────────────────
+//
+// The brand's other minter — the whole write of `setPageAuthor`. It takes no
+// payload, only the stored row and the author to give it, so the flip cannot
+// carry any other edit.
+
+/** A page carrying every optional key, so "verbatim" is a real check. */
+const decoratedPage = {
+  type: "page",
+  data: {
+    title: "Findings",
+    icon: "rocket",
+    iconSvgNodes: null,
+    cover: null,
+  },
+};
+
+test("human → agent writes the marker and copies every other key verbatim", () => {
+  registerPage();
+  expect(
+    asRecord(reauthorPageData({ before: decoratedPage, author: "agent" })),
+  ).toEqual({ ...decoratedPage.data, author: "agent" });
+});
+
+test("agent → human REMOVES the key rather than writing a value", () => {
+  registerPage();
+  const data = asRecord(
+    reauthorPageData({
+      before: {
+        type: "page",
+        data: { ...decoratedPage.data, author: "agent" },
+      },
+      author: "human",
+    }),
+  );
+  expect(data).toEqual(decoratedPage.data);
+  expect("author" in data).toBe(false);
+});
+
+test("setting the author a page already has is an identity on its data", () => {
+  registerPage();
+  expect(
+    asRecord(reauthorPageData({ before: agentPage, author: "agent" })),
+  ).toEqual(agentPage.data);
+  expect(
+    asRecord(reauthorPageData({ before: humanPage, author: "human" })),
+  ).toEqual(humanPage.data);
+});
+
+test("a non-page row is refused (400), never written", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      reauthorPageData({
+        before: { type: "__note__", data: { title: "x", pinned: false } },
+        author: "agent",
+      }),
+    400,
+  );
+});
+
+test("the flip still cannot ride a data edit — rewriteBlockData refuses it both ways", () => {
+  // The pair keeps the two changes apart: what `reauthorPageData` produces is
+  // exactly what a data edit may NOT say.
+  registerPage();
+  const flipped = asRecord(
+    reauthorPageData({ before: humanPage, author: "agent" }),
+  );
+  expectStatus(
+    () => rewriteBlockData({ type: "page", before: humanPage, next: flipped }),
+    409,
+  );
+  const unflipped = asRecord(
+    reauthorPageData({ before: agentPage, author: "human" }),
+  );
+  expectStatus(
+    () =>
+      rewriteBlockData({ type: "page", before: agentPage, next: unflipped }),
+    409,
   );
 });

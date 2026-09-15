@@ -130,7 +130,9 @@ export type BlockTextWriter = (
  *  2. **Structure**, under the page lock: compute the target forest from the
  *     version and what is live now ({@link planRestoreTarget}), then write it
  *     with the op handler's own shape, {@link writeForestTarget}. The page row's
- *     own `data` (title, icon, cover) is set from `snapshot.page`.
+ *     own `data` (title, icon, cover) is set from `snapshot.page` — all but its
+ *     author, which stays the stored row's (a version never changes whose page
+ *     it is; only `setPageAuthor` does).
  *  3. **Text**: `io.writeTexts` edits every text-bearing surviving block's doc
  *     to the version's runs, then projects `data.text`. Required rather than
  *     returned for the caller to apply: forgetting it would restore structure
@@ -210,13 +212,21 @@ export async function restorePageContent(
         );
       }
 
-      // The page row's data is a REWRITE of the one stored, and judged as one: a
-      // version of this same page carries the page's author (fixed at
-      // creation), so one that does not is refused rather than restored.
+      // A version restores the page's content, title, icon and cover — never
+      // its KIND, the same way it never moves the page. The author is changed
+      // only by the header's toggle (`setPageAuthor`), so a version taken before
+      // a flip holds the other one; the stored row's author is carried onto the
+      // version's data instead. The result is still a REWRITE of the stored
+      // data and judged as one (`rewriteBlockData`), which it now passes by
+      // construction.
+      const next: Record<string, unknown> = { ...snapshot.page };
+      delete next.author;
+      const { author } = pageData(pageRow);
+      if (author !== undefined) next.author = author;
       const data = rewriteBlockData({
         type: PAGE_BLOCK_TYPE,
         before: { type: PAGE_BLOCK_TYPE, data: pageRow.data },
-        next: snapshot.page,
+        next,
       });
       if (!dataEqual(pageRow.data, data)) {
         await updateBlockFields(ctx.tx, pageId, {

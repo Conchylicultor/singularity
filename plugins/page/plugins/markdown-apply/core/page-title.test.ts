@@ -11,7 +11,11 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { markdownNodesOfRows } from "./flatten";
-import { pageTitleBanner, stripPageTitleBanner } from "./page-title";
+import {
+  pageTitleBanner,
+  parsePageTitleBanner,
+  stripPageTitleBanner,
+} from "./page-title";
 import { planMarkdownApply } from "./plan";
 import type { StoredRow } from "./stored-row";
 
@@ -147,6 +151,89 @@ describe("stripPageTitleBanner", () => {
   test("compares against THIS page's banner, not against a shape", () => {
     const other = pageTitleBanner("Some other page", ctx);
     expect(stripPageTitleBanner(`${other}Body`, banner)).toBe(`${other}Body`);
+  });
+});
+
+describe("parsePageTitleBanner", () => {
+  /** The banner's own line — what a read shows and a rename edits. */
+  const lineOf = (title: string): string =>
+    pageTitleBanner(title, ctx).replace(/\n\n$/, "");
+
+  // The inverse, stated as a property over the titles the emitter must escape:
+  // whatever `pageTitleBanner` writes for a title reads back as that title.
+  test("reads back every title the banner writes, escaping included", () => {
+    for (const title of [
+      "Final findings",
+      "a * b",
+      "**bold**",
+      "`code`",
+      "[link](http://x)",
+      '<agent-note id="x">',
+      "back\\slash",
+      "under_score_d",
+      "  leading and trailing  ",
+      "",
+    ]) {
+      expect(parsePageTitleBanner(lineOf(title), ctx)).toEqual({
+        ok: true,
+        title,
+      });
+    }
+  });
+
+  // `""` is a real title (a page nobody named), which is exactly why failure is
+  // a discriminated result and not an empty string.
+  test("an empty title is `# ` — and reads back as the empty string", () => {
+    expect(lineOf("")).toBe("# ");
+    expect(parsePageTitleBanner("# ", ctx)).toEqual({ ok: true, title: "" });
+  });
+
+  test("refuses a title with formatting — a title is plain text", () => {
+    for (const line of [
+      "# **Final** notes",
+      "# *Final* notes",
+      "# `code`",
+      "# ~~gone~~",
+      "# [Final](http://x)",
+      '# <color value="red">Final</color>',
+      "# <u>Final</u>",
+    ]) {
+      const parsed = parsePageTitleBanner(line, ctx);
+      expect(parsed.ok).toBe(false);
+      if (!parsed.ok) expect(parsed.reason).toContain("plain text");
+    }
+  });
+
+  test("refuses a line that is not the banner's spelling", () => {
+    for (const line of [
+      "Final findings",
+      "#Final findings",
+      "## Final findings",
+      "### Final findings",
+      "",
+      "#",
+    ]) {
+      const parsed = parsePageTitleBanner(line, ctx);
+      expect(parsed.ok).toBe(false);
+      if (!parsed.ok) expect(parsed.reason).toContain('"# "');
+    }
+  });
+
+  // The parser is lenient and the serializer canonical, so a line with no
+  // marks can still be one the next read would spell differently. Refused, and
+  // the refusal carries the spelling that WOULD be accepted.
+  test("refuses a line that does not round-trip, naming the canonical spelling", () => {
+    const parsed = parsePageTitleBanner("# a * b", ctx);
+    expect(parsed).toEqual({
+      ok: false,
+      reason: expect.stringContaining(JSON.stringify("# a \\* b")),
+    });
+  });
+
+  test("refuses a soft break — a title is one line", () => {
+    const parsed = parsePageTitleBanner("# a\\nb", ctx);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.reason).toContain("one line");
   });
 });
 

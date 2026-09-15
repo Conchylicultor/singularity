@@ -764,7 +764,7 @@ describe("applyPageBlockPatch — a page the patch creates", () => {
   });
 });
 
-describe("a page's author is fixed at creation — refused on every rewrite path", () => {
+describe("a data edit never changes a page's author — refused on every rewrite path", () => {
   /** P ▸ [HUMAN (a human's sub-page), AGENT (an agent-authored one)]. */
   async function seedPages(): Promise<void> {
     await seedPage();

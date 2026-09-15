@@ -1,11 +1,15 @@
-// The `# Title` line a PAGE-rooted read prepends, and the strip that takes it
-// back off a document about to be applied.
+// The `# Title` line a PAGE-rooted read prepends, the strip that takes it back
+// off a document about to be applied, and the parse that reads a title back OUT
+// of an edited one.
 //
-// ONE module, both halves — the same rule `flatten.ts` states for its own shared
-// traversal: if the emitter and the stripper disagreed by a single byte, an
-// apply would be a diff against a document nobody ever saw. Here that byte has a
-// name: the page's own title would arrive at the planner as a CREATED heading
-// block, inside the document, at the top of the page.
+// ONE module, all three halves — the same rule `flatten.ts` states for its own
+// shared traversal: if the emitter and the stripper disagreed by a single byte,
+// an apply would be a diff against a document nobody ever saw. Here that byte has
+// a name: the page's own title would arrive at the planner as a CREATED heading
+// block, inside the document, at the top of the page. The parse is the third
+// party to the same agreement: it accepts a line only if the emitter would have
+// written exactly that line for the title it read, so "the title this line
+// states" can never mean something the next read would spell differently.
 //
 // The banner is a READER-SIDE PREFIX, never a node. The walk starts at the
 // root's CHILDREN (`flatten.ts`) — the root is SCOPE, not content — and that is
@@ -15,8 +19,15 @@
 // serialize walk and removed BEFORE the parse, so the forest on either side of
 // the round trip is exactly the one the engine already had, and the title
 // handling adds zero authority of its own.
+//
+// The parse does not change that either. It is a pure function from one line to
+// a title string; it neither strips nor writes anything. What a caller does with
+// the title — `agent-access`'s `edit_page` renames an agent-authored page with it,
+// through the page row's `data` — is the caller's authority, exercised outside
+// this engine, and never by letting the banner become a node.
 
 import {
+  parseInlineMarkdown,
   runsOf,
   serializeInlineMarkdown,
   type MarkdownContext,
@@ -33,7 +44,8 @@ const BANNER_PREFIX = "# ";
 
 /**
  * The banner as a single line — what {@link stripPageTitleBanner} compares
- * against, and the reason both halves live here.
+ * against, what {@link parsePageTitleBanner} must reproduce, and the reason all
+ * three halves live here.
  *
  * Two things happen to the title, and both are about what a title may NOT do:
  *
@@ -126,4 +138,96 @@ export function stripPageTitleBanner(markdown: string, banner: string): string {
   let next = i + 1;
   if (next < lines.length && lines[next] === "") next += 1;
   return lines.slice(next).join("\n");
+}
+
+/**
+ * What {@link parsePageTitleBanner} answers: the title a banner line states, or
+ * why the line is not one.
+ *
+ * A discriminated result rather than a nullable string, because `""` is a
+ * legitimate title (a page nobody named reads `# `), so a string-or-empty return
+ * would let "not a banner" pass for "renamed to nothing".
+ */
+export type PageTitleBannerParse =
+  { ok: true; title: string } | { ok: false; reason: string };
+
+/**
+ * The title one `# …` line states — the inverse of {@link bannerLine}.
+ *
+ * Three conditions, each the refusal of a line the stored title could not have
+ * produced:
+ *
+ *  - **It opens with the banner prefix.** `# ` exactly: `#Title` (no space) and
+ *    `## Title` (a second-level heading) are not the banner's spelling, and
+ *    neither is a line that is not a heading at all.
+ *  - **Its text carries no formatting.** A page title is PLAIN text — the page
+ *    row's `data.title` is a string, not runs — so `# **Final** notes` states
+ *    something no title can hold. A mark, a link or a color on any run is
+ *    refused rather than dropped: flattening it to its letters would store a
+ *    title the agent did not write.
+ *  - **It round-trips.** `bannerLine(title)` must reproduce the line BYTE FOR
+ *    BYTE. The inline parser is lenient by design (an unmatched `*` is literal
+ *    text), and the serializer is canonical (that same `*` comes back escaped),
+ *    so a line that parses without marks can still be one the next read would
+ *    spell differently. Accepting it would make the stored title and the line the
+ *    agent wrote two different strings — and the agent's next `read_page` would
+ *    show it a banner it never typed. The refusal names the canonical spelling,
+ *    so the fix is one copy away. It also rules out every title the stored form
+ *    cannot hold: a soft break (`\n`) reads back as a run holding a newline,
+ *    which `bannerLine` collapses to a space — a mismatch, stated separately
+ *    below because "a title is one line" is the clearer answer.
+ *
+ * The line is ONE line: finding it in a document (and deciding what may sit
+ * around it) is the caller's job, as it is for {@link stripPageTitleBanner}.
+ */
+export function parsePageTitleBanner(
+  line: string,
+  ctx: MarkdownContext,
+): PageTitleBannerParse {
+  if (!line.startsWith(BANNER_PREFIX)) {
+    return {
+      ok: false,
+      reason:
+        `a page title is written as one line opening with "${BANNER_PREFIX}" ` +
+        `(a single \`#\` and one space), and ${JSON.stringify(line)} does not`,
+    };
+  }
+  const runs = parseInlineMarkdown(
+    line.slice(BANNER_PREFIX.length),
+    ctx.protectedSpans,
+  );
+  const formatted = runs.find(
+    (run) =>
+      (run.marks !== undefined && run.marks.length > 0) ||
+      run.link !== undefined ||
+      (run.color !== undefined && run.color !== "default"),
+  );
+  if (formatted !== undefined) {
+    return {
+      ok: false,
+      reason:
+        `a page title is plain text, but ${JSON.stringify(formatted.text)} is ` +
+        `formatted (bold, italic, code, a link, …). Write it without the ` +
+        `markdown, or escape the characters with a backslash`,
+    };
+  }
+  const title = runs.map((run) => run.text).join("");
+  if (/[\r\n]/.test(title)) {
+    return {
+      ok: false,
+      reason:
+        "a page title is one line, but this one holds a line break (`\\n`)",
+    };
+  }
+  const canonical = bannerLine(title, ctx);
+  if (canonical !== line) {
+    return {
+      ok: false,
+      reason:
+        `the title line must be written exactly as read_page would show it, ` +
+        `which for that title is ${JSON.stringify(canonical)}, not ` +
+        `${JSON.stringify(line)}`,
+    };
+  }
+  return { ok: true, title };
 }

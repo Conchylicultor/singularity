@@ -689,6 +689,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `apps/mail/threads`
     - `apps/pages/agent-origin`
     - `apps/pages/history`
+    - `apps/pages/page-author`
     - `apps/pages/page-outline`
     - `apps/pages/page-tree`
     - `apps/pages/prompt-origin`

@@ -140,9 +140,9 @@ export type PageCover = z.infer<typeof PageCoverSchema>;
 // content an agent may write (`<agent-page>` in markdown). Absent means the
 // human's, the fail-safe reading, exactly as for every block that declares no
 // author; it is read through `blockAuthorOf` (`pageBlockAuthor` below), never
-// directly. The marker is the page's KIND, fixed at creation: the server refuses
-// a data write that flips it (`rewriteBlockData`). Not to be confused with
-// `apps/pages/agent-origin`'s "agent pages" (e2e-created, swept after 24h) —
+// directly. The marker is the page's KIND, changed only by the `setPageAuthor`
+// op: the server refuses a data write that flips it (`rewriteBlockData`). Not
+// to be confused with `apps/pages/agent-origin`'s "agent pages" (e2e-created, swept after 24h) —
 // see research/2026-09-11-page-agent-pages.md.
 export const PageDataSchema = z.object({
   title: z.string(),

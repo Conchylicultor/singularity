@@ -59,6 +59,7 @@ import {
   serializePageContent,
   type PageContentSnapshot,
 } from "./page-content";
+import { setPageAuthorOf } from "./handle-set-page-author";
 
 // Stand-ins for `page/text` and `page/divider` (the concrete block plugins
 // import this one, so importing them back would be a cycle). One text-bearing,
@@ -1149,5 +1150,61 @@ describe("the restore as a whole", () => {
     expect(await entries()).toEqual(entriesAfterFirst);
     expect(trashCalls).toEqual([]);
     expect(restoreCalls).toEqual([]);
+  });
+});
+
+// ── The page's kind ────────────────────────────────────────────────────────
+
+describe("a version never changes whose page it is", () => {
+  /** P ▸ [A "alpha"], and its version as it stands now. */
+  async function seedAndSnapshot(): Promise<PageContentSnapshot> {
+    await seedPage("P");
+    await seedBlock({
+      id: "A",
+      parentId: "P",
+      pageId: "P",
+      rank: "a0",
+      text: "alpha",
+    });
+    return snapshot("P");
+  }
+
+  test("a version taken before a flip to agent restores the content and title, and the page stays the agent's", async () => {
+    const v1 = await seedAndSnapshot();
+    expect(v1.page.author).toBeUndefined();
+
+    await setPageAuthorOf("P", "agent", t.db);
+    await setRow("P", {
+      data: parseBlockData("page", {
+        title: "Renamed",
+        icon: "rocket",
+        author: "agent",
+      }),
+    });
+
+    // Before the carry this was a 409: the version's data holds no marker, so
+    // restoring it verbatim would have flipped the page back.
+    await restore("P", v1);
+
+    expect(pageData(await row("P"))).toEqual({
+      title: "P",
+      icon: null,
+      author: "agent",
+    });
+    expect(textEditFor("A")).toEqual([{ text: "alpha" }]);
+  });
+
+  test("a version taken while the page was the agent's restores onto a human's page without re-marking it", async () => {
+    await seedPage("P");
+    await setPageAuthorOf("P", "agent", t.db);
+    const v1 = await snapshot("P");
+    expect(v1.page.author).toBe("agent");
+
+    await setPageAuthorOf("P", "human", t.db);
+    await restore("P", v1);
+
+    const data = pageData(await row("P"));
+    expect(data).toEqual({ title: "P", icon: null });
+    expect("author" in data).toBe(false);
   });
 });

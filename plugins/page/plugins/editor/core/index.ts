@@ -26,12 +26,14 @@ export {
   deleteBlock,
   moveBlock,
   turnIntoPage,
+  setPageAuthor,
   applyBlockOpEndpoint,
   patchBlocks,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
   TurnIntoPageBodySchema,
+  SetPageAuthorBodySchema,
 } from "./endpoints";
 export type {
   BlockPage,
@@ -39,6 +41,7 @@ export type {
   UpdateBlockBody,
   MoveBlockBody,
   TurnIntoPageBody,
+  SetPageAuthorBody,
 } from "./endpoints";
 
 export {

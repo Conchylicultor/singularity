@@ -74,8 +74,12 @@ A PAGE-rooted read opens with `# <title>` — a string prepended AFTER the
 serialize walk and stripped BEFORE the parse. The root stays scope, not content,
 and the title handling adds **zero authority of its own**.
 
-- **Emit and strip in ONE module**, for `flatten.ts`'s reason: disagree by a byte
-  and the apply is a diff against a document nobody saw.
+- **Emit, strip and parse in ONE module**, for `flatten.ts`'s reason: disagree by
+  a byte and the apply is a diff against a document nobody saw.
+  `parsePageTitleBanner` is the inverse of the emitter: it accepts a `# ` line of
+  unformatted text only if the emitter would write exactly that line for the
+  title it reads, so the stored title and the line an agent wrote cannot be two
+  different strings.
 - **Only `rootId === pageId`.** A banner on a card-scoped read would come back as
   an `# H1` minted INSIDE the card.
 - The title goes through the **same inline serializer** as every other line and
@@ -85,7 +89,10 @@ and the title handling adds **zero authority of its own**.
   page's CURRENT STORED title. A rename, a spliced-into banner and the page's own
   first heading are indistinguishable from here, so all of them fall through to
   the planner as a created heading and are refused. A deleted banner strips
-  nothing and deletes nothing — it was never a row.
+  nothing and deletes nothing — it was never a row. A RENAME is decided by the
+  caller before the apply, never here: `agent-access`'s `edit_page` reads the new
+  title with the parse, puts the stored banner line back so this strip sees an
+  unchanged title, and writes the title to the page row separately.
 - **Known bound:** deleting ONLY the banner line, on a page whose first block is
   an H1 reading exactly the title, strips that H1 block instead. Telling the two
   apart needs the banner to be a node, which is what this refuses to make it.
@@ -472,6 +479,7 @@ annotation in the key would make every status change look like a new block.
     - `page/editor.namesField`
     - `page/editor.PAGE_BLOCK_TYPE`
     - `page/editor.pageBlockMarkdown`
+    - `page/editor.parseInlineMarkdown`
     - `page/editor.plainOf`
     - `page/editor.RichText`
     - `page/editor.runsOf`
@@ -487,6 +495,7 @@ annotation in the key would make every status change look like a new block.
     - `MarkdownApplyPlan`
     - `MarkdownApplyResult`
     - `MarkdownTextEdit`
+    - `PageTitleBannerParse`
     - `StoredRow`
     - `TouchedBlocks`
     - `TouchedHow`
@@ -496,6 +505,7 @@ annotation in the key would make every status change look like a new block.
     - `documentOrderRows`
     - `markdownNodesOfRows`
     - `pageTitleBanner`
+    - `parsePageTitleBanner`
     - `planMarkdownApply`
     - `planWriteCount`
     - `stripPageTitleBanner`

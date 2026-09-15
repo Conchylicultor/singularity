@@ -132,8 +132,8 @@ export const TurnIntoPageBodySchema = z.object({
    * `"agent"` makes the new page AGENT-AUTHORED (`PageData.author`) — the
    * `/agent-page` insert: a human makes an empty page for an agent to fill, and
    * its first writer counts as its creator. Absent is an ordinary page, the
-   * human's. Chosen here and nowhere later: a page's author is fixed at creation
-   * (`rewriteBlockData` refuses a data write that flips it).
+   * human's. Chosen here at birth; afterwards only {@link setPageAuthor} changes
+   * it (`rewriteBlockData` refuses a data write that flips it).
    */
   author: z.literal("agent").optional(),
 });
@@ -146,6 +146,28 @@ export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
 export const turnIntoPage = defineEndpoint({
   route: "POST /api/blocks/:id/turn-into-page",
   body: TurnIntoPageBodySchema,
+  response: BlockSchema,
+});
+
+/**
+ * Whose page this is, as the whole of the request: `"agent"` makes it an
+ * agent-authored page (agents may write all of it), `"human"` makes it an
+ * ordinary one. The same two values as `BlockAuthor`, where the absent marker
+ * reads as the human's.
+ */
+export const SetPageAuthorBodySchema = z.object({
+  author: z.enum(["agent", "human"]),
+});
+export type SetPageAuthorBody = z.infer<typeof SetPageAuthorBodySchema>;
+
+// Flip a page between agent-authored and ordinary — the page header's toggle,
+// and the ONE way a page's author changes after it is born. A data write cannot
+// carry the flip (`rewriteBlockData` refuses it), and this op carries nothing
+// else: title, icon, cover and every other key are copied from the stored row.
+// Setting the author a page already has is a no-op that returns the row.
+export const setPageAuthor = defineEndpoint({
+  route: "POST /api/blocks/:id/page-author",
+  body: SetPageAuthorBodySchema,
   response: BlockSchema,
 });
 

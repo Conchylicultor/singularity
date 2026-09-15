@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-page-author",
+  "description": "Agent-page toggle button in the page-detail header.",
+  "private": true,
+  "version": "0.0.1"
+}

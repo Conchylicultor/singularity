@@ -81,7 +81,10 @@ says yes. So:
 - anywhere inside an `<agent-page>`: writable, because the nearest declaration is
   the page's own row (its data says `author: "agent"`). A write rooted at the
   page's own id hears that through the scope's ENCLOSURE — what the root sits
-  inside — which is how every block of the page is the agent's;
+  inside — which is how every block of the page is the agent's. That marker is
+  set when the page is born and changed afterwards only by the human's header
+  toggle (`setPageAuthor`, whose write is `reauthorPageData`) — never by a data
+  edit, and never by a history restore, which keeps the page's current author;
 - inside a `<human>` or `<todo>` card **nested in either**: refused. The nested
   card declares `human` first, and it is a hole in the agent's own region. This
   is what makes answering an agent inside its own note survive the next

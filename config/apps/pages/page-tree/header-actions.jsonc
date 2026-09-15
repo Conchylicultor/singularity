@@ -1,16 +1,19 @@
-// @hash a524e336b6ed
+// @hash e2e49c76bf6d
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   //
   // A horizontal strip read left to right, trailing the page's breadcrumb. Star
   // first: it is the one-tap action, and the one whose state you read at a
-  // glance. History second — a rarer, heavier affordance. Copy block ID last: a
-  // utility for handing the page to an agent, not a reading action. The pane's
-  // own Expand and Close sit beyond these, painted by the pane chrome rather
-  // than this slot.
+  // glance. History second — a rarer, heavier affordance. The agent-page toggle
+  // third: it is also a state you read at a glance (blue and pressed on an agent
+  // page), but a rare switch to flip, so it sits among the page's own actions,
+  // ahead of the copy-id utility. Copy block ID last: a utility for handing the
+  // page to an agent, not a reading action. The pane's own Expand and Close sit
+  // beyond these, painted by the pane chrome rather than this slot.
   "items": [
     "apps.pages.starred:star",
     "apps.pages.history:history",
+    "apps.pages.page-author:page-author",
     "apps.pages.copy-id:copy-id"
   ]
 }

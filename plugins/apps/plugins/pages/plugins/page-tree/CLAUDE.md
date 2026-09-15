@@ -71,7 +71,7 @@ route each render rather than remembered from how the page was opened.
 - Web:
   - Slots:
     - `PageDetail.Section` ← `apps.pages.page-tree`
-    - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.starred`
+    - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.page-author`, `apps.pages.starred`
     - `PageDetail.Overlay` ← `apps.pages.page-outline`
     - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
     - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
@@ -162,6 +162,7 @@ route each render rather than remembered from how the page was opened.
     - `apps/pages/content-search`
     - `apps/pages/copy-id`
     - `apps/pages/history`
+    - `apps/pages/page-author`
     - `apps/pages/page-outline`
     - `apps/pages/prompt-origin`
     - `apps/pages/starred`
