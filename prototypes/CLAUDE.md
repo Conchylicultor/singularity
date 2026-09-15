@@ -122,6 +122,9 @@ The gallery reads these out of your HTML — there is no metadata file.
     Lab fixture id.
   - `route:/agents/c/123` — a whole app **screen**: the running app itself,
     framed at that in-app path (no rail, no tab bar).
+  - `app:/agents` — the **whole app**, chrome included: the running app at that
+    path with its rail, tab bar and action bar, as a person sees it in their own
+    tab. For a mock of the chrome itself, or of a theme across chrome and screen.
 
   The kinds are open — the Compare stage lists the ones this worktree knows,
   with an example of each. A value with no `<kind>:` prefix is reported as a
@@ -136,7 +139,7 @@ Use `max-width` plus side padding, not `width: 1280px`, and let grids stack when
 there is no room. The template's `#root` already fills its frame.
 
 Why: with a `mocks` tag, Compare frames your mock at the widths the reader picks
-(a `route:` screen offers 480 / 768 / 1024 / 1280 / 1600), and your media
+(a `route:` or `app:` counterpart offers 480 / 768 / 1024 / 1280 / 1600), and your media
 queries run. A fixed-width mock gets cropped there while the real screen
 reflows beside it. So a mock of a screen needs breakpoints for those widths.
 

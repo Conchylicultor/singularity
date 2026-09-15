@@ -29,7 +29,7 @@ what is contributed or configured: no tab bar, and the railless framing.
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.TooltipProvider`
-    - `primitives/embed.isEmbeddedDocument`
+    - `primitives/embed.isChromelessDocument`
     - `primitives/loading.Loading`
     - `primitives/pane.setBasePath`
     - `primitives/pane.useRenderSync`

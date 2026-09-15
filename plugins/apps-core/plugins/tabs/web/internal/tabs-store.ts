@@ -173,9 +173,10 @@ function rawPathForTab(
  */
 export function loadPersistedTabs(): PersistedTabs | null {
   if (typeof window === "undefined") return null;
-  // An embedded document (`?embed=1`, see `primitives/embed`) boots one tab
-  // from its URL and restores nothing: it shares this browser tab's
-  // sessionStorage with the host page, and its instance is never registered.
+  // An embedded document (`?embed=…` in either mode, see `primitives/embed`)
+  // boots one tab from its URL and restores nothing: it shares this browser
+  // tab's sessionStorage with the host page, and its instance is never
+  // registered.
   if (isEmbeddedDocument()) return null;
   const raw =
     window.sessionStorage.getItem(storageKey()) ?? adoptLegacyPayload();

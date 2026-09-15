@@ -177,7 +177,8 @@ export function resetAppInstanceForTests(): void {
 }
 
 function resolveInstanceId(): string {
-  // An embedded document (a same-origin frame opened with `?embed=1`) shares
+  // An embedded document (a same-origin frame opened with `?embed=…`, in
+  // either mode) shares
   // this browser tab's sessionStorage — and so this registry — with the host
   // page. It is not a restorable instance, so it mints a fresh generation and
   // never reads, writes or re-promotes the registry: a commit from here would

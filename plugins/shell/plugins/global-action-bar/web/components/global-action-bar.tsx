@@ -7,7 +7,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { isEmbeddedDocument } from "@plugins/primitives/plugins/embed/web";
+import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
 import {
   getSurfaceMode,
   setSurfaceMode,
@@ -92,10 +92,11 @@ export function FloatingActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
   const { pinned, togglePin } = useActionBarPin();
 
-  // An embedded document (`?embed=1`, see `primitives/embed`) has no chrome
-  // at all, so the floating overlay stays out too. (The docked host needs no
-  // branch: it lives in the tab bar, which an embed does not render.)
-  if (!enabled || pinned || isEmbeddedDocument()) return null;
+  // A chromeless embed (`?embed=1`, see `primitives/embed`) has no chrome at
+  // all, so the floating overlay stays out too. (The docked host needs no
+  // branch: it lives in the tab bar, which a chromeless embed does not
+  // render.) An embed that keeps its chrome (`?embed=chrome`) draws it.
+  if (!enabled || pinned || isChromelessDocument()) return null;
 
   return (
     <FloatingAction

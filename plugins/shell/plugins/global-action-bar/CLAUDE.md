@@ -44,7 +44,7 @@ tab bar, which an embed does not paint.
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.ControlSizeProvider`
-    - `primitives/embed.isEmbeddedDocument`
+    - `primitives/embed.isChromelessDocument`
     - `primitives/icon-button.IconButton`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`

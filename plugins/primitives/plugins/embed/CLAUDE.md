@@ -1,9 +1,17 @@
 # embed
 
-The declared **chromeless-document** signal. A document opened with `?embed=1`
-renders one route with no app chrome — no app rail, no tab bar, no floating
-action bar — because something else supplies the frame around it (the
-Prototypes app's Compare stage framing the real app beside a mock, for one).
+The declared **embedded-document** signal. A document opened with `?embed=…` is
+hosted by another page on this same origin (the Prototypes app's Compare stage
+framing the real app beside a mock, for one), and the flag's value says how much
+of the app's own chrome it still draws:
+
+| Mode | Flag | What renders |
+| --- | --- | --- |
+| `chromeless` | `?embed=1` | one route, no app chrome — no app rail, no tab bar, no floating action bar — because the host supplies the frame |
+| `chrome` | `?embed=chrome` | the whole app, chrome included, as a person sees it in their own tab — for a host comparing the chrome itself |
+
+Both modes are embeds: whatever the mode, the document leaves no trace in the
+host tab's storage (see *The readers* below).
 
 It is a *declaration* on purpose. A `window.self !== window.top` heuristic
 would misfire on every other thing that frames the app (the browser app's
@@ -12,8 +20,8 @@ cannot do it at all: the rail and the tab bar live outside the surface.
 
 ## The read happens once
 
-`isEmbeddedDocument()` reads `window.location.search` on its first call and
-memoizes the answer for the document's lifetime. It cannot be re-read later:
+`embedMode()` reads `window.location.search` on its first call and memoizes the
+answer for the document's lifetime. It cannot be re-read later:
 the pane store rebuilds every URL it writes from the route alone
 (`buildRouteUrl` + `applyBasePath` in `primitives/pane`), so the flag would be
 gone after the first in-frame click and the chrome would come back mid-session.
@@ -21,21 +29,33 @@ The flag is a fact about how this document was **opened**, and that is what is
 captured. `resetEmbedForTests()` drops the memo.
 
 The tabs layer's shell history adapter additionally re-stamps the flag onto
-every URL it writes in an embedded document (`embedUrl`), so the address stays
-honest and a reload of the frame after in-frame navigation comes back
-chromeless. That is durability; the boot-time read is what makes it correct.
+every URL it writes in an embedded document (`embedUrl`, in the mode the
+document was opened with), so the address stays honest and a reload of the
+frame after in-frame navigation comes back embedded the same way. That is
+durability; the boot-time read is what makes it correct.
 
-## The five readers
+## The readers
 
-| Reader | Branch |
-| --- | --- |
-| `apps-core/layout` | no tab bar; the railless framing whatever variant is configured |
-| `shell/global-action-bar` | the floating host renders nothing (the docked host lives in the tab bar, already gone) |
-| `primitives/scope/app-instance` | mints a fresh generation and never touches the instance registry |
-| `apps-core/tabs` (tabs-store) | loads and saves no persisted tab set; boots one tab from the URL at the default placement |
-| the build's experimental-deploy stamp (`cli/build/internal/experimental-marker.ts`) | draws no red worktree frame: the host page on this same deploy already wears it, and the band would land in every capture of the embedded app |
+Two different questions, each with its own function — pick by what the branch
+is about:
 
-The last two are a **hazard guard**, not tidiness. A same-origin iframe shares
+- `isChromelessDocument()` — "do I draw the app chrome?" Only the `chromeless`
+  mode says no.
+- `isEmbeddedDocument()` — "am I hosted by another page on this origin?" Both
+  modes say yes.
+
+| Reader | Asks | Branch |
+| --- | --- | --- |
+| `apps-core/layout` | chromeless | no tab bar; the railless framing whatever variant is configured |
+| `shell/global-action-bar` | chromeless | the floating host renders nothing (the docked host lives in the tab bar, already gone) |
+| `primitives/scope/app-instance` | embedded | mints a fresh generation and never touches the instance registry |
+| `apps-core/tabs` (tabs-store) | embedded | loads and saves no persisted tab set; boots one tab from the URL at the default placement |
+| `apps-core/tabs` (shell history adapter) | `embedMode()` | re-stamps the flag in the same mode onto every URL it writes |
+| the build's experimental-deploy stamp (`cli/build/internal/experimental-marker.ts`) | embedded (either flag value) | draws no red worktree frame: the host page on this same deploy already wears it, and the band would land in every capture of the embedded app |
+| `apps/prototypes/compare/route` | embedded | refuses to frame the app again from inside a framed app |
+
+The storage guards are a **hazard guard**, not tidiness, and they hold in both
+modes. A same-origin iframe shares
 the host browser tab's `sessionStorage`, so an embedded document would
 otherwise append a generation to the host's `singularity.appInstances`
 registry — and at `RETAINED_INSTANCES` it would evict and sweep the host's real
@@ -50,17 +70,20 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
 
 ## API
 
-- `core`: `EMBED_PARAM`, `EMBED_VALUE`, `hasEmbedFlag(search)`,
-  `withEmbedFlag(rawUrl, origin)` — pure, tested in `core/embed.test.ts`.
-  `withEmbedFlag` goes through `URL`, so a path that already has a query gains
-  `&embed=1`, and a flag it already carries is overwritten, not duplicated.
-- `web`: `isEmbeddedDocument()`, `embedUrl(path)`, `resetEmbedForTests()`.
+- `core`: `EMBED_PARAM`, `EMBED_VALUES` (mode → flag value), `EmbedMode`,
+  `readEmbedMode(search)`, `withEmbedFlag(rawUrl, origin, mode)` — pure, tested
+  in `core/embed.test.ts`. A flag value that spells no mode (`?embed=0`) is not
+  an embed. `withEmbedFlag` goes through `URL`, so a path that already has a
+  query gains `&embed=…`, and a flag it already carries is overwritten, not
+  duplicated.
+- `web`: `embedMode()`, `isEmbeddedDocument()`, `isChromelessDocument()`,
+  `embedUrl(path, mode)`, `resetEmbedForTests()`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: The declared chromeless-document signal: isEmbeddedDocument() reads the `?embed=1` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read), and embedUrl(path) builds an in-app URL that opens that way. Read by the apps layout (no tab bar, no rail), the floating action bar (hidden), and the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame never evicts the host tab's own state.
+- Description: The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
 - Cross-plugin:
   - Imported by:
     - `apps-core/layout`
@@ -70,14 +93,17 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
     - `shell/global-action-bar`
 - Web:
   - Exports (values):
+    - `embedMode`
     - `embedUrl`
+    - `isChromelessDocument`
     - `isEmbeddedDocument`
     - `resetEmbedForTests`
 - Core:
+  - Exports (types): `EmbedMode`
   - Exports (values):
     - `EMBED_PARAM`
-    - `EMBED_VALUE`
-    - `hasEmbedFlag`
+    - `EMBED_VALUES`
+    - `readEmbedMode`
     - `withEmbedFlag`
 
 <!-- AUTOGENERATED:END -->

@@ -1,9 +1,10 @@
-import { hasEmbedFlag, withEmbedFlag } from "../../core";
+import { readEmbedMode, withEmbedFlag, type EmbedMode } from "../../core";
 
-let resolved: boolean | undefined;
+// `null` = read, and this document is not embedded; `undefined` = not read yet.
+let resolved: EmbedMode | null | undefined;
 
 /**
- * Is THIS document a chromeless embed?
+ * How THIS document is embedded, or `undefined` when it is not.
  *
  * Read ONCE, on first call, and memoized for the document's lifetime — never
  * re-read from the URL later. The pane store rebuilds every URL it writes from
@@ -12,17 +13,35 @@ let resolved: boolean | undefined;
  * and bring the chrome back mid-session. The flag is a fact about how this
  * document was OPENED, and that is what is captured.
  */
-export function isEmbeddedDocument(): boolean {
+export function embedMode(): EmbedMode | undefined {
   resolved ??=
     typeof window === "undefined"
-      ? false
-      : hasEmbedFlag(window.location.search);
-  return resolved;
+      ? null
+      : (readEmbedMode(window.location.search) ?? null);
+  return resolved ?? undefined;
 }
 
-/** An in-app URL (`/agents/c/1`, query allowed) that opens chromeless. */
-export function embedUrl(path: string): string {
-  return withEmbedFlag(path, window.location.origin);
+/**
+ * Is THIS document embedded at all, in either mode? The question for anything
+ * about being hosted on the same origin: storage the host tab owns, framing
+ * the app again from inside a frame.
+ */
+export function isEmbeddedDocument(): boolean {
+  return embedMode() !== undefined;
+}
+
+/**
+ * Is THIS document embedded WITHOUT its app chrome? The question for the
+ * chrome itself — the tab bar, the app rail, the floating action bar. An embed
+ * in `chrome` mode draws all three.
+ */
+export function isChromelessDocument(): boolean {
+  return embedMode() === "chromeless";
+}
+
+/** An in-app URL (`/agents/c/1`, query allowed) that opens embedded in `mode`. */
+export function embedUrl(path: string, mode: EmbedMode): string {
+  return withEmbedFlag(path, window.location.origin, mode);
 }
 
 /** Drop the memoized read between tests (mirrors resetAppInstanceForTests). */

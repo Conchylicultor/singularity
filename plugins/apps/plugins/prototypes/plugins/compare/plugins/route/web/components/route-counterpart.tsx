@@ -6,6 +6,7 @@ import {
   embedUrl,
   isEmbeddedDocument,
 } from "@plugins/primitives/plugins/embed/web";
+import type { EmbedMode } from "@plugins/primitives/plugins/embed/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type {
   CounterpartKindProps,
@@ -37,15 +38,38 @@ function widthChoices(declared: number): WidthChoices {
  * branch renders it — real routing, real live data, real chrome inside the
  * surface — and never a second implementation that could drift from it.
  */
-export function RouteCounterpart({
+export function RouteCounterpart(props: CounterpartKindProps): ReactElement {
+  return <AppCounterpartOf {...props} embed="chromeless" />;
+}
+
+/**
+ * The `app:` kind: the same running app at the same kind of path, framed WITH
+ * its chrome (`?embed=chrome`: the app rail, the tab bar, the action bar) — the
+ * whole app as a person sees it in their own tab. For a mock of the chrome
+ * itself, or of how a theme reads across chrome and surface together.
+ */
+export function WholeAppCounterpart(props: CounterpartKindProps): ReactElement {
+  return <AppCounterpartOf {...props} embed="chrome" />;
+}
+
+/** How each embed mode is named over its half of the stage. */
+const TITLES: Record<EmbedMode, string> = {
+  chromeless: "App screen",
+  chrome: "Whole app",
+};
+
+function AppCounterpartOf({
   target,
   meta,
   children,
-}: CounterpartKindProps): ReactElement {
+  embed,
+}: CounterpartKindProps & { embed: EmbedMode }): ReactElement {
   const apps = Apps.App.useContributions();
   const { deferredComplete } = useDeferredLoadState();
   return (
-    <>{children(resolve(target, meta.viewport, apps, deferredComplete))}</>
+    <>
+      {children(resolve(target, meta.viewport, apps, deferredComplete, embed))}
+    </>
   );
 }
 
@@ -54,6 +78,7 @@ function resolve(
   viewport: { w: number; h: number },
   apps: ReturnType<typeof Apps.App.useContributions>,
   deferredComplete: boolean,
+  embed: EmbedMode,
 ): CounterpartResolution {
   // Framing stops at depth one. This document being a framed app screen means
   // the path in some prototype led back to a Compare stage — its own
@@ -77,7 +102,7 @@ function resolve(
         </>
       ),
       detail:
-        "A route counterpart is a root-relative path into this app, starting with a slash — the part of the address after the host, e.g. route:/agents.",
+        "An app counterpart is a root-relative path into this app, starting with a slash — the part of the address after the host, e.g. route:/agents or app:/agents.",
     };
   }
 
@@ -123,11 +148,16 @@ function resolve(
   return {
     status: "found",
     widths: widthChoices(viewport.w),
-    title: "App screen",
+    title: TITLES[embed],
     subtitle: resolved.app.app.name,
     badge: target,
     render: (width) => (
-      <AppFrame target={target} width={width} height={viewport.h} />
+      <AppFrame
+        target={target}
+        embed={embed}
+        width={width}
+        height={viewport.h}
+      />
     ),
   };
 }
@@ -148,17 +178,19 @@ function resolve(
  */
 function AppFrame({
   target,
+  embed,
   width,
   height,
 }: {
   target: string;
+  embed: EmbedMode;
   width: number;
   height: number;
 }): ReactElement {
   return (
     <iframe
-      title={`App screen at ${target}`}
-      src={embedUrl(target)}
+      title={`${TITLES[embed]} at ${target}`}
+      src={embedUrl(target, embed)}
       // Inline geometry, not banned className layout utilities: the width comes
       // from the frame's own box (100% of the width the stage sized it to), the
       // height from the prototype's declared viewport — the same box the mock

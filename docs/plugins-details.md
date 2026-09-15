@@ -2814,9 +2814,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/prototypes/compare.Counterpart`
                   - `primitives/css/badge.Badge`
-            - **`route`** — The route: counterpart kind for the prototype Compare stage: the running app itself, framed chromeless (no rail, no tab bar) at an in-app path (route:/agents/c/123) on this deploy's own origin, so a whole-screen mock is compared against the real screen as this branch renders it — never a second implementation that could drift.
+            - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
               - Web:
-                - Contributes: `Counterpart.Kind` "App screen" → `RouteCounterpart`
+                - Contributes:
+                  - `Counterpart.Kind` "App screen" → `RouteCounterpart`
+                  - `Counterpart.Kind` "Whole app" → `WholeAppCounterpart`
                 - Uses:
                   - `apps-core.Apps`
                   - `apps-core.resolveAppForPath`
@@ -5597,7 +5599,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.TooltipProvider`
-          - `primitives/embed.isEmbeddedDocument`
+          - `primitives/embed.isChromelessDocument`
           - `primitives/loading.Loading`
           - `primitives/pane.setBasePath`
           - `primitives/pane.useRenderSync`
@@ -5903,6 +5905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core.resolveAppForPath`
           - `apps-core.setFocusedApp`
           - `apps-core.useActiveApp`
+          - `primitives/embed.embedMode`
           - `primitives/embed.embedUrl`
           - `primitives/embed.isEmbeddedDocument`
           - `primitives/latest-ref.useLatestRef`
@@ -26054,7 +26057,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/notes`
           - `tasks/task-description`
           - `tasks/task-header`
-    - **`embed`** — The declared chromeless-document signal: isEmbeddedDocument() reads the `?embed=1` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read), and embedUrl(path) builds an in-app URL that opens that way. Read by the apps layout (no tab bar, no rail), the floating action bar (hidden), and the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame never evicts the host tab's own state.
+    - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
       - Cross-plugin:
         - Imported by:
           - `apps-core/layout`
@@ -26064,14 +26067,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `shell/global-action-bar`
       - Web:
         - Exports (values):
+          - `embedMode`
           - `embedUrl`
+          - `isChromelessDocument`
           - `isEmbeddedDocument`
           - `resetEmbedForTests`
       - Core:
+        - Exports (types): `EmbedMode`
         - Exports (values):
           - `EMBED_PARAM`
-          - `EMBED_VALUE`
-          - `hasEmbedFlag`
+          - `EMBED_VALUES`
+          - `readEmbedMode`
           - `withEmbedFlag`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
@@ -30296,7 +30302,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.ControlPanelPopover`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/embed.isEmbeddedDocument`
+          - `primitives/embed.isChromelessDocument`
           - `primitives/icon-button.IconButton`
           - `primitives/overlay/floating-action.FloatingAction`
           - `primitives/overlay/floating-action.FloatingActionFadeIn`
