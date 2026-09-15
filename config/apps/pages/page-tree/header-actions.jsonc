@@ -1,13 +1,16 @@
-// @hash 83d722b8e10f
+// @hash a524e336b6ed
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   //
   // A horizontal strip read left to right, trailing the page's breadcrumb. Star
   // first: it is the one-tap action, and the one whose state you read at a
-  // glance. History second — a rarer, heavier affordance. The pane's own Expand
-  // and Close sit beyond these, painted by the pane chrome rather than this slot.
+  // glance. History second — a rarer, heavier affordance. Copy block ID last: a
+  // utility for handing the page to an agent, not a reading action. The pane's
+  // own Expand and Close sit beyond these, painted by the pane chrome rather
+  // than this slot.
   "items": [
     "apps.pages.starred:star",
-    "apps.pages.history:history"
+    "apps.pages.history:history",
+    "apps.pages.copy-id:copy-id"
   ]
 }

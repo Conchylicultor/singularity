@@ -2466,6 +2466,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineJob('pages.search.reindex')`
               - `defineJob('pages.search.backfill')`
               - `defineWarmup('pages.search.backfill')`
+        - **`copy-id`** — Copy block ID button in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
+          - Web:
+            - Contributes: `PageDetail.HeaderActions` → `CopyIdAction`
+            - Uses:
+              - `apps/pages/page-tree.PageDetail`
+              - `primitives/copy-to-clipboard.useCopyToClipboard`
+              - `primitives/icon-button.IconButton`
         - **`history`** — Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
           - Web:
             - Contributes: `PageDetail.HeaderActions` → `VersionHistoryAction`
@@ -2520,7 +2527,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots:
               - `PageDetail.Section` ← `apps.pages.page-tree`
-              - `PageDetail.HeaderActions` ← `apps.pages.history`, `apps.pages.starred`
+              - `PageDetail.HeaderActions` ← `apps.pages.copy-id`, `apps.pages.history`, `apps.pages.starred`
               - `PageDetail.Overlay` ← `apps.pages.page-outline`
               - `PageTree.RowActions` ← `apps.pages.page-tree`, `apps.pages.starred`
               - `PageTree.Fields` ← `apps.pages.agent-origin`, `apps.pages.starred`
@@ -2609,6 +2616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/pages-nav`
               - `apps/pages/agent-origin`
               - `apps/pages/content-search`
+              - `apps/pages/copy-id`
               - `apps/pages/history`
               - `apps/pages/page-outline`
               - `apps/pages/prompt-origin`
@@ -21966,6 +21974,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/deploy/servers`
           - `apps/deploy/ssh-setup`
+          - `apps/pages/copy-id`
           - `apps/studio/compositions/release/release-logs`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -26262,6 +26271,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/events/sources`
           - `apps/events/sources/refresh-all`
           - `apps/mail/reading-pane`
+          - `apps/pages/copy-id`
           - `apps/pages/history`
           - `apps/pages/page-tree`
           - `apps/pages/starred`

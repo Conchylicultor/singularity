@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-copy-id",
+  "description": "Copy block ID button in the page-detail header.",
+  "private": true,
+  "version": "0.0.1"
+}

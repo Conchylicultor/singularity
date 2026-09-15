@@ -1,4 +1,4 @@
-// @hash 83d722b8e10f
+// @hash a524e336b6ed
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -6,6 +6,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "apps.pages.copy-id:copy-id",
     "apps.pages.history:history",
     "apps.pages.starred:star"
   ]

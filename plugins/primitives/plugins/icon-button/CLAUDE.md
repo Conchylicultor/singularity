@@ -77,6 +77,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/events/sources`
     - `apps/events/sources/refresh-all`
     - `apps/mail/reading-pane`
+    - `apps/pages/copy-id`
     - `apps/pages/history`
     - `apps/pages/page-tree`
     - `apps/pages/starred`

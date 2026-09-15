@@ -15,6 +15,7 @@
   - Imported by:
     - `apps/deploy/servers`
     - `apps/deploy/ssh-setup`
+    - `apps/pages/copy-id`
     - `apps/studio/compositions/release/release-logs`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
