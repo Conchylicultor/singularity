@@ -143,11 +143,25 @@ Why: with a `mocks` tag, Compare frames your mock at the widths the reader picks
 queries run. A fixed-width mock gets cropped there while the real screen
 reflows beside it. So a mock of a screen needs breakpoints for those widths.
 
+## One request, one prototype
+
+**Only ever create a single prototype.** Run `./singularity prototype new` at
+most once per request — and not at all when your prompt already names a folder.
+Asked for three directions, three layouts or "a few ideas"? That is still one
+prototype: build every direction inside it and declare them as an option (see
+below), e.g. `direction: dense | airy | split`.
+
+Why: the reader compares variants by flipping one pill in place — same canvas,
+same scroll, same history. Spread across separate prototypes, the variants turn
+into near-duplicate gallery cards with forked version histories, and comparing
+them means jumping between panes.
+
 ## Options: variants the reader flips between
 
-If the design has versions to compare — a palette, a pane style, a density —
-**declare them; never build a switcher, toggle bar or settings panel into the
-page to flip between them.** The app draws the picker itself, as a small pill
+If the design has versions to compare — a palette, a pane style, a density, or
+whole alternative designs — **declare them; never build a switcher, toggle bar
+or settings panel into the page to flip between them, and never split them into
+separate prototypes.** The app draws the picker itself, as a small pill
 floating over the stage, outside your page. So your page holds only the design:
 the picker takes no canvas space, shows up in no screenshot or thumbnail, and
 your CSS never has to style it.
