@@ -48,8 +48,10 @@ stays below the jump factor and keeps its stall evidence. (See
 
 ## Stall stacks → the trace store
 
-On **main**, the sampler also arms a background-thread JSC sampling profiler and
-drains it every tick. When a tick's `eventLoopMaxMs > 3 s` (a frozen backend), it
+On **main**, the sampler also claims the background-thread JSC sampling profiler
+(`claimStackSampler("health-monitor")` from `infra/stack-sampler`, the
+profiler's one owner per process, which holds every bun:jsc fact) and drains it
+every tick. When a tick's `eventLoopMaxMs > 3 s` (a frozen backend), it
 aggregates the drained stacks into a `topLeaves`/`topStacks` histogram and hands
 the section to `debug/stall-monitor` via `recordEventLoopStall(...)`. The sampler
 only **detects + aggregates**; `stall-monitor` **captures the trace and files the
@@ -63,7 +65,8 @@ answer *why*. See `server/internal/stall-profiler.ts`.
 
 **`topStacks` carries its own `frames`.** Each stack bucket ships, alongside its
 name-only `stack` signature, the resolved `frameKey` identities of the same
-frames (the `name @ path:line` / `name [category]` form `topLeaves[].key` uses),
+frames (the primitive's `frameKey`, with paths made cwd-relative — the
+`name @ path:line` / `name [category]` form `topLeaves[].key` uses),
 taken from the first trace seen with that signature. **Invariant** (by
 construction in `aggregateTraces`, asserted in its tests): `frames[i]` is the
 frameKey of the frame whose bare name is `stack.split(" ← ")[i]` — same slice,

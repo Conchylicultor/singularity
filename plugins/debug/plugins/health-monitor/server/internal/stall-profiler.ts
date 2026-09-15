@@ -1,5 +1,10 @@
-import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";
 import { recordEventLoopStall } from "@plugins/debug/plugins/stall-monitor/server";
+import {
+  claimStackSampler,
+  frameKey,
+  type StackSample,
+  type StackSampler,
+} from "@plugins/infra/plugins/stack-sampler/core";
 import type {
   StallSection,
   StallLeaf,
@@ -11,10 +16,12 @@ import type {
 // Mechanism: JSC's sampling profiler runs on a SEPARATE thread, so it keeps
 // sampling the blocked main-thread JS stack DURING a synchronous block — exactly
 // the window where an on-demand "start profiling" request could never even be
-// processed. We start it once at sampler boot (main only) and drain it every
-// tick. Reading `samplingProfilerStackTraces()` DRAINS the buffer (returns only
-// samples since the last read), so a single drain-per-tick bounds memory AND
-// aligns the captured samples to the same window as `eventLoopMaxMs`.
+// processed. We claim it once at sampler boot (main only) and drain it every
+// tick. A drain returns only the samples since the last one, so a single
+// drain-per-tick bounds memory AND aligns the captured samples to the same window
+// as `eventLoopMaxMs`. The profiler itself — and every fact about bun:jsc's API
+// (no stop, the directory-only argument, the varying rate, which frames are
+// missing) — is owned by `infra/stack-sampler`; see its CLAUDE.md.
 //
 // Why drain-then-capture aligns: during a 40 s block no setInterval tick fires
 // (the timer lives on the blocked loop), so the JSC buffer accumulates the entire
@@ -28,24 +35,10 @@ import type {
 // like every other slow signal (rendered by the `trace/plugins/stall` event class
 // as a histogram lane) and the report reaches the bell + Debug → Reports.
 //
-// Note: bun:jsc (1.3.x) exposes `startSamplingProfiler` and
-// `samplingProfilerStackTraces` but NO explicit stop. `stopStallProfiler()`
-// therefore just disarms our consumer (we stop draining/capturing); the JSC
-// sampler thread idles harmlessly. This is fine — the sampler lives for the
-// process.
-//
-// `samplingProfilerStackTraces` exists at runtime but is absent from bun-types,
-// so we augment the module below. `startSamplingProfiler(optionalDirectory?)`'s
-// only arg is an output directory (NOT a numeric sample-interval — passing a
-// number is meaningless), so we call it with no arg. The observed rate in this
-// build is fixed at ~230 Hz; the real rate is derived per-dump from
+// The profiler has no stop, so `stopStallProfiler()` just disarms our consumer
+// (we stop draining/capturing) and the JSC sampler thread idles harmlessly for
+// the rest of the process. The real sample rate is derived per-dump from
 // nSamples/window, never assumed.
-declare module "bun:jsc" {
-  export function samplingProfilerStackTraces(): {
-    interval: number;
-    traces: ProfilerTrace[];
-  };
-}
 
 // Matches the "stalls > 3 s" cohort the investigation tracks in health.jsonl.
 const STALL_THRESHOLD_MS = 3_000;
@@ -56,24 +49,7 @@ const MAX_SIGNATURE_FRAMES = 40;
 const TOP_LEAVES = 15;
 const TOP_STACKS = 10;
 
-// JSC marks "no line/column/source" with this sentinel (0xFFFFFFFF).
-const NO_LINE = 4_294_967_295;
-
-interface ProfilerFrame {
-  name?: string;
-  sourceURL?: string;
-  line?: number;
-  column?: number;
-  category?: string;
-  flags?: number;
-}
-
-interface ProfilerTrace {
-  timestamp: number;
-  frames: ProfilerFrame[];
-}
-
-let armed = false;
+let sampler: StackSampler | null = null;
 
 // Render a source path relative to the worktree root so keys stay readable and
 // stable (the absolute prefix is noise and machine-specific).
@@ -81,20 +57,6 @@ function shortenSource(sourceURL: string): string {
   const cwd = process.cwd();
   if (sourceURL.startsWith(cwd + "/")) return sourceURL.slice(cwd.length + 1);
   return sourceURL;
-}
-
-// A leaf/frame identity key. JS frames → `name @ path:line`; native/unknown
-// frames (no sourceURL, sentinel line) → `name [category]`.
-function frameKey(frame: ProfilerFrame): string {
-  const name = frame.name && frame.name.length > 0 ? frame.name : "(anonymous)";
-  const hasSource =
-    typeof frame.sourceURL === "string" &&
-    frame.sourceURL.length > 0 &&
-    typeof frame.line === "number" &&
-    frame.line !== NO_LINE;
-  if (hasSource) return `${name} @ ${shortenSource(frame.sourceURL!)}:${frame.line}`;
-  const category = frame.category && frame.category.length > 0 ? frame.category : "native";
-  return `${name} [${category}]`;
 }
 
 // Generic "hottest N entries of a histogram". The value type is open so a bucket
@@ -143,7 +105,7 @@ interface StackBucket {
   frames: string[];
 }
 
-export function aggregateTraces(traces: ProfilerTrace[]): {
+export function aggregateTraces(traces: StackSample[]): {
   topLeaves: StallLeaf[];
   topStacks: StallStack[];
 } {
@@ -153,7 +115,7 @@ export function aggregateTraces(traces: ProfilerTrace[]): {
 
   for (const trace of traces) {
     const frames = trace.frames;
-    if (!frames?.[0]) continue;
+    if (!frames[0]) continue;
     total += 1;
 
     // Slice ONCE and derive both the leaf and the signature from the kept
@@ -161,15 +123,21 @@ export function aggregateTraces(traces: ProfilerTrace[]): {
     // construction rather than by two call sites agreeing.
     const kept = frames.slice(0, MAX_SIGNATURE_FRAMES);
 
-    const leaf = frameKey(kept[0]!);
+    const leaf = frameKey(kept[0]!, shortenSource);
     leafCounts.set(leaf, (leafCounts.get(leaf) ?? 0) + 1);
 
     // Full collapsed stack signature, innermost → outermost (names only — keeps
     // it compact and groups by call path rather than exact source position).
-    const signature = kept.map((f) => (f.name && f.name.length > 0 ? f.name : "?")).join(" ← ");
+    const signature = kept
+      .map((f) => (f.name && f.name.length > 0 ? f.name : "?"))
+      .join(" ← ");
     const seen = stackCounts.get(signature);
     if (seen) seen.count += 1;
-    else stackCounts.set(signature, { count: 1, frames: kept.map(frameKey) });
+    else
+      stackCounts.set(signature, {
+        count: 1,
+        frames: kept.map((f) => frameKey(f, shortenSource)),
+      });
   }
 
   if (total === 0) return { topLeaves: [], topStacks: [] };
@@ -187,21 +155,26 @@ export function aggregateTraces(traces: ProfilerTrace[]): {
       total,
       TOP_STACKS,
       (bucket) => bucket.count,
-      (stack, bucket, count, pct) => ({ stack, count, pct, frames: bucket.frames }),
+      (stack, bucket, count, pct) => ({
+        stack,
+        count,
+        pct,
+        frames: bucket.frames,
+      }),
     ),
   };
 }
 
 export function startStallProfiler(): void {
-  if (armed) return;
-  startSamplingProfiler();
-  armed = true;
+  if (sampler) return;
+  sampler = claimStackSampler("health-monitor");
 }
 
-// No JSC "stop" export exists; we simply disarm the consumer. The sampler thread
-// idles for the rest of the process lifetime.
+// No JSC "stop" exists; we simply disarm the consumer. The sampler thread idles
+// for the rest of the process lifetime, and a later `startStallProfiler()`
+// re-claims the same handle (same owner).
 export function stopStallProfiler(): void {
-  armed = false;
+  sampler = null;
 }
 
 // Always drain (bounds memory + aligns the window). If the window stalled past
@@ -209,18 +182,27 @@ export function stopStallProfiler(): void {
 // stall-monitor (which files the trace + report); else discard. `windowMs` is the
 // actual wall-time since the previous drain (the tick fires late after a block),
 // so nSamples/window is the true sample rate.
-export function drainAndMaybeDump(eventLoopMaxMs: number, windowMs: number): void {
-  if (!armed) return;
-  const traces = samplingProfilerStackTraces().traces ?? [];
+export function drainAndMaybeDump(
+  eventLoopMaxMs: number,
+  windowMs: number,
+): void {
+  if (!sampler) return;
+  const traces = sampler.drain();
 
   if (eventLoopMaxMs <= STALL_THRESHOLD_MS) return; // not a stall — discard
   if (traces.length === 0) return; // nothing captured for this window
 
   const windowSeconds = windowMs / 1000;
-  const sampleRateHz = windowSeconds > 0 ? Math.round(traces.length / windowSeconds) : 0;
+  const sampleRateHz =
+    windowSeconds > 0 ? Math.round(traces.length / windowSeconds) : 0;
   const { topLeaves, topStacks } = aggregateTraces(traces);
 
-  const section: StallSection = { nSamples: traces.length, sampleRateHz, topLeaves, topStacks };
+  const section: StallSection = {
+    nSamples: traces.length,
+    sampleRateHz,
+    topLeaves,
+    topStacks,
+  };
 
   // Hand the aggregated evidence to the alert plugin, which owns both the trace
   // (critical, stable-labelled) and the deduped `event-loop-stall` report. This

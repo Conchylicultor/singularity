@@ -158,6 +158,72 @@ hang is still `started − ended`. Queued checks are derived
 disagree with the start/end records. The bound's one real cost: a wedged check
 eventually stalls the run behind it, where before its peers drained.
 
+## The check thread is shared, and a run reports when it stalls
+
+Every check in a pass runs on ONE JS thread. When code holds that thread, no
+other check runs and no timer fires — so every check's `durationMs` in that
+window grows by the stall, and a check's own wall-clock timeout can fire against
+a service that is perfectly healthy. That is how fork-schema-drift's 5 s
+Postgres connect failed on 2026-09-10. Measured with this watch, a full uncached
+pass stalls its thread 10–14 times, and the longest stall is 24–42 s. The design
+and the measured culprits are on the wiki track page "Check pass speed"
+(read it with the `read_page` MCP tool: `block-c0e3f7dd-4943-432d-a631-d864fe623fe7`).
+
+So each run carries a **thread watch**
+([`core/thread-watch.ts`](core/thread-watch.ts)), opened and closed with the
+progress run. A 50 ms timer measures how late it fires, and each tick drains the
+JSC stack sampler (`infra/stack-sampler`, claimed as `check-runner`). A tick
+late by ≥ 1 s is a **stall**. Every sample is attributed, stall or not, to give
+a whole-run table of who used the thread. The sampler's rate is measured inside
+stall windows, where the thread is busy by definition, and it turns sample
+counts into milliseconds. With no stall, the tables give shares only.
+
+Where it lands:
+
+- **`check-progress.jsonl`**: a `stall` record per stall (top 3 owners with
+  5-frame example stacks, plus the WHOLE `running` list), a `thread` record just
+  before `done` (written even when nothing stalled), and `stalledMs` on each
+  `end` (how much of that check's `durationMs` fell inside stalls). Read back,
+  a missing `stalledMs` is `null`, never 0: older runs stalled too, they just
+  weren't measured.
+- **The transcript** (`check-<runId>.log`): the full detail above the trailer —
+  the whole-run owner table and each stall with its top 5 owners, 8-frame
+  stacks, and the checks in flight.
+- **The console**: one `⚠ check thread stalled …` line after the per-check
+  lines, on a passing run too. It never changes the verdict.
+- **`./singularity check --status`**: a `thread stalled N× so far` line under
+  each open run.
+
+**Reading an owner** ([`core/thread-attribution.ts`](core/thread-attribution.ts)):
+
+- `check <plugin>`: a frame from that check's own `check/` directory was on the
+  stack. That is sync work the check itself runs.
+- `shared <fn @ path>`: the outermost source frame, i.e. an async function
+  resumed after an `await`. **Its caller is not on the stack.** The stall
+  record's `running` list is the link back to the checks that could have called
+  it (e.g. the four that call the shared plugin-tree builder).
+- `import`: module evaluation from `await import()`. The evaluated module's
+  plugin is kept as detail ("of which: …"), so a long barrel-import chain reads
+  as one owner rather than 800 slivers.
+- `native <leaf>`: no source frame at all.
+
+A sync function whose last act is `return heavy()` loses its frame to JSC's
+proper tail calls, and its samples go to the next frame out. An `async run()`
+keeps its frame.
+
+Two consequences for check authors:
+
+- **A check's own wall-clock timeout must be longer than the longest stall a
+  pass reports.** Otherwise it measures the other checks, not its service. Read
+  the `thread` record of a recent uncached pass before picking a number.
+- **The watch sees only the main thread.** Work a check moves onto a Worker
+  (type-check's preparation) cannot show up here. That keeps it off the shared
+  thread, but it is not free.
+
+The watch names who held the thread. It does not give a check's true cost.
+`--jobs 1` is still the tool for isolating one check (see the fan-out section
+above).
+
 ## Bumping the cache-key format version
 
 Slot names carry `CACHE_KEY_VERSION` ([`core/cache.ts`](core/cache.ts)). Bump it
@@ -186,6 +252,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/paths.worktreeArtifacts`
     - `infra/spawn.getWorktreeRoot`
     - `infra/spawn.spawnCaptured`
+    - `infra/stack-sampler.claimStackSampler`
+    - `infra/stack-sampler.frameKey`
+    - `infra/stack-sampler.StackFrame`
+    - `infra/stack-sampler.StackSampler`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.lineAt`

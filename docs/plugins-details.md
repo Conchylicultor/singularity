@@ -15456,6 +15456,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreeArtifacts`
               - `infra/spawn.getWorktreeRoot`
               - `infra/spawn.spawnCaptured`
+              - `infra/stack-sampler.claimStackSampler`
+              - `infra/stack-sampler.frameKey`
+              - `infra/stack-sampler.StackFrame`
+              - `infra/stack-sampler.StackSampler`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.lineAt`
@@ -18170,6 +18174,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `SshFailureKind`
         - Exports (values): `SshFailureKindSchema`
+    - **`stack-sampler`** — The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
+      - Cross-plugin:
+        - Imported by: `framework/tooling/checks`
+      - Core:
+        - Exports (types):
+          - `StackFrame`
+          - `StackSample`
+          - `StackSampler`
+        - Exports (values):
+          - `claimStackSampler`
+          - `frameKey`
+          - `normalizeTraces`
     - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Server:
         - Contributes: `resource.declare` "trash-entries"

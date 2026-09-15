@@ -1,7 +1,17 @@
 import { basename } from "path";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import {
+  claimStackSampler,
+  type StackSampler,
+} from "@plugins/infra/plugins/stack-sampler/core";
 import { checkProgressLogDir } from "../data-dirs";
+import type { OwnerShare } from "./thread-attribution";
+import {
+  openThreadWatch,
+  type ThreadStall,
+  type ThreadSummary,
+} from "./thread-watch";
 
 // Host-global, exactly like the check-result cache next door (cache.ts:18) —
 // every worktree's check run appends to the SAME file, which is the point: an
@@ -34,8 +44,9 @@ const progressSink = defineFileSink({
   id: "check-progress",
   description:
     "Per-check-run progress log (`./singularity check`): one JSONL line per run " +
-    "open, bootstrap phase, check start/end, heartbeat, and completion — so a " +
-    "wedged run names the unit it is stuck in. Host-global across worktrees.",
+    "open, bootstrap phase, check start/end, heartbeat, thread stall, and " +
+    "completion — so a wedged run names the unit it is stuck in, and a stalled " +
+    "one the code that stalled it. Host-global across worktrees.",
   path: PROGRESS_FILE,
   maxBytes: 2 * 1024 * 1024,
   keep: 2,
@@ -95,6 +106,15 @@ export type ProgressRecord =
        * a pre-gate run had no queue, so 0 is that run's true wait.
        */
       queuedMs?: number;
+      /**
+       * Milliseconds of this check's body that fell inside thread stalls
+       * (`thread-watch.ts`): the part of `durationMs` that was the process, not
+       * the check. OPTIONAL on the wire for the same reason as `queuedMs`, but
+       * read back the OPPOSITE way — a missing value is `null`, never 0. A
+       * pre-gate run truly had no queue; a pre-watch run DID stall, nobody
+       * measured it, and a 0 would claim its durations were clean.
+       */
+      stalledMs?: number;
     })
   | (RecordBase & {
       phase: "pending";
@@ -102,7 +122,95 @@ export type ProgressRecord =
       pending: string[];
       bootstrap: string[];
     })
+  | (RecordBase & { phase: "stall" } & ProgressStall)
+  | (RecordBase & { phase: "thread" } & ProgressThread)
   | (RecordBase & { phase: "done"; elapsedMs: number; allOk: boolean });
+
+/** An owner as a record carries it; `detail` is empty for all but `import`. */
+interface RecordOwner {
+  owner: string;
+  samples: number;
+  detail: { name: string; samples: number }[];
+}
+
+/**
+ * One thread stall, as this file carries it — the TOP 3 owners, each with the
+ * first 5 frames of one real stack, and the WHOLE `running` list (the link from
+ * a `shared` owner to the checks that could have called it). The transcript
+ * gets the full detail (5 owners, 8 frames); this file is host-global and
+ * sized for dozens of runs, so it gets what names a culprit and no more.
+ *
+ * Spelled out rather than derived from `ThreadStall`: this is a wire format
+ * that outlives the code writing it, so a field added to the in-memory shape
+ * must not reach the file without someone deciding it should.
+ */
+export interface ProgressStall {
+  offsetMs: number;
+  durationMs: number;
+  lateMs: number;
+  running: string[];
+  bootstrap: string[];
+  samples: number;
+  owners: Array<RecordOwner & { example: string[] }>;
+}
+
+/**
+ * The run's thread summary, written ONCE by `finish()`, just before `done` —
+ * and even when nothing stalled: `longestLateMs = 300` is evidence too, it
+ * rules out the "one long block" explanation. Owners carry no example stack
+ * here; the stall records already hold the stacks that matter.
+ *
+ * `stallOwners` is who held the thread across every stall window together —
+ * what the console's "mostly X" ranks. `owners` is the whole run, stall or not.
+ */
+export interface ProgressThread {
+  longestLateMs: number;
+  stallCount: number;
+  stalledMs: number;
+  samples: number;
+  rateHz: number | null;
+  selfMs: number;
+  owners: Array<RecordOwner & { ms: number | null }>;
+  stallOwners: RecordOwner[];
+}
+
+const STALL_RECORD_OWNERS = 3;
+const STALL_RECORD_FRAMES = 5;
+
+function recordOwner(share: OwnerShare): RecordOwner {
+  return { owner: share.owner, samples: share.samples, detail: share.detail };
+}
+
+function stallRecord(stall: ThreadStall): ProgressStall {
+  return {
+    offsetMs: stall.offsetMs,
+    durationMs: stall.durationMs,
+    lateMs: stall.lateMs,
+    running: stall.running,
+    bootstrap: stall.bootstrap,
+    samples: stall.samples,
+    owners: stall.owners.slice(0, STALL_RECORD_OWNERS).map((share) => ({
+      ...recordOwner(share),
+      example: share.example.slice(0, STALL_RECORD_FRAMES),
+    })),
+  };
+}
+
+function threadRecord(summary: ThreadSummary): ProgressThread {
+  return {
+    longestLateMs: summary.longestLateMs,
+    stallCount: summary.stallCount,
+    stalledMs: summary.stalledMs,
+    samples: summary.samples,
+    rateHz: summary.rateHz,
+    selfMs: summary.selfMs,
+    owners: summary.owners.map((share) => ({
+      ...recordOwner(share),
+      ms: share.ms,
+    })),
+    stallOwners: summary.stallOwners.map(recordOwner),
+  };
+}
 
 /**
  * The checkout this run is checking — which is the run's identity, since a check
@@ -135,7 +243,7 @@ function worktreeName(): string {
  * better trade against silently losing the one diagnostic this file exists to
  * provide.
  */
-function writeRecord(record: ProgressRecord): void {
+function appendToSink(record: ProgressRecord): void {
   progressSink.append(JSON.stringify(record));
 }
 
@@ -160,7 +268,9 @@ export interface ProgressRun {
    *
    * `queuedMs` is the time spent waiting for a slot in the runner's concurrency
    * gate — separate from `durationMs` on purpose, so a bounded run's per-check
-   * cost is never inflated by the queue in front of it.
+   * cost is never inflated by the queue in front of it. The record's
+   * `stalledMs` is not a parameter: the run owns the thread watch, so it asks
+   * the watch itself, over the `durationMs` window ending now.
    */
   checkEnded(
     checkId: string,
@@ -169,8 +279,23 @@ export interface ProgressRun {
     cached: boolean,
     queuedMs: number,
   ): void;
-  /** Write the terminal `done` record and stop the heartbeat. Idempotent-safe. */
-  finish(allOk: boolean): void;
+  /**
+   * Stop the heartbeat and the thread watch, write the `thread` record and then
+   * the terminal `done`, and return the thread summary — the runner hands it to
+   * the transcript and the console, so it never holds a watch handle of its own.
+   */
+  finish(allOk: boolean): ThreadSummary;
+}
+
+/**
+ * What a run writes through and samples from. `openProgressRun` hands it the
+ * host-global sink and the process's one stack sampler; a test hands it an
+ * array and a fake, so it never writes the real file or claims the sampler
+ * (every bun:test file shares one process, and a sampler has one owner).
+ */
+export interface ProgressRunDeps {
+  write: (record: ProgressRecord) => void;
+  sampler: StackSampler;
 }
 
 /**
@@ -192,8 +317,22 @@ export interface ProgressRun {
  * the event loop were fully blocked. The heartbeat needs a live loop and adds
  * the time dimension (how long each unit has been outstanding). If either
  * assumption about the hang's nature is wrong, the other still names it.
+ *
+ * The thread watch opens here too, beside the heartbeat, and for the same
+ * reason the run record is written first: bootstrap is part of the run, and
+ * `load-checks` alone keeps the thread ~2.5 s.
  */
-export function openProgressRun(args: {
+export function openProgressRun(args: ProgressRunArgs): ProgressRun {
+  return startProgressRun(args, {
+    write: appendToSink,
+    // The process's one JSC sampler. `runChecks` runs once per process (its
+    // only caller is the `check` command), and a second claim under this same
+    // owner is the same handle — so there is nothing to release.
+    sampler: claimStackSampler("check-runner"),
+  });
+}
+
+interface ProgressRunArgs {
   scope: string | null;
   /** The ids the caller named, or null for "every check". */
   requested: string[] | null;
@@ -205,7 +344,13 @@ export function openProgressRun(args: {
    * it and gets a fresh uuid.
    */
   runId?: string;
-}): ProgressRun {
+}
+
+/** `openProgressRun` over any writer and sampler — see `ProgressRunDeps`. */
+export function startProgressRun(
+  args: ProgressRunArgs,
+  deps: ProgressRunDeps,
+): ProgressRun {
   const runId = args.runId ?? crypto.randomUUID();
   const pid = process.pid;
   const worktree = worktreeName();
@@ -222,7 +367,7 @@ export function openProgressRun(args: {
     worktree,
   });
 
-  writeRecord({
+  deps.write({
     ...stamp(),
     phase: "run",
     scope: args.scope,
@@ -236,7 +381,7 @@ export function openProgressRun(args: {
   // the heartbeat exists to observe a hang, not to cause one.
   const heartbeat = setInterval(() => {
     if (inFlight.size === 0 && inBootstrap.size === 0) return;
-    writeRecord({
+    deps.write({
       ...stamp(),
       phase: "pending",
       elapsedMs: Math.round(performance.now() - startedAt),
@@ -246,10 +391,21 @@ export function openProgressRun(args: {
   }, HEARTBEAT_MS);
   heartbeat.unref();
 
+  // Reads the same two sets the heartbeat does, so a stall's `running` list and
+  // a `pending` record cannot disagree about what was in flight.
+  const watch = openThreadWatch({
+    startedAt,
+    inFlight: () => ({ running: [...inFlight], bootstrap: [...inBootstrap] }),
+    sampler: deps.sampler,
+    onStall: (stall) =>
+      deps.write({ ...stamp(), phase: "stall", ...stallRecord(stall) }),
+  });
+
   return {
     async bootstrap(step, fn) {
       inBootstrap.add(step);
-      writeRecord({ ...stamp(), phase: "bootstrap-start", step });
+      watch.noteStarted("bootstrap", step);
+      deps.write({ ...stamp(), phase: "bootstrap-start", step });
       const phaseStart = performance.now();
       try {
         return await fn();
@@ -257,7 +413,7 @@ export function openProgressRun(args: {
         // Same `finally` discipline as a check's `end`: a bootstrap phase that
         // THROWS must not be left looking like one that never returned.
         inBootstrap.delete(step);
-        writeRecord({
+        deps.write({
           ...stamp(),
           phase: "bootstrap-end",
           step,
@@ -266,15 +422,19 @@ export function openProgressRun(args: {
       }
     },
     resolved(treeHash, selected) {
-      writeRecord({ ...stamp(), phase: "selected", treeHash, selected });
+      deps.write({ ...stamp(), phase: "selected", treeHash, selected });
     },
     checkStarted(checkId) {
       inFlight.add(checkId);
-      writeRecord({ ...stamp(), phase: "start", checkId });
+      // Into the watch's current window too: a check that starts and blocks in
+      // the same turn is never in a tick's snapshot of `inFlight`.
+      watch.noteStarted("running", checkId);
+      deps.write({ ...stamp(), phase: "start", checkId });
     },
     checkEnded(checkId, durationMs, ok, cached, queuedMs) {
       inFlight.delete(checkId);
-      writeRecord({
+      const now = performance.now();
+      deps.write({
         ...stamp(),
         phase: "end",
         checkId,
@@ -282,16 +442,23 @@ export function openProgressRun(args: {
         ok,
         cached,
         queuedMs,
+        stalledMs: watch.overlapMs(now - durationMs, now),
       });
     },
     finish(allOk) {
       clearInterval(heartbeat);
-      writeRecord({
+      // Stopped BEFORE `done`, so its last tick (and any stall that tick
+      // closes) lands inside the run, and `thread` is the run's second-to-last
+      // line on every path — the early exits included.
+      const thread = watch.stop();
+      deps.write({ ...stamp(), phase: "thread", ...threadRecord(thread) });
+      deps.write({
         ...stamp(),
         phase: "done",
         elapsedMs: Math.round(performance.now() - startedAt),
         allOk,
       });
+      return thread;
     },
   };
 }
@@ -341,6 +508,12 @@ export interface CheckRunProgress {
     cached: boolean;
     /** Slot-wait ahead of the body; see the `end` record's own doc. */
     queuedMs: number;
+    /**
+     * How much of `durationMs` fell inside thread stalls. Null for a line
+     * written before the watch existed: that run stalled too, unmeasured, so
+     * null is "not known" where a 0 would be a claim — see the `end` record.
+     */
+    stalledMs: number | null;
   }>;
   /**
    * `selected − everything that has ever started`: the checks the runner's
@@ -364,6 +537,16 @@ export interface CheckRunProgress {
   outstandingBootstrap: OutstandingCheck[];
   /** `started − ended`: empty for a healthy run, the culprit set for a hung one. */
   outstanding: OutstandingCheck[];
+  /**
+   * Every thread stall recorded so far, in order — readable WHILE the run is in
+   * flight, since each lands the moment its late tick runs.
+   */
+  stalls: Array<ProgressStall & { at: string }>;
+  /**
+   * The run's thread summary. Null until `finish()` writes it — and for every
+   * run recorded before the watch existed.
+   */
+  thread: (ProgressThread & { at: string }) | null;
   /** Present iff the run reached its `done` record. */
   done: { at: string; elapsedMs: number; allOk: boolean } | null;
 }
@@ -389,7 +572,31 @@ export function readCheckProgress(): CheckRunProgress[] {
     maxBytes: 8 * 1024 * 1024, // covers the full 6 MB footprint
   });
   if (result.kind === "missing") return []; // no run has ever executed on this host
+  return reconstructRuns(result.records);
+}
 
+/** A record's own fields, without the envelope every line carries. */
+function fieldsOf<R extends RecordBase & { phase: string }>(
+  record: R,
+): Omit<R, keyof RecordBase | "phase"> {
+  const {
+    t: _t,
+    runId: _runId,
+    pid: _pid,
+    worktree: _worktree,
+    phase: _phase,
+    ...fields
+  } = record;
+  return fields;
+}
+
+/**
+ * The reconstruction itself, over records in file order — pure, so it is
+ * tested on records a test wrote to an array, never on the host-global file.
+ */
+export function reconstructRuns(
+  records: readonly ProgressRecord[],
+): CheckRunProgress[] {
   const runs = new Map<string, CheckRunProgress>();
   const startsByRun = new Map<string, Map<string, string>>();
   const bootstrapByRun = new Map<string, Map<string, string>>();
@@ -398,7 +605,7 @@ export function readCheckProgress(): CheckRunProgress[] {
   // still-outstanding set alone would report every settled check as queued.
   const everStartedByRun = new Map<string, Set<string>>();
 
-  for (const record of result.records) {
+  for (const record of records) {
     if (record.phase === "run") {
       runs.set(record.runId, {
         runId: record.runId,
@@ -416,6 +623,8 @@ export function readCheckProgress(): CheckRunProgress[] {
         outstandingBootstrap: [],
         outstanding: [],
         queued: null,
+        stalls: [],
+        thread: null,
         done: null,
       });
       startsByRun.set(record.runId, new Map());
@@ -456,7 +665,14 @@ export function readCheckProgress(): CheckRunProgress[] {
         // written by an UNBOUNDED run, where every check started immediately —
         // so 0 is that run's true wait, not a stand-in for an unknown.
         queuedMs: record.queuedMs ?? 0,
+        // The opposite normalization, on purpose: a line without it comes from
+        // a run that stalled unmeasured, so it is unknown — null, not 0.
+        stalledMs: record.stalledMs ?? null,
       });
+    } else if (record.phase === "stall") {
+      run.stalls.push({ ...fieldsOf(record), at: record.t });
+    } else if (record.phase === "thread") {
+      run.thread = { ...fieldsOf(record), at: record.t };
     } else if (record.phase === "done") {
       run.done = {
         at: record.t,

@@ -21,7 +21,7 @@ import {
 } from "./read-set";
 import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
-import { openCheckTranscript } from "./transcript";
+import { openCheckTranscript, renderStallLine } from "./transcript";
 import { isBuildProcess } from "./run-context";
 import {
   thrownOutcome,
@@ -327,8 +327,13 @@ export async function runChecks(
     // Close the run: an early return is a finished run, and a run left open
     // would sit in `--status` forever as a phantom hang. Same for the
     // transcript, which otherwise ends at its header with no reason given.
-    transcript?.finish([message], false);
-    progress.finish(false);
+    //
+    // Progress FIRST, at every exit: its `finish()` stops the thread watch and
+    // returns the summary the transcript renders. An early exit is not exempt —
+    // `load-checks` alone keeps the thread busy ~2.5 s, and that is recorded
+    // here like anywhere else.
+    const thread = progress.finish(false);
+    transcript?.finish([message], false, thread);
     return false;
   }
 
@@ -348,8 +353,8 @@ export async function runChecks(
         .map((c) => `${c.id} is ${scopeOf(c)}-scoped`)
         .join(", ")}. Drop the --scope flag, or run only checks of that scope.`;
       console.error(message);
-      transcript?.finish([message], false);
-      progress.finish(false);
+      const thread = progress.finish(false);
+      transcript?.finish([message], false, thread);
       return false;
     }
   }
@@ -371,8 +376,8 @@ export async function runChecks(
           ", ",
         )}. Drop the --always-run flag, or name only alwaysRun checks.`;
       console.error(message);
-      transcript?.finish([message], false);
-      progress.finish(false);
+      const thread = progress.finish(false);
+      transcript?.finish([message], false, thread);
       return false;
     }
   }
@@ -390,8 +395,8 @@ export async function runChecks(
       "alwaysRun flag on the checks the fast path depends on, or drop the flag " +
       "and stop claiming this pass validates anything.";
     console.error(message);
-    transcript?.finish([message], false);
-    progress.finish(false);
+    const thread = progress.finish(false);
+    transcript?.finish([message], false, thread);
     return false;
   }
 
@@ -720,10 +725,11 @@ export async function runChecks(
     // above all — is already that check's FAIL outcome, built inside the gate
     // callback, so it never reaches here.
     //
-    // The run is over either way: stop the heartbeat so it can never outlive the
-    // run, and close the records. Rethrown untouched — this changes no semantics.
-    transcript?.finish([`run aborted: ${String(err)}`], false);
-    progress.finish(false);
+    // The run is over either way: stop the heartbeat and the thread watch so
+    // neither can outlive the run, and close the records. Rethrown untouched —
+    // this changes no semantics.
+    const thread = progress.finish(false);
+    transcript?.finish([`run aborted: ${String(err)}`], false, thread);
     throw err;
   }
 
@@ -809,6 +815,18 @@ export async function runChecks(
     }
   }
 
+  // Stops the heartbeat and the thread watch, and closes the run's records. A
+  // run that reaches here has, by definition, not hung — `started − ended` is
+  // empty. Finished HERE, ahead of the transcript, because it returns the
+  // thread summary both the console line below and the transcript render.
+  const thread = progress.finish(allOk);
+
+  // One line when the thread stalled, on a passing run too, and never a change
+  // to the verdict. It stays loud until the code that stalls the thread is
+  // fixed: every duration above carries the stall, so a reader has to know.
+  const stallLine = renderStallLine(thread, transcript?.path ?? null);
+  if (stallLine !== null) log(stallLine, "stdout");
+
   // The closing banner is the one thing the console and the transcript still
   // share verbatim: it is about the RUN, not about any one check, so neither the
   // settle loop nor the print loop can own it.
@@ -830,12 +848,8 @@ export async function runChecks(
     trailer.push(note);
   }
 
-  // Closes the transcript and prunes the family.
-  transcript?.finish(trailer, allOk);
-
-  // Stops the heartbeat and closes the run's records. A run that reaches here
-  // has, by definition, not hung — `started − ended` is empty.
-  progress.finish(allOk);
+  // Closes the transcript (thread block, trailer) and prunes the family.
+  transcript?.finish(trailer, allOk, thread);
 
   return allOk;
 }

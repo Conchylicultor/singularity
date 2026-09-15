@@ -3223,6 +3223,10 @@
       "name": "@singularity/plugin-infra-ssh",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/stack-sampler": {
+      "name": "@singularity/plugin-infra-stack-sampler",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/trash": {
       "name": "@singularity/plugin-infra-trash",
       "version": "0.0.1",
@@ -7441,6 +7445,8 @@
     "@singularity/plugin-infra-spawn": ["@singularity/plugin-infra-spawn@workspace:plugins/infra/plugins/spawn"],
 
     "@singularity/plugin-infra-ssh": ["@singularity/plugin-infra-ssh@workspace:plugins/infra/plugins/ssh"],
+
+    "@singularity/plugin-infra-stack-sampler": ["@singularity/plugin-infra-stack-sampler@workspace:plugins/infra/plugins/stack-sampler"],
 
     "@singularity/plugin-infra-trash": ["@singularity/plugin-infra-trash@workspace:plugins/infra/plugins/trash"],
 

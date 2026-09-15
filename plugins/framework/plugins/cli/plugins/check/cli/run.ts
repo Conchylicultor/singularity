@@ -9,12 +9,44 @@ import {
   runChecks,
   requestedJobs,
   scopeOf,
+  type CheckRunProgress,
   type RunChecksOptions,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   CHECK_SCOPES,
   type CheckScope,
 } from "@plugins/framework/plugins/tooling/core";
+
+/**
+ * The open run's thread stalls so far, as one line — or null when it has had
+ * none. Read off the `stall` records, which land the moment each late tick
+ * runs, so a run still in flight already names what has been holding its
+ * thread. The shares merge each record's top owners, so they are over the
+ * owners the records kept, not over every sample.
+ */
+function stallLine(run: CheckRunProgress): string | null {
+  if (run.stalls.length === 0) return null;
+  const longest = run.stalls.reduce((a, b) => (b.lateMs > a.lateMs ? b : a));
+  const byOwner = new Map<string, number>();
+  let total = 0;
+  for (const stall of run.stalls) {
+    total += stall.samples;
+    for (const o of stall.owners) {
+      byOwner.set(o.owner, (byOwner.get(o.owner) ?? 0) + o.samples);
+    }
+  }
+  const top = [...byOwner]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([owner, n]) => `${owner} ${Math.round((n / total) * 100)}%`)
+    .join(", ");
+  const secs = (ms: number): string => `${(ms / 1000).toFixed(1)} s`;
+  return (
+    `  thread stalled ${run.stalls.length}× so far ` +
+    `(longest ${secs(longest.lateMs)} at +${secs(longest.offsetMs)})` +
+    (top ? ` — top: ${top}` : "")
+  );
+}
 
 /**
  * Render the durable check-progress log: every run that never wrote its `done`
@@ -42,6 +74,11 @@ function printProgress(): void {
       `run ${run.runId} — ${run.worktree} (pid ${run.pid}, scope ${run.scope ?? "all"})\n` +
         `  started ${run.startedAt}, last activity ${run.lastActivityAt}`,
     );
+    // Before the bootstrap branch, because bootstrap stalls too (`load-checks`
+    // alone holds the thread ~2.5 s) — and a stalled run's durations and
+    // "running for" times are the process's, not the checks'.
+    const stalls = stallLine(run);
+    if (stalls !== null) console.log(stalls);
     // A run with no `selected` record yet never got past bootstrap — it has zero
     // outstanding CHECKS, which without this branch would print as a healthy
     // "0/0 settled" and say nothing about the git spawn it is actually stuck in.

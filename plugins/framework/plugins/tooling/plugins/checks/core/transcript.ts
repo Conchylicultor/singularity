@@ -6,6 +6,8 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import type { OwnerShare } from "./thread-attribution";
+import type { ThreadSummary } from "./thread-watch";
 
 /**
  * One settled check, as the transcript renders it. The runner's own outcome type
@@ -56,6 +58,120 @@ export function renderOutcomeBlock(outcome: TranscriptOutcome): string[] {
   return lines;
 }
 
+/** `1234` → `1.2 s`. One decimal: a stall is ≥ 1 s, so milliseconds are noise. */
+function seconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
+function percent(part: number, whole: number): string {
+  return whole > 0 ? `${Math.round((part / whole) * 100)}%` : "–";
+}
+
+/** `owner 61%, owner 22%` over a tally's own total. */
+function headline(owners: OwnerShare[], total: number, n: number): string {
+  return owners
+    .slice(0, n)
+    .map((o) => `${o.owner} ${percent(o.samples, total)}`)
+    .join(", ");
+}
+
+/**
+ * What an owner that pools many sources was made of (the evaluated plugins
+ * under `import`), as shares of that owner. Nothing for every other owner.
+ */
+function detailLines(o: OwnerShare): string[] {
+  if (o.detail.length === 0) return [];
+  const parts = o.detail.map(
+    (d) => `${d.name} ${percent(d.samples, o.samples)}`,
+  );
+  return [`          of which: ${parts.join(", ")}`];
+}
+
+/** The longest stall's `lateMs` — the part of a stall the thread was known busy. */
+function longestStallMs(thread: ThreadSummary): number {
+  return Math.max(0, ...thread.stalls.map((s) => s.lateMs));
+}
+
+/**
+ * The run's thread block: a summary line, who used the thread over the whole
+ * run, and one entry per stall with its owners and a real stack for each. This
+ * is the full-detail copy — the progress log keeps 3 owners and 5 frames per
+ * stall, the console one line.
+ *
+ * Rendered even when nothing stalled: the whole-run table and the longest late
+ * tick are evidence on their own (a longest tick of 300 ms rules out one long
+ * block). Milliseconds per owner appear only when a stall measured the
+ * sampler's rate; without one, shares are all that can be said.
+ */
+export function renderThreadBlock(thread: ThreadSummary): string[] {
+  const lines: string[] = [];
+  const rate = thread.rateHz;
+  const stalledPart =
+    thread.stallCount === 0
+      ? "no stall"
+      : `${thread.stallCount} stall${thread.stallCount === 1 ? "" : "s"}, ` +
+        `${seconds(thread.stalledMs)} stalled (longest ${seconds(longestStallMs(thread))})`;
+  lines.push(
+    `thread: ${stalledPart}; longest late tick ${thread.longestLateMs}ms; ` +
+      `${thread.samples} samples${rate === null ? "" : ` at ${rate} Hz`}; ` +
+      `watch cost ${thread.selfMs}ms`,
+  );
+
+  lines.push("  who used the thread (whole run):");
+  for (const o of thread.owners) {
+    const ms = o.ms === null ? "" : `~${seconds(o.ms)}  `;
+    lines.push(
+      `    ${percent(o.samples, thread.samples).padStart(4)}  ${ms}${o.owner}`,
+      ...detailLines(o),
+    );
+  }
+
+  thread.stalls.forEach((stall, i) => {
+    lines.push(
+      `  stall ${i + 1} at +${seconds(stall.offsetMs)}: ${seconds(stall.lateMs)}, ` +
+        `${stall.samples} samples, ${stall.running.length} ` +
+        `check${stall.running.length === 1 ? "" : "s"} in flight`,
+    );
+    if (stall.running.length > 0)
+      lines.push(`    running: ${stall.running.join(", ")}`);
+    if (stall.bootstrap.length > 0)
+      lines.push(`    bootstrap: ${stall.bootstrap.join(", ")}`);
+    for (const o of stall.owners) {
+      lines.push(
+        `    ${percent(o.samples, stall.samples).padStart(4)}  ${o.owner}`,
+        ...detailLines(o),
+        ...o.example.map((frame) => `          ${frame}`),
+      );
+    }
+  });
+
+  return lines;
+}
+
+/**
+ * The console's one line about the thread, or null when nothing stalled. It
+ * never changes the verdict, and prints on a passing run too: it stays loud
+ * until the code that stalls the thread is fixed, which is the point of it.
+ */
+export function renderStallLine(
+  thread: ThreadSummary,
+  detailsPath: string | null,
+): string | null {
+  if (thread.stallCount === 0) return null;
+  // Ranked by STALL time (every stall window together), not whole-run time:
+  // the line is about what stalled the thread, and the whole-run table — which
+  // also counts work that yielded — is in the transcript.
+  const stallSamples = thread.stalls.reduce((sum, s) => sum + s.samples, 0);
+  const owners = headline(thread.stallOwners, stallSamples, 2);
+  return (
+    `⚠ check thread stalled ${seconds(longestStallMs(thread))} ` +
+    `(longest of ${thread.stallCount}, ${seconds(thread.stalledMs)} total)` +
+    (owners ? ` — mostly ${owners}` : "") +
+    "." +
+    (detailsPath ? ` Details: ${detailsPath}` : "")
+  );
+}
+
 /** A live run's transcript: the settle-time writer plus its terminal write. */
 export interface CheckTranscript {
   /** Where it is being written — the pointer the console hands the reader. */
@@ -63,10 +179,12 @@ export interface CheckTranscript {
   /** Record one settled check. Called as each settles, never from a print loop. */
   record(outcome: TranscriptOutcome): void;
   /**
-   * Close the run: append `trailer` (the STOP banner, the inconclusive note, or
-   * whatever ended the run early), then the `done` line, then prune the family.
+   * Close the run: append the thread block, then `trailer` (the STOP banner,
+   * the inconclusive note, or whatever ended the run early), then the `done`
+   * line, then prune the family. `thread` is what `ProgressRun.finish()`
+   * returned, which is why the runner finishes the progress run first.
    */
-  finish(trailer: string[], allOk: boolean): void;
+  finish(trailer: string[], allOk: boolean, thread: ThreadSummary): void;
 }
 
 /**
@@ -122,7 +240,8 @@ export function openCheckTranscript(args: {
       lines.push(...renderOutcomeBlock(outcome));
       flush();
     },
-    finish(trailer, allOk) {
+    finish(trailer, allOk, thread) {
+      lines.push("", ...renderThreadBlock(thread));
       lines.push(...trailer);
       lines.push(
         "",

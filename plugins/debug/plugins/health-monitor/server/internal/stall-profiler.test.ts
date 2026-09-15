@@ -1,22 +1,36 @@
 import { expect, test } from "bun:test";
-import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";
+import {
+  claimStackSampler,
+  type StackFrame,
+} from "@plugins/infra/plugins/stack-sampler/core";
 import { aggregateTraces } from "./stall-profiler";
 
 // Synthetic traces: deterministic histogram + percentage math.
 test("aggregateTraces builds leaf + stack histograms with percentages", () => {
-  const f = (name: string, sourceURL?: string, line?: number) => ({
+  const f = (name: string, sourceURL?: string, line?: number): StackFrame => ({
     name,
-    sourceURL,
-    line,
+    sourceURL: sourceURL ?? null,
+    line: line ?? null,
     column: 1,
     category: sourceURL ? "FTL" : "Unknown Executable",
-    flags: 0,
   });
   const traces = [
-    { timestamp: 1, frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)] },
-    { timestamp: 2, frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)] },
-    { timestamp: 3, frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)] },
-    { timestamp: 4, frames: [f("cold", "/x/b.ts", 5), f("other", "/x/b.ts", 7)] },
+    {
+      timestamp: 1,
+      frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)],
+    },
+    {
+      timestamp: 2,
+      frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)],
+    },
+    {
+      timestamp: 3,
+      frames: [f("hot", "/x/a.ts", 10), f("caller", "/x/a.ts", 20)],
+    },
+    {
+      timestamp: 4,
+      frames: [f("cold", "/x/b.ts", 5), f("other", "/x/b.ts", 7)],
+    },
   ];
   const { topLeaves, topStacks } = aggregateTraces(traces);
 
@@ -35,7 +49,15 @@ test("aggregateTraces condenses native/unknown frames", () => {
   const { topLeaves } = aggregateTraces([
     {
       timestamp: 1,
-      frames: [{ name: "now", line: 4_294_967_295, category: "Unknown Executable" }],
+      frames: [
+        {
+          name: "now",
+          sourceURL: null,
+          line: null,
+          column: null,
+          category: "Unknown Executable",
+        },
+      ],
     },
   ]);
   expect(topLeaves[0]?.key).toBe("now [Unknown Executable]");
@@ -44,19 +66,23 @@ test("aggregateTraces condenses native/unknown frames", () => {
 // The leaf↔stack association: a consumer must be able to attribute the DOMINANT
 // stack from that stack's own frames, never from the independent topLeaves
 // histogram (which may describe a different, minority stall).
-const jsFrame = (name: string, sourceURL: string, line: number) => ({
+const jsFrame = (
+  name: string,
+  sourceURL: string,
+  line: number,
+): StackFrame => ({
   name,
   sourceURL,
   line,
   column: 1,
   category: "FTL",
-  flags: 0,
 });
-const nativeFrame = (name: string) => ({
+const nativeFrame = (name: string): StackFrame => ({
   name,
-  line: 4_294_967_295,
+  sourceURL: null,
+  line: null,
+  column: null,
   category: "Unknown Executable",
-  flags: 0,
 });
 
 test("topStacks[i].frames aligns 1:1 with stack.split(' ← ')", () => {
@@ -113,7 +139,9 @@ test("topStacks[i].frames[0] is the leaf key counted in topLeaves", () => {
 });
 
 test("the 40-frame cap applies identically to stack and frames", () => {
-  const deep = Array.from({ length: 60 }, (_, i) => jsFrame(`f${i}`, "/x/deep.ts", i));
+  const deep = Array.from({ length: 60 }, (_, i) =>
+    jsFrame(`f${i}`, "/x/deep.ts", i),
+  );
   const { topStacks } = aggregateTraces([{ timestamp: 1, frames: deep }]);
 
   const names = topStacks[0]?.stack.split(" ← ") ?? [];
@@ -136,9 +164,11 @@ test("an unattributed innermost frame still yields `name [category]` at frames[0
 
 // End-to-end: the JSC sampler thread captures the blocked main-thread stack
 // during a synchronous block, and aggregateTraces names the function. This is the
-// exact capture path drainAndMaybeDump uses on a real stall.
+// exact capture path drainAndMaybeDump uses on a real stall — claimed under the
+// production owner, since `bun test` runs every file in one process and the
+// sampler admits one owner per process.
 test("real JSC capture names the blocking function", () => {
-  startSamplingProfiler();
+  const sampler = claimStackSampler("health-monitor");
 
   function uniquelyNamedBusyBlock(): number {
     let x = 0;
@@ -148,7 +178,7 @@ test("real JSC capture names the blocking function", () => {
   }
   uniquelyNamedBusyBlock();
 
-  const { traces } = samplingProfilerStackTraces();
+  const traces = sampler.drain();
   expect(traces.length).toBeGreaterThan(0);
 
   const { topLeaves, topStacks } = aggregateTraces(traces);
