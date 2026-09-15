@@ -66,7 +66,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 ## Plugin reference
 
-- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail, with tall/tiny shapes and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses:
     - `primitives/announce.announce`

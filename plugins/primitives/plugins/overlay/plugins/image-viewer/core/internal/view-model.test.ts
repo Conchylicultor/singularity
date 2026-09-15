@@ -279,11 +279,13 @@ describe("wheelZoomFactor", () => {
 });
 
 describe("thumbnailShape", () => {
-  it("classifies icons, full-page screenshots and everything else", () => {
+  it("classifies icons and everything else", () => {
     expect(thumbnailShape({ width: 32, height: 32 })).toBe("tiny");
     expect(thumbnailShape({ width: 64, height: 64 })).toBe("tiny");
     expect(thumbnailShape({ width: 65, height: 40 })).toBe("normal");
-    expect(thumbnailShape({ width: 1280, height: 5200 })).toBe("tall");
+    // A full-page screenshot is fitted whole, not cropped to its top.
+    expect(thumbnailShape({ width: 1280, height: 5200 })).toBe("normal");
+    expect(thumbnailShape({ width: 60, height: 400 })).toBe("normal");
     expect(thumbnailShape({ width: 1000, height: 2200 })).toBe("normal");
     expect(thumbnailShape({ width: 2560, height: 1600 })).toBe("normal");
   });

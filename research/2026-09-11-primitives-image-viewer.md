@@ -37,7 +37,9 @@ Discord, ChatGPT, Google Photos and macOS Quick Look work.
 
 **Inline in the transcript:**
 - Every image is a capped thumbnail, at most ~240px tall.
-- Tall images (height over 2.2× the width) show their top part, fading out.
+- The whole image always shows: it shrinks along whichever axis hits the cap
+  first. (Tall images used to show only their top part, fading out; that
+  cropped and enlarged narrow images, so it was dropped on 2026-09-15.)
 - Tiny images (e.g. a 32px icon) show at real size on a checkerboard tile.
 - On hover, a badge shows the image size (e.g. `2560 × 1600`) plus an expand icon.
 - Clicking opens the viewer. Nothing expands inline any more.
@@ -128,7 +130,7 @@ export interface ViewerImage {
  *  thumbnails appear on the page. Renders the viewer while it is open. */
 export function ImageGallery(p: { children: ReactNode }): JSX.Element;
 
-/** The inline thumbnail: capped size, tall/tiny shapes, hover badge, opens the viewer. */
+/** The inline thumbnail: capped size (whole image, never cropped), tiny shape, hover badge, opens the viewer. */
 export function ViewerThumbnail(p: { image: ViewerImage; size?: "inline" | "chip" }): JSX.Element;
 
 /** For callers that keep their own <img> (e.g. the resizable page image block).
@@ -190,7 +192,7 @@ export function ImageViewer(p: {
   - `zoomAt`: keeps the point under the pointer fixed.
   - `detailScale`: 100%, or 2–8× for small images.
   - `stepScale`: the fixed zoom levels for `+` / `−`.
-  - `minimapRect`, and `thumbnailShape` (normal / tall / tiny).
+  - `minimapRect`, and `thumbnailShape` (normal / tiny).
 - **One `VIEWER_KEYS` table** drives the key handler, the shortcut sheet, and
   each button's tooltip, so they can't disagree.
 - **Drag and wheel don't re-render React.** The image's position and zoom are

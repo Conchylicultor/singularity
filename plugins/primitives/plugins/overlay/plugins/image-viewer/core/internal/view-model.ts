@@ -313,19 +313,17 @@ export const DRAG_THRESHOLD = 4;
 /**
  * How a thumbnail frames its image.
  *
- * - `tall` — taller than 2.2× its width (a full-page screenshot): the thumbnail
- *   shows the top part, fading out; the viewer shows it whole.
  * - `tiny` — at most 64px each way (an icon): shown at its real size, pixelated,
  *   on a checkerboard tile so there is something to click.
- * - `normal` — everything else: capped in height, never enlarged.
+ * - `normal` — everything else: shrunk to fit the thumbnail box along whichever
+ *   axis hits it first, so the whole picture always shows — never cropped,
+ *   never enlarged.
  */
-export type ThumbnailShape = "normal" | "tall" | "tiny";
+export type ThumbnailShape = "normal" | "tiny";
 
 const TINY_MAX = 64;
-const TALL_RATIO = 2.2;
 
 export function thumbnailShape(size: Size): ThumbnailShape {
   if (size.width <= TINY_MAX && size.height <= TINY_MAX) return "tiny";
-  if (size.height / size.width > TALL_RATIO) return "tall";
   return "normal";
 }

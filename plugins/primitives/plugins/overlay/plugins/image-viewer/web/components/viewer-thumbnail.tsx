@@ -2,7 +2,6 @@ import { useContext, useState, type ReactNode } from "react";
 import { MdOpenInFull } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   hoverRevealGroup,
@@ -17,9 +16,9 @@ import type { ViewerImage } from "../internal/types";
 export interface ViewerThumbnailProps {
   image: ViewerImage;
   /**
-   * - `inline` (default) — a transcript thumbnail: at most ~240px tall, a
-   *   full-page screenshot cropped to its top, an icon at real size on a
-   *   checkerboard, and a hover badge with its size.
+   * - `inline` (default) — a transcript thumbnail: the whole image, shrunk to
+   *   fit at most ~240px tall and the available width, an icon at real size on
+   *   a checkerboard, and a hover badge with its size.
    * - `chip` — the compact 64px form a composer's pasted attachment uses.
    */
   size?: "inline" | "chip";
@@ -38,9 +37,10 @@ type Measure =
 
 /** How the `<img>` is sized, per shape. */
 const IMG_CLASS: Record<ThumbnailShape | "chip", string> = {
+  // Two max bounds and no set size: the browser shrinks the image, keeping its
+  // aspect, until both hold — so the longer axis sets the scale and the whole
+  // picture shows.
   normal: "max-h-60 max-w-full",
-  // Show the top of a very tall image, not a sliver of all of it.
-  tall: "h-60 w-[300px] max-w-full object-cover object-top",
   // Real size; the checker tile around it is what makes it a target.
   tiny: "[image-rendering:pixelated]",
   chip: "max-h-16 max-w-32 object-cover",
@@ -127,13 +127,6 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
             known === null && measure.kind === "pending" && "opacity-0",
           )}
         />
-        {!chip && shape === "tall" && (
-          <Layer
-            as="span"
-            decorative
-            className="bg-linear-to-b from-transparent from-75% to-muted"
-          />
-        )}
         {!chip && known && (
           <>
             <Pin
