@@ -11,6 +11,11 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  declareRuntimeNamespace,
+  resetRuntimeNamespaceForTest,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
+import {
   dataRoot,
   defineAppDataDir,
   defineDataDir,
@@ -24,23 +29,23 @@ import {
 // unique to itself. Two tests sharing a name would collide through the registry
 // rather than through anything they assert.
 
-// Every variable a test below rewrites. The move tests impersonate a process
-// that may or may not move shared data, and that is decided by
-// `SINGULARITY_WORKTREE` / `SINGULARITY_RELEASE` — which an agent pane's test
-// run INHERITS (`SINGULARITY_WORKTREE=singularity`), so each is restored
-// exactly, never merely deleted.
-const ENV_KEYS = [
-  "SINGULARITY_DIR",
-  "SINGULARITY_WORKTREE",
-  "SINGULARITY_RELEASE",
-] as const;
+// Every variable a test below rewrites, plus the process's declared runtime
+// namespace. The move tests impersonate a process that may or may not move
+// shared data, and that is decided by the declared namespace and
+// `SINGULARITY_RELEASE`. The `bun test` preload declared this process's
+// namespace as the checkout it runs from, so each test puts that exact
+// declaration back rather than merely dropping it.
+const ENV_KEYS = ["SINGULARITY_DIR", "SINGULARITY_RELEASE"] as const;
 const ORIGINAL_ENV = new Map(ENV_KEYS.map((k) => [k, process.env[k]]));
+const ORIGINAL_NAMESPACE = runtimeNamespace();
 
 function restoreEnv(): void {
   for (const [key, value] of ORIGINAL_ENV) {
     if (value === undefined) delete process.env[key];
     else process.env[key] = value;
   }
+  resetRuntimeNamespaceForTest();
+  declareRuntimeNamespace(ORIGINAL_NAMESPACE);
 }
 
 afterEach(restoreEnv);
@@ -251,9 +256,9 @@ test("an area's ensure() shares the not-a-directory guard", () => {
 
 // ── movedFrom ────────────────────────────────────────────────────────────────
 
-/** A process that may NOT move shared data: no singleton env at all. */
+/** A process that may NOT move shared data: no runtime namespace, not a release. */
 function asOrdinaryProcess(): void {
-  delete process.env.SINGULARITY_WORKTREE;
+  resetRuntimeNamespaceForTest();
   delete process.env.SINGULARITY_RELEASE;
 }
 
@@ -432,10 +437,10 @@ test("only the host singleton running merged code may move shared data", () => {
       mainCheckout: false,
     }),
   ).toBe(true);
-  // THE case this rule exists for: an agent pane's CLI / test / hook inherits
-  // SINGULARITY_WORKTREE=singularity, so it reads as the host singleton — but it
-  // runs an UNMERGED branch from a linked worktree, and must never move bytes
-  // on the root every checkout shares.
+  // THE case this rule exists for: a process that reads as the host singleton
+  // (main's backend spawned it, or a leaked identity once made every agent CLI
+  // read as main) but runs an UNMERGED branch from a linked worktree — it must
+  // never move bytes on the root every checkout shares.
   expect(
     mayMoveSharedData({
       hostSingleton: true,

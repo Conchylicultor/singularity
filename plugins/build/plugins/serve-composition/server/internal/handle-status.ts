@@ -1,9 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  REPO_ROOT,
-  checkoutRef,
-  isMain,
-} from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { readCompositionMarker } from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceFor,

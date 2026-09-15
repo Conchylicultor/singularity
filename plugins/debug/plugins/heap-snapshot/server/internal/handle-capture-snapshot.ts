@@ -1,7 +1,8 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { writeFileSync, statSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { worktreeDataDir, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { captureHeapSnapshot } from "../../shared/endpoints";
 
 // Heavy, manual debug action. `Bun.generateHeapSnapshot("v8")` walks the FULL
@@ -13,7 +14,7 @@ export const handleCaptureSnapshot = implement(captureHeapSnapshot, () => {
   const capturedAtMs = Date.now();
   const json = Bun.generateHeapSnapshot("v8");
 
-  const dir = worktreeDataDir(currentWorktreeName());
+  const dir = worktreeDataDir(runtimeNamespace());
   mkdirSync(dir, { recursive: true });
   const path = join(dir, `heap-${capturedAtMs}.heapsnapshot`);
   writeFileSync(path, json);

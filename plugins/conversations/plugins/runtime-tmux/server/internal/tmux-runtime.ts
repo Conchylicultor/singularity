@@ -10,10 +10,12 @@ import {
   type EffortLevel,
 } from "@plugins/conversations/plugins/effort-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
+import { AGENT_SESSION_WRAPPER } from "./agent-session-env";
 import {
   resolveSessionState,
   type PaneRef,
@@ -595,9 +597,10 @@ export const tmuxRuntime: ConversationRuntime = {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
     // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the
-    // worktree slug Claude's .mcp.json dials back to over HTTP — it must be a
-    // host the gateway actually routes, so we read it straight from the
-    // server's own worktree env rather than from a caller-supplied label.
+    // namespace Claude's .mcp.json dials back to over HTTP — it must be a host
+    // the gateway actually routes, so it is this backend's own declared
+    // runtime namespace rather than a caller-supplied label. runtimeNamespace()
+    // throws when the process never declared one.
     //
     // CLAUDE_CODE_DISABLE_AGENT_VIEW pins the session to this pane. Claude
     // Code's agent view can otherwise move a live session into its per-machine
@@ -610,12 +613,7 @@ export const tmuxRuntime: ConversationRuntime = {
     // so the pane is the only place a session may run.
     const hasPrompt =
       typeof opts?.prompt === "string" && opts.prompt.length > 0;
-    const parentHost = Bun.env.SINGULARITY_WORKTREE;
-    if (!parentHost) {
-      throw new Error(
-        "tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server",
-      );
-    }
+    const parentHost = runtimeNamespace();
     const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
     // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
     // valid flag value, so it rides `--settings '{"ultracode":true}'` (xhigh +
@@ -664,6 +662,12 @@ export const tmuxRuntime: ConversationRuntime = {
     // SERVER, so demoting our short-lived `tmux new-session` client below
     // would be a no-op. backgroundPrefix() is a fixed literal — shell-safe.
     const claudeCmd = backgroundPrefix() + cmdParts.join(" ");
+    // tmux execs this argv directly, so the first zsh is the only process that
+    // can expand `$VAR` against what tmux hands the pane (its injected TMUX /
+    // TMUX_PANE plus the two `-e` values). That shell immediately re-execs into
+    // an allowlisted environment; see agent-session-env.ts for why the pane's
+    // inherited environment cannot be trusted. The Claude command and the
+    // prompt ride as positional words, never interpolated into the wrapper.
     const proc = Bun.spawn(
       [
         TMUX,
@@ -683,8 +687,9 @@ export const tmuxRuntime: ConversationRuntime = {
         "zsh",
         "-l",
         "-c",
-        claudeCmd,
+        AGENT_SESSION_WRAPPER,
         "zsh",
+        claudeCmd,
         ...(hasPrompt && !useTempFile ? [opts!.prompt!] : []),
       ],
       { stdout: "pipe", stderr: "pipe" },

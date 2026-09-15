@@ -29,7 +29,7 @@
 // import cycle. The derived-views core leaf has no such back-edge.
 //
 // Pure module: no imports that pull in a DB pool, so it stays import-safe for
-// tooling/check subprocesses (where SINGULARITY_WORKTREE is unset).
+// tooling/check subprocesses (which declare no runtime namespace).
 
 /**
  * Public table created imperatively by the migration runner

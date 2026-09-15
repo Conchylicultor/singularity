@@ -86,11 +86,29 @@ exactly when it matters. Re-stamping is append-only and costs ≤ 2 lines per wa
 `foldOpRecords(raw, now)` takes `now` as a **parameter**; it never reads the
 clock. That is what makes the live synthesis testable (`core/fold.test.ts`).
 
-## `opSlug` is the liveness key, not `worktree`
+## One identity field: `opSlug`
 
-`opSlug` is `basename(worktree root)` — the op-marker slug `isWorktreeOpActive()`
-reads. It is **not** `worktree` (which comes from `SINGULARITY_WORKTREE`); the
-two can differ. `finalizeOrphanedOps` probes `opSlug`; a null slug is inactive.
+A record names exactly one thing — the checkout the op ran in — and `opSlug` is
+it: `basename(worktree root)`, the op-marker slug `isWorktreeOpActive()` reads.
+Every writer derives it from its own git root (`checkoutNamespace(root)`), so it
+is true for the process that wrote the line. `finalizeOrphanedOps` probes it for
+liveness (a null slug is inactive), and the profiling reader groups a Gantt row
+on it.
+
+The record used to carry a second field, `worktree`, read from the
+`SINGULARITY_WORKTREE` environment variable — and the reader preferred it. An
+environment variable reaches every descendant forever: once the tmux server
+inherited main's copy, every agent's build, check and test filed itself under
+`singularity`, and each conversation's own Op profiling pane went empty. Two
+fields for one thing meant one of them could be wrong while the other was right.
+The variable is gone (see
+[`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md)),
+and so is the field.
+
+A line with no slug at all — a foreign writer, or one predating July — is filed
+under its branch instead, canonicalized to the same bare shape
+(`claude-web/att-x` → `att-x`). That is a fallback for old lines, not a second
+identity.
 
 ## Vocabulary is borrowed, not invented
 

@@ -30,13 +30,33 @@ export type BundleRefusal =
       namespace: string;
     }
   /** No `latest-<platform>` pointer — nothing packed has claimed this platform. */
-  | { kind: "no-pointer"; pointer: string; pointerPath: string; namespace: string }
+  | {
+      kind: "no-pointer";
+      pointer: string;
+      pointerPath: string;
+      namespace: string;
+    }
   /** The run dir exists but holds no `RELEASE.json`. */
   | { kind: "no-manifest"; runDir: string }
-  | { kind: "wrong-composition"; manifestPath: string; found: string; expected: string }
+  | {
+      kind: "wrong-composition";
+      manifestPath: string;
+      found: string;
+      expected: string;
+    }
   | { kind: "wrong-target"; manifestPath: string; found: string }
-  | { kind: "platform-mismatch"; manifestPath: string; found: string; expected: string }
-  | { kind: "inconsistent-run-id"; manifestPath: string; declared: string; runId: string }
+  | {
+      kind: "platform-mismatch";
+      manifestPath: string;
+      found: string;
+      expected: string;
+    }
+  | {
+      kind: "inconsistent-run-id";
+      manifestPath: string;
+      declared: string;
+      runId: string;
+    }
   /** Staged (`--dev`) but never packed into a shippable binary. */
   | { kind: "not-packed"; localPath: string };
 
@@ -67,9 +87,10 @@ export type BundleResolution =
  */
 export function namespaceHint(namespace: string): string {
   return (
-    `Release namespace: "${namespace}" (from SINGULARITY_WORKTREE, else main). ` +
-    `A release cut from the Studio UI lands under its own worktree's namespace instead, ` +
-    `and ship deliberately does not search a second one.`
+    `Release namespace: "${namespace}" (a backend's own namespace, or the one ` +
+    `this checkout owns when run from the CLI). A release cut from another ` +
+    `namespace lands under that one instead, and ship deliberately does not ` +
+    `search a second one.`
   );
 }
 
@@ -90,7 +111,9 @@ export function bundleRefusalMessage(refusal: BundleRefusal): string {
       return (
         `release run "${refusal.release}" does not exist. Looked in:\n  ${refusal.runDir}\n` +
         `Available runs in ${refusal.compDir}: ${
-          refusal.available.length > 0 ? [...refusal.available].sort().join(", ") : "(none)"
+          refusal.available.length > 0
+            ? [...refusal.available].sort().join(", ")
+            : "(none)"
         }\n` +
         namespaceHint(refusal.namespace)
       );

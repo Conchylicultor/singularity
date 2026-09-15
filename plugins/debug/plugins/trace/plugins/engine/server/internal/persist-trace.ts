@@ -1,5 +1,5 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { db } from "@plugins/database/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { TripContext, TraceSnapshot } from "../../core";
 import { _traces } from "./tables";
 
@@ -16,7 +16,7 @@ export async function persistTrace(
     id: ctx.id,
     atMs: ctx.atMs,
     wallTime: ctx.wallTime,
-    worktree: currentWorktreeName(),
+    worktree: runtimeNamespace(),
     windowStartMs: ctx.windowStartMs,
     trigger: ctx.trigger,
     events,

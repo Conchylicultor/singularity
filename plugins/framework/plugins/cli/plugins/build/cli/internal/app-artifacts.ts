@@ -541,7 +541,6 @@ export async function prepareCompositionSources(opts: {
  */
 export async function generateAppSources(opts: {
   root: string;
-  worktreeName: string;
   migration: {
     name?: string;
     reset?: boolean;
@@ -550,7 +549,7 @@ export async function generateAppSources(opts: {
   };
   hooks: ArtifactHooks;
 }): Promise<void> {
-  const { root, worktreeName, hooks } = opts;
+  const { root, hooks } = opts;
   const codegenStep = codegenStepFor(hooks);
 
   // 3. Regenerate DB migrations from plugin schema files
@@ -562,7 +561,6 @@ export async function generateAppSources(opts: {
   hooks.log("Generating DB migrations...");
   const migration = await generateMigration({
     root,
-    worktreeName,
     migrationName: opts.migration.name,
     resetMigration: opts.migration.reset,
     customMigration: opts.migration.custom,

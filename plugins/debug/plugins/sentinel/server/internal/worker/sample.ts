@@ -1,9 +1,9 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { statSync } from "node:fs";
 import { join } from "node:path";
 import { cpus, loadavg } from "node:os";
 import {
   listWorktreeDirs,
-  MAIN_WORKTREE_NAME,
   worktreesDir,
 } from "@plugins/infra/plugins/paths/server";
 import {

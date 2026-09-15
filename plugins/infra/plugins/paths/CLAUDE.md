@@ -16,14 +16,17 @@ different right answers depending on who is asking:
 
 | question | answer | who may ask |
 |---|---|---|
-| which namespace is **this backend** the server for? | `currentWorktreeName()` | a gateway-spawned backend, only |
+| which namespace is **this runtime** the server for? | `runtimeNamespace()` (`infra/runtime-identity`) | a gateway-spawned backend, or an exec child its spawner told |
 | which namespace does **this checkout** own? | `checkoutNamespace(root)` | the CLI, checks |
 | which deploy did this checkout **publish**? | `resolveCheckoutDeploy(root)` | anything driving the deployed app |
 
-The first reads `SINGULARITY_WORKTREE`. Every process an agent pane spawns
-INHERITS that variable from main's backend, so inside a worktree it answers
-`singularity` — which is why a CLI or an e2e script that reads it acts on MAIN's
-deploy while reporting success.
+The first does not live in this plugin at all, and that split is the point. It is
+declared once, at a process's entry point, from the `--namespace` its spawner
+passed — so a process that was told nothing has no answer and asking THROWS. It
+used to ride in an environment variable, which every agent pane inherited from
+main's backend: inside a worktree it answered `singularity`, so a CLI or an e2e
+script that read it acted on MAIN's deploy while reporting success. See
+[`runtime-identity`](../runtime-identity/CLAUDE.md).
 
 The third is a READ, not a derivation, and that is what makes it safe.
 `./singularity build` records the checkout that published a namespace in that
@@ -251,6 +254,8 @@ run everywhere.
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.Namespace`
     - `infra/namespace.namespaceFor`
+    - `infra/runtime-identity.isMain`
+    - `infra/runtime-identity.runtimeNamespace`
     - `infra/spawn.getMainRepoRoot`
   - Exports (types):
     - `AppIdentity`
@@ -276,7 +281,6 @@ run everywhere.
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
-    - `currentWorktreeName`
     - `DATA_DIR_KINDS`
     - `dataRoot`
     - `defineAppDataDir`
@@ -285,11 +289,9 @@ run everywhere.
     - `getDataDirs`
     - `HOME_DIR`
     - `isHostSingleton`
-    - `isMain`
     - `isRelease`
     - `LEGACY_LAYOUT`
     - `listWorktreeDirs`
-    - `MAIN_WORKTREE_NAME`
     - `META_APP_ROOTS`
     - `planMigration`
     - `PLUGINS_DIR`
@@ -320,43 +322,34 @@ run everywhere.
     - `build/build-logs`
     - `build/build-profiling`
     - `build/deployment`
-    - `build/runs-arm`
     - `build/serve-composition`
     - `build/server-build-id`
     - `code-explorer`
     - `code-explorer/file-resolve`
     - `config_v2`
-    - `conversations`
     - `conversations/conversation-progress`
     - `conversations/conversation-view/op-status`
-    - `conversations/conversations-view/queue`
-    - `conversations/hibernation`
     - `conversations/runtime-tmux`
     - `conversations/transcript-watcher`
     - `database/zero/cache-service`
-    - `debug/boot-events`
     - `debug/boot-watchdog`
     - `debug/health-monitor`
     - `debug/heap-snapshot`
     - `debug/memory`
     - `debug/paging-probe`
     - `debug/profiling/build`
-    - `debug/profiling/ops`
     - `debug/sentinel`
     - `debug/session-divergence`
     - `debug/timeline`
-    - `debug/trace/engine`
     - `debug/worktree-cleanup`
     - `framework/cli/op-runtime`
     - `framework/tooling/checks`
     - `framework/tooling/guards`
     - `infra/claude-cli`
-    - `infra/corpus-index`
     - `infra/git/git-watcher`
     - `infra/jobs/supervised-run`
     - `infra/jobs/supervised-task`
     - `infra/launcher`
-    - `infra/warmup`
     - `infra/worktree`
     - `infra/worktree/reclaim`
     - `infra/worktree/removal-audit`
@@ -367,7 +360,6 @@ run everywhere.
     - `primitives/terminal`
     - `release`
     - `release/bundles`
-    - `release/runs-arm`
     - `review/plugin-changes`
     - `stats/commits`
     - `stats/cost`
@@ -395,7 +387,6 @@ run everywhere.
     - `CLAUDE_DIR`
     - `CLAUDE_PROJECTS_DIR`
     - `CLAUDE_SESSIONS_DIR`
-    - `currentWorktreeName`
     - `DATA_DIR_KINDS`
     - `dataRoot`
     - `defineAppDataDir`
@@ -404,10 +395,8 @@ run everywhere.
     - `GIT`
     - `HOME_DIR`
     - `isHostSingleton`
-    - `isMain`
     - `isRelease`
     - `listWorktreeDirs`
-    - `MAIN_WORKTREE_NAME`
     - `META_APP_ROOTS`
     - `PGREP`
     - `PLUGINS_DIR`

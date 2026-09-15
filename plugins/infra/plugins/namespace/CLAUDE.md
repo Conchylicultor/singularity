@@ -5,7 +5,7 @@ The one owner of what a deployed app is CALLED.
 A namespace is a single string that is simultaneously the subdomain in
 `http://<ns>.localhost:9000`, the spec-dir basename under
 `~/.singularity/worktrees/<ns>/`, the socket stem, the Postgres database, the
-config dir, and the `SINGULARITY_WORKTREE` a backend is spawned with. Because it
+config dir, and the `--namespace` a backend is spawned with. Because it
 is all of those at once, it gets exactly one minter: `namespaceFor(composition,
 checkout)`.
 
@@ -86,6 +86,8 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `framework/tooling/guards`
     - `framework/tooling/web-artifacts`
     - `infra/paths`
+    - `infra/runtime-identity`
+    - `plugin-meta/barrel-import`
     - `plugin-meta/closure`
     - `plugin-meta/composition`
 - Core:
@@ -99,6 +101,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `GATEWAY_PORT`
     - `isNamespace`
     - `MAIN_COMPOSITION_ID`
+    - `MAIN_WORKTREE_NAME`
     - `NAMESPACE_HOST_SUFFIX`
     - `NAMESPACE_LABEL_RE`
     - `NAMESPACE_RE`

@@ -61,7 +61,7 @@ echo "setup: applying migrations to 'singularity' DB..."
 # symmetry with the line above — a redundant second install is now structurally
 # impossible, since the wrapper reaches the SAME `ensureDeps`, which the call
 # above has already made fresh, so it returns immediately either way.
-SINGULARITY_WORKTREE=singularity bun plugins/framework/plugins/cli/bin/index.ts apply-migrations
+bun plugins/framework/plugins/cli/bin/index.ts apply-migrations
 '''
 
 [hooks]

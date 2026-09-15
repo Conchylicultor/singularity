@@ -29,9 +29,9 @@ const DETAIL_SEGMENT = "proto/:name/:stage?";
  * A factory rather than a per-id function because resolving the namespace shells
  * out to git, and `prototype list` formats a URL for every prototype on disk.
  *
- * The namespace is minted from the CHECKOUT the command runs in, never from
- * `SINGULARITY_WORKTREE`: the CLI does not set that variable for itself, so
- * reading it would print main's URL from every worktree. `checkoutNamespace` is
+ * The namespace is minted from the CHECKOUT the command runs in, never from a
+ * RUNTIME namespace: a CLI process declares none, and asking for one throws.
+ * `checkoutNamespace` is
  * that mint: it asks git which checkout this root is and applies the elision
  * rule, so neither half is spelled again here.
  */

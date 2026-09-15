@@ -19,7 +19,10 @@ essentially nothing. See `research/2026-08-20-global-slot-naming-witness.md`.
 
 - Description: Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
 - Core:
-  - Uses: `packages/semaphore.createSemaphore`
+  - Uses:
+    - `infra/namespace.asNamespace`
+    - `infra/runtime-identity.declareRuntimeNamespace`
+    - `packages/semaphore.createSemaphore`
   - Exports (types): `AutoStubEntry`
   - Exports (values):
     - `AUTO_STUB_CSS`

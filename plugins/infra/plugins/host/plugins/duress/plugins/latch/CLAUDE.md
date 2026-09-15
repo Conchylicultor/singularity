@@ -9,7 +9,7 @@ the lease and the fleet self-recovers. Readers gate on the cheap synchronous
 parent `duress` plugin's CLAUDE.md for the full lifecycle and lease contract.
 
 This is a **leaf sub-plugin on purpose**: its module-eval depends only on
-`node:fs` and `infra/paths` — no config_v2, no DB, no `SINGULARITY_WORKTREE`
+`node:fs` and `infra/paths` — no config_v2, no DB, no runtime-namespace
 identity — so processes outside a backend (the CLI's build admission valve,
 `plugins/framework/plugins/cli/plugins/op-runtime/cli/admission-valve.ts`) can import it safely.
 The parent `duress` barrel drags config_v2 (whose module-eval asserts a

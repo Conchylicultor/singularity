@@ -1,8 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { statSync, readFileSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { assertRunId, assertRunKindId } from "./ids";
 
 /**
@@ -163,11 +161,7 @@ export function readRunTerminal(
 ): RunTerminal | null {
   assertRunKindId(kindId);
   assertRunId(kindId, runId);
-  const path = worktreeArtifacts.runTerminal(
-    currentWorktreeName(),
-    kindId,
-    runId,
-  );
+  const path = worktreeArtifacts.runTerminal(runtimeNamespace(), kindId, runId);
   let raw: string;
   let mtime: Date;
   try {

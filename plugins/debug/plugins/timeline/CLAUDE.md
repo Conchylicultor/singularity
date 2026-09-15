@@ -191,7 +191,6 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `infra/mcp.Mcp`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.listWorktreeDirs`
-    - `infra/paths.MAIN_WORKTREE_NAME`
     - `primitives/log-channels.readChannelJson`
   - Register: `mcpTool('get_timeline')`
   - Routes: `GET /api/debug/timeline`

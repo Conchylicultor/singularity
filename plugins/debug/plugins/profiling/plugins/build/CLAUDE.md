@@ -30,7 +30,6 @@
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.worktreeArtifacts`
   - Routes:
     - `GET /api/debug/profiling/build`

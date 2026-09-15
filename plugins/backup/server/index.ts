@@ -1,6 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { backupConfig } from "../shared/config";
 import { runBackup } from "../shared/endpoints";
 import { backupRunJob } from "./internal/backup-job";

@@ -1,3 +1,7 @@
+import {
+  runtimeNamespace,
+  isMain,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { join } from "node:path";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import {
@@ -9,11 +13,7 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  worktreeDataDir,
-  currentWorktreeName,
-  isMain,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 import {
   startStallProfiler,
@@ -77,7 +77,7 @@ let lastTickAt = 0;
 let stallArmed = false;
 
 function healthFilePath(): string {
-  return join(worktreeDataDir(currentWorktreeName()), "logs", "health.jsonl");
+  return join(worktreeDataDir(runtimeNamespace()), "logs", "health.jsonl");
 }
 
 // Keep the JSONL bounded without a job: trim to the newest half once it grows
@@ -114,7 +114,7 @@ function tick(): void {
   const proc = procMemory();
   const sample: HealthSample = {
     sampledAt: now,
-    worktree: currentWorktreeName(),
+    worktree: runtimeNamespace(),
     eventLoopP50Ms: histogram.percentile(50) / 1e6,
     eventLoopP99Ms: histogram.percentile(99) / 1e6,
     eventLoopMaxMs: histogram.max / 1e6,

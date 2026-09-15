@@ -12,6 +12,7 @@
  *
  * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-run`
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   closeSync,
@@ -25,7 +26,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  currentWorktreeName,
   RUN_TERMINAL_SUFFIX,
   RUN_TRANSCRIPT_SUFFIX,
   worktreeArtifacts,
@@ -232,7 +232,7 @@ describe("a kill and a deliberate exit(143) are told apart", () => {
   // assertion goes through `readRunTerminal` — the function every consumer
   // actually calls — rather than re-parsing the marker in the test.
   const KIND = "shimtest";
-  const worktree = currentWorktreeName();
+  const worktree = runtimeNamespace();
   const written: string[] = [];
 
   afterEach(() => {

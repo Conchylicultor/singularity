@@ -15,7 +15,7 @@
 // second rollup registers with zero edits to the generic layer.
 //
 // Pure module: no DB import, so it stays import-safe for tooling/check
-// subprocesses (where SINGULARITY_WORKTREE is unset).
+// subprocesses (which declare no runtime namespace).
 export type DerivedRollupSpec = {
   // The rollup table's SQL name. Used both as the create target and as the
   // feed-exempt key (the change-feed never installs a NOTIFY trigger on a

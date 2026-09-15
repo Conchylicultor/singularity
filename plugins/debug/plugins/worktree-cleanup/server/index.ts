@@ -1,5 +1,5 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { handleList } from "./internal/handle-list";
 import { handleDelete } from "./internal/handle-delete";
 import { handleBulkDelete } from "./internal/handle-bulk-delete";

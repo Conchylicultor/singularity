@@ -110,6 +110,11 @@ const OpEntrySchema = z.object({
 export type OpEntry = z.infer<typeof OpEntrySchema>;
 
 const WorktreeGroupSchema = z.object({
+  /**
+   * The checkout this row's ops ran in — the op record's `opSlug` (basename of
+   * the checkout root), canonicalized. Spelled `worktree` because that is the
+   * name every consumer of this wire shape already uses for a checkout id.
+   */
   worktree: z.string(),
   // The conversation that drove this worktree's work — the first event's
   // conversationId — and its human title, resolved from the main DB. Null when
@@ -143,7 +148,6 @@ export const OpDetailSchema = z.object({
   opId: z.string(),
   kind: OpKindSchema,
   opSlug: z.string().nullable(),
-  worktree: z.string().nullable(),
   branch: z.string(),
   conversationId: z.string().nullable(),
   lane: LaneSchema.nullable(),

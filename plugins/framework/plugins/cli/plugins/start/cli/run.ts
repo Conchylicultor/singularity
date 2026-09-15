@@ -1,8 +1,10 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   assertSupportedHost,
   readPid,

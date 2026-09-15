@@ -98,8 +98,8 @@ function loadDeclaredTables(): Set<string> {
   return declaredTablesFromSnapshot(parsed);
 }
 
-// The worktree DB name = the git worktree dir basename (SINGULARITY_WORKTREE is
-// not set in a check subprocess), mirroring getWorktreeSlug in the check CLI.
+// The worktree DB name = the git worktree dir basename (a check subprocess has no
+// runtime namespace), mirroring getWorktreeSlug in the check CLI.
 async function getWorktreeName(): Promise<string> {
   return basename(await getWorktreeRoot());
 }

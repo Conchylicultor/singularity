@@ -6,7 +6,8 @@ import {
   declaredSets,
   writeDataDirsManifest,
 } from "../../core/internal/data-dirs-manifest";
-import { currentWorktreeName, isRelease } from "../../core/internal/paths";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { isRelease } from "../../core/internal/paths";
 
 /**
  * Publish what THIS namespace declares under the shared data root, so an audit
@@ -38,5 +39,5 @@ export async function publishDataDirsManifest(): Promise<void> {
     dedupeKey: (d) => `${d.spec.kind}/${d.spec.name}`,
     label: "data-dir",
   });
-  writeDataDirsManifest(currentWorktreeName(), declaredSets(getDataDirs()));
+  writeDataDirsManifest(runtimeNamespace(), declaredSets(getDataDirs()));
 }

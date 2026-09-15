@@ -4,6 +4,7 @@ import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { sanitizeChannel } from "@plugins/infra/plugins/file-sink/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import type { LogStream } from "./registry";
 
 // The READ half of the persistent log-channel substrate. The WRITE/rotation half
@@ -17,18 +18,13 @@ export function logsDirFor(worktree: string): string {
   return join(worktreeDataDir(asNamespace(worktree)), "logs");
 }
 
-// Resolve THIS worktree's logs dir. Throws loudly when SINGULARITY_WORKTREE is
-// unset — a durable sink with no worktree to write into is a bug, not a fallback.
-// Shared by the write path (defineLogSink / the client ingress family) and unused
-// by the read path (which takes an explicit worktree).
+// Resolve THIS process's logs dir, from the runtime namespace it declared at its
+// entry point. Throws loudly when nothing declared one — a durable sink with no
+// worktree to write into is a bug, not a fallback. Shared by the write path
+// (defineLogSink / the client ingress family) and unused by the read path (which
+// takes an explicit worktree).
 export function logsDir(): string {
-  const worktree = process.env.SINGULARITY_WORKTREE;
-  if (!worktree) {
-    throw new Error(
-      "SINGULARITY_WORKTREE is not set — cannot resolve the per-worktree logs directory",
-    );
-  }
-  return logsDirFor(worktree);
+  return join(worktreeDataDir(runtimeNamespace()), "logs");
 }
 
 // Max bytes a tail read pulls off disk via a positioned read, so even a full

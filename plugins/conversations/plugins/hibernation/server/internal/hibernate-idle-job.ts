@@ -1,6 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { getConfig } from "@plugins/config_v2/server";
 import {
   listHibernationCandidates,

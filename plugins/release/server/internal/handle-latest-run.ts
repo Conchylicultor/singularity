@@ -1,7 +1,7 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { ReleaseLatestRunResponse } from "../../core";
 import { releaseLatestRunEndpoint } from "../../core";
 import { _releaseRuns } from "./tables";
@@ -29,7 +29,7 @@ export const handleLatestRun = implement(
       .from(_releaseRuns)
       .where(
         and(
-          eq(_releaseRuns.namespace, currentWorktreeName()),
+          eq(_releaseRuns.namespace, runtimeNamespace()),
           eq(_releaseRuns.composition, query.composition),
         ),
       )

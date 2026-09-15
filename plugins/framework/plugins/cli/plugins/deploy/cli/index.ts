@@ -30,8 +30,9 @@
  *   consumer*. That keeps `assertKnownComposition`, the hostname/port
  *   validation and the unique-constraint → 409 mapping as the single writer of
  *   that table. (It is also the only option: the deployments *server* barrel
- *   eagerly imports `config_v2/server`, which throws at module eval without
- *   `SINGULARITY_WORKTREE` — so a CLI process cannot import its table.)
+ *   eagerly imports `config_v2/server`, which resolves its config dir at module
+ *   eval from this process's runtime namespace — which a CLI process does not
+ *   have, so it cannot import that table.)
  * - The **server row + its health row** are read straight from the DB, because
  *   they have no core-level wire contract: `servers`/`health` keep theirs in
  *   plugin-private `shared/`, and the TOFU-pinned `hostKeyLine` is
@@ -39,9 +40,11 @@
  *   with `hostKey: { mode: "learn" }` would silently accept a changed host key,
  *   i.e. weaker verification than the probe already established.
  *
- * Both resolve against `currentWorktreeName()`, so the CLI acts on exactly the
- * namespace whose Deploy app you are looking at: bare on a checkout that is
- * `main`, or the spawning backend's own worktree when the D5 UI shells out.
+ * Both resolve against `checkoutNamespace(REPO_ROOT)` — the namespace this
+ * CHECKOUT owns, minted from git — so the CLI acts on exactly the namespace
+ * whose Deploy app you are looking at: bare on a checkout that is `main`, or the
+ * spawning backend's own worktree when the D5 UI shells out (which spawns the
+ * child with `cwd` at that same checkout).
  */
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 

@@ -1,6 +1,7 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
-import { isMain, isRelease } from "@plugins/infra/plugins/paths/server";
+import { isRelease } from "@plugins/infra/plugins/paths/server";
 import { pagingProbeConfig } from "../core";
 import { startPagingProbes, stopPagingProbes } from "./internal/probe-host";
 

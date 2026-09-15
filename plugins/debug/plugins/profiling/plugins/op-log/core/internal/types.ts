@@ -108,13 +108,15 @@ export interface RawOpRecord {
   opId: string;
   kind?: OpKind;
   /**
-   * `basename(worktree root)` — the op-marker slug `isWorktreeOpActive()` reads,
-   * and the liveness key the orphan reconciler probes. Carried explicitly
-   * because it is NOT the same as `worktree` (env `SINGULARITY_WORKTREE`), which
-   * may differ.
+   * `basename(worktree root)` — THE identity of the checkout the op ran in: the
+   * op-marker slug `isWorktreeOpActive()` reads, the liveness key the orphan
+   * reconciler probes, and the key the profiling reader groups a Gantt row on.
+   * Derived from the CLI's own git root (`checkoutNamespace(root)`), so it is
+   * true for the process that wrote it — never read from an inherited
+   * environment, which is what filed every agent op under main for two weeks.
+   * Optional only because an older CLI's line may lack it.
    */
   opSlug?: string | null;
-  worktree?: string | null;
   branch?: string;
   conversationId?: string | null;
   /** Which reserved-floor lane the op drew from — explains WHY it waited. */
@@ -144,7 +146,6 @@ export interface OpRecord {
   opId: string;
   kind: OpKind;
   opSlug: string | null;
-  worktree: string | null;
   branch: string;
   conversationId: string | null;
   lane: Lane | null;

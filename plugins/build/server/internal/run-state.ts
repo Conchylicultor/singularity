@@ -1,6 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
@@ -59,7 +59,7 @@ export async function claimBuildRun(row: {
       // ids on argv, so the row and the process cannot disagree about what ran.
       targets: row.targets,
       pid: process.pid,
-      namespace: currentWorktreeName(),
+      namespace: runtimeNamespace(),
     });
     return true;
   } catch (err) {
@@ -84,7 +84,7 @@ export async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
     .where(
       and(
         isNull(_buildRuns.finishedAt),
-        eq(_buildRuns.namespace, currentWorktreeName()),
+        eq(_buildRuns.namespace, runtimeNamespace()),
       ),
     );
   return rows.map((row) => ({ runId: row.id, pid: row.pid }));

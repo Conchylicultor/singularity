@@ -1,18 +1,23 @@
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { registerAutoStubs } from "./auto-stubs.generated";
 
 let registered = false;
 
 /**
- * The dummy `SINGULARITY_WORKTREE` the stubs install (see `registerBarrelStubs`).
+ * The dummy runtime namespace the stubs declare (see `registerBarrelStubs`).
  *
- * Exported because it is a LIE that outlives this process: anything spawned from
- * a barrel-importing process inherits it, and would then believe it is running
- * in a worktree by that name. The one consumer today is the check subprocess
- * helper (`cli/plugins/op-runtime/cli/check-subprocess.ts`), which scrubs the variable when — and
- * only when — it still holds this exact value; a real inherited worktree name
- * must survive. Spelled once here so the scrub and the stub can never disagree
- * about what the sentinel is.
+ * A LIE, but one that now dies with the process: it is declared into this
+ * process's module state rather than written into its environment, so nothing
+ * this process spawns can inherit it. That is what retired the value-scoped
+ * scrub the check-subprocess helper used to carry — a child that inherited the
+ * sentinel used to write its transcript and its progress records under a
+ * worktree that does not exist.
+ *
+ * Still exported: it is the one spelling of the sentinel, and a reader finding
+ * it in a log should be able to grep to here. It is a valid namespace by
+ * construction (`asNamespace` below would throw otherwise).
  */
 export const BARREL_STUB_WORKTREE = "barrel-import-stub";
 
@@ -36,17 +41,16 @@ export function registerBarrelStubs(_repoRoot: string): void {
   if (registered) return;
   registered = true;
 
-  // Server barrels read SINGULARITY_WORKTREE at module init (e.g. database
-  // pool guard). Set a dummy value so they don't throw during barrel import.
-  process.env.SINGULARITY_WORKTREE ??= BARREL_STUB_WORKTREE;
+  // Several server modules resolve the process's runtime namespace at module
+  // eval (config_v2's config dir), and the database pool needs one on its first
+  // query. Declare a dummy so they evaluate; pg.Pool connections are lazy, so no
+  // real DB connect happens. Idempotent, so a second `registerBarrelStubs` in a
+  // process that already declared its own namespace is a no-op only when the two
+  // agree — and a disagreement is a genuine bug worth the throw.
+  declareRuntimeNamespace(asNamespace(BARREL_STUB_WORKTREE));
 
   const noop = () => {};
   const identity = <T>(x: T): T => x;
-
-  // Several server modules (database/server, database/admin, paths) throw at
-  // top-level when this env var is missing. Setting a dummy value lets them
-  // evaluate; pg.Pool connections are lazy so no real DB connect happens.
-  process.env.SINGULARITY_WORKTREE ??= "__barrel_import_stub__";
 
   // `globalThis` carries no DOM typing in every tsconfig target that reaches
   // this file, so the probe reads the property structurally.

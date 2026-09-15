@@ -1,7 +1,7 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import {
   asNamespace,
   namespaceUrl,
@@ -86,7 +86,7 @@ export const fleetFlightsClass = defineTraceEventClass({
       .array(GatewayWorktreeSchema.passthrough())
       .parse(await res.json());
 
-    const self = currentWorktreeName();
+    const self = runtimeNamespace();
     const targets = fleet.filter(
       (w) => w.state === "running" && w.name !== self,
     );

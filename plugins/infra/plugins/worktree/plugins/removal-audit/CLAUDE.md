@@ -109,7 +109,6 @@ part that took hours to establish by hand.
   - Uses:
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
-    - `infra/paths.isMain`
     - `infra/paths.PS`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`

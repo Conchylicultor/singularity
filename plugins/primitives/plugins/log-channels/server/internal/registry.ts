@@ -28,7 +28,7 @@ interface InternalChannel {
   nextSeq: number;
   // A durable channel resolves its bounded-append file sink LAZILY on first
   // publish: `makeSink` builds it (its path needs the per-worktree logs dir, whose
-  // resolution reads SINGULARITY_WORKTREE and must NOT run at module import — the
+  // resolution asks for this process's runtime namespace and must NOT run at module import — the
   // log-channels/server barrel is imported nearly everywhere, incl. inside the
   // import-safe @plugins/database/server graph). An ephemeral channel has
   // `makeSink === null` and stays memory-only. Durability is a declaration

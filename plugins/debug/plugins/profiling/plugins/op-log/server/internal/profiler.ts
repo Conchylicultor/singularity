@@ -14,15 +14,15 @@ import type {
 import { appendOpLog } from "./jsonl";
 
 // The writer. Generalizes `cli/bin/push-profiler.ts` (whose shape this copies:
-// same three phases, same `steps` bracketing, same env-sourced identity, same
-// `complete` + `write` split) to every op kind, and adds the wait list the push
-// profiler's scalar `waitMs` could not express.
+// same three phases, same `steps` bracketing, same `complete` + `write` split)
+// to every op kind, and adds the wait list the push profiler's scalar `waitMs`
+// could not express.
 //
 // Every method is a closure, never a `this`-dependent method: the push command
 // already passes `profiler.markLockRequested` as a bare function reference, so a
 // `this`-bound method would break at the first call site it is handed to.
 
-/** Identity a caller must supply; the rest is read from the environment. */
+/** Identity a caller must supply; the rest is derived by the profiler. */
 export interface OpProfilerOptions {
   /**
    * Unique per invocation. push: its `pushId`; build: its `buildId`; check: a
@@ -31,9 +31,11 @@ export interface OpProfilerOptions {
   opId: string;
   branch: string;
   /**
-   * `basename(worktree root)` — the op-marker slug. THE liveness key
-   * `finalizeOrphanedOps` probes, and deliberately not `worktree`: the two can
-   * differ (`worktree` comes from `SINGULARITY_WORKTREE`).
+   * `basename(worktree root)` — the op-marker slug, and THE identity of the
+   * checkout this op ran in: the liveness key `finalizeOrphanedOps` probes and
+   * the key the profiling reader groups a Gantt row on. Pass
+   * `checkoutNamespace(root)` — the caller's own git root — so the record names
+   * the checkout that really did the work.
    */
   opSlug: string | null;
   /** Which reserved-floor lane the op draws from. */
@@ -109,7 +111,6 @@ export function createOpProfiler<K extends OpKind>(
   opts: OpProfilerOptions,
 ): OpProfiler<K> {
   const conversationId = process.env.SINGULARITY_CONVERSATION_ID ?? null;
-  const worktree = process.env.SINGULARITY_WORKTREE ?? null;
   const sink = opts.sink ?? ((record: RawOpRecord) => appendOpLog(record));
 
   const requestedAt = new Date();
@@ -162,7 +163,6 @@ export function createOpProfiler<K extends OpKind>(
     opSlug: opts.opSlug,
     branch: opts.branch,
     conversationId,
-    worktree,
     lane: opts.lane ?? null,
     mode: opts.mode ?? null,
     buildId: opts.buildId ?? null,

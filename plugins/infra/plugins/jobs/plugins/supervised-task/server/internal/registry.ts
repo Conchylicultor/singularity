@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   SUPERVISED_EXEC_COMMAND,
   type SupervisedTaskInvocation,
@@ -134,6 +135,12 @@ export function defineSupervisedTask<P extends z.ZodType>(
         SUPERVISED_EXEC_COMMAND,
         spec.id,
         JSON.stringify(payload),
+        // The child's runtime namespace, stated rather than inherited. THIS
+        // backend is the only process that knows which namespace the work
+        // belongs to — a composition backend runs out of main's checkout, so
+        // the child's own cwd cannot answer it.
+        "--namespace",
+        runtimeNamespace(),
       ],
       // `./singularity` is a path relative to the checkout root, and the
       // backend's own cwd is its `server-core` directory.

@@ -721,9 +721,9 @@ const noUndeclaredDataDirsCheck: Check = {
     // concurrently-running agent's unmerged branch owns is invisible here — and
     // used to be reported as an orphan nobody could act on. See the manifest
     // module for the whole story.
-    // `checkoutWorktreeName`, not `currentWorktreeName`: this runs in a CLI
-    // process, where `SINGULARITY_WORKTREE` (a gateway-set, backend-only var) is
-    // unset and `currentWorktreeName()` would answer `main` from every worktree.
+    // `checkoutWorktreeName`, not `runtimeNamespace()`: this runs in a CLI
+    // process, which declares no runtime namespace at all — only a
+    // gateway-spawned backend does — so asking for one would throw.
     // Excluding the wrong namespace would leave OUR OWN possibly-stale manifest
     // in the foreign set, where it could excuse an entry this checkout has
     // stopped declaring — turning a real local orphan into someone else's.

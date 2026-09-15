@@ -1,9 +1,7 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
 import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
 import { getBuildRunLogs } from "../../shared/endpoints";
@@ -38,7 +36,7 @@ function readIfPresent(path: string): string | null {
 
 function readStepArtifact(buildId: string): BuildLogsFile | null {
   const raw = readIfPresent(
-    worktreeArtifacts.buildLogs(currentWorktreeName(), buildId),
+    worktreeArtifacts.buildLogs(runtimeNamespace(), buildId),
   );
   if (raw === null) return null;
   try {
@@ -87,7 +85,7 @@ const RAW_STEP_ID = "raw";
 function readTranscriptAsStep(buildId: string): BuildStepLog | null {
   const text = readIfPresent(
     worktreeArtifacts.runTranscript(
-      currentWorktreeName(),
+      runtimeNamespace(),
       BUILD_RUN_KIND_ID,
       buildId,
     ),

@@ -60,7 +60,7 @@ test("a composition whose registry is missing throws instead of booting the full
   );
 });
 
-test("a namespace-unsafe SINGULARITY_WORKTREE throws instead of falling back", () => {
+test("a namespace-unsafe runtime namespace throws instead of falling back", () => {
   for (const bad of [
     "Website",
     "we bsite",

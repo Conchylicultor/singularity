@@ -1,12 +1,11 @@
+import {
+  runtimeNamespace,
+  isMain,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { and, arrayContains, desc, eq, isNotNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
-import {
-  REPO_ROOT,
-  checkoutRef,
-  currentWorktreeName,
-  isMain,
-} from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import {
   MAIN_COMPOSITION_ID,
@@ -43,7 +42,7 @@ export async function lastClosedAttempt(): Promise<BuildAttempt | null> {
     .from(_buildRuns)
     .where(
       and(
-        eq(_buildRuns.namespace, currentWorktreeName()),
+        eq(_buildRuns.namespace, runtimeNamespace()),
         // A PLAIN build of this checkout's own app — the SQL twin of
         // `isMainCompositionBuild`, which is `targets.length === 1 &&
         // targets[0] === MAIN_COMPOSITION_ID`. A run that also published someone
@@ -83,7 +82,7 @@ export async function lastCompositionAttempt(
     .from(_buildRuns)
     .where(
       and(
-        eq(_buildRuns.namespace, currentWorktreeName()),
+        eq(_buildRuns.namespace, runtimeNamespace()),
         arrayContains(_buildRuns.targets, [id]),
         isNotNull(_buildRuns.finishedAt),
       ),

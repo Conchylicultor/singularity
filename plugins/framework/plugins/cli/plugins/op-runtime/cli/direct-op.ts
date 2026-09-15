@@ -7,11 +7,11 @@ import type {
   GrantHooks,
   Lane,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import {
-  checkoutNamespace,
   MAIN_WORKTREE_NAME,
-} from "@plugins/infra/plugins/paths/server";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import {
   getWorktreeRoot,
   spawnCaptured,

@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
@@ -224,7 +225,7 @@ export async function recordReport(
     if (!admitted.persist) return { outcome: "shed" };
   }
 
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+  const worktree = runtimeNamespace();
   const message = clamp(rawMessage ?? "", MESSAGE_MAX);
 
   // Fan-out gate — after the duress gate (a replayed storm is still a storm,

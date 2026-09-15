@@ -3,8 +3,8 @@
 // A NAMESPACE is the one name that a deployed app answers to. It is the
 // subdomain in `http://<ns>.localhost:9000`, the spec-dir basename under
 // `~/.singularity/worktrees/<ns>/`, the socket stem `<ns>.sock`, the Postgres
-// database, the config dir, and the `SINGULARITY_WORKTREE` a backend is spawned
-// with. All of those are the SAME string, which is exactly why there must be
+// database, the config dir, and the `--namespace` a backend is spawned with. All
+// of those are the SAME string, which is exactly why there must be
 // only one function that decides what it is.
 //
 // This file has ZERO imports on purpose, for the same reason
@@ -219,6 +219,20 @@ export function namespaceParts(ns: Namespace): NamespaceParts {
     checkout: ns.slice(dot + 1),
   };
 }
+
+/**
+ * The namespace the main app answers to.
+ *
+ * DERIVED, not a second literal: it is what the elision rule yields for the main
+ * composition on the main checkout. Spelling `"singularity"` as a constant a
+ * second time is how that string came to mean two different things in two files.
+ *
+ * It lives here rather than in `paths` because it is namespace data, not a path:
+ * nothing about a filesystem takes part in deriving it.
+ */
+export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
+  kind: "main",
+});
 
 /**
  * Validating cast at a serialization boundary — an env var, a spec-dir basename,

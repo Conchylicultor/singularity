@@ -16,7 +16,7 @@ software went.
 
 ## Deliberately **unscoped**
 
-The build and release arms carry an always-on `where namespace = currentWorktreeName()`,
+The build and release arms carry an always-on `where namespace = runtimeNamespace()`,
 because a worktree DB is forked from main and inherits main's rows. This arm must
 not, and the symmetry is a trap: `deploy_runs` has no namespace — a deploy targets
 a remote server — so the predicate would not narrow the arm, it would delete every

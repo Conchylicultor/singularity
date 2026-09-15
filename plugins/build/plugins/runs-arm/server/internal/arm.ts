@@ -1,5 +1,5 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { defineRunKind } from "@plugins/runs/server";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_RUN_KIND } from "@plugins/build/plugins/run-ledger/core";
@@ -61,8 +61,8 @@ export const buildRunKind = defineRunKind({
   // would be a silent regression on the app's most-used surface rather than a
   // new view being generous.
   //
-  // `currentWorktreeName()` reads `process.env.SINGULARITY_WORKTREE`, constant
-  // for the process lifetime (one backend per worktree), so evaluating it once
-  // at module eval is correct — same call, same reasoning, as the resource.
-  where: eq(_buildRuns.namespace, currentWorktreeName()),
+  // `runtimeNamespace()` is declared once at this process's entry point and
+  // never changes (one backend per namespace), so evaluating it once at module
+  // eval is correct — same call, same reasoning, as the resource.
+  where: eq(_buildRuns.namespace, runtimeNamespace()),
 });

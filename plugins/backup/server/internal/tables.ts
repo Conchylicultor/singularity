@@ -1,3 +1,4 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -9,7 +10,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { parsedJson } from "@plugins/database/plugins/sql-column/server";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 import {
   BackupManifestSchema,
   BackupTargetResultSchema,

@@ -1,6 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
 import {
   HARD_KILL_EXIT_CODE,
@@ -42,7 +42,7 @@ export async function claimBackupRun(
     await db.insert(_backupRuns).values({
       id: runId,
       trigger,
-      namespace: currentWorktreeName(),
+      namespace: runtimeNamespace(),
       pid: process.pid,
     });
     return runId;
@@ -70,7 +70,7 @@ export async function listUnfinishedBackups(): Promise<
     .where(
       and(
         isNull(_backupRuns.finishedAt),
-        eq(_backupRuns.namespace, currentWorktreeName()),
+        eq(_backupRuns.namespace, runtimeNamespace()),
       ),
     );
   return rows.map((row) => ({ runId: row.id, pid: row.pid }));

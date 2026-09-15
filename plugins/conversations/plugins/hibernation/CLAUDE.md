@@ -20,7 +20,6 @@
     - `conversations.ensureResumed`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`
-    - `infra/paths.isMain`
     - `tasks/tasks-core.listHibernationCandidates`
     - `tasks/tasks-core.setConversationHibernated`
     - `tasks/tasks-core.touchConversationViewed`

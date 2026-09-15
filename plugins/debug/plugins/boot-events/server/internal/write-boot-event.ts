@@ -1,7 +1,7 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { getBootMode } from "@plugins/framework/plugins/server-core/core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { BootLine } from "./schema";
 
 // Writes the per-boot lines to the persisted `boot` log channel →
@@ -42,7 +42,7 @@ export const bootStartRegistration: Registration = {
     if (getBootMode() !== "serve") return;
     publish({
       sampledAt: Date.now(),
-      worktree: currentWorktreeName(),
+      worktree: runtimeNamespace(),
       processStartedAt: Math.round(performance.timeOrigin),
       phase: "start",
     });
@@ -53,7 +53,7 @@ export function writeBootReadyEvent(): void {
   const now = Date.now();
   publish({
     sampledAt: now,
-    worktree: currentWorktreeName(),
+    worktree: runtimeNamespace(),
     processStartedAt: Math.round(performance.timeOrigin),
     readyAt: now,
     phase: "ready",

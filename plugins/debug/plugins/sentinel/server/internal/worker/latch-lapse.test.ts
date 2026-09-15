@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FRESHNESS_LEASE_MS } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   DuressEpisodeEventSchema,
   type ClusterSample,
@@ -33,7 +34,7 @@ import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
 // fs on the temp paths). Runtime process.env mutations do NOT propagate to
 // workers (verified); the option is the seam.
 
-const WORKTREE = process.env.SINGULARITY_WORKTREE ?? "singularity";
+const WORKTREE = runtimeNamespace();
 const CADENCE_MS = 100;
 
 const THRESHOLDS: DetectorThresholds = {

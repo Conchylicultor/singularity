@@ -156,12 +156,12 @@ export async function runHermeticBuild(opts: {
   assertKnownCompositions(opts.compositions);
 
   const root = await getWorktreeRoot();
-  // The identity of the CHECKOUT, not of the environment: the CLI never
-  // sets `SINGULARITY_WORKTREE` for itself, so `currentWorktreeName()`
-  // would answer "singularity" from every worktree. `release` (the parent
-  // process) resolves the release dist through the SAME function on the
-  // same root — it spawns this command with `cwd` at that root — so the
-  // producer and the consumer of the dist cannot land on different trees.
+  // The identity of the CHECKOUT. A CLI process has no RUNTIME namespace at
+  // all — only a gateway-spawned backend does — so the question it can answer
+  // is "which checkout am I standing in". `release` (the parent process)
+  // resolves the release dist through the SAME function on the same root — it
+  // spawns this command with `cwd` at that root — so the producer and the
+  // consumer of the dist cannot land on different trees.
   const name = checkoutWorktreeName(root);
   // The namespace a plain build of this checkout would serve — what the reap
   // gate asks the gateway about and what the check transcript is keyed by. Equal
@@ -282,7 +282,6 @@ export async function runHermeticBuild(opts: {
   // from `run.ts` exists to keep true.
   await generateAppSources({
     root,
-    worktreeName: name,
     migration: opts.migration,
     hooks,
   });

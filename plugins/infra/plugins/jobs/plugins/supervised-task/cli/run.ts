@@ -1,4 +1,5 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { runExec } from "@plugins/framework/plugins/server-core/cli";
 import {
   getSupervisedTask,
@@ -6,7 +7,7 @@ import {
 } from "../server/internal/registry";
 
 /**
- * `./singularity supervised-exec <taskId> <payloadJson>`.
+ * `./singularity supervised-exec <taskId> <payloadJson> --namespace <ns>`.
  *
  * The whole body sits inside `runExec`, which boots the plugin graph and never
  * returns: it exits 0 when the body resolves and 1 when anything in it throws,
@@ -19,11 +20,15 @@ import {
  * runs — so before boot every id is unknown and after it the set is complete.
  * There is no earlier point at which "unknown task" could be answered honestly.
  */
-const run: CliAction<[string, string], object> = async (
+const run: CliAction<[string, string], { namespace: string }> = async (
   taskId,
   payloadJson,
+  opts,
 ) => {
-  await runExec(async () => {
+  // Validated here, at the process boundary where a string off a command line
+  // becomes an identity: the namespace goes on to name a database and a
+  // directory, so a malformed one must be loud rather than become a path.
+  await runExec(asNamespace(opts.namespace), async () => {
     const task = getSupervisedTask(taskId);
     if (task === undefined) {
       // Loud, immediately, and naming the id. The alternative — returning

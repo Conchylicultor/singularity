@@ -28,21 +28,17 @@ import {
   currentQueryDeadline,
   queryDeadlineSink,
 } from "./query-deadline";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
-// genuinely needs. The throw is deferred to first use (the lazy `pool()` build,
-// triggered by the first real query/connection) rather than run at module load,
-// so this module is import-safe: admin-only importers that never touch the
-// worktree pool, and unit tests that inject a fake `db` and never issue a query,
-// both import it without a worktree. It is still loud and never silently
-// defaulted — a real query without `SINGULARITY_WORKTREE` throws here.
-function requireWorktree(): string {
-  const worktree = process.env.SINGULARITY_WORKTREE;
-  if (!worktree) {
-    throw new Error("SINGULARITY_WORKTREE env var is required");
-  }
-  return worktree;
-}
+// genuinely needs, and it is this process's RUNTIME namespace (`--namespace`
+// from the gateway, or the namespace an exec child's spawner stated). The ask is
+// deferred to first use (the lazy `pool()` build, triggered by the first real
+// query/connection) rather than run at module load, so this module is
+// import-safe: admin-only importers that never touch the worktree pool, and unit
+// tests that inject a fake `db` and never issue a query, both import it without
+// one. It is still loud and never silently defaulted — a real query in a process
+// that declared no namespace throws here.
 
 const config = readDatabaseConfig();
 const conn = config.pgbouncer
@@ -193,8 +189,8 @@ const queryRetryDelay = withJitter(exponential({ initial: 10, max: 250 }));
 // `[deadlock-retry]`; a rising rate is the signal to fix the source, not the cap.
 // Durable "db" retry log. `defineLogSink` registers the channel env-free and
 // defers the file-sink (its per-worktree path resolution) to first publish, so
-// importing @plugins/database/server stays import-safe (never reads
-// SINGULARITY_WORKTREE at module eval; see database/CLAUDE.md).
+// importing @plugins/database/server stays import-safe (never resolves this
+// process's namespace at module eval; see database/CLAUDE.md).
 const dbLog = defineLogSink({
   id: "db",
   description:
@@ -696,8 +692,8 @@ function armLease(
 }
 
 // Lazily-constructed singleton pool. Importing this module never builds a pool or
-// reads SINGULARITY_WORKTREE; the worktree name is required only when the first
-// real query/connection is issued (`pool()` → `requireWorktree()`). node-postgres
+// asks for this process's namespace; the worktree name is required only when the
+// first real query/connection is issued (`pool()` → `runtimeNamespace()`). node-postgres
 // pools connect lazily, so building the pool opens no connection either — the warm
 // step in `warmPool()` does that explicitly at boot.
 let poolSingleton: Pool | null = null;
@@ -705,7 +701,7 @@ let poolSingleton: Pool | null = null;
 function pool(): Pool {
   if (poolSingleton) return poolSingleton;
   const p = new Pool({
-    connectionString: buildConnectionString(conn, requireWorktree()),
+    connectionString: buildConnectionString(conn, runtimeNamespace()),
     max: POOL_MAX,
     idleTimeoutMillis: 20_000,
   });

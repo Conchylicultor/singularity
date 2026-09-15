@@ -13,8 +13,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq, or } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import {
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
+import {
+  REPO_ROOT,
+  checkoutNamespace,
+} from "@plugins/infra/plugins/paths/core";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import {
   _deployServers,
@@ -78,6 +84,22 @@ export function refuse(message: string): never {
   process.exit(1);
 }
 
+// ── Which namespace this command acts on ──────────────────────────────────────
+//
+// The CHECKOUT's own namespace, minted from git — not a runtime namespace. This
+// is a CLI process: it declares no runtime namespace, and the value it wants is
+// "which app does the checkout I was invoked from own", which is exactly what
+// `checkoutNamespace` answers. It used to read the environment, which answered
+// `singularity` from every worktree — so a deploy launched from a worktree read
+// main's deployment rows and main's server registry.
+//
+// Memoized because it costs one `git` spawn and is asked on every endpoint call.
+let namespacePromise: Promise<Namespace> | undefined;
+export function deployNamespace(): Promise<Namespace> {
+  namespacePromise ??= checkoutNamespace(REPO_ROOT);
+  return namespacePromise;
+}
+
 // ── Resolution ────────────────────────────────────────────────────────────────
 
 type ServerRow = typeof _deployServers.$inferSelect;
@@ -96,7 +118,7 @@ export interface DeployTarget {
 
 /** One short-lived pool against this namespace's DB, released in `finally`. */
 async function withDb<T>(fn: (db: NodePgDatabase) => Promise<T>): Promise<T> {
-  const pool = openShortLivedClient(currentWorktreeName());
+  const pool = openShortLivedClient(await deployNamespace());
   try {
     return await fn(drizzle(pool));
   } finally {
@@ -104,9 +126,9 @@ async function withDb<T>(fn: (db: NodePgDatabase) => Promise<T>): Promise<T> {
   }
 }
 
-/** This namespace's own backend, through the gateway. */
-function backendBase(): string {
-  return namespaceUrl(currentWorktreeName());
+/** This checkout's own backend, through the gateway. */
+async function backendBase(): Promise<string> {
+  return namespaceUrl(await deployNamespace());
 }
 
 /**
@@ -122,7 +144,7 @@ async function callEndpoint(
   endpoint: { route: string },
   body?: unknown,
 ): Promise<unknown> {
-  const url = `${backendBase()}${extractPath(endpoint.route)}`;
+  const url = `${await backendBase()}${extractPath(endpoint.route)}`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -137,7 +159,7 @@ async function callEndpoint(
   } catch (err) {
     if (!(err instanceof TypeError)) throw err;
     return refuse(
-      `cannot reach ${url} — the "${currentWorktreeName()}" backend is not serving. ` +
+      `cannot reach ${url} — the "${await deployNamespace()}" backend is not serving. ` +
         `Run \`./singularity build\` first; deploy reads its deployment records from it.`,
     );
   }
@@ -195,7 +217,7 @@ async function resolveServer(
   const all = await db.select().from(_deployServers);
   refuse(
     all.length === 0
-      ? `no servers are registered in the "${currentWorktreeName()}" namespace. Add one in the Deploy app first.`
+      ? `no servers are registered in the "${await deployNamespace()}" namespace. Add one in the Deploy app first.`
       : `no server matches "${ref}". Registered: ${all
           .map((r) => `${r.name} (${r.id})`)
           .join(", ")}`,

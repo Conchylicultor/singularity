@@ -41,7 +41,7 @@ const bundleRoot = dirname(process.execPath);
 process.env.SINGULARITY_DIR ??= join(bundleRoot, "data");
 // Mark this as a compiled release so host-singleton work that keys on the dev
 // "main" worktree (the cluster sentinel + duress latch) also runs on a
-// release's single backend, whose SINGULARITY_WORKTREE is the composition name
+// release's single backend, whose runtime namespace is the composition name
 // (so isMain() is false). Propagates launch → gateway (env spread) → backend
 // (gateway forwards os.Environ()). Read via isRelease() in infra/paths.
 process.env.SINGULARITY_RELEASE ??= "1";
@@ -186,7 +186,7 @@ async function main(): Promise<void> {
   // on EVERY boot — the data dir outlives a deploy, so a once-only seed would
   // serve the FIRST bundle's config forever. Only the build-owned origin layer
   // is written; the user's own `.jsonc` overrides are left alone. worktreeName
-  // = composition = the runtime SINGULARITY_WORKTREE, so this lands exactly where
+  // = composition = the backend's runtime namespace, so this lands exactly where
   // config-dir.ts reads (SINGULARITY_DIR/config/<worktree>). Runs before the
   // gateway spawns the backend, so CONFIG_DIR is current on first read.
   propagateReleaseConfig({

@@ -7,16 +7,14 @@
  * real `sleep`, a dead one is a real reaped process — `isPidAlive` is not
  * something a stub can honestly answer.
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
 import { observeRun } from "./observe";
 
-const worktree = currentWorktreeName();
+const worktree = runtimeNamespace();
 /** Lowercase alphanumeric with no separator, per `assertRunKindId`. */
 const KIND_ID = "supjobobs";
 

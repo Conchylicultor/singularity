@@ -1,3 +1,4 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { listLiveForkDatabases } from "@plugins/debug/plugins/slow-ops/plugins/cluster/server";
@@ -6,7 +7,6 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import {
   TimelineQuerySchema,
   HOST_LANE,

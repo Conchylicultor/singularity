@@ -1,5 +1,5 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { defineRunKind } from "@plugins/runs/server";
 import { _releaseRuns } from "@plugins/release/server";
 import { RELEASE_RUN_KIND, releaseRunArmFields } from "../../core";
@@ -53,5 +53,5 @@ export const releaseRunKind = defineRunKind({
   // precisely because a worktree DB inherits main's rows, and the table's own
   // comment says so. Unscoped, every worktree's merged list would open on
   // main's release history.
-  where: eq(_releaseRuns.namespace, currentWorktreeName()),
+  where: eq(_releaseRuns.namespace, runtimeNamespace()),
 });

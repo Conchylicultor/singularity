@@ -7,8 +7,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // worktree created outside the app (`git worktree add`). That runs in a CLI
 // process, where server contributions have never been collected — and it cannot
 // simply load the plugin registry to collect them, because doing so imports
-// `@plugins/database/server`, which builds its pool at module load and throws
-// without `SINGULARITY_WORKTREE`. Reading the set over HTTP from a backend that
+// `@plugins/database/server`, whose worktree pool is scoped to a runtime
+// namespace a CLI process does not have. Reading the set over HTTP from a backend that
 // HAS booted keeps one source of truth (the declarations themselves) and one
 // failure mode: if no backend is up, the CLI says so instead of quietly forking
 // everything.

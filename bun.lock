@@ -3193,6 +3193,10 @@
       "name": "@singularity/plugin-infra-retention",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/runtime-identity": {
+      "name": "@singularity/plugin-infra-runtime-identity",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/runtime-profiler": {
       "name": "@singularity/plugin-infra-runtime-profiler",
       "version": "0.0.1",
@@ -7433,6 +7437,8 @@
     "@singularity/plugin-infra-request-origin": ["@singularity/plugin-infra-request-origin@workspace:plugins/infra/plugins/request-origin"],
 
     "@singularity/plugin-infra-retention": ["@singularity/plugin-infra-retention@workspace:plugins/infra/plugins/retention"],
+
+    "@singularity/plugin-infra-runtime-identity": ["@singularity/plugin-infra-runtime-identity@workspace:plugins/infra/plugins/runtime-identity"],
 
     "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
 

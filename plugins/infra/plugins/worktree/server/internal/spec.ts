@@ -24,7 +24,7 @@ export interface ZeroCacheSpec {
 }
 
 export interface WorktreeSpec {
-  /** Namespace = subdomain = SINGULARITY_WORKTREE. Spec dir basename. */
+  /** Namespace = subdomain = the backend's `--namespace`. Spec dir basename. */
   name: string;
   /** Absolute path to the backend working dir (`bun bin/index.ts` runs here). */
   server: string;
@@ -72,7 +72,8 @@ export interface WorktreeSpec {
 /**
  * Register a servable namespace by writing its `spec.json`. The gateway's
  * fsnotify watcher picks it up; identity flows from the dir basename to the
- * backend's `SINGULARITY_WORKTREE` env var. Returns the spec.json path.
+ * `--namespace <ns>` the gateway spawns the backend with. Returns the spec.json
+ * path.
  *
  * This is the single seam shared by the dev build (identity derived from the git
  * worktree) and the release launcher (a fixed name, no git operation). The spec

@@ -16,8 +16,8 @@ export type { LogChannel, LogStream };
  * channel is registered exactly once here (a duplicate id throws), so a channel
  * written from two modules must share ONE `defineLogSink` call.
  *
- * The file sink is built LAZILY on first publish: its path resolution reads
- * SINGULARITY_WORKTREE, which must not run at module import (this barrel is
+ * The file sink is built LAZILY on first publish: its path resolution asks for
+ * this process's runtime namespace, which must not run at module import (this barrel is
  * imported inside the import-safe @plugins/database/server graph). The on-disk
  * file is `<logsDir>/<id>.jsonl`; the id must match what the read path
  * (`readChannelEntries`) reconstructs, so both derive the filename through

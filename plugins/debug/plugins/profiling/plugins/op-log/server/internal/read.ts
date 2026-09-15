@@ -47,9 +47,9 @@ export function readOpRecords(): OpRecord[] {
  * preserving it as an interrupted trace.
  *
  * `isActive(opSlug)` guards against closing an op that is still genuinely
- * running. Liveness is keyed on the OP SLUG (basename of the worktree root),
- * never the `worktree` field — the two can differ. A null slug is treated as
- * inactive, matching the reconciler it replaces.
+ * running. Liveness is keyed on the OP SLUG (basename of the worktree root) —
+ * the record's one identity field. A null slug is treated as inactive, matching
+ * the reconciler it replaces.
  *
  * APPENDS, never rewrites: concurrent CLI processes are writing this same file,
  * so a rewrite would race them. Callers must still ensure a single reconciler

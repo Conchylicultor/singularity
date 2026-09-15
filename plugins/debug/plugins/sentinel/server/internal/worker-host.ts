@@ -1,6 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { pathToFileURL } from "node:url";
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { sentinelConfig } from "../../core";
 import type { DetectorThresholds } from "./detector";
 import type {
@@ -159,10 +159,11 @@ function spawn(s: HostState): void {
 
   const init: WorkerInitFrame = {
     type: "init",
-    worktree: currentWorktreeName(),
+    worktree: runtimeNamespace(),
     cadenceMs: cfg.cadenceMs,
     thresholds: s.latestConfigFrame?.thresholds ?? pickThresholds(cfg),
-    maxEpisodeHoldMs: s.latestConfigFrame?.maxEpisodeHoldMs ?? cfg.maxEpisodeHoldMs,
+    maxEpisodeHoldMs:
+      s.latestConfigFrame?.maxEpisodeHoldMs ?? cfg.maxEpisodeHoldMs,
   };
   worker.postMessage(init);
 }

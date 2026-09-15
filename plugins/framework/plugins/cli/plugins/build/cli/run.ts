@@ -1138,7 +1138,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
   await generateAppSources({
     root,
-    worktreeName: name,
     migration: {
       name: opts.migrationName,
       reset: opts.resetMigration,

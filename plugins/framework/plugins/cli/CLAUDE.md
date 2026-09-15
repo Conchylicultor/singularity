@@ -372,8 +372,8 @@ through it too). Two consequences that look wrong and are not:
   guards registry codegen written *into* the checkout — unrelated to where the
   dist lands. Don't re-derive `livePath` from it.
 - **The building worktree's name is `checkoutWorktreeName(root)`, never
-  `currentWorktreeName()`** — the CLI never sets `SINGULARITY_WORKTREE` for
-  itself, so the env-derived name answers `singularity` from every worktree.
+  `runtimeNamespace()`** — a CLI process declares no runtime namespace at all
+  (only a gateway-spawned backend does), so asking for one throws.
   `release` spawns `build --hermetic` with `cwd` at that root, so both resolve
   the same dist by construction.
 
@@ -427,7 +427,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Sub-plugins:
-  - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to the DB named by SINGULARITY_WORKTREE. The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+  - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
   - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
   - **`build`** — `./singularity build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
   - **`check`** — `./singularity check` — run the repo validation checks (all, a named subset, or one scope). The only in-process caller of runChecks(): `build` and `push` each spawn it as a subprocess, so their `checks ✓` is one claim.

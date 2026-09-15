@@ -14,7 +14,7 @@ import { join, resolve } from "path";
 // generation from a directory where the globs match nothing, and drizzle-kit
 // exits 0 having discovered no tables — a silent DROP, not an error. Safe to
 // import at module eval: migrations/core is a side-effect-free leaf (unlike
-// @plugins/database/server, which throws without SINGULARITY_WORKTREE), and it
+// @plugins/database/server, whose worktree pool wants a runtime namespace), and it
 // reaches no registered pre-barrel/post-web codegen manifest, which is the
 // property cli:codegen-manifests-not-frozen holds over the whole CLI process's
 // import closure: a manifest frozen at CLI load is regenerated on disk by stage
@@ -270,7 +270,6 @@ export interface GenerateMigrationResult {
  */
 export async function generateMigration(opts: {
   root: string;
-  worktreeName: string;
   migrationName?: string;
   resetMigration?: boolean;
   customMigration?: boolean;
@@ -278,7 +277,6 @@ export async function generateMigration(opts: {
 }): Promise<GenerateMigrationResult> {
   const {
     root,
-    worktreeName,
     migrationName,
     resetMigration,
     customMigration,
@@ -342,16 +340,15 @@ export async function generateMigration(opts: {
   const result = await runDrizzleKitWithPrompts({
     cmd,
     cwd,
-    // No PG* env: `generate` is a pure snapshot diff against ./data and opens no
-    // connection, and drizzle.config.ts no longer reads the database config at
-    // all. Passing libpqEnv() here is what made this step ENOENT on a host with
-    // no ~/.singularity/state/db-config/database.json. SINGULARITY_WORKTREE stays: the schema
-    // files are import-safe without it (client.ts defers the throw to the first
-    // query), but keeping it leaves the dev loop byte-identical.
-    env: {
-      ...process.env,
-      SINGULARITY_WORKTREE: worktreeName,
-    },
+    // No `env` at all, so the child simply inherits this process's. `generate`
+    // is a pure snapshot diff against ./data and opens no connection, and
+    // drizzle.config.ts reads no database config — passing libpqEnv() here is
+    // what made this step ENOENT on a host with no
+    // ~/.singularity/state/db-config/database.json. The worktree name used to be
+    // passed too; the schema files never needed it (no schema-glob file resolves
+    // a namespace at module eval, and the database client defers its identity to
+    // the first query), and a namespace in an environment is inherited by
+    // everything drizzle-kit itself spawns.
     answers: migrationAnswers ?? null,
     keyedAnswers,
     echo: true,

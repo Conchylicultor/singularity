@@ -314,8 +314,9 @@ function OpRow({
   // Each op's own FULL span, summed. Never `waits + hold` — that omits the work
   // gaps between the waits and would under-report every build.
   const totalDuration = group.ops.reduce((sum, op) => sum + op.totalMs, 0);
-  // A push falls back to the branch when SINGULARITY_WORKTREE is unset, so the
-  // row's identifier may arrive branch-shaped; the label shows the bare id.
+  // A row is keyed on the checkout id, but a legacy line with no slug is filed
+  // under its branch, so the identifier can still arrive branch-shaped; the
+  // label shows the bare id either way.
   const worktreeLabel = stripAttemptBranchPrefix(group.worktree);
 
   const handleClick = useMemo(() => {

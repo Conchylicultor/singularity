@@ -263,8 +263,6 @@ The two other edges of the same argument:
     - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.checkoutRef`
-    - `infra/paths.currentWorktreeName`
-    - `infra/paths.isMain`
     - `infra/paths.REPO_ROOT`
     - `infra/query-resource.queryResource`
     - `infra/worktree.readCompositionMarker`

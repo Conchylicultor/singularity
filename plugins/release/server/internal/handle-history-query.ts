@@ -1,7 +1,7 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import type { SortRule } from "@plugins/primitives/plugins/data-view/core";
@@ -71,86 +71,92 @@ function searchWhere(query: string): SQL | undefined {
 const resolver: OperatorSqlResolver = (typeId, operatorId) =>
   resolveFieldFilterSql(typeId, operatorId) ?? null;
 
-export const handleHistoryQuery = implement(queryReleaseHistory, async ({ body }) => {
-  const { filter, query, cursor, limit } = body;
-  // Substitute the default order when the client sends no sort, and use the same
-  // effective sort everywhere (keys, signature, augmentors) so cursors stay
-  // consistent across pages.
-  const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
+export const handleHistoryQuery = implement(
+  queryReleaseHistory,
+  async ({ body }) => {
+    const { filter, query, cursor, limit } = body;
+    // Substitute the default order when the client sends no sort, and use the same
+    // effective sort everywhere (keys, signature, augmentors) so cursors stay
+    // consistent across pages.
+    const sort = body.sort.length > 0 ? body.sort : DEFAULT_SORT;
 
-  // Fold in the generic server-side augmentors (custom columns, …). Each binds
-  // its aliased columns into `columnMap` (so sort/filter/seek reach them), a
-  // `LEFT JOIN` thunk, and a projection (so `keyValuesOf` can mint the cursor).
-  // `rowKeyCol` must be the column whose value == the web `rowKey(row)` (here
-  // `_releaseRuns.id`, matching `rowKey={r => r.id}`).
-  const aug = await augmentServerQuery({
-    dataViewId: body.dataViewId,
-    rowKeyCol: _releaseRuns.id,
-    sort,
-    filter,
-  });
-  const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+    // Fold in the generic server-side augmentors (custom columns, …). Each binds
+    // its aliased columns into `columnMap` (so sort/filter/seek reach them), a
+    // `LEFT JOIN` thunk, and a projection (so `keyValuesOf` can mint the cursor).
+    // `rowKeyCol` must be the column whose value == the web `rowKey(row)` (here
+    // `_releaseRuns.id`, matching `rowKey={r => r.id}`).
+    const aug = await augmentServerQuery({
+      dataViewId: body.dataViewId,
+      rowKeyCol: _releaseRuns.id,
+      sort,
+      filter,
+    });
+    const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
 
-  // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
-  // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
-  const keys = buildSortKeys(sort, columnMap, { col: _releaseRuns.id, fieldId: "id" });
+    // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
+    // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
+    const keys = buildSortKeys(sort, columnMap, {
+      col: _releaseRuns.id,
+      fieldId: "id",
+    });
 
-  let seek: SQL | undefined;
-  if (cursor) {
-    const payload = decodeCursor(cursor);
-    // Backstop: a cursor minted under a different sort must not be replayed
-    // against this request's ordering (would dup/skip rows).
-    if (payload.s !== sortSignature(sort)) {
-      throw new HttpError(400, "Cursor sort signature mismatch");
+    let seek: SQL | undefined;
+    if (cursor) {
+      const payload = decodeCursor(cursor);
+      // Backstop: a cursor minted under a different sort must not be replayed
+      // against this request's ordering (would dup/skip rows).
+      if (payload.s !== sortSignature(sort)) {
+        throw new HttpError(400, "Cursor sort signature mismatch");
+      }
+      seek = seekPredicate(keys, payload.v);
     }
-    seek = seekPredicate(keys, payload.v);
-  }
 
-  const where = and(
-    // Scoped to this namespace's own runs: a worktree DB inherits main's rows via
-    // the fork, so without this filter every worktree would surface main's runs.
-    eq(_releaseRuns.namespace, currentWorktreeName()),
-    eq(_releaseRuns.composition, body.composition),
-    searchWhere(query),
-    compileWhere(filter, columnMap, resolver),
-    seek,
-  );
+    const where = and(
+      // Scoped to this namespace's own runs: a worktree DB inherits main's rows via
+      // the fork, so without this filter every worktree would surface main's runs.
+      eq(_releaseRuns.namespace, runtimeNamespace()),
+      eq(_releaseRuns.composition, body.composition),
+      searchWhere(query),
+      compileWhere(filter, columnMap, resolver),
+      seek,
+    );
 
-  // Explicit flat projection (wire columns + the augmentors' sort-key columns)
-  // over a `$dynamic()` query so the augmentors' joins can be applied.
-  let q: PgSelect = db
-    .select({ ...RELEASE_RUN_WIRE_COLUMNS, ...aug.projection })
-    .from(_releaseRuns)
-    .$dynamic();
-  for (const j of aug.joins) q = j.apply(q);
-  const rows = await q
-    .where(where)
-    .orderBy(...orderByClauses(keys))
-    .limit(limit + 1);
+    // Explicit flat projection (wire columns + the augmentors' sort-key columns)
+    // over a `$dynamic()` query so the augmentors' joins can be applied.
+    let q: PgSelect = db
+      .select({ ...RELEASE_RUN_WIRE_COLUMNS, ...aug.projection })
+      .from(_releaseRuns)
+      .$dynamic();
+    for (const j of aug.joins) q = j.apply(q);
+    const rows = await q
+      .where(where)
+      .orderBy(...orderByClauses(keys))
+      .limit(limit + 1);
 
-  const hasMore = rows.length > limit;
-  const rawItems = rows.slice(0, limit);
+    const hasMore = rows.length > limit;
+    const rawItems = rows.slice(0, limit);
 
-  // Compute the cursor from the RAW last row — it still carries the custom
-  // projection keys `keyValuesOf` reads to mint the keyset cursor.
-  const lastRaw = rawItems.at(-1);
-  const nextCursor =
-    hasMore && lastRaw
-      ? encodeCursor(
-          keyValuesOf(lastRaw as unknown as Record<string, unknown>, keys),
-          sortSignature(sort),
-        )
-      : null;
+    // Compute the cursor from the RAW last row — it still carries the custom
+    // projection keys `keyValuesOf` reads to mint the keyset cursor.
+    const lastRaw = rawItems.at(-1);
+    const nextCursor =
+      hasMore && lastRaw
+        ? encodeCursor(
+            keyValuesOf(lastRaw as unknown as Record<string, unknown>, keys),
+            sortSignature(sort),
+          )
+        : null;
 
-  // Strip the custom projection keys before returning (mirrors the conversations
-  // handler): `ReleaseRunSchema` strips unknown keys anyway, but doing it here
-  // keeps the wire lean and the shape explicit.
-  const ccKeys = Object.keys(aug.projection);
-  const items = rawItems.map((r) => {
-    const c = { ...r } as Record<string, unknown>;
-    for (const k of ccKeys) delete c[k];
-    return c;
-  }) as unknown as ReleaseRun[];
+    // Strip the custom projection keys before returning (mirrors the conversations
+    // handler): `ReleaseRunSchema` strips unknown keys anyway, but doing it here
+    // keeps the wire lean and the shape explicit.
+    const ccKeys = Object.keys(aug.projection);
+    const items = rawItems.map((r) => {
+      const c = { ...r } as Record<string, unknown>;
+      for (const k of ccKeys) delete c[k];
+      return c;
+    }) as unknown as ReleaseRun[];
 
-  return { items, nextCursor, hasMore };
-});
+    return { items, nextCursor, hasMore };
+  },
+);

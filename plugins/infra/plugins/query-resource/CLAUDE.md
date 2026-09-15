@@ -229,8 +229,8 @@ tasks/attempts aggregates never read).
 `spec.db` defaults to the real per-worktree drizzle `db` (a top-level static
 import — the boundary system forbids inline `import()`), coerced once through a
 minimal structural `QueryDb` facade; unit tests inject a fake. This works because
-`@plugins/database/server` is **import-safe**: the pg pool (and its
-`SINGULARITY_WORKTREE` requirement) is built lazily on the first real query, so
+`@plugins/database/server` is **import-safe**: the pg pool (and its runtime-namespace
+requirement) is built lazily on the first real query, so
 importing `db` never touches a worktree — no test env shim needed.
 
 ## Boundaries

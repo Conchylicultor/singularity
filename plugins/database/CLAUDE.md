@@ -185,24 +185,24 @@ forensic companion `research/2026-07-09-global-interactive-lane-under-load.md`; 
 
 ## Import-safety (lazy pool)
 
-Importing `@plugins/database/server` has **no side effects** and never reads
-`SINGULARITY_WORKTREE`. The pg pool is built by a lazy `pool()` singleton on the
+Importing `@plugins/database/server` has **no side effects** and never asks for
+this process's runtime namespace. The pg pool is built by a lazy `pool()` singleton on the
 first real query/connection; `db` is a thin forwarding Proxy over a
 lazily-constructed real drizzle instance (`server/internal/client.ts`). A missing
 worktree stays **loud** — the first `db.<method>()` (or `awaitDbReady`/`warmPool`)
-throws `SINGULARITY_WORKTREE env var is required` — but the throw no longer fires
+throws out of `runtimeNamespace()` — but the throw no longer fires
 at module eval. This is what lets any `bun:test` transitively import a server
 module near the DB and inject a fake `db` without a per-suite env shim. The Proxy
 forwards to a **real `pg.Pool`-backed** drizzle instance (not a fake), so
 `db.transaction()` — which drizzle gates on `client instanceof Pool` — keeps
-working. Do not reintroduce an eager `new Pool(requireWorktree())` at module top.
+working. Do not reintroduce an eager `new Pool(runtimeNamespace())` at module top.
 
 The lazy pool keeps *import* safe; a **`bun test` preload** (`test/bun-preload.ts`,
-registered in the root `bunfig.toml` `[test]` section) then defaults
-`SINGULARITY_WORKTREE` to the current checkout when unset, so a suite that issues a
-real query — or that touches any other worktree-scoped throw (the per-worktree log
-dir, config_v2) — runs with `bun test <path>` and no `SINGULARITY_WORKTREE=<worktree>`
-prefix. The throws stay loud in production; only test runs get the default.
+registered in the root `bunfig.toml` `[test]` section) then declares the current
+checkout as the test process's runtime namespace, so a suite that issues a real
+query — or that touches any other namespace-scoped throw (the per-worktree log
+dir, config_v2) — runs with a plain `bun test <path>` and nothing set in the
+environment. The throws stay loud in production; only test runs get the default.
 
 ## Bootstrap
 

@@ -1,7 +1,7 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { and, eq, inArray, lt } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { db } from "@plugins/database/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationsQueue } from "./tables";

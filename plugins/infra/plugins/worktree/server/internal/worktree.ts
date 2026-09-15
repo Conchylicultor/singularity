@@ -373,8 +373,9 @@ async function addCheckout(
  *
  * REQUIRED, not read here, and both halves of that are deliberate. Required so
  * the guard cannot be skipped by forgetting an argument; not read here because
- * the manifest lives in `config_v2`, whose server barrel THROWS at module eval
- * without `SINGULARITY_WORKTREE` — and the CLI statically reaches this barrel
+ * the manifest lives in `config_v2`, whose server barrel resolves its config dir
+ * at module eval from this process's runtime namespace, which a CLI process does
+ * not have — and the CLI statically reaches this barrel
  * from four commands, so importing it would break every `./singularity` command.
  * `infra/worktree` also has no business knowing what a composition is; the
  * caller, which runs in a backend, does.

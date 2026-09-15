@@ -24,7 +24,7 @@ import { logsDir } from "./persist";
 // under the same rotation.
 //
 // It is declared LAZILY on the first ingress (not at module eval): resolving the
-// logs dir reads SINGULARITY_WORKTREE, and this module is on the import path of
+// logs dir asks for this process's runtime namespace, and this module is on the import path of
 // the log-channels/server barrel, which must stay import-safe. First-ingress is
 // also exactly when the first client-log file starts existing.
 let familyBoundDeclared = false;

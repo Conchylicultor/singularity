@@ -32,17 +32,28 @@ no cron, no git watcher, and above all **no supervised-run reconciler**, which i
 a child would adopt and write off the very run that spawned it.
 
 Read `server-core`'s "Boot modes" before adding to `onReadyBlocking` or moving
-main-only work earlier: `isMain()` is env-derived, so in a child of main's backend
-it is **true**, and nothing misbehaves today only because every main-only side
-effect hangs off a phase `exec` skips.
+main-only work earlier: a child of main's backend is HANDED main's namespace, so
+`isMain()` is **true** there, and nothing misbehaves today only because every
+main-only side effect hangs off a phase `exec` skips.
 
-## What the child inherits
+## What the child is told, and what it merely inherits
 
-Nothing is plumbed — `startSupervisedRun` spawns with `{ ...process.env }`:
+**Identity is plumbed, on argv.** `invoke()` appends `--namespace
+<runtimeNamespace()>` to every child's command line, and `supervised-exec`
+declares that option as REQUIRED — so a child cannot start without being told
+which app it is. That namespace resolves both the per-worktree database and,
+through that namespace's `spec.json`, the composition registry: same app, same DB
+as the parent, because the parent SAID so.
 
-- **`SINGULARITY_WORKTREE`** resolves both the per-worktree database and, through
-  that namespace's `spec.json`, the composition registry. Same app, same DB as the
-  parent, with no argument saying so.
+It used to be inherited instead, through a `SINGULARITY_WORKTREE` environment
+variable, and that is exactly the failure this replaced: an environment variable
+reaches every descendant forever, so a value nobody chose became every agent
+session's identity
+(`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`).
+
+Everything else still comes from the ambient environment —
+`startSupervisedRun` spawns with `{ ...process.env }`:
+
 - **`PATH`** — `tar`, `gzip`, `pg_dump` resolve exactly as in the backend.
 - **cwd** is `REPO_ROOT`, because `./singularity` is a path.
 

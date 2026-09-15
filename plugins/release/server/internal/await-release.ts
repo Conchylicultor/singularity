@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
@@ -5,7 +6,6 @@ import {
   runEnded,
   type RunEndedPayload,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { _releaseRuns } from "./tables";
 import { RELEASE_RUN_KIND_ID } from "./kind-id";
 
@@ -110,7 +110,7 @@ async function otherOpenRelease(opts: {
     .from(_releaseRuns)
     .where(
       and(
-        eq(_releaseRuns.namespace, currentWorktreeName()),
+        eq(_releaseRuns.namespace, runtimeNamespace()),
         eq(_releaseRuns.composition, opts.composition),
         ne(_releaseRuns.id, opts.releaseId),
         isNull(_releaseRuns.finishedAt),

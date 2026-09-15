@@ -166,10 +166,12 @@ honour both:
   new `env` and died before restarting — which a "did I just change it" flag
   never would.
 
-The child inherits `SINGULARITY_WORKTREE`, which is what makes the CLI act on the
-same namespace as the app you clicked in: it reads the deployment record over HTTP
-from `<worktree>.localhost:9000` and the server row from that worktree's DB fork,
-both keyed on `currentWorktreeName()`.
+The child is spawned with `cwd` at this backend's own checkout, which is what
+makes the CLI act on the same namespace as the app you clicked in: a CLI process
+mints its namespace from the checkout it stands in (`checkoutNamespace(root)`),
+and reads the deployment record over HTTP from `<worktree>.localhost:9000` and
+the server row from that worktree's DB fork with it. Nothing rides in the
+environment.
 
 ### A run is recorded twice, and the two are not redundant
 
@@ -406,7 +408,6 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `infra/jobs/supervised-run.defineSupervisedRunKind`
     - `infra/jobs/supervised-run.startSupervisedRun`
     - `infra/jobs/supervised-run.UnfinishedRun`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`

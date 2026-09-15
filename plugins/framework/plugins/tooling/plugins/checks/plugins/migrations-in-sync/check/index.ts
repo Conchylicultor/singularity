@@ -1,8 +1,8 @@
 import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
-import { basename, join, relative, resolve } from "path";
+import { join, relative, resolve } from "path";
 // Reach the config reader through the database CORE barrel, not admin/server:
-// the admin pool module throws at import time when SINGULARITY_WORKTREE is
-// unset, which is the norm in a tooling/check subprocess. The core barrel
+// the admin pool module's worktree connection string needs this process's runtime
+// namespace, which a tooling/check subprocess does not have. The core barrel
 // exposes exactly the config→env helpers for non-backend consumers and is
 // import-safe by design (same precedent as
 // plugins/database/plugins/migrations/check/index.ts). This used to be a
@@ -78,11 +78,14 @@ const check: Check = {
           // is an order of magnitude above the real duration, so only that wedge
           // trips it.
           timeoutMs: 300_000,
+          // No namespace in the child's environment: drizzle-kit needs none (no
+          // schema-glob file resolves one at module eval — `schema-files-loadable`
+          // is the probe that keeps that true), and a namespace in an environment
+          // is inherited by everything the child spawns in turn.
           env: {
             ...process.env,
             ...libpqEnv(),
             NO_COLOR: "1",
-            SINGULARITY_WORKTREE: basename(root),
           },
         },
       );

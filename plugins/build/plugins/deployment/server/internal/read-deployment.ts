@@ -1,7 +1,5 @@
-import {
-  REPO_ROOT,
-  currentWorktreeName,
-} from "@plugins/infra/plugins/paths/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { createSignedMemo } from "@plugins/infra/plugins/git/plugins/git-read-cache/server";
 import {
   resolved,
@@ -211,7 +209,7 @@ const deploymentMemo = createSignedMemo<DeploymentState>({
 // buys the per-key single-flight: the boot snapshot, a subscriber's first read
 // and a post-build notify can land together, and only one of them does the git
 // work.
-const MEMO_KEY = currentWorktreeName();
+const MEMO_KEY = runtimeNamespace();
 
 /** The bound signature probe, for the resource's `revalidate`. */
 export function deploymentEtag(): Promise<string> {

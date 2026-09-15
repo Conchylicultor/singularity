@@ -206,7 +206,6 @@ convergence mechanisms all missing it) and the design.
     - `infra/endpoints.implement`
     - `infra/git/git-read-cache.createSignedMemo`
     - `infra/git/git-watcher.refHeadResource`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.GIT`
     - `infra/paths.REPO_ROOT`
     - `primitives/commit-list.LOG_FORMAT`

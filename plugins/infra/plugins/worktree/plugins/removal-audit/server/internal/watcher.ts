@@ -1,9 +1,9 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { readdir } from "node:fs/promises";
 import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
 import {

@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { existsSync } from "node:fs";
 import {
   createTask,
@@ -104,12 +105,10 @@ export async function createConversation(
   // queued before model flattening. Keep persisted rows on concrete ids.
   const model = normalizeModel(opts.model ?? inheritedModel ?? DEFAULT_MODEL);
 
-  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
-  if (!spawnedBy) {
-    throw new Error(
-      "createConversation requires spawnedBy (or SINGULARITY_WORKTREE)",
-    );
-  }
+  // The namespace of the backend doing the creating, unless the caller named
+  // one. `runtimeNamespace()` throws rather than answering with a guess, so
+  // there is no "no worktree" branch left to write.
+  const spawnedBy = opts.spawnedBy ?? runtimeNamespace();
 
   let worktreePath: string;
   let conversationId: string;

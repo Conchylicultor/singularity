@@ -68,7 +68,7 @@ in the backend entry `server/index.ts` (hooks + catch-up) and in
 The shared `db-test-fixture` primitive (`createTestDb`) provisions an isolated
 throwaway database via admin's public barrel and drops it after. **Running:** needs a running cluster — a plain
 `bun test plugins/database/plugins/live-state-snapshot` (the fixture throws loudly
-if the cluster is unreachable). No `SINGULARITY_WORKTREE=<worktree>` prefix: the
-root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) defaults it to the
-current checkout when unset. See
+if the cluster is unreachable). Nothing has to be set in the environment: the
+root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) declares the current
+checkout as the test process's runtime namespace. See
 `research/2026-07-03-database-live-state-db-backed-invariant-harness.md`.

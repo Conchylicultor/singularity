@@ -28,7 +28,7 @@ status yields `NULL` and throws the whole page; folding the branches out of a
 
 ## Deliberately **unscoped**
 
-The build and release arms carry an always-on `where namespace = currentWorktreeName()`,
+The build and release arms carry an always-on `where namespace = runtimeNamespace()`,
 because a worktree DB is forked from main and inherits main's rows. This arm must
 not, and the symmetry is a trap: this arm projects `namespace: null` — a backup
 covers the machine — so the predicate would not narrow the arm, it would delete

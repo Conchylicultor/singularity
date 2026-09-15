@@ -15,8 +15,8 @@ import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
  * free here: `bin/index.ts` already imports it, so nothing is added to the boot
  * import closure.
  *
- * **Why the file and not an env var.** The first cut had the gateway pass
- * `SINGULARITY_COMPOSITION` to the backend it spawns. But `./singularity build`
+ * **Why the file and not a spawn-time value.** The first cut had the gateway
+ * pass the composition to the backend it spawns. But `./singularity build`
  * rebuilds the backend and NOT the Go gateway (only `./singularity start`
  * compiles that), so a running gateway is routinely older than the tree it
  * serves — it would not pass the variable at all, the backend would see no
@@ -28,7 +28,7 @@ import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
  * Four ways to get "no composition", all of them the main app, which is what an
  * absent value has always meant:
  *
- *   1. No `SINGULARITY_WORKTREE` — a hand-run backend, spawned by nobody.
+ *   1. No namespace — a hand-run backend, spawned by nobody.
  *   2. No spec file — not gateway-spawned, or a namespace not registered yet.
  *   3. A spec with no `composition` key — every pre-composition spec, and
  *      `central`, which serves no composition at all.
@@ -42,7 +42,7 @@ import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
  * @param worktreesDir the `worktrees` data dir holding `<namespace>/spec.json`
  *   — passed in rather than resolved here so this stays a pure function of
  *   (dir, namespace) with a tmpdir test, exactly like `selectRegistry`
- * @param namespace the raw `SINGULARITY_WORKTREE` value, which is the spec dir
+ * @param namespace this backend's runtime namespace, which is the spec dir
  *   basename. Not validated here: `selectRegistry` owns that guard, and a
  *   namespace bogus enough to escape the dir simply names no spec file.
  */

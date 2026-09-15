@@ -360,7 +360,6 @@ remote is built here.
     - `infra/launcher.gatewayPidFile`
     - `infra/launcher.isRunning`
     - `infra/launcher.teardownSelfContainedApp`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
     - `primitives/data-view/server-query.augmentServerQuery`

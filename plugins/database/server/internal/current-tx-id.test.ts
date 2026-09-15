@@ -9,8 +9,8 @@ import { currentTxId } from "./current-tx-id";
 // live-state-snapshot's captureWatermark runs). The last one pins the Rule A↔B
 // comparability the optimistic-mutation confirmation depends on, on real Postgres.
 //
-// Runs against the plugin's OWN worktree DB (the bun-test preload defaults
-// SINGULARITY_WORKTREE to the current checkout) rather than a db-test-fixture
+// Runs against the plugin's OWN worktree DB (the bun-test preload declares the
+// current checkout as this process's namespace) rather than a db-test-fixture
 // throwaway: the fixture is a CHILD plugin of database, so importing it from
 // here would form a parent↔child cycle (plugin-boundaries). Safe because the
 // suite only reads xids and writes a session-scoped TEMP table (ON COMMIT DROP)

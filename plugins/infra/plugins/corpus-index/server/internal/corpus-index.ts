@@ -1,3 +1,4 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   readdir,
   readFile,
@@ -10,7 +11,6 @@ import { dirname, join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";

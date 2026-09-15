@@ -33,12 +33,34 @@ there, not in a composition root, unless it is genuinely serve-only.
 | `onReady` / `onAllReady` / `drainWarmups`      | yes     | no     |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     |
 
+### Both modes declare their namespace FIRST
+
+A process has no ambient identity: which namespace it serves is stated by
+whoever spawned it, and read back through `runtimeNamespace()`
+([`infra/runtime-identity`](../../../infra/plugins/runtime-identity/CLAUDE.md)).
+
+- **`serve`** — the gateway spawns `… bin/index.ts --namespace <ns>`
+  (`gateway/worktree.go`), and `bin/declare-namespace.ts` is the **literal first
+  import** of `bin/index.ts`. It has to be first: `plugins-active.ts` selects the
+  plugin registry at module eval, and `config_v2` resolves its config dir at
+  module eval, so an import placed above that line boots the process with no
+  identity and fails 83 plugins deep with a TDZ error that names nothing.
+- **`exec`** — `runExec(namespace, body)` takes it as a parameter and declares it
+  before the dynamic `import("../bin/active-runtime")`. Its caller reads it off
+  its own required `--namespace <ns>` option (`supervised-exec`), which the
+  spawning backend appends from `runtimeNamespace()`.
+
+It used to ride in a `SINGULARITY_WORKTREE` environment variable, inherited by
+every descendant forever; `namespace-identity/no-ambient-worktree-env` keeps it
+from coming back.
+
 ### Two standing constraints — read before adding a boot hook
 
 **1. `isMain()` does NOT mean "the serving backend", and an `exec` child satisfies
-it.** `isMain()` is env-derived (`SINGULARITY_WORKTREE === "singularity"`,
-`paths/core`), and a child inherits its parent's env — so inside a child spawned
-by main's backend it returns **true**. Nothing in the tree misbehaves today only
+it.** `isMain()` asks whether this process's RUNTIME NAMESPACE is main's
+(`@plugins/infra/plugins/runtime-identity/core`), and a supervised child is
+handed its spawner's namespace on argv — so inside a child spawned by main's
+backend it returns **true**. Nothing in the tree misbehaves today only
 because every main-only side effect happens to hang off a phase `exec` skips:
 cron installation (`jobs`' `onAllReady`), the graphile runners and the git
 watcher's `git.refAdvanced` emit (`onReady`), the supervised-run reconciler
@@ -179,7 +201,7 @@ server deps (e.g. `bun-pty`) go in the plugin's own `package.json` — no alias 
 
 ## Database
 
-Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
+Drizzle ORM + Postgres, one DB per namespace — the process's own runtime namespace picks the database name.
 
 - Each plugin defines its tables in `plugins/{name}/server/internal/tables.ts` and any derived views/Zod schemas in `plugins/{name}/server/internal/schema.ts`.
 - `plugins/database/plugins/migrations/drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.

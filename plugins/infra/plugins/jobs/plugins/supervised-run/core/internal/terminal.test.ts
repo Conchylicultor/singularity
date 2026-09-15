@@ -22,6 +22,7 @@
  *
  * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-run`
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   existsSync,
@@ -30,14 +31,11 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import { isPidAlive, readRunTerminal, RunMarkerError } from "./terminal";
 
 const KIND = "testkind";
-const name = currentWorktreeName();
+const name = runtimeNamespace();
 const created: string[] = [];
 
 function markerPath(runId: string): string {

@@ -45,9 +45,9 @@
  * The first fix replaced the literal with a *derivation* — the checkout's
  * directory name, preferring `$SINGULARITY_WORKTREE` — and that failed the same
  * way, one level up. A name is a guess about what somebody else registered:
- * `SINGULARITY_WORKTREE` answers "which namespace is this BACKEND the server
- * for" (`gateway/worktree.go` sets it on the backends it spawns), an agent pane
- * inherits it through the tmux server, and so from inside any worktree it said
+ * `SINGULARITY_WORKTREE` answered "which namespace is this BACKEND the server
+ * for" (the gateway set it on the backends it spawned), an agent pane inherited
+ * it through the tmux server, and so from inside any worktree it said
  * `singularity`. Runs drove MAIN's app and printed ALL CHECKS PASSED — worse,
  * `withBrowser` opens by POSTing the config repair to the resolved origin, so
  * every run reverted the user's live documents before doing anything.

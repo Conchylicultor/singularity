@@ -2,10 +2,16 @@ import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import {
   asNamespace,
-  namespaceFor,
-  MAIN_COMPOSITION_ID,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
+// The RUNTIME's own namespace — a different question from every path below,
+// which is why it moved out of this file. `runtime-identity` is a leaf (its only
+// import is `namespace/core`, which this module already reaches), so the edge
+// costs no closure anywhere.
+import {
+  isMain,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
 
 export const REPO_ROOT = resolve(
   import.meta.dir,
@@ -56,28 +62,13 @@ export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
 export const SERVER_CORE_RELATIVE = "plugins/framework/plugins/server-core";
 
 /**
- * The namespace the main app answers to.
- *
- * DERIVED, not a second literal: it is what the elision rule yields for the main
- * composition on the main checkout. Spelling it as a constant here again is how
- * "singularity" ended up meaning two different things in two files.
- */
-export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
-  kind: "main",
-});
-
-export function isMain(): boolean {
-  return process.env.SINGULARITY_WORKTREE === MAIN_WORKTREE_NAME;
-}
-
-/**
  * True when this backend is running inside a compiled release artifact (the
  * `launch` binary sets `SINGULARITY_RELEASE=1` before bringing up the app; it
  * propagates launch → gateway → backend). A release runs exactly ONE backend
  * per host, so this is the release-side twin of `isMain()` for host-singleton
  * work (e.g. the cluster sentinel + duress latch): in a release the backend's
- * `SINGULARITY_WORKTREE` is the composition name, so `isMain()` is false, yet
- * that single backend IS the host singleton.
+ * runtime namespace is the composition name, so `isMain()` is false, yet that
+ * single backend IS the host singleton.
  */
 export function isRelease(): boolean {
   return process.env.SINGULARITY_RELEASE === "1";
@@ -147,36 +138,23 @@ export function setReleaseIdentity(identity: ReleaseIdentity): void {
 }
 
 /**
- * The namespace this backend runs in: the worktree slug, or `MAIN_WORKTREE_NAME`
- * on main. Use to tag/scope per-namespace data so it can't leak across the
- * DB-fork boundary (a worktree DB is forked from main and inherits its rows).
- */
-export function currentWorktreeName(): Namespace {
-  const raw = process.env.SINGULARITY_WORKTREE;
-  // A serialization boundary: the gateway wrote this env var from a spec-dir
-  // basename, so it is validated on the way in rather than trusted. A malformed
-  // namespace becomes a path and a database name, so being loud here is cheap.
-  return raw === undefined ? MAIN_WORKTREE_NAME : asNamespace(raw);
-}
-
-/**
  * The worktree name a CHECKOUT ON DISK carries: its root directory's basename.
  * This is the identity a **CLI process** has, and the one every per-worktree
  * artifact a CLI produces is keyed by (the op marker, the build profile, the
  * build-progress log, the DB fork name — and, since the release dist moved out
  * of the checkout, `worktreeArtifacts.releaseWebDist`).
  *
- * DELIBERATELY NOT {@link currentWorktreeName}, and the two are not
+ * DELIBERATELY NOT `runtimeNamespace()`
+ * (`@plugins/infra/plugins/runtime-identity/core`), and the two are not
  * interchangeable:
  *
- * - `currentWorktreeName()` reads `SINGULARITY_WORKTREE`, which the gateway sets
- *   when it spawns a backend. It is the right answer THERE — a composition
- *   namespace's backend runs out of main's checkout, so only the env can say
- *   which namespace it serves.
- * - The CLI never sets `SINGULARITY_WORKTREE` for itself, so in a hand-run CLI
- *   process `currentWorktreeName()` answers `"singularity"` from *every*
- *   worktree. Anything a CLI writes per-worktree must therefore derive its name
- *   from the checkout it is operating on, never from the environment.
+ * - `runtimeNamespace()` is the namespace a RUNTIME serves — declared at its
+ *   entry point from the `--namespace` the gateway spawned it with. It is the
+ *   right answer THERE: a composition namespace's backend runs out of main's
+ *   checkout, so only its spawner can say which namespace it serves.
+ * - A CLI process declares no runtime namespace at all, so asking for one
+ *   throws. Anything a CLI writes per-worktree derives its name from the
+ *   checkout it is operating on.
  *
  * Two processes that must agree on which checkout produced an artifact — a
  * `release` and the `build --hermetic` child it spawns with `cwd` at that same
@@ -509,15 +487,15 @@ export const worktreeArtifacts = {
  *   whatever the env said when *this* module was first imported. In a release
  *   the alternative — deriving from `REPO_ROOT` — resolves into the compiled
  *   binary's virtual FS, which is why a release used to report a null build id.
- * - The derived arm is per-NAMESPACE (`currentWorktreeName()`, i.e. the
- *   `SINGULARITY_WORKTREE` the gateway spawned this backend with), and an
+ * - The derived arm is per-NAMESPACE (`runtimeNamespace()`, i.e. the
+ *   `--namespace` the gateway spawned this backend with), and an
  *   auto-served composition's backend runs out of MAIN's checkout. A
  *   `REPO_ROOT`-derived path made every such backend read main's dist and
  *   report main's build id and build commit.
  *
- * Correct only in a backend, where the gateway sets `SINGULARITY_WORKTREE`. A
- * CLI process has to name the namespace itself, and the way to do that is to
- * ask which deploy this checkout published:
+ * Correct only in a backend, which is the only kind of process that declares a
+ * runtime namespace. A CLI process has to name the namespace itself, and the way
+ * to do that is to ask which deploy this checkout published:
  *
  *     const r = resolveCheckoutDeploy(root);
  *     if (r.kind === "resolved") worktreeArtifacts.webDist(r.deploy.namespace);
@@ -533,7 +511,7 @@ export const worktreeArtifacts = {
 export function webDistDir(): string {
   return (
     process.env.SINGULARITY_WEB_DIST ??
-    worktreeArtifacts.webDist(currentWorktreeName())
+    worktreeArtifacts.webDist(runtimeNamespace())
   );
 }
 

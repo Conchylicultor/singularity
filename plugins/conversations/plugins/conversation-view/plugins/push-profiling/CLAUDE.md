@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
+- Description: Toolbar button showing the op Gantt scoped to the conversation's worktree.
 - Web:
   - Slots: `conv-push-profiling.actions` ← `primitives.pane`
   - Contributes:

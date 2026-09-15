@@ -1,5 +1,5 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { desc, eq } from "drizzle-orm";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { queryResource } from "@plugins/infra/plugins/query-resource/server";
 import { buildHistoryResource as buildHistoryDescriptor } from "../../shared";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
@@ -11,8 +11,8 @@ import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 // changed run as a single keyed row (the prior push resource FULL-recomputed
 // with no keyed diffing — this is a strict improvement).
 //
-// `currentWorktreeName()` reads `process.env.SINGULARITY_WORKTREE`, constant for
-// the process lifetime (one backend per worktree), so the static `where`
+// `runtimeNamespace()` is declared once at this process's entry point and never
+// changes (one backend per namespace), so the static `where`
 // evaluated once at module eval is correct. The explicit column list keeps `pid`
 // (an internal liveness marker, not part of BuildRun) off the wire. Scoped to
 // this namespace's own runs: a worktree DB inherits main's rows via the fork, so
@@ -29,7 +29,7 @@ export const buildHistoryResource = queryResource(buildHistoryDescriptor, {
     finishedAt: _buildRuns.finishedAt,
     exitCode: _buildRuns.exitCode,
   },
-  where: eq(_buildRuns.namespace, currentWorktreeName()),
+  where: eq(_buildRuns.namespace, runtimeNamespace()),
   orderBy: desc(_buildRuns.startedAt),
   limit: 50,
   recompute: {

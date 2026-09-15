@@ -15,20 +15,20 @@
  * where it is pinned.
  *
  * Driven against real files at the real resolved paths, like the suite it
- * replaces — the module reads `currentWorktreeName()` at call time and cannot be
+ * replaces — the module reads `runtimeNamespace()` at call time and cannot be
  * pointed at a fixture dir.
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import {
-  currentWorktreeName,
   worktreeArtifacts,
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
 import { buildRunLogSteps } from "./handle-build-run-logs";
 
-const name = currentWorktreeName();
+const name = runtimeNamespace();
 const created: string[] = [];
 
 function uniqueBuildId(tag: string): string {

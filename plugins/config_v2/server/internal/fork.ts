@@ -1,5 +1,5 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { cp, stat } from "node:fs/promises";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { configDir } from "../../data-dirs";
 
 export async function forkConfig(targetWorktree: string): Promise<void> {

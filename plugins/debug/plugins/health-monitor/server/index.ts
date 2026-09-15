@@ -1,7 +1,10 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { handleHealthData } from "./internal/handle-health-data";
-import { startProcessSampler, stopProcessSampler } from "./internal/process-sampler";
+import {
+  startProcessSampler,
+  stopProcessSampler,
+} from "./internal/process-sampler";
 import { startHostSampler, stopHostSampler } from "./internal/host-sampler";
 import { getHealthData } from "../shared/endpoints";
 

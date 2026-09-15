@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { existsSync, readdirSync, readFileSync } from "fs";
-import { basename, join, resolve } from "path";
+import { join, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   generateMigration,
@@ -116,7 +116,6 @@ const run: CliAction<[], { name?: string }> = async (opts) => {
   await assertTrackedMigrationsPresent(root);
   await generateMigration({
     root,
-    worktreeName: basename(root),
     migrationName: opts.name ?? deriveMigrationName(),
     resetMigration: true,
   });

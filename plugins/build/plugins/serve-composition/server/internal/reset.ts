@@ -30,6 +30,7 @@
 // {central, singularity, main} namespaces, and three more provenance guards below
 // prove the target is a compose-serve-owned namespace before any data is touched.
 
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { rm } from "node:fs/promises";
 import {
   propagateConfigToUser,
@@ -53,11 +54,7 @@ import {
   assertServableCompositionNamespace,
   compositionsConfig,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import {
-  REPO_ROOT,
-  checkoutRef,
-  currentWorktreeName,
-} from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
   namespaceFor,
@@ -110,7 +107,7 @@ export async function resetCompositionData(id: string): Promise<void> {
   // options would let the guards disagree about what the manifest says.
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root,
-    userConfigDir: configDir.file(currentWorktreeName()),
+    userConfigDir: configDir.file(runtimeNamespace()),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
 

@@ -1,7 +1,6 @@
 import type { OpRecord } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 import { readOpRecords } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
 import {
   getOpProfiling,
   type OpEntry,
@@ -12,26 +11,33 @@ import { resolveWorktreeTitles } from "./resolve-worktree-titles";
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 const TWENTY_MINUTES = 20 * 60 * 1000;
 
-function matchesWorktree(wt: string, target: string): boolean {
-  return (
-    wt === target ||
-    wt === attemptBranchName(target) ||
-    wt.endsWith(`/${target}`)
-  );
-}
-
-// Ops for the same worktree carry different identifiers: builds log the basename
-// (`att-x`), while pushes fall back to the branch (`claude-web/att-x`) whenever
-// SINGULARITY_WORKTREE is unset for the push CLI. Canonicalize every kind to the
-// bare worktree basename so a worktree's push, build, and check bars group onto
-// a single Gantt row instead of several.
+// A branch-shaped identifier (`claude-web/att-x`) reduced to the bare checkout
+// id (`att-x`) every op of that checkout is filed under. Only the legacy branch
+// fallback below ever needs it — a real `opSlug` is already bare.
 function canonicalWorktree(wt: string): string {
   return wt.split("/").pop() || wt;
 }
 
-/** The identifier an op is filed under, before canonicalization. */
+/**
+ * The checkout an op ran in. That is the record's `opSlug` — the basename of the
+ * git root the writing CLI derived for itself, so every kind (build, push,
+ * check, test, e2e) files under one and the same id and lands on one Gantt row.
+ *
+ * The branch is a fallback for a line that carries no slug at all: a foreign
+ * writer, or one predating the slug. Those can be branch-shaped, so they are
+ * canonicalized to the same bare form.
+ */
 function worktreeOf(r: OpRecord): string {
-  return r.worktree ?? r.branch;
+  return r.opSlug ?? canonicalWorktree(r.branch);
+}
+
+/**
+ * Both sides are the bare checkout id by the time they meet here, so the match
+ * is equality. The target is canonicalized too, so a caller that names a
+ * worktree by its branch still selects that worktree's ops.
+ */
+function matchesWorktree(wt: string, target: string): boolean {
+  return wt === canonicalWorktree(target);
 }
 
 // An op's span on the Gantt is `requestedAt → requestedAt + totalMs`, for EVERY
@@ -95,7 +101,7 @@ export const handleOpProfiling = implement(
 
     const byWorktree = new Map<string, OpEntry[]>();
     for (const r of recent) {
-      const wt = canonicalWorktree(worktreeOf(r));
+      const wt = worktreeOf(r);
       let ops = byWorktree.get(wt);
       if (!ops) {
         ops = [];

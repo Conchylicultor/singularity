@@ -32,7 +32,6 @@
 - Server:
   - Uses:
     - `infra/endpoints.implement`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.worktreeDataDir`
   - Routes:
     - `GET /api/debug/heap-stats`

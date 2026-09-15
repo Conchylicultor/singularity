@@ -1,3 +1,4 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { sql } from "drizzle-orm";
 import {
   index,
@@ -7,7 +8,6 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 import { _deployServers } from "@plugins/apps/plugins/deploy/plugins/servers/server";
 // The specific module, not the `core` barrel: drizzle-kit loads this file to
 // build the schema, and `core/derive.ts` is plain strings with no imports at all.

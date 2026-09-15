@@ -15,6 +15,12 @@ import {
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  declareRuntimeNamespace,
+  resetRuntimeNamespaceForTest,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { readChannelEntries } from "./persist";
 import { getChannelIds } from "./registry";
 import { handleEmit } from "./handle-emit";
@@ -24,14 +30,18 @@ import { handleEmit } from "./handle-emit";
 // end; and the duress latch pointed at a temp dir of its own, so the test can
 // never read — or write — the host's real latch.
 
-const ORIGINAL_WORKTREE = process.env.SINGULARITY_WORKTREE;
+// The preload already declared one (the checkout), and a redeclare to a
+// different value throws — which is the guard doing its job. This suite is the
+// one legitimate exception, so it resets first and puts the original back.
+const ORIGINAL_WORKTREE = runtimeNamespace();
 const worktree = `handle-emit-test-${process.pid}-${Math.random().toString(36).slice(2)}`;
 let latchDir: string;
 let channelSeq = 0;
 
 beforeAll(() => {
-  // The write path resolves the per-worktree logs dir from this env var.
-  process.env.SINGULARITY_WORKTREE = worktree;
+  // The write path resolves the per-worktree logs dir from the runtime namespace.
+  resetRuntimeNamespaceForTest();
+  declareRuntimeNamespace(asNamespace(worktree));
   latchDir = mkdtempSync(join(tmpdir(), "handle-emit-latch-"));
   _setLatchDirForTests(latchDir);
 });
@@ -41,8 +51,8 @@ afterAll(() => {
   _setLatchDirForTests(null);
   rmSync(latchDir, { recursive: true, force: true });
   rmSync(join(worktreesDir(), worktree), { recursive: true, force: true });
-  if (ORIGINAL_WORKTREE === undefined) delete process.env.SINGULARITY_WORKTREE;
-  else process.env.SINGULARITY_WORKTREE = ORIGINAL_WORKTREE;
+  resetRuntimeNamespaceForTest();
+  declareRuntimeNamespace(ORIGINAL_WORKTREE);
 });
 
 beforeEach(() => {

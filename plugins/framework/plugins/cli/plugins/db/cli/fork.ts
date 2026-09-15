@@ -10,18 +10,18 @@ import {
   forkExclusionsSchema,
 } from "@plugins/database/plugins/fork/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import {
   asNamespace,
   namespaceUrl,
+  MAIN_WORKTREE_NAME,
 } from "@plugins/infra/plugins/namespace/core";
 
 // What a fork must not copy is DECLARED by the plugins that own the tables
 // (`ExcludeFromFork` / `ExcludeSchemaDataFromFork`), and those declarations are
 // collected at server boot. A CLI process never boots the server, and it cannot
 // load the plugin registry to collect them either — that imports
-// `@plugins/database/server`, whose pool is built at module load and throws
-// without `SINGULARITY_WORKTREE`.
+// `@plugins/database/server`, whose worktree pool is scoped to a RUNTIME
+// namespace, which a CLI process does not have.
 //
 // So we ask a backend that HAS booted. Candidates in order:
 //

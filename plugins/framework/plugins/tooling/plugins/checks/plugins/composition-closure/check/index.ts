@@ -488,8 +488,8 @@ const check: Check = {
     //    that is NOT the checkout's own — unvalidated territory. Which checkout
     //    it runs against is now variable (a serve build publishes
     //    `<composition>.<checkout>`), which makes the mismatch broader rather
-    //    than narrower: the plugin's `SINGULARITY_WORKTREE` names a namespace
-    //    with no git worktree behind it, whichever checkout's tree it is reading.
+    //    than narrower: the plugin's runtime namespace names a namespace with no
+    //    git worktree behind it, whichever checkout's tree it is reading.
     //    Declaring the exclude upgrades this to the hard disjointness gate above.
     //
     //    Keyed on `serve` — the declared serve mode — which is the only thing in

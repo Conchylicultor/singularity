@@ -1,7 +1,8 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
-import { currentWorktreeName, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import {
   defineLogSink,
   type LogChannel,
@@ -62,7 +63,7 @@ function probeEntryPath(): string {
 }
 
 function logsDir(): string {
-  return join(worktreeDataDir(currentWorktreeName()), "logs");
+  return join(worktreeDataDir(runtimeNamespace()), "logs");
 }
 
 function outPathFor(variant: ProbeVariant): string {
@@ -74,7 +75,11 @@ function outPathFor(variant: ProbeVariant): string {
 // wedged. stdout is ignored — the probe writes its samples to the JSONL file
 // directly and prints nothing to stdout. Fire-and-forget (void): the reader ends
 // when the child exits and the stream closes.
-function pipeStderr(host: HostState, child: ChildState, stream: ReadableStream<Uint8Array>): void {
+function pipeStderr(
+  host: HostState,
+  child: ChildState,
+  stream: ReadableStream<Uint8Array>,
+): void {
   // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- drains a child process's stderr into a log channel (non-blocking stream I/O on the supervisor); diagnostic plumbing (paging-probe is OFF by default), not attributable main-thread work.
   void (async () => {
     const decoder = new TextDecoder();
@@ -88,12 +93,16 @@ function pipeStderr(host: HostState, child: ChildState, stream: ReadableStream<U
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
         for (const line of lines) {
-          if (line.length > 0) host.channel.publish(`[${child.variant}] ${line}`);
+          if (line.length > 0)
+            host.channel.publish(`[${child.variant}] ${line}`);
         }
       }
-      if (buffer.length > 0) host.channel.publish(`[${child.variant}] ${buffer}`);
+      if (buffer.length > 0)
+        host.channel.publish(`[${child.variant}] ${buffer}`);
     } catch (err) {
-      host.channel.publish(`[${child.variant}] stderr read error: ${String(err)}`);
+      host.channel.publish(
+        `[${child.variant}] stderr read error: ${String(err)}`,
+      );
     }
   })();
 }
@@ -162,7 +171,8 @@ function spawnChild(host: HostState, child: ChildState): void {
   );
   child.proc = proc;
   child.spawnedAt = Date.now();
-  if (proc.stderr instanceof ReadableStream) pipeStderr(host, child, proc.stderr);
+  if (proc.stderr instanceof ReadableStream)
+    pipeStderr(host, child, proc.stderr);
 }
 
 export function startPagingProbes(): void {

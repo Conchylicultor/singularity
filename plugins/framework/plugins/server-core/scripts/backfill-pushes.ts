@@ -9,9 +9,9 @@
  * any whose HEAD appears in the git log of main without a Singularity-Conversation
  * trailer, and insert the missing push records.
  *
- * Usage:
- *   SINGULARITY_WORKTREE=singularity bun scripts/backfill-pushes.ts          # dry run
- *   SINGULARITY_WORKTREE=singularity bun scripts/backfill-pushes.ts --write  # apply
+ * Usage (the namespace whose database to write is stated, never inherited):
+ *   ./singularity run scripts/backfill-pushes.ts --namespace singularity          # dry run
+ *   ./singularity run scripts/backfill-pushes.ts --namespace singularity --write  # apply
  */
 
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -148,11 +148,19 @@ function resolveConversation(
 
 // ── main ──────────────────────────────────────────────────────────────────────
 
-const worktree = process.env.SINGULARITY_WORKTREE;
-if (!worktree) {
-  console.error("SINGULARITY_WORKTREE env var required");
-  process.exit(1);
+function argNamespace(): string {
+  const i = process.argv.indexOf("--namespace");
+  const value = i === -1 ? undefined : process.argv[i + 1];
+  if (value === undefined || value.startsWith("-")) {
+    console.error(
+      "--namespace <ns> is required — it names the database this script writes to.",
+    );
+    process.exit(1);
+  }
+  return value;
 }
+
+const worktree = argNamespace();
 
 import { readFileSync } from "node:fs";
 import { GIT } from "@plugins/infra/plugins/paths/server";

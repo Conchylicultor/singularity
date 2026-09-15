@@ -216,10 +216,10 @@ function threadRecord(summary: ThreadSummary): ProgressThread {
  * The checkout this run is checking — which is the run's identity, since a check
  * run's whole subject is the tree it was loaded from. That makes `REPO_ROOT` the
  * right source and the other two candidates wrong: `cwd` moves during the
- * build's codegen, and `SINGULARITY_WORKTREE` is deliberately set to a dummy
- * ("barrel-import-stub") by the barrel-import stubs the build loads through
- * (barrel-import/core/internal/stubs.ts), in the SAME process that then runs
- * checks in-process — so a build's check run would misattribute itself to a
+ * build's codegen, and this process's RUNTIME namespace is deliberately declared
+ * as a dummy ("barrel-import-stub") by the barrel-import stubs the build loads
+ * through (barrel-import/core/internal/stubs.ts), in the SAME process that then
+ * runs checks in-process — so a build's check run would misattribute itself to a
  * worktree that isn't real. `REPO_ROOT` is derived from `import.meta.dir` at
  * module load, so it names the checkout this code was read from in every path.
  */

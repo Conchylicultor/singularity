@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { appendFileSync, readFileSync, unlinkSync } from "node:fs";
 import { reportsBufferDir } from "../../data-dirs";
 import type { ReportSource } from "@plugins/reports/core";
@@ -18,8 +19,7 @@ import type { ReportSource } from "@plugins/reports/core";
 // changed.
 
 function bufferFile(): string {
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  return reportsBufferDir.file(`${worktree}.jsonl`);
+  return reportsBufferDir.file(`${runtimeNamespace()}.jsonl`);
 }
 
 // The one write. Both public writers below go through it so the file format is

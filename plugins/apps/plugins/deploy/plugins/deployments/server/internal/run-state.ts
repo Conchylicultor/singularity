@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -5,7 +6,6 @@ import {
   reportServerError,
 } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   defineSupervisedRunKind,
@@ -152,7 +152,7 @@ export async function claimRun(opts: {
       commitSha: null,
       status: "running",
       startedAt: new Date(),
-      launchedFrom: currentWorktreeName(),
+      launchedFrom: runtimeNamespace(),
       // The first leg is knowable now — an `update` always converges first — so
       // the row names a real artifact from the instant it exists.
       legRunId: legRunId(id, firstLeg(body.verb)),
@@ -193,7 +193,7 @@ async function busyRunOnServer(serverId: string): Promise<
     .from(_deployRuns)
     .where(
       and(
-        eq(_deployRuns.launchedFrom, currentWorktreeName()),
+        eq(_deployRuns.launchedFrom, runtimeNamespace()),
         eq(_deployRuns.serverId, serverId),
         isNull(_deployRuns.finishedAt),
       ),
@@ -385,7 +385,7 @@ async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
     .from(_deployRuns)
     .where(
       and(
-        eq(_deployRuns.launchedFrom, currentWorktreeName()),
+        eq(_deployRuns.launchedFrom, runtimeNamespace()),
         isNull(_deployRuns.finishedAt),
         isNotNull(_deployRuns.legRunId),
       ),
@@ -552,7 +552,7 @@ export async function reconcileDeployLiveView(): Promise<void> {
     .from(_deployRuns)
     .where(
       and(
-        eq(_deployRuns.launchedFrom, currentWorktreeName()),
+        eq(_deployRuns.launchedFrom, runtimeNamespace()),
         isNull(_deployRuns.finishedAt),
       ),
     );

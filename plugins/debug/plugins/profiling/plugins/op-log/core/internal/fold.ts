@@ -77,7 +77,6 @@ function identityOf(
     opSlug: base.opSlug ?? null,
     branch: base.branch ?? base.opId,
     conversationId: base.conversationId ?? null,
-    worktree: base.worktree ?? null,
     lane: base.lane ?? null,
     mode: base.mode ?? null,
     buildId: base.buildId ?? null,

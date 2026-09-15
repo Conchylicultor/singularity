@@ -1,8 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { DEPLOY_RUN_KIND_ID } from "./kind-id";
 
 /**
@@ -44,7 +42,7 @@ const TAIL_BYTES = 256 * 1024;
 export function legStarted(legId: string): boolean {
   return existsSync(
     worktreeArtifacts.runTranscript(
-      currentWorktreeName(),
+      runtimeNamespace(),
       DEPLOY_RUN_KIND_ID,
       legId,
     ),
@@ -68,7 +66,7 @@ export function legStarted(legId: string): boolean {
  */
 export function readTranscriptTail(legId: string): string[] {
   const path = worktreeArtifacts.runTranscript(
-    currentWorktreeName(),
+    runtimeNamespace(),
     DEPLOY_RUN_KIND_ID,
     legId,
   );

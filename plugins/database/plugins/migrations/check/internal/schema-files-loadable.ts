@@ -1,4 +1,4 @@
-import { basename, resolve } from "path";
+import { resolve } from "path";
 import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 import {
   getWorktreeRoot,
@@ -28,7 +28,10 @@ const schemaFilesLoadableCheck: Check = {
 
     // One subprocess replicating drizzle-kit's synchronous require() load, run
     // from the migrations plugin dir (matching drizzle-kit's module/tsconfig
-    // resolution) with SINGULARITY_WORKTREE set as `migrations-in-sync` does.
+    // resolution) and with exactly drizzle-kit's own environment — which is to
+    // say, no namespace. That is the point: a schema-glob file that resolved a
+    // runtime namespace at module eval would break real migration generation,
+    // so the probe must not be handed one the real run does not have.
     const result = await spawnCaptured(
       [
         process.execPath,
@@ -40,7 +43,6 @@ const schemaFilesLoadableCheck: Check = {
         cwd: resolve(root, MIGRATIONS_PLUGIN_DIR),
         env: {
           ...process.env,
-          SINGULARITY_WORKTREE: basename(root),
           NO_COLOR: "1",
         },
         // The probe require()s every schema-glob file in one pass — seconds of

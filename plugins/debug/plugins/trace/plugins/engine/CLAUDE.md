@@ -228,7 +228,6 @@ expandable JSON.
     - `infra/entities.defineEntity`
     - `infra/host/duress.createShedBuffer`
     - `infra/host/duress.ShedSummary`
-    - `infra/paths.currentWorktreeName`
     - `infra/retention.defineRetention`
     - `reports.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`

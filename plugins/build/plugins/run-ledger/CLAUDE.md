@@ -4,12 +4,13 @@ Lean build-runs ledger leaf: the `build_runs` table definition (`_buildRuns`)
 plus the CLI build-run recorder (`createBuildRunRecorder`). Extracted out from
 behind the heavy `build/server` barrel so the detached `./singularity build` CLI
 can record rows without evaluating that graph — importing `build/server` pulls in
-`config_v2` (whose module eval throws `SINGULARITY_WORKTREE must be set`) and
-`shell/notifications`, neither of which exists in an env-less terminal build.
+`config_v2` (whose module eval resolves its config dir from this process's runtime
+namespace, which a CLI has none of) and `shell/notifications`, neither of which
+exists in a namespace-less terminal build.
 
 The recorder writes to the DB of the namespace it is HANDED
 (`createBuildRunRecorder(ns)` → `openShortLivedClient(ns)` + drizzle), because the
-CLI has no worktree identity of its own and cannot use the env-bound `db`. That
+CLI has no runtime namespace of its own and cannot use the namespace-bound `db`. That
 namespace is the BUILDING CHECKOUT's — a build's row belongs with the transcript
 and profile the same checkout's backend serves. It used to be hardcoded to main's,
 which was right while the only rows written were main's deploy and its

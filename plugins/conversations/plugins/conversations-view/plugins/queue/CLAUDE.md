@@ -19,7 +19,6 @@
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
-    - `infra/paths.isMain`
     - `infra/query-resource.windowQueryResource`
     - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`

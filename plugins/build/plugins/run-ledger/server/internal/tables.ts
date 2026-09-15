@@ -7,8 +7,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_COMPOSITION_ID,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/namespace/core";
 
 export const _buildRuns = pgTable(
   "build_runs",

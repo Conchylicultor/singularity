@@ -1,6 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   gitWorktreesDir,
   worktreePathFor,

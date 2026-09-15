@@ -17,11 +17,10 @@ import { listWorktreeDirs } from "./worktree-dirs";
 //
 // Three questions on this machine look alike and are not:
 //
-//   which namespace is THIS BACKEND the server for?  `currentWorktreeName()`
-//     — the `SINGULARITY_WORKTREE` the gateway spawned it with, and correct
-//       only in a gateway-spawned backend. A process that merely INHERITED the
-//       variable (every agent pane does, through the tmux server) is answered
-//       `singularity` from inside any worktree.
+//   which namespace is THIS RUNTIME the server for?  `runtimeNamespace()`
+//     — the `--namespace` the gateway spawned it with, declared at its entry
+//       point. Only a runtime has one; in a CLI process asking throws, which is
+//       what stops the answer from being a guess.
 //   which namespace does THIS CHECKOUT own?           `checkoutNamespace(root)`
 //     — minted from git, and true whether or not anything is deployed.
 //   which deploy did this checkout PUBLISH?           this file.

@@ -1,33 +1,37 @@
 import { join } from "node:path";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { compositionReleaseDir } from "./out-dir";
 
 /**
  * The ONE directory ship looks in for a composition's bundles, resolved once.
  *
  * **Which namespace it keys on, and why.** `releaseOutDir` roots every release
- * at `<SINGULARITY_DIR>/releases/<namespace>/<comp>-<target>/`, where the
- * namespace is `currentWorktreeName()` — i.e. `SINGULARITY_WORKTREE`, falling
- * back to `main`. Ship keys on exactly the same call, which is what makes the
- * two agree in each of the two real situations:
+ * at `<SINGULARITY_DIR>/releases/<namespace>/<comp>-<target>/`, and the
+ * namespace is a PARAMETER on both sides — the producer names it, the reader
+ * names it, and they agree because each kind of process answers the same
+ * question the same way:
  *
- * - **hand-run release + hand-run ship** — neither process has
- *   `SINGULARITY_WORKTREE`, so both see `releases/singularity/`, even when the
- *   CLI is invoked from a worktree checkout. (Confirmed against a real
- *   cross-build: `release --platform linux-x64` from this worktree wrote
- *   `releases/singularity/website-web/<run-id>/`, NOT `releases/att-…/`.)
+ * - **hand-run release + hand-run ship** — both mint the namespace from the
+ *   CHECKOUT they were invoked from (`checkoutNamespace(root)`), so a release
+ *   cut in a worktree is found by a ship run from that same worktree.
  * - **Studio-triggered release + UI-triggered ship** — both run inside the
- *   worktree backend, so both see `releases/<that worktree>/`.
+ *   worktree backend, so both name that backend's runtime namespace.
  *
- * The mismatch is the CROSS pair (a Studio release, then a hand-run ship), and
- * it is deliberately left as a loud miss: this function is never called for more
- * than one namespace, and every refusal carries the absolute path it looked in.
- * Searching both namespaces would make "which bundle am I shipping?"
- * ambiguous, which is strictly worse than a miss you can read in one line.
+ * The remaining mismatch is the CROSS pair (a Studio release, then a hand-run
+ * ship from a DIFFERENT checkout), and it is deliberately left as a loud miss:
+ * this function is never called for more than one namespace, and every refusal
+ * carries the absolute path it looked in. Searching both namespaces would make
+ * "which bundle am I shipping?" ambiguous, which is strictly worse than a miss
+ * you can read in one line.
  */
-export function bundleRoot(composition: string): { namespace: string; compDir: string } {
-  const namespace = currentWorktreeName();
-  return { namespace, compDir: compositionReleaseDir(namespace, composition, "web") };
+export function bundleRoot(
+  namespace: Namespace,
+  composition: string,
+): { namespace: string; compDir: string } {
+  return {
+    namespace,
+    compDir: compositionReleaseDir(namespace, composition, "web"),
+  };
 }
 
 /**

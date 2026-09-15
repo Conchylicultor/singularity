@@ -84,8 +84,6 @@ path — unreachable today, silent corruption if it ever is not.
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/jobs/supervised-task.defineSupervisedTask`
     - `infra/paths.BACKUPS_DIR`
-    - `infra/paths.currentWorktreeName`
-    - `infra/paths.isMain`
     - `primitives/log-channels.Log`
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports (values):

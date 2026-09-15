@@ -1,7 +1,5 @@
-import {
-  listWorktreeDirs,
-  MAIN_WORKTREE_NAME,
-} from "@plugins/infra/plugins/paths/server";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";

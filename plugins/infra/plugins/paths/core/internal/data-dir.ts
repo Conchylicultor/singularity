@@ -561,12 +561,12 @@ export interface MoverFacts {
  * May a process with these facts perform a pending move?
  *
  * The host singleton, AND running merged code. The second half is not
- * belt-and-braces: `isHostSingleton()` reads `SINGULARITY_WORKTREE`, and every
- * process an agent pane spawns INHERITS `SINGULARITY_WORKTREE=singularity` from
- * main's backend — its `./singularity` CLI, its tests, its e2e scripts, its
- * Claude Code hooks. On `isHostSingleton()` alone, an agent building or testing
- * an UNMERGED branch would move directories on the root every other checkout
- * shares, which is precisely what a move must never be. Code running from the
+ * belt-and-braces: a process can read as the host singleton while running an
+ * UNMERGED branch — main's backend spawns exec children, and until the runtime
+ * namespace became a declared argument every agent CLI, test and hook inherited
+ * main's identity through the environment. On `isHostSingleton()` alone such a
+ * process would move directories on the root every other checkout shares, which
+ * is precisely what a move must never be. Code running from the
  * main checkout is merged code by definition, so that is the half that makes
  * the singleton answer true. A release has no checkout at all (it runs from a
  * compiled binary) and owns its own root, so it qualifies on its own.

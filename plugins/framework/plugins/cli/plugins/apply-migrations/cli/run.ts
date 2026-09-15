@@ -6,20 +6,27 @@ import {
   buildConnectionString,
 } from "@plugins/database/core";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  REPO_ROOT,
+  checkoutNamespace,
+} from "@plugins/infra/plugins/paths/core";
 
-const run: CliAction<[], object> = async () => {
-  const worktree = process.env.SINGULARITY_WORKTREE;
-  if (!worktree) {
-    throw new Error("SINGULARITY_WORKTREE env var is required");
-  }
+const run: CliAction<[], { namespace?: string }> = async (opts) => {
+  // Stated, or minted from the checkout this command is standing in. Never read
+  // from the environment: the ambient value answered `singularity` from every
+  // worktree, so a hand-run bootstrap silently migrated MAIN's database.
+  const worktree =
+    opts.namespace === undefined
+      ? await checkoutNamespace(REPO_ROOT)
+      : asNamespace(opts.namespace);
 
   // Open a direct, short-lived connection to the target DB and run the
   // migration runner against it. We do NOT import `db` from
-  // @plugins/database/server: that barrel builds its pool at module load and
-  // throws without SINGULARITY_WORKTREE. That used to break every other CLI
-  // command, because the CLI imported all command modules eagerly; it no longer
-  // does — a command's body loads only when that command runs — but the direct
-  // connection is still the right shape here, mirroring the migration tooling
+  // @plugins/database/server: that barrel's worktree pool is scoped to this
+  // process's RUNTIME namespace, which a CLI process does not have — and which
+  // would be the wrong question anyway, since the namespace to migrate is an
+  // argument here. The direct connection also mirrors the migration tooling
   // (plugins/database/plugins/migrations/{drizzle.config.ts,check/*}): the
   // pgbouncer branch is skipped because bootstrap connects straight to
   // Postgres.

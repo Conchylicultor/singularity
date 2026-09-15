@@ -1,9 +1,9 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";

@@ -1,8 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getBuildProfiling } from "../../shared/endpoints";
 
@@ -19,7 +17,7 @@ interface BuildProfile {
 }
 
 function readBuildProfile(): BuildProfile | null {
-  const name = currentWorktreeName();
+  const name = runtimeNamespace();
   const path = worktreeArtifacts.buildProfile(name);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;

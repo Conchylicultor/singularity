@@ -8,15 +8,17 @@ import type {
 /**
  * An e2e script never learns which deploy it drives from the environment.
  *
- * `SINGULARITY_WORKTREE` answers a question about a different process:
- * `gateway/worktree.go` sets it on every backend it spawns, so it means "which
- * namespace is this BACKEND the server for". An agent's pane is spawned by
- * main's backend and inherits the var through the tmux server's environment, so
- * inside a worktree checkout it is always present and always says
- * `singularity`. A script that reads it therefore drives MAIN's app from a
- * worktree and prints `ALL CHECKS PASSED` — it did exercise an app, just not
- * the one under test, and the transcript records a green run against code the
- * change was not in.
+ * The defect this closes was `$SINGULARITY_WORKTREE`, which answered a question
+ * about a different process: the gateway set it on every backend it spawned, so
+ * it meant "which namespace is this BACKEND the server for". An agent's pane was
+ * spawned by main's backend and inherited the variable through the tmux server's
+ * environment, so inside a worktree checkout it was always present and always
+ * said `singularity`. A script that read it therefore drove MAIN's app from a
+ * worktree and printed `ALL CHECKS PASSED` — it did exercise an app, just not
+ * the one under test, and the transcript recorded a green run against code the
+ * change was not in. That variable is gone now
+ * (`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`),
+ * but the SHAPE it had is what this check is about, and the shape is not.
  *
  * The reads are not passive either. `withBrowser` opens by restoring the config
  * documents a previous run left changed, at the resolved origin; and the one
@@ -28,8 +30,8 @@ import type {
  * `SINGULARITY_E2E_BASE` had the same shape — an inherited channel that
  * silently outranks the derivation — and was deleted for the same reason, so a
  * SECOND env-shaped target must be unspellable rather than merely absent today.
- * A rule keyed on `SINGULARITY_WORKTREE` would watch the one spelling we
- * already know about.
+ * A rule keyed on one variable name would watch the one spelling we already know
+ * about.
  *
  * Scoped to `e2e/`, which is where the target comes from the deploy registry on
  * disk instead (`target.ts` → `resolveCheckoutDeploy`). The harness's own
@@ -88,9 +90,10 @@ const check: Check = {
       ok: false,
       message: `${matches.length} environment-derived target read(s) in e2e scripts:\n    ${listed}`,
       hint:
-        "An e2e script's process inherits `SINGULARITY_WORKTREE` from the backend that spawned " +
-        "its agent session — in a worktree it answers `singularity`, so reading it silently " +
-        "drives and writes to MAIN's deploy. Use `pathUrl(path)` for a URL, `targetNamespace()` " +
+        "An e2e script's process inherits its environment from whatever spawned its agent " +
+        "session, so an environment-derived target is a claim nobody in this run made — and " +
+        "the last one silently drove and wrote to MAIN's deploy. Use `pathUrl(path)` for a " +
+        "URL, `targetNamespace()` " +
         "for the namespace whose files you assert on, `--composition <id>` for a composition, " +
         "`--url` for a deploy this checkout did not build.",
     };

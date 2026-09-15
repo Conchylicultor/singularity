@@ -16,8 +16,8 @@ import { basename, dirname, join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import {
   REPO_ROOT,
+  checkoutNamespace,
   checkoutWorktreeName,
-  currentWorktreeName,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import {
@@ -748,8 +748,18 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // (shared with the Studio engine). When the engine supplies `--out` it is
   // already a `<…>/<run-id>` dir; derive the run-id from the dir name so
   // both paths are handled uniformly.
+  // The namespace a release is filed under is the CHECKOUT's, minted from git.
+  // A hand-run CLI declares no runtime namespace, and `deploy ship` asks the
+  // same question the same way from the same checkout, so the writer and the
+  // reader land on one directory.
   const out =
-    opts.out ?? releaseOutDir(opts.composition, opts.target, newReleaseRunId());
+    opts.out ??
+    releaseOutDir(
+      await checkoutNamespace(root),
+      opts.composition,
+      opts.target,
+      newReleaseRunId(),
+    );
   const runId = basename(out);
 
   console.log(`Releasing composition "${opts.composition}" (${platform})`);
@@ -852,7 +862,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // is a different tree, and publishing over it is the bug this stage
   // closes (research/2026-08-06-global-one-dist-per-namespace.md, S3).
   //
-  // `checkoutWorktreeName(root)` — NOT `currentWorktreeName()`, which
+  // `checkoutWorktreeName(root)` — NOT `runtimeNamespace()`, which
   // answers "singularity" in a hand-run CLI from every worktree. Phase 1
   // is spawned with `cwd: root`, so its `basename(getWorktreeRoot())`
   // resolves to this same name and the two processes agree by
@@ -1123,8 +1133,11 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   // A run dir is a whole staged app; `~/.singularity/state/releases/` has no
   // other retention. Runs a pointer names are never swept.
+  // `checkoutWorktreeName(root)`, for the same reason as line ~861: this is a
+  // hand-run CLI, which declares no runtime namespace, and the run dirs it is
+  // pruning are keyed by the checkout that produced them.
   const pruned = pruneReleaseRunDirs(
-    currentWorktreeName(),
+    checkoutWorktreeName(root),
     opts.composition,
     opts.target,
   );

@@ -1,8 +1,8 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
 import { releaseOutDir } from "@plugins/release/plugins/bundles/server";
@@ -61,7 +61,7 @@ export async function claimRelease(opts: {
       // This backend's own, live pid. It keeps the fresh row from looking like
       // an orphan in the window before the child's pid is known.
       pid: process.pid,
-      namespace: currentWorktreeName(),
+      namespace: runtimeNamespace(),
     });
     return true;
   } catch (err) {
@@ -138,7 +138,12 @@ export async function closeReleaseRow(
   // error.
   if (row === undefined) return;
 
-  const out = releaseOutDir(row.composition, row.target, releaseId);
+  const out = releaseOutDir(
+    runtimeNamespace(),
+    row.composition,
+    row.target,
+    releaseId,
+  );
   const manifest = readManifest(out);
   const ending: ReleaseEnding = {
     exitCode: terminal.exitCode,
@@ -191,7 +196,7 @@ export async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
     .where(
       and(
         isNull(_releaseRuns.finishedAt),
-        eq(_releaseRuns.namespace, currentWorktreeName()),
+        eq(_releaseRuns.namespace, runtimeNamespace()),
       ),
     );
   return rows.map((row) => ({ runId: row.id, pid: row.pid }));

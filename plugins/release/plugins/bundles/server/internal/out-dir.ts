@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { releasesDir } from "../../data-dirs";
 
 /**
@@ -37,6 +37,13 @@ export function compositionReleaseDir(
  * (`release-<ms>-<rand>`) gives chronology plus a stable dir key shared with the
  * engine's DB row.
  *
+ * `namespace` is WHO PRODUCED the release, and it is a parameter rather than
+ * something this module reads, because the two kinds of producer answer it
+ * differently: a backend by its own runtime namespace, a hand-run CLI by the
+ * checkout it was invoked from (`checkoutNamespace(root)`). Reading one ambient
+ * answer here is what used to put every hand-run release under `singularity/`
+ * whichever worktree cut it.
+ *
  * The 104-byte Unix-socket length cap no longer constrains this path: the
  * launcher (`launcher/bin/launch.ts`) reroots the embedded-PG, PgBouncer, and
  * gateway per-worktree backend sockets onto short `/tmp` dirs — the PG/PgBouncer
@@ -45,12 +52,10 @@ export function compositionReleaseDir(
  * for a direct `<out>/launch`.
  */
 export function releaseOutDir(
+  namespace: Namespace,
   composition: string,
   target: string,
   runId: string,
 ): string {
-  return join(
-    compositionReleaseDir(currentWorktreeName(), composition, target),
-    runId,
-  );
+  return join(compositionReleaseDir(namespace, composition, target), runId);
 }

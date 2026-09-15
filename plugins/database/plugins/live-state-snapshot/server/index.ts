@@ -24,8 +24,8 @@ import { liveStateChangelogPruneJob } from "./internal/prune";
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 //
 // `persist.ts` and `catch-up.ts` are db-PARAMETRIZED (no `@plugins/database/server`
-// import) so a test can import them without the SINGULARITY_WORKTREE-at-import
-// throw; the `db` singleton is bound HERE (a backend-only entry) and threaded into
+// import) so a test can import them without reaching the namespace-bound worktree
+// pool; the `db` singleton is bound HERE (a backend-only entry) and threaded into
 // the hooks + catch-up below. The two public barrel exports keep their `(keys) => …`
 // signature via `./internal/public-snapshots` (barrel-purity R3 forbids the
 // singleton-binding wrappers living inline in this barrel).

@@ -9,12 +9,10 @@
  * pid in the process table) stay real. Same trade
  * `supervised-run/server/internal/supervisor.test.ts` makes for the reconciler.
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
   HARD_KILL_EXIT_CODE,
   type RunTerminal,
@@ -28,7 +26,7 @@ import {
   type StartedRunAttempt,
 } from "./loop";
 
-const worktree = currentWorktreeName();
+const worktree = runtimeNamespace();
 const KIND_ID = "supjobloop";
 
 // A stub rather than a real `defineLogSink`: nothing in this file publishes, and

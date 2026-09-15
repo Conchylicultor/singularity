@@ -1,4 +1,5 @@
-import { WORKTREES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 
@@ -55,25 +56,37 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 // `getBootMode()` (`../core/boot-mode.ts`) — boot-events' `start` line is the
 // example.
 //
-// `isMain()` is env-derived (`SINGULARITY_WORKTREE === "singularity"`), so a
-// child spawned by main's backend inherits a TRUE `isMain()`. Nothing gated on
-// it fires here: every main-only side effect in the tree hangs off `onReady`,
-// `onAllReady` or a warm-up, all of which exec skips.
+// `isMain()` is true in a child spawned by MAIN's backend, because the namespace
+// its spawner hands it IS main's. Nothing gated on it fires here: every main-only
+// side effect in the tree hangs off `onReady`, `onAllReady` or a warm-up, all of
+// which exec skips.
 //
-// The child inherits `SINGULARITY_WORKTREE` from its parent, which is what
-// `database`'s `requireWorktree()` reads to resolve the per-worktree DB — so an
-// exec child talks to exactly the database its parent backend does, with no
-// extra plumbing.
+// The namespace is a PARAMETER, declared before anything else runs. It names both
+// the plugin registry this process boots (`bin/active-runtime`) and the Postgres
+// database it talks to (`database`'s worktree pool), so an exec child talks to
+// exactly the database its spawner meant — stated, never inherited. See
+// research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md.
 
 /**
  * Boot this process in `exec` mode, run `body`, tear the runtime down and exit.
  *
  * ```ts
  * // in a CLI command that IS the short-lived child
- * await runExec(async () => {
+ * await runExec(namespace, async () => {
  *   await runBackupTask(payload);
  * });
  * ```
+ *
+ * `namespace` is stated by the caller, which got it off its own `--namespace`
+ * option. Guessing it from the checkout path is deliberately NOT done: it would
+ * pick a database, and picking the wrong one silently is worse than refusing.
+ *
+ * It is declared FIRST, before a single plugin is imported, because the failure
+ * otherwise arrives 83 plugins deep and describes the wrong thing entirely:
+ * `config_v2/server` resolves its config dir at module eval, and every plugin
+ * that imports `ConfigV2` from that half-evaluated barrel then fails with
+ * `ReferenceError: Cannot access 'ConfigV2' before initialization` — 82 lines of
+ * TDZ burying the one line that said what was actually missing.
  *
  * The whole boot is inside this call, so there is no way to obtain a
  * half-booted runtime: `body` runs only after the graph is loaded, registered,
@@ -89,9 +102,10 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
  * responsibility.
  */
 export async function runExec(
+  namespace: Namespace,
   body: () => void | Promise<void>,
 ): Promise<never> {
-  assertWorktreeIdentity();
+  declareRuntimeNamespace(namespace);
   recordMemoryCheckpoint("boot-start");
   let ordered;
   try {
@@ -115,36 +129,4 @@ export async function runExec(
   }
   await runShutdownHooks(ordered);
   process.exit(0);
-}
-
-/**
- * `exec` inherits its worktree identity; it never derives one.
- *
- * `SINGULARITY_WORKTREE` names both the plugin registry this process boots
- * (`bin/active-runtime`) and the Postgres database it talks to
- * (`database`'s `requireWorktree()`). A supervised child gets it from the
- * backend that spawned it. A human typing the command in a shell does not — and
- * that is exactly how this was first found.
- *
- * Asserted HERE, before a single plugin is imported, because the failure
- * otherwise arrives 83 plugins deep and describes the wrong thing entirely:
- * `config_v2/server` throws at module eval without it, and every plugin that
- * imports `ConfigV2` from that half-evaluated barrel then fails with
- * `ReferenceError: Cannot access 'ConfigV2' before initialization` — 82 lines of
- * TDZ burying the one line that said what was actually missing.
- *
- * Guessing the namespace from the checkout path is deliberately NOT done: it
- * would pick a database, and picking the wrong one silently is worse than
- * refusing. The caller states the identity or gets told to.
- */
-function assertWorktreeIdentity(): void {
-  if (process.env.SINGULARITY_WORKTREE) return;
-  throw new Error(
-    "[exec] SINGULARITY_WORKTREE is not set. It names the plugin registry to boot " +
-      "and the database to talk to, so an exec runtime cannot start without it. " +
-      "A supervised child inherits it from the backend that spawned it; running " +
-      "this command by hand does not, so set it explicitly — e.g. " +
-      "`SINGULARITY_WORKTREE=<namespace> ./singularity <command>`, where " +
-      `<namespace> is the directory name under ${WORKTREES_DIR_DISPLAY}/.`,
-  );
 }

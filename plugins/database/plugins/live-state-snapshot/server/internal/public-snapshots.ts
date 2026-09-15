@@ -9,8 +9,8 @@ import {
 // boot-bench). They keep the public `(keys) => …` signature while the underlying
 // `persist.ts` fns are db-parametrized. The `db` singleton import lives HERE (a
 // backend-only file, imported solely through the barrel) — never in `persist.ts`
-// itself, so a test importing `persist.ts` directly never triggers the
-// SINGULARITY_WORKTREE-at-import throw in `@plugins/database/server`. Kept out of
+// itself, so a test importing `persist.ts` directly never reaches the
+// namespace-bound worktree pool in `@plugins/database/server`. Kept out of
 // the barrel `index.ts` because barrel-purity (R3) forbids top-level `const`.
 export const readPersistedSnapshots = (
   keys: string[],

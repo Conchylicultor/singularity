@@ -5,8 +5,8 @@ import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { _buildRuns } from "./tables";
 
 // The detached `./singularity build` CLI records build_runs rows directly, from
-// the CLI process — which has NO `SINGULARITY_WORKTREE` env (a terminal build is
-// namespace-less) and so cannot use the env-bound `db` from
+// the CLI process — which declares NO runtime namespace (a terminal build is
+// namespace-less) and so cannot use the namespace-bound `db` from
 // `@plugins/database/server`. The recorder therefore opens ONE short-lived pool
 // against the database of the namespace it is told to write to — the BUILDING
 // CHECKOUT's own namespace, which is where a build's row, transcript and profile
@@ -16,7 +16,7 @@ import { _buildRuns } from "./tables";
 //
 // Eval-safety is the whole reason this lives in the run-ledger leaf, not the heavy
 // build/server barrel: its import graph is drizzle + database/admin/server +
-// namespace/core only — NO config_v2 / notifications / env-bound db / jobs / events.
+// namespace/core only — NO config_v2 / notifications / namespace-bound db / jobs / events.
 // Never add an import here that pulls any of those into an env-less CLI process.
 
 export interface BuildRunRecorder {

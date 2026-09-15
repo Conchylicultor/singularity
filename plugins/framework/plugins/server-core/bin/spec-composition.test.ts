@@ -41,7 +41,7 @@ test("a spec that declares a composition answers with it", () => {
 });
 
 test("the four ways to mean the main app", () => {
-  // 1. No SINGULARITY_WORKTREE — a hand-run backend.
+  // 1. No namespace — a hand-run backend.
   expect(readSpecComposition(worktreesDir, undefined)).toBeUndefined();
   expect(readSpecComposition(worktreesDir, "")).toBeUndefined();
   // 2. No spec file — not gateway-spawned, or not registered yet.

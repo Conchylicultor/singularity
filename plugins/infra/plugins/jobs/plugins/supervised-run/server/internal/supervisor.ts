@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { basename } from "node:path";
 import { closeSync, existsSync, mkdirSync, openSync } from "node:fs";
 import {
@@ -5,7 +6,6 @@ import {
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
 import {
-  currentWorktreeName,
   pruneWorktreeRunArtifacts,
   RUN_TERMINAL_SUFFIX,
   RUN_TRANSCRIPT_SUFFIX,
@@ -119,11 +119,7 @@ function track(
   pid: number | null,
 ): LiveRun {
   const tail = createTranscriptTail({
-    path: worktreeArtifacts.runTranscript(
-      currentWorktreeName(),
-      kind.id,
-      runId,
-    ),
+    path: worktreeArtifacts.runTranscript(runtimeNamespace(), kind.id, runId),
     fromOffset: 0,
     publish: (lines) => {
       // No `stream` argument, so every line publishes as the channel's default.
@@ -351,7 +347,7 @@ async function syncWatcher(): Promise<void> {
     await watcherStarting;
     return;
   }
-  const dir = worktreeArtifacts.runsDir(currentWorktreeName());
+  const dir = worktreeArtifacts.runsDir(runtimeNamespace());
   mkdirSync(dir, { recursive: true });
   watcherStarting = (async () => {
     watcher = await createFileWatcher({
@@ -531,7 +527,7 @@ export async function startSupervisedRun(
     assertRegistered(kind);
     assertRunId(kind.id, opts.runId);
 
-    const worktree = currentWorktreeName();
+    const worktree = runtimeNamespace();
     const transcriptPath = worktreeArtifacts.runTranscript(
       worktree,
       kind.id,

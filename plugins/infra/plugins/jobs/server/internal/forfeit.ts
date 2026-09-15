@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync, writeFileSync } from "node:fs";
 import { reportServerFatalSync } from "@plugins/framework/plugins/server-core/core";
 import { jobsStateDir } from "../../data-dirs";
@@ -337,8 +338,7 @@ const LATCH_WINDOW_MS = 3_600_000;
 const MAX_TRIPS_PER_WINDOW = 3;
 
 function latchFile(): string {
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  return jobsStateDir.file(`${worktree}.json`);
+  return jobsStateDir.file(`${runtimeNamespace()}.json`);
 }
 
 /**

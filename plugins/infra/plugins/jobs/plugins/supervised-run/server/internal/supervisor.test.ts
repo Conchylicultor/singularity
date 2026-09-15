@@ -25,12 +25,10 @@
  * flushed everything the tail was still holding — which is also the sharper
  * test, since a tail stopped early publishes nothing at all afterwards.
  */
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { appendFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import type { RunTerminal } from "../../core";
 import { defineSupervisedRunKind, type UnfinishedRun } from "./registry";
@@ -40,7 +38,7 @@ import {
   startSupervisedRun,
 } from "./supervisor";
 
-const worktree = currentWorktreeName();
+const worktree = runtimeNamespace();
 
 /**
  * One fake kind for this file. The id is a filename prefix, so it obeys

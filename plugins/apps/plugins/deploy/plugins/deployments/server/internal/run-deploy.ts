@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -318,10 +319,15 @@ async function runUpdate(
 /**
  * `./singularity` from the checkout this backend was built from, so the CLI
  * resolves the SAME namespace: it reads its deployment record over HTTP from
- * `<worktree>.localhost:9000` and its server row from that worktree's DB fork,
- * both keyed on `currentWorktreeName()` — which the child inherits through
- * SINGULARITY_WORKTREE from this process's env (hence no env override; a
- * supervised run's `envOverrides` are additions to this backend's environment).
+ * `<worktree>.localhost:9000` and its server row from that worktree's DB fork.
+ *
+ * Nothing is passed to say which namespace that is, and nothing needs to be. The
+ * child is a CLI process, so it mints the namespace from the checkout it is
+ * standing in (`checkoutNamespace(REPO_ROOT)` in the deploy command's
+ * `internal/target.ts`) — and that checkout IS this backend's own, because
+ * `cwd` is `REPO_ROOT`. The two agree by construction rather than by a value
+ * riding along in the environment, which is what the old wording relied on and
+ * what quietly made every worktree's deploy act on main's records.
  */
 function deployArgv(
   run: OpenRun,
@@ -573,7 +579,11 @@ async function decideBuild(
   composition: string,
   platform: PlatformTag,
 ): Promise<{ build: boolean }> {
-  const existing = resolveBundle({ composition, platform });
+  const existing = resolveBundle({
+    namespace: runtimeNamespace(),
+    composition,
+    platform,
+  });
   if (!existing.ok) {
     deployLog.publish(
       `[build] no shippable ${platform} bundle for ${composition}: ` +
@@ -608,7 +618,11 @@ type PinResult =
   | { readonly ok: false; readonly message: string };
 
 function pinBundle(composition: string, platform: PlatformTag): PinResult {
-  const pinned = resolveBundle({ composition, platform });
+  const pinned = resolveBundle({
+    namespace: runtimeNamespace(),
+    composition,
+    platform,
+  });
   if (!pinned.ok) {
     return { ok: false, message: bundleRefusalMessage(pinned.refusal) };
   }

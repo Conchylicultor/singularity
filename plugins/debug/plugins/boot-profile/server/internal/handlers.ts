@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -20,7 +21,7 @@ const UUID_RE =
 export const handleSaveBootTrace = implement(
   saveBootTrace,
   async ({ body }) => {
-    const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+    const worktree = runtimeNamespace();
     const [row] = await db
       .insert(_bootTraces)
       .values({ worktree, snapshot: body.snapshot })

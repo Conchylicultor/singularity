@@ -98,7 +98,6 @@ the panel until it is given something to say.
     - `infra/jobs.defineJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`
-    - `infra/paths.isMain`
     - `infra/paths.worktreesDir`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.gitWorktreesDir`

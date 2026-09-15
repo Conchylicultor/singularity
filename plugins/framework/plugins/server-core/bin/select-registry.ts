@@ -39,8 +39,9 @@ import {
  * exercise it would load every server plugin as a side effect.
  *
  * @param coreDir the `server-core/core` directory holding the registries
- * @param namespace the raw `SINGULARITY_WORKTREE` value — validated, not used to
- *   select; a bogus one means a broken spawn env and boot should say so
+ * @param namespace this backend's runtime namespace (`runtimeNamespace()`, from
+ *   the gateway's `--namespace`) — validated, not used to select; a bogus one
+ *   means a broken spawn and boot should say so
  * @param composition the spec's `composition` field, from `readSpecComposition`
  *   (absent/empty ⇒ the main composition ⇒ the committed registry)
  */
@@ -54,8 +55,8 @@ export function selectRegistry(
   if (namespace !== undefined && namespace !== "") {
     // `namespace` is `<composition>.<checkout>` with both sentinels elided, so
     // it is one or two dot-joined labels, capped at 63 bytes because it is also
-    // this backend's Postgres database name. A mismatch means a broken spawn
-    // env, not a missing registry: fail loudly rather than boot under a bogus
+    // this backend's Postgres database name. A mismatch means a broken spawn,
+    // not a missing registry: fail loudly rather than boot under a bogus
     // identity. Nothing below reads it — the guard is the whole point.
     //
     // The real `NAMESPACE_RE`, imported from the plugin that owns it. Boot can
@@ -70,7 +71,7 @@ export function selectRegistry(
     // `namespace:grammar-in-sync` pins; there is nothing left to pin here.
     if (!NAMESPACE_RE.test(namespace)) {
       throw new Error(
-        `Invalid SINGULARITY_WORKTREE "${namespace}" — cannot select a plugin registry.`,
+        `Invalid runtime namespace "${namespace}" — cannot select a plugin registry.`,
       );
     }
   }

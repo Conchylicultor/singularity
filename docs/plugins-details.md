@@ -730,7 +730,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs/supervised-run.defineSupervisedRunKind`
               - `infra/jobs/supervised-run.startSupervisedRun`
               - `infra/jobs/supervised-run.UnfinishedRun`
-              - `infra/paths.currentWorktreeName`
               - `infra/paths.REPO_ROOT`
               - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
@@ -6354,8 +6353,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/jobs/supervised-task.defineSupervisedTask`
       - `infra/paths.BACKUPS_DIR`
-      - `infra/paths.currentWorktreeName`
-      - `infra/paths.isMain`
       - `primitives/log-channels.Log`
     - DB schema: `plugins/backup/server/internal/tables.ts`
     - Exports (values):
@@ -6673,8 +6670,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/jobs.defineJob`
       - `infra/jobs/supervised-job.defineSupervisedJob`
       - `infra/paths.checkoutRef`
-      - `infra/paths.currentWorktreeName`
-      - `infra/paths.isMain`
       - `infra/paths.REPO_ROOT`
       - `infra/query-resource.queryResource`
       - `infra/worktree.readCompositionMarker`
@@ -6803,7 +6798,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
-          - `infra/paths.currentWorktreeName`
           - `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/logs`
       - Core:
@@ -6837,7 +6831,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
-          - `infra/paths.currentWorktreeName`
           - `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/profile`
       - Shared:
@@ -6898,7 +6891,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/git/git-read-cache.createSignedMemo`
           - `infra/git/git-watcher.refHeadResource`
-          - `infra/paths.currentWorktreeName`
           - `infra/paths.GIT`
           - `infra/paths.REPO_ROOT`
           - `primitives/commit-list.LOG_FORMAT`
@@ -7001,7 +6993,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `build/run-ledger._buildRuns`
-          - `infra/paths.currentWorktreeName`
           - `runs.defineRunKind`
         - Register: `defineRunKind('build')`
       - Core:
@@ -7048,8 +7039,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/zero/cache-service.dropZeroReplicationArtifacts`
           - `infra/endpoints.implement`
           - `infra/paths.checkoutRef`
-          - `infra/paths.currentWorktreeName`
-          - `infra/paths.isMain`
           - `infra/paths.REPO_ROOT`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.hasCompositionMarker`
@@ -7247,7 +7236,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses:
       - `infra/file-watcher.createFileWatcher`
       - `infra/file-watcher.FileWatcher`
-      - `infra/paths.MAIN_WORKTREE_NAME`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.repoConfigDir`
     - Exports (types):
@@ -7710,7 +7698,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/events.defineTriggerEvent`
       - `infra/events.Trigger`
       - `infra/jobs.defineJob`
-      - `infra/paths.isMain`
       - `infra/worktree.setupWorktree`
       - `infra/worktree.worktreePathFor`
       - `reports.recordReport`
@@ -10296,7 +10283,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `pushAndExitConfig`
               - `startPushAndExit`
         - **`push-counter`**
-        - **`push-profiling`** — Toolbar button showing the build/push/check op Gantt scoped to the conversation's worktree.
+        - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
           - Web:
             - Slots: `conv-push-profiling.actions` ← `primitives.pane`
             - Contributes:
@@ -10546,7 +10533,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/entity-extensions.defineExtension`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
-              - `infra/paths.isMain`
               - `infra/query-resource.windowQueryResource`
               - `tasks/tasks-core._attempts`
               - `tasks/tasks-core._conversations`
@@ -10660,7 +10646,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations.ensureResumed`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
-          - `infra/paths.isMain`
           - `tasks/tasks-core.listHibernationCandidates`
           - `tasks/tasks-core.setConversationHibernated`
           - `tasks/tasks-core.touchConversationViewed`
@@ -11611,7 +11596,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`boot-events`** — Durable per-boot event lines: a `start` line at the register phase (so a backend wedged during migrations/boot is visible as an open-ended bar) and a `ready` line from the onReady hook, paired by processStartedAt into the wall-clock interval readBootEvents(worktree, windowMs) returns — so deploy-restart bursts render on cross-worktree timelines, with no DB table (survives re-forks, readable while a backend is wedged).
       - Server:
         - Uses:
-          - `infra/paths.currentWorktreeName`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelJson`
         - DB schema: `plugins/debug/plugins/boot-events/server/internal/schema.ts`
@@ -11929,10 +11913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/stall-monitor.recordEventLoopStall`
           - `infra/endpoints.implement`
           - `infra/host/host-read-pool.heavyReadQueueDepth`
-          - `infra/paths.currentWorktreeName`
-          - `infra/paths.isMain`
           - `infra/paths.listWorktreeDirs`
-          - `infra/paths.MAIN_WORKTREE_NAME`
           - `infra/paths.worktreeDataDir`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelJson`
@@ -11987,7 +11968,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `infra/endpoints.implement`
-          - `infra/paths.currentWorktreeName`
           - `infra/paths.worktreeDataDir`
         - Routes:
           - `GET /api/debug/heap-stats`
@@ -12225,8 +12205,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
-          - `infra/paths.currentWorktreeName`
-          - `infra/paths.isMain`
           - `infra/paths.isRelease`
           - `infra/paths.worktreeDataDir`
           - `primitives/log-channels.defineLogSink`
@@ -12377,7 +12355,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `infra/paths.currentWorktreeName`
               - `infra/paths.worktreeArtifacts`
             - Routes:
               - `GET /api/debug/profiling/build`
@@ -12469,7 +12446,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/op-log.readOpRecords`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `infra/paths.isMain`
               - `infra/worktree.isWorktreeOpActive`
             - Routes:
               - `GET /api/debug/profiling/ops`
@@ -12907,10 +12883,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress/latch.readDuress`
           - `infra/host/duress/latch.refreshDuress`
           - `infra/host/duress/latch.setDuress`
-          - `infra/paths.currentWorktreeName`
           - `infra/paths.isHostSingleton`
           - `infra/paths.listWorktreeDirs`
-          - `infra/paths.MAIN_WORKTREE_NAME`
           - `infra/paths.worktreesDir`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelEntries`
@@ -13234,7 +13208,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.listWorktreeDirs`
-          - `infra/paths.MAIN_WORKTREE_NAME`
           - `primitives/log-channels.readChannelJson`
         - Register: `mcpTool('get_timeline')`
         - Routes: `GET /api/debug/timeline`
@@ -13358,7 +13331,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/entities.defineEntity`
               - `infra/host/duress.createShedBuffer`
               - `infra/host/duress.ShedSummary`
-              - `infra/paths.currentWorktreeName`
               - `infra/retention.defineRetention`
               - `reports.recordReport`
             - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
@@ -13577,7 +13549,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.defineJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
-          - `infra/paths.isMain`
           - `infra/paths.worktreesDir`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.gitWorktreesDir`
@@ -15013,7 +14984,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `readMergeMarkers`
           - `resolveGitDir`
       - Plugins:
-        - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to the DB named by SINGULARITY_WORKTREE. The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
+        - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
         - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
           - Cross-plugin:
             - Imported by:
@@ -15953,7 +15924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
             - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
-            - **`namespace-identity`** — Lint rule banning the cast of a checkout directory name to a Namespace — a name is one input to a namespace, not a namespace, and the guess names the wrong deploy the moment a composition is served from a non-main checkout.
+            - **`namespace-identity`** — Two lint rules over one mistake — answering 'which namespace?' with something that is not one: no-laundered-checkout-namespace bans casting a checkout directory name to a Namespace, and no-ambient-worktree-env bans the retired SINGULARITY_WORKTREE environment variable a runtime now receives as --namespace.
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`repo-walk-safety`** — repo-walk-safety lint rule: no-adhoc-repo-walk
@@ -16419,7 +16390,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/file-watcher.createFileWatcher`
           - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/paths.isMain`
           - `infra/warmup.defineWarmup`
         - Exports (types):
           - `CorpusDelta`
@@ -17049,7 +17019,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/paths.GIT`
-              - `infra/paths.isMain`
               - `infra/paths.REPO_ROOT`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `primitives/commit-list.GitError`
@@ -17515,7 +17484,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
-              - `infra/paths.currentWorktreeName`
               - `infra/paths.pruneWorktreeRunArtifacts`
               - `infra/paths.RUN_TERMINAL_SUFFIX`
               - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
@@ -17537,8 +17505,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TRANSCRIPT_CEILING_BYTES`
           - Core:
             - Uses:
-              - `infra/paths.currentWorktreeName`
               - `infra/paths.worktreeArtifacts`
+              - `infra/runtime-identity.runtimeNamespace`
             - Exports (types): `RunTerminal`
             - Exports (values):
               - `assertRunId`
@@ -17642,6 +17610,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/guards`
           - `framework/tooling/web-artifacts`
           - `infra/paths`
+          - `infra/runtime-identity`
+          - `plugin-meta/barrel-import`
           - `plugin-meta/closure`
           - `plugin-meta/composition`
       - Core:
@@ -17655,6 +17625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GATEWAY_PORT`
           - `isNamespace`
           - `MAIN_COMPOSITION_ID`
+          - `MAIN_WORKTREE_NAME`
           - `NAMESPACE_HOST_SUFFIX`
           - `NAMESPACE_LABEL_RE`
           - `NAMESPACE_RE`
@@ -17686,6 +17657,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.Namespace`
           - `infra/namespace.namespaceFor`
+          - `infra/runtime-identity.isMain`
+          - `infra/runtime-identity.runtimeNamespace`
           - `infra/spawn.getMainRepoRoot`
         - Exports (types):
           - `AppIdentity`
@@ -17711,7 +17684,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
-          - `currentWorktreeName`
           - `DATA_DIR_KINDS`
           - `dataRoot`
           - `defineAppDataDir`
@@ -17720,11 +17692,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `getDataDirs`
           - `HOME_DIR`
           - `isHostSingleton`
-          - `isMain`
           - `isRelease`
           - `LEGACY_LAYOUT`
           - `listWorktreeDirs`
-          - `MAIN_WORKTREE_NAME`
           - `META_APP_ROOTS`
           - `planMigration`
           - `PLUGINS_DIR`
@@ -17755,43 +17725,34 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `build/build-logs`
           - `build/build-profiling`
           - `build/deployment`
-          - `build/runs-arm`
           - `build/serve-composition`
           - `build/server-build-id`
           - `code-explorer`
           - `code-explorer/file-resolve`
           - `config_v2`
-          - `conversations`
           - `conversations/conversation-progress`
           - `conversations/conversation-view/op-status`
-          - `conversations/conversations-view/queue`
-          - `conversations/hibernation`
           - `conversations/runtime-tmux`
           - `conversations/transcript-watcher`
           - `database/zero/cache-service`
-          - `debug/boot-events`
           - `debug/boot-watchdog`
           - `debug/health-monitor`
           - `debug/heap-snapshot`
           - `debug/memory`
           - `debug/paging-probe`
           - `debug/profiling/build`
-          - `debug/profiling/ops`
           - `debug/sentinel`
           - `debug/session-divergence`
           - `debug/timeline`
-          - `debug/trace/engine`
           - `debug/worktree-cleanup`
           - `framework/cli/op-runtime`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
           - `infra/claude-cli`
-          - `infra/corpus-index`
           - `infra/git/git-watcher`
           - `infra/jobs/supervised-run`
           - `infra/jobs/supervised-task`
           - `infra/launcher`
-          - `infra/warmup`
           - `infra/worktree`
           - `infra/worktree/reclaim`
           - `infra/worktree/removal-audit`
@@ -17802,7 +17763,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `release`
           - `release/bundles`
-          - `release/runs-arm`
           - `review/plugin-changes`
           - `stats/commits`
           - `stats/cost`
@@ -17830,7 +17790,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `CLAUDE_DIR`
           - `CLAUDE_PROJECTS_DIR`
           - `CLAUDE_SESSIONS_DIR`
-          - `currentWorktreeName`
           - `DATA_DIR_KINDS`
           - `dataRoot`
           - `defineAppDataDir`
@@ -17839,10 +17798,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `GIT`
           - `HOME_DIR`
           - `isHostSingleton`
-          - `isMain`
           - `isRelease`
           - `listWorktreeDirs`
-          - `MAIN_WORKTREE_NAME`
           - `META_APP_ROOTS`
           - `PGREP`
           - `PLUGINS_DIR`
@@ -17976,6 +17933,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `primitives/usage-rank`
           - `reports`
+    - **`runtime-identity`** — The namespace a PROCESS runs as, declared once at its entry point and read everywhere else. A backend is handed it as `--namespace` by the gateway, an exec child by its spawner; asking for one that was never declared throws.
+      - Core:
+        - Uses:
+          - `infra/namespace.MAIN_WORKTREE_NAME`
+          - `infra/namespace.Namespace`
+        - Exports (values):
+          - `declareRuntimeNamespace`
+          - `isMain`
+          - `resetRuntimeNamespaceForTest`
+          - `runtimeNamespace`
+      - Cross-plugin:
+        - Imported by:
+          - `infra/jobs/supervised-run`
+          - `infra/paths`
+          - `plugin-meta/barrel-import`
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by: `infra/endpoints`
@@ -18242,9 +18214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/editor`
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
       - Server:
-        - Uses:
-          - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/paths.isMain`
+        - Uses: `infra/host/host-read-pool.withHeavyReadSlot`
         - Exports (types): `WarmupSpec`
         - Exports (values):
           - `defineWarmup`
@@ -18379,7 +18349,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses:
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
-              - `infra/paths.isMain`
               - `infra/paths.PS`
               - `infra/worktree.ensureMainWorktreeRoot`
               - `infra/worktree.gitWorktreesDir`
@@ -20686,7 +20655,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
       - Core:
-        - Uses: `packages/semaphore.createSemaphore`
+        - Uses:
+          - `infra/namespace.asNamespace`
+          - `infra/runtime-identity.declareRuntimeNamespace`
+          - `packages/semaphore.createSemaphore`
         - Exports (types): `AutoStubEntry`
         - Exports (values):
           - `AUTO_STUB_CSS`
@@ -29173,7 +29145,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/launcher.gatewayPidFile`
       - `infra/launcher.isRunning`
       - `infra/launcher.teardownSelfContainedApp`
-      - `infra/paths.currentWorktreeName`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.worktreeArtifacts`
       - `primitives/data-view/server-query.augmentServerQuery`
@@ -29273,9 +29244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`bundles`** — The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
       - Server:
-        - Uses:
-          - `infra/paths.currentWorktreeName`
-          - `infra/paths.GIT`
+        - Uses: `infra/paths.GIT`
         - Exports (types):
           - `GitProvenance`
           - `PruneResult`
@@ -29321,7 +29290,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runs.Runs`
       - Server:
         - Uses:
-          - `infra/paths.currentWorktreeName`
           - `release._releaseRuns`
           - `runs.defineRunKind`
         - Register: `defineRunKind('release')`

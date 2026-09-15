@@ -8,6 +8,7 @@ export {
   namespaceUrl,
   namespaceFromHost,
   MAIN_COMPOSITION_ID,
+  MAIN_WORKTREE_NAME,
   BASE_EXCLUSIONS_ID,
   NAMESPACE_LABEL_RE,
   NAMESPACE_RE,

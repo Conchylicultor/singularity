@@ -104,11 +104,9 @@ type DeployedDist =
  * The dist THIS CHECKOUT deploys, read out of the registry the deploy wrote.
  *
  * The namespace is not derivable from a name, and both names within reach get it
- * wrong. `currentWorktreeName()` answers a question about a different process —
+ * wrong. `runtimeNamespace()` answers a question about a different process —
  * which namespace is *this backend* the server for — and a check runs in a CLI
- * process that merely inherited `SINGULARITY_WORKTREE` from the backend that
- * spawned its agent pane, so it says `singularity` from inside every worktree:
- * `map-in-sync` would inspect MAIN's dist and pass or fail on it. The checkout's
+ * process, which declares none and would simply throw. The checkout's
  * own basename reads safer and is not, because a `--composition` build publishes
  * `<composition>.<checkout>` and never the checkout's own app — so the basename
  * names a directory nothing ever deployed to, and `asNamespace` on it launders

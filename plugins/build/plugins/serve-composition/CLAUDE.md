@@ -273,8 +273,6 @@ code, that is the bug this section exists to prevent.
     - `database/zero/cache-service.dropZeroReplicationArtifacts`
     - `infra/endpoints.implement`
     - `infra/paths.checkoutRef`
-    - `infra/paths.currentWorktreeName`
-    - `infra/paths.isMain`
     - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.hasCompositionMarker`

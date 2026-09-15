@@ -1,3 +1,4 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { sql } from "drizzle-orm";
 import { EventEmitter } from "node:events";
 import {
@@ -16,7 +17,6 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   recordEntrySpan,

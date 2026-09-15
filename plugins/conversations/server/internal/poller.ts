@@ -1,3 +1,4 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { dirname } from "node:path";
 import {
   listConversationsForInfra,
@@ -11,7 +12,6 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { recordReport } from "@plugins/reports/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getConfig } from "@plugins/config_v2/server";

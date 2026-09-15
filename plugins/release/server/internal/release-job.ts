@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -140,7 +141,7 @@ export const releaseJob = defineSupervisedJob({
       ...target.buildArgs(input.composition),
       ...intentArgs(input.intent),
       "--out",
-      releaseOutDir(input.composition, input.target, runId),
+      releaseOutDir(runtimeNamespace(), input.composition, input.target, runId),
     ];
     releaseLog.publish(`$ ${argv.join(" ")}`);
     return {

@@ -16,13 +16,10 @@ export {
   CLAUDE_DIR,
   CLAUDE_PROJECTS_DIR,
   CLAUDE_SESSIONS_DIR,
-  MAIN_WORKTREE_NAME,
-  isMain,
   isRelease,
   isHostSingleton,
   releaseIdentity,
   setReleaseIdentity,
-  currentWorktreeName,
   checkoutWorktreeName,
 } from "../core/internal/paths";
 export type { ReleaseIdentity } from "../core/internal/paths";

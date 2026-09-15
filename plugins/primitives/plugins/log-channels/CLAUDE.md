@@ -20,7 +20,7 @@ channel either declares a durable file sink or it doesn't.
   `getFileSinks()`. Declared **exactly once** per id — a channel written from two
   modules hoists ONE `defineLogSink` into a shared module and imports it from both
   (a duplicate id throws). The sink is built lazily so declaring one is
-  **import-safe** (no `SINGULARITY_WORKTREE` read at module eval — the barrel is
+  **import-safe** (the process's runtime namespace is not resolved at module eval — the barrel is
   imported inside the import-safe `@plugins/database/server` graph).
   A caller holding an ARRAY of lines calls `publishAll([{ line, stream?, timestamp? }])`
   instead of looping. `publishAll` is the single implementation and `publish`

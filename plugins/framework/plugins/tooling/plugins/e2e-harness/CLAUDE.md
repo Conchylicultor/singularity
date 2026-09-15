@@ -27,10 +27,12 @@ published** — `resolveCheckoutDeploy(REPO_ROOT)` reads every
 name, and no environment variable has any spelling in this runtime.
 
 That is not fastidiousness. The default used to be
-`$SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`, and `SINGULARITY_WORKTREE`
-answers a question about a different process: the gateway sets it on the
-backends it spawns, an agent pane inherits it through the tmux server, so from
-inside any worktree it said `singularity`. Argument-less runs drove MAIN's app
+`$SINGULARITY_WORKTREE ?? basename(REPO_ROOT)`, and that variable answered a
+question about a different process: the gateway set it on the backends it
+spawned, an agent pane inherited it through the tmux server, so from inside any
+worktree it said `singularity`. (The variable itself is gone now — see
+`infra/runtime-identity` — but the lesson about environment-derived targets is
+what this rule keeps.) Argument-less runs drove MAIN's app
 and printed `ALL CHECKS PASSED` — and, since `withBrowser` opens by POSTing the
 config repair to the resolved origin, reverted the user's live config documents
 there before doing anything else. A name is only ever a guess about what

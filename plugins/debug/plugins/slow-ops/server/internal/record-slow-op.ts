@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
@@ -365,7 +366,7 @@ export async function upsertSlowOpIn(
     waits,
     traceId,
   } = input;
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+  const worktree = runtimeNamespace();
 
   // `occurredAt` is the trip instant, which under duress-shed replay is
   // EARLIER than now and may be older than what the row already recorded. The

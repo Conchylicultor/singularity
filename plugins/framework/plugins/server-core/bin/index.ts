@@ -1,3 +1,9 @@
+// FIRST, and it must stay first: this declares the namespace this backend
+// serves, from the `--namespace` the gateway spawned it with. Everything below
+// reads that answer, and two modules in the closure resolve it at module eval
+// (`plugins-active.ts`, `config_v2`'s config dir), so an import above this line
+// boots the process without an identity. See `./declare-namespace`.
+import "./declare-namespace";
 import {
   profilerStart,
   recordMemoryCheckpoint,
@@ -26,7 +32,7 @@ import {
 // resolved once for both boot modes.
 import { serverEntries, hasCoreBarrel } from "./active-runtime";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
-import { isMain } from "@plugins/infra/plugins/paths/core";
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 
 // ── QoS boost (main backend only) ───────────────────────────────
@@ -34,7 +40,7 @@ import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 // both boot and serving latency sit above default-priority bulk load (agent
 // builds / type-check fleets) — the same scheduler tier that keeps GUI apps
 // responsive during a build storm. STRICTLY main-only: isMain() is true only
-// when the gateway spawned this backend with SINGULARITY_WORKTREE=singularity;
+// when the gateway spawned this backend with `--namespace singularity`;
 // an agent-worktree backend runs this same code under its own worktree name
 // and never qualifies. Boosting agent backends would lift the fleet above its
 // own builds and defeat priority isolation. See

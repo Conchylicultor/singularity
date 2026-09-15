@@ -1,8 +1,6 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
-import {
-  currentWorktreeName,
-  worktreeArtifacts,
-} from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import type { ReleaseLogLine } from "../../core/endpoints";
 import { RELEASE_RUN_KIND_ID } from "./kind-id";
 
@@ -41,7 +39,7 @@ import { RELEASE_RUN_KIND_ID } from "./kind-id";
  */
 export function readReleaseTranscript(releaseId: string): ReleaseLogLine[] {
   const path = worktreeArtifacts.runTranscript(
-    currentWorktreeName(),
+    runtimeNamespace(),
     RELEASE_RUN_KIND_ID,
     releaseId,
   );

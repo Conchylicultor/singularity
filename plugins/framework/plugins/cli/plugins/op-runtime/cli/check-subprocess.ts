@@ -50,15 +50,13 @@
 // **`SINGULARITY_BUILD_IN_PROGRESS` must pass through untouched.** That marker
 // is how a dist-comparing check (`web-artifacts:map-in-sync`) learns to skip a
 // dist the build is about to replace; the child is the process actually running
-// those checks, so it is the one that has to see it. `SINGULARITY_WORKTREE` is
-// the opposite case — see `env` below.
+// those checks, so it is the one that has to see it.
 //
 // **No `background` option, deliberately.** `type-check`'s workers already apply
 // the agent-branch demotion rule at their own spawn site, so they are covered on
 // every path; demoting the whole check subtree from here would be a behaviour
 // change smuggled into a refactor.
 
-import { BARREL_STUB_WORKTREE } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
@@ -148,17 +146,6 @@ export async function runCheckSubprocess(
     ...process.env,
     ...grant.env(),
   };
-  // Scrub the barrel-stub sentinel — VALUE-SCOPED, never unconditional. A UI or
-  // auto build inherits a REAL `SINGULARITY_WORKTREE` from the backend that
-  // spawned it, and that one must survive; only the `??=` dummy that
-  // `registerBarrelStubs` installs so server barrels can be imported outside the
-  // server is a lie about which worktree this is. Left in place, the child would
-  // write its transcript and its progress records under a worktree that does not
-  // exist.
-  if (env.SINGULARITY_WORKTREE === BARREL_STUB_WORKTREE) {
-    delete env.SINGULARITY_WORKTREE;
-  }
-
   // CLOCKS. `wallStartMs` has to be in THIS process's `performance.now()`
   // domain (the span collector subtracts its own `t0`), and the child's
   // `performance.now()` has a different origin. So take one paired reading here,

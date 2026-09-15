@@ -1,6 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { finalizeOrphanedOps } from "@plugins/debug/plugins/profiling/plugins/op-log/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { handleOpDetail } from "./internal/handle-op-detail";
 import { handleOpProfiling } from "./internal/handle-op-profiling";

@@ -1,7 +1,7 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   getTask,
   hasBlockingDep,

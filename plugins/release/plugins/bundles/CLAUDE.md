@@ -24,8 +24,9 @@ same sentence.
 ## `server/` is DB-free, and that is a hard constraint
 
 `@plugins/release/server` cannot be imported by a CLI process: its barrel
-eagerly pulls `@plugins/database/server`, which throws at module eval when
-`SINGULARITY_WORKTREE` is unset. That is why `cli/plugins/release/cli/run.ts` used
+eagerly pulls `@plugins/database/server`, whose worktree pool is scoped to a
+runtime namespace a CLI process does not have. That is why
+`cli/plugins/release/cli/run.ts` used
 to carry a hand-copied `releaseOutDir` / `newReleaseRunId` under a "KEEP IN
 SYNC" comment.
 
@@ -100,9 +101,7 @@ process can import it.
 
 - Description: The on-disk release-bundle registry: run-dir layout, the `latest-<platform>` pointer, resolveBundle()'s discriminated verdict, git provenance + staleness, and run-dir retention. Strictly DB-free so a CLI process can import it.
 - Server:
-  - Uses:
-    - `infra/paths.currentWorktreeName`
-    - `infra/paths.GIT`
+  - Uses: `infra/paths.GIT`
   - Exports (types):
     - `GitProvenance`
     - `PruneResult`

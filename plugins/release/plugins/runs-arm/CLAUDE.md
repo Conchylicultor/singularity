@@ -87,7 +87,6 @@ quiet absence of a predicate.
     - `runs.Runs`
 - Server:
   - Uses:
-    - `infra/paths.currentWorktreeName`
     - `release._releaseRuns`
     - `runs.defineRunKind`
   - Register: `defineRunKind('release')`

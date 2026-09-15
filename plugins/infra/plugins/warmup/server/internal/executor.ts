@@ -1,6 +1,6 @@
+import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { profilerStart } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { isMain } from "@plugins/infra/plugins/paths/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { warmupRegistry, type WarmupSpec } from "./registry";

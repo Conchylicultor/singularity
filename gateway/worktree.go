@@ -746,11 +746,13 @@ func (w *Worktree) startZeroCache(spec *ZeroCacheSpec) (*zeroCache, error) {
 
 	cmd := exec.Command(spec.Command[0], spec.Command[1:]...)
 	cmd.Dir = spec.Cwd
+	// ZERO_* only: the zero-cache start script reads nothing else. It used to be
+	// handed SINGULARITY_WORKTREE as well, which nothing read — and which every
+	// process the sidecar ever spawned would have inherited.
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("ZERO_UPSTREAM_DB=%s", spec.UpstreamDb),
 		fmt.Sprintf("ZERO_PORT=%d", port),
 		fmt.Sprintf("ZERO_REPLICA_FILE=%s", replicaFile),
-		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
@@ -978,11 +980,19 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 			demoted = true
 		}
 	}
+	// The backend's RUNTIME NAMESPACE travels on ARGV, never in the environment.
+	// An env var reaches every descendant forever: main's backend was the first
+	// process to talk to the tmux server after a restart, so every agent session
+	// started from it thought it was main, and so did every build, check and test
+	// those sessions ran. Appended last, after any taskpolicy wrapping, so it is
+	// an argument of the backend itself rather than of the wrapper. Read by
+	// server-core/bin/declare-namespace.ts. See
+	// research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md.
+	argv = append(append([]string{}, argv...), "--namespace", w.Name)
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("SOCKET_PATH=%s", socketPath),
-		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 

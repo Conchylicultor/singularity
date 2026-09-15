@@ -170,8 +170,9 @@ on the running cluster via admin's public barrel
 (`ensureDatabase`/`openShortLivedClient`/`dropDatabase`) and drops it after.
 
 **Running:** these suites need a running cluster (started by `./singularity
-build`) — run with a plain `bun test plugins/database/plugins/change-feed`. No
-`SINGULARITY_WORKTREE=<worktree>` prefix: the root `bunfig.toml` `[test]` preload
-(`test/bun-preload.ts`) defaults it to the current checkout when unset. The
+build`) — run with a plain `bun test plugins/database/plugins/change-feed`.
+Nothing has to be set in the environment: the root `bunfig.toml` `[test]` preload
+(`test/bun-preload.ts`) declares the current checkout as the test process's
+runtime namespace. The
 fixture throws loudly (never silently skips) if the cluster is unreachable. See
 `research/2026-07-03-database-live-state-db-backed-invariant-harness.md`.

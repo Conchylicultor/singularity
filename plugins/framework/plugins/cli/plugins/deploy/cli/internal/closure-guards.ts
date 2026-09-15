@@ -9,7 +9,7 @@
 import { join } from "node:path";
 import {
   REPO_ROOT,
-  currentWorktreeName,
+  checkoutNamespace,
 } from "@plugins/infra/plugins/paths/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import {
@@ -74,7 +74,10 @@ interface ClosureContext {
 async function loadClosureContext(): Promise<ClosureContext> {
   const values = readEffectiveConfigFromDisk(compositionsConfig, {
     root: REPO_ROOT,
-    userConfigDir: configDir.file(currentWorktreeName()),
+    // The CHECKOUT's namespace, minted from git. A CLI process has no runtime
+    // namespace; reading one used to answer `singularity` from every worktree,
+    // so a converge launched from a worktree read MAIN's compositions config.
+    userConfigDir: configDir.file(await checkoutNamespace(REPO_ROOT)),
     hierarchyPath: COMPOSITIONS_HIERARCHY_PATH,
   });
   const tree = await buildPluginTree(join(REPO_ROOT, "plugins"), {

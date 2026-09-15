@@ -1,3 +1,4 @@
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
@@ -29,6 +30,7 @@ export const handleReleaseCandidate = implement(
   releaseCandidateEndpoint,
   async ({ query }): Promise<ReleaseCandidateResponse> => {
     const resolution = resolveBundle({
+      namespace: runtimeNamespace(),
       composition: query.composition,
       platform: query.platform,
     });

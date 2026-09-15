@@ -27,11 +27,14 @@ the waits, and using it silently truncates the Gantt's time axis.
 
 ## Grouping
 
-`canonicalWorktree()` is load-bearing: ops for one worktree carry *different*
-identifiers — builds log the basename (`att-x`), while pushes fall back to the
-branch (`claude-web/att-x`) when `SINGULARITY_WORKTREE` is unset for the push CLI.
-Canonicalizing to the bare basename is what puts a worktree's push, build, and
-check bars on a single row instead of several.
+A row is keyed on the op record's `opSlug` — the basename of the checkout root
+the writing CLI derived from its own git root. Every kind files under that same
+id, so a worktree's push, build, check, test and e2e bars land on one row.
+
+`canonicalWorktree()` survives for one case only: a line carrying no slug at all
+(a foreign writer, or one predating July) is filed under its branch, which can be
+branch-shaped (`claude-web/att-x`). Reducing it to the bare basename puts such a
+line on its worktree's row rather than a row of its own.
 
 Row labels resolve through `resolveWorktreeTitles()` off the worktree id (= the
 attempt id, by the basename invariant), so build-only rows — which carry no
@@ -97,7 +100,6 @@ every worktree backend from writing it concurrently.
     - `debug/profiling/op-log.readOpRecords`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/paths.isMain`
     - `infra/worktree.isWorktreeOpActive`
   - Routes:
     - `GET /api/debug/profiling/ops`

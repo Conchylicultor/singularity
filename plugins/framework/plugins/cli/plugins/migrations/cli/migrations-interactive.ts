@@ -175,7 +175,18 @@ export function resolveAnswer(
 export async function runDrizzleKitWithPrompts(opts: {
   cmd: string[];
   cwd: string;
-  env: Record<string, string>;
+  /**
+   * Extra environment for the child, REPLACING the parent's when given. Omit it
+   * — the ordinary case — and the child simply inherits this process's
+   * environment, which is what drizzle-kit wants: it needs `PATH` and nothing
+   * else, and every value a caller once added to this map has since moved to an
+   * explicit argument. `NO_COLOR` is added either way, below.
+   *
+   * Typed with `| undefined` values because that is what `process.env` really
+   * holds and what `Bun.spawn` really accepts; a `Record<string, string>` here
+   * made the plain inherit-everything spelling a type error.
+   */
+  env?: Record<string, string | undefined>;
   answers: MigrationAnswer[] | null;
   /**
    * Identity-keyed answers (used by regen, where positional order is unstable).
@@ -195,7 +206,7 @@ export async function runDrizzleKitWithPrompts(opts: {
     stdin: "pipe",
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...env, NO_COLOR: "1" },
+    env: { ...(env ?? process.env), NO_COLOR: "1" },
   });
 
   const detectedPrompts: DetectedPrompt[] = [];

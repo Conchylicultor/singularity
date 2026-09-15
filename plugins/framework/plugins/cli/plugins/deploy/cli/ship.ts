@@ -26,6 +26,7 @@ import {
   resolveTarget,
   runScript,
   sshTargetFor,
+  deployNamespace,
 } from "./internal/target";
 
 const run: CliAction<[string], { server: string; release?: string }> = async (
@@ -43,6 +44,9 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
   // verdict rather than exiting, so the same call answers for a UI; the
   // exit is this command's own translation of a refusal.
   const resolution = resolveBundle({
+    // This checkout's own namespace — the same one a `release` run from here
+    // writes under, so the two halves of a hand-run release/ship pair agree.
+    namespace: await deployNamespace(),
     composition,
     platform: target.platform,
     release: opts.release,

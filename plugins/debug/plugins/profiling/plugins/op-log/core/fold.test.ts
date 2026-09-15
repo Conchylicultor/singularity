@@ -12,7 +12,6 @@ const requested = (over: Partial<RawOpRecord> = {}): RawOpRecord => ({
   opId: "op-1",
   kind: "build",
   opSlug: "wt-a",
-  worktree: "wt-a",
   branch: "feature",
   conversationId: "conv-1",
   lane: "background",

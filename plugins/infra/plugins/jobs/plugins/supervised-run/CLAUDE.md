@@ -189,7 +189,6 @@ already restarted by the time it is called.
   - Uses:
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.pruneWorktreeRunArtifacts`
     - `infra/paths.RUN_TERMINAL_SUFFIX`
     - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
@@ -211,8 +210,8 @@ already restarted by the time it is called.
     - `TRANSCRIPT_CEILING_BYTES`
 - Core:
   - Uses:
-    - `infra/paths.currentWorktreeName`
     - `infra/paths.worktreeArtifacts`
+    - `infra/runtime-identity.runtimeNamespace`
   - Exports (types): `RunTerminal`
   - Exports (values):
     - `assertRunId`

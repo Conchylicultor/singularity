@@ -1,3 +1,4 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { sql } from "drizzle-orm";
 import {
   boolean,
@@ -9,7 +10,6 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 // Straight to the file, not through `../../core`: drizzle-kit's schema loader
 // evaluates this module on its own to read the DDL, and the core barrel also
 // carries the endpoint and resource descriptors it has no business pulling in.

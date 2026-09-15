@@ -1,20 +1,15 @@
 import { readFileSync } from "node:fs";
 import { Pool } from "pg";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 // The worktree name is ONLY needed for the worktree (non-admin) connection
 // string. `getAdminPool()` talks exclusively to the `postgres` system DB, so it
-// must import and run with no `SINGULARITY_WORKTREE` set (the self-contained
-// launcher creates the app DB before any namespace exists). The throw is
-// therefore deferred to first use of the worktree path via `requireWorktree()`,
-// not run at module load — but it is still loud and never silently defaulted.
-function requireWorktree(): string {
-  const worktree = process.env.SINGULARITY_WORKTREE;
-  if (!worktree) {
-    throw new Error("SINGULARITY_WORKTREE env var is required");
-  }
-  return worktree;
-}
+// must import and run in a process that declared no namespace at all (the
+// self-contained launcher creates the app DB before any namespace exists). The
+// ask is therefore deferred to first use of the worktree path via
+// `runtimeNamespace()`, not run at module load — but it is still loud and never
+// silently defaulted.
 
 interface ConnConfig {
   host: string;
@@ -67,15 +62,15 @@ function getConn(): ConnConfig {
 }
 
 // Worktree connection string for graphile-worker (the jobs worker, which only
-// runs inside a real worktree backend where SINGULARITY_WORKTREE is always set).
-// It is the one export that genuinely needs the worktree name, so it is a lazy
-// function — never evaluated at module load. Admin-only importers (such as the
-// self-contained launcher, which never starts the jobs worker) leave it uncalled,
-// so the module stays import-safe and `getAdminPool()` is reachable with no
-// SINGULARITY_WORKTREE; calling it without the env var fails loud via
-// `requireWorktree()` rather than returning a silent undefined.
+// runs inside a real worktree backend, where a runtime namespace is always
+// declared). It is the one export that genuinely needs the worktree name, so it
+// is a lazy function — never evaluated at module load. Admin-only importers (such
+// as the self-contained launcher, which never starts the jobs worker) leave it
+// uncalled, so the module stays import-safe and `getAdminPool()` is reachable in
+// a process with no namespace at all; calling this one there fails loud via
+// `runtimeNamespace()` rather than returning a silent undefined.
 export function connectionString(): string {
-  return buildConnString(getConn(), requireWorktree());
+  return buildConnString(getConn(), runtimeNamespace());
 }
 
 let adminPool: Pool | null = null;

@@ -1,8 +1,14 @@
 import { existsSync, readFileSync, readdirSync, realpathSync } from "node:fs";
 import { basename, join } from "node:path";
+import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { ReleaseManifestSchema } from "../../core";
 import type { BundleResolution } from "../../core";
-import { bundleRoot, isPointerName, latestPointerName, latestPointerPath } from "./pointer";
+import {
+  bundleRoot,
+  isPointerName,
+  latestPointerName,
+  latestPointerPath,
+} from "./pointer";
 
 /**
  * Resolve which bundle to ship for `(composition, platform)`.
@@ -22,16 +28,28 @@ import { bundleRoot, isPointerName, latestPointerName, latestPointerPath } from 
  * throws, because a broken artifact is not a refusal a user can act on.
  */
 export function resolveBundle(opts: {
+  /**
+   * WHO produced the release being looked for — a backend's own runtime
+   * namespace, or, in a CLI, the namespace the invoking checkout owns. Stated by
+   * the caller because those are different questions; see {@link bundleRoot}.
+   */
+  namespace: Namespace;
   composition: string;
   platform: string;
   release?: string;
 }): BundleResolution {
   const { composition, platform } = opts;
-  const { namespace, compDir } = bundleRoot(composition);
+  const { namespace, compDir } = bundleRoot(opts.namespace, composition);
   if (!existsSync(compDir)) {
     return {
       ok: false,
-      refusal: { kind: "no-releases", composition, platform, compDir, namespace },
+      refusal: {
+        kind: "no-releases",
+        composition,
+        platform,
+        compDir,
+        namespace,
+      },
     };
   }
 
@@ -71,7 +89,9 @@ export function resolveBundle(opts: {
   if (!existsSync(manifestPath)) {
     return { ok: false, refusal: { kind: "no-manifest", runDir } };
   }
-  const manifest = ReleaseManifestSchema.parse(JSON.parse(readFileSync(manifestPath, "utf8")));
+  const manifest = ReleaseManifestSchema.parse(
+    JSON.parse(readFileSync(manifestPath, "utf8")),
+  );
 
   if (manifest.composition !== composition) {
     return {

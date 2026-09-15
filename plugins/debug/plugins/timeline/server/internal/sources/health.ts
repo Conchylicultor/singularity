@@ -1,3 +1,4 @@
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { cpus } from "node:os";
 import {
   HealthSampleSchema,
@@ -6,7 +7,6 @@ import {
   type HostSample,
 } from "@plugins/debug/plugins/health-monitor/server";
 import { readChannelJson } from "@plugins/primitives/plugins/log-channels/server";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import type { TimelineHealthPoint } from "../../../shared/frames";
 import { backendHealthPoints, hostHealthPoints } from "./health-map";
 
@@ -25,7 +25,12 @@ export function readHealthLane(
   fromMs: number,
   toMs: number,
 ): TimelineHealthPoint[] {
-  const samples = readChannelJson<HealthSample>(worktree, "health", MAX_LINES, HealthSampleSchema);
+  const samples = readChannelJson<HealthSample>(
+    worktree,
+    "health",
+    MAX_LINES,
+    HealthSampleSchema,
+  );
   return backendHealthPoints(samples, fromMs, toMs);
 }
 
@@ -33,7 +38,10 @@ export function readHealthLane(
 // The server runs on the host itself (single-instance-per-user), so its cpu
 // count is the honest load-ratio denominator for the downsample's pressure
 // score — the same value the browser reads via navigator.hardwareConcurrency.
-export function readHostLane(fromMs: number, toMs: number): TimelineHealthPoint[] {
+export function readHostLane(
+  fromMs: number,
+  toMs: number,
+): TimelineHealthPoint[] {
   const samples = readChannelJson<HostSample>(
     MAIN_WORKTREE_NAME,
     "health-host",

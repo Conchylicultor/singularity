@@ -121,7 +121,6 @@ quiet absence of a predicate.
 - Server:
   - Uses:
     - `build/run-ledger._buildRuns`
-    - `infra/paths.currentWorktreeName`
     - `runs.defineRunKind`
   - Register: `defineRunKind('build')`
 - Core:

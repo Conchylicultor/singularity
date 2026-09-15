@@ -115,8 +115,6 @@ type and the read schema cannot drift.
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
-    - `infra/paths.currentWorktreeName`
-    - `infra/paths.isMain`
     - `infra/paths.isRelease`
     - `infra/paths.worktreeDataDir`
     - `primitives/log-channels.defineLogSink`
