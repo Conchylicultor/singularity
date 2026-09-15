@@ -116,14 +116,14 @@ function BuildButtonInner({
   // The look IS the state. At rest, with nothing to say, the control is one
   // quiet icon like the bar's other utilities. Anything to report — a build
   // running, the server updated under this tab, a failed build, a tab that
-  // needs a reload — turns it into an outlined pill that says it in words, and
+  // needs a reload — turns it into a framed pill that says it in words, and
   // a due reload joins it as the pill's own Reload segment.
   const quiet = status === "idle" && advice.kind === "none";
   const trigger = quiet ? (
     <IconButton icon={MdBuild} label="Builds" />
   ) : (
     <Button
-      variant="outline"
+      variant="frame"
       aspect={status === "idle" ? "icon" : "text"}
       aria-label={status === "idle" ? "Builds" : undefined}
       // A failed build tints the pill's frame; its words stay in the text colour.

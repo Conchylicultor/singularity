@@ -1411,6 +1411,14 @@
 @utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+/* The control role: the words on a control (a button's label, a tab's title).
+ * Unlike every role above, its weight is a token (`--font-weight-control`), so a
+ * region that wears its own theme — the app chrome — can set lighter controls
+ * without re-weighting its prose. `font-control` is that weight alone: `Button`
+ * carries it beside its size rung, so a caller that swaps the size (`text-caption`)
+ * keeps the control's weight, and one that sets `font-normal` replaces it. */
+@utility text-control    { font-size: var(--font-size-control);    line-height: var(--line-height-control);    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
+@utility font-control    { font-weight: var(--font-weight-control); } /* twmerge: extend font-weight */
 /* The code role: monospaced running text (log viewers, code blocks, math source
  * fields). Caption size with the LOOSER label line-height — code wraps and is
  * scanned line-by-line, so it needs more leading than prose at the same size.
@@ -1433,6 +1441,7 @@
 @utility text-body-compact       { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 @utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-control-compact    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-control); }                           /* twmerge: extend font-size */
 @utility text-code-compact       { font-family: var(--font-mono);           font-size: var(--font-size-2xs);            line-height: var(--line-height-caption); font-weight: var(--font-weight-normal); } /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
@@ -1509,9 +1518,9 @@
   html, body, #root {
     @apply h-full overflow-hidden;
     }
-  /* Inherited, themed typographic defaults (base font-family + text color) are
-     consumed at EVERY theme-scope root — the desktop `:root` PLUS each
-     `[data-theme-scope]` — never on a bare `html`/`body` above the scope
+  /* Inherited, themed typographic defaults (base font-family, font smoothing
+     and text color) are consumed at EVERY theme-scope root — the desktop
+     `:root` PLUS each `[data-theme-scope]` — never on a bare `html`/`body` above the scope
      boundary. CSS inheritance passes the *computed* value, not the `var()`
      reference: anchoring these only on `html`/`body` resolves the var once at
      `:root`, so a FORKED app's descendants inherit that computed desktop value
@@ -1523,6 +1532,7 @@
   :root,
   [data-theme-scope] {
     font-family: var(--font-sans);
+    -webkit-font-smoothing: var(--font-smoothing);
     color: var(--foreground);
     /* Sticky-chrome mask default = the page canvas (`--background`). A pinned
        bar (`bg-chrome-mask`) paints this to hide content scrolling under it;

@@ -14,7 +14,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 
 const buttonVariants = cva(
-  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding font-control whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -44,6 +44,13 @@ const buttonVariants = cva(
         // strength on hover (and while its popover is open).
         dashed:
           "border-dashed border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground aria-expanded:border-muted-foreground/70 aria-expanded:text-foreground",
+        // A FRAME and nothing else: `outline`'s hairline with no fill of its
+        // own, so — like `ghost` — it wears the surface it sits on and hovers
+        // to that surface's `--hover-fill`. `outline` paints a fill (the canvas,
+        // or `input/30` in dark mode), which on any other surface — the app
+        // chrome's graphite bar — shows as a lighter patch behind the label.
+        frame:
+          "border-border hover:bg-hover-fill hover:text-foreground aria-expanded:bg-hover-fill aria-expanded:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // A text size is the density token group's bundle for that size: height
@@ -66,8 +73,10 @@ const buttonVariants = cva(
         "icon-sm":
           "control-icon-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "control-icon-lg",
+        // Sized by the surrounding text, so it has no control role: its
+        // weight is the fixed medium, not the themable control weight.
         inline:
-          "h-auto rounded-[min(var(--radius-md),8px)] p-0.5 align-middle text-[1em] [&_svg:not([class*='size-'])]:icon-auto",
+          "h-auto rounded-[min(var(--radius-md),8px)] p-0.5 align-middle text-[1em] font-medium [&_svg:not([class*='size-'])]:icon-auto",
       },
       shape: {
         default: "",

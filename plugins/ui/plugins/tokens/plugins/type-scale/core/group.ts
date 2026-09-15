@@ -26,6 +26,14 @@ export const typeScaleGroup = defineTokenGroup("type-scale", {
   lineHeightBody: { default: "1.5rem", label: "Line height body" },
   lineHeightLabel: { default: "1.25rem", label: "Line height label" },
   lineHeightCaption: { default: "1rem", label: "Line height caption" },
+  // The control role: the words ON a control — a button's label, a tab's
+  // title. Its own role, not `body`/`label`, so a region can set its controls'
+  // type without resizing the prose around them (the app chrome sets smaller,
+  // regular-weight controls). Weight is a token too: the one decision the
+  // other roles freeze in their utility.
+  fontSizeControl: { default: "0.875rem", label: "Font size control" },
+  lineHeightControl: { default: "1.25rem", label: "Line height control" },
+  fontWeightControl: { default: "500", label: "Font weight control" },
 });
 
 export type TypeScaleTokenValues = {

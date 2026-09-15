@@ -11,6 +11,10 @@ export const fontFamilyGroup = defineTokenGroup("font-family", {
     label: "Mono font",
   },
   letterSpacing: { default: "0em", label: "Letter spacing" },
+  // `-webkit-font-smoothing` (macOS): `auto` lets the browser thicken glyph
+  // stems, which light text on a dark ground shows the most; `antialiased`
+  // draws them at the font's own weight.
+  fontSmoothing: { default: "auto", label: "Font smoothing" },
 });
 
 export type FontFamilyTokenValues = {

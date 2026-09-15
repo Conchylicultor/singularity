@@ -3,6 +3,8 @@ import { fixedThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
+import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
+import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
 
 // The graphite tone: a neutral, faintly cool near-black that hosts light and
 // dark apps alike. The chrome owns no accent colour of its own — the only
@@ -26,9 +28,12 @@ const INK = "oklch(0.2303 0.0083 264.40)"; // text on a signal/ok fill
  * whichever app is focused and whether the page is light or dark, so an app
  * with its own look is framed by the same neutral frame as every other one.
  *
- * Only colours and the chrome's two heights are named. Fonts, the type scale,
- * radii and spacing are the defaults every app uses, so the chrome's text is
- * set in the same font as the apps it hosts.
+ * Beyond colours it names only what makes it read as quiet chrome: its two
+ * heights, lighter control labels (12.5px, regular — a tab's title and a
+ * button's label alike) and font smoothing that draws light text at the font's
+ * own weight. The font, the rest of the type scale, radii and spacing are the
+ * defaults every app uses, so the chrome is set in the same face as the apps
+ * it hosts.
  */
 export const chromeTheme = defineFixedTheme({
   id: "chrome",
@@ -79,6 +84,13 @@ export const chromeTheme = defineFixedTheme({
         controlHeightSm: "1.625rem",
       }),
     ),
+    typeScaleGroup.fragment(
+      both({
+        fontSizeControl: "0.78125rem",
+        fontWeightControl: "400",
+      }),
+    ),
+    fontFamilyGroup.fragment(both({ fontSmoothing: "antialiased" })),
   ],
 });
 

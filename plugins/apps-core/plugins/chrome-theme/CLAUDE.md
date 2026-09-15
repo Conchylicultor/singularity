@@ -11,10 +11,17 @@ their own look. Following the focused app made the frame change colour on every
 app switch; a constant neutral frame lets a light app and a dark app both look
 at home inside it, and keeps the only accent on screen the app's own.
 
-It names colours (`color-palette`, `sidebar-palette`) and the chrome's two
-heights (a 36px bar, 26px controls) only. Fonts, the type scale, radii and
-spacing are the defaults, so the chrome's text is set in the same font as the
+It names colours (`color-palette`, `sidebar-palette`), the chrome's two
+heights (a 36px bar, 26px controls), its control labels (`type-scale`'s
+control role: 12.5px, regular — tab titles and button labels alike) and
+`antialiased` font smoothing (`font-family`), which draws light text on the
+graphite at the font's own weight. The font, the rest of the type scale, radii
+and spacing are the defaults, so the chrome is set in the same face as the
 apps. `scheme: "dark"` — the frame does not flip with the light/dark switch.
+
+Its framed pills (Improve, Build) are `Button variant="frame"`, not
+`outline`: `outline` paints a fill of its own, and in dark mode that fill
+(`input/30`) shows as a lighter patch on the graphite.
 
 Designed from the "App chrome" prototype (`proto-1789460441-wknb`: banner
 layout, graphite tone, underline tabs).

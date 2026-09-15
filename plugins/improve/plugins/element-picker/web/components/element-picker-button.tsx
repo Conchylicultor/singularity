@@ -7,13 +7,13 @@ import { PickerButton } from "@plugins/primitives/plugins/ui-context/plugins/ele
  * insert it into the Improve draft, opening the popover if it isn't already.
  * Identical in effect to the in-form `TaskDraftPickerButton` — one insertion,
  * added to whatever is already drafted — differing only in that this one
- * doesn't need the popover open to start. Outlined, like the Improve button it
+ * doesn't need the popover open to start. Framed, like the Improve button it
  * is joined to.
  */
 export function ElementPickerButton() {
   return (
     <PickerButton
-      variant="outline"
+      variant="frame"
       onPick={(meta) =>
         insertIntoImproveDraft(serializeUiContext(meta, "picked"))
       }

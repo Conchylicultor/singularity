@@ -54,7 +54,7 @@ export function ChipTab({
       {...rest}
     >
       <TabIcon icon={Icon} badge={badge} />
-      {!collapsed && <Text variant="label">{label}</Text>}
+      {!collapsed && <Text variant="control">{label}</Text>}
       {!collapsed && onClose && (
         <TabCloseButton label={label} onClose={onClose} active={active} />
       )}

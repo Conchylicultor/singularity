@@ -33,7 +33,7 @@ export function ReloadSegment({ advice }: { advice: ReloadAdvice }) {
   return (
     <WithTooltip content={message}>
       <Button
-        variant="outline"
+        variant="frame"
         aria-label={message}
         // The tint holds on hover too — it is what says why a reload is due.
         className={cn(

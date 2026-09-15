@@ -8,7 +8,8 @@
  * the mock and the running app at the mock's own viewport, the same three
  * regions photographed from each (top-left of the bar, its action cluster, the
  * rail), and the painted values that matter read back from both — ground,
- * text, hairline, bar height, rail button box, pill radius.
+ * text, hairline, bar height, rail button box, pill radius and fill, and the
+ * type the tab and pill labels are set in (size, weight, smoothing).
  *
  * Also asserts what the chrome must be regardless of the mock: it wears the
  * fixed chrome theme, and switching to an app with its own theme leaves the
@@ -96,6 +97,9 @@ async function paint(page: Page, selector: string) {
       radius: cs.borderTopLeftRadius,
       w: Math.round(box.width),
       h: Math.round(box.height),
+      // The type the words are set in. Smoothing matters as much as weight:
+      // `auto` thickens light-on-dark stems on macOS.
+      font: `${cs.fontSize} ${cs.fontWeight} ${cs.getPropertyValue("-webkit-font-smoothing")}`,
     };
   }, selector);
 }
@@ -124,7 +128,10 @@ await withBrowser(async (h) => {
     rail: await paint(page, ".rail"),
     railBtn: await paint(page, ".rail-btn.active"),
     tab: await paint(page, ".tab.active"),
+    tabLabel: await paint(page, ".tab.active .t"),
     pill: await paint(page, ".split.improve"),
+    pillLabel: await paint(page, ".split.improve .btn.main"),
+    pickSegment: await paint(page, ".split.improve .seg"),
   };
   console.log("mock:", JSON.stringify(mock, null, 2));
 
@@ -138,10 +145,15 @@ await withBrowser(async (h) => {
     rail: await paint(page, `${CHROME}:has(button[aria-label="Home"])`),
     railBtn: await paint(page, `${CHROME} button[aria-label="Home"]`),
     tab: await paint(page, '[data-app-tab] [aria-pressed="true"]'),
+    tabLabel: await paint(
+      page,
+      '[data-app-tab] [aria-pressed="true"] .text-control',
+    ),
     pill: await paint(
       page,
       '[data-slot="button-group"]:has(button[aria-label="Pick UI element"])',
     ),
+    pickSegment: await paint(page, 'button[aria-label="Pick UI element"]'),
     // The group draws no frame of its own — its segments do.
     pillSegment: await paint(
       page,
@@ -157,6 +169,11 @@ await withBrowser(async (h) => {
   r.eq("bar height matches the mock", app.bar?.h, mock.bar?.h);
   r.eq("hairline matches the mock", app.bar?.border, mock.bar?.border);
   r.eq("active tab text matches the mock", app.tab?.fg, mock.tab?.fg);
+  r.eq(
+    "tab label type matches the mock",
+    app.tabLabel?.font,
+    mock.tabLabel?.font,
+  );
   r.eq("rail button box matches the mock", app.railBtn?.w, mock.railBtn?.w);
   r.eq(
     "rail button corner matches the mock",
@@ -174,6 +191,18 @@ await withBrowser(async (h) => {
     "pill frame matches the mock",
     app.pillSegment?.border,
     mock.pill?.border,
+  );
+  // The pill has no fill of its own: what shows through is the bar's ground.
+  r.eq("pill fill matches the mock", app.pillSegment?.bg, mock.pill?.bg);
+  r.eq(
+    "pill label type matches the mock",
+    app.pillSegment?.font,
+    mock.pillLabel?.font,
+  );
+  r.eq(
+    "Pick segment keeps the quieter tone",
+    app.pickSegment?.fg,
+    mock.pickSegment?.fg,
   );
   r.ok(
     "pill ends are fully round",

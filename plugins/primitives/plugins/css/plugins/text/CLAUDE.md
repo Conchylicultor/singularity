@@ -21,6 +21,7 @@ runtime vars. Picking a typography preset re-themes every variant together.
 | `subheading` | 1rem      | 1.5rem      | 600    | 0        | `text-base font-semibold` |
 | `body`       | 0.875rem  | 1.5rem      | 400    | 0        | `text-sm leading-6`       |
 | `label`      | 0.8125rem | 1.25rem     | 500    | 0        | `text-sm font-medium`     |
+| `control`    | 0.875rem  | 1.25rem     | 500 (token) | 0   | a button's own `text-sm font-medium` |
 | `caption`    | 0.75rem   | 1rem        | 400    | 0        | `text-xs`                 |
 | `eyebrow`    | 0.75rem   | 1rem        | 400    | wide     | `text-xs uppercase …`     |
 | `code`       | 0.75rem   | 1.25rem     | 400    | 0        | `font-mono text-xs leading-5` |
@@ -37,6 +38,12 @@ chrome never reaches for it; a page has at most one.
 owns the mono **family** as well as the metrics, so "code" is one decision — do
 not pair it with `font-mono`. Its line-height is the looser `label` rung, not
 `caption`'s: code wraps and is scanned line-by-line.
+
+`control` is the words ON a control — a tab's title, and (through
+`buttonTextClassFor`) every `Button`'s label — so a region sets both at once.
+It is the one role whose weight is a token (`--font-weight-control`): the app
+chrome's fixed theme sets its controls to 12.5px regular without re-weighting
+the prose around them. Its compact rung is caption-sized at the same weight.
 
 `textVariantClass(variant)` returns a variant's classes as a string, for the
 elements `<Text>` cannot be — a shiki `<pre>`, a `dangerouslySetInnerHTML` div, a

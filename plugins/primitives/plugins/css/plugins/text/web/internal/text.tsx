@@ -19,6 +19,7 @@ export type TextVariant =
   | "subheading"
   | "body"
   | "label"
+  | "control"
   | "caption"
   | "eyebrow"
   | "code";
@@ -38,6 +39,9 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   subheading: "text-subheading",
   body: "text-body",
   label: "text-label",
+  // The words ON a control (a tab's title, beside the Buttons it sits among):
+  // the same themable role Button's label wears, so a region sets both at once.
+  control: "text-control",
   caption: "text-caption",
   // Eyebrow/overline role: caption geometry + the small-caps treatment, single
   // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
@@ -62,6 +66,7 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
   subheading: "text-subheading-compact",
   body: "text-body-compact",
   label: "text-label-compact",
+  control: "text-control-compact",
   caption: "text-caption-compact",
   eyebrow: "text-caption-compact uppercase tracking-wide whitespace-nowrap",
   code: "text-code-compact",

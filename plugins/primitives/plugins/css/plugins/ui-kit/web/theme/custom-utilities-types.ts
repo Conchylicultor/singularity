@@ -43,6 +43,7 @@
 // backstop for that duplication.
 export type BuiltinGroupId =
   | "font-size"
+  | "font-weight"
   | "z"
   | "h"
   | "w"

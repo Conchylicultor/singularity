@@ -19,7 +19,7 @@ export function PickerButton({
 }: {
   onPick: (meta: UiContextMeta) => void;
   label?: string;
-  /** The button's look — ghost by default; `outline` as a segment of a split pill. */
+  /** The button's look — ghost by default; `frame` as a segment of a split pill. */
   variant?: IconButtonProps["variant"];
 }) {
   return (

@@ -36,8 +36,13 @@ The global UI kit — one cohesive design-system unit. It owns:
   `textStepFor(density): 0 | 1` is THE threshold (1 only at `xs`, the compact
   tier; `sm`/`md`/`lg` keep the comfortable size) consumed by `Button`, `Badge`,
   AND `Text`, so a row of mixed leaves can never desync its type rung.
-  `buttonTextClassFor(density)` is `Button`'s rung map (`xs → text-xs`, else
-  `text-sm`) built on it. **Decision: the step sits at `sm → xs`** — type tracks
+  `buttonTextClassFor(density)` is `Button`'s rung map (`xs →
+  text-control-compact`, else `text-control` — the type-scale's control role,
+  14px by default) built on it. The label's weight is the cva's `font-control`
+  (`--font-weight-control`, 500 by default), kept apart from the size rung so a
+  caller swapping the size (`text-caption`) keeps it and one setting
+  `font-normal` replaces it. So a theme sets every Button's label — the app
+  chrome's makes them 12.5px regular. **Decision: the step sits at `sm → xs`** — type tracks
   *content* density, not chrome affordance, and `Bar` defaults to `sm`, so
   stepping at `sm` would shrink every toolbar/header label. (The legacy shadcn
   `Button` stepped at `sm`; unifying onto `textStepFor` grows toolbar button
@@ -45,6 +50,11 @@ The global UI kit — one cohesive design-system unit. It owns:
   shares `md`'s 14px label, it shares its 16px icon and every density preset
   gives `controlGapSm` the same value as `controlGapMd` — a shorter box, never
   a tighter label. Only `xs`, whose text drops a rung, tightens them.
+- **`Button variant="frame"`** is `outline`'s hairline with no fill of its
+  own: like `ghost` it wears the surface it sits on and hovers to
+  `--hover-fill`. Use it for a framed control on anything but the page canvas —
+  `outline` paints the canvas (or `input/30` in dark mode) behind its label.
+  The app chrome's Improve and Build pills are `frame`.
 - **`Button variant="dashed"`** is the *optional* affordance beside the main
   action (attach, add, point at): no fill, muted dashed hairline and label, full
   strength on hover. Use it instead of restyling an `outline` with

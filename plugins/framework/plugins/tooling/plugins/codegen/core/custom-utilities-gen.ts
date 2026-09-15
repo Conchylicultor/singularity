@@ -38,6 +38,7 @@ const MANIFEST_REL_PATH =
 // plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities-types.ts.
 const BUILTIN_GROUP_IDS = new Set([
   "font-size",
+  "font-weight",
   "z",
   "h",
   "w",
