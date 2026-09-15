@@ -534,12 +534,10 @@ function ViewerFrame({
             gestures.pointerMove(e.nativeEvent, e.currentTarget)
           }
           onPointerUp={(e) => {
-            gestures.pointerUp(e.nativeEvent, e.currentTarget);
+            gestures.pointerUp(e.nativeEvent);
             wake();
           }}
-          onPointerCancel={(e) =>
-            gestures.pointerCancel(e.nativeEvent, e.currentTarget)
-          }
+          onPointerCancel={(e) => gestures.pointerCancel(e.nativeEvent)}
         >
           {natural === null && !failed && (
             <Center className="size-full">
@@ -566,7 +564,7 @@ function ViewerFrame({
             onError={() => ctl.failedToLoad()}
             className={cn(
               placedClasses(),
-              "max-w-none origin-top-left cursor-zoom-in shadow-2xl will-change-transform",
+              "max-w-none origin-top-left cursor-zoom-out shadow-2xl will-change-transform",
               "group-data-[zoomed=true]/viewer:cursor-grab group-data-[dragging=true]/viewer:cursor-grabbing",
             )}
             style={{

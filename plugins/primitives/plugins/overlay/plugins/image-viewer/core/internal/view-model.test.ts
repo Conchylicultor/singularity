@@ -3,7 +3,6 @@ import {
   MAX_SCALE,
   centerOn,
   clampView,
-  detailScale,
   fitScale,
   fitView,
   isZoomed,
@@ -154,27 +153,6 @@ describe("panView", () => {
       y: -220,
     });
     expect(panView(at, 10_000, 0, screenshot, area).x).toBe(area.side);
-  });
-});
-
-describe("detailScale", () => {
-  it("is 100% when fitting shrank the image below 80%", () => {
-    expect(detailScale(screenshot, area)).toBe(1);
-  });
-
-  it("is a whole-number 2–8× enlargement for an image already at real size", () => {
-    const s = detailScale(icon, area);
-    expect(Number.isInteger(s)).toBe(true);
-    expect(s).toBe(8); // 60% of the 760px room is far past 8× a 32px icon
-    const medium = detailScale({ width: 300, height: 300 }, area);
-    expect(medium).toBe(2); // floor(0.6 · 760/300) = 1, raised to the 2× floor
-  });
-
-  it("enlarges an image that fit shrank only slightly (fit ≥ 80%)", () => {
-    // 0.8 ≤ fit < 1: shown nearly full size, so 100% would reveal nothing.
-    const nearly = { width: 1500, height: 900 }; // fit = min(1288/1500, 760/900) ≈ 0.844
-    expect(fitScale(nearly, area)).toBeGreaterThanOrEqual(0.8);
-    expect(detailScale(nearly, area)).toBe(2);
   });
 });
 

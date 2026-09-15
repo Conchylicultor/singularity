@@ -3,7 +3,6 @@ import {
   areaCenter,
   centerOn,
   clampView,
-  detailScale,
   fitScale,
   fitView,
   isZoomed,
@@ -196,15 +195,6 @@ export function createViewController(
       if (!g) return;
       const c = areaCenter(g.area);
       zoomTo(1, c.x, c.y, true);
-    },
-
-    /** A click on the image: back to fit when zoomed, else in to the detail
-     *  scale with the clicked point kept under the pointer. */
-    toggleDetail(px: number, py: number) {
-      const g = geometry();
-      if (!g) return;
-      if (isZoomed(get().view, g.image, g.area)) toFit(true);
-      else zoomTo(detailScale(g.image, g.area), px, py, true);
     },
 
     /** A drag has moved `(dx, dy)` since it started at `from`. */

@@ -176,20 +176,6 @@ export function panView(
 }
 
 /**
- * What a click on the fitted image zooms to. 100% when fitting shrank the
- * image noticeably (below 80%). An image that already shows at (nearly) real
- * size — an icon — has nothing to reveal at 100%, so it gets a whole-number
- * enlargement from 2× to 8× that fills about 60% of the room: whole numbers
- * keep its pixels square.
- */
-export function detailScale(image: Size, area: Area): number {
-  if (fitScale(image, area) < 0.8) return 1;
-  const r = room(area);
-  const fill = Math.min(r.width / image.width, r.height / image.height);
-  return clamp(Math.floor(fill * 0.6), 2, 8);
-}
-
-/**
  * The next zoom level for `+` (`dir = 1`) or `−` (`dir = -1`) from `scale`.
  * Walks {@link ZOOM_LADDER}; zooming out never goes below fit, and snaps to
  * fit when the next rung would pass it — so `−` always lands exactly on fit.

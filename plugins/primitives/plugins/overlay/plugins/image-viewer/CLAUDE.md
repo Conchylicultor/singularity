@@ -1,9 +1,9 @@
 # image-viewer
 
 One full-window viewer for every image in the app. Click an image: it grows out
-of its thumbnail, fitted to the window. Click it again for 100% at the spot you
-clicked; scroll or pinch to zoom, drag to pan, ← / → for the other images, Esc to
-close. Design and decisions: `research/2026-09-11-primitives-image-viewer.md`.
+of its thumbnail, fitted to the window. Click it again to close; scroll or pinch
+to zoom, drag to pan (a click on a zoomed image goes back to fit), ← / → for the
+other images, Esc to close. Design and decisions: `research/2026-09-11-primitives-image-viewer.md`.
 
 ## Which piece to use
 
@@ -66,7 +66,7 @@ handler, the `?` sheet and the button tooltips all read.
 
 ## Plugin reference
 
-- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-100%, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+- Description: One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
 - Web:
   - Uses:
     - `primitives/announce.announce`
@@ -142,7 +142,6 @@ handler, the `?` sheet and the button tooltips all read.
     - `COMPACT_BELOW`
     - `dataUriToBlob`
     - `dataUriType`
-    - `detailScale`
     - `DRAG_THRESHOLD`
     - `fitScale`
     - `fitView`

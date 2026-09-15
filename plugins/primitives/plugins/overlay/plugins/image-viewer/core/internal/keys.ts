@@ -103,7 +103,7 @@ export const VIEWER_GESTURES: readonly {
   readonly cap: string;
   readonly description: string;
 }[] = [
-  { cap: "Click", description: "Fit ↔ 100% at that spot" },
+  { cap: "Click", description: "Close — or back to fit when zoomed" },
   { cap: "Scroll", description: "Zoom around the pointer" },
   { cap: "Drag", description: "Pan when zoomed" },
 ];

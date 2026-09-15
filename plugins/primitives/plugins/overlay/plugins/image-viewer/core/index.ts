@@ -7,7 +7,6 @@ export {
   areaCenter,
   centerOn,
   clampView,
-  detailScale,
   fitScale,
   fitView,
   isAtScale,

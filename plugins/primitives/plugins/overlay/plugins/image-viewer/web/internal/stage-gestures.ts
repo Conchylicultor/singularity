@@ -35,8 +35,8 @@ function distance(a: Point, b: Point): number {
 /**
  * Pointer and wheel input on the stage, turned into controller calls:
  *
- * - a click on the image toggles fit ↔ the detail scale at that spot;
- * - a click on the backdrop closes — unless zoomed, where it is just a miss;
+ * - a click closes, on the image or the backdrop — unless zoomed, where a
+ *   click on the image returns to fit and one on the backdrop is just a miss;
  * - a drag pans (only when zoomed: at fit there is nothing to pan to);
  * - two pointers pinch-zoom around their midpoint;
  * - the wheel zooms around the pointer.
@@ -55,7 +55,7 @@ export function createStageGestures(
 
   const interactive = () => store.getState().phase === "open";
 
-  function end(e: PointerEvent, isUp: boolean, stage: HTMLElement) {
+  function end(e: PointerEvent, isUp: boolean) {
     if (!pointers.has(e.pointerId)) return;
     pointers.delete(e.pointerId);
     ctl.setDragging(false);
@@ -67,9 +67,8 @@ export function createStageGestures(
     const p = press;
     press = null;
     if (!p || p.moved || !isUp) return;
-    const at = toStage(stage, e.clientX, e.clientY);
-    if (p.onImage) ctl.toggleDetail(at.x, at.y);
-    else if (!ctl.isZoomed()) onDismiss();
+    if (!ctl.isZoomed()) onDismiss();
+    else if (p.onImage) ctl.toFit(true);
   }
 
   return {
@@ -119,12 +118,12 @@ export function createStageGestures(
       if (press.moved && ctl.isZoomed()) ctl.pan(press.from, dx, dy);
     },
 
-    pointerUp(e: PointerEvent, stage: HTMLElement) {
-      end(e, true, stage);
+    pointerUp(e: PointerEvent) {
+      end(e, true);
     },
 
-    pointerCancel(e: PointerEvent, stage: HTMLElement) {
-      end(e, false, stage);
+    pointerCancel(e: PointerEvent) {
+      end(e, false);
     },
 
     /** Registered non-passive by the caller, so this may `preventDefault` —

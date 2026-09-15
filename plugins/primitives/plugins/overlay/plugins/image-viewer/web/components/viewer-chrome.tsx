@@ -233,7 +233,7 @@ function fitOf(s: ViewState): number | null {
   return s.natural && s.area ? fitScale(s.natural, s.area) : null;
 }
 
-const HINT = "Click to see it at 100% · Scroll to zoom · Drag to pan";
+const HINT = "Click to close · Scroll to zoom · Drag to pan";
 
 /** The zoom toolbar at the bottom: − 62% + | Fit 1:1 | ⌨, with the shortcut
  *  sheet and the first-open hint stacked above it. */

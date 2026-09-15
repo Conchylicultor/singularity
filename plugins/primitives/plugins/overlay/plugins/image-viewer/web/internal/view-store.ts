@@ -38,7 +38,7 @@ export interface ViewState {
   readonly sheet: boolean;
   /** The feedback pill's text ("Image copied"), or `null` when hidden. */
   readonly status: string | null;
-  /** The first-open hint ("Click to see it at 100% · …") is showing. */
+  /** The first-open hint ("Click to close · …") is showing. */
   readonly hint: boolean;
 }
 
