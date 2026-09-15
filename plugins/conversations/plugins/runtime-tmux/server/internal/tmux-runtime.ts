@@ -22,6 +22,7 @@ import {
   type SessionState,
 } from "./claude-session";
 import { parseInputDraft } from "./input-draft";
+import { asLaunchMessage } from "./launch-message";
 import { resolvePaneStatus } from "./pane-status";
 import { captureProcessTree } from "./process-tree";
 
@@ -611,8 +612,13 @@ export const tmuxRuntime: ConversationRuntime = {
     // its commits, pushes and MCP calls then carry another conversation's id
     // (the Sep 9 misattributed push). The app never uses background sessions,
     // so the pane is the only place a session may run.
-    const hasPrompt =
-      typeof opts?.prompt === "string" && opts.prompt.length > 0;
+    // The launch message, escaped so the CLI reads it as a turn and never as a
+    // slash command (see launch-message.ts). Every use below reads this one
+    // value, so the temp-file and positional paths cannot diverge.
+    const launchMessage =
+      typeof opts?.prompt === "string" && opts.prompt.length > 0
+        ? asLaunchMessage(opts.prompt)
+        : undefined;
     const parentHost = runtimeNamespace();
     const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
     // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
@@ -642,14 +648,15 @@ export const tmuxRuntime: ConversationRuntime = {
     // tmux has a ~16KB per-arg cap. For long prompts, write to a temp file and
     // have the shell script cat+delete it. Short prompts use positional $1.
     const PROMPT_ARG_LIMIT = 12_000;
-    const useTempFile = hasPrompt && opts!.prompt!.length > PROMPT_ARG_LIMIT;
+    const useTempFile =
+      launchMessage !== undefined && launchMessage.length > PROMPT_ARG_LIMIT;
     let promptFile: string | undefined;
     if (useTempFile) {
       promptFile = `/tmp/singularity-prompt-${conversationId}.txt`;
-      await Bun.write(promptFile, opts!.prompt!);
+      await Bun.write(promptFile, launchMessage);
     }
 
-    if (hasPrompt) {
+    if (launchMessage !== undefined) {
       if (useTempFile) {
         cmdParts.push(`-- "$(cat '${promptFile}' && rm -f '${promptFile}')"`);
       } else {
@@ -690,7 +697,7 @@ export const tmuxRuntime: ConversationRuntime = {
         AGENT_SESSION_WRAPPER,
         "zsh",
         claudeCmd,
-        ...(hasPrompt && !useTempFile ? [opts!.prompt!] : []),
+        ...(launchMessage !== undefined && !useTempFile ? [launchMessage] : []),
       ],
       { stdout: "pipe", stderr: "pipe" },
     );
