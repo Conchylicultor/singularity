@@ -43,12 +43,6 @@ ruleTester.run(
       { code: `process.env.SINGULARITY_DIR ??= fallback;` },
       // A name that merely CONTAINS it is a different variable.
       { code: `const v = process.env.SINGULARITY_WORKTREE_LEGACY;` },
-      // The transition file is the single allowlist entry.
-      {
-        code: `const legacy = process.env.SINGULARITY_WORKTREE;`,
-        filename:
-          "/repo/plugins/framework/plugins/server-core/bin/declare-namespace.ts",
-      },
     ],
     invalid: [
       // The plain read.
@@ -81,11 +75,13 @@ ruleTester.run(
         code: `delete env.SINGULARITY_WORKTREE;`,
         errors: [{ messageId: "ambientWorktreeEnv" }],
       },
-      // A file whose path merely ENDS in something similar is not the allowlist
-      // entry — the suffix is the whole path from `plugins/` down.
+      // The backend entry is no longer exempt: it used to carry the one
+      // transition read while a pre-argv gateway could still be running, and
+      // that gateway has been restarted.
       {
-        code: `const wt = process.env.SINGULARITY_WORKTREE;`,
-        filename: "/repo/plugins/other/bin/declare-namespace.ts",
+        code: `const legacy = process.env.SINGULARITY_WORKTREE;`,
+        filename:
+          "/repo/plugins/framework/plugins/server-core/bin/declare-namespace.ts",
         errors: [{ messageId: "ambientWorktreeEnv" }],
       },
     ],

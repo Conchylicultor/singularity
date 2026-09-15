@@ -16,21 +16,19 @@ const VAR = "SINGULARITY_WORKTREE";
 
 /**
  * The files allowed to name it, as path SUFFIXES so they match whatever absolute
- * root the lint run has. Three, and each for a different reason:
+ * root the lint run has. Two, and only the rule's own pair:
  *
- * 1. `declare-namespace.ts` carries the gateway-restart transition branch —
- *    `./singularity build` rebuilds the backend but not the Go gateway, so until
- *    the user restarts it by hand a running gateway still sets the variable and
- *    passes no `--namespace`. That branch and this entry are deleted together
- *    once the gateway has been restarted.
- * 2. THIS FILE, which has to spell the name it bans. Rule files are linted
+ * 1. THIS FILE, which has to spell the name it bans. Rule files are linted
  *    repo-wide like any other source, so without the entry the rule reports
  *    itself — and the alternative, splitting the literal up to hide it from the
  *    matcher, would make the one place that defines the ban unreadable.
- * 3. Its test, whose fixtures are the ban's own worked examples.
+ * 2. Its test, whose fixtures are the ban's own worked examples.
+ *
+ * No production file is exempt. The backend entry used to be, while a gateway
+ * predating the `--namespace` argv contract could still be running; that
+ * gateway has been restarted and the transition branch deleted.
  */
 const ALLOWED_SUFFIXES = [
-  "plugins/framework/plugins/server-core/bin/declare-namespace.ts",
   "plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity/lint/no-ambient-worktree-env.ts",
   "plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity/lint/no-ambient-worktree-env.test.ts",
 ] as const;

@@ -251,8 +251,11 @@ tmux server's environment irrelevant by construction.
 
 ## Follow-ups (own tasks)
 
-- Delete the gateway-transition env fallback in `declare-namespace.ts` after
-  the user has restarted the gateway; drop the lint allowlist entry.
+- ~~Delete the gateway-transition env fallback in `declare-namespace.ts` after
+  the user has restarted the gateway; drop the lint allowlist entry.~~ Done
+  2026-09-15: gateway restarted with `./singularity start --force`, fallback and
+  allowlist entry removed. The restart surfaced that the gateway daemon forwards
+  its starter's whole environment to every backend; filed as its own task.
 - Live refresh of both op surfaces (file watcher on `op-log.jsonl` → push
   resource), per the monitoring page.
 - `SOCKET_PATH` is the remaining gateway-set env var; it is derivable from the

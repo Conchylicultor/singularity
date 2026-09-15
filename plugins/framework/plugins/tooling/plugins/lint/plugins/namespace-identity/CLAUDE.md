@@ -80,10 +80,10 @@ The replacements are two, and which one you want depends on what you are:
 Spawning a child that needs one? Pass `--namespace <ns>` on its argv. Never an
 env key: that is the inheritance this rule exists to end.
 
-**One allowlist entry**, `server-core/bin/declare-namespace.ts`, which still
-reads the variable while a gateway older than the argv contract is running
-(`./singularity build` rebuilds the backend but not the Go gateway). That branch
-and this exemption are deleted together once the gateway has been restarted. See
+**No production file is exempt.** Only the rule's own source and test may spell
+the name. The backend entry (`server-core/bin/declare-namespace.ts`) was exempt
+while a gateway older than the argv contract could still be running; that
+gateway has been restarted and the transition read deleted. See
 [`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md).
 
 ## Scope, and the fallback shapes

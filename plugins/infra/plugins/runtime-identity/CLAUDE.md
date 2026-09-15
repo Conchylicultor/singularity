@@ -51,8 +51,8 @@ and `test` those sessions ran inherited it and filed its records under
 
 Module state cannot be inherited, which is the whole point of putting the answer
 here. `namespace-identity/no-ambient-worktree-env` (rung 3) keeps the variable
-from coming back: the name may not appear in code outside the one transition file
-that still reads it while a pre-argv gateway is running.
+from coming back: the name may not appear in code anywhere but the rule's own
+source and test.
 
 Design:
 [`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md).

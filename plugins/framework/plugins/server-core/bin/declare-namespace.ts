@@ -34,36 +34,12 @@ function argvNamespace(): string | undefined {
 }
 
 const fromArgv = argvNamespace();
-if (fromArgv !== undefined) {
-  declareRuntimeNamespace(asNamespace(fromArgv));
-} else {
-  // ── Gateway-restart transition: THE ONLY env read of this variable left ────
-  //
-  // `./singularity build` rebuilds this backend but not the Go gateway, so a
-  // running gateway is routinely older than the tree it serves. Until the user
-  // restarts it by hand (`./singularity start`) it still sets the old
-  // environment variable and passes no argv, and refusing here would mean every
-  // backend on this branch failing to boot.
-  //
-  // Allowlisted in `namespace-identity/no-ambient-worktree-env`, which bans the
-  // identifier everywhere else. Deleting this branch (and that allowlist entry)
-  // is a recorded follow-up of the plan below, to be done once the gateway has
-  // been restarted.
-  //
-  // Design: research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md
-  const legacy = process.env.SINGULARITY_WORKTREE;
-  if (legacy === undefined) {
-    throw new Error(
-      `[boot] this backend was spawned without ${FLAG} <ns>. The gateway passes ` +
-        `it (gateway/worktree.go); a hand-run backend has to pass it itself. It ` +
-        `names the namespace this process serves — its database, its config dir ` +
-        `and its log tree.`,
-    );
-  }
-  declareRuntimeNamespace(asNamespace(legacy));
-  console.warn(
-    `[boot] no ${FLAG} on argv — falling back to the running gateway's inherited ` +
-      `environment ("${legacy}"). That gateway predates the argv contract; run ` +
-      `\`./singularity start\` to restart it and this line goes away.`,
+if (fromArgv === undefined) {
+  throw new Error(
+    `[boot] this backend was spawned without ${FLAG} <ns>. The gateway passes ` +
+      `it (gateway/worktree.go); a hand-run backend has to pass it itself. It ` +
+      `names the namespace this process serves — its database, its config dir ` +
+      `and its log tree.`,
   );
 }
+declareRuntimeNamespace(asNamespace(fromArgv));
