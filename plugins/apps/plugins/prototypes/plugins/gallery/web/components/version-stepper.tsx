@@ -19,7 +19,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
 import {
-  shaForStep,
+  versionForStep,
   stepBy,
   stepLabel,
   versionSteps,
@@ -82,13 +82,13 @@ function ReadyStepper({ history }: { history: PrototypeHistory }) {
   const { shownVersion, showVersion } = usePrototypeDetail();
   const [listOpen, setListOpen] = useState(false);
 
-  const model = versionSteps(history, shownVersion);
+  const model = versionSteps(history, shownVersion?.sha ?? null);
   const current = model.current === null ? null : model.steps[model.current]!;
   const prev = stepBy(model, -1);
   const next = stepBy(model, 1);
 
   const go = (step: VersionStep | null) => {
-    if (step) showVersion(shaForStep(step));
+    if (step) showVersion(versionForStep(step));
   };
   const stepBack = useEventCallback(() => go(prev));
   const stepForward = useEventCallback(() => go(next));

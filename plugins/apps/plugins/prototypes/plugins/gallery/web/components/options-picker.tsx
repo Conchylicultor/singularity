@@ -15,7 +15,11 @@ import {
   type PrototypeMeta,
   type PrototypeOption,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { usePrototypeDetail, usePrototypePicks } from "../context";
+import {
+  usePrototypeDetail,
+  usePrototypeOptions,
+  usePrototypePicks,
+} from "../context";
 
 /**
  * The picker for a prototype's declared options (`<meta name="prototype-option">`).
@@ -32,11 +36,18 @@ import { usePrototypeDetail, usePrototypePicks } from "../context";
  * the hover box and moving the pointer into it would close the panel under it.
  * A pick is written to the pane's remembered picks; the frame's `src` carries
  * them, so the frame reloads on the new variant.
+ *
+ * The chips are the options of the document ON SCREEN
+ * (`usePrototypeOptions`): on a recorded version, the ones that version
+ * declared — so a variant the live page has since dropped is still there to
+ * pick. Renders nothing when that document declares none.
  */
 export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
   const { setPick, resetPicks } = usePrototypeDetail();
+  const options = usePrototypeOptions(meta);
   const picks = usePrototypePicks(meta);
-  const summary = meta.options
+  if (options.length === 0) return null;
+  const summary = options
     .map((o) => humanizeToken(pickedValue(o, picks)))
     .join(" · ");
 
@@ -64,7 +75,7 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
             stretching the panel across the stage. */}
         <Clip className="max-h-0 max-w-0 transition-[max-width,max-height] duration-200 group-data-open/fa:max-h-[40rem] group-data-open/fa:max-w-[28rem]">
           <Stack direction="col" gap="md">
-            {meta.options.map((option) => (
+            {options.map((option) => (
               <OptionRow
                 key={option.name}
                 option={option}

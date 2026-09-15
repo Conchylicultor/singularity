@@ -18,9 +18,10 @@ export type VersionStep =
 
 /**
  * Where the stepper stands, derived from the history and the version the pane
- * shows. Nothing here is state: the pane holds only `shown` (a sha, or `null`
- * for live), so a new version arriving, or the folder turning dirty, re-derives
- * the stops under it rather than leaving a stale index behind.
+ * shows. Nothing here is state: the pane holds only the version it shows (or
+ * `null` for live), read here by its sha, so a new version arriving, or the
+ * folder turning dirty, re-derives the stops under it rather than leaving a
+ * stale index behind.
  */
 export interface VersionSteps {
   steps: readonly VersionStep[];
@@ -70,14 +71,14 @@ export function versionSteps(
   };
 }
 
-/** The sha to show at stop `step` — `null` for the live stop. */
-export function shaForStep(step: VersionStep): string | null {
-  return step.kind === "version" && !step.live ? step.version.sha : null;
+/** The version to show at stop `step` — `null` for the live stop. */
+export function versionForStep(step: VersionStep): PrototypeVersion | null {
+  return step.kind === "version" && !step.live ? step.version : null;
 }
 
 /** Whether stop `step` is a saved version the live folder has moved past. */
 export function isPastStep(step: VersionStep): boolean {
-  return shaForStep(step) !== null;
+  return versionForStep(step) !== null;
 }
 
 /**

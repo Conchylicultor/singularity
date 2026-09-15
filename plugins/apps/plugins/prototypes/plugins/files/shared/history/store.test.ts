@@ -233,6 +233,47 @@ describe("checkpoint", () => {
   });
 });
 
+describe("version options", () => {
+  const page = (palette: string, values: string) =>
+    `<html data-palette="${palette}"><meta name="prototype-option" content="palette: ${values}"><title>A</title></html>`;
+
+  test("each version carries the options its OWN page declares", async () => {
+    await writeProto({ "index.html": page("violet", "violet | azure") });
+    await store.ensureHistory(ID);
+    // The live page drops `violet` and gains `amber`.
+    await writeProto({ "index.html": page("amber", "amber | azure") });
+    await store.checkpoint(ID, { kind: "manual", subject: "recolour" });
+
+    const [v0, v1] = (await history()).versions;
+    expect(v0!.options).toEqual([
+      { name: "palette", values: ["violet", "azure"], default: "violet" },
+    ]);
+    expect(v1!.options).toEqual([
+      { name: "palette", values: ["amber", "azure"], default: "amber" },
+    ]);
+  });
+
+  test("a version with no index.html declares none", async () => {
+    await writeProto({});
+    await store.ensureHistory(ID);
+    await writeProto({ "index.html": page("violet", "violet | azure") });
+    await store.checkpoint(ID, { kind: "manual", subject: "first page" });
+
+    const [v0, v1] = (await history()).versions;
+    expect(v0!.options).toEqual([]);
+    expect(v1!.options).toHaveLength(1);
+  });
+
+  test("a checkpoint's answer carries the options too", async () => {
+    await writeProto({ "index.html": "<title>A</title>" });
+    await store.ensureHistory(ID);
+    await writeProto({ "index.html": page("violet", "violet | azure") });
+    const result = await store.checkpoint(ID, { kind: "manual", subject: "x" });
+    if (result.kind !== "recorded") throw new Error(result.kind);
+    expect(result.version.options.map((o) => o.name)).toEqual(["palette"]);
+  });
+});
+
 describe("dirty", () => {
   test("tracks edits, additions and deletions, but not dot-files", async () => {
     await writeProto({ "index.html": "v0", "styles.css": "a" });

@@ -75,13 +75,16 @@ The Prototypes app's two panes:
     options. Stages get it as `src`, and Present's overlay and new-tab link call
     the hook, so no frame can show a different variant — a stage never composes
     a frame URL itself. When a recorded version is shown (below) it returns
-    that version's frozen document instead (`prototypeVersionUrl`), with no
-    picks and no cache-bust — which is how Focus, Compare's mock half and all
-    four Present destinations follow the stepper without knowing it exists.
+    that version's frozen document instead (`prototypeVersionUrl`), with the
+    picks judged against THAT version's options and no cache-bust — which is
+    how Focus, Compare's mock half and all four Present destinations follow
+    the stepper without knowing it exists.
   - **Version stepper** (`version-stepper.tsx`, the `version` header action) —
     `‹ v3 of 7 ›` over `files`' per-prototype `prototypes.history` resource.
-    The pane's only version state is `shownVersion` on the provider: a sha, or
-    `null` for the live folder, held together with the prototype's name so
+    The pane's only version state is `shownVersion` on the provider: the
+    recorded `PrototypeVersion` (whole, so its options are known the moment it
+    is picked), or `null` for the live folder, held together with the
+    prototype's name so
     opening another prototype shows it live without an effect resetting
     anything. Everything else — the stops, which one is on screen, what the
     arrows reach — is derived from the history on every render
@@ -101,12 +104,15 @@ The Prototypes app's two panes:
       nothing in the header appears or disappears as you step. Restore / Back
       to latest therefore live over the stage, not in the header (below). The
       e2e asserts the ‹ and › boxes are identical across steps.
-    - A past version renders as it was saved: the options picker is hidden,
-      because the options declared today may not exist in it. Its corner of
-      the stage then holds the **past-version pill** (`past-version-pill.tsx`,
-      rendered by `ReadyStage`, so it floats over every stage): "Viewing v3 ·
-      <request> · 2h ago" with **Restore** and **Back to latest**. App DOM over
-      the stage, never inside the prototype's page.
+    - A past version keeps its own options: every `PrototypeVersion` carries
+      the options its own `index.html` declares (read out of the version by
+      `files`), and the picker offers those — never today's, which may not
+      exist in it, and which may have dropped a variant the reader wants to
+      see again. Under the picker, in the same corner of the stage, sits the
+      **past-version pill** (`past-version-pill.tsx`, rendered by
+      `ReadyStage`, so it floats over every stage): "Viewing v3 · <request> ·
+      2h ago" with **Restore** and **Back to latest**. App DOM over the stage,
+      never inside the prototype's page.
     - The label's tooltip is the version's request line and when it was made;
       clicking it opens the version list — a `DataView` (`prototypes.versions`,
       one list view, newest first) whose row action (`PrototypeVersionActions`,
@@ -126,13 +132,17 @@ The Prototypes app's two panes:
     so reaching for it would close the panel. Picks are remembered per
     prototype on this device (`useDraft`, scoped by name, on the provider) —
     living outside the frame is what makes them survive the reload every edit
-    causes. `usePrototypePicks(meta)` resolves them against today's declaration
-    (stale picks drop).
+    causes. One memory per prototype, judged per document:
+    `usePrototypeOptions(meta)` is the declaration of the document on screen
+    (the shown version's, else the live page's) and `usePrototypePicks(meta)`
+    resolves the remembered picks against it (picks it does not declare
+    drop), so a palette picked on v3 carries to the live page wherever the
+    live page still has it.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults —
-    or, when a recorded version is on screen, a line naming that version (number
-    and sha) and the `prototype restore` command that brings it back, since
-    "make this darker" may be about v3 rather than the live folder.
+    and, when a recorded version is on screen, a line naming that version
+    (number and sha) and the `prototype restore` command that brings it back,
+    since "make this darker" may be about v3 rather than the live folder.
 
 Layout uses inline styles for the dynamic scaling geometry (not banned className
 layout utilities).

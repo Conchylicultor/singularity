@@ -14,6 +14,8 @@ import {
   resolvePicks,
   type OptionPicks,
   type PrototypeMeta,
+  type PrototypeOption,
+  type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PrototypeStages, type PrototypeStageContribution } from "./slots";
 
@@ -47,14 +49,17 @@ export interface PrototypeDetailContextValue {
   setPick: (option: string, value: string) => void;
   resetPicks: () => void;
   /**
-   * The recorded version the pane is showing, as its sha — `null` for the live
-   * folder. Every frame of the open prototype follows it (through
-   * {@link usePrototypeSrc}). Belongs to one prototype: opening another one
-   * shows that one live.
+   * The recorded version the pane is showing — `null` for the live folder.
+   * Every frame of the open prototype follows it (through
+   * {@link usePrototypeSrc}), and so does the options picker, which offers
+   * the options THAT version declares. Held whole rather than as a sha: a
+   * version never changes, so its options are known the moment it is picked
+   * and stepping never waits on a lookup. Belongs to one prototype: opening
+   * another one shows that one live.
    */
-  shownVersion: string | null;
-  /** Show a recorded version (its sha), or the live folder (`null`). */
-  showVersion: (sha: string | null) => void;
+  shownVersion: PrototypeVersion | null;
+  /** Show a recorded version, or the live folder (`null`). */
+  showVersion: (version: PrototypeVersion | null) => void;
 }
 
 const PrototypeDetailContext =
@@ -115,15 +120,17 @@ export function PrototypeDetailProvider({
   );
 
   // Held WITH the prototype it belongs to, so switching prototype shows the
-  // new one live without an effect resetting anything: a sha recorded for
+  // new one live without an effect resetting anything: a version recorded for
   // another name simply does not apply here. Not remembered across visits —
   // an old version is something you look at, not a place the pane reopens on.
-  const [shown, setShown] = useState<{ name: string; sha: string } | null>(
-    null,
-  );
-  const shownVersion = shown?.name === name ? shown.sha : null;
+  const [shown, setShown] = useState<{
+    name: string;
+    version: PrototypeVersion;
+  } | null>(null);
+  const shownVersion = shown?.name === name ? shown.version : null;
   const showVersion = useCallback(
-    (sha: string | null) => setShown(sha === null ? null : { name, sha }),
+    (version: PrototypeVersion | null) =>
+      setShown(version === null ? null : { name, version }),
     [name],
   );
 
@@ -159,14 +166,31 @@ export function PrototypeDetailProvider({
 }
 
 /**
- * The picks that apply to `meta`: the remembered ones still valid against its
- * declaration, defaults left out (the page already carries them).
+ * The options of the document on screen: the shown version's own declaration,
+ * or — on the live folder — the live page's (`meta`). Never today's options
+ * over an old version: one it has since dropped is still pickable there, and
+ * one it has since gained would pick nothing.
+ */
+export function usePrototypeOptions(
+  meta: PrototypeMeta,
+): readonly PrototypeOption[] {
+  const { shownVersion } = usePrototypeDetail();
+  return shownVersion?.options ?? meta.options;
+}
+
+/**
+ * The picks that apply to the document on screen: the remembered ones still
+ * valid against ITS declaration ({@link usePrototypeOptions}), defaults left
+ * out (the page already carries them). One memory per prototype, judged per
+ * document — so a palette picked on v3 carries to the live page when it still
+ * has that palette, and is simply not applied where it does not.
  */
 export function usePrototypePicks(meta: PrototypeMeta): OptionPicks {
   const { storedPicks } = usePrototypeDetail();
+  const options = usePrototypeOptions(meta);
   return useMemo(
-    () => resolvePicks(meta.options, storedPicks),
-    [meta.options, storedPicks],
+    () => resolvePicks(options, storedPicks),
+    [options, storedPicks],
   );
 }
 
@@ -178,15 +202,14 @@ export function usePrototypePicks(meta: PrototypeMeta): OptionPicks {
  *
  * - live (no version picked): its `index.html`, cache-busted by `version` and
  *   carrying the picked options.
- * - a recorded version: that version's frozen document, as it was saved. No
- *   picks — the options declared today may not exist in it, so it renders at
- *   its own defaults — and no cache-bust, since a sha addresses content that
- *   never changes.
+ * - a recorded version: that version's frozen document, carrying the picks
+ *   valid against the options THAT version declares. No cache-bust, since a
+ *   sha addresses content that never changes.
  */
 export function usePrototypeSrc(meta: PrototypeMeta, version: number): string {
   const { shownVersion } = usePrototypeDetail();
   const picks = usePrototypePicks(meta);
   return shownVersion === null
     ? prototypeUrl(meta.name, { v: version, picks })
-    : prototypeVersionUrl(meta.name, shownVersion);
+    : prototypeVersionUrl(meta.name, shownVersion.sha, { picks });
 }

@@ -9,6 +9,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -135,14 +136,13 @@ function StageBody() {
 
 /**
  * The resolved stage, with the options picker floating over it when the
- * prototype declares any. The picker sits at the PANE level, not in a stage, so
- * every stage shows the same variant under the same control.
+ * document on screen declares any. The picker sits at the PANE level, not in a
+ * stage, so every stage shows the same variant under the same control.
  *
- * While a recorded version is shown the picker is gone: that version renders
- * as it was saved, at its own defaults, and the options declared TODAY may not
- * exist in it — a chip there would pick nothing. Its corner then holds the
- * past-version pill (Restore / Back to latest), which lives over the stage
- * rather than in the header so the header's width never changes as you step.
+ * While a recorded version is shown the picker offers THAT version's options
+ * (not today's, which may not exist in it), and the past-version pill
+ * (Restore / Back to latest) sits under it in the same corner — over the stage
+ * rather than in the header, so the header's width never changes as you step.
  *
  * `src` is built once here (`usePrototypeSrc`) and handed down whole: a stage
  * never composes a frame URL, so none can drop the picks, the cache-bust or
@@ -160,7 +160,6 @@ function ReadyStage({
   stage: PrototypeStage;
 }) {
   const src = usePrototypeSrc(meta, version);
-  const { shownVersion } = usePrototypeDetail();
   return (
     // The positioning context the picker pins to.
     <div className="relative h-full">
@@ -169,18 +168,16 @@ function ReadyStage({
         gallery,
         src,
       })}
-      {/* One corner, one occupant: the options picker on the live folder, or
-          — on a recorded version, which has no picker — what that version is,
-          with Restore and Back to latest. */}
-      {shownVersion !== null ? (
-        <Pin to="bottom-right" offset="md">
-          <PastVersionPill />
-        </Pin>
-      ) : meta.options.length > 0 ? (
-        <Pin to="bottom-right" offset="md">
+      {/* One corner, stacked: the options picker, and under it — on a
+          recorded version — what that version is, with Restore and Back to
+          latest. The picker opens upward, so it never covers the pill. Each
+          renders nothing when it has nothing to say. */}
+      <Pin to="bottom-right" offset="md">
+        <Stack direction="col" gap="sm" align="end">
           <OptionsPicker meta={meta} />
-        </Pin>
-      ) : null}
+          <PastVersionPill />
+        </Stack>
+      </Pin>
     </div>
   );
 }

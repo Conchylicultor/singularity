@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { PrototypeOptionSchema } from "./prototypes";
 
 // The wire half of a prototype's version history. The store itself (one private
 // git repo per prototype, beside the folder) is Node-only and lives in
@@ -44,6 +45,13 @@ export const PrototypeVersionSchema = z.object({
   conversationId: z.string().nullable(),
   /** The assistant message that ended that turn; `null` for every other kind. */
   messageId: z.string().nullable(),
+  /**
+   * The options THIS version's `index.html` declares — read out of the version
+   * itself, never today's page: an option the live page has since dropped (or
+   * not yet grown) is still pickable on the version that has it. Empty when it
+   * declares none, or has no `index.html` (an empty folder's baseline).
+   */
+  options: z.array(PrototypeOptionSchema),
 });
 export type PrototypeVersion = z.infer<typeof PrototypeVersionSchema>;
 

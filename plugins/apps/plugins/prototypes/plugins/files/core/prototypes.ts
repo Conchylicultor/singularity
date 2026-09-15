@@ -162,12 +162,19 @@ export function prototypeUrl(
 
 /**
  * Build the URL of a recorded version's document — the one builder for
- * {@link PROTOTYPE_VERSION_FILE_ROUTE}. No `v` (a version never changes) and no
- * picks: a past version is shown exactly as it was saved, and the live page's
- * declared options may not exist in it.
+ * {@link PROTOTYPE_VERSION_FILE_ROUTE}. No `v`: a version never changes. `picks`
+ * are stamped exactly as on the live route, but judged against THAT version's
+ * own declaration (`PrototypeVersion.options`) — the live page's options may
+ * not exist in it.
  */
-export function prototypeVersionUrl(name: string, sha: string): string {
-  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/versions/${sha}/index.html`;
+export function prototypeVersionUrl(
+  name: string,
+  sha: string,
+  opts: { picks?: OptionPicks } = {},
+): string {
+  const qs = new URLSearchParams(opts.picks ?? {});
+  const query = qs.size === 0 ? "" : `?${qs.toString()}`;
+  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/versions/${sha}/index.html${query}`;
 }
 
 /**

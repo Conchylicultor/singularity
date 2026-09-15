@@ -1,7 +1,8 @@
 // Verifies the detail pane's version stepper on a prototype with at least two
 // recorded versions: ‹ puts the Focus frame on a recorded version's frozen URL,
 // the past-version pill (Restore, Back to latest) appears over the stage,
-// `]` steps forward, Present's new browser
+// the options picker offers that version's own options and a pick lands on the
+// version's URL (when the version declares any), `]` steps forward, Present's new browser
 // tab opens the same version, the label opens the version list, and Back to
 // latest returns every frame to the live folder. Throughout, the ‹ and › stay
 // exactly where they were — the regression test for the arrows sliding out
@@ -101,11 +102,7 @@ await withBrowser(async (h) => {
   const moved = await waitFor(() => frameSrc(page), isVersionSrc);
   const versionSrc = moved.value;
   r.ok("‹ shows a recorded version", moved.ok, versionSrc);
-  r.ok(
-    "…with no picks or cache-bust on it",
-    !versionSrc.includes("?"),
-    versionSrc,
-  );
+  r.ok("…with no cache-bust on it", !/[?&]v=/.test(versionSrc), versionSrc);
   // Restore / Back to latest float over the stage in the past-version pill —
   // never in the header, whose width must not change as the stepper steps.
   const pill = page.getByRole("group", { name: "Past version" });
@@ -118,21 +115,57 @@ await withBrowser(async (h) => {
   await arrowsStay("after stepping back to a past version");
   await snap(page, out, "past-version");
 
+  // The picker offers the options THIS version declares — so a variant the
+  // live page has since dropped is still pickable here. Only checkable when
+  // the version declares some. `shownSrc` is the version's URL as the frame
+  // now shows it: with the pick on it, once one is made.
+  let shownSrc = versionSrc;
+  const picker = page.getByLabel("Prototype options");
+  if (await picker.isVisible()) {
+    await picker.hover();
+    // Scoped to the picker: the stage switcher's chips are radios too.
+    const unpicked = picker.getByRole("radio", { checked: false }).first();
+    await unpicked.waitFor({ state: "visible", timeout: ELEMENT_TIMEOUT_MS });
+    await unpicked.click();
+    const picked = await waitFor(
+      () => frameSrc(page),
+      (src) => isVersionSrc(src) && src !== versionSrc && src.includes("?"),
+    );
+    r.ok("a pick on a past version lands on its URL", picked.ok, picked.value);
+    shownSrc = picked.value;
+    const bogus = await agentFetch(
+      `${new URL(versionSrc, "http://x").pathname}?not-an-option=x`,
+    );
+    r.ok(
+      "…and an undeclared pick on a version is a 400",
+      bogus.status === 400,
+      String(bogus.status),
+    );
+    await page.mouse.move(5, 5);
+    await snap(page, out, "past-version-picked");
+  } else {
+    r.ok("this version declares no options — pick not checked", true);
+  }
+
   // A second step back, past → past, when the history is long enough.
   if (await prev.isEnabled()) {
     await prev.click();
     const older = await waitFor(
       () => frameSrc(page),
-      (src) => isVersionSrc(src) && src !== versionSrc,
+      (src) => isVersionSrc(src) && !src.startsWith(versionSrc.split("?")[0]!),
     );
     r.ok("‹ again shows an older version", older.ok, older.value);
     await arrowsStay("after stepping to an older version");
     await page.keyboard.press("]");
     const again = await waitFor(
       () => frameSrc(page),
-      (src) => src === versionSrc,
+      (src) => src === shownSrc,
     );
-    r.ok("`]` steps forward to the version before", again.ok, again.value);
+    r.ok(
+      "`]` steps forward to the version before, pick kept",
+      again.ok,
+      again.value,
+    );
   }
 
   // Present's last destination opens the pane's own URL in a new tab.

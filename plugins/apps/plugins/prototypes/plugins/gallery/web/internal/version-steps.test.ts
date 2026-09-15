@@ -5,10 +5,11 @@ import type {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   isPastStep,
-  shaForStep,
+  versionForStep,
   stepBy,
   stepLabel,
   versionSteps,
+  type VersionStep,
 } from "./version-steps";
 
 function version(n: number): PrototypeVersion {
@@ -20,7 +21,12 @@ function version(n: number): PrototypeVersion {
     subject: `request ${n}`,
     conversationId: null,
     messageId: null,
+    options: [],
   };
+}
+
+function shaOf(step: VersionStep): string | null {
+  return versionForStep(step)?.sha ?? null;
 }
 
 function history(count: number, dirty: boolean): PrototypeHistory {
@@ -44,7 +50,7 @@ describe("versionSteps", () => {
       "v2 · Latest",
     ]);
     expect(model.current).toBe(2);
-    expect(model.steps.map(shaForStep)).toEqual(["sha0", "sha1", null]);
+    expect(model.steps.map(shaOf)).toEqual(["sha0", "sha1", null]);
   });
 
   test("dirty: an unsaved stop past the newest, which becomes a past version", () => {
@@ -56,7 +62,7 @@ describe("versionSteps", () => {
       "Live · unsaved",
     ]);
     expect(model.current).toBe(3);
-    expect(model.steps.map(shaForStep)).toEqual(["sha0", "sha1", "sha2", null]);
+    expect(model.steps.map(shaOf)).toEqual(["sha0", "sha1", "sha2", null]);
     expect(model.steps.map(isPastStep)).toEqual([true, true, true, false]);
   });
 
@@ -72,8 +78,8 @@ describe("versionSteps", () => {
     expect(model.current).toBe(1);
     const prev = stepBy(model, -1);
     const next = stepBy(model, 1);
-    expect(prev && shaForStep(prev)).toBe("sha0");
-    expect(next && shaForStep(next)).toBe("sha2");
+    expect(prev && shaOf(prev)).toBe("sha0");
+    expect(next && shaOf(next)).toBe("sha2");
   });
 
   test("showing the newest of a clean folder IS the live stop", () => {
@@ -87,7 +93,7 @@ describe("versionSteps", () => {
     expect(model.current).toBe(2);
     const next = stepBy(model, 1);
     expect(next?.kind).toBe("unsaved");
-    expect(next && shaForStep(next)).toBeNull();
+    expect(next && shaOf(next)).toBeNull();
   });
 
   test("a sha the history does not hold is lost; forward returns to live", () => {

@@ -103,7 +103,10 @@ DB: prototypes are host-global and forever, a worktree DB is neither.
   in, so an existing repo always has its baseline), `adoptAll`, `checkpoint`
   (`add -A`, commit only if `diff --cached` moved; a `messageId` already on a
   commit is `unchanged` — the turn event is at-least-once), `readHistory`
-  (versions + `dirty`; adopts on first read), `readVersionFile` (bytes via
+  (versions + `dirty`; adopts on first read; each version carries the options
+  its own `index.html` declares, read for every not-yet-seen version in ONE
+  `git cat-file --batch` and remembered by commit sha, since a commit never
+  changes), `readVersionFile` (bytes via
   `cat-file blob`), `readVersionPatch`, `restoreVersion` ("Before restore" if
   dirty → `read-tree -u --reset <sha>` → "Restored vN"). Every arg that becomes a
   path or a revision is validated first (`isPrototypeId`, `isVersionSha`,
@@ -269,7 +272,9 @@ the browser keeps the old `styles.css` and an edit looks like it didn't land.
   that version, read out of git; `Cache-Control: immutable` (the sha addresses
   the content); 404 for anything that does not name a version's file. A path
   prefix per version, so its relative `styles.css` resolves to the same version.
-  Built by `prototypeVersionUrl(name, sha)`.
+  Its `index.html` takes option picks exactly like the live route (same
+  `server/internal/picked-document.ts`), judged against the options THAT
+  version declares. Built by `prototypeVersionUrl(name, sha, { picks })`.
 - `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore`
   version (`restorePrototypeVersion`, via `implement()`).
 

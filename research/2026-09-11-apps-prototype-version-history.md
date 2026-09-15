@@ -193,9 +193,12 @@ Compare's mock half, and Present (overlay and new tab). With a version selected
 it returns `prototypeVersionUrl(name, sha)`. So all three stages show the
 selected version with no change of their own.
 
-A past version is shown as it was saved: the option picks are not applied, and
-the options picker is hidden. The live file's declared options may not exist in
-an old version.
+A past version keeps its own options. *(Revised 2026-09-15 — the first cut
+hid the picker and rendered a past version at its defaults, which made a
+variant the live page had since dropped impossible to see again.)* Each
+`PrototypeVersion` carries the options its own `index.html` declares, the
+picker offers those, and the version file route stamps picks exactly like the
+live route, judged against that version's declaration.
 
 `VersionStepper` — a zero-prop contribution to `prototypeDetailPane.Actions`,
 next to the stage switcher (`gallery/web/components/detail-actions.tsx`), reading

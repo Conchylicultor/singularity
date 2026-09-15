@@ -132,22 +132,23 @@ export function ImproveButton() {
           );
         }
         if (shownVersion !== null) {
-          // A past version renders at its own defaults, so there is no picked
-          // variant to name — the version is what is on screen.
           if (history.pending) {
             // Unreachable: the popover is disabled while the history loads.
             throw new Error(
               "the prototype history is still loading — cannot say which version is on screen",
             );
           }
-          parts.push(shownVersionLine(name, shownVersion, history.data));
-        } else {
-          const meta = list.data.find((p) => p.name === name);
-          const variant = meta
-            ? pickedVariantLine(resolvePicks(meta.options, storedPicks))
-            : null;
-          if (variant) parts.push(variant);
+          parts.push(shownVersionLine(name, shownVersion.sha, history.data));
         }
+        // The picks as the document on screen judges them: a recorded version
+        // against the options IT declares, the live folder against today's.
+        const options =
+          shownVersion?.options ??
+          list.data.find((p) => p.name === name)?.options;
+        const variant = options
+          ? pickedVariantLine(resolvePicks(options, storedPicks))
+          : null;
+        if (variant) parts.push(variant);
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };

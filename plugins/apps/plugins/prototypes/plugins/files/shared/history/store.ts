@@ -1,8 +1,16 @@
 import { existsSync, statSync } from "node:fs";
 import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { isPrototypeId } from "../../core";
-import type { PrototypeHistory, PrototypeVersion } from "../../core";
+import {
+  PROTOTYPE_ENTRY_FILE,
+  isPrototypeId,
+  readPrototypeOptions,
+} from "../../core";
+import type {
+  PrototypeHistory,
+  PrototypeOption,
+  PrototypeVersion,
+} from "../../core";
 import { listPrototypeDirNames } from "../read-folder";
 import { historyGit, initBareRepo, type HistoryGit } from "./git";
 import { withHistoryLock } from "./lock";
@@ -363,7 +371,7 @@ async function commit(
   );
 }
 
-/** Every version, oldest → newest. */
+/** Every version, oldest → newest, each with the options its own page declares. */
 async function readEntries(git: HistoryGit): Promise<VersionEntry[]> {
   // Unit separator between fields, record separator between commits: the
   // message writer strips both, so neither can occur inside a field.
@@ -372,24 +380,101 @@ async function readEntries(git: HistoryGit): Promise<VersionEntry[]> {
     "--reverse",
     "--format=%H%x1f%cI%x1f%B%x1e",
   ]);
-  return result.stdout
+  const commits = result.stdout
     .split("\x1e")
     .map((record) => record.replace(/^\n/, ""))
     .filter((record) => record !== "")
     .map((record, n) => {
       const [sha, at, raw] = record.split("\x1f");
-      const message = parseVersionMessage(raw ?? "");
-      return {
-        n,
-        sha: sha!,
-        at: at!,
-        kind: message.kind,
-        subject: message.subject,
-        conversationId: message.conversationId,
-        messageId: message.messageId,
-        body: message.body,
-      };
+      return { n, sha: sha!, at: at!, message: parseVersionMessage(raw ?? "") };
     });
+  const options = await readVersionOptions(
+    git,
+    commits.map((c) => c.sha),
+  );
+  return commits.map(({ n, sha, at, message }) => ({
+    n,
+    sha,
+    at,
+    kind: message.kind,
+    subject: message.subject,
+    conversationId: message.conversationId,
+    messageId: message.messageId,
+    options: options.get(sha)!,
+    body: message.body,
+  }));
+}
+
+/**
+ * Each version's declared options, by commit sha. A commit never changes, so a
+ * version's options are read once per process and remembered; this grows with
+ * the number of versions recorded on the host, a few hundred bytes each.
+ */
+const versionOptionsMemo = new Map<string, PrototypeOption[]>();
+
+/**
+ * The options of each of `shas`, reading every version not yet remembered in
+ * ONE `git cat-file --batch` — a history is re-read on every edit of its
+ * folder (the dirty flag), so it must not cost a spawn per version.
+ */
+async function readVersionOptions(
+  git: HistoryGit,
+  shas: readonly string[],
+): Promise<Map<string, PrototypeOption[]>> {
+  const unread = shas.filter((sha) => !versionOptionsMemo.has(sha));
+  if (unread.length > 0) {
+    const pages = await readBatch(
+      git,
+      unread.map((sha) => `${sha}:${PROTOTYPE_ENTRY_FILE}`),
+    );
+    for (const [i, sha] of unread.entries()) {
+      const html = pages[i]!;
+      // No `index.html` in a version is a version that declares nothing — an
+      // empty folder's baseline — not a failed read.
+      const options =
+        html === null ? [] : (await readPrototypeOptions(html)).options;
+      versionOptionsMemo.set(sha, options);
+    }
+  }
+  return new Map(shas.map((sha) => [sha, versionOptionsMemo.get(sha)!]));
+}
+
+/**
+ * `git cat-file --batch` over `specs` (`<rev>:<path>`): each blob's text, or
+ * `null` for one that does not exist, in request order. The protocol frames an
+ * object as `<oid> <type> <size>\n<size bytes>\n`, a missing one as
+ * `<spec> missing\n`.
+ */
+async function readBatch(
+  git: HistoryGit,
+  specs: readonly string[],
+): Promise<(string | null)[]> {
+  const result = await git.run(["cat-file", "--batch"], {
+    stdin: specs.map((s) => `${s}\n`).join(""),
+  });
+  const buf = result.stdoutBytes;
+  const decoder = new TextDecoder();
+  const out: (string | null)[] = [];
+  let i = 0;
+  for (const spec of specs) {
+    const nl = buf.indexOf(0x0a, i);
+    if (nl < 0) throw new Error(`git cat-file --batch ended before ${spec}`);
+    const header = decoder.decode(buf.subarray(i, nl));
+    i = nl + 1;
+    if (header.endsWith(" missing")) {
+      out.push(null);
+      continue;
+    }
+    const size = Number.parseInt(header.split(" ")[2] ?? "", 10);
+    if (!Number.isFinite(size)) {
+      throw new Error(
+        `git cat-file --batch: unreadable header for ${spec}: ${header}`,
+      );
+    }
+    out.push(decoder.decode(buf.subarray(i, i + size)));
+    i += size + 1; // content + trailing newline
+  }
+  return out;
 }
 
 /** Does the folder differ from the newest version (staged or not, added or deleted)? */
@@ -411,6 +496,7 @@ function toVersion(entry: VersionEntry): PrototypeVersion {
     subject: entry.subject,
     conversationId: entry.conversationId,
     messageId: entry.messageId,
+    options: entry.options,
   };
 }
 

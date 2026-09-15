@@ -31,8 +31,8 @@ import { isPastStep, versionSteps } from "../internal/version-steps";
 
 /**
  * "Viewing v3 · <request> · 2h ago   [Restore] [Back to latest]" — floated over
- * the stage while a recorded version is shown, in the corner the options picker
- * uses (which is hidden then, so the spot is free).
+ * the stage while a recorded version is shown, in the stage's corner under the
+ * options picker (which then offers that version's own options).
  *
  * It is over the STAGE, not in the header, on purpose. The header centres the
  * group before its spacer in the slack it shares with the title, so anything
@@ -56,7 +56,7 @@ export function PastVersionPill() {
 
 function ReadyPill({ history }: { history: PrototypeHistory }) {
   const { name, shownVersion, showVersion } = usePrototypeDetail();
-  const model = versionSteps(history, shownVersion);
+  const model = versionSteps(history, shownVersion?.sha ?? null);
   const current = model.current === null ? null : model.steps[model.current]!;
   // On the live folder there is nothing to say and nothing to offer.
   if (current !== null && !isPastStep(current)) return null;
@@ -130,7 +130,7 @@ function ReadyPill({ history }: { history: PrototypeHistory }) {
 function confirmRestore(
   name: string,
   version: PrototypeVersion,
-  showVersion: (sha: string | null) => void,
+  showVersion: (version: PrototypeVersion | null) => void,
 ) {
   void confirmDialog({
     title: `Restore v${version.n}?`,
