@@ -38,7 +38,10 @@ async function target(): Promise<PrototypeMeta> {
   const meta = wanted
     ? rows.find((p) => p.name === wanted)
     : (rows.find((p) => p.options.length > 0) ?? rows[0]);
-  if (!meta) throw new Error(wanted ? `no prototype ${wanted}` : "no prototypes exist to present");
+  if (!meta)
+    throw new Error(
+      wanted ? `no prototype ${wanted}` : "no prototypes exist to present",
+    );
   return meta;
 }
 
@@ -158,7 +161,8 @@ await withBrowser(async (h) => {
     await group.getByRole("radio", { name: humanizeToken(otherValue) }).click();
     const switched = await waitFor(
       () => Promise.resolve(frameUrl(page)),
-      (url) => url !== undefined && url.includes(`${option.name}=${otherValue}`),
+      (url) =>
+        url !== undefined && url.includes(`${option.name}=${otherValue}`),
       { timeoutMs: 15_000 },
     );
     r.ok(
