@@ -29,6 +29,7 @@ plugins/framework/plugins/central-core/
 2. Each plugin declares its routes via a `CentralPluginDefinition` (defined in `core/types.ts`).
 3. `bin/plugins.ts` is a flat list of plugin imports — structurally identical to the server and web registries.
 4. At startup, plugins are topo-sorted by `dependsOn`, registered sequentially, then `onReady` runs concurrently.
+5. Once listening, central writes the gateway's `central-routes.json` itself, from the routes it registered (`bin/routes-manifest.ts`). No build writes it: central runs main's code, so a list built from any other checkout can name the wrong routes.
 
 ## Path Aliases
 

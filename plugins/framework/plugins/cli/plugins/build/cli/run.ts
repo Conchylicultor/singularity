@@ -1,6 +1,5 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
-import { existsSync, writeFileSync } from "fs";
-import { rename } from "fs/promises";
+import { existsSync } from "fs";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { sweepDistLeftovers } from "./internal/dist-publish";
 import {
@@ -34,10 +33,7 @@ import {
 } from "@plugins/infra/plugins/namespace/core";
 import { join, resolve } from "path";
 import { parseMigrationAnswers } from "@plugins/framework/plugins/cli/plugins/migrations/cli";
-import { collectAllPlugins } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins/format/core";
-import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import {
   buildProfilerStart,
   checkBroadcasts,
@@ -95,10 +91,6 @@ import {
   clearWorktreeOp,
   writeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
-import {
-  CENTRAL_ROUTES_FILENAME,
-  gatewayState,
-} from "@plugins/infra/plugins/launcher/data-dirs";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/server";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
@@ -116,60 +108,12 @@ const GIT_TIMEOUT_MS = 60_000;
 // was right while a checkout's namespace was the only one this command could
 // mint; `--composition` in a worktree mints `<composition>.<checkout>`.
 const NAME_REGEX = NAMESPACE_RE;
-const CENTRAL_ROUTES_FILE = gatewayState.file(CENTRAL_ROUTES_FILENAME);
 
-interface CentralRoutesManifest {
-  backend: string;
-  routes: string[];
-}
-
-/**
- * Runtime-level routes registered by `central-core/bin/index.ts` itself rather
- * than by any plugin's barrel. The build pipeline can't see these via plugin
- * scanning, so they're hard-coded baseline entries on the manifest.
- */
-const CENTRAL_RUNTIME_ROUTES: ReadonlyArray<string> = [
-  "/ws/central-notifications",
-  "/api/central-resources/",
-];
-
-/**
- * Collect path prefixes from every plugin's `central/index.ts`, plus the
- * runtime-level routes above. HTTP route keys are method-prefixed
- * (`"GET /api/auth/state"`); we strip the method and truncate at the first
- * `/:param` to get a forward-routable prefix. WS routes are taken as-is
- * (literal paths).
- */
-async function collectCentralRoutes(root: string): Promise<string[]> {
-  const out = new Set<string>(CENTRAL_RUNTIME_ROUTES);
-  for (const p of await collectAllPlugins(root)) {
-    const data = getFacet(p, routesFacetDef);
-    if (!data) continue;
-    for (const r of data.routes) {
-      if (r.runtime !== "central") continue;
-      if (r.type === "http") {
-        const space = r.route.indexOf(" ");
-        const path = space >= 0 ? r.route.slice(space + 1) : r.route;
-        const colon = path.indexOf("/:");
-        out.add(colon >= 0 ? path.slice(0, colon + 1) : path);
-      } else {
-        out.add(r.route);
-      }
-    }
-  }
-  return Array.from(out).sort();
-}
-
-async function writeCentralRoutesManifest(root: string): Promise<void> {
-  const manifest: CentralRoutesManifest = {
-    backend: "central",
-    routes: await collectCentralRoutes(root),
-  };
-  gatewayState.ensure();
-  const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
-  writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
-  await rename(tmp, CENTRAL_ROUTES_FILE);
-}
+// No central-routes manifest is written here. The central runtime publishes it
+// itself on boot, from the routes it actually registered
+// (central-core/bin/routes-manifest.ts). A build used to write it from its OWN
+// checkout's tree — and since central runs main's code, a worktree on an older
+// branch silently dropped routes central was serving.
 
 /**
  * This checkout's HEAD, or `null` when git cannot answer. Failure is a value
@@ -1029,16 +973,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     hooks,
   });
 
-  // 2b. Refresh the central-routes manifest so the gateway knows which
-  // path prefixes are owned by central plugins.
-  endSpan = buildProfilerStart(
-    "centralRoutes",
-    "build:codegen",
-    "central routes manifest",
-  );
-  await writeCentralRoutesManifest(root);
-  endSpan();
-
   // 2b'. Write the central spec early too — otherwise the gateway has no
   // way to spawn central. (Repeated at end of build for idempotency.)
   // central.json always points at *main's* central-core/, not the current
@@ -1521,12 +1455,6 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     closeReceipt(target.namespace, "ok", 0);
     deployedUrls.push(namespaceUrl(target.namespace));
   }
-
-  // 6b. Emit the central routing manifest. The gateway watches this file
-  // and forwards listed paths to the central backend regardless of host.
-  // Routes are populated from each plugin's `central/index.ts` httpRoutes
-  // and wsRoutes maps.
-  await writeCentralRoutesManifest(root);
 
   // 6c. Re-register the `central` worktree spec for idempotency. Path is
   // always main's central-core/ — see comment at the early write above.

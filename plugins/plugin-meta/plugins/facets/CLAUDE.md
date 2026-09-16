@@ -39,10 +39,9 @@ importing or naming an individual facet sub-plugin. A consumer may read
 
 **Rule: rendering/doc consumers must never name a facet.** If one needs to, the
 abstraction is leaking — redesign the generic API. (A non-rendering runtime
-concern that genuinely depends on one specific aspect — e.g. the gateway's
-central-routes manifest in `cli/.../build.ts` reading the `routes` facet — may
-import that facet's `core/` directly; it is not one of the four generic
-surfaces, so naming it is honest rather than a leak.)
+concern that genuinely depends on one specific aspect may import that facet's
+`core/` directly; it is not one of the four generic surfaces, so naming it is
+honest rather than a leak.)
 
 ## Facet vs. core PluginNode
 

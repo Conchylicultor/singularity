@@ -36,12 +36,12 @@ comma-joined in `cp`.
 | any other non-2xx from Hooktheory | `HooktheoryApiError` with Hooktheory's message | 502 |
 | Hooktheory refuses the stored token (401) | `HooktheoryApiError`, message ends "sign in to Hooktheory again …" | 502 |
 | a 2xx body of an unexpected shape, or an unparseable `jsonData` | `Error` naming the fields | 500 |
-| central does not know the provider | `Error` | 500 |
+| central does not know the provider | `HooktheoryProviderUnavailableError` | 503, explaining the merge is what fixes it |
 
 Some Hooktheory errors are HTML pages rather than its JSON envelope (an
 unauthenticated `/trends/nodes`); only the page's `<title>` reaches a message.
 
-**On a branch, the signed-in calls answer 500 "unknown provider" until the auth
+**On a branch, the signed-in calls answer 503 "unknown provider" until the auth
 change declaring the `hooktheory` provider is merged** — central runs main's
 code (see `plugins/auth/CLAUDE.md`). The public section call works regardless.
 

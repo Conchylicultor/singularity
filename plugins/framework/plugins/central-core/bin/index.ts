@@ -19,6 +19,10 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import {
+  centralRoutePrefixes,
+  writeCentralRoutesManifest,
+} from "./routes-manifest";
 
 // ── Load all central plugins (topological waves) ───────────────
 // Import in dependency-ordered waves over `dependsOn` rather than one flat
@@ -182,6 +186,9 @@ interface HttpParamRoute extends ParamRoute<HttpHandler> {
 const literalHttpRoutes: Record<string, HttpHandler> = {};
 const paramHttpRoutes: HttpParamRoute[] = [];
 const wsRoutes: Record<string, WsHandler> = {};
+// Every HTTP route key registered, as written (`"GET /api/auth/state"`) — the
+// source of the routing manifest published once the server is listening.
+const httpRouteKeys: string[] = [];
 
 function pathSegments(
   path: string,
@@ -193,6 +200,7 @@ function pathSegments(
 }
 
 function registerHttpRoute(key: string, handler: HttpHandler) {
+  httpRouteKeys.push(key);
   const spaceIdx = key.indexOf(" ");
   const method = key.slice(0, spaceIdx);
   const path = key.slice(spaceIdx + 1);
@@ -241,7 +249,8 @@ for (const plugin of ordered) {
 }
 
 // Core-owned routes for the live-state primitive on the central runtime.
-// Browsers reach these paths via the gateway's central-routes manifest.
+// Browsers reach these paths via the gateway's central-routes manifest, which
+// this process publishes below — so they are listed like any plugin route.
 wsRoutes["/ws/central-notifications"] = notificationsWsHandler;
 registerHttpRoute("GET /api/central-resources/:key", handleResourceHttp);
 
@@ -323,5 +332,12 @@ const server = Bun.serve<WsData>({
     },
   },
 });
+
+// Tell the gateway which paths are ours, now that something is listening for
+// them. Written from the route tables above, so the list always matches the
+// code this process runs — whichever checkout last built cannot change it.
+writeCentralRoutesManifest(
+  centralRoutePrefixes(httpRouteKeys, Object.keys(wsRoutes)),
+);
 
 console.log(`Central listening on :${server.port}`);

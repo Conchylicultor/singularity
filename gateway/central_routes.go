@@ -15,7 +15,9 @@ import (
 )
 
 // CentralRoutes is the in-memory projection of the central-routes manifest
-// written by `./singularity build`. The manifest declares a singleton backend
+// the central runtime writes on boot, from the routes it actually registered
+// (so it always matches the running central's code, whichever checkout last
+// built). The manifest declares a singleton backend
 // (typically "central") and the path prefixes that should be forwarded to it
 // from any host.
 type CentralRoutes struct {
