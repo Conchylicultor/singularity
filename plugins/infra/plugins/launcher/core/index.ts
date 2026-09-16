@@ -5,6 +5,7 @@ export {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_WITHHELD_ENV,
   isRuntimeEnvName,
+  normalizeRuntimePath,
   pickHostEnv,
   pickRuntimeEnv,
   runtimeEnvNames,

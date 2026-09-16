@@ -2619,6 +2619,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime": {
+      "name": "@singularity/plugin-framework-tooling-checks-bun-runtime",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source": {
       "name": "@singularity/plugin-framework-tooling-checks-class-token-walk-single-source",
       "version": "0.0.1",
@@ -7184,6 +7188,8 @@
 
     "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync": ["@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync"],
 
+    "@singularity/plugin-framework-tooling-checks-bun-runtime": ["@singularity/plugin-framework-tooling-checks-bun-runtime@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime"],
+
     "@singularity/plugin-framework-tooling-checks-class-token-walk-single-source": ["@singularity/plugin-framework-tooling-checks-class-token-walk-single-source@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source"],
 
     "@singularity/plugin-framework-tooling-checks-collected-dir-tsconfig-coverage": ["@singularity/plugin-framework-tooling-checks-collected-dir-tsconfig-coverage@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/collected-dir-tsconfig-coverage"],
@@ -9622,7 +9628,7 @@
 
     "postcss-selector-parser": ["postcss-selector-parser@7.1.1", "", { "dependencies": { "cssesc": "^3.0.0", "util-deprecate": "^1.0.2" } }, "sha512-orRsuYpJVw8LdAwqqLykBj9ecS5/cRHlI5+nvTo8LcCKmzDmqVORXtOIYEEQuL9D4BxtA1lm5isAqzQZCoQ6Eg=="],
 
-    "postgres": ["postgres@3.4.9", "", {}, "sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw=="],
+    "postgres": ["postgres@3.4.7", "", {}, "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw=="],
 
     "postgres-array": ["postgres-array@2.0.0", "", {}, "sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA=="],
 
@@ -10229,8 +10235,6 @@
     "@opentelemetry/sdk-trace-base/@opentelemetry/resources": ["@opentelemetry/resources@2.0.1", "", { "dependencies": { "@opentelemetry/core": "2.0.1", "@opentelemetry/semantic-conventions": "^1.29.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.3.0 <1.10.0" } }, "sha512-dZOB3R6zvBwDKnHDTB4X1xtMArB/d324VsbiPkX/Yu0Q8T2xceRthoIVFhJdvgVM2QhGVUyX9tzwiNxGtoBJUw=="],
 
     "@opentelemetry/sdk-trace-node/@opentelemetry/sdk-trace-base": ["@opentelemetry/sdk-trace-base@2.8.0", "", { "dependencies": { "@opentelemetry/core": "2.8.0", "@opentelemetry/resources": "2.8.0", "@opentelemetry/semantic-conventions": "^1.29.0" }, "peerDependencies": { "@opentelemetry/api": ">=1.3.0 <1.10.0" } }, "sha512-mhU4jp+vW0mGbFRd+GeXHvmfA4aDqWjBjLC3pE5XMpLs0IE2ryYb019Ts2AQrOq67gaTF25D91+fgvEHDZEnuQ=="],
-
-    "@rocicorp/zero/postgres": ["postgres@3.4.7", "", {}, "sha512-Jtc2612XINuBjIl/QTWsV5UvE8UHuNblcO3vVADSrKsrc6RqGX6lOW1cEo3CM2v0XG4Nat8nI+YM7/f26VxXLw=="],
 
     "@singularity/plugin-framework-cli/@types/bun": ["@types/bun@1.4.0", "", { "dependencies": { "bun-types": "1.4.0" } }, "sha512-K+lZULY23vRgK/CfTjFIV+tyifaNdSMlPh9j+6mQ/cLfpOznLyAuzgV/JQysyECpkBQLVMSyvjlr2fBUSA9wFQ=="],
 

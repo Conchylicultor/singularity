@@ -5,6 +5,7 @@ import {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_HOST_ENV,
   RUNTIME_WITHHELD_ENV,
+  normalizeRuntimePath,
   pickHostEnv,
   pickRuntimeEnv,
   runtimeEnvNames,
@@ -133,5 +134,59 @@ describe("runtimeEnvNames", () => {
     for (const entry of runtimeEnvNames()) {
       expect(entry).toMatch(/^[A-Za-z_][A-Za-z0-9_]*\*?$/);
     }
+  });
+});
+
+describe("normalizeRuntimePath", () => {
+  // Fixture roots, deliberately not this machine's: the function transforms a
+  // PATH string by shape, and a test that named real system directories would
+  // both bake a developer's layout into source and read as a claim about it.
+  const MISE = "/fixture/home/.local/share/mise";
+
+  test("drops mise's resolved tool directories and keeps its shims", () => {
+    expect(
+      normalizeRuntimePath(
+        `/fixture/pkg/bin:${MISE}/installs/bun/latest/bin:${MISE}/installs/go/1.24.13/bin:${MISE}/installs/tmux/3.6a:${MISE}/shims:/fixture/bin`,
+      ),
+    ).toBe(`/fixture/pkg/bin:${MISE}/shims:/fixture/bin`);
+  });
+
+  test("the version frozen into PATH is exactly what must not survive", () => {
+    const normalized = normalizeRuntimePath(
+      `${MISE}/installs/bun/1.3.13/bin:${MISE}/shims`,
+    );
+    expect(normalized).not.toContain("1.3.13");
+    expect(normalized).toBe(`${MISE}/shims`);
+  });
+
+  test("derives and prepends the shims dir when stripping would leave none", () => {
+    expect(
+      normalizeRuntimePath(`${MISE}/installs/bun/1.4.2/bin:/fixture/bin`),
+    ).toBe(`${MISE}/shims:/fixture/bin`);
+  });
+
+  test("leaves a PATH with no mise install dir untouched", () => {
+    const plain = "/fixture/pkg/bin:/fixture/bin";
+    expect(normalizeRuntimePath(plain)).toBe(plain);
+    expect(normalizeRuntimePath(`${MISE}/shims:/fixture/bin`)).toBe(
+      `${MISE}/shims:/fixture/bin`,
+    );
+  });
+
+  test("a path that merely mentions mise elsewhere is not a tool directory", () => {
+    const plain = "/fixture/mise-tools/bin:/fixture/mise/installs-backup";
+    expect(normalizeRuntimePath(plain)).toBe(plain);
+  });
+});
+
+describe("pickRuntimeEnv normalizes PATH", () => {
+  test("the gateway can never be handed a version-pinned tool directory", () => {
+    const mise = "/fixture/home/.local/share/mise";
+    const picked = pickRuntimeEnv({
+      HOME: "/fixture/home",
+      PATH: `${mise}/installs/bun/latest/bin:${mise}/shims:/fixture/bin`,
+    });
+    expect(picked.PATH).toBe(`${mise}/shims:/fixture/bin`);
+    expect(picked.HOME).toBe("/fixture/home");
   });
 });

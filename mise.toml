@@ -14,7 +14,15 @@
 experimental = true  # required for the [hooks] block below
 
 [tools]
-bun = "latest"
+# Exact, on purpose. `latest` made the running Bun an invisible machine fact: mise
+# resolved it once, in May 2026, and the repo then sat on 1.3.13 for four months
+# without anything recording or checking it. That Bun double-closes a finished
+# child's extra stdio fds at garbage collection, so it killed whatever had since
+# taken those numbers — on main, pooled Postgres sockets, mid-query. Fixed
+# upstream in oven-sh/bun#33828, first shipped in 1.4.0 (1.3.14 still has it).
+# The `bun-runtime` check re-proves on every build that the pinned Bun really is
+# free of the defect, so a downgrade or a future regression fails loudly.
+bun = "1.4.2"
 go = "1.24"  # Go <1.24 omits LC_UUID; macOS 26 dyld then refuses to load the gateway binary
 tmux = "latest"
 rust = "stable"  # cargo + rustc for the Tauri desktop release shell (tauri/); end users need none of this

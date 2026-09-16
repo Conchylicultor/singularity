@@ -45,6 +45,12 @@
 //   PATH is forwarded, and each tool either defaults these or recomputes them
 //   from its own install location.
 //
+// PATH is the one forwarded name that is not passed through verbatim: mise's
+// resolved per-version tool directories are stripped from it, so the runtime
+// tree resolves its tools through mise's shims and obeys the committed
+// `mise.toml` rather than a version frozen into the starter's shell. See
+// `normalizeRuntimePath`.
+//
 // Every SINGULARITY_* name the code reads or sets must appear in
 // RUNTIME_FORWARDED_ENV or RUNTIME_WITHHELD_ENV (or match a forwarded prefix),
 // and every name listed here must still be read or set somewhere. The
@@ -194,9 +200,68 @@ export function isRuntimeEnvName(name: string): boolean {
 }
 
 /**
+ * A directory mise creates when it installs one version of one tool, e.g.
+ * `~/.local/share/mise/installs/bun/1.4.2/bin` or `…/installs/tmux/3.6a`. The
+ * version is part of the path, so the entry names ONE build forever.
+ */
+const MISE_INSTALL_DIR = /(^|\/)mise\/installs\//;
+
+/** mise's own dispatcher directory, which resolves a tool per invocation. */
+const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
+
+/**
+ * PATH, with mise's resolved tool directories removed and its shims kept.
+ *
+ * A shell with mise activated does not put mise's shims on PATH and leave it
+ * there — it puts the RESOLVED directory of each tool version in front of them.
+ * That is right for a shell, which is re-activated per directory, and wrong for
+ * the runtime tree, which is one long-lived daemon: `./singularity start`
+ * snapshots the starter's PATH into the gateway, and every backend it ever
+ * spawns resolves `bun` against that snapshot. So the version baked into the
+ * snapshot outlives any later change to `mise.toml`.
+ *
+ * That is not hypothetical. On 2026-09-16 the gateway was still handing every
+ * backend `…/mise/installs/bun/latest/bin`, a symlink resolved once in May, so
+ * the whole runtime tree ran Bun 1.3.13 — the version that double-closes a
+ * finished child's extra stdio fds and killed pooled Postgres sockets mid-query
+ * — and reading `mise.toml` told you nothing about it.
+ *
+ * Dropping those entries leaves the shims, which re-resolve per invocation from
+ * the `mise.toml` of the directory the process runs in. The committed pin then
+ * governs the whole runtime tree, and asking for a version that is not
+ * installed fails loudly at the shim instead of quietly running another one.
+ *
+ * If the stripped entries were the only way mise's tools were reachable, the
+ * shims directory is derived from one of them and prepended, so this can never
+ * hand the runtime a PATH with no toolchain on it.
+ */
+export function normalizeRuntimePath(value: string): string {
+  const entries = value.split(":");
+  const kept: string[] = [];
+  const shimsDirs: string[] = [];
+  for (const entry of entries) {
+    const at = entry.search(MISE_INSTALL_DIR);
+    if (at < 0) {
+      kept.push(entry);
+      continue;
+    }
+    const root = entry.slice(0, at);
+    shimsDirs.push(`${root}${root.endsWith("/") ? "" : "/"}mise/shims`);
+  }
+  if (shimsDirs.length === 0) return value;
+  if (kept.some((entry) => MISE_SHIMS_DIR.test(entry))) return kept.join(":");
+  return [shimsDirs[0], ...kept].join(":");
+}
+
+/**
  * The declared part of `source`: every host, forwarded or tool name, and every
  * name starting with a forwarded prefix, whose value is set. Anything else —
  * withheld names and names this file has never heard of alike — is dropped.
+ *
+ * PATH is the one value that is not passed through verbatim: see
+ * `normalizeRuntimePath`. It is normalised HERE, at the filter every runtime
+ * environment goes through, rather than at the one call site — a second caller
+ * must not be able to hand the gateway a PATH that pins a tool version.
  *
  * Takes the environment as an argument rather than reading `process.env`, so
  * the caller decides which environment it filters (the launcher passes its
@@ -208,7 +273,8 @@ export function pickRuntimeEnv(
   const picked: Record<string, string> = {};
   for (const [name, value] of Object.entries(source)) {
     if (value === undefined) continue;
-    if (isRuntimeEnvName(name)) picked[name] = value;
+    if (!isRuntimeEnvName(name)) continue;
+    picked[name] = name === "PATH" ? normalizeRuntimePath(value) : value;
   }
   return picked;
 }
@@ -227,7 +293,11 @@ export function pickHostEnv(
   const picked: Record<string, string> = {};
   for (const name of RUNTIME_HOST_ENV) {
     const value = source[name];
-    if (value !== undefined) picked[name] = value;
+    if (value === undefined) continue;
+    // Same rule as `pickRuntimeEnv`: a tool the runtime runs must not inherit a
+    // PATH that freezes one version of a toolchain. Idempotent, so a PATH the
+    // gateway already normalised passes through unchanged.
+    picked[name] = name === "PATH" ? normalizeRuntimePath(value) : value;
   }
   return picked;
 }

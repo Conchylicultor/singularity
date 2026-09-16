@@ -15548,6 +15548,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
+            - **`bun-runtime`**
             - **`class-token-walk-single-source`**
             - **`collected-dir-tsconfig-coverage`**
             - **`composition-closure`**
@@ -17653,6 +17654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (values):
           - `isRuntimeEnvName`
+          - `normalizeRuntimePath`
           - `pickHostEnv`
           - `pickRuntimeEnv`
           - `RUNTIME_FORWARDED_ENV`

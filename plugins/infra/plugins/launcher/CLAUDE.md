@@ -111,6 +111,18 @@ Two boundaries, one declaration:
    per-child additions (`ZERO_*` for a zero-cache). A backend's socket path is
    not one of them: it travels on argv (`--socket`). See `gateway/CLAUDE.md`.
 
+`PATH` is the one forwarded name not passed through verbatim.
+`normalizeRuntimePath` strips mise's **resolved per-version** tool directories
+(`…/mise/installs/<tool>/<version>/bin`) out of it and keeps the shims, so the
+runtime tree re-resolves its tools per invocation from the committed
+`mise.toml`. A shell with mise activated puts those resolved directories ahead
+of the shims — right for a shell, re-activated per directory; wrong for a daemon
+that snapshots PATH once and spawns backends against it for weeks. That is how
+every backend on this host ran Bun 1.3.13 (a symlink resolved in May 2026) long
+after `mise.toml` could have said otherwise, and Bun 1.3.13 closes pooled
+Postgres sockets out from under live queries. A pin change therefore needs
+`./singularity start` to reach the already-running gateway.
+
 **Adding a variable:** write the reader, then run `./singularity check`.
 `launcher:runtime-env-declared` fails on any `SINGULARITY_*` name that code
 reads or sets (TypeScript under `plugins/`, gateway Go, git hooks, desktop
@@ -195,6 +207,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
 - Core:
   - Exports (values):
     - `isRuntimeEnvName`
+    - `normalizeRuntimePath`
     - `pickHostEnv`
     - `pickRuntimeEnv`
     - `RUNTIME_FORWARDED_ENV`
