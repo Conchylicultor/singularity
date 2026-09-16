@@ -3675,7 +3675,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
     - `Editor.TurnInto` ← `page.turn-into-page`
     - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-    - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`
+    - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.turn-into-page`
   - Uses:
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`

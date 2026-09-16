@@ -4,9 +4,11 @@
 
 ## Plugin reference
 
-- Description: Turn into → Page block action: convert a block into a sub-page in place, keeping its id, position, and subtree; the page row renders inline as the link.
+- Description: Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title). The page row renders inline as the link.
 - Web:
-  - Contributes: `Editor.TurnInto` → `TurnIntoPageItem`
+  - Contributes:
+    - `Editor.TurnInto` → `TurnIntoPageItem`
+    - `Editor.InsertAction` "Page"
   - Uses:
     - `infra/endpoints.fetchEndpoint`
     - `page/editor.Editor`

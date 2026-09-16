@@ -19368,7 +19368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-          - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`
+          - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.turn-into-page`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -20805,9 +20805,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `toggleBlock`
           - `toggleDataSchema`
-    - **`turn-into-page`** — Turn into → Page block action: convert a block into a sub-page in place, keeping its id, position, and subtree; the page row renders inline as the link.
+    - **`turn-into-page`** — Turn a block into a sub-page in place, keeping its id, position, and subtree: from Turn into → Page, or from the caret's line with `/page` (the line's other words become its title). The page row renders inline as the link.
       - Web:
-        - Contributes: `Editor.TurnInto` → `TurnIntoPageItem`
+        - Contributes:
+          - `Editor.TurnInto` → `TurnIntoPageItem`
+          - `Editor.InsertAction` "Page"
         - Uses:
           - `infra/endpoints.fetchEndpoint`
           - `page/editor.Editor`

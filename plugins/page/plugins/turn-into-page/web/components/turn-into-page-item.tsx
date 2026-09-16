@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { MdDescription } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
-import type { Block } from "@plugins/page/plugins/editor/core";
+import { textOf, type Block } from "@plugins/page/plugins/editor/core";
 import { turnBlockIntoPage } from "../internal/turn-block-into-page";
 
 /**
@@ -28,7 +28,7 @@ export function TurnIntoPageItem({
       icon={<MdDescription className="text-muted-foreground" />}
       onMouseDown={(e: MouseEvent) => {
         e.preventDefault();
-        void turnBlockIntoPage({ block });
+        void turnBlockIntoPage(block.id, textOf(block));
         close();
       }}
     >
