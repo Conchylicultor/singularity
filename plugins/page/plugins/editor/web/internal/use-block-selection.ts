@@ -171,7 +171,7 @@ export function useBlockSelection({
 
   // ---- The announcement funnel ----------------------------------------------
   //
-  // The range changes in exactly THREE places — here, the Cmd+A branch, and
+  // The range changes in exactly THREE places — here, `selectEveryBlock`, and
   // `clearSelection` — so those three are where the selection is spoken. Nothing
   // observes a state to speak it: each site announces the change it just made, so
   // the announcement is exact, push-based, and costs no render.
@@ -287,11 +287,35 @@ export function useBlockSelection({
     focusContainer();
   });
 
+  /**
+   * Select every block and hand the keyboard to the container. Reached from
+   * Cmd+A twice over: on the container while a selection is live, and from
+   * inside a block once there is no more text for Cmd+A to select (an empty
+   * block, or one whose text is already all selected — the Notion ladder).
+   */
+  const selectEveryBlock = useEventCallback(() => {
+    selectAll();
+    anchorRef.current = orderedIds[0] ?? null;
+    headRef.current = orderedIds[orderedIds.length - 1] ?? null;
+    // Select-all has no block the user aimed at, so Enter falls back to the
+    // range's end — the same block it has always put the caret in.
+    aimedRef.current = null;
+    // The third range-change site (see the funnel note above). Naming one block
+    // here would be misleading — select-all has no head the user aimed at.
+    announce(`All ${orderedIds.length} blocks selected`);
+    focusContainer();
+  });
+
   // Stable across renders: every member is an event callback or a ref-only helper,
   // so deep children (every `BlockRow`) never re-render because the head moved.
   const control = useMemo<SelectionControl>(
-    () => ({ enterSelectionMode, extendTo, clear: clearSelection }),
-    [enterSelectionMode, extendTo, clearSelection],
+    () => ({
+      enterSelectionMode,
+      extendTo,
+      selectAll: selectEveryBlock,
+      clear: clearSelection,
+    }),
+    [enterSelectionMode, extendTo, selectEveryBlock, clearSelection],
   );
 
   // ---- Container focus + keyboard policy ------------------------------------
@@ -320,15 +344,7 @@ export function useBlockSelection({
     }
     if (mod && e.key.toLowerCase() === "a") {
       e.preventDefault();
-      selectAll();
-      anchorRef.current = orderedIds[0] ?? null;
-      headRef.current = orderedIds[orderedIds.length - 1] ?? null;
-      // Select-all has no block the user aimed at, so Enter falls back to the
-      // range's end — the same block it has always put the caret in.
-      aimedRef.current = null;
-      // The third range-change site (see the funnel note above). Naming one block
-      // here would be misleading — select-all has no head the user aimed at.
-      announce(`All ${orderedIds.length} blocks selected`);
+      selectEveryBlock();
       return;
     }
     if (mod && e.key.toLowerCase() === "d") {

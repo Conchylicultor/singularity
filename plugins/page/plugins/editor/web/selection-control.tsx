@@ -4,7 +4,7 @@ import { createContext, useContext } from "react";
  * Imperative block-selection controls shared between the selection layer (which
  * owns the anchor/head and the focusable container) and deep children that need
  * to drive selection — `BlockRow` (shift-click) and the in-block `KeyboardPlugin`
- * (Esc / Shift+Arrow at a boundary). Lives below `MultiSelectProvider` so it can
+ * (Esc / Shift+Arrow at a boundary / Cmd+A with no more text to select). Lives below `MultiSelectProvider` so it can
  * translate intents into contiguous range updates.
  *
  * Every member focuses the selection container as part of its effect: entering
@@ -15,6 +15,11 @@ export interface SelectionControl {
   enterSelectionMode: (blockId: string, extend?: "up" | "down") => void;
   /** Shift-click: extend the range from the current anchor to this block. */
   extendTo: (blockId: string) => void;
+  /**
+   * Leave text editing and select every block on the page — the second press of
+   * Cmd+A, once the block has no more text for it to select.
+   */
+  selectAll: () => void;
   /** Clear the selection. */
   clear: () => void;
 }

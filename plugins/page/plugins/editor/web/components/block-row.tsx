@@ -17,6 +17,10 @@ import {
   framePadY,
 } from "../internal/page-column";
 import { gutterFirstLineCenter, type RailSeat } from "../internal/rail-seat";
+import {
+  hasTextLeftToSelect,
+  isSelectAllKey,
+} from "../internal/select-all-ladder";
 import "./block-document-scale.css";
 
 /** One empty body line plus the standard row padding — the childless-anchor box. */
@@ -327,6 +331,19 @@ export function BlockRow({
             e.preventDefault();
             selection.extendTo(block.id);
           }
+        }}
+        // Cmd+A's second rung for every caret that is not a Lexical editor (see
+        // `internal/select-all-ladder.ts`). A Lexical block always consumes the
+        // press itself, so it arrives here already prevented. Containment is
+        // checked on the DOM: a popover's search box portaled out of this row
+        // still bubbles here through React, and is not this block's caret.
+        onKeyDown={(e) => {
+          if (e.defaultPrevented || !selection || !isSelectAllKey(e)) return;
+          if (!(e.target instanceof Node)) return;
+          if (!e.currentTarget.contains(e.target)) return;
+          if (hasTextLeftToSelect(e.target)) return;
+          e.preventDefault();
+          selection.selectAll();
         }}
       >
         {/* The caret host is a function of the block TYPE alone and must never

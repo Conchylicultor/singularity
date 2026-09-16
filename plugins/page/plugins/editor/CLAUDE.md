@@ -1432,7 +1432,7 @@ are the entire point of a page.
 Two channels replace the missing attribute, and neither is decoration:
 
 - **The selection is spoken on every range change.** The range moves in exactly
-  three places — `applyRange`, the Cmd+A branch, and `clearSelection`, all in
+  three places — `applyRange`, `selectEveryBlock` (Cmd+A), and `clearSelection`, all in
   `internal/use-block-selection.ts` — and each announces through
   `primitives/announce`. `"Heading 2: Container frames, block 3 of 12, selected"`,
   `"…, 4 blocks selected"`, `"All 12 blocks selected"`, `"Selection cleared"`.

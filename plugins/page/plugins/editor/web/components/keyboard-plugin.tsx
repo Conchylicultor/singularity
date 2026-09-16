@@ -1,6 +1,9 @@
 import { useEffect, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
+  $getRoot,
+  $getSelection,
+  $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_LEFT_COMMAND,
@@ -11,6 +14,7 @@ import {
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
+  SELECT_ALL_COMMAND,
   type LexicalCommand,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -336,6 +340,29 @@ export function KeyboardPlugin({
           if (!selectionRef.current) return false;
           event?.preventDefault();
           selectionRef.current.enterSelectionMode(blockIdRef.current);
+          return true;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      // Cmd+A is a two-step ladder, like Notion (`internal/select-all-ladder.ts`):
+      // the first press selects the block's text (Lexical's own handler, reached
+      // by returning false); once there is no more text to select — the block is
+      // empty, or its text is already all selected — it selects every block.
+      lexicalEditor.registerCommand<KeyboardEvent>(
+        SELECT_ALL_COMMAND,
+        (event) => {
+          if (!selectionRef.current) return false;
+          const nothingMoreToSelect = lexicalEditor
+            .getEditorState()
+            .read(() => {
+              const text = $getRoot().getTextContent();
+              if (text === "") return true;
+              const sel = $getSelection();
+              return $isRangeSelection(sel) && sel.getTextContent() === text;
+            });
+          if (!nothingMoreToSelect) return false;
+          event.preventDefault();
+          selectionRef.current.selectAll();
           return true;
         },
         COMMAND_PRIORITY_HIGH,
