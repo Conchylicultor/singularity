@@ -181,6 +181,11 @@ export function pushBuildStepLog(step: BuildStepLog): void {
  *
  * Fully synchronous (writeFileSync + renameSync), so the exit-time verdict guard
  * — which prints the pointer at that path — can call it from its exit handler.
+ *
+ * The build-runs ledger reads this file as the build's TERMINAL RECORD (its
+ * `exitCode`, and its mtime as the end time) to settle a dead build's still-open
+ * row at the next claim — run-ledger's `settleDeadInflightRun` — so every
+ * graceful ending must keep writing it.
  */
 export function writeBuildLogs(
   name: Namespace,

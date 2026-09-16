@@ -153,8 +153,11 @@ What that buys, and what moved:
 - **`build-logs-<id>.json` did two jobs and only one moved.** Its
   `exitCode` + `finishedAt` were the terminal record — that is the exit marker's
   job now, written by the shim for any command rather than by a CLI that
-  remembers to. Its `steps` are structure only the build itself can know, so the
-  CLI still writes them and nothing changed there. `recoverBuildArtifacts`, which
+  remembers to. (One reader remains: the claim-time settle of a dead holder of
+  the in-flight index reads its `exitCode` and mtime, because a hand-run build
+  has no shim and no exit marker — see `run-ledger/CLAUDE.md`.) Its `steps` are
+  structure only the build itself can know, so the CLI still writes them and
+  nothing changed there. `recoverBuildArtifacts`, which
   reconstructed a one-step stand-in from the parent's pipe for a hard-killed
   build, is gone: the recovery moved to the READ path, where `build-logs`
   synthesises the same single block from the child's own transcript — which
@@ -253,6 +256,7 @@ The two other edges of the same argument:
     - `build/deployment.deploymentResource`
     - `build/deployment.readDeployment`
     - `build/run-ledger._buildRuns`
+    - `build/run-ledger.settleDeadInflightRun`
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `config_v2.watchConfig`

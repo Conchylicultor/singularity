@@ -1075,8 +1075,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       pid: process.pid,
     });
     if (claim === "lost") {
+      // "lost" now means a LIVE build holds the slot: a holder whose build
+      // already ended was settled from its own build-logs record and the claim
+      // retried inside `insertRun`.
       softNotes.push(
-        `build-runs: ${name} already has a build in flight — no ledger row minted`,
+        `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
       );
     } else if (claim === "unavailable") {
       // A checkout that has never been deployed has no database of its own.

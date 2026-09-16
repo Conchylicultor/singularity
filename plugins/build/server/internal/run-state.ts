@@ -9,7 +9,10 @@ import {
   buildStatusOf,
   killedSignalName,
 } from "@plugins/build/plugins/build-status/core";
-import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
+import {
+  _buildRuns,
+  settleDeadInflightRun,
+} from "@plugins/build/plugins/run-ledger/server";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentResource } from "@plugins/build/plugins/deployment/server";
 import { reconcileDeployment } from "./reconcile";
@@ -37,10 +40,16 @@ function isInflightViolation(err: unknown): boolean {
  * with this backend's own live pid so the fresh row is not read as an orphan in
  * the window before the child's pid is known.
  *
- * `false` means another build holds the slot. That is an ordinary outcome, not a
+ * `false` means a LIVE build holds the slot. That is an ordinary outcome, not a
  * fault: auto-build is a convergence loop, so a dropped request is re-derived at
  * the next edge rather than queued. `defineSupervisedJob` turns that into a
  * `null` claim, and the handler returns without spawning anything.
+ *
+ * A holder whose build already ended (an early exit, a throw, a signal or a
+ * SIGKILL that left its row open) does not drop the request: on the index
+ * violation the holder is settled from the build's own terminal record
+ * (`settleDeadInflightRun`, shared with the CLI's `insertRun`) and the INSERT is
+ * retried once. The index still decides that retry.
  */
 export async function claimBuildRun(row: {
   buildId: string;
@@ -48,7 +57,8 @@ export async function claimBuildRun(row: {
   commitHash: string | null;
   targets: string[];
 }): Promise<boolean> {
-  try {
+  const namespace = runtimeNamespace();
+  const insert = async (): Promise<void> => {
     await db.insert(_buildRuns).values({
       id: row.buildId,
       trigger: row.trigger,
@@ -59,8 +69,18 @@ export async function claimBuildRun(row: {
       // ids on argv, so the row and the process cannot disagree about what ran.
       targets: row.targets,
       pid: process.pid,
-      namespace: runtimeNamespace(),
+      namespace,
     });
+  };
+  try {
+    await insert();
+    return true;
+  } catch (err) {
+    if (!isInflightViolation(err)) throw err;
+  }
+  if (!(await settleDeadInflightRun(db, namespace))) return false;
+  try {
+    await insert();
     return true;
   } catch (err) {
     if (isInflightViolation(err)) return false;

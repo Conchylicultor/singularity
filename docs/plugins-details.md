@@ -6752,6 +6752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `build/deployment.deploymentResource`
       - `build/deployment.readDeployment`
       - `build/run-ledger._buildRuns`
+      - `build/run-ledger.settleDeadInflightRun`
       - `config_v2.ConfigV2`
       - `config_v2.getConfig`
       - `config_v2.watchConfig`
@@ -7057,6 +7058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `_buildRuns`
           - `createBuildRunRecorder`
+          - `settleDeadInflightRun`
       - Cross-plugin:
         - Imported by:
           - `build`

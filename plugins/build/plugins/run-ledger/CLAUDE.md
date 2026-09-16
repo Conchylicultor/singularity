@@ -75,8 +75,43 @@ the checkout has no database yet — a fresh checkout running a composition-only
 build is a legitimate way to reach that, and the missing ledger must degrade to a
 note rather than fail a deploy it only observes.
 
+## A dead holder is settled at the claim
+
+Only two paths in `./singularity build` close its own row: the ok verdict and the
+failure-verdict funnel. An early `process.exit`, a throw, a catchable signal and a
+SIGKILL all leave it open, still holding `build_runs_inflight_uniq`. The exit hook
+cannot close it (a DB write is async), and the backend's supervised-run
+reconciler only looks at boot — which a failed build never triggers.
+
+So whoever LOSES the claim settles the holder: both claimants — the CLI's
+`insertRun` and the backend's `claimBuildRun` — call `settleDeadInflightRun(db,
+namespace)` on an inflight-index violation (checked by constraint name, so a
+primary-key collision is never read as "in flight"), and retry the INSERT once
+when it returns `true`. The rule is the supervised reconciler's:
+
+```
+terminal = build-logs-<id>.json ?? (isPidAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
+```
+
+`build-logs-<buildId>.json` is the build's terminal record. `writeBuildLogs`
+(`op-runtime/cli/build-logs-writer.ts`) writes it synchronously on every graceful
+ending — ok verdict, failure verdict, and the exit-hook verdict guard's fallback —
+so the row gets the build's real `exitCode` and the file's mtime as its end time.
+**That dependency is load-bearing:** a graceful exit path that stops writing the
+file would be read as "still running" while its pid lives, and as a hard kill
+(`-1`) once it is gone. A file that exists but does not parse throws.
+
+It is race-safe because the index still decides every race: the settle runs only
+after losing the insert, closes only a provably-ended build with the guarded
+first-writer-wins UPDATE (stamping only `finished_at` / `exit_code`), and a
+recycled pid can only read as alive. `"lost"` / `false` therefore now means a
+LIVE build holds the slot.
+
 This leaf's whole import graph is intentionally minimal: drizzle,
-`database/admin/server`, and `namespace/core` only. **Never add a `config_v2`,
+`database/admin/server`, `namespace/core`, and — for the settle —
+`jobs/supervised-job/core` (`isPidAlive`, `HARD_KILL_EXIT_CODE`) and `paths/core`
+(`worktreeArtifacts.buildLogs`). Both of those are db-free and queue-free by
+their own barrels' rules. **Never add a `config_v2`,
 `shell/notifications`, env-bound `database/server`, `jobs`, or `events` import
 here** — that eval-safety is the entire reason the leaf exists.
 
@@ -102,6 +137,7 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
   - Exports (values):
     - `_buildRuns`
     - `createBuildRunRecorder`
+    - `settleDeadInflightRun`
 - Cross-plugin:
   - Imported by:
     - `build`
