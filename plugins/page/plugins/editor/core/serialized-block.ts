@@ -35,7 +35,40 @@ export interface SerializedBlock {
    * mint stays unconditional.
    */
   ref?: string;
+  /**
+   * Where a `type="page"` node's CONTENT lives — see {@link PageSource}. Set
+   * only on page nodes, by the serializer that copied them.
+   */
+  pageSource?: PageSource;
 }
+
+/**
+ * The page a copied `type="page"` node came from.
+ *
+ * A sub-page's content is not in the forest a copy serializes: it lives in the
+ * page's own `page_id` partition, which the editor on screen never loads. So a
+ * page node carries its SOURCE instead of its children, and the server resolves
+ * the content when the paste lands:
+ *
+ *  - node `id === pageId` — the paste CLAIMS the source row: the page itself
+ *    moves to the destination, keeping its id (links, history, authorship and
+ *    its content partition come with it). Only {@link withPasteIds} produces
+ *    that shape, and only for the first paste of a cut.
+ *  - any other id — the paste is a COPY: the server clones the source page's
+ *    whole content (nested sub-pages included) under the new id.
+ *
+ * `cutId` names the cut gesture that wrote the clipboard: one cut moves its page
+ * once, and every later paste of the same clipboard copies it.
+ */
+export interface PageSource {
+  pageId: string;
+  cutId?: string;
+}
+
+const PageSourceSchema: ZodParser<PageSource> = z.object({
+  pageId: z.string(),
+  cutId: z.string().optional(),
+});
 
 export const SerializedBlockSchema: ZodParser<SerializedBlock> = z.lazy(() =>
   z.object({
@@ -44,6 +77,7 @@ export const SerializedBlockSchema: ZodParser<SerializedBlock> = z.lazy(() =>
     expanded: z.boolean(),
     children: z.array(SerializedBlockSchema),
     ref: z.string().optional(),
+    pageSource: PageSourceSchema.optional(),
   }),
 );
 
@@ -73,6 +107,8 @@ export interface IdentifiedBlock {
    * that they disagree.
    */
   ref?: string;
+  /** See {@link SerializedBlock.pageSource}; `id === pageSource.pageId` is a claim. */
+  pageSource?: PageSource;
 }
 
 export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
@@ -83,6 +119,7 @@ export const IdentifiedBlockSchema: ZodParser<IdentifiedBlock> = z.lazy(() =>
     expanded: z.boolean(),
     children: z.array(IdentifiedBlockSchema),
     ref: z.string().optional(),
+    pageSource: PageSourceSchema.optional(),
   }),
 );
 
@@ -106,4 +143,37 @@ export function withMintedIds(forest: SerializedBlock[]): IdentifiedBlock[] {
     id: newBlockId(),
     children: withMintedIds(node.children),
   }));
+}
+
+/**
+ * {@link withMintedIds} for a PASTE: identical, except a page node `claim`
+ * accepts keeps its source id — which is what makes the server move that page
+ * instead of copying it (see {@link PageSource}). Every other node is minted.
+ *
+ * A separate function rather than a flag on `withMintedIds`, so the one
+ * exception to "a forest's ids are always fresh" is spelled at the one call site
+ * that may take it.
+ */
+export function withPasteIds(
+  forest: SerializedBlock[],
+  claim: (source: PageSource) => boolean,
+): IdentifiedBlock[] {
+  return forest.map((node) => ({
+    ...node,
+    id:
+      node.pageSource !== undefined && claim(node.pageSource)
+        ? node.pageSource.pageId
+        : newBlockId(),
+    children: withPasteIds(node.children, claim),
+  }));
+}
+
+/** Every `pageSource` in a forest, depth-first. */
+export function pageSourcesOf(
+  forest: readonly SerializedBlock[],
+): PageSource[] {
+  return forest.flatMap((node) => [
+    ...(node.pageSource ? [node.pageSource] : []),
+    ...pageSourcesOf(node.children),
+  ]);
 }

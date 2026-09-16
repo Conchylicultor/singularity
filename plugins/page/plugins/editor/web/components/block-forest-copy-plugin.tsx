@@ -69,7 +69,10 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
      * `CUT_COMMAND` only deletes on the branch that actually copied — a cut that
      * failed to reach the clipboard must not destroy the block.
      */
-    const writeBlock = (event: ClipboardEvent): boolean => {
+    const writeBlock = (
+      event: ClipboardEvent,
+      gesture: "copy" | "cut",
+    ): boolean => {
       const selection = $getSelection();
       // A text range (or a node selection inside the block) belongs to the
       // browser; only a collapsed caret means "the whole block". BOTH answers
@@ -87,7 +90,7 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
       // The row is gone from under the caret (a concurrent delete): decline
       // rather than write an empty clipboard over what the user had.
       if (forest.length === 0) return false;
-      writeForestToClipboard(clipboardData, forest, handles);
+      writeForestToClipboard(clipboardData, forest, handles, gesture);
       event.preventDefault();
       return true;
     };
@@ -95,13 +98,13 @@ export function BlockForestCopyPlugin({ block, editor }: BlockTextPluginProps) {
     const unregister = [
       lexical.registerCommand<ClipboardEvent>(
         COPY_COMMAND,
-        writeBlock,
+        (event) => writeBlock(event, "copy"),
         COMMAND_PRIORITY_NORMAL,
       ),
       lexical.registerCommand<ClipboardEvent>(
         CUT_COMMAND,
         (event) => {
-          if (!writeBlock(event)) return false;
+          if (!writeBlock(event, "cut")) return false;
           // The same structural delete the rail menu's Delete runs, so the caret
           // lands where a delete always lands and the cut is one undo entry.
           editor.remove();

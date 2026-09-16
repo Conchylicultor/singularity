@@ -34,6 +34,8 @@ import {
   patchesFromDiff,
   isEmptyPatch,
   withMintedIds,
+  withPasteIds,
+  pageSourcesOf,
   newBlockId,
   namesField,
   hasTextKey,
@@ -63,6 +65,7 @@ import {
   toNodes,
 } from "./internal/optimistic-block-ops";
 import { serializeForest } from "./serialize-blocks";
+import { claimCutPages, markCutsPasted } from "./internal/cut-claims";
 import { landCaret, landCaretAtOwnEdge } from "./internal/caret-landing";
 import { createCaretAuthority } from "./internal/caret-authority";
 import type { BlockFocusHandle } from "./internal/caret-authority";
@@ -1442,8 +1445,14 @@ export function BlockEditorProviderInner({
       afterId: string | null;
       parentId?: string | null;
     }) => {
-      const forest = withMintedIds(args.blocks);
+      // A cut sub-page's first paste keeps its id — the server then MOVES that
+      // page rather than copying it (`PageSource`); everything else is minted.
+      const forest = withPasteIds(
+        args.blocks,
+        claimCutPages(new Set(rowsRef.current.map((b) => b.id))),
+      );
       if (forest.length === 0) return;
+      markCutsPasted(pageSourcesOf(args.blocks));
       // `parentId` defaults to the PAGE's own id, not null: the reducer's forest
       // excludes the page row, so the page id is how "the content top level" is
       // addressed (see the `paste` op's `parentId` doc).

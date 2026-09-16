@@ -18872,13 +18872,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `page/editor.Editor`
                   - `page/page-reference.PageReference`
                   - `primitives/loading.Loading`
-            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+            - **`authorship`** — Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover; a copied block keeps its authors.
               - Server:
-                - Contributes: `resource.declare` "agent-notes-authors"
+                - Contributes:
+                  - `resource.declare` "agent-notes-authors"
+                  - `page.editor.block.onCopy`
                 - Uses:
                   - `database.db`
                   - `infra/retention.markCascadeBounded`
                   - `page/editor._blocks`
+                  - `page/editor.BlockLifecycle`
                 - DB schema: `plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server/internal/tables.ts`
                 - Exports (values):
                   - `_pageBlocksAgentAuthors`
@@ -19365,6 +19368,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/optimistic-mutation.enqueueResourceWrite`
           - `primitives/optimistic-mutation.OpNoLongerApplies`
           - `primitives/optimistic-mutation.useOptimisticResource`
+          - `primitives/persistent-draft.readDraft`
+          - `primitives/persistent-draft.writeDraft`
           - `primitives/scope/dom-scope.defineDomScope`
           - `primitives/scope/scoped-store.defineScopedStore`
           - `primitives/select-scope.ContentScope`
@@ -19516,12 +19521,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (types):
           - `AfterCommit`
           - `Block`
+          - `BlockCopyHook`
           - `BlockCreateHook`
           - `BlockDeleteHook`
           - `BlockRestoreHook`
           - `BlocksChangedPayload`
           - `BlockTextWriter`
           - `BlockTrashHook`
+          - `CopiedBlock`
           - `DeletedBlockRow`
           - `PageContentSnapshot`
           - `PageData`
@@ -19620,6 +19627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageCover`
           - `PageData`
           - `PageRow`
+          - `PageSource`
           - `RichText`
           - `RowData`
           - `RunsXmlTextOptions`
@@ -19691,6 +19699,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageDataSchema`
           - `PageRowSchema`
           - `PAGES_TRASH_SOURCE`
+          - `pageSourcesOf`
           - `pagesResource`
           - `parseInlineMarkdown`
           - `parseMarkdownToForest`
@@ -19733,6 +19742,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `visibleChildRule`
           - `withContainersSelected`
           - `withMintedIds`
+          - `withPasteIds`
           - `withRuns`
           - `writtenIds`
           - `xmlTextContentLength`
@@ -19815,11 +19825,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Endpoint callers: `editor-collab`
     - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
       - Server:
-        - Contributes: `resource.declare` "page-block-doc"
+        - Contributes:
+          - `resource.declare` "page-block-doc"
+          - `page.editor.block.onCopy`
         - Uses:
           - `database.db`
           - `infra/endpoints.implement`
           - `page/editor._blocks`
+          - `page/editor.BlockLifecycle`
           - `primitives/collab-doc.bytea`
         - DB schema: `plugins/page/plugins/editor-collab/server/internal/tables.ts`
         - Exports (values):
@@ -28113,6 +28126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/prompt-input`
           - `conversations/conversation-view/push-and-exit`
+          - `page/editor`
           - `primitives/css/color-picker`
           - `primitives/detail-sections`
           - `primitives/dom/auto-scroll`

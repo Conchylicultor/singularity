@@ -764,7 +764,10 @@ function SelectionLayer({
   // document — which is how the selection bar's button copies, since it renders
   // outside the container and its event never reaches `onCopy` below.
   const writeClipboard = useCallback(
-    (e: { clipboardData: DataTransfer | null; preventDefault: () => void }) => {
+    (
+      e: { clipboardData: DataTransfer | null; preventDefault: () => void },
+      gesture: "copy" | "cut",
+    ) => {
       const roots = blockSelectionRoots(
         toNodes(rowsRef.current),
         selectedRef.current,
@@ -774,7 +777,7 @@ function SelectionLayer({
       const clipboardData = e.clipboardData;
       if (clipboardData === null) return false;
       const forest = serializeForest(rowsRef.current, roots);
-      writeForestToClipboard(clipboardData, forest, handles);
+      writeForestToClipboard(clipboardData, forest, handles, gesture);
       e.preventDefault();
       return true;
     },
@@ -784,7 +787,7 @@ function SelectionLayer({
   const onCopy = useCallback(
     (e: React.ClipboardEvent) => {
       if (document.activeElement !== containerRef.current) return;
-      writeClipboard(e);
+      writeClipboard(e, "copy");
     },
     [writeClipboard, containerRef],
   );
@@ -792,7 +795,7 @@ function SelectionLayer({
   const onCut = useCallback(
     (e: React.ClipboardEvent) => {
       if (document.activeElement !== containerRef.current) return;
-      if (writeClipboard(e)) {
+      if (writeClipboard(e, "cut")) {
         bulkDelete([...selectedRef.current]);
         clearSelection();
       }
@@ -827,7 +830,7 @@ function SelectionLayer({
     const container = containerRef.current;
     if (container === null) return;
     const doc = container.ownerDocument;
-    const write = (e: ClipboardEvent) => void writeClipboard(e);
+    const write = (e: ClipboardEvent) => void writeClipboard(e, "copy");
     doc.addEventListener("copy", write, { capture: true, once: true });
     try {
       // Never scroll the viewport just to seat the clipboard.

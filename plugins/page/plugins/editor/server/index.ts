@@ -50,8 +50,10 @@ export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
 export type {
   AfterCommit,
+  BlockCopyHook,
   BlockCreateHook,
   BlockDeleteHook,
+  CopiedBlock,
   BlockRestoreHook,
   BlockTrashHook,
   DeletedBlockRow,

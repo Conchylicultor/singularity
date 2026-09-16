@@ -136,8 +136,14 @@ export {
   SerializedBlockSchema,
   IdentifiedBlockSchema,
   withMintedIds,
+  withPasteIds,
+  pageSourcesOf,
 } from "./serialized-block";
-export type { SerializedBlock, IdentifiedBlock } from "./serialized-block";
+export type {
+  SerializedBlock,
+  IdentifiedBlock,
+  PageSource,
+} from "./serialized-block";
 
 export { rankWindow, planForestInsert } from "./block-forest";
 

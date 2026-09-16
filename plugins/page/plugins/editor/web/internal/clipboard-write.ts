@@ -1,4 +1,5 @@
 import {
+  newBlockId,
   serializeForestToMarkdown,
   type BlockHandle,
   type IdentifiedBlock,
@@ -26,13 +27,20 @@ import { BLOCKS_MIME } from "./transfer";
  * (`block-forest-copy-plugin.tsx`) — so the two produce byte-identical
  * clipboard payloads by construction, not by two mirrored implementations
  * happening to agree.
+ *
+ * `gesture` is what a paste of a sub-page later hinges on: a CUT stamps one
+ * fresh `cutId` on every page node, so the first paste of it moves those pages
+ * (keeping their ids) while a copy — or any later paste of the same cut —
+ * copies them. See `PageSource` in `core/serialized-block.ts`.
  */
 export function writeForestToClipboard(
   clipboardData: DataTransfer,
   forest: IdentifiedBlock[],
   handles: BlockHandle<unknown>[],
+  gesture: "copy" | "cut",
 ): void {
-  clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
+  const payload = gesture === "cut" ? withCutId(forest, newBlockId()) : forest;
+  clipboardData.setData(BLOCKS_MIME, JSON.stringify(payload));
   clipboardData.setData(
     "text/plain",
     serializeForestToMarkdown(forest, {
@@ -53,4 +61,16 @@ export function writeForestToClipboard(
       softBreaks: "newline",
     }),
   );
+}
+
+/** Stamp one cut gesture's id on every page node of a copied forest. */
+function withCutId(
+  forest: IdentifiedBlock[],
+  cutId: string,
+): IdentifiedBlock[] {
+  return forest.map((node) => ({
+    ...node,
+    ...(node.pageSource ? { pageSource: { ...node.pageSource, cutId } } : {}),
+    children: withCutId(node.children, cutId),
+  }));
 }

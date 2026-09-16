@@ -79,13 +79,16 @@ gap in that plugin.
 
 ## Plugin reference
 
-- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover.
+- Description: Reads an agent-authored block's authorship (useAgentNotesAuthors, and useAgentNotesCreator for the first writer) and renders it as the card's provenance popover — one row per contributing conversation, opening the conversation that wrote it. Contributes no slot of its own; the agent-notes anchor hosts it. Owns page_blocks_agent_authors: which conversations wrote into an agent-notes card. A race-free (block, conversation) link table, the recordAgentNotesAuthor stamp any writer calls, and the per-card keyed live read behind the card's provenance popover; a copied block keeps its authors.
 - Server:
-  - Contributes: `resource.declare` "agent-notes-authors"
+  - Contributes:
+    - `resource.declare` "agent-notes-authors"
+    - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
     - `infra/retention.markCascadeBounded`
     - `page/editor._blocks`
+    - `page/editor.BlockLifecycle`
   - DB schema: `plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server/internal/tables.ts`
   - Exports (values):
     - `_pageBlocksAgentAuthors`

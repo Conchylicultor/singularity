@@ -1,6 +1,8 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
+import { BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { blockContentServerResource } from "./internal/resource";
+import { copyBlockDocsHook } from "./internal/copy-hook";
 import { handleBlockDocInit, handleBlockDocUpdate } from "./internal/routes";
 import { blockDocInit, blockDocUpdate } from "../core";
 
@@ -20,7 +22,10 @@ export {
 export default {
   description:
     "Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.",
-  contributions: [Resource.Declare(blockContentServerResource)],
+  contributions: [
+    Resource.Declare(blockContentServerResource),
+    BlockLifecycle.OnCopy(copyBlockDocsHook),
+  ],
   httpRoutes: {
     [blockDocInit.route]: handleBlockDocInit,
     [blockDocUpdate.route]: handleBlockDocUpdate,

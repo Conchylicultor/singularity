@@ -1,5 +1,5 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { Block, IdentifiedBlock } from "../core";
+import { PAGE_BLOCK_TYPE, type Block, type IdentifiedBlock } from "../core";
 
 /**
  * Build a portable `IdentifiedBlock[]` for `rootIds` and their descendants from
@@ -16,6 +16,11 @@ import type { Block, IdentifiedBlock } from "../core";
  * it immediately: `withMintedIds` mints fresh ids for a duplicate, and a paste
  * re-mints for the clipboard forest too. The id here is provenance, never a
  * destination identity.
+ *
+ * A `type="page"` node's children are NOT here: its content lives in the page's
+ * own partition, which these rows never hold. So a page node carries its
+ * `pageSource` instead, and the server resolves the content when the forest
+ * lands (a copy clones it; the first paste of a cut moves the page itself).
  */
 export function serializeForest(
   rows: readonly Block[],
@@ -40,6 +45,9 @@ export function serializeForest(
       data: block.data,
       expanded: block.expanded,
       children,
+      ...(block.type === PAGE_BLOCK_TYPE
+        ? { pageSource: { pageId: block.id } }
+        : {}),
     };
   };
 

@@ -86,6 +86,28 @@ export interface BlockRestoreHook {
   onRestore: (rows: readonly DeletedBlockRow[]) => Promise<void> | void;
 }
 
+/** One row a copy minted, beside the row it was cloned from. */
+export interface CopiedBlock {
+  sourceId: string;
+  copyId: string;
+  type: string;
+}
+
+// A page's content was CLONED under fresh ids — a copy/paste or a duplicate of a
+// sub-page (`copyPageContent`). `blocks` pairs every inserted row with its
+// source, the page row itself included. Runs INSIDE the locked write
+// transaction, after the rows are inserted, so a contributor copies the state it
+// keys by block id (a content doc, authorship) atomically with the rows: the
+// copy is never observable without it. Collection-consumer separation: the
+// writer never names a contributor, and a side table that is a statement about
+// the SOURCE row only (a star, a task binding) simply does not contribute.
+export interface BlockCopyHook {
+  onCopy: (
+    blocks: readonly CopiedBlock[],
+    tx: PageForestTx,
+  ) => Promise<void> | void;
+}
+
 export const BlockLifecycle = {
   AfterCreate: defineServerContribution<BlockCreateHook>(
     "page.editor.block.afterCreate",
@@ -104,4 +126,5 @@ export const BlockLifecycle = {
   OnRestore: defineServerContribution<BlockRestoreHook>(
     "page.editor.block.onRestore",
   ),
+  OnCopy: defineServerContribution<BlockCopyHook>("page.editor.block.onCopy"),
 };

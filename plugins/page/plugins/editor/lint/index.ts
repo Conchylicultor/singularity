@@ -102,8 +102,8 @@ export default {
     // chokepoint, its flag writers, the cascade-set walk (raw SQL), the page-id
     // recompute (raw SQL) and doc-order CTE, the scope resolver (a lock name,
     // never a row), the patch handler's "which creates land on a trashed row"
-    // lookup, the rank-park floor (a trashed sibling still holds its rank), and
-    // the live relation's own definition.
+    // lookup, the rank-park floor (a trashed sibling still holds its rank), the
+    // pasted-sub-page resolver, and the live relation's own definition.
     "no-unfiltered-blocks-read": [
       "plugins/page/plugins/editor/server/internal/live-blocks.ts",
       "plugins/page/plugins/editor/server/internal/forest-writer.ts",
@@ -113,6 +113,9 @@ export default {
       "plugins/page/plugins/editor/server/internal/page-doc-order.ts",
       "plugins/page/plugins/editor/server/internal/page-id.ts",
       "plugins/page/plugins/editor/server/internal/handle-patch-blocks.ts",
+      // A pasted sub-page: a cut page is in the trash when its paste claims it,
+      // and a copy of a since-deleted page still clones what it held.
+      "plugins/page/plugins/editor/server/internal/page-clipboard.ts",
     ],
     // The two modules allowed to call the structural endpoints: the page's own
     // optimistic instance, and the composite router that fans writes out to it

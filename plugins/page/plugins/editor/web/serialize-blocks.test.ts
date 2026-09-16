@@ -15,6 +15,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   planForestInsert,
   withMintedIds,
+  withPasteIds,
   type Block,
   type BlockNode,
   type IdentifiedBlock,
@@ -35,7 +36,12 @@ function mk(
   id: string,
   parentId: string | null,
   rank: Rank,
-  opts: { type?: string; pageId?: string | null; expanded?: boolean; text?: string } = {},
+  opts: {
+    type?: string;
+    pageId?: string | null;
+    expanded?: boolean;
+    text?: string;
+  } = {},
 ): Block {
   return {
     id,
@@ -94,7 +100,10 @@ describe("serializeForest", () => {
     const [s] = serializeForest(rows, ["root"]);
     expect(s!.type).toBe("callout");
     expect(s!.expanded).toBe(true);
-    expect(s!.children.map((c) => (c.data as { text: string }).text)).toEqual(["c1", "c2"]);
+    expect(s!.children.map((c) => (c.data as { text: string }).text)).toEqual([
+      "c1",
+      "c2",
+    ]);
   });
 
   test("round-trips through a plan → serialize cycle (structure preserved)", () => {
@@ -122,17 +131,24 @@ describe("serializeForest", () => {
     // each node's source row id (the markdown walk needs it — a `<page id="…"/>`
     // tag has no other source of identity), and those ids are freshly minted
     // here. That the ids are the source rows' is pinned by its own test below.
-    expect(withoutIds(serializeForest(rowsOf(nodes), rootIds))).toEqual([original]);
+    expect(withoutIds(serializeForest(rowsOf(nodes), rootIds))).toEqual([
+      original,
+    ]);
   });
 
   test("stamps each node's SOURCE row id", () => {
     // Provenance, never a destination identity: both consumers (copy→paste and
     // duplicate) run the forest through `withMintedIds`, which overwrites it.
-    const rows = [mk("root", null, r0, { type: "toggle" }), mk("kid", "root", r0)];
+    const rows = [
+      mk("root", null, r0, { type: "toggle" }),
+      mk("kid", "root", r0),
+    ];
     const [s] = serializeForest(rows, ["root"]);
     expect(s!.id).toBe("root");
     expect(s!.children.map((c) => c.id)).toEqual(["kid"]);
-    expect(withMintedIds(serializeForest(rows, ["root"]))[0]!.id).not.toBe("root");
+    expect(withMintedIds(serializeForest(rows, ["root"]))[0]!.id).not.toBe(
+      "root",
+    );
   });
 
   test("a COLLAPSED subtree still serializes whole (rows, not visible lines)", () => {
@@ -154,9 +170,11 @@ describe("serializeForest", () => {
     const r1 = r0;
     const r2 = after(r1);
     const rows = [mk("A", null, r1), mk("B", null, r2)];
-    expect(serializeForest(rows, ["B", "A"]).map((s) => (s.data as { text: string }).text)).toEqual(
-      ["B", "A"],
-    );
+    expect(
+      serializeForest(rows, ["B", "A"]).map(
+        (s) => (s.data as { text: string }).text,
+      ),
+    ).toEqual(["B", "A"]);
   });
 
   test("a root id absent from the rows is dropped; the others still serialize", () => {
@@ -164,10 +182,46 @@ describe("serializeForest", () => {
     // are a live snapshot, so a root can legitimately vanish under a concurrent
     // delete between selection and copy.
     const rows = [mk("A", null, r0)];
-    expect(serializeForest(rows, ["GONE", "A"]).map((s) => s.type)).toEqual(["text"]);
+    expect(serializeForest(rows, ["GONE", "A"]).map((s) => s.type)).toEqual([
+      "text",
+    ]);
   });
 
   test("no roots → an empty forest", () => {
     expect(serializeForest([mk("A", null, r0)], [])).toEqual([]);
+  });
+});
+
+describe("a sub-page carries its source, not its content", () => {
+  test("a page node names its own row as pageSource; other nodes carry none", () => {
+    const rows = [
+      mk("S", "root", r0, { type: "page" }),
+      mk("root", null, after(r0)),
+    ];
+    const [root] = serializeForest(rows, ["root"]);
+    expect(root!.pageSource).toBeUndefined();
+    expect(root!.children[0]!.pageSource).toEqual({ pageId: "S" });
+  });
+
+  test("withMintedIds always mints, so a duplicate copies the page", () => {
+    const rows = [mk("S", null, r0, { type: "page" })];
+    const [n] = withMintedIds(serializeForest(rows, ["S"]));
+    expect(n!.id).not.toBe("S");
+    expect(n!.pageSource).toEqual({ pageId: "S" });
+  });
+
+  test("withPasteIds keeps the source id only for what the claim accepts", () => {
+    const forest: SerializedBlock[] = [
+      { ...leaf("page"), pageSource: { pageId: "S", cutId: "c1" } },
+      { ...leaf("page"), pageSource: { pageId: "T" } },
+      leaf("text"),
+    ];
+    const [s, tNode, text] = withPasteIds(
+      forest,
+      (source) => source.cutId === "c1",
+    );
+    expect(s!.id).toBe("S");
+    expect(tNode!.id).not.toBe("T");
+    expect(text!.id).toMatch(/^block-/);
   });
 });

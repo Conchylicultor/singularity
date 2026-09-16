@@ -1,6 +1,11 @@
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { recordTrashEntry } from "@plugins/infra/plugins/trash/server";
+import {
+  recordTrashEntry,
+  _trashEntries,
+} from "@plugins/infra/plugins/trash/server";
 import { textOf, type BlockNode } from "../../core/block-ops";
 import type { Block } from "../../core/schemas";
 import { PAGE_BLOCK_TYPE, PAGE_BLOCKS_TRASH_SOURCE } from "../../core/schemas";
@@ -393,6 +398,28 @@ export interface ForestWriteResult {
    * `<agent-page>`, a paste or a duplicate of a sub-page all land here.
    */
   createdPageIds: string[];
+  /**
+   * Pages this write CLAIMED rather than inserted (see {@link PageClaim}), with
+   * the page scope each one left. The caller announces those former scopes: a
+   * page moving out of a page changed that page's content too.
+   */
+  claimedFromPageIds: string[];
+}
+
+/**
+ * An existing `type="page"` row a paste names by its own id — the first paste of
+ * a cut, which MOVES the page instead of copying it (`PageSource` in
+ * `core/serialized-block.ts`). The reducer plans it like any inserted node; the
+ * writer places the stored row there instead of inserting a new one, so the
+ * page keeps its id, its data and every row keyed on it.
+ *
+ * `trashEntryId` is the entry the row is flagged under (the cut trashed it), or
+ * `null` when it is live somewhere else (the cut was undone, or restored from
+ * the Trash). A trashed claim takes back its whole subtree from that entry.
+ */
+export interface PageClaim {
+  pageId: string | null;
+  trashEntryId: string | null;
 }
 
 /** The ids of the page rows among a write's inserts. */
@@ -615,7 +642,7 @@ async function trashBeforePlacing(
       { id: string; pageId: string | null; data: unknown }
     >;
   },
-): Promise<Omit<ForestWriteResult, "createdPageIds">> {
+): Promise<Omit<ForestWriteResult, "createdPageIds" | "claimedFromPageIds">> {
   const deletedRows = deleteClosureOf(args.asWritten, args.deleteIds);
   const deleteRootIds = deleteRootsOf(deletedRows);
   const deferredToChokepoint = deletedRows.some(
@@ -691,6 +718,7 @@ export async function writeForestTarget(
   ctx: PageForestCtx,
   before: BlockNode[],
   after: BlockNode[],
+  claims: ReadonlyMap<string, PageClaim> = new Map(),
 ): Promise<ForestWriteResult> {
   const { inserted, updated, deletedIds } = reconcileBlocks(before, after);
   const beforeById = new Map(before.map((n) => [n.id, n]));
@@ -735,22 +763,33 @@ export async function writeForestTarget(
   });
 
   const now = new Date();
-  await insertBlocks(
-    ctx.tx,
-    inserted.map((node) => ({
-      id: node.id,
-      // In-page ops never change pageId; new nodes carry the pageId the
-      // reducer already inherited from their parent/sibling.
-      pageId: node.pageId,
-      parentId: node.parentId,
-      type: node.type,
-      data: parseBlockData(node.type, node.data),
-      rank: node.rank,
-      expanded: node.expanded,
-      createdAt: now,
-      updatedAt: now,
-    })),
-  );
+  // Parent-before-descendant, so the self-FK holds row by row: a claimed page may
+  // sit under a container this same paste inserts. Consecutive inserts still go
+  // out as one statement.
+  let batch: NewBlockRow[] = [];
+  for (const node of inserted) {
+    const claim = claims.get(node.id);
+    if (claim === undefined) {
+      batch.push({
+        id: node.id,
+        // In-page ops never change pageId; new nodes carry the pageId the
+        // reducer already inherited from their parent/sibling.
+        pageId: node.pageId,
+        parentId: node.parentId,
+        type: node.type,
+        data: parseBlockData(node.type, node.data),
+        rank: node.rank,
+        expanded: node.expanded,
+        createdAt: now,
+        updatedAt: now,
+      });
+      continue;
+    }
+    await insertBlocks(ctx.tx, batch);
+    batch = [];
+    await placeClaimedPage(ctx, node, claim);
+  }
+  await insertBlocks(ctx.tx, batch);
   await trashOrphanInserts(
     ctx.tx,
     write,
@@ -774,7 +813,95 @@ export async function writeForestTarget(
     });
   }
 
-  return { ...write, createdPageIds: pageIdsOf(inserted) };
+  return {
+    ...write,
+    createdPageIds: pageIdsOf(inserted.filter((n) => !claims.has(n.id))),
+    claimedFromPageIds: inserted.flatMap((n) => {
+      const from = claims.get(n.id)?.pageId;
+      return from === undefined || from === null ? [] : [from];
+    }),
+  };
+}
+
+/**
+ * Place a claimed page where the reducer planned it: one UPDATE moves the stored
+ * row (and clears its trash flags, when the cut trashed it) — its `data` is left
+ * alone, so the page keeps its own title, icon and author rather than the
+ * clipboard's copy of them. Its content needs no re-scoping: it is keyed
+ * `page_id = <its id>`, which a move does not change.
+ *
+ * A trashed claim then takes back the rest of its subtree from the cut's entry —
+ * only the rows under THIS page: a cut of `[paragraph, page]` flags both under
+ * one entry, and the paragraph (pasted as a fresh copy) stays in the trash. Rows
+ * under the page that an earlier, separate delete trashed keep their own entry.
+ * The entry is consumed once no row carries it. The `OnRestore` hooks run after
+ * commit over every row that came back, exactly as for a restore.
+ */
+async function placeClaimedPage(
+  ctx: PageForestCtx,
+  node: BlockNode,
+  claim: PageClaim,
+): Promise<void> {
+  await updateBlockFields(ctx.tx, node.id, {
+    parentId: node.parentId,
+    pageId: node.pageId,
+    rank: node.rank,
+    expanded: node.expanded,
+    deletedAt: null,
+    trashEntryId: null,
+    updatedAt: new Date(),
+  });
+  const entryId = claim.trashEntryId;
+  if (entryId === null) return;
+
+  const subtree = await executeRows(ctx.tx, {
+    label: "page_blocks claimed page subtree",
+    query: sql`
+      WITH RECURSIVE sub AS (
+        SELECT id FROM page_blocks
+         WHERE parent_id = ${node.id} AND trash_entry_id = ${entryId}
+        UNION
+        SELECT b.id FROM page_blocks b JOIN sub s ON b.parent_id = s.id
+         WHERE b.trash_entry_id = ${entryId}
+      )
+      SELECT b.id, b.type, b.page_id, b.parent_id
+        FROM page_blocks b JOIN sub USING (id)
+    `,
+    row: z.object({
+      id: z.string(),
+      type: z.string(),
+      page_id: z.string().nullable(),
+      parent_id: z.string().nullable(),
+    }),
+  });
+  await untrashBlockRoots(
+    ctx.tx,
+    subtree.map((r) => r.id),
+  );
+  const [remaining] = await ctx.tx
+    .select({ id: _blocks.id })
+    .from(_blocks)
+    .where(eq(_blocks.trashEntryId, entryId))
+    .limit(1);
+  if (remaining === undefined) {
+    await ctx.tx.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
+  }
+
+  const restored: DeletedBlockRow[] = [
+    {
+      id: node.id,
+      type: node.type,
+      pageId: node.pageId,
+      parentId: node.parentId,
+    },
+    ...subtree.map((r) => ({
+      id: r.id,
+      type: r.type,
+      pageId: r.page_id,
+      parentId: r.parent_id,
+    })),
+  ];
+  ctx.afterCommit(() => runOnRestore(restored));
 }
 
 // ---------------------------------------------------------------------------
@@ -965,5 +1092,9 @@ export async function writeBlockPatch(
     await updateBlockFields(ctx.tx, u.id, set);
   }
 
-  return { ...write, createdPageIds: pageIdsOf(inserts) };
+  return {
+    ...write,
+    createdPageIds: pageIdsOf(inserts),
+    claimedFromPageIds: [],
+  };
 }

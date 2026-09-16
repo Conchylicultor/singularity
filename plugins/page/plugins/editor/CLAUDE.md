@@ -2269,6 +2269,44 @@ rather than by two mirrored implementations agreeing.
   fold it identically, and a clone always lands strictly between its source and
   that source's next sibling) — it is document-ordered for determinism only.
 
+### A pasted sub-page moves once, and copies after that
+
+A sub-page's content is not in the forest a copy serializes — it lives in the
+page's own `page_id` partition, which the editor on screen never loads. So a
+`type="page"` node carries `pageSource: { pageId, cutId? }` instead of children
+(`core/serialized-block.ts`), and the server resolves the content when the paste
+or duplicate lands, inside the op's own locked transaction
+(`server/internal/page-clipboard.ts`):
+
+> A page node whose id IS its source page is a CLAIM: the page itself moves.
+> Any other page node is a COPY of the source's whole content.
+
+- **The decision is the client's, made before dispatch**, because the paste
+  renders optimistically under the ids it names and the server cannot pick a
+  different identity afterwards. A cut stamps one `cutId` on its page nodes
+  (`writeForestToClipboard(…, "cut")`); `paste` mints through `withPasteIds`,
+  which keeps the source id only for a cut not yet pasted
+  (`web/internal/cut-claims.ts`, remembered in localStorage and in memory) whose
+  page is not already in the destination forest. `withMintedIds` stays
+  unconditional, so duplicate always copies.
+- **A claim keeps everything keyed on the page's id** — links, history,
+  authorship, its content partition. The writer places the stored row where the
+  reducer planned it (`writeForestTarget`'s `claims`) instead of inserting, and a
+  trashed claim takes back only the rows under that page from the cut's entry
+  (a cut of `[paragraph, page]` leaves the paragraph trashed). A claim of a page
+  that is live elsewhere just moves it. A claim of the destination or a page
+  above it is a 409.
+- **A copy runs `BlockLifecycle.OnCopy`** over every `(source, copy)` pair, in
+  the transaction, so a plugin keying state by block id brings it along without
+  the writer naming it: `editor-collab` copies the content doc (the text's owner,
+  which the ~1 s `data.text` projection may trail), `authorship` copies the
+  conversations that wrote it. State that is a statement about the SOURCE row (a
+  star, a TODO's task binding, the agent-origin marker) does not contribute.
+- **Which rows are content follows the source page's own state**: a live page
+  copies its live rows, a trashed one the rows its delete trashed with it. Rows
+  this same write inserted are never read back as source, so pasting a copy of a
+  page into that page terminates.
+
 ## A write names the fields it changes (`BlockPatch`)
 
 > Restating a whole row asserts authority over fields you don't own.
@@ -3724,6 +3762,8 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation.enqueueResourceWrite`
     - `primitives/optimistic-mutation.OpNoLongerApplies`
     - `primitives/optimistic-mutation.useOptimisticResource`
+    - `primitives/persistent-draft.readDraft`
+    - `primitives/persistent-draft.writeDraft`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/select-scope.ContentScope`
@@ -3875,12 +3915,14 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
   - Exports (types):
     - `AfterCommit`
     - `Block`
+    - `BlockCopyHook`
     - `BlockCreateHook`
     - `BlockDeleteHook`
     - `BlockRestoreHook`
     - `BlocksChangedPayload`
     - `BlockTextWriter`
     - `BlockTrashHook`
+    - `CopiedBlock`
     - `DeletedBlockRow`
     - `PageContentSnapshot`
     - `PageData`
@@ -3979,6 +4021,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageCover`
     - `PageData`
     - `PageRow`
+    - `PageSource`
     - `RichText`
     - `RowData`
     - `RunsXmlTextOptions`
@@ -4050,6 +4093,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `PageDataSchema`
     - `PageRowSchema`
     - `PAGES_TRASH_SOURCE`
+    - `pageSourcesOf`
     - `pagesResource`
     - `parseInlineMarkdown`
     - `parseMarkdownToForest`
@@ -4092,6 +4136,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `visibleChildRule`
     - `withContainersSelected`
     - `withMintedIds`
+    - `withPasteIds`
     - `withRuns`
     - `writtenIds`
     - `xmlTextContentLength`
