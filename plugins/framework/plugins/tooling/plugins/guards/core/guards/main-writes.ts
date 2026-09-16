@@ -56,7 +56,7 @@ function localPaths(operands: readonly FileOperand[]): string[] {
  * the call's effective working directory (so a leading `cd` is honored). Empty
  * when the call writes nothing we police.
  */
-function writeTargets(call: ShellCall): string[] {
+export function writeTargets(call: ShellCall): string[] {
   const name = canonicalCommand(call.name);
   if (!name) return [];
   const argv = parseArgv(call);

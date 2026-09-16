@@ -7,6 +7,7 @@ import { gitPushGuard } from "./guards/git-push";
 import { gitResetMainGuard } from "./guards/git-reset-main";
 import { mainEditsGuard } from "./guards/main-edits";
 import { mainWritesGuard } from "./guards/main-writes";
+import { noMemoryGuard } from "./guards/no-memory";
 import { migrationsGuard } from "./guards/migrations";
 import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
@@ -28,6 +29,8 @@ export const GUARDS: Guard<any>[] = [
   pollLoopGuard,
   // File writes
   mainEditsGuard,
+  // Bash + file writes
+  noMemoryGuard,
   // Agent
   agentModelGuard,
 ];
