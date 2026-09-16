@@ -17,6 +17,13 @@ export interface CreateSessionOptions {
 
 const sessions = new Map<string, Session>();
 
+// The terminal type this PTY emulates. It must reach the child as TERM: the
+// backend starts from a declared environment that deliberately carries no TERM
+// (see launcher's runtime-env.ts), and bun-pty's `name` does not set it when an
+// explicit `env` is passed. Without it `tmux attach` exits with "terminal does
+// not support clear".
+const TERM_NAME = "xterm-256color";
+
 export function createSession(options: CreateSessionOptions): string {
   const id = crypto.randomUUID();
   const cmd = options.command?.[0] ?? (process.env.SHELL || "bash");
@@ -24,11 +31,11 @@ export function createSession(options: CreateSessionOptions): string {
   const cwd = options.cwd || HOME_DIR || "/";
 
   const p = spawn(cmd, args, {
-    name: "xterm-256color",
+    name: TERM_NAME,
     cols: options.cols,
     rows: options.rows,
     cwd,
-    env: process.env as Record<string, string>,
+    env: { ...(process.env as Record<string, string>), TERM: TERM_NAME },
   });
 
   sessions.set(id, { id, pty: p });
