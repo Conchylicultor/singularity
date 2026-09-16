@@ -444,6 +444,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tasks-core`** [load-bearing] — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
     - **`worktree-identity`** — Which checkout and task this page is served from, as the health report's first (informational) row: the linked task's title or the namespace, the kind of place it names, a copy button, and Open task.
 
+- **`toolchain`** — Daily toolchain.detect-outdated job: when main's toolchain has a newer release than mise.lock records, files one auto-started task (Toolchain category) whose agent runs `./singularity toolchain upgrade` and pushes on an `upgraded` verdict.
+
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
     - **`breadcrumb-separator`** — Breadcrumb-separator region (chevron / slash). Contributes its variant-region host into BreadcrumbSlots.Separator.

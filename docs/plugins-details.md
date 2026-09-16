@@ -11192,6 +11192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-effort`
       - `tasks/task-preprompt`
       - `tasks/tasks-core`
+      - `toolchain`
       - `ui/theme-engine/saved-themes`
   - Core:
     - Exports (types):
@@ -15297,6 +15298,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`serve-app`** — `./singularity serve-app` — boot a packaged app's full runtime (gateway + embedded Postgres + app DB) under an isolated SINGULARITY_DIR. The one detachable command: it is meant to outlive the shell that launched it.
         - **`start`** — `./singularity start` — build and start the gateway daemon, then wait for it to actually serve before reporting success.
         - **`test`** — `./singularity test` — the ONLY way to run tests: both runners (bun:test for co-located logic suites, vitest for jsdom suites), with a summary naming both buckets so a green-but-partial result is impossible.
+          - Core:
+            - Uses:
+              - `infra/paths.worktreeArtifacts`
+              - `infra/paths.worktreeDataDir`
+            - Exports (types):
+              - `JunitSummary`
+              - `TestRunnerName`
+              - `TestRunnerOutcome`
+              - `TestStatus`
+            - Exports (values):
+              - `parseJunit`
+              - `readTestStatus`
+              - `writeTestStatus`
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
@@ -17562,6 +17576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stats/cost`
           - `tasks/auto-start`
           - `tasks/task-title`
+          - `toolchain`
       - Plugins:
         - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
           - Server:
@@ -17886,6 +17901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `framework/cli/op-runtime`
+          - `framework/cli/test`
           - `framework/tooling/checks`
           - `framework/tooling/guards`
           - `infra/claude-cli`
@@ -27320,6 +27336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports/render-loop`
           - `shell/notifications`
           - `stats/cost`
+          - `toolchain`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -31184,6 +31201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/task-graph`
       - `tasks/task-header`
       - `tasks/task-list`
+      - `toolchain`
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
       - Web:
@@ -31459,6 +31477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
           - `tasks/reports-investigation`
           - `tasks/task-dependencies`
+          - `toolchain`
     - **`task-dependencies`** — Both ends of the task's dependency edges in one card: the tasks it runs after and the tasks it blocks, as removable chips, with prerequisite / follow-up add affordances (and a quick-add for the folder task when applicable) in the header.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
@@ -32211,6 +32230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/task-events`
           - `tasks/task-preprompt`
           - `tasks/task-title`
+          - `toolchain`
         - Extended by:
           - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
           - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
@@ -32232,6 +32252,40 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-button.IconButton`
           - `primitives/live-state.useResource`
           - `shell/health-report.HealthReport`
+
+- **`toolchain`** — Daily toolchain.detect-outdated job: when main's toolchain has a newer release than mise.lock records, files one auto-started task (Toolchain category) whose agent runs `./singularity toolchain upgrade` and pushes on an `upgraded` verdict.
+  - Server:
+    - Contributes: `taskCategory` "toolchain"
+    - Uses:
+      - `database.db`
+      - `infra/jobs.defineJob`
+      - `primitives/log-channels.Log`
+      - `tasks.armTaskAutoStart`
+      - `tasks/task-category.setTaskCategory`
+      - `tasks/task-category.TaskCategory`
+      - `tasks/task-category.tasksCategory`
+      - `tasks/tasks-core.createTask`
+      - `tasks/tasks-core.getTask`
+    - Register: `defineJob('toolchain.detect-outdated')`
+  - Core:
+    - Exports (types):
+      - `GateResult`
+      - `ToolHold`
+      - `ToolSmoke`
+      - `ToolSpec`
+    - Exports (values):
+      - `compareVersions`
+      - `confirmedFailures`
+      - `HOLDS`
+      - `isExactRelease`
+      - `lockProblems`
+      - `newFailures`
+      - `parseMiseLock`
+      - `parseMiseToolRequests`
+      - `setLockedVersion`
+      - `TOOLCHAIN_CATEGORY_ID`
+      - `TOOLS`
+      - `upgradeTarget`
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

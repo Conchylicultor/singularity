@@ -64,6 +64,8 @@ export const detectOutdatedToolchainJob = defineJob({
   name: "toolchain.detect-outdated",
   // `mise outdated` asks each tool's release source over the network.
   hold: "minutes",
+  inProcess:
+    "A read-only detection pass (one `mise outdated` call, then at most one task insert) that a restart can abort and the next daily tick simply repeats; it holds a slot for at most its five-minute spawn bound.",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
