@@ -78,9 +78,12 @@ const buttonVariants = cva(
         inline:
           "h-auto rounded-[min(var(--radius-md),8px)] p-0.5 align-middle text-[1em] font-medium [&_svg:not([class*='size-'])]:icon-auto",
       },
+      // A pill's rounded ends take room a rectangle's corners don't: `pill-ends`
+      // adds the shape group's pill extra to both sides of the size's own
+      // `px-control-*`. Icon sizes have no inline padding, so it is inert there.
       shape: {
         default: "",
-        pill: "rounded-full!",
+        pill: "rounded-full! pill-ends",
       },
     },
     defaultVariants: {

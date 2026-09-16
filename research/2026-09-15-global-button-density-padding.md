@@ -149,7 +149,8 @@ it with a `px-*` class on one button.
   ramp. They should read the same per-size tokens. That is a separate change,
   because their vertical metrics would move too.
 - Extra padding for pill-shaped buttons, if the header check in §5 shows it is
-  needed.
+  needed. *Done: the shape group's `pillPadExtra` — see
+  `2026-09-15-global-pill-button-padding.md`.*
 
 ## Outcome (2026-09-15)
 

@@ -192,8 +192,9 @@ const density = densityGroup.fragment(
     // 44.4px — a contact card's button (14px on a 1.6 line + 11px × 2).
     controlHeightMd: "2.775rem",
     controlHeightLg: "3rem",
-    // 18px — the call-to-action pill's inline padding.
-    controlPadSm: "1.125rem",
+    // 12px — a small control's inline padding: the quiet nav links. The
+    // call-to-action pill adds the shape's pill extra on top (see `shape`).
+    controlPadSm: "0.75rem",
     chromeBarH: "3rem",
     // 72px — the site header.
     chromePaneH: "4.5rem",
@@ -218,9 +219,13 @@ const density = densityGroup.fragment(
 /**
  * One radius token sized so the card corner (`rounded-2xl`, 1.8×) lands on the
  * design's 20px; a button's `rounded-lg` (1×) then sits at 11px.
+ *
+ * The pill extra is what the header's call-to-action pill pads beyond the nav
+ * links beside it: 12px (`controlPadSm`) + 6px = the mock's 18px, while the
+ * links keep 12px, so the nav words sit the mock's ~29px apart.
  */
 const shape = shapeGroup.fragment(
-  both({ radius: "0.6944rem", spacing: "0.25rem" }),
+  both({ radius: "0.6944rem", spacing: "0.25rem", pillPadExtra: "0.375rem" }),
 );
 
 /**

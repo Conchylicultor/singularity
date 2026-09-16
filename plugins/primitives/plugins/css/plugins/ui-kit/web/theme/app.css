@@ -471,11 +471,26 @@
  * (--control-pad-* / --control-gap-*). So a preset owns how wide a control is,
  * not only how tall. `padding-inline` is the property Tailwind's own `px-*`
  * writes, so a caller's `pl-*` / `pr-*` / `px-0` override resolves exactly as it
- * did against a numeric `px-2.5`. */
-@utility px-control-xs { padding-inline: var(--control-pad-xs); } /* twmerge: extend px */
-@utility px-control-sm { padding-inline: var(--control-pad-sm); } /* twmerge: extend px */
-@utility px-control-md { padding-inline: var(--control-pad-md); } /* twmerge: extend px */
-@utility px-control-lg { padding-inline: var(--control-pad-lg); } /* twmerge: extend px */
+ * did against a numeric `px-2.5`.
+ *
+ * Each side also adds `--pill-extra-start` / `--pill-extra-end`: the extra room
+ * a fully-rounded end needs over a rectangle's corner (the shape group's
+ * `--pill-pad-extra`). They are 0 unless the element says that side IS a
+ * rounded end — `pill-ends` (a pill: both sides), or `pill-start` / `pill-end`
+ * (a split pill's outer segments, one side each). So a pill's padding is the
+ * size's padding plus the shape's extra, one density value read two ways, and
+ * an icon-only segment (no `px-control-*`) stays square and centred.
+ * Registered with `inherits: false` so the extra belongs to the element whose
+ * shape declared it, never to a control nested inside it. */
+@property --pill-extra-start { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --pill-extra-end { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@utility px-control-xs { padding-inline: calc(var(--control-pad-xs) + var(--pill-extra-start)) calc(var(--control-pad-xs) + var(--pill-extra-end)); } /* twmerge: extend px */
+@utility px-control-sm { padding-inline: calc(var(--control-pad-sm) + var(--pill-extra-start)) calc(var(--control-pad-sm) + var(--pill-extra-end)); } /* twmerge: extend px */
+@utility px-control-md { padding-inline: calc(var(--control-pad-md) + var(--pill-extra-start)) calc(var(--control-pad-md) + var(--pill-extra-end)); } /* twmerge: extend px */
+@utility px-control-lg { padding-inline: calc(var(--control-pad-lg) + var(--pill-extra-start)) calc(var(--control-pad-lg) + var(--pill-extra-end)); } /* twmerge: extend px */
+@utility pill-ends { --pill-extra-start: var(--pill-pad-extra); --pill-extra-end: var(--pill-pad-extra); } /* twmerge: standalone -- Declares which sides are rounded ends; sets custom properties only, no built-in group to conflict with. */
+@utility pill-start { --pill-extra-start: var(--pill-pad-extra); } /* twmerge: standalone -- Declares the start side a rounded end; sets a custom property only, no built-in group to conflict with. */
+@utility pill-end { --pill-extra-end: var(--pill-pad-extra); } /* twmerge: standalone -- Declares the end side a rounded end; sets a custom property only, no built-in group to conflict with. */
 @utility gap-control-xs { gap: var(--control-gap-xs); } /* twmerge: extend gap */
 @utility gap-control-sm { gap: var(--control-gap-sm); } /* twmerge: extend gap */
 @utility gap-control-md { gap: var(--control-gap-md); } /* twmerge: extend gap */

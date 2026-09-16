@@ -14,26 +14,28 @@ export const shapeShortcuts: {
     id: "default",
     label: "Default",
     fragment: shapeGroup.fragment(
-      both({ radius: "0.625rem", spacing: "0.25rem" }),
+      both({ radius: "0.625rem", spacing: "0.25rem", pillPadExtra: "0rem" }),
     ),
   },
   {
     id: "sharp",
     label: "Sharp",
-    fragment: shapeGroup.fragment(both({ radius: "0rem", spacing: "0.25rem" })),
+    fragment: shapeGroup.fragment(
+      both({ radius: "0rem", spacing: "0.25rem", pillPadExtra: "0rem" }),
+    ),
   },
   {
     id: "rounded",
     label: "Rounded",
     fragment: shapeGroup.fragment(
-      both({ radius: "0.75rem", spacing: "0.25rem" }),
+      both({ radius: "0.75rem", spacing: "0.25rem", pillPadExtra: "0rem" }),
     ),
   },
   {
     id: "pill",
     label: "Pill",
     fragment: shapeGroup.fragment(
-      both({ radius: "9999px", spacing: "0.25rem" }),
+      both({ radius: "9999px", spacing: "0.25rem", pillPadExtra: "0rem" }),
     ),
   },
 ];

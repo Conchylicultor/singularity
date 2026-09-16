@@ -81,7 +81,10 @@ export function Badge({
         // below decides WHICH baseline the chip offers the sentence.
         "inline-flex region-line max-w-full gap-xs p-chip align-baseline font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
         shape === "rect" && "rounded-md",
-        shape === "pill" && "rounded-full",
+        // `pill-ends`: a chip on the control scale (ToggleChip's `px-control-*`)
+        // takes the shape group's pill extra on both ends, like a pill Button.
+        // Inert on the chip scale (`p-chip`), which does not read it.
+        shape === "pill" && "rounded-full pill-ends",
         textClass,
         colorClass ?? VARIANT_CLASS[variant],
         className,

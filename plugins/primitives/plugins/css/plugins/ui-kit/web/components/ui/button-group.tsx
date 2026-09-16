@@ -57,6 +57,12 @@ function ButtonGroup({
         "[&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-l-none [&>.contents:not(:nth-last-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-r-none",
         shape === "pill" &&
           "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-l-full [&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-r-full [&>.contents:nth-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-l-full [&>.contents:nth-last-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-r-full",
+        // A split pill pads its two outer ends for their roundness: the first
+        // segment's start and the last segment's end take the shape group's
+        // pill extra (`pill-start` / `pill-end`), exactly as a whole pill
+        // button's two ends do. The seams stay square and unpadded.
+        shape === "pill" &&
+          "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:pill-start [&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:pill-end [&>.contents:nth-child(1_of_:not([data-base-ui-focus-guard]))>*]:pill-start [&>.contents:nth-last-child(1_of_:not([data-base-ui-focus-guard]))>*]:pill-end",
         // Collapse the doubled border between adjacent segments into one seam.
         "[&>:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))]:-ml-px [&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:-ml-px",
         className,

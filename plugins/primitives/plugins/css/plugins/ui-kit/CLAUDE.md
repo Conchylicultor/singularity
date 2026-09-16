@@ -30,7 +30,12 @@ The global UI kit — one cohesive design-system unit. It owns:
   `"icon"` | `"inline"`). A text size's height, inline padding and icon gap all
   come from the density token group (`control-*`, `px-control-*`,
   `gap-control-*`) — never a numeric `px-`/`gap-` in the cva, which no theme can
-  reach. `ControlSize` must sit beside `Button` here (not in the
+  reach. A pill's rounded ends take more room than a rectangle's corners, so
+  `px-control-*` also adds the shape group's `pillPadExtra` on each side the
+  element declares a rounded end: `pill-ends` (Button/Badge `shape="pill"`,
+  both sides) or `pill-start` / `pill-end` (a `ButtonGroup shape="pill"`'s outer
+  segments). The extra is 0 by default; an icon-only segment has no
+  `px-control-*`, so it stays square. `ControlSize` must sit beside `Button` here (not in the
   `control-size` primitive, which only owns the CSS scale + lint rule).
   This module is also the home of the **single density→text policy**:
   `textStepFor(density): 0 | 1` is THE threshold (1 only at `xs`, the compact

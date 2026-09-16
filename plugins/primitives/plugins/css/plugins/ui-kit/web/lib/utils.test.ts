@@ -176,6 +176,18 @@ it("Button: a caller's gap-* replaces the control gap token", () => {
   expect<string>(cn("gap-control-md", "gap-xs")).toBe("gap-xs");
 });
 
+it("Button pill: pill-ends composes with the control padding it widens", () => {
+  // pill-ends only sets the per-side extra that px-control-* reads, so the two
+  // must survive the merge together, and a caller's px-0 still wins the padding.
+  expect<string>(cn("px-control-sm", "pill-ends")).toBe(
+    "px-control-sm pill-ends",
+  );
+  expect<string>(cn("px-control-sm pill-ends", "px-0")).toBe("pill-ends px-0");
+  expect<string>(
+    cn("rounded-l-full pill-start", "rounded-r-full pill-end"),
+  ).toBe("rounded-l-full pill-start rounded-r-full pill-end");
+});
+
 it("ToggleChip: the control padding and gap override the chip shell's", () => {
   // Badge's shell carries gap-xs + p-chip; the chip's md form layers the
   // control size's inline padding and gap over them.

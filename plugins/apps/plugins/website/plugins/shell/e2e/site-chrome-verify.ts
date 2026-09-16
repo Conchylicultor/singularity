@@ -7,7 +7,8 @@
 //   - the wordmark's full stop sits on the text's line, not above it;
 //   - a quiet nav link's hover changes only its colour (no hover box);
 //   - the call-to-action pill takes its height and inline padding from the
-//     theme's small-control density tokens;
+//     theme's small-control density tokens plus the shape's pill extra, while
+//     the quiet nav links at the same size pad without it;
 //   - a fork card lifts 3px under the pointer;
 //   - the forward arrows (story link, contact call to action) step 4px toward
 //     their destination on hover.
@@ -33,6 +34,9 @@ const out = arg("out", "/tmp/site-chrome");
 
 /** The reading measure `website-band.css` declares (65rem at a 16px root). */
 const MEASURE_PX = 1040;
+
+/** The header's quiet nav links, in reading order (`header.jsonc`). */
+const NAV_WORDS = ["For users", "For developers", "Story"];
 
 /** A CSS colour's alpha, from the `rgb()` / `rgba()` / `color()` a computed style returns. */
 function alphaOf(color: string): number {
@@ -152,8 +156,9 @@ await withBrowser(async (h) => {
   r.ok("a quiet nav link paints no hover box", alphaOf(navBg) === 0, navBg);
 
   // --- the call to action's width comes from the theme -----------------------
-  // The pill is a small control: its height AND its inline padding are the equin
-  // density preset's small-control tokens (38.4px, 18px), not Button's own.
+  // The pill is a small control: its height is the equin density preset's
+  // small-control height (38.4px), and its inline padding that size's 12px plus
+  // the shape's 6px pill extra on each rounded end — 18px, not Button's own.
   // The app's own action bar has an "Improve" button too (a tooltip trigger);
   // the site's is the one that opens its panel (a popover trigger).
   const cta = page
@@ -170,7 +175,7 @@ await withBrowser(async (h) => {
     };
   });
   r.ok(
-    "the call to action's inline padding is the preset's 18px",
+    "the call to action's inline padding is 18px (12px + the 6px pill extra)",
     ctaBox.padStart === "18px" && ctaBox.padEnd === "18px",
     JSON.stringify(ctaBox),
   );
@@ -178,6 +183,46 @@ await withBrowser(async (h) => {
     "the call to action's height is the preset's 38.4px",
     Math.abs(ctaBox.height - 38.4) < 0.5,
     `${ctaBox.height}px`,
+  );
+
+  // --- a quiet link pads less than the pill beside it -----------------------
+  // Same small size, two shapes: the ghost links take the preset's 12px, and the
+  // pill adds the shape group's 6px pill extra on each rounded end. So the nav
+  // words sit the mock's ~29px apart (12 + 4px gap + 12) while the pill keeps 18.
+  const linkPad = await computed(forUsers, "padding-inline-start");
+  r.ok(
+    "a quiet nav link's inline padding is 12px",
+    linkPad === "12px",
+    linkPad,
+  );
+  // Word to word, not box to box: each label's glyph run (a Range over the
+  // button's contents), so the gap is the padding either side plus the gap
+  // between the two buttons — what a reader sees between the words.
+  const wordGaps = await page.evaluate((labels) => {
+    const words = labels.map((label) => {
+      const button = [...document.querySelectorAll("button")].find(
+        (b) => b.textContent?.trim() === label,
+      );
+      if (!button) return null;
+      const range = document.createRange();
+      range.selectNodeContents(button);
+      return range.getBoundingClientRect();
+    });
+    const gaps: number[] = [];
+    for (let i = 1; i < words.length; i++) {
+      const before = words[i - 1];
+      const after = words[i];
+      if (!before || !after) return null;
+      gaps.push(Math.round(after.left - before.right));
+    }
+    return gaps;
+  }, NAV_WORDS);
+  r.ok(
+    "the quiet nav words sit about the mock's 29px apart",
+    wordGaps !== null &&
+      wordGaps.length > 0 &&
+      wordGaps.every((g) => g >= 26 && g <= 31),
+    JSON.stringify(wordGaps),
   );
 
   // --- band hairlines span the measure ----------------------------------------
