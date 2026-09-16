@@ -8,8 +8,11 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { createTurnQueue } from "@plugins/packages/plugins/macrotask-yield/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { computeTreeHash } from "./tree-hash";
+import { resolveCacheSignature } from "./cache-signature";
+import { recordingRepo, runRepoFiles } from "./repo-set";
 import { openCheckCache } from "./cache";
 import { withScanView } from "./scan-context";
 import {
@@ -417,21 +420,37 @@ export async function runChecks(
   const cache = treeHash
     ? await progress.bootstrap("open-cache", () => openCheckCache())
     : null;
-  // The shared, content-addressed tree snapshot — loaded ONCE per run (one
-  // `git ls-tree -r`) and reused by every input-keyed check's validate/record.
-  // Loaded ONLY when some selected check is actually input-keyed, so the extra
-  // spawn is never paid while the feature is unused. Fail-open: null → those
-  // checks fall back to running under a null view (still keyed via the legacy
-  // `has()/record()` path). Nine checks are input-keyed today, `type-check` and
-  // `plugin-boundaries` among them, so a full pass loads this snapshot — it is a
-  // hot path, not a dormant one.
+  // The shared, content-addressed tree snapshot — loaded at most ONCE per run
+  // (one `git ls-tree -r`) and reused by every input-keyed check's
+  // validate/record AND by `ctx.repo()`, whose file set is this tree whenever
+  // the run has one. One memoized promise serves both, so they can never read
+  // different trees and the spawn is never paid twice.
+  //
+  // Loaded EAGERLY only when some selected check is input-keyed; otherwise the
+  // first `ctx.repo()` call loads it, and a run no check asks pays nothing.
+  // Fail-open: null → input-keyed checks fall back to running under a null view
+  // (still keyed via the legacy `has()/record()` path), and `ctx.repo()` falls
+  // back to `loadRepoFiles`. Nine checks are input-keyed today, `type-check`
+  // and `plugin-boundaries` among them, so a full pass loads this snapshot — it
+  // is a hot path, not a dormant one.
+  let snapshotLoad: Promise<TreeSnapshot | null> | null = null;
+  const loadSnapshot = (): Promise<TreeSnapshot | null> =>
+    root !== null && treeHash !== null
+      ? (snapshotLoad ??= loadTreeSnapshot(root, treeHash))
+      : Promise.resolve(null);
   const anyInputKeyed = selected.some((c) => c.inputKeyed === true);
   const snapshot: TreeSnapshot | null =
     anyInputKeyed && root && treeHash
-      ? await progress.bootstrap("tree-snapshot", () =>
-          loadTreeSnapshot(root, treeHash),
-        )
+      ? await progress.bootstrap("tree-snapshot", loadSnapshot)
       : null;
+
+  // `ctx.repo()`: the run's file set, loaded by the first check that asks and
+  // shared by every check after it (`repo-set.ts` says where it comes from).
+  // `--no-cache` resolved no root above; the set resolves its own then.
+  const repo = runRepoFiles({
+    loadSnapshot,
+    root: () => (root !== null ? Promise.resolve(root) : getWorktreeRoot()),
+  });
 
   // Bootstrap is over: the facts that cost work to learn are now known, so they
   // reach the log as a follow-up record under the same `runId`.
@@ -460,16 +479,8 @@ export async function runChecks(
     observations: CheckObservation[],
   ): Promise<CheckOutcome> => {
     // A check opts out of caching by returning null from cacheSignature();
-    // absent → "" (keyed on tree hash alone). The runner never names checks.
-    let sig: string | null = "";
-    if (check.cacheSignature) {
-      try {
-        sig = check.cacheSignature();
-        // eslint-disable-next-line promise-safety/no-bare-catch -- cacheSignature() failure of any kind safely degrades to uncached; propagating would abort the check run, which is a worse outcome than skipping the cache
-      } catch {
-        sig = null;
-      }
-    }
+    // absent → "" (keyed on tree hash alone). Awaited: a signature may be async.
+    const sig = await resolveCacheSignature(check);
 
     // `observations` holds the non-fatal lines (measurements, capacity notes) a
     // check emits via `ctx.log`. Buffered rather than written straight through:
@@ -485,6 +496,7 @@ export async function runChecks(
       grant: options.grant,
       log: (line, stream) => observations.push({ line, stream }),
       cacheEnabled: !noCache,
+      repo,
     };
 
     // INPUT-KEYED path (validate-by-replay). Selected GENERICALLY on the
@@ -553,9 +565,18 @@ export async function runChecks(
             stream: "stdout",
           });
       }
-      // MISS → run under a fresh recording view, capturing the read-set.
+      // MISS → run under a fresh recording view, capturing the read-set. The
+      // check's `ctx.repo()` records into the same view, so what it lists and
+      // reads through it is part of what a later HIT replays. Its set is this
+      // same snapshot's (one memoized load), which `recordingRepo` requires.
       const view = snapshot.createRecordingView();
-      const result = await withScanView(treeHash, view, () => check.run(ctx));
+      const recordingCtx: CheckContext = {
+        ...ctx,
+        repo: recordingRepo(repo, view),
+      };
+      const result = await withScanView(treeHash, view, () =>
+        check.run(recordingCtx),
+      );
       const durationMs = Math.round(performance.now() - wallStart);
       if (result.ok) cache.recordReadSet(check.id, sig, view.readSet());
       return {
@@ -636,6 +657,9 @@ export async function runChecks(
     jobs === null ? selected.length : Math.min(selected.length, jobs),
   );
   const gate = createSemaphore(width);
+  // Hands each admitted check its own event-loop turn to start on — see the
+  // first statement of the gate callback below.
+  const startTurn = createTurnQueue();
 
   let results: CheckOutcome[];
   try {
@@ -647,6 +671,23 @@ export async function runChecks(
         let queuedMs = 0;
         return gate.run(
           async () => {
+            // FIRST: wait for this check's own event-loop turn. Without it every
+            // admitted check started on a MICROTASK (the gate grants through a
+            // resolved promise), so ~100 checks ran their synchronous start-up —
+            // `cacheSignature()`, then `run()` up to its first `await` — back to
+            // back, before any timer or I/O callback could run: the thread
+            // watch's tick, a heartbeat, another check's socket.
+            //
+            // A microtask yield (`await Promise.resolve()`) would change
+            // nothing: microtasks drain before the loop moves on. Nor would a
+            // plain `await yieldMacrotask()` here: every check would queue its
+            // yield for the SAME turn and resume in one batch. The turn queue
+            // chains them, so a full loop turn runs between one check's
+            // start-up and the next.
+            //
+            // Ahead of `wallStart`, so the wait for a turn is neither queue
+            // (`queuedMs`) nor work (`durationMs`); both keep their meaning.
+            await startTurn();
             // INSIDE the gate, both of them, and that placement is the entire
             // point of the change rather than an incidental detail.
             //

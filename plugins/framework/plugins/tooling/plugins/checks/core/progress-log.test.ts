@@ -62,6 +62,18 @@ describe("startProgressRun", () => {
 
     const [progress] = reconstructRuns(records);
     expect(progress?.thread).toMatchObject({ stallCount: 0, stalledMs: 0 });
+    // No samples drained (an empty sampler) → every kind is zero-filled, never
+    // dropped — but this run went through the REAL `process.cpuUsage()`, so
+    // `cpu` itself is only known to be a non-negative number, not exactly zero.
+    expect(progress?.thread?.kinds).toEqual({
+      "blocking-io": 0,
+      process: 0,
+      "module-load": 0,
+      cpu: 0,
+      native: 0,
+    });
+    expect(progress?.thread?.cpu?.userMs).toBeGreaterThanOrEqual(0);
+    expect(progress?.thread?.cpu?.systemMs).toBeGreaterThanOrEqual(0);
     expect(progress?.done?.allOk).toBe(false);
   });
 
@@ -104,6 +116,24 @@ describe("startProgressRun", () => {
     expect(progress?.stalls[0]?.running).toEqual(["x"]);
     expect(progress?.thread?.stallCount).toBe(1);
     expect(progress?.completed[0]?.stalledMs).toBeGreaterThanOrEqual(STALL_MS);
+    // IN_CHECK_X's `spin` frame has a source and matches no named set → cpu.
+    // Every sample this stall drained lands there, and nowhere else.
+    const stall = progress?.stalls[0];
+    if (!stall) throw new Error("expected one stall");
+    expect(stall.kinds).toEqual({
+      "blocking-io": 0,
+      process: 0,
+      "module-load": 0,
+      cpu: stall.samples,
+      native: 0,
+    });
+    expect(progress?.stalls[0]?.leaves?.[0]?.leaf).toBe(
+      "spin @ plugins/x/check/index.ts:3",
+    );
+    // A real `process.cpuUsage()` delta over a real busy-spin: not pinned to
+    // an exact number (scheduling noise), just that it is a real reading.
+    expect(progress?.stalls[0]?.cpu?.userMs).toBeGreaterThanOrEqual(0);
+    expect(progress?.thread?.cpu?.userMs).toBeGreaterThanOrEqual(0);
   }, 10_000);
 });
 
@@ -204,6 +234,10 @@ describe("reconstructRuns", () => {
             example: ["spin @ a.ts:1"],
           },
         ],
+        // This stall's record predates the kind/cpu split — null, never 0.
+        kinds: null,
+        leaves: null,
+        cpu: null,
       },
     ]);
     expect(run?.thread).toMatchObject({
@@ -211,7 +245,61 @@ describe("reconstructRuns", () => {
       stallCount: 1,
       rateHz: 40.3,
     });
+    expect(run?.thread?.kinds).toBeNull();
+    expect(run?.thread?.cpu).toBeNull();
     expect(run?.done).toEqual({ at: at(10), elapsedMs: 10_000, allOk: true });
+  });
+
+  test("a stall/thread record WITH kinds/leaves/cpu reconstructs them, not null", () => {
+    const kinds = {
+      "blocking-io": 5,
+      process: 0,
+      "module-load": 0,
+      cpu: 1,
+      native: 0,
+    };
+    const cpu = { userMs: 12, systemMs: 3 };
+    const leaves = [{ leaf: "readdirSync [native]", samples: 5 }];
+    const records: ProgressRecord[] = [
+      { ...base, t: at(0), phase: "run", scope: null, requested: null },
+      {
+        ...base,
+        t: at(1),
+        phase: "stall",
+        offsetMs: 0,
+        durationMs: 1_000,
+        lateMs: 950,
+        running: [],
+        bootstrap: [],
+        samples: 6,
+        owners: [],
+        kinds,
+        leaves,
+        cpu,
+      },
+      {
+        ...base,
+        t: at(2),
+        phase: "thread",
+        longestLateMs: 950,
+        stallCount: 1,
+        stalledMs: 950,
+        samples: 6,
+        rateHz: null,
+        selfMs: 1,
+        owners: [],
+        stallOwners: [],
+        kinds,
+        cpu,
+      },
+      { ...base, t: at(2), phase: "done", elapsedMs: 2_000, allOk: true },
+    ];
+    const [run] = reconstructRuns(records);
+    expect(run?.stalls[0]?.kinds).toEqual(kinds);
+    expect(run?.stalls[0]?.leaves).toEqual(leaves);
+    expect(run?.stalls[0]?.cpu).toEqual(cpu);
+    expect(run?.thread?.kinds).toEqual(kinds);
+    expect(run?.thread?.cpu).toEqual(cpu);
   });
 
   test("a run recorded before the watch has no thread and no stalls, not an empty summary", () => {

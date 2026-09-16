@@ -1,4 +1,4 @@
-import ts from "typescript";
+import type TS from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { segmentMatchPatterns } from "../core";
 import identityManifestCheck from "./identity-manifest";
@@ -6,13 +6,22 @@ import identityManifestCheck from "./identity-manifest";
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
+// `typescript`'s module object is invariant for the process's lifetime — not a
+// tree-derived fact — so a per-process memo is safe. Loaded lazily so this
+// module's own top-level import doesn't pay `typescript`'s eval cost during the
+// check runner's "load all checks" burst, well before any check's `run()` starts.
+let tsPromise: Promise<typeof TS> | undefined;
+function loadTypescript(): Promise<typeof TS> {
+  return (tsPromise ??= import("typescript").then((m) => m.default));
+}
+
 interface SegmentSite {
   raw: string;
   file: string;
   line: number;
 }
 
-function literalText(node: ts.Expression): string | null {
+function literalText(ts: typeof TS, node: TS.Expression): string | null {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
     return node.text;
   }
@@ -23,19 +32,26 @@ function literalText(node: ts.Expression): string | null {
 // segment. There is exactly one: `defineRoute({ ... })`. `Pane.define` takes its
 // identity from the `RouteDef` it is handed and declares no `segment` field of
 // its own, so `Pane.define({ segment })` has no spelling to scan for.
-function isSegmentDefiningCall(node: ts.CallExpression): boolean {
+function isSegmentDefiningCall(
+  ts: typeof TS,
+  node: TS.CallExpression,
+): boolean {
   const callee = node.expression;
   return ts.isIdentifier(callee) && callee.text === "defineRoute";
 }
 
-function collectSegments(file: string, source: string): SegmentSite[] {
+function collectSegments(
+  ts: typeof TS,
+  file: string,
+  source: string,
+): SegmentSite[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const sites: SegmentSite[] = [];
 
-  const visit = (node: ts.Node): void => {
+  const visit = (node: TS.Node): void => {
     if (
       ts.isCallExpression(node) &&
-      isSegmentDefiningCall(node) &&
+      isSegmentDefiningCall(ts, node) &&
       node.arguments.length > 0 &&
       ts.isObjectLiteralExpression(node.arguments[0]!)
     ) {
@@ -45,7 +61,7 @@ function collectSegments(file: string, source: string): SegmentSite[] {
           ts.isIdentifier(prop.name) &&
           prop.name.text === "segment"
         ) {
-          const raw = literalText(prop.initializer);
+          const raw = literalText(ts, prop.initializer);
           // Non-literal segments can't be analyzed statically; in practice every
           // segment is a string literal (the runtime check is the backstop).
           if (raw === null) break;
@@ -67,6 +83,7 @@ const check: Check = {
   description:
     "pane URL segments must be globally unique (no two panes match the same URLs)",
   async run() {
+    const ts = await loadTypescript();
     // Files that may author a pane segment: any source calling `defineRoute`,
     // which is the only place a segment is written. Tests are excluded — they
     // register throwaway panes that never ship.
@@ -82,7 +99,7 @@ const check: Check = {
 
     const byPattern = new Map<string, SegmentSite[]>();
     for (const { rel, src } of sources) {
-      for (const site of collectSegments(rel, src)) {
+      for (const site of collectSegments(ts, rel, src)) {
         // Index/empty-segment panes resolve via appIndex, not URL matching —
         // multiple empties are legal (mirrors useSyncPaneRegistry).
         if (site.raw === "" || site.raw === "/") continue;

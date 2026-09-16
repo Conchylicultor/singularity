@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, statSync } from "fs";
+import { existsSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   runtimeNames,
   sharedImporters,
@@ -10,25 +10,21 @@ import {
   findImports,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import {
-  currentScanView,
-  listRepoFiles,
-} from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import type {
+  Check,
+  CheckContext,
+  CheckResult,
+  RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import { splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
 import { recordBoundaryReadSet } from "./read-set";
 import { selectSourceFiles } from "./source-files";
 import { repoTree } from "./repo-tree";
 import { collectUnknownDirViolations } from "./unknown-dirs";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = {
-  id: string;
-  description: string;
-  inputKeyed?: boolean;
-  run(): Promise<CheckResult>;
-};
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
@@ -65,8 +61,6 @@ const PUSH_BACK_HINT =
 interface PluginDir {
   /** Relative path from `plugins/` root, e.g. "conversations/plugins/conversation-view". */
   relPath: string;
-  /** Absolute path on disk. */
-  absPath: string;
   /** Last path segment, e.g. "conversation-view". */
   name: string;
   /** Self-declared composition root (package.json `singularity.compositionRoot`). */
@@ -93,7 +87,7 @@ const check: Check = {
   // tree walk. See ./read-set for the completeness argument and the sourceHash
   // widening that pins buildPluginTree's own logic.
   inputKeyed: true,
-  async run(): Promise<CheckResult> {
+  async run(ctx: CheckContext): Promise<CheckResult> {
     // Record the read-set (no-op on the legacy whole-tree path, where the view is
     // null). Pure snapshot projection — spawns nothing, reads no bytes — so it is
     // cheap even though it runs on the MISS path before the walk.
@@ -104,17 +98,18 @@ const check: Check = {
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 
-    // ONE git-backed enumeration per run, shared by every rule that asks what
-    // files or directories exist. See ./source-files and ./repo-tree for why it
-    // is git-derived and not a filesystem walk.
-    const allFiles = await listRepoFiles(root);
+    // ONE shared file-set read per run, from the run itself — never a private
+    // `listRepoFiles` call. `repoFiles` is the RepoFiles handle (has/under/all/
+    // read); `repo` is the local directory-shaped view over the same file list
+    // (subdirs/containsTsFiles — see ./repo-tree).
+    const repoFiles = await ctx.repo();
+    const allFiles = repoFiles.all();
     const repo = repoTree(allFiles);
 
     const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
     const plugins: PluginDir[] = Array.from(tree.byDir.values()).map(
       (node) => ({
         relPath: node.path,
-        absPath: node.dir,
         name: node.name,
         compositionRoot: node.compositionRoot,
       }),
@@ -123,9 +118,21 @@ const check: Check = {
     const skippedSet = new Set(SKIPPED_PLUGINS);
     const violations: Violation[] = [];
 
+    // The check thread is shared by every other check in the pass. Yield to the
+    // event loop every ~10ms of CPU (never a microtask — a macrotask boundary is
+    // what actually admits queued timers/IO) so a whole-tree pass here cannot
+    // stall the run the way the old readdirSync/readFileSync/existsSync calls did.
+    let lastYield = performance.now();
+    async function maybeYield(): Promise<void> {
+      if (performance.now() - lastYield > 10) {
+        await yieldMacrotask();
+        lastYield = performance.now();
+      }
+    }
+
     // The set of standard plugin folder names is derived generically (collected-dir
     // registry + fixed structural conventions), not hardcoded here. R11 uses it.
-    const known = standardPluginDirs(root);
+    const known = await standardPluginDirsIn(repoFiles);
 
     // Composition roots (the SPA bootstrap / CLI entry) self-declare via the
     // package.json `singularity.compositionRoot` marker. They are exempt from
@@ -135,7 +142,8 @@ const check: Check = {
     // R1: package.json naming
     for (const p of plugins) {
       if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
-      checkPackageNaming(p, violations);
+      await checkPackageNaming(p, violations, repoFiles);
+      await maybeYield();
     }
 
     // R11: reject unrecognized top-level directories inside plugin folders
@@ -158,40 +166,44 @@ const check: Check = {
     // shared/ is excluded — it uses relative imports, not barrels.
     for (const p of plugins) {
       if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
+      const pluginRel = `plugins/${p.relPath}`;
       for (const runtime of ["web", "server", "central", "core"] as const) {
-        const runtimeDir = join(p.absPath, runtime);
-        if (!existsSync(runtimeDir)) continue;
-        const barrel = join(runtimeDir, "index.ts");
-        if (!existsSync(barrel)) {
+        // A runtime dir "exists" iff the run's git-derived file set holds at
+        // least one file under it — never `existsSync`, which also sees a
+        // gitignored directory the read-set recorded above cannot cover. See
+        // ./repo-tree and the plugin's own CLAUDE.md.
+        if (!repo.subdirs(pluginRel).has(runtime)) continue;
+        const barrelRel = `${pluginRel}/${runtime}/index.ts`;
+        if (!repoFiles.has(barrelRel)) {
           if (
             runtime !== "central" &&
-            repo.containsTsFiles(`plugins/${p.relPath}/${runtime}`)
+            repo.containsTsFiles(`${pluginRel}/${runtime}`)
           ) {
             violations.push({
               rule: "barrel-required",
-              file: `plugins/${p.relPath}/${runtime}/`,
+              file: `${pluginRel}/${runtime}/`,
               message: `missing \`index.ts\` barrel in \`${runtime}/\``,
-              fix: `create \`plugins/${p.relPath}/${runtime}/index.ts\` — the barrel is the only legal cross-plugin entry point for this runtime`,
+              fix: `create \`${pluginRel}/${runtime}/index.ts\` — the barrel is the only legal cross-plugin entry point for this runtime`,
             });
           }
           continue;
         }
-        const barrelRel = relative(root, barrel).split(sep).join("/");
-        checkBarrelPurity(barrel, barrelRel, violations);
+        await checkBarrelPurity(barrelRel, violations, repoFiles);
 
         // Name-level cross-plugin re-export detection (direct + indirect chains
         // + import-then-reexport). Single source of truth for the
         // `cross-plugin-reexport` rule; the old inline branch is removed.
-        for (const v of collectForeignReexports({
+        for (const v of await collectForeignReexports({
           barrelRel,
           ownPlugin: p.relPath,
           runtime,
           pluginSet,
-          readFile: (relPath) => safeRead(join(root, relPath)),
+          readFile: (relPath) => repoFiles.read(relPath),
           exceptions: REEXPORT_EXCEPTIONS,
         })) {
           violations.push(v);
         }
+        await maybeYield();
       }
     }
 
@@ -206,7 +218,7 @@ const check: Check = {
       const sourcePlugin = pluginForPath(relFile, pluginSet);
       if (sourcePlugin && skippedSet.has(sourcePlugin)) continue;
 
-      const src = safeRead(absFile);
+      const src = await repoFiles.read(relFile);
       if (!src) continue;
 
       // R7: forbid direct workspace-name imports (`@singularity/plugin-*`).
@@ -386,6 +398,8 @@ const check: Check = {
           }
         }
       }
+
+      await maybeYield();
     }
 
     // R6: detect cycles — run separately per runtime so web/server/central graphs
@@ -459,21 +473,6 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
   return best;
 }
 
-function safeRead(path: string): string | null {
-  try {
-    if (!statSync(path).isFile()) return null;
-    return readFileSync(path, "utf-8");
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return null;
-  }
-}
-
 // ============================================================================
 // R1: package.json naming
 // ============================================================================
@@ -493,11 +492,15 @@ function expectedPackageName(relPath: string): string {
   return `@singularity/plugin-${chain}`;
 }
 
-function checkPackageNaming(p: PluginDir, violations: Violation[]) {
-  const pkgPath = join(p.absPath, "package.json");
+async function checkPackageNaming(
+  p: PluginDir,
+  violations: Violation[],
+  repoFiles: RepoFiles,
+): Promise<void> {
   const relPkg = `plugins/${p.relPath}/package.json`;
   const expected = expectedPackageName(p.relPath);
-  if (!existsSync(pkgPath)) {
+  const raw = await repoFiles.read(relPkg);
+  if (raw === null) {
     violations.push({
       rule: "package",
       file: relPkg,
@@ -508,7 +511,7 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
   }
   let data: { name?: unknown };
   try {
-    data = JSON.parse(readFileSync(pkgPath, "utf-8"));
+    data = JSON.parse(raw);
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
     violations.push({
@@ -548,12 +551,12 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
  * top-level `await`, control flow) is a violation — it should live in a sibling file
  * (conventionally `shared/`).
  */
-function checkBarrelPurity(
-  absPath: string,
+async function checkBarrelPurity(
   relPath: string,
   violations: Violation[],
-) {
-  const raw = safeRead(absPath);
+  repoFiles: RepoFiles,
+): Promise<void> {
+  const raw = await repoFiles.read(relPath);
   if (!raw) return;
   const stmts = splitTopLevelStatements(raw);
   for (const { text, line } of stmts) {
@@ -613,7 +616,7 @@ function isAllowedBarrelStatement(s: string): boolean {
 }
 
 // ============================================================================
-// Import extraction (R4, R5, R6)
+// Import extraction (R4, R5, R6) — UNCHANGED below this point
 // ============================================================================
 
 type ImportKind = "default" | "named" | "namespace" | "side-effect";
@@ -623,59 +626,18 @@ interface Imp {
   kind: ImportKind;
 }
 
-/**
- * Extract every `import ... from "<mod>"` / `export ... from "<mod>"` statement.
- * Only `@plugins/...` modules are returned.
- *
- * `kind` is:
- *   - "default" if the statement has a default binding (`import Foo from`,
- *     `import Foo, { a } from`, `import type Foo from`).
- *   - "named" otherwise (named-only imports, re-exports).
- *   - "namespace" for `import * as X from` / `export * from`.
- *   - "side-effect" for bare `import "..."`.
- *
- * All four extractors route through `findImports` (the shared static-import
- * scanner), which masks comments/regex/strings and reads each specifier back by
- * offset — so an import statement written inside a string or template literal
- * (a test fixture, a docs snippet) is never mistaken for a real import, while
- * genuine imports (including in test files) are still caught.
- */
-/**
- * Extract module specifiers that target a sibling plugin via its bun-workspace
- * name (`@singularity/plugin-<chain>`). Such imports bypass the `@plugins/*`
- * path-alias system used by R4/R5/R6 — they resolve through `node_modules`
- * symlinks instead, which means the boundary rules can't see them. R7 catches
- * them and forces the alias form.
- */
 function extractWorkspaceImports(rawSrc: string): string[] {
   return findImports(rawSrc)
     .map((i) => i.specifier)
     .filter((s) => s.startsWith("@singularity/plugin-"));
 }
 
-/**
- * Extract every relative module specifier (`./...` or `../...`) from static
- * import/export statements. Used by R8 to flag relative imports that escape
- * the source plugin's tree. Skips dynamic `import()` and `require()`.
- */
 function extractRelativeImports(rawSrc: string): string[] {
   return findImports(rawSrc)
     .map((i) => i.specifier)
     .filter((s) => s.startsWith("./") || s.startsWith("../"));
 }
 
-/**
- * Extract every inline import-type expression that targets a plugin barrel.
- * These appear in type positions (e.g. `model?: import("plugins/…/shared").Bar`)
- * and are invisible to `extractPluginImports`, which only scans static
- * `import … from` statements. R9 flags them: use a top-level
- * `import type { Bar } from "…/shared"` instead.
- *
- * `findImports` deliberately ignores dynamic `import(...)` (it is a call, not a
- * static import), so we scan for it here — but over MASKED source, reading the
- * specifier back by offset, so an `import("@plugins/…")` written inside a
- * string/template literal is never mistaken for a real one.
- */
 function extractInlineImports(rawSrc: string): string[] {
   const masked = maskSource(rawSrc);
   const results: string[] = [];
@@ -710,12 +672,6 @@ function extractPluginImports(rawSrc: string): Imp[] {
   return results;
 }
 
-/**
- * A non-JS asset specifier (stylesheet, font, image, …) imported for its side
- * effect. Such files are not JS modules and have no exportable symbol, so they
- * cannot be proxied through a plugin's barrel — they are referenced by their
- * real path. The barrel-grammar rule is therefore inapplicable to them.
- */
 const ASSET_EXTENSIONS = [
   ".css",
   ".scss",
@@ -733,7 +689,6 @@ function isAssetSpecifier(specifier: string): boolean {
 
 function looksLikeImportOrReexport(keyword: string, body: string): boolean {
   if (keyword === "import") {
-    // Valid bodies: "", "X", "X, { ... }", "{ ... }", "* as X", "type X", "type { ... }"
     if (body === "") return true;
     if (/^\*\s+as\s+\w+$/.test(body)) return true;
     if (/^type\s+/.test(body)) {
@@ -750,7 +705,6 @@ function looksLikeImportOrReexport(keyword: string, body: string): boolean {
     return false;
   }
   if (keyword === "export") {
-    // Valid re-exports: "{ ... }", "* as X", "*", "type { ... }", "type * as X"
     if (/^\{[\s\S]*\}$/.test(body)) return true;
     if (/^\*(\s+as\s+\w+)?$/.test(body)) return true;
     if (/^type\s+/.test(body)) {
@@ -763,22 +717,18 @@ function looksLikeImportOrReexport(keyword: string, body: string): boolean {
 }
 
 function classifyKind(keyword: string, body: string): ImportKind {
-  if (keyword === "export") return "named"; // re-exports never bring in a default alias
+  if (keyword === "export") return "named";
   if (body === "") return "side-effect";
   if (/^\*\s+as\s+\w+$/.test(body)) return "namespace";
   if (/^type\s+\*\s+as\s+\w+$/.test(body)) return "namespace";
-  // Strip leading `type ` marker (type-only import)
   const stripped = body.replace(/^type\s+/, "").trim();
-  // Default: starts with a bare identifier (not `{`)
   if (/^\w+(\s*,\s*\{[\s\S]*\})?$/.test(stripped)) return "default";
   return "named";
 }
 
 interface ResolvedImport {
   pluginPath: string;
-  /** First path segment after the plugin path, e.g. "web" / "server" / "shared". */
   suffixHead: string;
-  /** Remaining path after the suffixHead. Empty means the import targets the barrel. */
   tail: string;
 }
 
@@ -789,8 +739,6 @@ function resolveImport(
   if (!importPath.startsWith("@plugins/")) return null;
   const rest = importPath.slice("@plugins/".length);
   const parts = rest.split("/");
-  // Longest matching plugin path prefix wins (so a nested sub-plugin resolves
-  // to itself rather than its parent).
   let best = "";
   for (let i = 1; i <= parts.length; i++) {
     const candidate = parts.slice(0, i).join("/");
@@ -799,7 +747,6 @@ function resolveImport(
   if (!best) return null;
   const remainder = rest.slice(best.length).replace(/^\//, "");
   if (!remainder) {
-    // Import like `@plugins/foo` with no runtime — treat as invalid suffix.
     return { pluginPath: best, suffixHead: "", tail: "" };
   }
   const remParts = remainder.split("/");
@@ -811,7 +758,7 @@ function resolveImport(
 }
 
 // ============================================================================
-// R6: cycle detection
+// R6: cycle detection — UNCHANGED
 // ============================================================================
 
 function detectCycle(edges: { from: string; to: string }[]): string[] | null {
@@ -848,7 +795,6 @@ function detectCycle(edges: { from: string; to: string }[]): string[] | null {
       const nxt = step.value;
       const col = color.get(nxt) ?? WHITE;
       if (col === GRAY) {
-        // Reconstruct the cycle: walk parents from top.node back to nxt, then append nxt.
         const path: string[] = [top.node];
         let cur = top.node;
         while (cur !== nxt) {
@@ -875,7 +821,7 @@ function detectCycle(edges: { from: string; to: string }[]): string[] | null {
 }
 
 // ============================================================================
-// Output formatting
+// Output formatting — UNCHANGED
 // ============================================================================
 
 const MAX_REPORTED = 15;

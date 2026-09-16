@@ -212,8 +212,8 @@ describe("measureManifestFreeze", () => {
 });
 
 describe("scanCommandRuns", () => {
-  test("names nested leaves by their verb path and keeps non-run imports apart", () => {
-    const scan = scanCommandRuns(
+  test("names nested leaves by their verb path and keeps non-run imports apart", async () => {
+    const scan = await scanCommandRuns(
       "index.ts",
       `export default defineCliCommand({\n` +
         `  name: "deploy",\n` +
@@ -232,8 +232,8 @@ describe("scanCommandRuns", () => {
     expect([...scan.other]).toEqual(["./eager"]);
   });
 
-  test("a module that never mentions defineCliCommand has no run edges", () => {
-    const scan = scanCommandRuns(
+  test("a module that never mentions defineCliCommand has no run edges", async () => {
+    const scan = await scanCommandRuns(
       "x.ts",
       `export const run = () => import("./run");\n`,
     );
@@ -242,15 +242,15 @@ describe("scanCommandRuns", () => {
 });
 
 describe("callsFunction", () => {
-  test("a call counts; a definition, a re-export and a comment do not", () => {
+  test("a call counts; a definition, a re-export and a comment do not", async () => {
     expect(
-      callsFunction("a.ts", `writeManifest(m, root);`, "writeManifest"),
+      await callsFunction("a.ts", `writeManifest(m, root);`, "writeManifest"),
     ).toBe(true);
     expect(
-      callsFunction("a.ts", `codegen.writeManifest(m);`, "writeManifest"),
+      await callsFunction("a.ts", `codegen.writeManifest(m);`, "writeManifest"),
     ).toBe(true);
     expect(
-      callsFunction(
+      await callsFunction(
         "a.ts",
         `export function writeManifest(m) {}\nexport { writeManifest as w } from "./x";\n// writeManifest(m)\n`,
         "writeManifest",

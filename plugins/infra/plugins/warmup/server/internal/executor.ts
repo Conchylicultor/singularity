@@ -3,8 +3,8 @@ import { profilerStart } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { warmupRegistry, type WarmupSpec } from "./registry";
-import { yieldServer } from "./yield-server";
 
 /**
  * How many warm-ups may run at once. Kept deliberately small: warm-ups drain
@@ -25,7 +25,7 @@ export interface WarmupExecDeps {
   warmups: WarmupSpec[];
   isMain: () => boolean;
   withSlot: <T>(fn: () => Promise<T>) => Promise<T>;
-  yieldServer: () => Promise<void>;
+  yieldMacrotask: () => Promise<void>;
   concurrency: number;
 }
 
@@ -35,7 +35,7 @@ export interface WarmupExecDeps {
  *   redundancy on host-global work);
  * - each `run` is gated by a bounded `createSemaphore(concurrency)` and wrapped
  *   in `withSlot` (the host-wide heavy-read budget), with a macrotask
- *   `yieldServer()` before each so request IO/timers interleave;
+ *   `yieldMacrotask()` before each so request IO/timers interleave;
  * - each is wrapped in a `warmup:<name>` profiler span for boot-Gantt visibility;
  * - a throw is NEVER fatal — a warm-up is an optimization, so it is logged and
  *   the drain continues (the boot-budget monitor separately flags slow/failed
@@ -49,7 +49,7 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
         if (w.scope === "host" && !deps.isMain()) return;
         // A real macrotask breath before each heavy unit — unlike a microtask
         // `await Promise.resolve()`, this admits queued request IO/timers.
-        await deps.yieldServer();
+        await deps.yieldMacrotask();
         const end = profilerStart(`warmup:${w.name}`, "warmup", w.name, w.name);
         try {
           // Boot-Gantt bar (profilerStart, above) and runtime `bg` aggregate
@@ -80,7 +80,7 @@ export async function drainWarmups(): Promise<void> {
     warmups: [...warmupRegistry.values()],
     isMain,
     withSlot: withHeavyReadSlot,
-    yieldServer,
+    yieldMacrotask,
     concurrency: WARMUP_CONCURRENCY,
   });
 }

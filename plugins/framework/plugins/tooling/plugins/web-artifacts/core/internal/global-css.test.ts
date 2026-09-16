@@ -18,7 +18,11 @@ describe("parseCssInputs", () => {
     ].join("\n");
     expect(parseCssInputs(css)).toEqual({
       sourceDirs: ["../../../../plugins/", "../../../../prototypes/"],
-      importSpecs: ["tailwindcss", "shadcn/tailwind.css", "@fontsource-variable/inter"],
+      importSpecs: [
+        "tailwindcss",
+        "shadcn/tailwind.css",
+        "@fontsource-variable/inter",
+      ],
     });
   });
 
@@ -39,40 +43,72 @@ describe("cachedAggregateHash (the css-key content fingerprint)", () => {
     mkdirSync(join(dir, "a"));
     writeFileSync(join(dir, "a", "one.tsx"), `<div className="p-md" />`);
     writeFileSync(join(dir, "b.md"), "docs");
-    return { dir, files: [join(dir, "a", "one.tsx"), join(dir, "b.md")].sort() };
+    return {
+      dir,
+      files: [join(dir, "a", "one.tsx"), join(dir, "b.md")].sort(),
+    };
   }
 
-  test("content change flips the hash; untouched sibling set keeps it", () => {
+  test("content change flips the hash; untouched sibling set keeps it", async () => {
     const { dir, files } = fixture();
-    const h1 = cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache: freshCache() });
-    const h1again = cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache: freshCache() });
+    const h1 = await cachedAggregateHash({
+      cacheKey: "k",
+      baseDir: dir,
+      files,
+      cache: freshCache(),
+    });
+    const h1again = await cachedAggregateHash({
+      cacheKey: "k",
+      baseDir: dir,
+      files,
+      cache: freshCache(),
+    });
     expect(h1again).toBe(h1);
 
     writeFileSync(join(dir, "a", "one.tsx"), `<div className="p-lg" />`);
-    const h2 = cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache: freshCache() });
+    const h2 = await cachedAggregateHash({
+      cacheKey: "k",
+      baseDir: dir,
+      files,
+      cache: freshCache(),
+    });
     expect(h2).not.toBe(h1);
   });
 
-  test("stat fast path reuses the recorded hash without re-reading", () => {
+  test("stat fast path reuses the recorded hash without re-reading", async () => {
     const { dir, files } = fixture();
     const cache = freshCache();
-    const h1 = cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache });
+    const h1 = await cachedAggregateHash({
+      cacheKey: "k",
+      baseDir: dir,
+      files,
+      cache,
+    });
     // Poison the recorded hash: an (incorrect) sentinel proves the fast path
     // returns the RECORD, i.e. no content was re-read when stats match.
     cache.records["k"]!.ownHash = "sentinel";
-    expect(cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache })).toBe("sentinel");
+    expect(
+      await cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache }),
+    ).toBe("sentinel");
 
     // An mtime bump invalidates the record and recomputes the true hash.
     const later = new Date(Date.now() + 5000);
     utimesSync(files[0]!, later, later);
-    expect(cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache })).toBe(h1);
+    expect(
+      await cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache }),
+    ).toBe(h1);
   });
 
-  test("a vanished file changes the set (and never throws)", () => {
+  test("a vanished file changes the set (and never throws)", async () => {
     const { dir, files } = fixture();
-    const h1 = cachedAggregateHash({ cacheKey: "k", baseDir: dir, files, cache: freshCache() });
+    const h1 = await cachedAggregateHash({
+      cacheKey: "k",
+      baseDir: dir,
+      files,
+      cache: freshCache(),
+    });
     const withGhost = [...files, join(dir, "gone.ts")];
-    const h2 = cachedAggregateHash({
+    const h2 = await cachedAggregateHash({
       cacheKey: "k",
       baseDir: dir,
       files: withGhost,

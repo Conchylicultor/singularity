@@ -6,8 +6,9 @@ Extracts each plugin's on-disk structure: its immediate sub-folders (tagged
 (`package.json` `singularity.compositionRoot`).
 
 `extract()` reads the plugin directory directly; the standard-folder set is
-resolved lazily on first `extract` and memoized (`standardPluginDirs` is
-synchronous — pure fs reads). No top-level await: this facet module is
+answered from the tree build's in-memory FS snapshot (`ctx.fs`) through
+codegen's `standardPluginDirsFromSnapshot` — synchronous, no disk, one answer
+per snapshot. No top-level await: this facet module is
 dynamically imported inside the facets ⇄ codegen import cycle, and a top-level
 await would suspend it mid-evaluation and surface as a TDZ crash in
 `loadFacets()`. No `relate()` — structure is purely per-plugin. `renderDoc()` surfaces only anomalies

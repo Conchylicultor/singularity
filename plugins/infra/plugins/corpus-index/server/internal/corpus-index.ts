@@ -14,7 +14,7 @@ import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read
 import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { yieldServer } from "./yield-server";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 
 // ─── What this is ─────────────────────────────────────────────────────────────
 //
@@ -241,7 +241,7 @@ export interface RefreshDeps<TPartial> {
   /** Whether to persist the index after a change (see {@link computePersist}). */
   persist: boolean;
   withSlot: <R>(fn: () => Promise<R>) => Promise<R>;
-  yieldServer: () => Promise<void>;
+  yieldMacrotask: () => Promise<void>;
 }
 
 /**
@@ -328,7 +328,7 @@ export async function refreshCorpus<TPartial>(
         };
         (item.hadEntry ? modifiedPaths : addedPaths).push(item.path);
         // A macrotask breath so request serving interleaves between files.
-        await deps.yieldServer();
+        await deps.yieldMacrotask();
       }),
     ),
   );
@@ -349,7 +349,7 @@ export async function refreshCorpus<TPartial>(
 export interface CorpusIndexEnv {
   isMain: () => boolean;
   withSlot: <R>(fn: () => Promise<R>) => Promise<R>;
-  yieldServer: () => Promise<void>;
+  yieldMacrotask: () => Promise<void>;
   startFileWatcher: (opts: {
     dirs: string[];
     onChange: () => void;
@@ -391,7 +391,7 @@ export function createCorpusIndex<TPartial>(
     concurrency,
     persist: computePersist(spec.scope, env.isMain()),
     withSlot: env.withSlot,
-    yieldServer: env.yieldServer,
+    yieldMacrotask: env.yieldMacrotask,
   });
 
   async function ensureFresh(): Promise<CorpusDelta> {
@@ -484,7 +484,7 @@ export function defineCorpusIndex<TPartial>(
   return createCorpusIndex(spec, {
     isMain,
     withSlot: withHeavyReadSlot,
-    yieldServer,
+    yieldMacrotask,
     startFileWatcher: async ({ dirs, onChange }) => {
       // Process-lifetime watcher — the handle is intentionally discarded (the
       // original stats/cost watcher was likewise fire-and-forget, main-only).

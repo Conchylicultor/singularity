@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { readdirSync, readFileSync } from "fs";
 import { basename, join, resolve } from "path";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
@@ -7,7 +6,10 @@ import {
   type DestructiveClassification,
 } from "@plugins/database/plugins/migrations/core";
 import { queryRows } from "@plugins/database/plugins/sql-rows/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import {
+  getWorktreeRoot,
+  spawnCaptured,
+} from "@plugins/infra/plugins/spawn/core";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { z } from "zod";
 import { withDirectDb } from "./internal/direct-db";
@@ -20,10 +22,26 @@ type Check = {
   id: string;
   description: string;
   run(): Promise<CheckResult>;
-  cacheSignature?(): string | null;
+  cacheSignature?(): string | null | Promise<string | null>;
 };
 
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
+
+// Wedge-breaker for a metadata-only git read, not latency policing — same
+// reasoning as the sibling migration-applies-clean/data-migration-reset-stable
+// checks.
+const GIT_TIMEOUT_MS = 60_000;
+
+async function git(
+  root: string,
+  args: string[],
+): Promise<{ code: number; out: string }> {
+  const result = await spawnCaptured(["git", ...args], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
+  return { code: result.exitCode, out: result.stdout };
+}
 
 // Filename → sha8 regex, inlined from the runner (server/internal/runner.ts) so
 // this check never imports a server-plugin internal.
@@ -54,29 +72,14 @@ const check: Check = {
   id: "fork-schema-drift",
   description:
     "worktree DB carries no destructive migration absent from this branch",
-  // Impure: opens a live DB connection and reads origin/main via git. The
-  // signature folds the data/ dir content + origin/main commit so an unchanged
-  // input still caches; the empty-drift common case is already cheap.
-  cacheSignature() {
+  // Impure: reads origin/main via git. The data/ dir CONTENT is already
+  // covered by the runner's own tree hash (scope "tree", the default) — only
+  // origin/main's ref needs folding in.
+  async cacheSignature(): Promise<string | null> {
     try {
-      const root = process.cwd();
-      const dir = resolve(root, MIGRATIONS_SUBDIR);
-      const hash = createHash("sha256");
-      for (const f of readdirSync(dir).sort()) {
-        if (!f.endsWith(".sql")) continue;
-        hash.update(f);
-        hash.update("\0");
-        hash.update(readFileSync(join(dir, f)));
-        hash.update("\0");
-      }
-      const proc = Bun.spawnSync(["git", "rev-parse", "origin/main"], {
-        cwd: root,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const mainRef = proc.success ? proc.stdout.toString().trim() : "no-main";
-      return `${hash.digest("hex")}:${mainRef}`;
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (missing dir, git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
+      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
+      return result.code === 0 ? result.out.trim() : "no-main";
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap check
     } catch {
       return null;
     }

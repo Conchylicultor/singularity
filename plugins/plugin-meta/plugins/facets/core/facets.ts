@@ -45,7 +45,9 @@ export interface ExtractContext {
   // When present, the parse-utils `readIfExists` / `walkFiles` helpers read from
   // it instead of disk (wired ambiently by buildPluginTree's extract loop), so
   // facet bodies need no change. Absent for build-time callers that scan disk
-  // directly. Facets read files via the parse-utils helpers, not this field.
+  // directly. Facets read files via the parse-utils helpers, not this field
+  // (the structure facet reads it through codegen's
+  // standardPluginDirsFromSnapshot).
   fs?: FsSnapshot;
 }
 

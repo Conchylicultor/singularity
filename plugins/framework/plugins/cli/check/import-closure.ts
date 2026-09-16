@@ -2,10 +2,22 @@ import { mkdtempSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import ts from "typescript";
+import type TS from "typescript";
 import { defineCliCommand } from "../core";
 
 const TSCONFIG_BASE = "tsconfig.base.json";
+
+// `typescript`'s module object is invariant for the process's lifetime — not a
+// tree-derived fact — so a per-process memo is safe. Loaded lazily so this
+// module's own top-level import doesn't pay `typescript`'s eval cost on every
+// `./singularity check` pass (this check module loads during the "load all
+// checks" burst, well before any check's `run()` starts). Exported so
+// `manifest-freeze.ts` shares this SAME cached promise instead of duplicating
+// the import.
+let tsPromise: Promise<typeof TS> | undefined;
+export function loadTypescript(): Promise<typeof TS> {
+  return (tsPromise ??= import("typescript").then((m) => m.default));
+}
 
 /**
  * Every path-alias prefix declared in the repo's single alias owner
@@ -176,11 +188,15 @@ const DEFINE_CLI_COMMAND = defineCliCommand.name;
  * literals. A `name` that is not a string literal is reported as `<computed>`;
  * it only labels the message.
  */
-export function scanCommandRuns(file: string, source: string): CommandRunScan {
+export async function scanCommandRuns(
+  file: string,
+  source: string,
+): Promise<CommandRunScan> {
   const runs = new Map<string, string[]>();
   const other = new Set<string>();
   if (!source.includes(DEFINE_CLI_COMMAND)) return { runs, other };
 
+  const ts = await loadTypescript();
   const sf = ts.createSourceFile(
     file,
     source,
@@ -188,14 +204,14 @@ export function scanCommandRuns(file: string, source: string): CommandRunScan {
     true,
     file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const visit = (node: ts.Node): void => {
+  const visit = (node: TS.Node): void => {
     if (
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword
     ) {
       const arg = node.arguments[0];
       if (arg !== undefined && ts.isStringLiteralLike(arg)) {
-        const command = runThunkCommand(node);
+        const command = runThunkCommand(ts, node);
         if (command === undefined) other.add(arg.text);
         else runs.set(arg.text, [...(runs.get(arg.text) ?? []), command]);
       }
@@ -210,7 +226,10 @@ export function scanCommandRuns(file: string, source: string): CommandRunScan {
  * The verb path whose `run` thunk `importCall` is, or `undefined` when it is
  * not one — see {@link scanCommandRuns} for the recognised shape.
  */
-function runThunkCommand(importCall: ts.CallExpression): string | undefined {
+function runThunkCommand(
+  ts: typeof TS,
+  importCall: TS.CallExpression,
+): string | undefined {
   const arrow = importCall.parent;
   if (
     !ts.isArrowFunction(arrow) ||
@@ -223,21 +242,21 @@ function runThunkCommand(importCall: ts.CallExpression): string | undefined {
   if (
     !ts.isPropertyAssignment(prop) ||
     prop.initializer !== arrow ||
-    propertyName(prop) !== "run"
+    propertyName(ts, prop) !== "run"
   ) {
     return undefined;
   }
-  if (defineCallOf(prop.parent) === undefined) return undefined;
+  if (defineCallOf(ts, prop.parent) === undefined) return undefined;
 
   // Walk out from the leaf's own object literal through every enclosing
   // `defineCliCommand` (a group's `subcommands`), so a leaf reads as the verb
   // path a user types.
   const names: string[] = [];
-  for (let n: ts.Node = prop.parent; !ts.isSourceFile(n); n = n.parent) {
-    if (ts.isObjectLiteralExpression(n) && defineCallOf(n) !== undefined) {
+  for (let n: TS.Node = prop.parent; !ts.isSourceFile(n); n = n.parent) {
+    if (ts.isObjectLiteralExpression(n) && defineCallOf(ts, n) !== undefined) {
       const nameProp = n.properties.find(
-        (p): p is ts.PropertyAssignment =>
-          ts.isPropertyAssignment(p) && propertyName(p) === "name",
+        (p): p is TS.PropertyAssignment =>
+          ts.isPropertyAssignment(p) && propertyName(ts, p) === "name",
       );
       names.unshift(
         nameProp !== undefined && ts.isStringLiteralLike(nameProp.initializer)
@@ -250,7 +269,10 @@ function runThunkCommand(importCall: ts.CallExpression): string | undefined {
 }
 
 /** The `defineCliCommand(obj)` call `obj` is the first argument of, if any. */
-function defineCallOf(obj: ts.Node): ts.CallExpression | undefined {
+function defineCallOf(
+  ts: typeof TS,
+  obj: TS.Node,
+): TS.CallExpression | undefined {
   if (!ts.isObjectLiteralExpression(obj)) return undefined;
   const call = obj.parent;
   if (
@@ -264,7 +286,10 @@ function defineCallOf(obj: ts.Node): ts.CallExpression | undefined {
   return undefined;
 }
 
-function propertyName(p: ts.PropertyAssignment): string | undefined {
+function propertyName(
+  ts: typeof TS,
+  p: TS.PropertyAssignment,
+): string | undefined {
   return ts.isIdentifier(p.name) || ts.isStringLiteralLike(p.name)
     ? p.name.text
     : undefined;
@@ -311,10 +336,10 @@ export async function importClosure(
   // recover an import chain on failure.
   const edges = new Map<string, Set<string>>();
   const scans = new Map<string, CommandRunScan>();
-  const scanOf = (file: string): CommandRunScan => {
+  const scanOf = async (file: string): Promise<CommandRunScan> => {
     let scan = scans.get(file);
     if (scan === undefined) {
-      scan = scanCommandRuns(file, readFileSync(file, "utf8"));
+      scan = await scanCommandRuns(file, readFileSync(file, "utf8"));
       scans.set(file, scan);
     }
     return scan;
@@ -331,14 +356,14 @@ export async function importClosure(
         {
           name: "externalize-packages",
           setup(build) {
-            build.onResolve({ filter: /.*/ }, (args) => {
+            build.onResolve({ filter: /.*/ }, async (args) => {
               const spec = args.path;
               if (args.kind === "dynamic-import") {
                 // Cut the graph here, whatever the specifier resolves to.
                 if (opts.dynamicImports === "cut") {
                   return { path: spec, external: true };
                 }
-                const scan = scanOf(args.importer);
+                const scan = await scanOf(args.importer);
                 const commands = scan.runs.get(spec);
                 if (commands !== undefined && !scan.other.has(spec)) {
                   commandRuns.push({

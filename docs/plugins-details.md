@@ -11443,6 +11443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `drizzleGenerateArgv`
           - `MIGRATIONS_PLUGIN_DIR`
           - `schemaGlobFiles`
+          - `schemaGlobFilesAsync`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`
@@ -15445,18 +15446,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `subscribeSlotsDeclared`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
+        - Uses:
+          - `infra/spawn.spawnCaptured`
+          - `packages/semaphore.createSemaphore`
         - Exports (types):
           - `Check`
           - `CheckContext`
           - `CheckResult`
           - `CheckScope`
-        - Exports (values): `CHECK_SCOPES`
+          - `RepoFiles`
+        - Exports (values):
+          - `assertRepoPath`
+          - `CHECK_SCOPES`
+          - `loadRepoFiles`
+          - `pathsUnder`
+          - `repoFilesOver`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/checks`
+          - `framework/tooling/codegen`
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
             - Uses:
-              - `framework/tooling/checks.listRepoFiles`
               - `infra/spawn.getWorktreeRoot`
+              - `packages/macrotask-yield.yieldMacrotask`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/plugin-tree.buildPluginTree`
             - Exports (types):
@@ -15480,6 +15494,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses:
+              - `framework/tooling.assertRepoPath`
+              - `framework/tooling.loadRepoFiles`
+              - `framework/tooling.pathsUnder`
+              - `framework/tooling.RepoFiles`
+              - `framework/tooling.repoFilesOver`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `infra/file-sink.defineFileSink`
@@ -15492,6 +15511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/stack-sampler.frameKey`
               - `infra/stack-sampler.StackFrame`
               - `infra/stack-sampler.StackSampler`
+              - `packages/macrotask-yield.createTurnQueue`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.lineAt`
@@ -15543,8 +15563,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `scopeOf`
               - `tsBuildInfoPath`
               - `validate`
-          - Cross-plugin:
-            - Imported by: `framework/tooling/boundaries`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
@@ -15620,10 +15638,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/slot-declaration.declaredSlotSources`
               - `framework/slot-declaration.declarePluginSlots`
               - `framework/slot-declaration.findUndeclaredSlots`
+              - `framework/tooling.loadRepoFiles`
+              - `framework/tooling.RepoFiles`
               - `framework/tooling/format.formatIfFormattable`
               - `framework/tooling/format.SourceBytes`
               - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
               - `infra/namespace.MAIN_COMPOSITION_ID`
+              - `packages/macrotask-yield.yieldMacrotask`
+              - `packages/semaphore.createSemaphore`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
               - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
               - `plugin-meta/barrel-import.AutoStubEntry`
@@ -15645,6 +15667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/facets/slots.slotsFacetDef`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.findMarkerCalls`
+              - `plugin-meta/parse-utils.FsSnapshot`
               - `plugin-meta/parse-utils.lineAt`
               - `plugin-meta/parse-utils.markerCallSpans`
               - `plugin-meta/parse-utils.maskSource`
@@ -15688,6 +15711,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `collectedDirRegistryPath`
               - `collectEntriesWithDeps`
               - `collectFieldEagerBarrels`
+              - `collectImportGraph`
               - `collectTokenGroupVars`
               - `compositionRegistryFileName`
               - `compositionRegistryPath`
@@ -15696,6 +15720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `dataViewsManifestPath`
               - `declareSlotsFromBarrels`
               - `discoverCollectedDirs`
+              - `discoverCollectedDirsIn`
               - `eagerTierManifestPath`
               - `extractRuntimeImportSpecifiers`
               - `fieldsEagerManifestPath`
@@ -15758,6 +15783,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `setDefaultOriginDefaultsPreparer`
               - `spaceRampManifestPath`
               - `standardPluginDirs`
+              - `standardPluginDirsFromSnapshot`
+              - `standardPluginDirsIn`
               - `tokenGroupVarsManifestPath`
               - `writeGenerated`
               - `writePreBarrelManifest`
@@ -18247,6 +18274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `spawnPassthrough`
       - Cross-plugin:
         - Imported by:
+          - `framework/tooling`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/format`
@@ -18736,6 +18764,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (types): `Inflight`
         - Exports (values): `createInflight`
+    - **`macrotask-yield`** — Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/boundaries`
+          - `framework/tooling/checks`
+          - `framework/tooling/codegen`
+      - Core:
+        - Exports (values):
+          - `createTurnQueue`
+          - `yieldMacrotask`
     - **`retry`**
       - Core:
         - Exports (types): `DelayStrategy`
@@ -18749,7 +18787,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `framework/resource-runtime`
+          - `framework/tooling`
           - `framework/tooling/checks`
+          - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
           - `infra/endpoints`
           - `plugin-meta/barrel-import`

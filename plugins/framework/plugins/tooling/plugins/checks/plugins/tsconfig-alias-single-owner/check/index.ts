@@ -1,4 +1,4 @@
-import ts from "typescript";
+import type TS from "typescript";
 import {
   getWorktreeRoot,
   spawnCaptured,
@@ -20,6 +20,11 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 // target silently rots when files move or a new config is added).
 const BASE = "tsconfig.base.json";
 
+let tsPromise: Promise<typeof TS> | undefined;
+function loadTypescript(): Promise<typeof TS> {
+  return (tsPromise ??= import("typescript").then((m) => m.default));
+}
+
 async function listTsconfigs(root: string): Promise<string[]> {
   const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], {
     cwd: root,
@@ -38,7 +43,11 @@ async function listTsconfigs(root: string): Promise<string[]> {
 // Raw (single-file) `paths` keys — `readConfigFile` parses JSONC but does NOT
 // resolve `extends`, so this is exactly the literal declaration, which is what
 // we want to forbid in non-base configs.
-function declaredPathAliases(root: string, rel: string): string[] {
+function declaredPathAliases(
+  ts: typeof TS,
+  root: string,
+  rel: string,
+): string[] {
   const { config } = ts.readConfigFile(`${root}/${rel}`, ts.sys.readFile);
   const paths = config?.compilerOptions?.paths;
   return paths && typeof paths === "object" ? Object.keys(paths) : [];
@@ -49,8 +58,9 @@ const check: Check = {
   description:
     "Path aliases (e.g. @plugins/*) must be declared once in tsconfig.base.json and inherited via `extends` — no tsconfig may redeclare a base-owned alias",
   async run() {
+    const ts = await loadTypescript();
     const root = await getWorktreeRoot();
-    const owned = new Set(declaredPathAliases(root, BASE));
+    const owned = new Set(declaredPathAliases(ts, root, BASE));
     if (owned.size === 0) {
       return {
         ok: false,
@@ -62,7 +72,9 @@ const check: Check = {
     const offenders: string[] = [];
     for (const rel of await listTsconfigs(root)) {
       if (rel === BASE) continue;
-      const dupes = declaredPathAliases(root, rel).filter((a) => owned.has(a));
+      const dupes = declaredPathAliases(ts, root, rel).filter((a) =>
+        owned.has(a),
+      );
       if (dupes.length > 0) offenders.push(`  ${rel} → ${dupes.join(", ")}`);
     }
 

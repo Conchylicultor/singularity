@@ -1,13 +1,16 @@
-import { existsSync, statSync } from "fs";
-import { dirname, resolve } from "path";
+import { dirname, isAbsolute, relative, resolve } from "path";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readListed, timeSlicer } from "./scan-pacing";
 
 /**
  * Static module-import-graph helpers for the `pre-barrel-manifests-complete`
  * check. Import scanning routes through `findImports` (the shared static-import
  * scanner), which masks comments/regex/strings and reads each specifier back by
  * offset — so an import written inside a string/template literal is never
- * mistaken for a real one.
+ * mistaken for a real one. Resolution asks the repo's file set, never the disk:
+ * a stat per candidate extension per import, over every file a barrel reaches,
+ * was tens of thousands of blocking calls on a check pass's shared thread.
  */
 
 // Asset specifiers that never resolve to a .generated.ts module.
@@ -61,14 +64,23 @@ export function extractRuntimeImportSpecifiers(src: string): string[] {
   return out;
 }
 
-function isFile(p: string): boolean {
-  return existsSync(p) && statSync(p).isFile();
-}
+/** What resolution needs of a file set: its root, and membership. */
+export type FileMembership = Pick<RepoFiles, "root" | "has">;
 
-function resolveModuleFile(base: string): string | null {
-  const candidates = [base, `${base}.ts`, `${base}.tsx`, resolve(base, "index.ts")];
+function resolveModuleFile(files: FileMembership, base: string): string | null {
+  const candidates = [
+    base,
+    `${base}.ts`,
+    `${base}.tsx`,
+    resolve(base, "index.ts"),
+  ];
   for (const c of candidates) {
-    if (isFile(c)) return c;
+    const rel = relative(files.root, c);
+    // Outside the root (or the root itself) is in no file set — and is not a
+    // path a file set accepts: `has` throws on a malformed one.
+    if (rel === "" || rel === ".." || rel.startsWith("../") || isAbsolute(rel))
+      continue;
+    if (files.has(rel)) return c;
   }
   return null;
 }
@@ -78,17 +90,63 @@ function resolveModuleFile(base: string): string | null {
  * resolve against the importing file's directory; `@plugins/…` specs resolve
  * against `<root>/plugins/…`. Tries `<spec>` (only if it's a file, e.g. an
  * explicit `.ts`/`.tsx`), `<spec>.ts`, `<spec>.tsx`, then `<spec>/index.ts`.
- * Returns the first existing file's absolute path, or null. A bare specifier
- * that names a directory resolves to its `index.ts`, never to the directory.
+ * Returns the first one in the file set, as an absolute path, or null. A bare
+ * specifier that names a directory resolves to its `index.ts`, never to the
+ * directory — a file set lists no directories.
  */
 export function resolveImportSpecifier(
-  root: string,
+  files: FileMembership,
   fromFile: string,
   spec: string,
 ): string | null {
   if (spec.startsWith(PLUGINS_ALIAS)) {
     const rel = spec.slice(PLUGINS_ALIAS.length);
-    return resolveModuleFile(resolve(root, "plugins", rel));
+    return resolveModuleFile(files, resolve(files.root, "plugins", rel));
   }
-  return resolveModuleFile(resolve(dirname(fromFile), spec));
+  return resolveModuleFile(files, resolve(dirname(fromFile), spec));
+}
+
+/**
+ * The internal runtime-import graph reachable from `roots` (absolute paths of
+ * files in `repo`): every reached file → the absolute paths its internal
+ * runtime imports resolve to. Each reached file is read once, asynchronously,
+ * one import level at a time, and the parse loop yields as it goes — so a
+ * caller asking two questions of one reach (web barrels only, then every
+ * barrel) reads nothing twice.
+ */
+export async function collectImportGraph(
+  repo: RepoFiles,
+  roots: readonly string[],
+): Promise<Map<string, readonly string[]>> {
+  const edges = new Map<string, readonly string[]>();
+  const seen = new Set<string>();
+  const tick = timeSlicer();
+  let level: string[] = [];
+  for (const root of roots) {
+    const abs = resolve(root);
+    if (seen.has(abs)) continue;
+    seen.add(abs);
+    level.push(abs);
+  }
+  while (level.length > 0) {
+    const texts = await Promise.all(
+      level.map((abs) => readListed(repo, relative(repo.root, abs))),
+    );
+    const next: string[] = [];
+    for (const [i, abs] of level.entries()) {
+      const targets: string[] = [];
+      for (const spec of extractRuntimeImportSpecifiers(texts[i]!)) {
+        const target = resolveImportSpecifier(repo, abs, spec);
+        if (target === null) continue;
+        targets.push(target);
+        if (seen.has(target)) continue;
+        seen.add(target);
+        next.push(target);
+      }
+      edges.set(abs, targets);
+      await tick();
+    }
+    level = next;
+  }
+  return edges;
 }

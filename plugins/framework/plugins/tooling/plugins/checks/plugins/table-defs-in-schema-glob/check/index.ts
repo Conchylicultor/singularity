@@ -1,5 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
+import { schemaGlobFilesAsync } from "@plugins/database/plugins/migrations/core";
 import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -15,11 +15,13 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
   {
     name: "defineLink",
-    definedIn: "plugins/infra/plugins/attachments/server/internal/define-link.ts",
+    definedIn:
+      "plugins/infra/plugins/attachments/server/internal/define-link.ts",
   },
   {
     name: "defineExtension",
-    definedIn: "plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts",
+    definedIn:
+      "plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts",
   },
   {
     name: "defineTriggerEvent",
@@ -27,11 +29,14 @@ const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
   },
   {
     name: "defineEntity",
-    definedIn: "plugins/infra/plugins/entities/server/internal/define-entity.ts",
+    definedIn:
+      "plugins/infra/plugins/entities/server/internal/define-entity.ts",
   },
 ];
 
-const FACTORY_DEFINITION_FILES = new Set(TABLE_FACTORIES.map((f) => f.definedIn));
+const FACTORY_DEFINITION_FILES = new Set(
+  TABLE_FACTORIES.map((f) => f.definedIn),
+);
 
 // The imperative-public-table allowlist (the same single source the
 // orphaned-db-tables check reads): each entry is a public table created
@@ -87,7 +92,7 @@ const check: Check = {
 
     // 1. Glob-matched file set — derived from drizzle.config.ts (single source),
     // enumerated by the shared migrations/core helper (fails loud if unparseable).
-    const globFiles = new Set(schemaGlobFiles(root));
+    const globFiles = new Set(await schemaGlobFilesAsync(root));
 
     const offenders = new Map<string, string>(); // key `path:line` → formatted line
 
@@ -130,8 +135,7 @@ const check: Check = {
     return {
       ok: false,
       message: `table definition(s) outside a drizzle schema file in ${lines.length} place(s):\n    ${lines.join("\n    ")}`,
-      hint:
-        "drizzle-kit only discovers tables in `server/**/internal/tables.ts`, `tables-*.ts`, `schema.ts`, or `schema-*.ts`. A `pgTable`/factory call anywhere else silently vanishes from migration generation — drizzle treats the table as dropped and emits a spurious DROP. Move the `pgTable` / factory call into a schema file; for a factory, re-export `<handle>.table` there per the attachments/entity-extensions convention.",
+      hint: "drizzle-kit only discovers tables in `server/**/internal/tables.ts`, `tables-*.ts`, `schema.ts`, or `schema-*.ts`. A `pgTable`/factory call anywhere else silently vanishes from migration generation — drizzle treats the table as dropped and emits a spurious DROP. Move the `pgTable` / factory call into a schema file; for a factory, re-export `<handle>.table` there per the attachments/entity-extensions convention.",
     };
   },
 };

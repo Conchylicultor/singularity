@@ -26,8 +26,8 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
   - Uses:
-    - `framework/tooling/checks.listRepoFiles`
     - `infra/spawn.getWorktreeRoot`
+    - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/plugin-tree.buildPluginTree`
   - Exports (types):

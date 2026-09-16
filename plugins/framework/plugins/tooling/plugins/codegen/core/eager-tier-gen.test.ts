@@ -3,15 +3,22 @@
  * the structural predicate (`isAppContent`), and the per-file boot-critical key
  * scan (`bootCriticalKeysIn`), driven by synthetic inputs — no filesystem. Covers: the structural rule, watched-slot pins, bootCritical pins,
  * the reachability throw, the dependsOn closure pulling a dep of an eager shell
- * out of deferral, and deterministic sorted output. Run with `bun test`.
+ * out of deferral, and deterministic sorted output — and the scan over a file
+ * set (which files it reads). Run with `bun test`.
  */
 
 import { test, expect, describe } from "bun:test";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   bootCriticalKeysIn,
   computeEagerTier,
   isAppContent,
+  renderEagerTierManifest,
 } from "./eager-tier-gen";
+import type { RegistryGenContext } from "./plugin-registry-gen";
 
 describe("isAppContent", () => {
   test("app content = apps/plugins/<app>/plugins/<child> with child !== shell", () => {
@@ -205,5 +212,102 @@ describe("bootCriticalKeysIn", () => {
       const label = "resourceDescriptor(\\"fake\\", S, null, { bootCritical: true })";
     `;
     expect(bootCriticalKeysIn(src, "s.ts")).toEqual([]);
+  });
+});
+
+/** A `RepoFiles` over an in-memory `{ path: text }` map. */
+function memRepo(root: string, files: Record<string, string>): RepoFiles {
+  const paths = Object.keys(files).sort();
+  return {
+    root,
+    all: () => paths,
+    has: (p) => Object.hasOwn(files, p),
+    under: (dir) =>
+      dir === "" ? paths : paths.filter((p) => p.startsWith(`${dir}/`)),
+    read: (p) => Promise.resolve(Object.hasOwn(files, p) ? files[p]! : null),
+  };
+}
+
+function node(pluginsRoot: string, path: string): PluginNode {
+  return {
+    dir: `${pluginsRoot}/${path}`,
+    path,
+    name: path.split("/").at(-1)!,
+    id: asPluginId(
+      path
+        .split("/")
+        .filter((s) => s !== "plugins")
+        .join("."),
+    ),
+    descriptions: {},
+    loadBearing: false,
+    collapsed: false,
+    compositionRoot: false,
+    runtimes: { web: true, server: false, central: false },
+    children: [],
+    facets: {},
+  };
+}
+
+describe("the scan over a file set", () => {
+  const WEB_ENTRY = "export default {};\n";
+  const CALLS_CORE_ROOT = [
+    'import { Core } from "@plugins/framework/plugins/web-sdk/core";',
+    "export const root = Core.Root({ component: () => null });",
+  ].join("\n");
+  const APP = "apps/plugins/mail/plugins";
+
+  async function render(files: Record<string, string>, paths: string[]) {
+    const root = "/fixture";
+    const repo = memRepo(root, files);
+    const nodes = paths.map((p) => node(`${root}/plugins`, p));
+    const tree = {
+      pluginsRoot: `${root}/plugins`,
+      byDir: new Map(nodes.map((n) => [n.dir, n])),
+      byPath: new Map(nodes.map((n) => [n.path, n])),
+      roots: nodes,
+      facets: [],
+    };
+    const ctx: RegistryGenContext = {
+      root,
+      tree,
+      graph: classifyEdges(tree),
+      mainBundle: new Set(nodes.map((n) => n.id)),
+      repo: () => Promise.resolve(repo),
+      dirScans: new Map(),
+    };
+    return await renderEagerTierManifest(root, ctx);
+  }
+
+  test("a watched slot in a plugin's source pins it; the same call in a test does not", async () => {
+    const manifest = await render(
+      {
+        [`plugins/${APP}/badge/web/index.ts`]: WEB_ENTRY,
+        [`plugins/${APP}/badge/web/root.ts`]: CALLS_CORE_ROOT,
+        [`plugins/${APP}/quiet/web/index.ts`]: WEB_ENTRY,
+        [`plugins/${APP}/quiet/web/root.test.ts`]: CALLS_CORE_ROOT,
+        [`plugins/${APP}/quiet/web/__tests__/root.tsx`]: CALLS_CORE_ROOT,
+        [`plugins/${APP}/quiet/web/plugins/sub/root.ts`]: CALLS_CORE_ROOT,
+      },
+      [`${APP}/badge`, `${APP}/quiet`],
+    );
+    expect(manifest).toContain(
+      `//   - ${APP}/badge: watched boot slot Core.Root`,
+    );
+    expect(manifest).toContain(`  "${APP}/quiet",`);
+    expect(manifest).not.toContain(`  "${APP}/badge",`);
+  });
+
+  test("a bootCritical descriptor in core pins its plugin", async () => {
+    const manifest = await render(
+      {
+        [`plugins/${APP}/sync/web/index.ts`]: WEB_ENTRY,
+        [`plugins/${APP}/sync/core/resource.ts`]:
+          'export const d = resourceDescriptor("mailSync", S, null, { bootCritical: true });\n',
+      },
+      [`${APP}/sync`],
+    );
+    expect(manifest).toContain("boot-critical descriptor (mailSync)");
+    expect(manifest).not.toContain(`  "${APP}/sync",`);
   });
 });

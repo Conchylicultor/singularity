@@ -6,9 +6,10 @@ import {
   type StackSampler,
 } from "@plugins/infra/plugins/stack-sampler/core";
 import { checkProgressLogDir } from "../data-dirs";
-import type { OwnerShare } from "./thread-attribution";
+import type { OwnerShare, StallKind } from "./thread-attribution";
 import {
   openThreadWatch,
+  type StallCpu,
   type ThreadStall,
   type ThreadSummary,
 } from "./thread-watch";
@@ -152,6 +153,20 @@ export interface ProgressStall {
   bootstrap: string[];
   samples: number;
   owners: Array<RecordOwner & { example: string[] }>;
+  /**
+   * Sample counts by innermost-frame kind (blocking-io/process/module-load/cpu/
+   * native — see `classifyLeaf`). OPTIONAL on the wire for the same reason as
+   * `queuedMs`/`stalledMs`: rotated lines written before this landed have none.
+   * Read back, a missing value is `null` (`CheckRunProgress.stalls[].kinds`),
+   * never zeros — that stall's split just isn't known.
+   */
+  kinds?: Record<StallKind, number>;
+  /** The busiest raw innermost frame names in this stall, busiest first — same
+   *  optionality and normalization as `kinds`. */
+  leaves?: Array<{ leaf: string; samples: number }>;
+  /** How much of the stall's window the process spent on a CPU — see `StallCpu`.
+   *  OPTIONAL on the wire, same reason and same null-not-zero normalization. */
+  cpu?: StallCpu;
 }
 
 /**
@@ -171,6 +186,12 @@ export interface ProgressThread {
   rateHz: number | null;
   selfMs: number;
   owners: Array<RecordOwner & { ms: number | null }>;
+  /** Sample counts by innermost-frame kind, over the whole run. Same
+   *  optionality and normalization as the `stall` record's `kinds`. */
+  kinds?: Record<StallKind, number>;
+  /** The whole run's CPU time. Same optionality and normalization as the
+   *  `stall` record's `cpu`. */
+  cpu?: StallCpu;
   stallOwners: RecordOwner[];
 }
 
@@ -193,6 +214,9 @@ function stallRecord(stall: ThreadStall): ProgressStall {
       ...recordOwner(share),
       example: share.example.slice(0, STALL_RECORD_FRAMES),
     })),
+    kinds: stall.kinds,
+    leaves: stall.leaves,
+    cpu: stall.cpu,
   };
 }
 
@@ -208,6 +232,8 @@ function threadRecord(summary: ThreadSummary): ProgressThread {
       ...recordOwner(share),
       ms: share.ms,
     })),
+    kinds: summary.kinds,
+    cpu: summary.cpu,
     stallOwners: summary.stallOwners.map(recordOwner),
   };
 }
@@ -539,14 +565,30 @@ export interface CheckRunProgress {
   outstanding: OutstandingCheck[];
   /**
    * Every thread stall recorded so far, in order — readable WHILE the run is in
-   * flight, since each lands the moment its late tick runs.
+   * flight, since each lands the moment its late tick runs. `kinds`/`leaves`/
+   * `cpu` are `null` for a stall recorded before that split existed — see
+   * `ProgressStall`.
    */
-  stalls: Array<ProgressStall & { at: string }>;
+  stalls: Array<
+    Omit<ProgressStall, "kinds" | "leaves" | "cpu"> & {
+      at: string;
+      kinds: Record<StallKind, number> | null;
+      leaves: Array<{ leaf: string; samples: number }> | null;
+      cpu: StallCpu | null;
+    }
+  >;
   /**
    * The run's thread summary. Null until `finish()` writes it — and for every
-   * run recorded before the watch existed.
+   * run recorded before the watch existed. `kinds`/`cpu` are null for a run
+   * recorded before that split existed, same rule as a stall's.
    */
-  thread: (ProgressThread & { at: string }) | null;
+  thread:
+    | (Omit<ProgressThread, "kinds" | "cpu"> & {
+        at: string;
+        kinds: Record<StallKind, number> | null;
+        cpu: StallCpu | null;
+      })
+    | null;
   /** Present iff the run reached its `done` record. */
   done: { at: string; elapsedMs: number; allOk: boolean } | null;
 }
@@ -670,9 +712,22 @@ export function reconstructRuns(
         stalledMs: record.stalledMs ?? null,
       });
     } else if (record.phase === "stall") {
-      run.stalls.push({ ...fieldsOf(record), at: record.t });
+      const { kinds, leaves, cpu, ...fields } = fieldsOf(record);
+      run.stalls.push({
+        ...fields,
+        at: record.t,
+        kinds: kinds ?? null,
+        leaves: leaves ?? null,
+        cpu: cpu ?? null,
+      });
     } else if (record.phase === "thread") {
-      run.thread = { ...fieldsOf(record), at: record.t };
+      const { kinds, cpu, ...fields } = fieldsOf(record);
+      run.thread = {
+        ...fields,
+        at: record.t,
+        kinds: kinds ?? null,
+        cpu: cpu ?? null,
+      };
     } else if (record.phase === "done") {
       run.done = {
         at: record.t,

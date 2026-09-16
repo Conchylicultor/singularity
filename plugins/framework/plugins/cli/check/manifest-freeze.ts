@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import ts from "typescript";
-import { importClosure, type ImportClosure } from "./import-closure";
+import type TS from "typescript";
+import {
+  importClosure,
+  loadTypescript,
+  type ImportClosure,
+} from "./import-closure";
 
 export interface ManifestFreezeInput {
   root: string;
@@ -95,12 +99,16 @@ export async function measureManifestFreeze(
   }
 
   const callers = new Map<string, boolean>();
-  const callsWriter = (module: string): boolean => {
+  const callsWriter = async (module: string): Promise<boolean> => {
     let hit = callers.get(module);
     if (hit === undefined) {
       hit =
         /\.[cm]?[jt]sx?$/.test(module) &&
-        callsFunction(module, readFileSync(join(root, module), "utf8"), writer);
+        (await callsFunction(
+          module,
+          readFileSync(join(root, module), "utf8"),
+          writer,
+        ));
       callers.set(module, hit);
     }
     return hit;
@@ -117,11 +125,13 @@ export async function measureManifestFreeze(
   }[] = [];
   for (const [target, commands] of byTarget) {
     const closure = await importClosure(root, target, policy);
+    const liveModules = [...closure.live];
+    const hits = await Promise.all(liveModules.map((m) => callsWriter(m)));
     runs.push({
       target,
       commands: [...new Set(commands)].sort(),
       closure,
-      regenerators: [...closure.live].filter(callsWriter).sort(),
+      regenerators: liveModules.filter((_, i) => hits[i]).sort(),
     });
   }
 
@@ -177,12 +187,13 @@ export async function measureManifestFreeze(
  * the writer, and the barrel that re-exports it, are loaded by every reader of
  * the manifest list and must not read as regenerating.
  */
-export function callsFunction(
+export async function callsFunction(
   file: string,
   source: string,
   name: string,
-): boolean {
+): Promise<boolean> {
   if (!source.includes(name)) return false;
+  const ts = await loadTypescript();
   const sf = ts.createSourceFile(
     file,
     source,
@@ -191,7 +202,7 @@ export function callsFunction(
     file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   let found = false;
-  const visit = (node: ts.Node): void => {
+  const visit = (node: TS.Node): void => {
     if (found) return;
     if (ts.isCallExpression(node)) {
       const callee = node.expression;

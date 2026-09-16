@@ -10,6 +10,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { StackFrame } from "@plugins/infra/plugins/stack-sampler/core";
 import {
+  classifyLeaf,
+  createKindTally,
   createOwnerTally,
   ownerLabel,
   ownerOf,
@@ -209,5 +211,73 @@ describe("createOwnerTally", () => {
       { name: "pages", samples: 1 },
     ]);
     expect(tally.top(1)).toHaveLength(1);
+  });
+});
+
+describe("classifyLeaf", () => {
+  test("a native `*Sync` frame → blocking-io, no matter the function name", () => {
+    expect(classifyLeaf(native("readdirSync"))).toBe("blocking-io");
+    expect(classifyLeaf(native("__scanSync"))).toBe("blocking-io");
+    expect(classifyLeaf(native("mkdtempSync"))).toBe("blocking-io");
+  });
+
+  test("Bun's spawn machinery → process, checked before the `Sync` pattern", () => {
+    expect(classifyLeaf(native("spawn"))).toBe("process");
+    expect(classifyLeaf(native("spawnSync"))).toBe("process");
+    expect(classifyLeaf(native("posix_spawn"))).toBe("process");
+    expect(classifyLeaf(native("resourceUsage"))).toBe("process");
+  });
+
+  test("the module loader's own frames → module-load", () => {
+    expect(classifyLeaf(native("require"))).toBe("module-load");
+    expect(classifyLeaf(native("requestInstantiate"))).toBe("module-load");
+    expect(classifyLeaf(native("fetch"))).toBe("module-load");
+    expect(classifyLeaf(native("parseModule"))).toBe("module-load");
+    expect(classifyLeaf(js("(module)", CHECK))).toBe("module-load");
+  });
+
+  test("an unmatched name with a source file → cpu", () => {
+    expect(classifyLeaf(js("maskSource", TREE))).toBe("cpu");
+  });
+
+  test("an unmatched native name with no source → native, never dropped", () => {
+    expect(classifyLeaf(native("readFile"))).toBe("native");
+    expect(classifyLeaf(native("anonymous"))).toBe("native");
+  });
+});
+
+describe("createKindTally", () => {
+  test("counts per kind, zero-filled, and keeps the busiest raw leaves", () => {
+    const tally = createKindTally(ROOTS);
+    tally.add([native("readdirSync")]);
+    tally.add([native("readdirSync")]);
+    tally.add([native("spawn")]);
+    tally.add([js("maskSource", CHECK, 9)]);
+
+    expect(tally.samples).toBe(4);
+    expect(tally.counts()).toEqual({
+      "blocking-io": 2,
+      process: 1,
+      "module-load": 0,
+      cpu: 1,
+      native: 0,
+    });
+    expect(tally.topLeaves(10)).toEqual([
+      { leaf: "readdirSync [native]", samples: 2 },
+      { leaf: "spawn [native]", samples: 1 },
+      {
+        leaf: "maskSource @ plugins/database/plugins/migrations/check/index.ts:9",
+        samples: 1,
+      },
+    ]);
+    expect(tally.topLeaves(1)).toHaveLength(1);
+  });
+
+  test("no frames at all still counts as one (native) sample, never dropped", () => {
+    const tally = createKindTally(ROOTS);
+    tally.add([]);
+    expect(tally.samples).toBe(1);
+    expect(tally.counts().native).toBe(1);
+    expect(tally.topLeaves(10)).toEqual([{ leaf: "(no frames)", samples: 1 }]);
   });
 });

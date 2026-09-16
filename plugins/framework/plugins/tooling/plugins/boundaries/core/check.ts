@@ -1,11 +1,12 @@
-import { existsSync, readFileSync, statSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {
   Check,
+  CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
@@ -26,34 +27,6 @@ interface Violation {
   file: string;
   message: string;
   fix?: string;
-}
-
-// The candidate set is every `.ts`/`.tsx` git lists — tracked + untracked-not-
-// ignored, the universe the check cache key is built from — and the zone config
-// alone decides which of them are in scope (`zoneMap.resolveFile`). Neither half
-// has a second statement here. This used to walk `SOURCE_ROOTS` pruning an
-// `IGNORED_DIRS` deny-list, which was wrong both ways: its `build` entry hid
-// three tracked plugins named `build` from every rule, while it still scanned
-// gitignored content (`.cache/`, `dist.*`) no commit contains. See
-// research/2026-09-10-tooling-boundary-rules-file-enumeration-from-git.md.
-async function listCandidateFiles(root: string): Promise<string[]> {
-  return (await listRepoFiles(root)).filter(
-    (p) => p.endsWith(".ts") || p.endsWith(".tsx"),
-  );
-}
-
-function safeRead(path: string): string | null {
-  try {
-    if (!statSync(path).isFile()) return null;
-    return readFileSync(path, "utf-8");
-  } catch (err) {
-    // Every path is git-listed and present at listing time, so a read failure
-    // is a race with a delete (or a dangling symlink). Anything else is a real
-    // fault and stays loud.
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
-    return null;
-  }
 }
 
 // Alias specifiers the zone map can resolve; every other specifier (relative,
@@ -104,7 +77,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
     id: "boundary-rules",
     description:
       "Zone-DAG boundary rules: runtime isolation + zone-level default-deny import restrictions",
-    async run(): Promise<CheckResult> {
+    async run(ctx: CheckContext): Promise<CheckResult> {
       const root = await getWorktreeRoot();
       const pluginsRoot = join(root, "plugins");
 
@@ -133,13 +106,28 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       // widened view that checkRuntime() uses for its lookups.
       const runtimeMap: Record<string, string[]> = config.runtimes;
 
-      for (const relFile of await listCandidateFiles(root)) {
+      // The candidate set is the run's shared file set (never a private
+      // listing) — every `.ts`/`.tsx` git lists, tracked + untracked-not-
+      // ignored, exactly the universe the check cache key is built from. The
+      // zone config alone decides which of them are in scope
+      // (`zoneMap.resolveFile`).
+      const repo = await ctx.repo();
+      const candidateFiles = repo
+        .all()
+        .filter((p) => p.endsWith(".ts") || p.endsWith(".tsx"));
+
+      // Yield to the event loop every ~10ms of CPU so this whole-tree scan can't
+      // stall the shared check-runner thread (never a microtask — see
+      // yieldMacrotask).
+      let lastYield = performance.now();
+
+      for (const relFile of candidateFiles) {
         if (excludeSet.has(relFile)) continue;
 
         const source = zoneMap.resolveFile(relFile);
         if (!source) continue;
 
-        const src = safeRead(join(root, relFile));
+        const src = await repo.read(relFile);
         if (!src) continue;
 
         const imports = extractCrossZoneImports(src);
@@ -202,6 +190,11 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
                 ? `add an allow edge in boundary.config.ts: allow("${source.zone} -> ${target.zone}")`
                 : `a deny rule blocks this import. If legitimate, add a specific allow above the deny`,
           });
+        }
+
+        if (performance.now() - lastYield > 10) {
+          await yieldMacrotask();
+          lastYield = performance.now();
         }
       }
 

@@ -1,24 +1,26 @@
-import { existsSync, readFileSync } from "fs";
 import { relative } from "path";
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 import {
+  buildRegistryGenContext,
   renderEagerTierManifest,
   eagerTierManifestPath,
   formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const check: Check = {
   id: "eager-tier-in-sync",
   description:
     "plugins/framework/plugins/web-sdk/core/web-tiers.generated.ts matches the current derived load tiers (structural + watched-slot + bootCritical + dependsOn closure)",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(checkCtx: CheckContext) {
+    const repo = await checkCtx.repo();
+    const { root } = repo;
     const file = eagerTierManifestPath(root);
     const rel = relative(root, file);
-    if (!existsSync(file)) {
+    const actual = await repo.read(rel);
+    if (actual === null) {
       return {
         ok: false,
         message: `${rel} is missing`,
@@ -30,7 +32,10 @@ const check: Check = {
     // not a crash, so push/build reports it cleanly.
     let expected: string;
     try {
-      expected = await renderEagerTierManifest(root);
+      expected = await renderEagerTierManifest(
+        root,
+        await buildRegistryGenContext(root, repo),
+      );
     } catch (err) {
       return {
         ok: false,
@@ -41,10 +46,7 @@ const check: Check = {
         hint: "A boot-critical resource descriptor is unreachable — see the message.",
       };
     }
-    if (
-      readFileSync(file, "utf8") !==
-      (await formatGenerated({ file, content: expected }))
-    ) {
+    if (actual !== (await formatGenerated({ file, content: expected }))) {
       return {
         ok: false,
         message: `${rel} is out of sync with the derived load tiers`,

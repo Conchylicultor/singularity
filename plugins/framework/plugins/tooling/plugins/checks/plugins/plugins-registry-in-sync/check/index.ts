@@ -1,7 +1,10 @@
-import { existsSync, readFileSync } from "fs";
 import { relative } from "path";
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 import {
-  discoverCollectedDirs,
+  discoverCollectedDirsIn,
   renderCollectedDirRegistry,
   collectedDirRegistryPath,
   collectEntriesWithDeps,
@@ -9,10 +12,6 @@ import {
   formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // Every `id: "<plugin.id>"` a rendered registry carries. The generator emits
 // `id: ${JSON.stringify(e.id)}` one entry per line, and plugin ids contain no
@@ -29,10 +28,13 @@ const check: Check = {
   id: "plugins-registry-in-sync",
   description:
     "All collected dir registries (web, server, central, check, lint, ...) are exactly what the `singularity` composition's closure renders from the current plugin source",
-  async run() {
-    const root = await getWorktreeRoot();
-    const ctx = await buildRegistryGenContext(root);
-    const defs = discoverCollectedDirs(root);
+  async run(checkCtx: CheckContext) {
+    // Everything this check enumerates or reads goes through the run's file
+    // set — the collected dirs, every scanned source, the committed registries.
+    const repo = await checkCtx.repo();
+    const { root } = repo;
+    const ctx = await buildRegistryGenContext(root, repo);
+    const defs = await discoverCollectedDirsIn(repo);
 
     // ── Identity, not equivalence ────────────────────────────────────────────
     //
@@ -58,7 +60,8 @@ const check: Check = {
     for (const def of defs) {
       const file = collectedDirRegistryPath(def);
       const rel = relative(root, file);
-      if (!existsSync(file)) {
+      const actual = await repo.read(rel);
+      if (actual === null) {
         return {
           ok: false,
           message: `${rel} is missing`,
@@ -67,7 +70,7 @@ const check: Check = {
       }
       const expected = await formatGenerated({
         file,
-        content: renderCollectedDirRegistry({
+        content: await renderCollectedDirRegistry({
           ctx,
           def,
           // The committed registries ARE the `singularity` composition's
@@ -75,7 +78,6 @@ const check: Check = {
           bundle: ctx.mainBundle,
         }),
       });
-      const actual = readFileSync(file, "utf8");
       if (actual === expected) continue;
 
       // Name the ids, not the diff. "These two files differ" is useless to
@@ -86,11 +88,12 @@ const check: Check = {
       // rendered but not carried means the closure reaches a plugin the committed
       // file never got. Both usually mean the same thing — the build was not run
       // — but which ids moved is what says whether that is the whole story.
-      const rendered = new Set(
-        collectEntriesWithDeps(ctx, def.dir, ctx.mainBundle).entries.map(
-          (e) => e.id,
-        ),
+      const { entries } = await collectEntriesWithDeps(
+        ctx,
+        def.dir,
+        ctx.mainBundle,
       );
+      const rendered = new Set(entries.map((e) => e.id));
       const carried = registryIds(actual);
       const stale = [...carried].filter((id) => !rendered.has(id)).sort();
       const missing = [...rendered].filter((id) => !carried.has(id)).sort();

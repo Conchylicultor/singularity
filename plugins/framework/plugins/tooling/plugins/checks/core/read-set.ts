@@ -37,6 +37,7 @@
 // fact from the fresh snapshot.
 
 import { createHash } from "node:crypto";
+import { pathsUnder } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
@@ -131,6 +132,11 @@ export interface TreeSnapshot {
   blobSha(path: string): string | null;
   /** True iff `path` is a blob (file) in the tree. */
   exists(path: string): boolean;
+  /**
+   * Every blob path, repo-relative, in `Array.prototype.sort()` order. Frozen:
+   * one array shared by every reader (it is `ctx.repo()`'s set), never copied.
+   */
+  paths(): readonly string[];
   /** Immediate child names (files + subdirs) of `dir`, sorted; `""` = repo root. */
   members(dir: string): string[];
   /** Repo-relative paths matching the git pathspec `pattern`, sorted. */
@@ -306,11 +312,21 @@ function buildSnapshot(
     }
   }
 
-  const sortedPaths = [...blobSha.keys()].sort();
+  const sortedPaths: readonly string[] = Object.freeze(
+    [...blobSha.keys()].sort(),
+  );
 
   let checkSourceHashMemo: string | undefined;
 
   const glob = (pattern: string): string[] => {
+    // `**` and `<dir>/**` — what `ctx.repo().all()` / `.under(dir)` record —
+    // are one contiguous run of the sorted list: two binary searches instead of
+    // a regex over every path, on record and on replay alike (both go through
+    // here). Same answer as the regex below, except for a path holding a line
+    // terminator, which the regex's `.` never matches and the range includes —
+    // the superset side.
+    const subtree = pattern === "**" ? "" : SUBTREE_GLOB.exec(pattern)?.[1];
+    if (subtree !== undefined) return pathsUnder(sortedPaths, subtree);
     const re = pathspecToRegex(pattern);
     return sortedPaths.filter((p) => re.test(p));
   };
@@ -325,6 +341,7 @@ function buildSnapshot(
     root,
     blobSha: (path) => blobSha.get(path) ?? null,
     exists: (path) => blobSha.has(path),
+    paths: () => sortedPaths,
     members: (dir) => {
       const key = dir.replace(/\/+$/, "");
       const set = dirMembers.get(key);
@@ -363,6 +380,11 @@ function buildSnapshot(
   };
   return snapshot;
 }
+
+// `<dir>/**`: a literal directory — no glob magic, no leading `:` pathspec
+// magic — followed by `/**`. The subtree form `ctx.repo().under(dir)` records;
+// see `glob` in `buildSnapshot`.
+const SUBTREE_GLOB = /^([^:*?[][^*?[]*)\/\*\*$/;
 
 /**
  * Strip a leading git pathspec magic signature so the glob body is left to

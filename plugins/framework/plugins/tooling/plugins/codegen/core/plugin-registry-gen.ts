@@ -1,11 +1,17 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { readdirSync, readFileSync } from "fs";
+import { join, resolve } from "path";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   findImports,
   findMarkerCalls,
   maskSource,
+  type FsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  loadRepoFiles,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -16,6 +22,7 @@ import {
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { resolveMainComposition } from "./main-bundle";
+import { readListed, timeSlicer } from "./scan-pacing";
 import { writeGenerated } from "./write-generated";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
@@ -31,90 +38,170 @@ const HEADER = [
   "// `plugins-registry-in-sync` check fails on drift.",
 ].join("\n");
 
-// ── Core barrel discovery ──────────────────────────────────────────
+// How many plugins' files a scan holds in flight at once. The file set's own
+// reader bounds the opens; this bounds how much text is resident.
+const PLUGIN_SCAN_WIDTH = 16;
 
-function findCoreBarrels(pluginsRoot: string): string[] {
-  const out: string[] = [];
-  function walk(dir: string, depth: number): void {
-    if (depth > 10) return;
-    const barrel = join(dir, "core", "index.ts");
-    if (existsSync(barrel)) out.push(barrel);
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
-        throw err;
-      return;
-    }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (dir === pluginsRoot) {
-        walk(join(dir, e.name), depth + 1);
-      } else if (e.name === "plugins") {
-        let children;
-        try {
-          children = readdirSync(join(dir, e.name), { withFileTypes: true });
-        } catch (err) {
-          const code = (err as NodeJS.ErrnoException).code;
-          if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
-            throw err;
-          continue;
-        }
-        for (const c of children) {
-          if (c.isDirectory()) walk(join(dir, e.name, c.name), depth + 1);
-        }
-      }
-    }
+// ── Collected-dir discovery ────────────────────────────────────────
+//
+// A collected dir is declared by a `defineCollectedDir("<dir>")` call in a file
+// directly under a plugin's `core/` — a `core/` that has a barrel. The
+// candidates come from the repo's FILE SET (git's tracked + untracked-not-
+// ignored, the universe the check cache key covers), never from a directory
+// walk. The walk this replaced made ~2,600 blocking readdir/exists calls per
+// call, four checks called it in one pass, and under a check pass's background
+// priority that held the shared check thread for 16–40 s. It also saw
+// gitignored directories, which no verdict may depend on.
+//
+// One pure core, three fronts that differ only in where the file list and the
+// text come from:
+//   - `discoverCollectedDirsIn(repo)` — async, for checks and for codegen that
+//     already holds a file set (a `RegistryGenContext`).
+//   - `discoverCollectedDirs(root)` — sync, for callers that cannot await: one
+//     `git ls-files`, then reads of the candidates.
+//   - `standardPluginDirsFromSnapshot(root, fs)` — the structure facet, over the
+//     in-memory snapshot its own tree build already read. No disk at all.
+
+// A file directly under a plugin's `core/`, at a plugin position: a top-level
+// plugin directory, or a sub-plugin nested under `plugins/`, at most ten names
+// deep (where the plugin-tree walk stops). Group 1 is the plugin's path under
+// `plugins/`.
+const CORE_FILE_RE =
+  /^plugins\/([^/]+(?:\/plugins\/[^/]+){0,9})\/core\/[^/]+\.ts$/;
+
+// A test file never declares a collected dir. Without this, a unit test that
+// calls `defineCollectedDir("x")` for real would register a phantom runtime
+// folder — a registry, a tsconfig-coverage demand, a "standard" folder name.
+// (It also keeps every front agreeing: the facet's snapshot holds no tests.)
+const TEST_FILE_RE = /\.test\.ts$/;
+
+interface CollectedDirCandidate {
+  /** Repo-relative path of the `core/*.ts` file. */
+  rel: string;
+  /** The owning plugin's path under `plugins/`. */
+  pluginPath: string;
+}
+
+/** The `core/*.ts` files among `files` that can declare a collected dir. */
+function collectedDirCandidates(
+  files: Iterable<string>,
+  has: (rel: string) => boolean,
+): CollectedDirCandidate[] {
+  const out: CollectedDirCandidate[] = [];
+  for (const rel of files) {
+    const m = CORE_FILE_RE.exec(rel);
+    if (!m || TEST_FILE_RE.test(rel)) continue;
+    const pluginPath = m[1]!;
+    if (has(`plugins/${pluginPath}/core/index.ts`))
+      out.push({ rel, pluginPath });
   }
-  walk(pluginsRoot, 0);
   return out;
 }
 
 // First positional string argument of a `defineCollectedDir("<dir>")` call.
 const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
 
-// Synchronous: this does only blocking `readdirSync`/`readFileSync`/`existsSync`
-// I/O. Keeping it sync (rather than async-by-signature) lets callers — notably
-// the structure facet's `extract`, which the facet pipeline invokes without
-// `await` — consume it without a top-level await. A top-level await here would
-// suspend the facet module mid-evaluation inside the facets ⇄ codegen import
-// cycle, surfacing as a TDZ crash ("Cannot access 'default' before initialization").
-export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
+/** The collected dirs the candidates' `text` declares. Pure. */
+function collectedDirsFrom(
+  root: string,
+  sources: Iterable<CollectedDirCandidate & { text: string }>,
+): DiscoveredCollectedDir[] {
   const pluginsRoot = resolve(root, "plugins");
-  const coreBarrels = findCoreBarrels(pluginsRoot);
   const out: DiscoveredCollectedDir[] = [];
-  for (const barrelPath of coreBarrels) {
-    const coreDir = dirname(barrelPath);
-    let coreFiles;
-    try {
-      coreFiles = readdirSync(coreDir, { withFileTypes: true });
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
-        throw err;
-      continue;
-    }
-    for (const entry of coreFiles) {
-      if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
-      const filePath = join(coreDir, entry.name);
-      const src = readFileSync(filePath, "utf8");
-      // Fast-path: skip files that can't contain the marker. Correctness still
-      // comes from `findMarkerCalls`, which ignores comment/string/regex matches.
-      if (!src.includes("defineCollectedDir")) continue;
-      for (const call of findMarkerCalls(src, "defineCollectedDir")) {
-        const arg = FIRST_STRING_ARG_RE.exec(call.argsText);
-        if (!arg) continue;
-        out.push({
-          dir: arg[1]!,
-          _brand: "CollectedDirDef",
-          ownerDir: dirname(coreDir),
-        });
-      }
+  for (const { pluginPath, text } of sources) {
+    // Fast-path: skip files that can't contain the marker. Correctness still
+    // comes from `findMarkerCalls`, which ignores comment/string/regex matches.
+    if (!text.includes("defineCollectedDir")) continue;
+    for (const call of findMarkerCalls(text, "defineCollectedDir")) {
+      const arg = FIRST_STRING_ARG_RE.exec(call.argsText);
+      if (!arg) continue;
+      out.push({
+        dir: arg[1]!,
+        _brand: "CollectedDirDef",
+        ownerDir: join(pluginsRoot, pluginPath),
+      });
     }
   }
   return out;
+}
+
+/**
+ * Every collected dir the tree declares, from the run's file set: no directory
+ * walk, and every read asynchronous (the set's reader bounds the opens).
+ */
+export async function discoverCollectedDirsIn(
+  repo: RepoFiles,
+): Promise<DiscoveredCollectedDir[]> {
+  const candidates = collectedDirCandidates(repo.under("plugins"), (rel) =>
+    repo.has(rel),
+  );
+  const sources = await Promise.all(
+    candidates.map(async (c) => ({
+      ...c,
+      text: await readListed(repo, c.rel),
+    })),
+  );
+  return collectedDirsFrom(repo.root, sources);
+}
+
+// Wedge-breaker for a metadata-only git read, not a latency budget — the bound
+// `listRepoFiles` uses, for the same reason.
+const GIT_TIMEOUT_MS = 60_000;
+
+function lsFilesSync(root: string, args: string[]): string[] {
+  const result = Bun.spawnSync(["git", "ls-files", "-z", ...args], {
+    cwd: root,
+    stdout: "pipe",
+    stderr: "pipe",
+    timeout: GIT_TIMEOUT_MS,
+  });
+  if (result.exitCode !== 0) {
+    // Loud, never `[]`: an empty listing would read as "no collected dirs".
+    throw new Error(
+      `git ls-files ${args.join(" ")} failed in ${root} (exit ${result.exitCode}): ${result.stderr.toString().trim()}`,
+    );
+  }
+  return result.stdout
+    .toString()
+    .split("\0")
+    .filter((p) => p.length > 0);
+}
+
+/**
+ * The files under `plugins/`, repo-relative and sorted — `listRepoFiles`'
+ * universe (tracked + untracked-not-ignored, minus index entries whose file is
+ * gone), listed synchronously for the callers that cannot await.
+ */
+function listPluginFilesSync(root: string): string[] {
+  const present = lsFilesSync(root, [
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    "plugins",
+  ]);
+  const gone = new Set(lsFilesSync(root, ["--deleted", "--", "plugins"]));
+  return [...new Set(present.filter((p) => !gone.has(p)))].sort();
+}
+
+/**
+ * `discoverCollectedDirsIn`, for callers that cannot await
+ * (`listNamedCompositionRegistries`, whose callers include a synchronous
+ * program-key read). Same file set, listed with ONE blocking `git ls-files`
+ * instead of a directory walk, then a read of each candidate. Nothing on a
+ * check pass's shared thread should call it: checks hold a file set already.
+ */
+export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
+  const files = listPluginFilesSync(root);
+  const listed = new Set(files);
+  const candidates = collectedDirCandidates(files, (rel) => listed.has(rel));
+  return collectedDirsFrom(
+    root,
+    candidates.map((c) => ({
+      ...c,
+      text: readFileSync(join(root, c.rel), "utf8"),
+    })),
+  );
 }
 
 // ── Standard plugin folders ────────────────────────────────────────
@@ -130,10 +217,9 @@ export function discoverCollectedDirs(root: string): DiscoveredCollectedDir[] {
 //      `e2e` holds a plugin's Playwright scripts; it is deliberately NOT a
 //      collected dir (there is nothing to register — a collected dir would
 //      generate an empty registry and pull in collected-dir-tsconfig-coverage).
-export function standardPluginDirs(root: string): Set<string> {
-  const collected = discoverCollectedDirs(root).map((d) => d.dir);
+function standardDirsWith(defs: DiscoveredCollectedDir[]): Set<string> {
   return new Set([
-    ...collected,
+    ...defs.map((d) => d.dir),
     "core",
     "shared",
     "plugins",
@@ -141,6 +227,53 @@ export function standardPluginDirs(root: string): Set<string> {
     "scripts",
     "e2e",
   ]);
+}
+
+/** The standard plugin folder names, from the run's file set. */
+export async function standardPluginDirsIn(
+  repo: RepoFiles,
+): Promise<Set<string>> {
+  return standardDirsWith(await discoverCollectedDirsIn(repo));
+}
+
+/** The standard plugin folder names, for callers that cannot await. */
+export function standardPluginDirs(root: string): Set<string> {
+  return standardDirsWith(discoverCollectedDirs(root));
+}
+
+// One answer per snapshot: a snapshot is one tree build's frozen read of the
+// source, so the answer lives exactly as long as the snapshot does.
+const snapshotStandardDirs = new WeakMap<FsSnapshot, Set<string>>();
+
+/**
+ * The standard plugin folder names, answered from a plugin-tree build's
+ * in-memory FS snapshot — for the structure facet, whose `extract` is
+ * synchronous and runs inside that build. The snapshot already holds every
+ * plugin's non-test `core/*.ts`, so this touches no disk. `root` is the repo
+ * root whose `plugins/` the snapshot covers.
+ */
+export function standardPluginDirsFromSnapshot(
+  root: string,
+  fs: FsSnapshot,
+): Set<string> {
+  const cached = snapshotStandardDirs.get(fs);
+  if (cached !== undefined) return cached;
+  const prefix = `${resolve(root)}/`;
+  const texts = new Map<string, string>();
+  for (const [abs, text] of fs.files) {
+    if (abs.startsWith(prefix)) texts.set(abs.slice(prefix.length), text);
+  }
+  const candidates = collectedDirCandidates(texts.keys(), (rel) =>
+    texts.has(rel),
+  );
+  const std = standardDirsWith(
+    collectedDirsFrom(
+      root,
+      candidates.map((c) => ({ ...c, text: texts.get(c.rel)! })),
+    ),
+  );
+  snapshotStandardDirs.set(fs, std);
+  return std;
 }
 
 // ── Entry collection ───────────────────────────────────────────────
@@ -151,11 +284,11 @@ export interface CollectedRawEntry {
   id: string;
 }
 
-function hasDefaultExport(file: string): boolean {
+function hasDefaultExport(text: string): boolean {
   // Mask comments/regex/strings so a commented-out or string-embedded `export
   // default` can't make an entryless barrel look like an entry. These are pure
   // code-construct detectors — the string interior is never read back.
-  const src = maskSource(readFileSync(file, "utf8"));
+  const src = maskSource(text);
   return (
     /(^|\n)\s*export\s+default\b/.test(src) ||
     /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)
@@ -185,8 +318,14 @@ export interface RegistryGenContext {
   // is no unfiltered registry — every render says which composition it is for,
   // and this is the answer for the committed `<dir>.generated.ts` files.
   mainBundle: Set<PluginId>;
-  // Per-`<dir>` filesystem scan (the collected entry list plus the raw
-  // import-derived dependency graph), memoized for this context's lifetime.
+  // The repo's file set every scan below enumerates and reads — a check's own
+  // run set when a check built this ctx, else listed from git on first use.
+  // Lazy because half the callers (composition-closure, config_v2's
+  // registrations-paired) read only the tree and never scan; memoized so one
+  // ctx lists at most once.
+  repo(): Promise<RepoFiles>;
+  // Per-`<dir>` scan (the collected entry list plus the raw import-derived
+  // dependency graph), memoized for this context's lifetime.
   //
   // Why it is safe to cache HERE rather than anywhere else: a `RegistryGenContext`
   // is a SNAPSHOT of the tree — `tree`, `graph` and `mainBundle` are already
@@ -194,7 +333,7 @@ export interface RegistryGenContext {
   // that needs a post-write view of the filesystem must build a fresh ctx to see
   // it. A
   // `<dir>` scan is a pure function of exactly the same inputs (`ctx.tree`,
-  // `ctx.root`, `dir`) and of nothing else — in particular NOT of the `bundle`,
+  // `ctx.repo()`, `dir`) and of nothing else — in particular NOT of the `bundle`,
   // which only filters an already-scanned entry list — so hanging it off the ctx
   // gives it precisely the lifetime it is valid for. Putting it in a
   // module-level cache would instead outlive the snapshot and start answering
@@ -208,8 +347,9 @@ export interface RegistryGenContext {
   // stage 1 shares a ctx across every composition one invocation names
   // (N compositions × 3 runtime dirs collapse to 3 scans). Behaviour is
   // unchanged — the cache holds the raw pre-filter scan, so the bundle filter
-  // and the dep pruning still run per call.
-  dirScans: Map<string, DirEntryScan>;
+  // and the dep pruning still run per call. It holds the PROMISE, so two
+  // concurrent renders of one `<dir>` share one scan.
+  dirScans: Map<string, Promise<DirEntryScan>>;
 }
 
 /** The bundle-independent half of `collectEntriesWithDeps`: what one `<dir>`
@@ -219,11 +359,23 @@ interface DirEntryScan {
   rawDeps: Map<string, string[]>;
 }
 
+/**
+ * The shared registry-generation context for `root`. A check passes its run's
+ * file set as `repo` (so the scans read through it); codegen omits it and the
+ * ctx lists the repo from git the first time a scan needs it.
+ */
 export async function buildRegistryGenContext(
   root: string,
+  repo?: RepoFiles,
 ): Promise<RegistryGenContext> {
+  if (repo !== undefined && repo.root !== root) {
+    throw new Error(
+      `buildRegistryGenContext(${root}) was handed the file set of ${repo.root}.`,
+    );
+  }
   const tree = await buildBarrelFreeTree(root);
   const graph = classifyEdges(tree);
+  let listing = repo === undefined ? undefined : Promise.resolve(repo);
   return {
     root,
     tree,
@@ -232,6 +384,7 @@ export async function buildRegistryGenContext(
     // exclusions did not take effect — see `resolveMainComposition`. A registry
     // that contradicts the manifest is worth failing the build for.
     mainBundle: resolveMainComposition(graph, root).bundle,
+    repo: () => (listing ??= loadRepoFiles(root)),
     dirScans: new Map(),
   };
 }
@@ -240,16 +393,25 @@ export async function buildRegistryGenContext(
  * The `<dir>` scan for this context, computed on first ask and reused after.
  * See `RegistryGenContext.dirScans` for why a ctx is the right lifetime.
  */
-function scanDir(ctx: RegistryGenContext, dir: string): DirEntryScan {
-  const cached = ctx.dirScans.get(dir);
-  if (cached !== undefined) return cached;
-  const allEntries = collectEntries(ctx.tree, dir);
-  const scan: DirEntryScan = {
-    allEntries,
-    rawDeps: buildDepsForDir(ctx.root, allEntries, dir),
-  };
-  ctx.dirScans.set(dir, scan);
+function scanDir(ctx: RegistryGenContext, dir: string): Promise<DirEntryScan> {
+  let scan = ctx.dirScans.get(dir);
+  if (scan === undefined) {
+    scan = computeDirScan(ctx, dir);
+    ctx.dirScans.set(dir, scan);
+  }
   return scan;
+}
+
+async function computeDirScan(
+  ctx: RegistryGenContext,
+  dir: string,
+): Promise<DirEntryScan> {
+  const repo = await ctx.repo();
+  const allEntries = await collectEntries(ctx.tree, repo, dir);
+  return {
+    allEntries,
+    rawDeps: await buildDepsForDir(repo, allEntries, dir),
+  };
 }
 
 /**
@@ -268,12 +430,21 @@ function identifierForDir(dir: string): string {
   return dir.replace(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 }
 
-function collectEntries(tree: PluginTree, dir: string): CollectedRawEntry[] {
+async function collectEntries(
+  tree: PluginTree,
+  repo: RepoFiles,
+  dir: string,
+): Promise<CollectedRawEntry[]> {
+  const barrels = [...tree.byDir.values()]
+    .map((node) => ({ node, rel: `plugins/${node.path}/${dir}/index.ts` }))
+    .filter((b) => repo.has(b.rel));
+  const texts = await Promise.all(barrels.map((b) => readListed(repo, b.rel)));
+  const tick = timeSlicer();
   const entries: CollectedRawEntry[] = [];
-  for (const node of tree.byDir.values()) {
-    const indexFile = join(node.dir, dir, "index.ts");
-    if (!existsSync(indexFile)) continue;
-    if (!hasDefaultExport(indexFile)) continue;
+  for (const [i, { node }] of barrels.entries()) {
+    const isEntry = hasDefaultExport(texts[i]!);
+    await tick();
+    if (!isEntry) continue;
     entries.push({
       pluginPath: node.path,
       importPath: `@plugins/${node.path}/${dir}`,
@@ -286,58 +457,39 @@ function collectEntries(tree: PluginTree, dir: string): CollectedRawEntry[] {
 
 // ── Dependency graph ───────────────────────────────────────────────
 
-function walkTsFiles(dir: string, out: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
-    return;
-  }
-  for (const e of entries) {
-    const p = join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === "node_modules" || e.name === "plugins") continue;
-      walkTsFiles(p, out);
-    } else if (e.isFile() && /\.tsx?$/.test(e.name)) {
-      out.push(p);
-    }
-  }
+const TS_FILE_RE = /\.tsx?$/;
+
+// Every `.ts`/`.tsx` under a plugin's `<dir>/` tree, skipping `node_modules` and
+// nested `plugins/` (each sub-plugin is scanned as its own entry).
+function tsFilesUnder(repo: RepoFiles, base: string): string[] {
+  return repo.under(base).filter((rel) => {
+    const segments = rel.slice(base.length + 1).split("/");
+    const name = segments.pop()!;
+    return (
+      TS_FILE_RE.test(name) &&
+      !segments.some((s) => s === "node_modules" || s === "plugins")
+    );
+  });
 }
 
 // Every import specifier found in a plugin's `<dir>/` tree. `findImports` masks
 // comments/regex/strings and reads each specifier back by offset, so an import
 // written inside a string/comment can't register a phantom dependency edge.
 // Covers both `import … from` and `export … from`.
-function collectImportSpecifiers(pluginDir: string, dir: string): Set<string> {
-  const subDir = join(pluginDir, dir);
-  const files: string[] = [];
-  walkTsFiles(subDir, files);
+async function collectImportSpecifiers(
+  repo: RepoFiles,
+  pluginPath: string,
+  dir: string,
+  tick: () => Promise<void>,
+): Promise<Set<string>> {
+  const files = tsFilesUnder(repo, `plugins/${pluginPath}/${dir}`);
+  const texts = await Promise.all(files.map((rel) => readListed(repo, rel)));
   const specifiers = new Set<string>();
-  for (const f of files) {
-    for (const imp of findImports(readFileSync(f, "utf8"))) {
-      specifiers.add(imp.specifier);
-    }
+  for (const text of texts) {
+    for (const imp of findImports(text)) specifiers.add(imp.specifier);
+    await tick();
   }
   return specifiers;
-}
-
-function collectImportPrefixes(
-  pluginDir: string,
-  dir: string,
-  entryPrefixes: Set<string>,
-): Set<string> {
-  const prefixes = new Set<string>();
-  for (const mod of collectImportSpecifiers(pluginDir, dir)) {
-    if (!mod.startsWith("@plugins/")) continue;
-    const lastSlash = mod.lastIndexOf("/");
-    if (lastSlash > 0) {
-      const prefix = mod.slice(0, lastSlash);
-      if (entryPrefixes.has(prefix)) prefixes.add(prefix);
-    }
-  }
-  return prefixes;
 }
 
 /** True for npm-style bare specifiers (neither relative/absolute nor `@plugins/*`). */
@@ -357,50 +509,61 @@ function isBareNpmSpecifier(mod: string): boolean {
  * Node builtins (`node:*`) are included verbatim; consumers filter. Does NOT
  * change the emitted registry shape.
  */
-export function collectBareSpecifiers(
+export async function collectBareSpecifiers(
   ctx: RegistryGenContext,
   dir: string,
-): Map<string, string[]> {
+): Promise<Map<string, string[]>> {
+  const repo = await ctx.repo();
+  const { allEntries } = await scanDir(ctx, dir);
+  const tick = timeSlicer();
   const out = new Map<string, string[]>();
-  for (const e of collectEntries(ctx.tree, dir)) {
-    const pluginDir = join(resolve(ctx.root, "plugins"), e.pluginPath);
-    const bare = [...collectImportSpecifiers(pluginDir, dir)]
-      .filter(isBareNpmSpecifier)
-      .sort();
+  for (const e of allEntries) {
+    const specifiers = await collectImportSpecifiers(
+      repo,
+      e.pluginPath,
+      dir,
+      tick,
+    );
+    const bare = [...specifiers].filter(isBareNpmSpecifier).sort();
     if (bare.length > 0) out.set(e.pluginPath, bare);
   }
   return out;
 }
 
-function buildDepsForDir(
-  root: string,
+async function buildDepsForDir(
+  repo: RepoFiles,
   entries: CollectedRawEntry[],
   dir: string,
-): Map<string, string[]> {
+): Promise<Map<string, string[]>> {
   const prefixToPluginPath = new Map<string, string>();
-  const entryPrefixes = new Set<string>();
   for (const e of entries) {
     const prefix = e.importPath.slice(0, e.importPath.lastIndexOf("/"));
     prefixToPluginPath.set(prefix, e.pluginPath);
-    entryPrefixes.add(prefix);
   }
 
-  const pluginsRoot = resolve(root, "plugins");
+  const tick = timeSlicer();
+  const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
   const result = new Map<string, string[]>();
-
-  for (const e of entries) {
-    const pluginDir = join(pluginsRoot, e.pluginPath);
-    const depPrefixes = collectImportPrefixes(pluginDir, dir, entryPrefixes);
-    const deps: string[] = [];
-    for (const prefix of depPrefixes) {
-      const depPath = prefixToPluginPath.get(prefix);
-      if (depPath && depPath !== e.pluginPath) deps.push(depPath);
-    }
-    if (deps.length > 0) {
-      deps.sort();
-      result.set(e.pluginPath, deps);
-    }
-  }
+  await Promise.all(
+    entries.map((e) =>
+      gate.run(async () => {
+        const deps = new Set<string>();
+        for (const mod of await collectImportSpecifiers(
+          repo,
+          e.pluginPath,
+          dir,
+          tick,
+        )) {
+          if (!mod.startsWith("@plugins/")) continue;
+          const lastSlash = mod.lastIndexOf("/");
+          if (lastSlash <= 0) continue;
+          const depPath = prefixToPluginPath.get(mod.slice(0, lastSlash));
+          if (depPath && depPath !== e.pluginPath) deps.add(depPath);
+        }
+        if (deps.size > 0) result.set(e.pluginPath, [...deps].sort());
+      }),
+    ),
+  );
   return result;
 }
 
@@ -416,13 +579,13 @@ function buildDepsForDir(
 // `renderCollectedDirRegistry` (so its output is byte-identical) AND the
 // eager-tier generator, which needs the exact same filtered web entry set +
 // pruned `dependsOn` graph.
-export function collectEntriesWithDeps(
+export async function collectEntriesWithDeps(
   ctx: RegistryGenContext,
   dir: string,
   // The composition's bundle: the dot-form PluginId set of its hard closure.
   bundle: Set<string>,
-): { entries: CollectedRawEntry[]; deps: Map<string, string[]> } {
-  const { allEntries, rawDeps } = scanDir(ctx, dir);
+): Promise<{ entries: CollectedRawEntry[]; deps: Map<string, string[]> }> {
+  const { allEntries, rawDeps } = await scanDir(ctx, dir);
   const entries = allEntries.filter((e) => bundle.has(e.id));
   const survivingPaths = new Set(entries.map((e) => e.pluginPath));
   const deps = new Map<string, string[]>();
@@ -437,7 +600,7 @@ export function collectEntriesWithDeps(
 
 // ── Renderer ───────────────────────────────────────────────────────
 
-export function renderCollectedDirRegistry(opts: {
+export async function renderCollectedDirRegistry(opts: {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
   // REQUIRED: which composition this registry is for — the dot-form PluginId set
@@ -446,9 +609,9 @@ export function renderCollectedDirRegistry(opts: {
   // unfiltered render would be a registry belonging to no composition, which is
   // how the app's membership and the manifest's used to drift apart silently.
   bundle: Set<string>;
-}): string {
+}): Promise<string> {
   const { ctx, def, bundle } = opts;
-  const { entries, deps } = collectEntriesWithDeps(ctx, def.dir, bundle);
+  const { entries, deps } = await collectEntriesWithDeps(ctx, def.dir, bundle);
   const exportName = `${identifierForDir(def.dir)}Entries`;
 
   const lines: string[] = [];
@@ -491,14 +654,18 @@ export async function generatePluginRegistry(opts: {
   ctx?: RegistryGenContext;
 }): Promise<void> {
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
-  const defs = discoverCollectedDirs(opts.root);
+  const defs = await discoverCollectedDirsIn(await ctx.repo());
   for (const def of defs) {
     await writeGenerated({
       file: collectedDirRegistryPath(def),
       // The committed registries ARE the `singularity` composition's registries
       // — `compositionRegistryFileName` says so, and this is where that is made
       // true rather than merely asserted afterwards.
-      content: renderCollectedDirRegistry({ ctx, def, bundle: ctx.mainBundle }),
+      content: await renderCollectedDirRegistry({
+        ctx,
+        def,
+        bundle: ctx.mainBundle,
+      }),
     });
   }
 }
@@ -605,12 +772,16 @@ export async function generateCompositionRegistry(opts: {
   // rather than as a guard at each caller.
   if (opts.name === MAIN_COMPOSITION_ID) return;
   const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
-  const defs = discoverCollectedDirs(opts.root);
+  const defs = await discoverCollectedDirsIn(await ctx.repo());
   for (const def of defs) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
     await writeGenerated({
       file: collectedDirNamedCompositionRegistryPath(def, opts.name),
-      content: renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle }),
+      content: await renderCollectedDirRegistry({
+        ctx,
+        def,
+        bundle: opts.bundle,
+      }),
     });
   }
 }
@@ -630,6 +801,11 @@ export function parseNamedCompositionRegistryFileName(
 /**
  * Every per-name composition registry currently on disk — the auto-serve
  * stage's sweep input (delete the entries whose name is no longer activated).
+ *
+ * Synchronous (callers include a synchronous program-key read), so it takes the
+ * git-listed sync discovery front. The per-name registries themselves are
+ * GITIGNORED, so no file set holds them: reading the (at most three) owning
+ * `core/` directories is the only way to see them.
  */
 export function listNamedCompositionRegistries(
   root: string,

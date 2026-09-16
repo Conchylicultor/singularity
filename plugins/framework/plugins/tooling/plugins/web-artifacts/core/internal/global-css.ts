@@ -133,12 +133,12 @@ function gitListFiles(repoRoot: string): string[] {
  * The global stylesheet's cache key. Uses (and updates) the caller's
  * fingerprint cache for the file-content aggregate's stat fast path.
  */
-export function computeGlobalCssKey(opts: {
+export async function computeGlobalCssKey(opts: {
   repoRoot: string;
   pluginsRoot: string;
   minify: boolean;
   cache: FingerprintCache;
-}): string {
+}): Promise<string> {
   const appCssFile = globalCssSource(opts.pluginsRoot);
   const appCss = readFileSync(appCssFile, "utf8");
   const { sourceDirs, importSpecs } = parseCssInputs(appCss);
@@ -179,7 +179,7 @@ export function computeGlobalCssKey(opts: {
     walkAllFiles(abs, walked);
     for (const f of walked) files.add(f);
   }
-  record.inputs = cachedAggregateHash({
+  record.inputs = await cachedAggregateHash({
     cacheKey: "__global-css|inputs",
     baseDir: opts.repoRoot,
     files: [...files].sort(),

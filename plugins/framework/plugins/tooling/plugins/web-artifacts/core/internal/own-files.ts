@@ -8,25 +8,47 @@
 //
 // Nested sub-plugins live under `<dir>/plugins/` — never an inlined root — so a
 // child's change never touches the parent's hash.
+//
+// All I/O here is async (`node:fs/promises`) behind a small shared concurrency
+// gate. This module runs on the check runner's ONE shared thread (as well as
+// inside `./singularity build`), and a fleet-wide hash pass touches thousands
+// of small source files — a blocking `readdirSync`/`statSync`/`readFileSync`
+// holds that thread for every OTHER check in the pass too (checks/CLAUDE.md's
+// stall watch). The gate bounds fan-out (never one `Promise.all` per file
+// across a whole fleet) without serializing reads one at a time.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative } from "node:path";
-import { computeOwnHash } from "../hash";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { computeOwnHash, type OwnFile } from "../hash";
 import { inlinedRootsFor, type ArtifactKind } from "../own-roots";
 import type { FingerprintCache, FingerprintRecord } from "./store";
 
 const SKIP_DIRS = new Set(["node_modules", "__tests__", "public"]);
 const TEST_FILE_RE = /\.test\.[jt]sx?$/;
 
-function walkFiles(dir: string, out: string[]): void {
+// Bounds concurrent file-system calls FROM THIS MODULE. Only the leaf I/O
+// calls (one `readdir` per directory, one `stat`/`readFile` per file) take a
+// slot — NEVER a recursive `walkFiles` call itself, which would hold a slot
+// for its whole subtree and could starve the very `readdir` calls it's
+// waiting on (the nested-semaphore deadlock class documented in
+// checks/CLAUDE.md's fan-out section, and the one host-read-pool hit before).
+const IO_CONCURRENCY = 32;
+const ioGate = createSemaphore(IO_CONCURRENCY);
+function withIoSlot<T>(fn: () => Promise<T>): Promise<T> {
+  return ioGate.run(fn);
+}
+
+async function walkFiles(dir: string, out: string[]): Promise<void> {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = await withIoSlot(() => readdir(dir, { withFileTypes: true }));
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
     return;
   }
+  const subdirs: string[] = [];
   for (const e of entries) {
     const p = join(dir, e.name);
     if (e.isSymbolicLink()) continue;
@@ -37,12 +59,15 @@ function walkFiles(dir: string, out: string[]): void {
         e.name.startsWith("dist.")
       )
         continue;
-      walkFiles(p, out);
+      subdirs.push(p);
     } else if (e.isFile()) {
       if (TEST_FILE_RE.test(e.name) || e.name === ".DS_Store") continue;
       out.push(p);
     }
   }
+  // Order doesn't matter: `listOwnFiles` sorts the aggregate result, so
+  // sibling subdirectories can walk concurrently (through the shared gate).
+  await Promise.all(subdirs.map((p) => walkFiles(p, out)));
 }
 
 /**
@@ -61,14 +86,17 @@ export function hashedRootsFor(
 }
 
 /** Absolute paths of the artifact's own files, sorted. */
-export function listOwnFiles(pluginDir: string, kind: ArtifactKind): string[] {
+export async function listOwnFiles(
+  pluginDir: string,
+  kind: ArtifactKind,
+): Promise<string[]> {
   const roots = hashedRootsFor(pluginDir, kind);
   const out: string[] = [];
-  for (const root of roots) walkFiles(root, out);
+  await Promise.all(roots.map((root) => walkFiles(root, out)));
   if (kind !== "entry") {
     const pkg = join(pluginDir, "package.json");
     try {
-      statSync(pkg);
+      await withIoSlot(() => stat(pkg));
       out.push(pkg);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
@@ -79,6 +107,23 @@ export function listOwnFiles(pluginDir: string, kind: ArtifactKind): string[] {
 }
 
 /**
+ * Read `files` as (rel, content) pairs via `toEntry`, bounded by the same IO
+ * gate as the walk — reading a whole own-file set opens many files at once and
+ * unbounded concurrency here would exhaust file descriptors. Shared by
+ * `identity.ts`'s `builderSourceDigest` (no fingerprint cache of its own).
+ */
+export async function readFilesBounded<T>(
+  files: string[],
+  toEntry: (abs: string, content: Buffer) => T,
+): Promise<T[]> {
+  return Promise.all(
+    files.map(async (abs) =>
+      toEntry(abs, await withIoSlot(() => readFile(abs))),
+    ),
+  );
+}
+
+/**
  * Aggregate content hash of an explicit file list, via the fingerprint fast
  * path: when the (mtimeMs, size) of every file matches the cached record, the
  * recorded hash is reused without reading content. Any mismatch (or a changed
@@ -86,35 +131,37 @@ export function listOwnFiles(pluginDir: string, kind: ArtifactKind): string[] {
  * that vanishes between listing and stat/read contributes nothing (transient —
  * e.g. a tracked-but-deleted path); any other IO error surfaces.
  */
-export function cachedAggregateHash(opts: {
+export async function cachedAggregateHash(opts: {
   cacheKey: string;
   /** Hash keys are paths relative to this dir, so renames invalidate. */
   baseDir: string;
   files: string[];
   cache: FingerprintCache;
-}): string {
+}): Promise<string> {
   const stats: Array<{
     abs: string;
     rel: string;
     mtimeMs: number;
     size: number;
   }> = [];
-  for (const f of opts.files) {
-    let st;
-    try {
-      st = statSync(f);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue;
-    }
-    if (!st.isFile()) continue;
-    stats.push({
-      abs: f,
-      rel: relative(opts.baseDir, f),
-      mtimeMs: st.mtimeMs,
-      size: st.size,
-    });
-  }
+  await Promise.all(
+    opts.files.map(async (f) => {
+      let st;
+      try {
+        st = await withIoSlot(() => stat(f));
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        return;
+      }
+      if (!st.isFile()) return;
+      stats.push({
+        abs: f,
+        rel: relative(opts.baseDir, f),
+        mtimeMs: st.mtimeMs,
+        size: st.size,
+      });
+    }),
+  );
 
   const record = opts.cache.records[opts.cacheKey];
   if (record && Object.keys(record.files).length === stats.length) {
@@ -129,14 +176,19 @@ export function cachedAggregateHash(opts: {
     if (clean) return record.ownHash;
   }
 
-  const contents: Array<{ rel: string; content: Buffer }> = [];
-  for (const s of stats) {
-    try {
-      contents.push({ rel: s.rel, content: readFileSync(s.abs) });
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-  }
+  const contents: OwnFile[] = [];
+  await Promise.all(
+    stats.map(async (s) => {
+      try {
+        contents.push({
+          rel: s.rel,
+          content: await withIoSlot(() => readFile(s.abs)),
+        });
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      }
+    }),
+  );
   const ownHash = computeOwnHash(contents);
   const next: FingerprintRecord = { files: {}, ownHash };
   for (const s of stats) next.files[s.rel] = [s.mtimeMs, s.size];
@@ -148,16 +200,16 @@ export function cachedAggregateHash(opts: {
  * The plugin's own-content hash — `cachedAggregateHash` over the artifact
  * kind's own-file roots.
  */
-export function ownHashFor(opts: {
+export async function ownHashFor(opts: {
   cacheKey: string;
   pluginDir: string;
   kind: ArtifactKind;
   cache: FingerprintCache;
-}): string {
+}): Promise<string> {
   return cachedAggregateHash({
     cacheKey: opts.cacheKey,
     baseDir: opts.pluginDir,
-    files: listOwnFiles(opts.pluginDir, opts.kind),
+    files: await listOwnFiles(opts.pluginDir, opts.kind),
     cache: opts.cache,
   });
 }

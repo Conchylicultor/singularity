@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { chromium } from "playwright";
+import { existsSync, renameSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineHostPool } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { HOST_POOLS } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import {
@@ -12,6 +11,7 @@ import type {
   Check,
   CheckContext,
   CheckResult,
+  RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
 import { layoutLabDir } from "../data-dirs";
 import { classifyFailure } from "./classify";
@@ -23,26 +23,31 @@ import { classifyFailure } from "./classify";
 // keyed on a tree hash of the css subtree, app.css, and every fixture
 // contributor's whole plugin subtree.
 
-// Globs whose tree-SHAs are the suite's real inputs: every css primitive (the
-// fixtures + the primitives they render) and the ui-kit Tailwind stylesheet.
-//
-// These are the SEED globs. The real input set is derived from them — see
-// `listFiles` — because a glob list alone could not close the hole below.
-const SIG_GLOBS = [
-  "plugins/primitives/plugins/css/plugins/**",
-  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css",
-  // Every fixture contributor, wherever it lives — NOT just the css subtree.
-  // `fixtures/` is a collected dir, so a contributor is under no obligation to
-  // be a css primitive: `primitives/adaptive-bar` was the first that is not.
-  // Its fixtures sit outside the two globs above, so editing one changed the
-  // geometry the gate measures while leaving the signature identical — a
-  // regression the check would have reported as `ok (cached)`, which is worse
-  // than not running it at all. Adding a NEW contributor happened to invalidate
-  // anyway (it rewrites `fixtures.generated.ts`, which IS in the css subtree),
-  // so the hole only opened on the SECOND edit to an outside fixture — the kind
-  // of gap that stays quiet for months.
-  "plugins/**/fixtures/**",
-];
+// The seed paths whose content is the suite's real input, expressed as a
+// predicate over the run's own file set (`ctx.repo()`) instead of git
+// pathspecs: every css primitive/fixture subtree, the ui-kit stylesheet, and
+// — repo-wide, not just under css/plugins — every fixture contributor's
+// `fixtures/` path (see `fixtureContributorRoots` below for why "repo-wide"
+// matters: `fixtures/` is a collected dir, so a contributor need not be a css
+// primitive at all).
+const CSS_PLUGINS_PREFIX = "plugins/primitives/plugins/css/plugins/";
+const APP_CSS_PATH =
+  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
+
+/**
+ * `RepoFiles.all()` is the exact tracked+untracked-not-ignored universe
+ * `git ls-files` (+ `--others --exclude-standard`) covers, so filtering it
+ * this way matches the old pathspec globs file-for-file: none of the three
+ * used a git wildmatch feature (char classes, negation) a prefix/substring
+ * test can't express.
+ */
+function isSeedPath(path: string): boolean {
+  return (
+    path.startsWith(CSS_PLUGINS_PREFIX) ||
+    path === APP_CSS_PATH ||
+    (path.startsWith("plugins/") && path.includes("/fixtures/"))
+  );
+}
 
 /**
  * The plugin roots of the fixture contributors, derived from the fixture paths
@@ -60,14 +65,14 @@ const SIG_GLOBS = [
  * tomorrow is covered the day it does — with no glob to remember to add, which
  * is the maintenance failure that opened the hole the first time.
  */
-function fixtureContributorGlobs(fixturePaths: readonly string[]): string[] {
+function fixtureContributorRoots(fixturePaths: readonly string[]): string[] {
   const roots = new Set<string>();
   for (const rel of fixturePaths) {
     const at = rel.lastIndexOf("/fixtures/");
     if (at < 0) continue;
     roots.add(rel.slice(0, at));
   }
-  return [...roots].sort().map((root) => `${root}/**`);
+  return [...roots].sort();
 }
 
 const SUITE_REL =
@@ -100,69 +105,36 @@ function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
-// sha256 over the WORKING-TREE content of every input file (tracked + untracked
-// not-ignored) under the globs. `git ls-files -s` alone reads the INDEX blob SHA,
-// which misses unstaged edits and untracked files (the layout-harness sources
-// themselves) — so a real geometry-affecting change could be cached past. We
-// therefore enumerate the paths with git (which honors .gitignore) and hash each
-// file's actual on-disk content. Sync + cheap (the css subtree is small source),
-// so `cacheSignature` reuses it.
-function gitList(root: string, globs: readonly string[]): string[] {
-  const args = [
-    ["ls-files", "--", ...globs],
-    ["ls-files", "--others", "--exclude-standard", "--", ...globs],
-  ];
-  const found: string[] = [];
-  for (const a of args) {
-    const proc = Bun.spawnSync(["git", ...a], {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const out = new TextDecoder().decode(proc.stdout).trim();
-    for (const line of out.split("\n")) if (line) found.push(line);
-  }
-  return found;
-}
-
-// Two passes, because the second glob set is not knowable up front: list the
-// seeds, read the fixture contributors OUT of what came back, then list their
-// whole plugin subtrees too. Four `git ls-files` invocations over a source tree,
-// all sync — `cacheSignature()` calls this on every check run, so it must stay
-// cheap enough to be free.
-function listFiles(root: string): string[] {
-  const seed = gitList(root, SIG_GLOBS);
-  const contributorGlobs = fixtureContributorGlobs(seed);
+// Two passes, because the second root set is not knowable up front: filter the
+// seed from the run's already-loaded file set, read the fixture contributors
+// OUT of what came back, then pull their whole plugin subtrees too via
+// `repo.under()`. Pure lookups over `RepoFiles` — no git spawn, no I/O of its
+// own — so this can run on every check run for free.
+function listFiles(repo: RepoFiles): string[] {
+  const seed = repo.all().filter(isSeedPath);
   const set = new Set(seed);
-  if (contributorGlobs.length > 0) {
-    for (const rel of gitList(root, contributorGlobs)) set.add(rel);
+  for (const root of fixtureContributorRoots(seed)) {
+    for (const rel of repo.under(root)) set.add(rel);
   }
   return [...set].sort();
 }
 
-function computeSig(root: string): string {
+async function computeSig(repo: RepoFiles): Promise<string> {
+  const files = listFiles(repo);
+  // Read concurrently (repo.read() is already bounded/memoized per run) but
+  // hash in the SORTED order above, so the digest never depends on read
+  // completion order.
+  const contents = await Promise.all(files.map((rel) => repo.read(rel)));
   const h = createHash("sha256");
-  for (const rel of listFiles(root)) {
-    h.update(rel);
+  for (let i = 0; i < files.length; i++) {
+    h.update(files[i]!);
     h.update("\0");
-    try {
-      h.update(readFileSync(join(root, rel)));
-    } catch (err) {
-      // A path that vanished between listing and read (e.g. a transient artifact)
-      // contributes nothing; any other IO error is real and must surface.
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
+    // A path the run's file set no longer has (vanished, or unreadable)
+    // contributes nothing — same as the old ENOENT-swallow.
+    if (contents[i] !== null) h.update(contents[i]!);
     h.update("\0");
   }
   return h.digest("hex");
-}
-
-function rootSync(): string {
-  const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return new TextDecoder().decode(proc.stdout).trim();
 }
 
 // The sidecar pass markers live in the `cache/layout-lab` data dir this plugin
@@ -176,14 +148,16 @@ const check: Check = {
   id: "layout-geometry",
   description:
     "layout primitives hold their geometry invariants (no track collision / overlap regressions)",
-  // Fold the css-subtree sig into the runner's own cache key so identical
-  // full-tree reruns (push reusing build) short-circuit. Cheap + side-effect-free.
-  cacheSignature(): string {
-    return computeSig(rootSync());
-  },
+  // No `cacheSignature()`: this check is `scope: "tree"` (the default), and the
+  // runner's own tree hash — tracked + untracked-not-ignored — already covers
+  // the exact universe `computeSig` reads via `ctx.repo()` below. A signature
+  // here could never separate two states the tree hash doesn't; see
+  // checks/CLAUDE.md, "A scope: 'tree' verdict must not depend on the process
+  // that produced it."
   async run(ctx: CheckContext): Promise<CheckResult> {
     const root = await getWorktreeRoot();
-    const sig = computeSig(root);
+    const repo = await ctx.repo();
+    const sig = await computeSig(repo);
 
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
     // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere. This
@@ -199,6 +173,8 @@ const check: Check = {
     return ctx.grant.run(() =>
       browserPool.run(async () => {
         if (existsSync(markerFile(sig))) return { ok: true };
+
+        const { chromium } = await import("playwright");
 
         // Chromium must be provisioned (the e2e-harness provision step owns that). Fail loudly
         // with a clear hint — never auto-install.

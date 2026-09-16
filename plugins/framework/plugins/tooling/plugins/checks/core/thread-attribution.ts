@@ -318,3 +318,148 @@ export function createOwnerTally(roots: readonly string[]): OwnerTally {
     },
   };
 }
+
+/**
+ * Which of five closed buckets the thread was doing WORK in, read off a
+ * sample's innermost frame alone (`frames[0]`) — cheap by construction: no
+ * extra stack walk, since the watch already has the frame in hand. Where
+ * `ownerOf` asks "whose code is this" (walking the whole stack for a `check`
+ * frame), `classifyLeaf` asks "what was the thread physically doing" — stuck in
+ * a synchronous syscall, waiting on a spawned process, loading a module, or
+ * running ordinary JS. The two answer different questions about the SAME
+ * sample; a stall record carries both.
+ *
+ * Every name below was read off real stalls
+ * (`~/.singularity/logs/check-progress/check-progress.jsonl`, `owners[].example`)
+ * on 2026-09-15. An unrecognized name is never dropped — it falls through to
+ * `cpu` (it has a source file) or `native` (it doesn't), and the stall's
+ * `leaves` tally keeps its raw name visible either way.
+ */
+export type StallKind =
+  "blocking-io" | "process" | "module-load" | "cpu" | "native";
+
+/** Every kind, in the order a report lists them. */
+export const STALL_KINDS: readonly StallKind[] = [
+  "blocking-io",
+  "process",
+  "module-load",
+  "cpu",
+  "native",
+];
+
+/** The transcript's word for each kind. */
+export const STALL_KIND_LABELS: Record<StallKind, string> = {
+  "blocking-io": "blocking I/O",
+  process: "process start",
+  "module-load": "module load",
+  cpu: "CPU",
+  native: "native",
+};
+
+/** Bun's spawn machinery: `Bun.spawn`/`Bun.spawnSync`'s native frames, plus the
+ *  rusage read right after a spawned child settles. */
+const PROCESS_LEAVES = new Set([
+  "spawn",
+  "spawnSync",
+  "posix_spawn",
+  "resourceUsage",
+]);
+
+/** The module loader's own native frames — `await import()`'s machinery,
+ *  CommonJS `require()`, and the loader's own fetch/parse under
+ *  `requestInstantiate` (dynamic import resolving a specifier). */
+const MODULE_LOAD_LEAVES = new Set([
+  "require",
+  "requestImportModule",
+  "requestInstantiate",
+  "requestFetch",
+  "fetch",
+  "parseModule",
+  "moduleEvaluation",
+  "moduleDeclarationInstantiation",
+  "(module)",
+]);
+
+/**
+ * A native `fooSync` frame. No per-function list is needed: every sync fs/glob
+ * entry point (`readdirSync`, `existsSync`, `readFileSync`, `statSync`,
+ * `lstatSync`, `realpathSync`, `openSync`, `writeFileSync`, `rmSync`,
+ * `mkdirSync`, `cpSync`, `mkdtempSync`, `Bun.Glob`'s `__scanSync`, …) already
+ * ends in `Sync` by Node/Bun's own naming convention, and it is a native
+ * binding — no source file. Repo code essentially never names a function that
+ * way, so the pattern alone is the rule.
+ */
+function isSyncLeaf(frame: StackFrame): boolean {
+  return sourceOf(frame) === null && frame.name.endsWith("Sync");
+}
+
+/** Classify one sample by its innermost frame — see `StallKind`. */
+export function classifyLeaf(frame: StackFrame): StallKind {
+  if (MODULE_LOAD_LEAVES.has(frame.name)) return "module-load";
+  // Checked before the `Sync` pattern: `spawnSync` would otherwise match it.
+  if (PROCESS_LEAVES.has(frame.name)) return "process";
+  if (isSyncLeaf(frame)) return "blocking-io";
+  return sourceOf(frame) !== null ? "cpu" : "native";
+}
+
+/** How many raw leaf names a stall's `leaves` list keeps. */
+export const STALL_LEAVES = 8;
+
+/** One raw leaf's tally entry. */
+export interface LeafShare {
+  leaf: string;
+  samples: number;
+}
+
+/** A running per-kind, per-raw-leaf sample count, over each sample's `frames[0]`. */
+export interface KindTally {
+  readonly samples: number;
+  add(frames: readonly StackFrame[]): void;
+  /** All five kinds, zero-filled — a caller never special-cases an unseen one. */
+  counts(): Record<StallKind, number>;
+  /** The `n` busiest raw leaf names (as `frameKey` renders them), busiest first. */
+  topLeaves(n: number): LeafShare[];
+}
+
+/**
+ * Count samples by `classifyLeaf(frames[0])`, plus the raw leaf names — the
+ * "hot leaf" view a closed 5-kind bucket can't show on its own. `roots` shortens
+ * a leaf's source the same way `createOwnerTally` does and for the same reason:
+ * a frame's `sourceURL` is fully resolved, so a checkout reached through a
+ * symlink needs both spellings stripped.
+ */
+export function createKindTally(roots: readonly string[]): KindTally {
+  const counts: Record<StallKind, number> = {
+    "blocking-io": 0,
+    process: 0,
+    "module-load": 0,
+    cpu: 0,
+    native: 0,
+  };
+  const leaves = new Map<string, number>();
+  let samples = 0;
+  const shorten = (sourceURL: string): string =>
+    shortenSource(sourceURL, roots);
+
+  return {
+    get samples() {
+      return samples;
+    },
+    add(frames) {
+      samples += 1;
+      const leaf = frames[0];
+      counts[leaf ? classifyLeaf(leaf) : "native"] += 1;
+      const key = leaf ? frameKey(leaf, shorten) : "(no frames)";
+      leaves.set(key, (leaves.get(key) ?? 0) + 1);
+    },
+    counts() {
+      return { ...counts };
+    },
+    topLeaves(n) {
+      return [...leaves.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, n)
+        .map(([leaf, count]) => ({ leaf, samples: count }));
+    },
+  };
+}

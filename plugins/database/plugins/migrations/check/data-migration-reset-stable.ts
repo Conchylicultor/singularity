@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import { existsSync, readdirSync } from "fs";
 import { join } from "path";
 import {
@@ -22,7 +21,7 @@ type Check = {
   id: string;
   description: string;
   run(): Promise<CheckResult>;
-  cacheSignature?(): string | null;
+  cacheSignature?(): string | null | Promise<string | null>;
 };
 
 // The migration SQL dir and the drizzle snapshot meta dir, relative to THIS check
@@ -151,30 +150,14 @@ const check: Check = {
   id: "data-migration-reset-stable",
   description:
     "branch-local data migrations are ordered before every branch-local schema migration",
-  // Impure: reads origin/main via git. The verdict depends only on which files
-  // exist (never their content) plus the main ref, so fold exactly those in —
-  // same shape as the sibling migration-applies-clean signature.
-  cacheSignature() {
+  // Impure: reads origin/main via git. Which .sql/*_snapshot.json files exist
+  // is already covered by the runner's own tree hash (existence, same as
+  // content, changes the tree hash) — only origin/main's ref needs folding in.
+  async cacheSignature(): Promise<string | null> {
     try {
-      const hash = createHash("sha256");
-      for (const f of readdirSync(DATA_DIR).sort()) {
-        if (!f.endsWith(".sql")) continue;
-        hash.update(f);
-        hash.update("\0");
-      }
-      for (const f of readdirSync(META_DIR).sort()) {
-        if (!f.endsWith("_snapshot.json")) continue;
-        hash.update(f);
-        hash.update("\0");
-      }
-      const proc = Bun.spawnSync(["git", "rev-parse", "origin/main"], {
-        cwd: process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const mainRef = proc.success ? proc.stdout.toString().trim() : "no-main";
-      return `${hash.digest("hex")}:${mainRef}`;
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (missing dir, git error) safely degrades to "never cache" (return null), which only re-runs the cheap check
+      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
+      return result.code === 0 ? result.out.trim() : "no-main";
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap check
     } catch {
       return null;
     }

@@ -1,18 +1,20 @@
 /**
- * Regression test for the comment/string robustness of `discoverCollectedDirs`.
+ * Collected-dir discovery (over a file set, over git, over a tree-build
+ * snapshot), per-name composition registries, and the registry renderer's
+ * bundle filter.
  *
- * The trigger bug: a `defineCollectedDir("…")` written inside a code comment (or
- * embedded in a string literal) was matched by a raw-text regex and silently
- * produced a phantom collected-dir registry. Routing the scan through
- * `findMarkerCalls` (which masks comments/strings/regex) must ignore those while
- * still discovering genuine calls. Run with `bun test` from the repo root.
+ * Discovery must ignore a `defineCollectedDir("…")` written inside a comment or
+ * string (routed through `findMarkerCalls`), and must consider only the files a
+ * collected dir can be declared in: directly under a `core/` that has a barrel,
+ * at a plugin position, and not a test.
  */
 
 import { test, expect, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
+import { dirname, join } from "path";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { classifyEdges } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -20,44 +22,146 @@ import {
   compositionRegistryFileName,
   compositionRegistryPath,
   discoverCollectedDirs,
+  discoverCollectedDirsIn,
   listNamedCompositionRegistries,
   parseNamedCompositionRegistryFileName,
   renderCollectedDirRegistry,
+  standardPluginDirsFromSnapshot,
+  standardPluginDirsIn,
   type DiscoveredCollectedDir,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
 
-const root = mkdtempSync(join(tmpdir(), "collected-dir-test-"));
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+// Fixture paths go through `pj(rel)` rather than bare `plugins/<seg>/…`
+// literals — the repo's own `plugin-refs-resolve` check validates that every
+// such literal in source resolves to a real plugin, and these are synthetic.
+const pj = (rel: string): string => `plugins/${rel}`;
 
-/** Write a core/index.ts barrel for a plugin under <root>/plugins/<name>/core. */
-function writeCoreBarrel(pluginName: string, contents: string) {
-  const coreDir = join(root, "plugins", pluginName, "core");
-  mkdirSync(coreDir, { recursive: true });
-  writeFileSync(join(coreDir, "index.ts"), contents);
+/**
+ * A `RepoFiles` over an in-memory `{ path: text }` map — the file set a run
+ * hands a check. `reads` records every path read, so a test can assert what a
+ * scan opened.
+ */
+function memRepo(
+  root: string,
+  files: Record<string, string>,
+): RepoFiles & { reads: string[] } {
+  const paths = Object.keys(files).sort();
+  const reads: string[] = [];
+  return {
+    root,
+    reads,
+    all: () => paths,
+    has: (p) => Object.hasOwn(files, p),
+    under: (dir) =>
+      dir === "" ? paths : paths.filter((p) => p.startsWith(`${dir}/`)),
+    read: (p) => {
+      reads.push(p);
+      return Promise.resolve(Object.hasOwn(files, p) ? files[p]! : null);
+    },
+  };
 }
 
-test("discoverCollectedDirs ignores commented/stringified markers but finds real calls", () => {
-  writeCoreBarrel(
-    "real",
-    ['export const realDir = defineCollectedDir("widget");'].join("\n"),
-  );
-  writeCoreBarrel(
-    "phantoms",
-    [
+/** A fresh git repository holding `files` untracked (so `--others` lists them). */
+function gitFixture(files: Record<string, string>): string {
+  const root = mkdtempSync(join(tmpdir(), "collected-dir-git-"));
+  afterAll(() => rmSync(root, { recursive: true, force: true }));
+  const init = Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+  if (init.exitCode !== 0) throw new Error(init.stderr.toString());
+  for (const [rel, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(root, rel)), { recursive: true });
+    writeFileSync(join(root, rel), text);
+  }
+  return root;
+}
+
+const sortedDirs = (defs: DiscoveredCollectedDir[]) =>
+  defs.map((d) => d.dir).sort();
+
+test("discovery ignores commented/stringified markers but finds real calls", async () => {
+  const repo = memRepo("/repo", {
+    [pj("real/core/index.ts")]:
+      'export const realDir = defineCollectedDir("widget");',
+    [pj("phantoms/core/index.ts")]: [
       '// defineCollectedDir("phantom")',
       "const s = \"defineCollectedDir('stringed')\";",
       '/* block defineCollectedDir("blocked") */',
     ].join("\n"),
-  );
-
-  const dirs = discoverCollectedDirs(root)
-    .map((d) => d.dir)
-    .sort();
-
+  });
   // Only the genuine call is discovered; the comment- and string-embedded
   // markers must not produce phantom collected dirs.
-  expect(dirs).toEqual(["widget"]);
+  expect(sortedDirs(await discoverCollectedDirsIn(repo))).toEqual(["widget"]);
+});
+
+test("discovery reads only core files at a plugin position whose core has a barrel", async () => {
+  const deep = (n: number) =>
+    Array.from({ length: n }, (_, i) => `d${i + 1}`).join("/plugins/");
+  const repo = memRepo("/repo", {
+    [pj("real/core/index.ts")]: "export {};",
+    [pj("real/core/dirs.ts")]: 'defineCollectedDir("widget");',
+    // A nested sub-plugin is a plugin position; its parent needs no core.
+    [pj("outer/plugins/inner/core/index.ts")]: 'defineCollectedDir("nested");',
+    // Ten names deep is the deepest position; eleven is past it.
+    [`plugins/${deep(10)}/core/index.ts`]: 'defineCollectedDir("ten");',
+    [`plugins/${deep(11)}/core/index.ts`]: 'defineCollectedDir("eleven");',
+    // No barrel → not a core a collected dir can live in.
+    [pj("nobarrel/core/dirs.ts")]: 'defineCollectedDir("orphan");',
+    // Not directly under core/.
+    [pj("real/core/sub/deep.ts")]: 'defineCollectedDir("subdir");',
+    // A `core/` that is not at a plugin position.
+    [pj("real/lib/core/index.ts")]: 'defineCollectedDir("lib");',
+    // A test never declares one.
+    [pj("real/core/define.test.ts")]: 'defineCollectedDir("fromtest");',
+  });
+
+  const defs = await discoverCollectedDirsIn(repo);
+  expect(sortedDirs(defs)).toEqual(["nested", "ten", "widget"]);
+  expect(defs.find((d) => d.dir === "nested")?.ownerDir).toBe(
+    "/repo/plugins/outer/plugins/inner",
+  );
+  // Nothing outside the candidates was opened.
+  expect(repo.reads.sort()).toEqual(
+    [
+      pj("outer/plugins/inner/core/index.ts"),
+      pj("real/core/dirs.ts"),
+      pj("real/core/index.ts"),
+      `plugins/${deep(10)}/core/index.ts`,
+    ].sort(),
+  );
+});
+
+test("the standard folder set is the fixed conventions plus every discovered dir", async () => {
+  const repo = memRepo("/repo", {
+    [pj("sdk/core/index.ts")]: 'defineCollectedDir("widget");',
+  });
+  expect([...(await standardPluginDirsIn(repo))].sort()).toEqual(
+    ["bin", "core", "e2e", "plugins", "scripts", "shared", "widget"].sort(),
+  );
+});
+
+test("the sync front lists the same universe from git: untracked counts, gitignored does not", () => {
+  const root = gitFixture({
+    ".gitignore": "plugins/ignored/\n",
+    [pj("fresh/core/index.ts")]: 'defineCollectedDir("widget");',
+    [pj("ignored/core/index.ts")]: 'defineCollectedDir("hidden");',
+  });
+  expect(sortedDirs(discoverCollectedDirs(root))).toEqual(["widget"]);
+});
+
+test("the snapshot front answers from a tree build's snapshot alone", () => {
+  const root = "/repo";
+  const fs = {
+    files: new Map([
+      [`${root}/plugins/sdk/core/index.ts`, 'defineCollectedDir("widget");'],
+      [`${root}/plugins/sdk/web/index.ts`, 'defineCollectedDir("notcore");'],
+    ]),
+    dirs: new Map(),
+  };
+  const std = standardPluginDirsFromSnapshot(root, fs);
+  expect(std.has("widget")).toBe(true);
+  expect(std.has("notcore")).toBe(false);
+  // One answer per snapshot.
+  expect(standardPluginDirsFromSnapshot(root, fs)).toBe(std);
 });
 
 // ── Per-name composition registries ────────────────────────────────
@@ -147,44 +251,36 @@ test("parse rejects the singleton, committed, and non-registry file names", () =
 });
 
 test("listNamedCompositionRegistries finds per-name files, skipping singletons", () => {
-  // The fake root's `widget` collected dir is not a composition runtime — build
-  // a second fake root declaring the three that are: `web`, `server`, and
-  // `prewarm` (per-name too since S1, so a deactivation sweep reclaims it).
-  const namedRoot = mkdtempSync(join(tmpdir(), "named-registry-test-"));
-  try {
-    const coreDir = join(namedRoot, "plugins", "sdk", "core");
-    mkdirSync(coreDir, { recursive: true });
-    writeFileSync(
-      join(coreDir, "index.ts"),
-      [
-        'export const webDir = defineCollectedDir("web");',
-        'export const serverDir = defineCollectedDir("server");',
-        'export const prewarmDir = defineCollectedDir("prewarm");',
-      ].join("\n"),
-    );
-    for (const f of [
-      "web.composition.sonata.generated.ts",
-      "web.composition.generated.ts", // pre-S1 singleton stray — not per-name
-      "server.composition.sonata.generated.ts",
-      "server.composition.pages.generated.ts",
-      "prewarm.composition.sonata.generated.ts",
-      "web.generated.ts", // committed — never listed
-    ]) {
-      writeFileSync(join(coreDir, f), "export const x = [];\n");
-    }
+  // The collected dirs come from git; the per-name registries are found by
+  // reading the owning core dirs (in the real repo they are gitignored).
+  const names = [
+    "web.composition.sonata.generated.ts",
+    "web.composition.generated.ts", // pre-S1 singleton stray — not per-name
+    "server.composition.sonata.generated.ts",
+    "server.composition.pages.generated.ts",
+    "prewarm.composition.sonata.generated.ts",
+    "web.generated.ts", // committed — never listed
+  ];
+  const namedRoot = gitFixture({
+    [pj("sdk/core/index.ts")]: [
+      'export const webDir = defineCollectedDir("web");',
+      'export const serverDir = defineCollectedDir("server");',
+      'export const prewarmDir = defineCollectedDir("prewarm");',
+    ].join("\n"),
+    ...Object.fromEntries(
+      names.map((f) => [`plugins/sdk/core/${f}`, "export const x = [];\n"]),
+    ),
+  });
 
-    const listed = listNamedCompositionRegistries(namedRoot)
-      .map((e) => `${e.dir}:${e.name}`)
-      .sort();
-    expect(listed).toEqual([
-      "prewarm:sonata",
-      "server:pages",
-      "server:sonata",
-      "web:sonata",
-    ]);
-  } finally {
-    rmSync(namedRoot, { recursive: true, force: true });
-  }
+  const listed = listNamedCompositionRegistries(namedRoot)
+    .map((e) => `${e.dir}:${e.name}`)
+    .sort();
+  expect(listed).toEqual([
+    "prewarm:sonata",
+    "server:pages",
+    "server:sonata",
+    "web:sonata",
+  ]);
 });
 
 // ── The bundle filter is the WHOLE filter ──────────────────────────
@@ -224,8 +320,10 @@ function fakeNode(pluginsRoot: string, path: string): PluginNode {
 }
 
 /**
- * A synthetic two-plugin tree: `beta/web` imports `alpha`'s web barrel, so the
- * emitted `beta` entry carries `dependsOn: ["alpha"]`.
+ * A synthetic three-plugin tree over an in-memory file set: `beta/web` imports
+ * `alpha`'s web barrel, so the emitted `beta` entry carries
+ * `dependsOn: ["alpha"]`. A `web/plugins/` file of `gamma`'s that imports
+ * `alpha` is a sub-plugin's, not gamma's, so gamma depends on nothing.
  *
  * The ctx is built by hand rather than through `buildRegistryGenContext` on
  * purpose: what is under test is the renderer's bundle-dependence, and a
@@ -236,20 +334,16 @@ function bundleFixture(): {
   ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
 } {
-  const fixtureRoot = mkdtempSync(join(tmpdir(), "registry-bundle-test-"));
-  afterAll(() => rmSync(fixtureRoot, { recursive: true, force: true }));
+  const fixtureRoot = "/fixture";
   const pluginsRoot = join(fixtureRoot, "plugins");
-  for (const [name, src] of [
-    ["alpha", "export default { name: 'alpha' };\n"],
-    [
-      "beta",
+  const repo = memRepo(fixtureRoot, {
+    [pj("alpha/web/index.ts")]: "export default { name: 'alpha' };\n",
+    [pj("beta/web/index.ts")]:
       'import x from "@plugins/alpha/web";\nexport default { name: "beta", x };\n',
-    ],
-  ] as const) {
-    mkdirSync(join(pluginsRoot, name, "web"), { recursive: true });
-    writeFileSync(join(pluginsRoot, name, "web", "index.ts"), src);
-  }
-  const nodes = [fakeNode(pluginsRoot, "alpha"), fakeNode(pluginsRoot, "beta")];
+    [pj("gamma/web/index.ts")]: "export default { name: 'gamma' };\n",
+    [pj("gamma/web/plugins/sub/x.ts")]: 'import "@plugins/alpha/web";\n',
+  });
+  const nodes = ["alpha", "beta", "gamma"].map((p) => fakeNode(pluginsRoot, p));
   const tree = {
     pluginsRoot,
     byDir: new Map(nodes.map((n) => [n.dir, n])),
@@ -264,6 +358,7 @@ function bundleFixture(): {
     // it is on the ctx so every consumer shares one classify pass.
     graph: classifyEdges(tree),
     mainBundle: new Set(nodes.map((n) => n.id)),
+    repo: () => Promise.resolve(repo),
     dirScans: new Map(),
   };
   return {
@@ -272,9 +367,9 @@ function bundleFixture(): {
   };
 }
 
-test("a bundle carrying every id renders every entry, with its deps", () => {
+test("a bundle carrying every id renders every entry, with its deps", async () => {
   const { ctx, def } = bundleFixture();
-  const rendered = renderCollectedDirRegistry({
+  const rendered = await renderCollectedDirRegistry({
     ctx,
     def,
     bundle: ctx.mainBundle,
@@ -283,14 +378,19 @@ test("a bundle carrying every id renders every entry, with its deps", () => {
   expect(rendered).toContain('id: "alpha"');
   expect(rendered).toContain('id: "beta"');
   expect(rendered).toContain('dependsOn: ["alpha"]');
+  expect(rendered).toMatch(/id: "gamma".*dependsOn: \[\]/);
   // Exactly one emitted entry per plugin — no duplicates, nothing dropped.
-  expect(rendered.match(/^ {2}\{ pluginPath:/gm)).toHaveLength(2);
+  expect(rendered.match(/^ {2}\{ pluginPath:/gm)).toHaveLength(3);
 });
 
-test("a bundle missing one id differs by exactly that entry, and prunes the dep on it", () => {
+test("a bundle missing one id differs by exactly that entry, and prunes the dep on it", async () => {
   const { ctx, def } = bundleFixture();
-  const full = renderCollectedDirRegistry({ ctx, def, bundle: ctx.mainBundle });
-  const withoutAlpha = renderCollectedDirRegistry({
+  const full = await renderCollectedDirRegistry({
+    ctx,
+    def,
+    bundle: ctx.mainBundle,
+  });
+  const withoutAlpha = await renderCollectedDirRegistry({
     ctx,
     def,
     bundle: new Set([...ctx.mainBundle].filter((id) => id !== "alpha")),
@@ -300,10 +400,10 @@ test("a bundle missing one id differs by exactly that entry, and prunes the dep 
   expect(withoutAlpha).toContain('id: "beta"');
   // `beta` survives, but its dependency on the absent `alpha` is pruned — a
   // dangling `dependsOn` would break the loader's topo-sort.
-  expect(withoutAlpha).toContain("dependsOn: []");
+  expect(withoutAlpha).not.toContain('dependsOn: ["alpha"]');
   // The difference is exactly one entry line, not a reshuffle.
   const lines = (s: string) =>
     s.split("\n").filter((l) => l.startsWith("  { pluginPath:"));
-  expect(lines(full)).toHaveLength(2);
-  expect(lines(withoutAlpha)).toHaveLength(1);
+  expect(lines(full)).toHaveLength(3);
+  expect(lines(withoutAlpha)).toHaveLength(2);
 });

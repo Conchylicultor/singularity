@@ -40,7 +40,9 @@ query never wait.) See
 - Cross-plugin:
   - Imported by:
     - `framework/resource-runtime`
+    - `framework/tooling`
     - `framework/tooling/checks`
+    - `framework/tooling/codegen`
     - `framework/tooling/web-artifacts`
     - `infra/endpoints`
     - `plugin-meta/barrel-import`

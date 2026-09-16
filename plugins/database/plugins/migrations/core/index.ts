@@ -1,4 +1,8 @@
 export { schemaGlobFiles } from "./internal/schema-glob";
+// Async twin for check-time callers — see its docblock. Both read the exact
+// same `SCHEMA_GLOBS` patterns; this one just doesn't block the check
+// runner's shared thread.
+export { schemaGlobFilesAsync } from "./internal/schema-glob";
 // The repo-relative DEV-TREE location of this plugin — drizzle-kit's cwd for
 // every sanctioned invocation, and the anchor its relative config paths resolve
 // against. Public because the two invocation sites live in other plugins

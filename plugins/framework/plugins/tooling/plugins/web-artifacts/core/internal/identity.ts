@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { findViteContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, INLINE_PACKAGES } from "../constants";
 import { computeIdentityHash, computeOwnHash, sha256Hex } from "../hash";
-import { listOwnFiles } from "./own-files";
+import { listOwnFiles, readFilesBounded } from "./own-files";
 
 const require = createRequire(import.meta.url);
 
@@ -19,9 +19,14 @@ const require = createRequire(import.meta.url);
  * installs: toolchain packages (vite, esbuild, tailwind) are THIS plugin's own
  * deps — omit `fromDir` so they resolve from here; a consumer-side package must
  * pass the dir whose package.json declares it.
+ *
+ * One small `package.json` read per call — not the whole-tree walk
+ * `listOwnFiles`/`builderSourceDigest` do below — so it stays sync.
  */
 export function packageVersion(pkg: string, fromDir?: string): string {
-  const resolver = fromDir ? createRequire(join(fromDir, "package.json")) : require;
+  const resolver = fromDir
+    ? createRequire(join(fromDir, "package.json"))
+    : require;
   const pj = resolver.resolve(`${pkg}/package.json`);
   return (JSON.parse(readFileSync(pj, "utf8")) as { version: string }).version;
 }
@@ -45,15 +50,20 @@ const WEB_ARTIFACTS_REL = "framework/plugins/tooling/plugins/web-artifacts";
  * source here auto-invalidates the fleet on ANY builder edit, so
  * `BUILDER_VERSION` is only a forced-bump lever, never a thing to remember.
  */
-export function builderSourceDigest(pluginsRoot: string): string {
+export async function builderSourceDigest(
+  pluginsRoot: string,
+): Promise<string> {
   const pluginDir = join(pluginsRoot, WEB_ARTIFACTS_REL);
-  const files = listOwnFiles(pluginDir, "core").map((abs) => ({
-    rel: abs.slice(pluginDir.length + 1),
-    content: readFileSync(abs),
-  }));
-  if (files.length === 0) {
-    throw new Error(`builder identity: no own files found under ${pluginDir}/core`);
+  const absFiles = await listOwnFiles(pluginDir, "core");
+  if (absFiles.length === 0) {
+    throw new Error(
+      `builder identity: no own files found under ${pluginDir}/core`,
+    );
   }
+  const files = await readFilesBounded(absFiles, (abs, content) => ({
+    rel: abs.slice(pluginDir.length + 1),
+    content,
+  }));
   return computeOwnHash(files);
 }
 
@@ -62,15 +72,15 @@ export function builderSourceDigest(pluginsRoot: string): string {
  * of each discovered `vite/index.ts` plus its plugin's `package.json` (which
  * pins the transform package version, e.g. `babel-plugin-react-compiler`).
  */
-export function computeBuilderIdentity(opts: {
+export async function computeBuilderIdentity(opts: {
   repoRoot: string;
   pluginsRoot: string;
   minify: boolean;
-}): BuilderIdentity {
+}): Promise<BuilderIdentity> {
   // Versions come from package.json reads (require.resolve), NOT module
   // imports — loading vite/esbuild here would put ~1s of module eval on every
   // pipeline run's detect stage (and on docgen's barrel import).
-  const sourceDigest = builderSourceDigest(opts.pluginsRoot);
+  const sourceDigest = await builderSourceDigest(opts.pluginsRoot);
   const record: Record<string, string | number | boolean> = {
     builderVersion: BUILDER_VERSION,
     builderSource: sourceDigest,
@@ -82,6 +92,9 @@ export function computeBuilderIdentity(opts: {
   for (const pkg of INLINE_PACKAGES) {
     record[`inline:${pkg}`] = packageVersion(pkg, opts.repoRoot);
   }
+  // `findViteContributions` (web-core, a different plugin) still walks the
+  // tree with a sync `readdirSync` — out of this change's scope; see the
+  // MISC agent's report.
   for (const file of findViteContributions(opts.pluginsRoot)) {
     const rel = file.slice(opts.pluginsRoot.length + 1);
     let digest = sha256Hex(readFileSync(file));

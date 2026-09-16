@@ -6,8 +6,13 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import type { OwnerShare } from "./thread-attribution";
-import type { ThreadSummary } from "./thread-watch";
+import {
+  STALL_KIND_LABELS,
+  STALL_KINDS,
+  type OwnerShare,
+  type StallKind,
+} from "./thread-attribution";
+import type { StallCpu, ThreadSummary } from "./thread-watch";
 
 /**
  * One settled check, as the transcript renders it. The runner's own outcome type
@@ -93,6 +98,35 @@ function longestStallMs(thread: ThreadSummary): number {
 }
 
 /**
+ * `blocking I/O 72%, process start 9%, CPU 15%, module load 4%` — every
+ * nonzero kind over the stall's own sample count, busiest first. What a
+ * stall's owner table can't show on its own: whether the thread was stuck in
+ * a syscall or just running ordinary JS.
+ */
+function kindsLine(kinds: Record<StallKind, number>, total: number): string {
+  return STALL_KINDS.filter((kind) => kinds[kind] > 0)
+    .sort((a, b) => kinds[b] - kinds[a])
+    .map((kind) => `${STALL_KIND_LABELS[kind]} ${percent(kinds[kind], total)}`)
+    .join(", ");
+}
+
+/**
+ * `1.2 s user + 0.3 s system (13% of 7.4 s stalled)` — how much of the
+ * stall's known-busy window (`lateMs`, never `durationMs` — see
+ * `ThreadStall.lateMs`) the PROCESS spent on a CPU, versus blocked in the
+ * kernel or simply not scheduled. "The process", not "the main thread":
+ * `StallCpu` is process-wide (see its doc) — a Worker running concurrently
+ * (`type-check`'s own) would inflate this.
+ */
+function cpuLine(cpu: StallCpu, lateMs: number): string {
+  const totalMs = cpu.userMs + cpu.systemMs;
+  return (
+    `${seconds(cpu.userMs)} user + ${seconds(cpu.systemMs)} system ` +
+    `(${percent(totalMs, lateMs)} of ${seconds(lateMs)} stalled)`
+  );
+}
+
+/**
  * The run's thread block: a summary line, who used the thread over the whole
  * run, and one entry per stall with its owners and a real stack for each. This
  * is the full-detail copy — the progress log keeps 3 owners and 5 frames per
@@ -132,6 +166,8 @@ export function renderThreadBlock(thread: ThreadSummary): string[] {
         `${stall.samples} samples, ${stall.running.length} ` +
         `check${stall.running.length === 1 ? "" : "s"} in flight`,
     );
+    lines.push(`    waiting on: ${kindsLine(stall.kinds, stall.samples)}`);
+    lines.push(`    on CPU: ${cpuLine(stall.cpu, stall.lateMs)}`);
     if (stall.running.length > 0)
       lines.push(`    running: ${stall.running.join(", ")}`);
     if (stall.bootstrap.length > 0)

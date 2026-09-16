@@ -13,7 +13,7 @@ function baseDeps(
     warmups,
     isMain: () => true,
     withSlot: (fn) => fn(),
-    yieldServer: () => new Promise<void>((r) => setImmediate(r)),
+    yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     concurrency: 2,
     ...overrides,
   };
@@ -23,7 +23,13 @@ describe("drainWarmupsWith", () => {
   test("skips host-scoped warm-ups when isMain() is false", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
-      { name: "host-one", scope: "host", run: async () => { ran = true; } },
+      {
+        name: "host-one",
+        scope: "host",
+        run: async () => {
+          ran = true;
+        },
+      },
     ];
     await drainWarmupsWith(baseDeps(warmups, { isMain: () => false }));
     expect(ran).toBe(false);
@@ -32,7 +38,13 @@ describe("drainWarmupsWith", () => {
   test("runs host-scoped warm-ups when isMain() is true", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
-      { name: "host-one", scope: "host", run: async () => { ran = true; } },
+      {
+        name: "host-one",
+        scope: "host",
+        run: async () => {
+          ran = true;
+        },
+      },
     ];
     await drainWarmupsWith(baseDeps(warmups, { isMain: () => true }));
     expect(ran).toBe(true);
@@ -41,7 +53,13 @@ describe("drainWarmupsWith", () => {
   test("always runs worktree-scoped warm-ups regardless of isMain()", async () => {
     let ran = false;
     const warmups: WarmupSpec[] = [
-      { name: "wt-one", scope: "worktree", run: async () => { ran = true; } },
+      {
+        name: "wt-one",
+        scope: "worktree",
+        run: async () => {
+          ran = true;
+        },
+      },
     ];
     await drainWarmupsWith(baseDeps(warmups, { isMain: () => false }));
     expect(ran).toBe(true);
@@ -69,9 +87,27 @@ describe("drainWarmupsWith", () => {
   test("a throwing warm-up does not abort the others", async () => {
     const ran: string[] = [];
     const warmups: WarmupSpec[] = [
-      { name: "before", scope: "worktree", run: async () => { ran.push("before"); } },
-      { name: "boom", scope: "worktree", run: async () => { throw new Error("kaboom"); } },
-      { name: "after", scope: "worktree", run: async () => { ran.push("after"); } },
+      {
+        name: "before",
+        scope: "worktree",
+        run: async () => {
+          ran.push("before");
+        },
+      },
+      {
+        name: "boom",
+        scope: "worktree",
+        run: async () => {
+          throw new Error("kaboom");
+        },
+      },
+      {
+        name: "after",
+        scope: "worktree",
+        run: async () => {
+          ran.push("after");
+        },
+      },
     ];
     // Must resolve (not reject) despite the throwing warm-up.
     await drainWarmupsWith(baseDeps(warmups, { concurrency: 1 }));
@@ -87,7 +123,9 @@ describe("drainWarmupsWith", () => {
     ];
     await drainWarmupsWith(
       baseDeps(warmups, {
-        yieldServer: async () => { yields++; },
+        yieldMacrotask: async () => {
+          yields++;
+        },
       }),
     );
     expect(yields).toBe(2);

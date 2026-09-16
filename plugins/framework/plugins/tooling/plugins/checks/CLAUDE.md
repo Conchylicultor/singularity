@@ -19,13 +19,13 @@ is scan-tree-aware and untracked-aware (it shares the discovery plumbing behind
 `grepCode`/`grepImports`), so it sees those uncommitted files.
 
 A check that enumerates the repo's SOURCE FILES must get them from
-**`listRepoFiles`** (exported from `checks/core`), never a `readdirSync` walk
-that prunes directories by name. Such a list is a guess at what `.gitignore`
-already states, and it is always missing one: type-check's two copies both
-omitted `.cache/`, so a `.ts` left in that gitignored directory counted as
-source and failed its coverage gate. `listRepoFiles` asks git for tracked +
-untracked-not-ignored — the same universe `computeTreeHash` builds. The
-`no-adhoc-repo-walk` lint rule enforces it.
+**`ctx.repo()`** (below) — outside a check, from **`loadRepoFiles`** (exported
+from `tooling/core`) — never a `readdirSync` walk that prunes directories by
+name. Such a list is a guess at what `.gitignore` already states, and it is
+always missing one: type-check's two copies both omitted `.cache/`, so a `.ts`
+left in that gitignored directory counted as source and failed its coverage
+gate. Both ask git for tracked + untracked-not-ignored — the same universe
+`computeTreeHash` builds. The `no-adhoc-repo-walk` lint rule enforces it.
 
 ## A `scope: "tree"` verdict must not depend on the process that produced it
 
@@ -185,7 +185,11 @@ Where it lands:
   before `done` (written even when nothing stalled), and `stalledMs` on each
   `end` (how much of that check's `durationMs` fell inside stalls). Read back,
   a missing `stalledMs` is `null`, never 0: older runs stalled too, they just
-  weren't measured.
+  weren't measured. Both `stall` and `thread` also carry a `kinds` tally
+  (sample counts by innermost-frame kind) and a `cpu` reading
+  (`process.cpuUsage()` delta); a stall's own record additionally keeps
+  `leaves` (its busiest raw innermost frame names). Read back the same way as
+  `stalledMs`: missing is `null`, never zeros.
 - **The transcript** (`check-<runId>.log`): the full detail above the trailer —
   the whole-run owner table and each stall with its top 5 owners, 8-frame
   stacks, and the checks in flight.
@@ -207,6 +211,19 @@ Where it lands:
   as one owner rather than 800 slivers.
 - `native <leaf>`: no source frame at all.
 
+**Reading a stall's kind split**: an owner says WHOSE code held the thread;
+`classifyLeaf` (`core/thread-attribution.ts`) says WHAT it was doing, sorting
+each sample's innermost frame into `blocking-io` (a native `*Sync` frame — the
+class this project exists to remove), `process` (Bun's spawn machinery),
+`module-load` (the loader's own frames), `cpu` (ordinary JS), or `native`
+(unclassified, never dropped). Paired with `cpu` (the `process.cpuUsage()`
+delta over the same window — process-WIDE, not main-thread-only: Bun 1.3 has
+no per-thread CPU clock, so a concurrently-busy Worker, e.g. `type-check`'s,
+can inflate it), this tells apart a stall spent WORKING (`cpu` ≈ `lateMs`) from
+one spent WAITING in the kernel (`blocking-io`-heavy, near-zero `cpu`) or not
+scheduled by the OS at all (near-zero `cpu` *and* near-zero `samples`). The
+transcript prints one line of each per stall.
+
 A sync function whose last act is `return heavy()` loses its frame to JSC's
 proper tail calls, and its samples go to the next frame out. An `async run()`
 keeps its frame.
@@ -223,6 +240,40 @@ Two consequences for check authors:
 The watch names who held the thread. It does not give a check's true cost.
 `--jobs 1` is still the tool for isolating one check (see the fan-out section
 above).
+
+## A check gets its files from `ctx.repo()`, and never blocks the thread
+
+The watch above names the culprit of nearly every stall: a **blocking** call —
+`readdirSync`, `existsSync`, `statSync`, `readFileSync`, `Bun.Glob.scanSync`,
+`Bun.spawnSync` — made once per file across the tree. Alone each is fast. In a
+pass it is not: an agent's check process runs at macOS background priority
+(throttled disk, slow cores), so each call takes ~100× longer, and holds the
+one thread every check shares for all of it.
+
+So check code:
+
+- **Gets the file set from `ctx.repo()`.** Loaded once per run, shared by every
+  check: the universe the cache key covers (tracked + untracked-not-ignored),
+  read off the key's own tree snapshot when the run has one. `all()`,
+  `has(path)` and `under(dir)` answer in memory. Never list, walk or glob the
+  repo yourself, and never run `git ls-files` per check.
+- **Reads contents asynchronously**: `repo.read(path)`, or `node:fs/promises`.
+  `read` is bounded by one run-wide gate, so `Promise.all` over thousands of
+  paths is fine through it — never through raw `readFile`.
+- **Yields in CPU loops** over thousands of items: `await yieldMacrotask()`
+  (`packages/macrotask-yield`) every ~10 ms of work. Not `await
+  Promise.resolve()` — a microtask never lets a timer run.
+- **Makes `cacheSignature()` async** when it needs git, rather than
+  `spawnSync`-ing it.
+
+For an `inputKeyed` check, `ctx.repo()` records what it answers: `has` as an
+existence fact, `under(dir)` as the membership of `dir/**`, `all()` as the whole
+tree's, `read` as a content fact. A check that moves its reads onto it needs no
+read-set code for them.
+
+The runner holds up its end: each check starts on its own event-loop turn
+(`createTurnQueue`), so ~100 checks' synchronous start-ups no longer run as one
+block before any timer.
 
 ## Bumping the cache-key format version
 
@@ -244,6 +295,11 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
   - Uses:
+    - `framework/tooling.assertRepoPath`
+    - `framework/tooling.loadRepoFiles`
+    - `framework/tooling.pathsUnder`
+    - `framework/tooling.RepoFiles`
+    - `framework/tooling.repoFilesOver`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `infra/file-sink.defineFileSink`
@@ -256,6 +312,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/stack-sampler.frameKey`
     - `infra/stack-sampler.StackFrame`
     - `infra/stack-sampler.StackSampler`
+    - `packages/macrotask-yield.createTurnQueue`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.lineAt`
@@ -307,8 +364,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `scopeOf`
     - `tsBuildInfoPath`
     - `validate`
-- Cross-plugin:
-  - Imported by: `framework/tooling/boundaries`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**

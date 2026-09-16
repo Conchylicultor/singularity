@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdtemp, mkdir, readFile, rm, writeFile, appendFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+  appendFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -26,7 +33,9 @@ let parseCount: Map<string, number>;
 
 const VERSION = 1;
 
-function deps(overrides: Partial<RefreshDeps<string>> = {}): RefreshDeps<string> {
+function deps(
+  overrides: Partial<RefreshDeps<string>> = {},
+): RefreshDeps<string> {
   return {
     roots: [corpusRoot],
     match: (p) => p.endsWith(".txt"),
@@ -39,7 +48,7 @@ function deps(overrides: Partial<RefreshDeps<string>> = {}): RefreshDeps<string>
     persist: false,
     withSlot: (fn) => fn(),
     // A real macrotask yield, exercising the between-files breath.
-    yieldServer: () => new Promise<void>((r) => setImmediate(r)),
+    yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     ...overrides,
   };
 }
@@ -72,7 +81,9 @@ test("cold path parses every matching file (and only matching files)", async () 
   expect(changed).toBe(true);
   expect(Object.keys(index.files).length).toBe(3); // .md excluded
   expect([...parseCount.values()].every((n) => n === 1)).toBe(true);
-  expect(Object.keys(index.files).some((p) => p.endsWith("skip.md"))).toBe(false);
+  expect(Object.keys(index.files).some((p) => p.endsWith("skip.md"))).toBe(
+    false,
+  );
 });
 
 test("only changed files re-parse (fingerprint skip)", async () => {
@@ -109,7 +120,9 @@ test("vanished files are dropped", async () => {
   const { changed } = await refreshCorpus(index, deps());
   expect(changed).toBe(true);
   expect(Object.keys(index.files).length).toBe(2);
-  expect(Object.keys(index.files).some((p) => p.endsWith("three.txt"))).toBe(false);
+  expect(Object.keys(index.files).some((p) => p.endsWith("three.txt"))).toBe(
+    false,
+  );
 });
 
 test("a version mismatch forces a full rebuild (empty on load)", async () => {
@@ -167,7 +180,9 @@ test("computePersist: host scope persists only on main; worktree always persists
 // host wiring (isMain / heavy-read slot / macrotask yield / watcher) so the
 // dirty-latch and delta plumbing are observable without a real backend.
 
-function spec(overrides: Partial<CorpusIndexSpec<string>> = {}): CorpusIndexSpec<string> {
+function spec(
+  overrides: Partial<CorpusIndexSpec<string>> = {},
+): CorpusIndexSpec<string> {
   return {
     name: "test.corpus",
     roots: [corpusRoot],
@@ -188,7 +203,7 @@ function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
   return {
     isMain: () => true,
     withSlot: (fn) => fn(),
-    yieldServer: () => new Promise<void>((r) => setImmediate(r)),
+    yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     startFileWatcher: async () => {},
     ...overrides,
   };

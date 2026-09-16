@@ -1,19 +1,18 @@
-import { existsSync, readFileSync } from "fs";
 import { join, relative, resolve } from "path";
+import type {
+  Check,
+  CheckContext,
+  RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   barrelStubsPath,
+  collectImportGraph,
   collectedDirRegistryPath,
-  discoverCollectedDirs,
-  extractRuntimeImportSpecifiers,
+  discoverCollectedDirsIn,
   postWebManifests,
   preBarrelManifests,
-  resolveImportSpecifier,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const RUNTIMES = ["web", "server", "central"] as const;
 
@@ -31,12 +30,13 @@ const RUNTIMES = ["web", "server", "central"] as const;
  * the `@composition-{web,server}-registry` bundler alias or a variable dynamic
  * specifier, neither of which this check's static DFS follows.
  */
-function buildAllowSet(root: string): Set<string> {
+async function buildAllowSet(repo: RepoFiles): Promise<Set<string>> {
+  const { root } = repo;
   const allow = new Set<string>();
   for (const m of preBarrelManifests) allow.add(resolve(m.path(root)));
   for (const m of postWebManifests) allow.add(resolve(m.path(root)));
   allow.add(resolve(barrelStubsPath(root)));
-  for (const def of discoverCollectedDirs(root)) {
+  for (const def of await discoverCollectedDirsIn(repo)) {
     allow.add(resolve(collectedDirRegistryPath(def)));
   }
   return allow;
@@ -52,56 +52,51 @@ function buildAllowSet(root: string): Set<string> {
  * phase (buildPluginTree's Step 4a), so it counts as web.
  */
 async function enumerateBarrels(
-  root: string,
+  repo: RepoFiles,
 ): Promise<{ web: string[]; rest: string[] }> {
-  const pluginsRoot = join(root, "plugins");
-  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+  const tree = await buildPluginTree(join(repo.root, "plugins"), {
+    skipBarrelImport: true,
+  });
   const web: string[] = [];
   const rest: string[] = [];
 
-  const seed = join(pluginsRoot, "framework/plugins/web-sdk/core/index.ts");
-  if (existsSync(seed)) web.push(seed);
+  const seed = "plugins/framework/plugins/web-sdk/core/index.ts";
+  if (repo.has(seed)) web.push(join(repo.root, seed));
 
   for (const node of tree.byDir.values()) {
     for (const runtime of RUNTIMES) {
-      const barrel = join(node.dir, runtime, "index.ts");
-      if (!existsSync(barrel)) continue;
-      (runtime === "web" ? web : rest).push(barrel);
+      const barrel = `plugins/${node.path}/${runtime}/index.ts`;
+      if (!repo.has(barrel)) continue;
+      (runtime === "web" ? web : rest).push(join(repo.root, barrel));
     }
   }
   return { web, rest };
 }
 
 /**
- * DFS from each barrel over its internal runtime imports (relative paths and
- * same-repo `@plugins/…` aliases), collecting every reachable file that ends in
- * `.generated.ts`. The visited set is shared across all barrels, so each file is
- * read at most once. Returns absolute, normalized paths.
+ * Every file ending in `.generated.ts` that `roots` reach over `graph`, which
+ * `collectImportGraph` built from a superset of the same roots — so it holds
+ * every file they reach. Absolute, normalized paths.
  */
-function collectReachableGenerated(
-  root: string,
-  barrels: string[],
+function reachableGenerated(
+  graph: Map<string, readonly string[]>,
+  roots: readonly string[],
 ): Set<string> {
-  const visited = new Set<string>();
+  const seen = new Set<string>();
   const generated = new Set<string>();
-
-  const visit = (file: string): void => {
-    const abs = resolve(file);
-    if (visited.has(abs)) return;
-    visited.add(abs);
-    if (abs.endsWith(".generated.ts")) generated.add(abs);
-
-    const src = readFileSync(abs, "utf8");
-    // `extractRuntimeImportSpecifiers` masks internally (via `findImports`) and
-    // reads specifiers by offset, so it takes RAW source.
-    for (const spec of extractRuntimeImportSpecifiers(src)) {
-      const resolved = resolveImportSpecifier(root, abs, spec);
-      if (resolved) visit(resolved);
+  const stack = roots.map((r) => resolve(r));
+  while (stack.length > 0) {
+    const file = stack.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    if (file.endsWith(".generated.ts")) generated.add(file);
+    const targets = graph.get(file);
+    if (targets === undefined) {
+      throw new Error(
+        `${file} is reachable but absent from the import graph collected from the same roots`,
+      );
     }
-  };
-
-  for (const barrel of barrels) {
-    if (existsSync(barrel)) visit(barrel);
+    stack.push(...targets);
   }
   return generated;
 }
@@ -110,12 +105,16 @@ const check: Check = {
   id: "pre-barrel-manifests-complete",
   description:
     "every *.generated.ts reachable from a plugin barrel at module-load is a registered pre-barrel manifest (or a registry-phase output), and no web barrel reaches a post-web manifest",
-  async run() {
-    const root = await getWorktreeRoot();
-    const allow = buildAllowSet(root);
-    const { web, rest } = await enumerateBarrels(root);
-    const fromWeb = collectReachableGenerated(root, web);
-    const reachable = collectReachableGenerated(root, [...web, ...rest]);
+  async run(ctx: CheckContext) {
+    const repo = await ctx.repo();
+    const { root } = repo;
+    const allow = await buildAllowSet(repo);
+    const { web, rest } = await enumerateBarrels(repo);
+    // ONE reach from every barrel, read once; both questions below are asked
+    // of it, so the web closure is not read and parsed a second time.
+    const graph = await collectImportGraph(repo, [...web, ...rest]);
+    const fromWeb = reachableGenerated(graph, web);
+    const reachable = reachableGenerated(graph, [...web, ...rest]);
 
     const offenders = [...reachable]
       .filter((f) => !allow.has(f))

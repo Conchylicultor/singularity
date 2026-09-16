@@ -15,14 +15,14 @@ for (const folder of ["web", "shared", "core", "fixtures"]) {
 }
 writeFileSync(join(dir, "package.json"), "{}\n");
 
-const rel = (kind: string): string[] =>
-  listOwnFiles(dir, kind)
+const rel = async (kind: string): Promise<string[]> =>
+  (await listOwnFiles(dir, kind))
     .map((abs) => abs.slice(dir.length + 1))
     .sort();
 
 describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
-  test("fixtures: its own folder + shared + package.json — never web or core", () => {
-    expect(rel("fixtures")).toEqual([
+  test("fixtures: its own folder + shared + package.json — never web or core", async () => {
+    expect(await rel("fixtures")).toEqual([
       "fixtures/index.ts",
       "package.json",
       "shared/index.ts",
@@ -31,16 +31,16 @@ describe("listOwnFiles walks exactly inlinedRootsFor(kind)", () => {
 
   // The `web` hash NARROWS here: own-core is rewritten to the external barrel,
   // so it never enters the bytes and hashing it only forced spurious rebuilds.
-  test("web: web + shared + package.json — NOT core", () => {
-    expect(rel("web")).toEqual([
+  test("web: web + shared + package.json — NOT core", async () => {
+    expect(await rel("web")).toEqual([
       "package.json",
       "shared/index.ts",
       "web/index.ts",
     ]);
   });
 
-  test("core: core + shared + package.json", () => {
-    expect(rel("core")).toEqual([
+  test("core: core + shared + package.json", async () => {
+    expect(await rel("core")).toEqual([
       "core/index.ts",
       "package.json",
       "shared/index.ts",

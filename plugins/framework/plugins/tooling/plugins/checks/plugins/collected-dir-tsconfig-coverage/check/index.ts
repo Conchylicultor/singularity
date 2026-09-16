@@ -1,42 +1,49 @@
-import ts from "typescript";
+import type TS from "typescript";
+import type {
+  Check,
+  CheckContext,
+  RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import {
-  discoverCollectedDirs,
+  discoverCollectedDirsIn,
   type DiscoveredCollectedDir,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import {
-  getWorktreeRoot,
-  spawnCaptured,
-} from "@plugins/infra/plugins/spawn/core";
 
-// Wedge-breaker for a metadata-only git read: far above any real duration,
-// because starvation under a saturated check run is what these suffer, not
-// slowness. Same reasoning as `infra/worktree`'s bounds, which carry the
-// measurements.
-const GIT_TIMEOUT_MS = 60_000;
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function listTsconfigs(root: string): Promise<string[]> {
-  const result = await spawnCaptured(["git", "ls-files", "*tsconfig*.json"], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-  });
-  const out = result.stdout.trim();
-  if (!out) return [];
-  return (
-    out
-      .split("\n")
-      // Sidequests are independent projects with their own tsconfigs.
-      .filter((p) => p && !p.startsWith("sidequests/"))
-  );
+// `typescript` is loaded when the check runs, not when the check registry
+// loads every check module at the start of a pass. The module object is the
+// same for the whole process, so one memo per process is exact.
+let tsPromise: Promise<typeof TS> | undefined;
+function loadTypescript(): Promise<typeof TS> {
+  return (tsPromise ??= import("typescript").then((m) => m.default));
 }
 
-// Literal (single-file) `include` entries — `readConfigFile` parses JSONC but
-// does NOT resolve `extends`, so this is exactly the local declaration, which is
-// the only place a collected-dir glob can legitimately be added.
-function declaredIncludes(root: string, rel: string): string[] {
-  const { config } = ts.readConfigFile(`${root}/${rel}`, ts.sys.readFile);
+// Every tsconfig in the run's file set — git's `*tsconfig*.json` pathspec,
+// whose `*` crosses `/`. Sidequests are independent projects with their own
+// tsconfigs.
+const TSCONFIG_RE = /tsconfig.*\.json$/;
+
+function listTsconfigs(repo: RepoFiles): string[] {
+  return repo
+    .all()
+    .filter((p) => TSCONFIG_RE.test(p) && !p.startsWith("sidequests/"));
+}
+
+// Literal (single-file) `include` entries — `parseConfigFileTextToJson` parses
+// JSONC but does NOT resolve `extends`, so this is exactly the local
+// declaration, which is the only place a collected-dir glob can legitimately be
+// added. (It is what `ts.readConfigFile` runs after reading the file.)
+async function declaredIncludes(
+  ts: typeof TS,
+  repo: RepoFiles,
+  rel: string,
+): Promise<string[]> {
+  const text = await repo.read(rel);
+  if (text === null) {
+    throw new Error(
+      `${rel} is in the repo's file set but could not be read — it was removed after the set was listed.`,
+    );
+  }
+  const { config } = ts.parseConfigFileTextToJson(`${repo.root}/${rel}`, text);
   const include = config?.include;
   return Array.isArray(include) ? (include as string[]) : [];
 }
@@ -49,22 +56,25 @@ const check: Check = {
   id: "collected-dir-tsconfig-coverage",
   description:
     "Every collected-dir runtime folder (web, server, check, facet, composition, …) must be covered by some tsconfig `include`, so its files type-check instead of being orphaned",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx: CheckContext) {
+    const repo = await ctx.repo();
+    const { root } = repo;
 
     // Single source of truth: the same scan codegen, plugin-boundaries, and
     // plugins-registry-in-sync derive from. Keep one declarer per dir for the
     // failure message (`ownerDir` cites where `defineCollectedDir` lives).
     const declaredBy = new Map<string, DiscoveredCollectedDir>();
-    for (const def of discoverCollectedDirs(root)) {
+    for (const def of await discoverCollectedDirsIn(repo)) {
       if (!declaredBy.has(def.dir)) declaredBy.set(def.dir, def);
     }
 
     // Every literal `include` glob across all (non-sidequest) tsconfigs.
-    const includes: string[] = [];
-    for (const rel of await listTsconfigs(root)) {
-      includes.push(...declaredIncludes(root, rel));
-    }
+    const ts = await loadTypescript();
+    const includes = (
+      await Promise.all(
+        listTsconfigs(repo).map((rel) => declaredIncludes(ts, repo, rel)),
+      )
+    ).flat();
 
     // A folder `X` is covered if any include glob touches a `.../X/...` (or bare
     // `X`) path segment. The `(/|$)` boundary recognizes every shape in use —

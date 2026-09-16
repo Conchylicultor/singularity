@@ -47,6 +47,61 @@ export interface CheckContext {
    * think about it: read it as `ctx.cacheEnabled !== false`.
    */
   cacheEnabled?: boolean;
+  /**
+   * The run's file set (see `RepoFiles`). Lazy + memoized per run: the first
+   * call loads it, later calls — from any check — share it.
+   *
+   * Check code gets the files it inspects HERE, never from its own
+   * `readdirSync` walk, `Bun.Glob.scanSync`, `existsSync` probe loop or
+   * `git ls-files`. Every check in a pass shares one JS thread, and a blocking
+   * call per file across the tree — ~100× slower at the background priority
+   * agent check passes run at — holds that thread for every other check (see
+   * `checks/CLAUDE.md`).
+   *
+   * For an `inputKeyed` check, whatever it lists and reads through this is
+   * recorded in its read-set, with no extra code.
+   */
+  repo(): Promise<RepoFiles>;
+}
+
+/**
+ * The run's file set: every repo-relevant path — tracked + untracked-not-
+ * ignored, exactly the universe the check cache key (`computeTreeHash`) and
+ * `listRepoFiles` cover. Loaded once per run and shared by every check.
+ *
+ * Build one with `loadRepoFiles(root)`; inside a check, the run's is
+ * `ctx.repo()`.
+ *
+ * Every path argument is spelled the way the set spells its members:
+ * repo-relative, `/`-separated, no leading `/` or `./`, no trailing `/`, no `.`
+ * or `..` segment. Any other spelling THROWS — it would match nothing and read
+ * as "not in the set", so `under("plugins/")` would hand a check an empty repo.
+ */
+export interface RepoFiles {
+  /** Absolute worktree root. */
+  readonly root: string;
+  /**
+   * Every file path, repo-relative, sorted (`Array.prototype.sort()` order).
+   * For an input-keyed check this records a whole-tree membership fact —
+   * prefer `under`.
+   */
+  all(): readonly string[];
+  /** True iff `path` (repo-relative, no leading "./") is a file in the set. */
+  has(path: string): boolean;
+  /**
+   * Every file under directory `dir` (repo-relative, no trailing slash; "" =
+   * whole repo), recursive, sorted. In-memory: two binary searches.
+   */
+  under(dir: string): readonly string[];
+  /**
+   * The working-tree content of `path` as UTF-8 text, read asynchronously
+   * (bounded concurrency), or null if the file is not in the set / vanished.
+   * For an input-keyed check the read is recorded in its read-set.
+   *
+   * The bound is ONE gate for the whole run, so handing this thousands of
+   * paths at once (`Promise.all`) is fine: only a few dozen are open at a time.
+   */
+  read(path: string): Promise<string | null>;
 }
 
 /**
@@ -156,7 +211,11 @@ export interface Check {
    *               the result depends on a runtime parameter — e.g. eslint's
    *               scope env — so distinct parameterizations get distinct keys).
    *   - null    → NEVER cache (impure: reads DB/network/env/git history).
-   * Must be cheap and side-effect-free.
+   * Must be cheap and side-effect-free. It may return a promise, for a
+   * signature that needs git or another async read: never make a blocking
+   * (`*Sync`) call here instead — it runs on the thread every check shares.
+   * The runner awaits it after the check's start turn; a throw or a rejection
+   * degrades to uncached, never to a failed run.
    *
    * A SIGNATURE KEYS A VERDICT; IT CANNOT MAKE ONE REPRODUCIBLE. Folding a value
    * into the key only separates two runs that would otherwise share a slot. If
@@ -165,7 +224,7 @@ export interface Check {
    * on `scope`) — the correct value here is `null`, and the real repair is to
    * remove the dependency at its source rather than key around it.
    */
-  cacheSignature?(): string | null;
+  cacheSignature?(): string | null | Promise<string | null>;
   /**
    * Cache-invalidation strategy — how a recorded PASS is decided still valid on
    * the next run:

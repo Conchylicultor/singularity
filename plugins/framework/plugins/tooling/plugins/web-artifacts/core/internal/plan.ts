@@ -6,7 +6,8 @@
 // how a target's meta is obtained: the pipeline builds-or-reads, the check
 // reads-or-bails — injected via `ensure`.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   FORCED_VENDOR_SPECS,
@@ -193,21 +194,21 @@ export async function planFleet(opts: {
   const source = opts.source ?? (await defaultFleetSource(root));
   const { webEntries, registryFile } = source;
 
-  const identity = computeBuilderIdentity({
+  const identity = await computeBuilderIdentity({
     repoRoot: root,
     pluginsRoot,
     minify: opts.minify,
   });
 
-  const target = (
+  const target = async (
     kind: ArtifactKind,
     pluginPath: string | null,
     entryFile: string,
     specifier: string | null,
-  ): PlannedTarget => {
+  ): Promise<PlannedTarget> => {
     const slug = pluginPath ? pluginIdOf(pluginPath) : "web-core";
     const pluginDir = pluginPath ? join(pluginsRoot, pluginPath) : webSrcDir;
-    const ownHash = ownHashFor({
+    const ownHash = await ownHashFor({
       cacheKey: `${pluginPath ?? "__entry"}|${kind}`,
       pluginDir,
       kind,
@@ -230,17 +231,28 @@ export async function planFleet(opts: {
     };
   };
 
-  const webTargets = webEntries.map((e) =>
-    target(
-      "web",
-      e.pluginPath,
-      join(pluginsRoot, e.pluginPath, "web", "index.ts"),
-      `@plugins/${e.pluginPath}/web`,
+  // Bounded by `own-files.ts`'s shared IO gate internally (`ownHashFor` →
+  // `withIoSlot`), so firing every plugin's target build concurrently here is
+  // safe — `Promise.all` preserves `webEntries`' order regardless of
+  // resolution order, so target identity/dirName assignment is unchanged.
+  const webTargets = await Promise.all(
+    webEntries.map((e) =>
+      target(
+        "web",
+        e.pluginPath,
+        join(pluginsRoot, e.pluginPath, "web", "index.ts"),
+        `@plugins/${e.pluginPath}/web`,
+      ),
     ),
   );
-  const entryTarget = target("entry", null, join(webSrcDir, "main.tsx"), null);
+  const entryTarget = await target(
+    "entry",
+    null,
+    join(webSrcDir, "main.tsx"),
+    null,
+  );
 
-  const registrySource = readFileSync(registryFile, "utf8");
+  const registrySource = await readFile(registryFile, "utf8");
   const registryInputsHash = computeInputsHash({
     ownHash: sha256Hex(registrySource),
     kind: "registry",
@@ -323,42 +335,50 @@ export async function resolveBarrelClosure(opts: {
         nextSpecs.add(spec);
       }
     }
+    // Same bounded-fan-out reasoning as `webTargets` above: `ownHashFor`'s
+    // actual disk concurrency is capped by own-files.ts's shared gate, so
+    // building every spec in this wave concurrently is safe.
+    const built = await Promise.all(
+      [...nextSpecs].sort().map(async (spec) => {
+        const rel = spec.slice("@plugins/".length);
+        const slash = rel.lastIndexOf("/");
+        const pluginPath = rel.slice(0, slash);
+        const kind = rel.slice(slash + 1);
+        const pluginDir = join(opts.pluginsRoot, pluginPath);
+        const barrelFile = join(pluginDir, kind, "index.ts");
+        if (slash <= 0 || !existsSync(barrelFile)) {
+          throw new Error(
+            `artifact closure: emitted static import "${spec}" is not a folder barrel ` +
+              `(expected ${barrelFile}) — cannot compose it into the import map.`,
+          );
+        }
+        const ownHash = await ownHashFor({
+          cacheKey: `${pluginPath}|${kind}`,
+          pluginDir,
+          kind,
+          cache: opts.cache,
+        });
+        const inputsHash = computeInputsHash({
+          ownHash,
+          kind,
+          identityHash: opts.identityHash,
+        });
+        const t: PlannedTarget = {
+          dirName: artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
+          kind,
+          pluginPath,
+          specifier: spec,
+          entryFile: barrelFile,
+          inputsHash,
+          needsBuild: !hasArtifact(
+            artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
+          ),
+        };
+        return { spec, t };
+      }),
+    );
     const wave: PlannedTarget[] = [];
-    for (const spec of [...nextSpecs].sort()) {
-      const rel = spec.slice("@plugins/".length);
-      const slash = rel.lastIndexOf("/");
-      const pluginPath = rel.slice(0, slash);
-      const kind = rel.slice(slash + 1);
-      const pluginDir = join(opts.pluginsRoot, pluginPath);
-      const barrelFile = join(pluginDir, kind, "index.ts");
-      if (slash <= 0 || !existsSync(barrelFile)) {
-        throw new Error(
-          `artifact closure: emitted static import "${spec}" is not a folder barrel ` +
-            `(expected ${barrelFile}) — cannot compose it into the import map.`,
-        );
-      }
-      const ownHash = ownHashFor({
-        cacheKey: `${pluginPath}|${kind}`,
-        pluginDir,
-        kind,
-        cache: opts.cache,
-      });
-      const inputsHash = computeInputsHash({
-        ownHash,
-        kind,
-        identityHash: opts.identityHash,
-      });
-      const t: PlannedTarget = {
-        dirName: artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
-        kind,
-        pluginPath,
-        specifier: spec,
-        entryFile: barrelFile,
-        inputsHash,
-        needsBuild: !hasArtifact(
-          artifactDirName(pluginIdOf(pluginPath), kind, inputsHash),
-        ),
-      };
+    for (const { spec, t } of built) {
       barrelTargets.set(spec, t);
       wave.push(t);
     }

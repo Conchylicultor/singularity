@@ -13,8 +13,9 @@
 // internal file may re-export foreign symbols the barrel never surfaces — those
 // must NOT be flagged.
 //
-// Pure: all disk access is injected via `readFile`, so this is unit-testable in
-// isolation.
+// All disk access is injected via `readFile` (async: this check's own file set
+// comes from the run's shared RepoFiles.read, never a private sync read), so
+// this is unit-testable in isolation with a plain in-memory map.
 // ============================================================================
 
 import {
@@ -39,8 +40,8 @@ export interface CollectForeignReexportsOptions {
   runtime: string;
   /** Known plugin relpaths (for longest-prefix resolution of @plugins specifiers). */
   pluginSet: ReadonlySet<string>;
-  /** Reads a repo-root-relative path; returns null if absent. */
-  readFile: (relPath: string) => string | null;
+  /** Reads a repo-root-relative path; resolves null if absent. */
+  readFile: (relPath: string) => Promise<string | null>;
   /** Temporary-migration allowlist, keyed `${ownPlugin}/${runtime} -> ${ultimateSpecifier}`. */
   exceptions: ReadonlySet<string>;
 }
@@ -112,7 +113,9 @@ function parseFile(src: string): ParsedFile {
       }
       // Default binding (`import Foo from`, `import Foo, { … } from`).
       const bodyTypeOnly = /^type\s+/.test(body);
-      const defaultMatch = body.replace(/^type\s+/, "").match(/^(\w+)\s*(?:,|$)/);
+      const defaultMatch = body
+        .replace(/^type\s+/, "")
+        .match(/^(\w+)\s*(?:,|$)/);
       if (defaultMatch && !body.replace(/^type\s+/, "").startsWith("{")) {
         imports.set(defaultMatch[1]!, { spec, typeOnly: bodyTypeOnly });
       }
@@ -211,7 +214,10 @@ function collectDeclaredExports(stmt: string, localExports: Set<string>) {
  * (suffixHead is a runtime, tail empty) — that's the only legal cross-plugin
  * form and the only one this rule resolves origins from.
  */
-function pluginFromSpec(spec: string, pluginSet: ReadonlySet<string>): string | null {
+function pluginFromSpec(
+  spec: string,
+  pluginSet: ReadonlySet<string>,
+): string | null {
   if (!spec.startsWith("@plugins/")) return null;
   const rest = spec.slice("@plugins/".length);
   const parts = rest.split("/");
@@ -225,7 +231,11 @@ function pluginFromSpec(spec: string, pluginSet: ReadonlySet<string>): string | 
 }
 
 function isExternalSpec(spec: string): boolean {
-  return !spec.startsWith("@plugins/") && !spec.startsWith("./") && !spec.startsWith("../");
+  return (
+    !spec.startsWith("@plugins/") &&
+    !spec.startsWith("./") &&
+    !spec.startsWith("../")
+  );
 }
 
 // ----------------------------------------------------------------------------
@@ -250,22 +260,32 @@ function normalizeJoin(base: string, rel: string): string {
 /**
  * Resolve a relative specifier from `fromFileRel` to a concrete file relpath,
  * trying `.ts`, `.tsx`, `/index.ts`, `/index.tsx`. Returns null if none exists.
+ * Now async: `readFile` is async (RepoFiles.read), so probing each candidate
+ * is an awaited call rather than a sync existence check.
  */
-function resolveRelativeFile(
+async function resolveRelativeFile(
   fromFileRel: string,
   spec: string,
-  readFile: (relPath: string) => string | null,
-): string | null {
+  readFile: (relPath: string) => Promise<string | null>,
+): Promise<string | null> {
   const base = normalizeJoin(dirOf(fromFileRel), spec);
-  const candidates = [base + ".ts", base + ".tsx", base + "/index.ts", base + "/index.tsx"];
+  const candidates = [
+    base + ".ts",
+    base + ".tsx",
+    base + "/index.ts",
+    base + "/index.tsx",
+  ];
   for (const c of candidates) {
-    if (readFile(c) !== null) return c;
+    if ((await readFile(c)) !== null) return c;
   }
   return null;
 }
 
 /** Owning plugin relpath for a repo-root-relative file path, or null. */
-function pluginForFile(fileRel: string, pluginSet: ReadonlySet<string>): string | null {
+function pluginForFile(
+  fileRel: string,
+  pluginSet: ReadonlySet<string>,
+): string | null {
   const norm = fileRel.split("\\").join("/");
   if (!norm.startsWith("plugins/")) return null;
   const rest = norm.slice("plugins/".length);
@@ -287,13 +307,16 @@ type Origin = { plugin: string } | "LOCAL" | "EXTERNAL";
 interface ResolveContext {
   ownPlugin: string;
   pluginSet: ReadonlySet<string>;
-  readFile: (relPath: string) => string | null;
+  readFile: (relPath: string) => Promise<string | null>;
   fileCache: Map<string, ParsedFile | null>;
 }
 
-function getParsed(ctx: ResolveContext, fileRel: string): ParsedFile | null {
+async function getParsed(
+  ctx: ResolveContext,
+  fileRel: string,
+): Promise<ParsedFile | null> {
   if (ctx.fileCache.has(fileRel)) return ctx.fileCache.get(fileRel)!;
-  const src = ctx.readFile(fileRel);
+  const src = await ctx.readFile(fileRel);
   const parsed = src === null ? null : parseFile(src);
   ctx.fileCache.set(fileRel, parsed);
   return parsed;
@@ -305,17 +328,17 @@ function getParsed(ctx: ResolveContext, fileRel: string): ParsedFile | null {
  * specifier, "EXTERNAL" for node_modules / R8-owned relative escapes, "LOCAL"
  * otherwise.
  */
-function resolveOrigin(
+async function resolveOrigin(
   ctx: ResolveContext,
   fileRel: string,
   exportedName: string,
   visited: Set<string>,
-): Origin {
+): Promise<Origin> {
   const key = `${fileRel}|${exportedName}`;
   if (visited.has(key)) return "LOCAL"; // cycle: bottom out as local
   visited.add(key);
 
-  const parsed = getParsed(ctx, fileRel);
+  const parsed = await getParsed(ctx, fileRel);
   if (!parsed) return "LOCAL";
 
   // 1. from-reexport: `export { exported as ? } from "spec"`.
@@ -328,14 +351,15 @@ function resolveOrigin(
   const bareRx = parsed.bareReexports.find((r) => r.exported === exportedName);
   if (bareRx) {
     const imp = parsed.imports.get(bareRx.local);
-    if (imp) return originFromSpec(ctx, fileRel, imp.spec, bareRx.local, visited);
+    if (imp)
+      return originFromSpec(ctx, fileRel, imp.spec, bareRx.local, visited);
     // Not imported — it's a locally declared name surfaced by name.
     return "LOCAL";
   }
 
   // 3. wildcard re-export: name could come from any `export * from "spec"`.
   for (const w of parsed.wildcardFrom) {
-    const o = originFromSpec(ctx, fileRel, w.spec, exportedName, visited);
+    const o = await originFromSpec(ctx, fileRel, w.spec, exportedName, visited);
     if (o !== "LOCAL") return o;
   }
 
@@ -347,13 +371,13 @@ function resolveOrigin(
  * Resolve the origin of `nameInSource` reached through `spec` from `fromFileRel`.
  * `spec` may be an `@plugins/...` barrel, a relative path, or an external module.
  */
-function originFromSpec(
+async function originFromSpec(
   ctx: ResolveContext,
   fromFileRel: string,
   spec: string,
   nameInSource: string,
   visited: Set<string>,
-): Origin {
+): Promise<Origin> {
   if (spec.startsWith("@plugins/")) {
     const plugin = pluginFromSpec(spec, ctx.pluginSet);
     if (plugin) return { plugin };
@@ -361,7 +385,7 @@ function originFromSpec(
     return "EXTERNAL";
   }
   if (spec.startsWith("./") || spec.startsWith("../")) {
-    const target = resolveRelativeFile(fromFileRel, spec, ctx.readFile);
+    const target = await resolveRelativeFile(fromFileRel, spec, ctx.readFile);
     if (!target) return "EXTERNAL"; // can't follow; not our concern
     // If the relative path escapes the owning plugin, R8 owns that — stop.
     const targetPlugin = pluginForFile(target, ctx.pluginSet);
@@ -376,8 +400,11 @@ function originFromSpec(
 // Public entry
 // ----------------------------------------------------------------------------
 
-export function collectForeignReexports(opts: CollectForeignReexportsOptions): Violation[] {
-  const { barrelRel, ownPlugin, runtime, pluginSet, readFile, exceptions } = opts;
+export async function collectForeignReexports(
+  opts: CollectForeignReexportsOptions,
+): Promise<Violation[]> {
+  const { barrelRel, ownPlugin, runtime, pluginSet, readFile, exceptions } =
+    opts;
   const ctx: ResolveContext = {
     ownPlugin,
     pluginSet,
@@ -385,7 +412,7 @@ export function collectForeignReexports(opts: CollectForeignReexportsOptions): V
     fileCache: new Map(),
   };
 
-  const barrel = getParsed(ctx, barrelRel);
+  const barrel = await getParsed(ctx, barrelRel);
   if (!barrel) return [];
 
   const violations: Violation[] = [];
@@ -400,11 +427,19 @@ export function collectForeignReexports(opts: CollectForeignReexportsOptions): V
   }
   const surfaced: Surfaced[] = [];
   for (const r of barrel.fromReexports) {
-    surfaced.push({ exported: r.exported, line: r.line, immediateSpec: r.spec });
+    surfaced.push({
+      exported: r.exported,
+      line: r.line,
+      immediateSpec: r.spec,
+    });
   }
   for (const r of barrel.bareReexports) {
     const imp = barrel.imports.get(r.local);
-    surfaced.push({ exported: r.exported, line: r.line, immediateSpec: imp?.spec ?? "(local)" });
+    surfaced.push({
+      exported: r.exported,
+      line: r.line,
+      immediateSpec: imp?.spec ?? "(local)",
+    });
   }
   // Wildcard re-exports surface an unknown set of names. We can only resolve the
   // foreign-cross-plugin case conservatively (the spec itself is the origin).
@@ -427,11 +462,16 @@ export function collectForeignReexports(opts: CollectForeignReexportsOptions): V
   }
 
   for (const s of surfaced) {
-    const origin = resolveOrigin(ctx, barrelRel, s.exported, new Set());
+    const origin = await resolveOrigin(ctx, barrelRel, s.exported, new Set());
     if (origin === "LOCAL" || origin === "EXTERNAL") continue;
     if (origin.plugin === ownPlugin) continue;
 
-    const ultimateSpec = ultimateSpecifier(ctx, barrelRel, s.exported, origin.plugin);
+    const ultimateSpec = await ultimateSpecifier(
+      ctx,
+      barrelRel,
+      s.exported,
+      origin.plugin,
+    );
     const exceptionKey = `${ownPlugin}/${runtime} -> ${ultimateSpec}`;
     if (exceptions.has(exceptionKey)) continue;
 
@@ -439,7 +479,9 @@ export function collectForeignReexports(opts: CollectForeignReexportsOptions): V
     if (seen.has(dedupe)) continue;
     seen.add(dedupe);
 
-    const indirect = s.immediateSpec !== ultimateSpec && !s.immediateSpec.startsWith("@plugins/");
+    const indirect =
+      s.immediateSpec !== ultimateSpec &&
+      !s.immediateSpec.startsWith("@plugins/");
     const chainNote = indirect ? ` (via \`${s.immediateSpec}\`)` : "";
     violations.push({
       rule: "cross-plugin-reexport",
@@ -457,27 +499,27 @@ export function collectForeignReexports(opts: CollectForeignReexportsOptions): V
  * name resolves to, for the message + exception key. Walks the same chain as
  * resolveOrigin but returns the foreign specifier string.
  */
-function ultimateSpecifier(
+async function ultimateSpecifier(
   ctx: ResolveContext,
   fileRel: string,
   exportedName: string,
   expectedPlugin: string,
-): string {
+): Promise<string> {
   const visited = new Set<string>();
-  const found = walkSpec(ctx, fileRel, exportedName, visited);
+  const found = await walkSpec(ctx, fileRel, exportedName, visited);
   return found ?? expectedPlugin;
 }
 
-function walkSpec(
+async function walkSpec(
   ctx: ResolveContext,
   fileRel: string,
   exportedName: string,
   visited: Set<string>,
-): string | null {
+): Promise<string | null> {
   const key = `${fileRel}|${exportedName}`;
   if (visited.has(key)) return null;
   visited.add(key);
-  const parsed = getParsed(ctx, fileRel);
+  const parsed = await getParsed(ctx, fileRel);
   if (!parsed) return null;
 
   const fromRx = parsed.fromReexports.find((r) => r.exported === exportedName);
@@ -490,22 +532,22 @@ function walkSpec(
     return null;
   }
   for (const w of parsed.wildcardFrom) {
-    const r = specWalk(ctx, fileRel, w.spec, exportedName, visited);
+    const r = await specWalk(ctx, fileRel, w.spec, exportedName, visited);
     if (r) return r;
   }
   return null;
 }
 
-function specWalk(
+async function specWalk(
   ctx: ResolveContext,
   fromFileRel: string,
   spec: string,
   nameInSource: string,
   visited: Set<string>,
-): string | null {
+): Promise<string | null> {
   if (spec.startsWith("@plugins/")) return spec;
   if (spec.startsWith("./") || spec.startsWith("../")) {
-    const target = resolveRelativeFile(fromFileRel, spec, ctx.readFile);
+    const target = await resolveRelativeFile(fromFileRel, spec, ctx.readFile);
     if (!target) return null;
     if (pluginForFile(target, ctx.pluginSet) !== ctx.ownPlugin) return null;
     return walkSpec(ctx, target, nameInSource, visited);

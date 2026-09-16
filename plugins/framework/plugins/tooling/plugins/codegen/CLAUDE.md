@@ -25,10 +25,14 @@
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
     - `framework/slot-declaration.findUndeclaredSlots`
+    - `framework/tooling.loadRepoFiles`
+    - `framework/tooling.RepoFiles`
     - `framework/tooling/format.formatIfFormattable`
     - `framework/tooling/format.SourceBytes`
     - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
     - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `packages/macrotask-yield.yieldMacrotask`
+    - `packages/semaphore.createSemaphore`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
     - `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`
     - `plugin-meta/barrel-import.AutoStubEntry`
@@ -50,6 +54,7 @@
     - `plugin-meta/facets/slots.slotsFacetDef`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.findMarkerCalls`
+    - `plugin-meta/parse-utils.FsSnapshot`
     - `plugin-meta/parse-utils.lineAt`
     - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
@@ -93,6 +98,7 @@
     - `collectedDirRegistryPath`
     - `collectEntriesWithDeps`
     - `collectFieldEagerBarrels`
+    - `collectImportGraph`
     - `collectTokenGroupVars`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
@@ -101,6 +107,7 @@
     - `dataViewsManifestPath`
     - `declareSlotsFromBarrels`
     - `discoverCollectedDirs`
+    - `discoverCollectedDirsIn`
     - `eagerTierManifestPath`
     - `extractRuntimeImportSpecifiers`
     - `fieldsEagerManifestPath`
@@ -163,6 +170,8 @@
     - `setDefaultOriginDefaultsPreparer`
     - `spaceRampManifestPath`
     - `standardPluginDirs`
+    - `standardPluginDirsFromSnapshot`
+    - `standardPluginDirsIn`
     - `tokenGroupVarsManifestPath`
     - `writeGenerated`
     - `writePreBarrelManifest`

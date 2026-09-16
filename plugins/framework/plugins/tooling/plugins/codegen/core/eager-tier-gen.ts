@@ -1,4 +1,6 @@
 import { join } from "path";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { writeGenerated } from "./write-generated";
 import {
   findImports,
@@ -8,9 +10,7 @@ import {
   maskSource,
   parseBoolField,
   parseStaticCallId,
-  readIfExists,
   unresolvableCallIdMessage,
-  walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { resourceDescriptorFactories } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
 import {
@@ -18,6 +18,7 @@ import {
   collectEntriesWithDeps,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
+import { readListed, timeSlicer } from "./scan-pacing";
 
 /**
  * Generates the web load-tier manifest: the DEFERRED plugin-path set that
@@ -199,7 +200,7 @@ export function computeEagerTier(input: {
   return { deferred, appContentPins };
 }
 
-// ── Filesystem scanners ────────────────────────────────────────────
+// ── Scanners over the file set ─────────────────────────────────────
 
 // The slot factories whose contributions always-eager global chrome reads at
 // boot. Each is guarded on the file also importing `head` from an `@plugins/`
@@ -244,22 +245,55 @@ function pluginImportedIdents(src: string): Set<string> {
   return idents;
 }
 
-function filesUnder(pluginDir: string, subs: string[]): string[] {
-  const files: string[] = [];
-  for (const sub of subs) walkFiles(join(pluginDir, sub), files);
-  return files;
+// How many plugins' files the scan holds in flight at once. The file set's own
+// reader bounds the opens; this bounds how much text is resident.
+const PLUGIN_SCAN_WIDTH = 16;
+
+// parse-utils' `walkFiles` predicate, over the file set instead of a directory
+// walk: `.ts`/`.tsx` that is not a co-located `*.test.ts(x)`, skipping
+// `node_modules`, nested `plugins/` (sub-plugins are their own nodes) and
+// `__tests__`.
+const SOURCE_FILE_RE = /\.tsx?$/;
+const TEST_FILE_RE = /\.test\.tsx?$/;
+const SKIPPED_DIRS = new Set(["node_modules", "plugins", "__tests__"]);
+
+/** A plugin's source files under each of `subs`, in `subs` order. */
+function sourceFilesUnder(
+  repo: RepoFiles,
+  pluginPath: string,
+  subs: readonly string[],
+): string[] {
+  const out: string[] = [];
+  for (const sub of subs) {
+    const base = `plugins/${pluginPath}/${sub}`;
+    for (const rel of repo.under(base)) {
+      const segments = rel.slice(base.length + 1).split("/");
+      const name = segments.pop()!;
+      if (!SOURCE_FILE_RE.test(name) || TEST_FILE_RE.test(name)) continue;
+      if (segments.some((s) => SKIPPED_DIRS.has(s))) continue;
+      out.push(rel);
+    }
+  }
+  return out;
 }
 
-/** The first watched boot slot a plugin genuinely calls (with its head imported), or null. */
-function scanWatchedSlot(pluginDir: string): string | null {
-  for (const f of filesUnder(pluginDir, ["web", "core", "shared"])) {
-    const src = readIfExists(f);
-    if (src == null) continue;
-    const idents = pluginImportedIdents(src);
+interface Source {
+  rel: string;
+  text: string;
+}
+
+/** The first watched boot slot one of `sources` genuinely calls (with its head imported), or null. */
+async function watchedSlotIn(
+  sources: readonly Source[],
+  tick: () => Promise<void>,
+): Promise<string | null> {
+  for (const { text } of sources) {
+    const idents = pluginImportedIdents(text);
+    await tick();
     for (const { marker, head } of WATCHED_SLOTS) {
       if (!idents.has(head)) continue;
-      if (!src.includes(marker)) continue; // cheap fast-path
-      if (findMarkerCalls(src, marker).length > 0) return marker;
+      if (!text.includes(marker)) continue; // cheap fast-path
+      if (findMarkerCalls(text, marker).length > 0) return marker;
     }
   }
   return null;
@@ -314,17 +348,6 @@ export function bootCriticalKeysIn(src: string, displayPath: string): string[] {
   return keys;
 }
 
-/** Descriptor keys of every `bootCritical: true` declaration in a plugin's files. */
-function scanBootCriticalKeys(pluginDir: string): string[] {
-  const keys: string[] = [];
-  for (const f of filesUnder(pluginDir, ["core", "shared", "web"])) {
-    const src = readIfExists(f);
-    if (src == null) continue;
-    keys.push(...bootCriticalKeysIn(src, f));
-  }
-  return keys;
-}
-
 // ── Render + public API ────────────────────────────────────────────
 
 function renderManifest(result: EagerTierResult): string {
@@ -351,38 +374,69 @@ function renderManifest(result: EagerTierResult): string {
 
 /**
  * Scan the tree and build the pure-core inputs. `ctx` carries the barrel-free
- * tree, its edge graph and the app's own bundle, so it can be shared with the
- * registry generator.
+ * tree, its edge graph, the app's own bundle and the file set, so it can be
+ * shared with the registry generator.
  */
-function scanEagerTierInputs(
+async function scanEagerTierInputs(
   ctx: RegistryGenContext,
-): Parameters<typeof computeEagerTier>[0] {
+): Promise<Parameters<typeof computeEagerTier>[0]> {
   // The eager tier describes the registry the app SHIPS, so it reads exactly the
   // entry set `generatePluginRegistry` emitted — the same bundle, not a second
   // opinion about who is in it.
-  const { entries, deps } = collectEntriesWithDeps(ctx, "web", ctx.mainBundle);
+  const { entries, deps } = await collectEntriesWithDeps(
+    ctx,
+    "web",
+    ctx.mainBundle,
+  );
   const webEntryPaths = entries.map((e) => e.pluginPath);
   const webSet = new Set(webEntryPaths);
+  const repo = await ctx.repo();
 
-  // Watched-slot scan: only app-content web entries can flip from deferred to
-  // eager via a slot (non-app-content is already structurally eager).
   const watchedSlotHits: WatchedSlotHit[] = [];
-  for (const p of webEntryPaths) {
-    if (!isAppContent(p)) continue;
-    const node = ctx.tree.byPath.get(p);
-    if (!node) continue;
-    const slot = scanWatchedSlot(node.dir);
-    if (slot) watchedSlotHits.push({ path: p, slot });
-  }
-
-  // bootCritical scan: EVERY plugin node (reachability is checked against web
-  // entries in the pure core, so a descriptor in a web-entryless plugin throws).
   const bootCriticalOwners: BootCriticalOwner[] = [];
-  for (const node of ctx.tree.byDir.values()) {
-    const keys = scanBootCriticalKeys(node.dir);
-    if (keys.length > 0)
-      bootCriticalOwners.push({ path: node.path, keys: keys.sort() });
-  }
+  const tick = timeSlicer();
+  const gate = createSemaphore(PLUGIN_SCAN_WIDTH);
+  await Promise.all(
+    [...ctx.tree.byDir.values()].map((node) =>
+      gate.run(async () => {
+        // One read of the plugin's web/core/shared files serves both scans. The
+        // order is the watched-slot scan's (its first hit names the pin).
+        const files = sourceFilesUnder(repo, node.path, [
+          "web",
+          "core",
+          "shared",
+        ]);
+        const sources = await Promise.all(
+          files.map(async (rel) => ({
+            rel,
+            text: await readListed(repo, rel),
+          })),
+        );
+
+        // Watched-slot scan: only app-content web entries can flip from
+        // deferred to eager via a slot (non-app-content is already
+        // structurally eager).
+        if (webSet.has(node.path) && isAppContent(node.path)) {
+          const slot = await watchedSlotIn(sources, tick);
+          if (slot) watchedSlotHits.push({ path: node.path, slot });
+        }
+
+        // bootCritical scan: EVERY plugin node (reachability is checked
+        // against web entries in the pure core, so a descriptor in a
+        // web-entryless plugin throws).
+        const keys: string[] = [];
+        for (const { rel, text } of sources) {
+          keys.push(...bootCriticalKeysIn(text, join(ctx.root, rel)));
+          await tick();
+        }
+        if (keys.length > 0)
+          bootCriticalOwners.push({ path: node.path, keys: keys.sort() });
+      }),
+    ),
+  );
+  // The scan finishes plugins in whatever order their reads land; the pure core
+  // gets them sorted, as the sequential scan used to hand them over.
+  watchedSlotHits.sort((a, b) => a.path.localeCompare(b.path));
   bootCriticalOwners.sort((a, b) => a.path.localeCompare(b.path));
 
   // Restrict deps to web entries defensively (collectEntriesWithDeps already prunes).
@@ -414,7 +468,7 @@ export async function renderEagerTierManifest(
   ctx?: RegistryGenContext,
 ): Promise<string> {
   const resolvedCtx = ctx ?? (await buildRegistryGenContext(root));
-  const result = computeEagerTier(scanEagerTierInputs(resolvedCtx));
+  const result = computeEagerTier(await scanEagerTierInputs(resolvedCtx));
   return renderManifest(result);
 }
 

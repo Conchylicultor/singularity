@@ -60,10 +60,12 @@ export default createRule({
         "guess at what `.gitignore` already states exactly. Every copy of this " +
         "list has been wrong: the one in type-check omitted `.cache/`, so a " +
         "`.ts` file left in that gitignored directory counted as source, " +
-        "belonged to no tsconfig program, and failed the coverage gate. Use " +
-        "listRepoFiles from " +
+        "belonged to no tsconfig program, and failed the coverage gate. Inside " +
+        "a check's run(ctx), use ctx.repo() — the run's own shared file set, " +
+        "loaded once and reused by every check, so this never re-lists. " +
+        "Outside a check (no ctx in scope), use listRepoFiles from " +
         "@plugins/framework/plugins/tooling/plugins/checks/core, which asks git " +
-        "for the tracked + untracked-not-ignored file set. If this list is not " +
+        "for the same tracked + untracked-not-ignored file set. If this list is not " +
         "enumerating the repo's sources — a bounded walk of one known subtree — " +
         "add the file to this rule's `ignores` allowlist so the exemption is " +
         "reviewed rather than invisible.",

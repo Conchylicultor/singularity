@@ -6,12 +6,25 @@
 
 - Description: Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
 - Core:
+  - Uses:
+    - `infra/spawn.spawnCaptured`
+    - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `Check`
     - `CheckContext`
     - `CheckResult`
     - `CheckScope`
-  - Exports (values): `CHECK_SCOPES`
+    - `RepoFiles`
+  - Exports (values):
+    - `assertRepoPath`
+    - `CHECK_SCOPES`
+    - `loadRepoFiles`
+    - `pathsUnder`
+    - `repoFilesOver`
+- Cross-plugin:
+  - Imported by:
+    - `framework/tooling/checks`
+    - `framework/tooling/codegen`
 - Sub-plugins:
   - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
   - **`checks`** — Check runner and built-in checks for ./singularity check

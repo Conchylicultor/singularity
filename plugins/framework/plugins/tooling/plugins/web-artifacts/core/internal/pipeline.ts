@@ -262,7 +262,7 @@ export async function runWebArtifactsPipeline(
     "artifacts:css-key",
     "global css input fingerprint",
     async () => {
-      const key = computeGlobalCssKey({
+      const key = await computeGlobalCssKey({
         repoRoot: root,
         pluginsRoot,
         minify: opts.minify,

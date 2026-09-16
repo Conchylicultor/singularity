@@ -214,6 +214,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`flock`** — Kernel advisory file locking: flockTry/flockRelease over libc flock(2). The one lock ownership the kernel releases on process death (SIGKILL included) and that consults no pid.
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
+    - **`macrotask-yield`** — Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
     - **`retry`**
     - **`semaphore`**
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.

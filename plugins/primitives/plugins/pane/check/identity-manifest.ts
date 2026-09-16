@@ -1,11 +1,22 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, posix, relative } from "path";
-import ts from "typescript";
+import type TS from "typescript";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
+
+// `typescript`'s module object is invariant for the process's lifetime — not a
+// tree-derived fact — so a per-process memo is safe. Loaded lazily so this
+// module's own top-level import doesn't pay `typescript`'s eval cost during the
+// check runner's "load all checks" burst, well before any check's `run()` starts.
+// A local memo (not shared with the sibling `index.ts`'s) — matching this
+// codebase's per-file-inlined-Check-type convention.
+let tsPromise: Promise<typeof TS> | undefined;
+function loadTypescript(): Promise<typeof TS> {
+  return (tsPromise ??= import("typescript").then((m) => m.default));
+}
 
 // ---------------------------------------------------------------------------
 // Why this check exists.
@@ -106,14 +117,14 @@ const PATHSPECS = [
 // Source reading
 // ---------------------------------------------------------------------------
 
-function literalText(node: ts.Expression): string | null {
+function literalText(ts: typeof TS, node: TS.Expression): string | null {
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
     return node.text;
   }
   return null;
 }
 
-function isDefineRouteCall(node: ts.CallExpression): boolean {
+function isDefineRouteCall(ts: typeof TS, node: TS.CallExpression): boolean {
   const callee = node.expression;
   return ts.isIdentifier(callee) && callee.text === "defineRoute";
 }
@@ -121,7 +132,7 @@ function isDefineRouteCall(node: ts.CallExpression): boolean {
 // `Pane.define({ … })` — the only spelling that mints a pane. Generic arguments
 // (`Pane.define<Params>({ … })`) leave the callee untouched, so they are read
 // the same way.
-function isPaneDefineCall(node: ts.CallExpression): boolean {
+function isPaneDefineCall(ts: typeof TS, node: TS.CallExpression): boolean {
   const callee = node.expression;
   return (
     ts.isPropertyAccessExpression(callee) &&
@@ -159,7 +170,7 @@ interface ImportBinding {
 interface PaneSite {
   file: string;
   line: number;
-  route: ts.Expression;
+  route: TS.Expression;
   appIndex: boolean;
 }
 
@@ -185,7 +196,10 @@ interface FileScan {
  * over — stepping over it would report the route as parentless (or as having the
  * id the visible half happens to spell), which is worse than reporting nothing.
  */
-function readRouteObject(obj: ts.ObjectLiteralExpression): RouteRead | null {
+function readRouteObject(
+  ts: typeof TS,
+  obj: TS.ObjectLiteralExpression,
+): RouteRead | null {
   let id: string | null = null;
   let segment: string | null = null;
   let parentName: string | null = null;
@@ -204,10 +218,10 @@ function readRouteObject(obj: ts.ObjectLiteralExpression): RouteRead | null {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name)) continue;
     switch (prop.name.text) {
       case "id":
-        id = literalText(prop.initializer);
+        id = literalText(ts, prop.initializer);
         break;
       case "segment":
-        segment = literalText(prop.initializer);
+        segment = literalText(ts, prop.initializer);
         break;
       case "parent":
         parentDeclared = true;
@@ -226,7 +240,10 @@ function readRouteObject(obj: ts.ObjectLiteralExpression): RouteRead | null {
 }
 
 /** The single object-literal argument of a call, or null when it is not one. */
-function objectArg(call: ts.CallExpression): ts.ObjectLiteralExpression | null {
+function objectArg(
+  ts: typeof TS,
+  call: TS.CallExpression,
+): TS.ObjectLiteralExpression | null {
   const first = call.arguments[0];
   if (first === undefined || !ts.isObjectLiteralExpression(first)) return null;
   return first;
@@ -238,11 +255,16 @@ function objectArg(call: ts.CallExpression): ts.ObjectLiteralExpression | null {
  * the only way to guarantee that is for the skip and the report to be the same
  * statement.
  */
-function scanFile(file: string, src: string, problems: string[]): FileScan {
+function scanFile(
+  ts: typeof TS,
+  file: string,
+  src: string,
+  problems: string[],
+): FileScan {
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true);
-  const lineOf = (node: ts.Node): number =>
+  const lineOf = (node: TS.Node): number =>
     sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
-  const at = (node: ts.Node): string => `${file}:${lineOf(node)}`;
+  const at = (node: TS.Node): string => `${file}:${lineOf(node)}`;
 
   const scan: FileScan = {
     file,
@@ -271,7 +293,7 @@ function scanFile(file: string, src: string, problems: string[]): FileScan {
     }
   }
 
-  const visit = (node: ts.Node): void => {
+  const visit = (node: TS.Node): void => {
     // `const <name> = defineRoute({ … })` — the hoisted route form. Read at any
     // depth so a route declared inside a block still registers.
     if (
@@ -279,28 +301,28 @@ function scanFile(file: string, src: string, problems: string[]): FileScan {
       ts.isIdentifier(node.name) &&
       node.initializer !== undefined &&
       ts.isCallExpression(node.initializer) &&
-      isDefineRouteCall(node.initializer)
+      isDefineRouteCall(ts, node.initializer)
     ) {
-      const obj = objectArg(node.initializer);
+      const obj = objectArg(ts, node.initializer);
       scan.routesByName.set(node.name.text, {
         name: node.name.text,
         exported:
           (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0,
         file,
         line: lineOf(node),
-        read: obj === null ? null : readRouteObject(obj),
+        read: obj === null ? null : readRouteObject(ts, obj),
       });
     }
 
-    if (ts.isCallExpression(node) && isPaneDefineCall(node)) {
-      const obj = objectArg(node);
+    if (ts.isCallExpression(node) && isPaneDefineCall(ts, node)) {
+      const obj = objectArg(ts, node);
       if (obj === null) {
         problems.push(
           `${at(node)}  Pane.define is not called with an inline object literal, ` +
             `so its identity cannot be read statically`,
         );
       } else {
-        let route: ts.Expression | null = null;
+        let route: TS.Expression | null = null;
         let appIndex = false;
         let appIndexBroken = false;
         let spread = false;
@@ -453,15 +475,16 @@ function resolveDecl(
 
 /** A route expression's fields, plus the file scope its `parent:` resolves in. */
 function resolveRoute(
-  expr: ts.Expression,
+  ts: typeof TS,
+  expr: TS.Expression,
   ctx: FileScan,
   index: GlobalIndex,
 ): Resolved<{ read: RouteRead; scope: FileScan }> {
   // Inline: `route: defineRoute({ … })`. Nothing to join — the identity is right
   // here, and its `parent:` resolves in the pane's own file.
-  if (ts.isCallExpression(expr) && isDefineRouteCall(expr)) {
-    const obj = objectArg(expr);
-    const read = obj === null ? null : readRouteObject(obj);
+  if (ts.isCallExpression(expr) && isDefineRouteCall(ts, expr)) {
+    const obj = objectArg(ts, expr);
+    const read = obj === null ? null : readRouteObject(ts, obj);
     if (read === null) {
       return {
         ok: false,
@@ -512,13 +535,14 @@ export type PaneScan =
  * the manifest.
  */
 export async function scanPaneIdentities(): Promise<PaneScan> {
+  const ts = await loadTypescript();
   const sources = await listCandidateSources({
     grepArg: GREP_ARG,
     pathspecs: PATHSPECS,
   });
 
   const problems: string[] = [];
-  const scans = sources.map(({ rel, src }) => scanFile(rel, src, problems));
+  const scans = sources.map(({ rel, src }) => scanFile(ts, rel, src, problems));
 
   const index: GlobalIndex = {
     byExportName: new Map(),
@@ -538,7 +562,7 @@ export async function scanPaneIdentities(): Promise<PaneScan> {
   for (const scan of scans) {
     for (const site of scan.panes) {
       const where = `${site.file}:${site.line}`;
-      const resolved = resolveRoute(site.route, scan, index);
+      const resolved = resolveRoute(ts, site.route, scan, index);
       if (!resolved.ok) {
         problems.push(`${where}  ${resolved.why}`);
         continue;

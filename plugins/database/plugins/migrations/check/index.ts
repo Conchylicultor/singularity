@@ -1,6 +1,3 @@
-import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
-import { join, resolve } from "path";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
 import {
@@ -29,7 +26,7 @@ type Check = {
   id: string;
   description: string;
   run(): Promise<CheckResult>;
-  cacheSignature?(): string | null;
+  cacheSignature?(): string | null | Promise<string | null>;
 };
 
 // The main DB. Worktree backends reach it directly via openShortLivedClient,
@@ -64,29 +61,15 @@ const check: Check = {
   id: "migration-applies-clean",
   description:
     "pending migrations apply cleanly on top of main (transactional dry-run, rolled back)",
-  // Impure: opens a live DB connection and reads origin/main via git. The
-  // signature folds the data/ dir content + origin/main commit so an unchanged
-  // input still caches; the fast path already makes the no-migration case cheap.
-  cacheSignature() {
+  // Impure: reads origin/main via git. The data/ dir CONTENT is already
+  // covered by the runner's own tree hash (this check is scope "tree", the
+  // default) — only origin/main's ref needs folding in, since a
+  // remote-tracking ref can move without changing anything in this tree.
+  async cacheSignature(): Promise<string | null> {
     try {
-      const root = process.cwd();
-      const dir = resolve(root, MIGRATIONS_SUBDIR);
-      const hash = createHash("sha256");
-      for (const f of readdirSync(dir).sort()) {
-        if (!f.endsWith(".sql")) continue;
-        hash.update(f);
-        hash.update("\0");
-        hash.update(readFileSync(join(dir, f)));
-        hash.update("\0");
-      }
-      const proc = Bun.spawnSync(["git", "rev-parse", "origin/main"], {
-        cwd: root,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const mainRef = proc.success ? proc.stdout.toString().trim() : "no-main";
-      return `${hash.digest("hex")}:${mainRef}`;
-      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (missing dir, git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
+      const result = await git(process.cwd(), ["rev-parse", "origin/main"]);
+      return result.code === 0 ? result.out.trim() : "no-main";
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
     } catch {
       return null;
     }

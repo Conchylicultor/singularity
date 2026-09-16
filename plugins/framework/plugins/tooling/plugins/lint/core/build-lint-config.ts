@@ -22,10 +22,10 @@
  */
 import { join } from "path";
 import { pathToFileURL } from "url";
-import tsPlugin from "@typescript-eslint/eslint-plugin";
-import tsParser from "@typescript-eslint/parser";
+import type TsEslintPlugin from "@typescript-eslint/eslint-plugin";
+import type TsEslintParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
-import reactHooks from "eslint-plugin-react-hooks";
+import type ReactHooksPlugin from "eslint-plugin-react-hooks";
 import type { Program } from "typescript";
 import { lintEntries } from "./lint.generated";
 import { NON_APP_FILE_GLOBS } from "./non-app-globs";
@@ -33,6 +33,35 @@ import { NON_APP_FILE_GLOBS } from "./non-app-globs";
 // `eslint.config.ts` (which cannot resolve the alias) and by Bun for the worker.
 import { LINT_SCOPE_EXCLUDE_GLOBS } from "./lint-scope-exceptions";
 import { lintToolkit, type LintToolkit } from "./class-token-walk";
+
+// Loaded lazily: importing anything from this module's barrel
+// (`lint/core/index.ts`) — even a leaf helper like `isLintScopeExcluded` —
+// forces this file's top level to evaluate (a static re-export runs the
+// whole module graph before the barrel is usable). `type-check`'s
+// `import-graph.ts` does exactly that from the MAIN thread, well before any
+// check's `run()` — so a top-level `import` of these three packages here paid
+// their cost on every `./singularity check` pass, for every check, not just
+// `type-check`'s own worker. Each is invariant for the process's lifetime —
+// not a tree-derived fact — so a per-process memo is safe (unlike caching a
+// tree fact across a whole process).
+let tsPluginPromise: Promise<typeof TsEslintPlugin> | undefined;
+function loadTsPlugin(): Promise<typeof TsEslintPlugin> {
+  return (tsPluginPromise ??= import("@typescript-eslint/eslint-plugin").then(
+    (m) => m.default,
+  ));
+}
+let tsParserPromise: Promise<typeof TsEslintParser> | undefined;
+function loadTsParser(): Promise<typeof TsEslintParser> {
+  return (tsParserPromise ??= import("@typescript-eslint/parser").then(
+    (m) => m.default,
+  ));
+}
+let reactHooksPromise: Promise<typeof ReactHooksPlugin> | undefined;
+function loadReactHooks(): Promise<typeof ReactHooksPlugin> {
+  return (reactHooksPromise ??= import("eslint-plugin-react-hooks").then(
+    (m) => m.default,
+  ));
+}
 
 interface PluginContribution {
   /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
@@ -201,7 +230,9 @@ export interface BuildLintConfigOptions {
  *
  * Fails loudly (below) on version skew rather than silently enabling nothing.
  */
-function compilerDiagnosticRulesAsWarn(): Record<string, Linter.RuleEntry> {
+function compilerDiagnosticRulesAsWarn(
+  reactHooks: Awaited<ReturnType<typeof loadReactHooks>>,
+): Record<string, Linter.RuleEntry> {
   const recommended = (
     reactHooks as unknown as {
       configs?: { "recommended-latest"?: { rules?: Record<string, unknown> } };
@@ -225,7 +256,12 @@ export async function buildLintConfig(
   opts: BuildLintConfigOptions,
 ): Promise<Linter.Config[]> {
   const { root, typeSource } = opts;
-  const contributions = await loadContributions(root);
+  const [contributions, tsPlugin, tsParser, reactHooks] = await Promise.all([
+    loadContributions(root),
+    loadTsPlugin(),
+    loadTsParser(),
+    loadReactHooks(),
+  ]);
 
   const parserOptions: Record<string, unknown> = {
     ecmaVersion: "latest",
@@ -286,7 +322,7 @@ export async function buildLintConfig(
         // React Compiler / Rules-of-React diagnostics, warn-first (see
         // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
         // explicit "error" pins below win the merge.
-        ...compilerDiagnosticRulesAsWarn(),
+        ...compilerDiagnosticRulesAsWarn(reactHooks),
         "react-hooks/rules-of-hooks": "error",
         // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
         // above as known-stable returns (like a bare useRef), via our patch to

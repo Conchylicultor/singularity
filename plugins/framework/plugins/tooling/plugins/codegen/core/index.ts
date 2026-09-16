@@ -33,6 +33,7 @@ export {
   collectBareSpecifiers,
   collectEntriesWithDeps,
   discoverCollectedDirs,
+  discoverCollectedDirsIn,
   generateCompositionRegistry,
   generatePluginRegistry,
   listNamedCompositionRegistries,
@@ -40,6 +41,8 @@ export {
   renderCollectedDirRegistry,
   buildRegistryGenContext,
   standardPluginDirs,
+  standardPluginDirsFromSnapshot,
+  standardPluginDirsIn,
   type CollectedRawEntry,
   type DiscoveredCollectedDir,
   type RegistryGenContext,
@@ -184,6 +187,7 @@ export {
 // Static module-import-graph helpers used by the `pre-barrel-manifests-complete`
 // check to prove no barrel reaches an unregistered `*.generated.ts` at load.
 export {
+  collectImportGraph,
   extractRuntimeImportSpecifiers,
   resolveImportSpecifier,
 } from "./import-graph";
