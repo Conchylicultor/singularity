@@ -44,11 +44,14 @@ export default {
       // temp-file capture is structurally impossible for these — the output must
       // be read (or the input written) while the child is still alive, or the
       // child is meant to outlive the call entirely.
+      //
+      // A pipe from one child INTO another is NOT such a case: write the first
+      // child's output to a file and hand the path to the second. Bun relays
+      // `stdin: other.stdout` through JS and drops the stream's tail when the
+      // writer exits — the DB fork (`pg_dump | pg_restore`) lost it 6 runs in 15.
       // `spawnWait` reads "granted\n" off live stdout while holding stdin open as
       // the release channel: the whole protocol is the open pipe.
       "plugins/packages/plugins/host-semaphore/server/internal/host-semaphore.ts",
-      // `pg_dump` → `pg_restore` stdin chaining: one child's stdout IS the other's stdin.
-      "plugins/database/plugins/admin/server/internal/fork.ts",
       // `pg_dump -Fc` writes straight into a caller-chosen output file sink;
       // spawnCaptured only ever captures into its own temp files.
       "plugins/database/plugins/admin/server/internal/backup.ts",
@@ -69,8 +72,6 @@ export default {
       "plugins/debug/plugins/paging-probe/server/internal/probe-host.ts",
       // `tmux load-buffer -b … -` reads the buffer from stdin as a stream.
       "plugins/conversations/plugins/runtime-tmux/server/internal/tmux-runtime.ts",
-      // `git archive | tar -x`: a pipe chain between two live children.
-      "plugins/review/plugins/plugin-changes/server/internal/handle-plugin-changes.ts",
 
       // The TEMPORARY Stage-2 backlog that used to sit here is EMPTY: all 20
       // plain-capture sites moved onto `spawnCaptured` and each took a bound

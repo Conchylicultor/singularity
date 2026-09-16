@@ -50,7 +50,6 @@ server-only (`bun:ffi`).
 - Cross-plugin:
   - Imported by:
     - `conversations/runtime-tmux`
-    - `database/admin`
     - `infra/spawn`
 - Server:
   - Exports (values):

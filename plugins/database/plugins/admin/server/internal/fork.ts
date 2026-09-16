@@ -1,4 +1,7 @@
-import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { getAdminPool, libpqSubprocessEnv } from "./pool";
 import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
@@ -56,11 +59,12 @@ function assertSafeName(name: string): void {
 // parameter forces every caller to name where its exclusion set came from; see
 // `forkExclusions()` in ./fork-exclusion, which fails loudly on the empty case.
 // `signal` is optional and ambient (no current caller passes one: the
-// `database.fork` job runs detached with no deadline). It cancels the host `db-fork` acquire, and once the slot is held
-// it SIGKILLs the dump/restore pair, whose non-zero exits then take the existing
-// failure path: the temp DB is dropped and the call throws. That ordering is the
-// point — the temp is reclaimed BEFORE the abort is reported, so cancelling a fork
-// never trades a released gate slot for a leaked `f_*__forking` database.
+// `database.fork` job runs detached with no deadline). It cancels the host
+// `db-fork` acquire, and once the slot is held it kills whichever of
+// dump/restore is running, the temp DB is dropped, and the call throws
+// `signal.reason`. That ordering is the point — the temp is reclaimed BEFORE the
+// abort is reported, so cancelling a fork never trades a released gate slot for
+// a leaked `f_*__forking` database.
 export async function forkDatabase(
   source: string,
   target: string,
@@ -120,56 +124,69 @@ export async function forkDatabase(
   // Gate ONLY the heavy dump|restore pipeline host-wide (the step whose
   // server-side restore work spawn-priority cannot demote); the cheap admin-pool
   // ops (exists/drop/CREATE/RENAME) stay outside the slot. The
-  // clients are additionally darwinbg-demoted (backgroundArgv) so their own
+  // clients are additionally darwinbg-demoted (`background: true`) so their own
   // CPU/IO (compression, COPY streaming) yields to the interactive backends.
+  //
+  // Dump to a FILE, then restore from it — never `pg_dump | pg_restore` through
+  // `Bun.spawn` (one child's `stdout` stream handed to the other's `stdin`). Bun
+  // relays that pipe through JS, and when `pg_dump` exits it intermittently
+  // drops the stream's tail: `pg_dump` exits 0, `pg_restore` fails with "could
+  // not read from input file: end of file" mid-`COPY`. Reproduced 6/15 with the
+  // real exclusion flags on bun 1.4.2, against 0/15 for the same pair joined by
+  // a shell pipe. Two sequential `spawnCaptured` calls hold no JS stream at all.
   await withDbForkSlot(async () => {
-    const dump = Bun.spawn(
-      backgroundArgv([
-        "pg_dump",
-        "-Fc",
-        ...plan.excludeTableData.map((t) => `--exclude-table-data=${t}`),
-        source,
-      ]),
-      {
-        env: subprocessEnv,
-        stdout: "pipe",
-        stderr: "pipe",
-      },
-    );
-    const restore = Bun.spawn(backgroundArgv(["pg_restore", "-d", temp]), {
-      env: subprocessEnv,
-      stdin: dump.stdout,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    // Cancellation, expressed as killing our own children rather than as a race
-    // against the signal: a dead child exits, `exited` resolves on its own, and the
-    // whole body unwinds through the failure path below that already knows how to
-    // drop the temp. Nothing is abandoned mid-await.
-    const onAbort = (): void => {
-      dump.kill(9);
-      restore.kill(9);
-    };
-    signal?.addEventListener("abort", onAbort, { once: true });
-    let dumpExit: number;
-    let restoreExit: number;
+    const dir = await mkdtemp(join(tmpdir(), "db-fork-"));
     try {
-      [dumpExit, restoreExit] = await Promise.all([
-        dump.exited,
-        restore.exited,
-      ]);
+      const archive = join(dir, "source.dump");
+      // A caller's signal bounds the fork when it passes one. None does today:
+      // the fork job runs detached with no deadline, and the CLI runs in a
+      // terminal, where Ctrl-C is the bound.
+      const bound = signal
+        ? { signal }
+        : {
+            unbounded:
+              "detached fork job / CLI terminal: nothing shorter than the dump bounds it",
+          };
+      const opts = { env: subprocessEnv, background: true, ...bound };
+      let failure: string | undefined;
+      // An abort makes spawnCaptured kill the child and throw `signal.reason`.
+      // Reclaim first, report second: the temp is dropped BEFORE that throw
+      // leaves this function, so cancelling a fork never leaks an `f_*__forking`.
+      try {
+        const dump = await spawnCaptured(
+          [
+            "pg_dump",
+            "-Fc",
+            "-f",
+            archive,
+            ...plan.excludeTableData.map((t) => `--exclude-table-data=${t}`),
+            source,
+          ],
+          opts,
+        );
+        if (dump.exitCode !== 0) {
+          failure = `pg_dump exited ${dump.exitCode ?? dump.signalCode}: ${dump.stderr}`;
+        } else {
+          const restore = await spawnCaptured(
+            ["pg_restore", "-d", temp, archive],
+            opts,
+          );
+          if (restore.exitCode !== 0) {
+            failure = `pg_restore exited ${restore.exitCode ?? restore.signalCode}: ${restore.stderr}`;
+          }
+        }
+      } catch (err) {
+        await dropDatabase(temp);
+        throw err;
+      }
+      if (failure !== undefined) {
+        await dropDatabase(temp);
+        throw new Error(
+          `forkDatabase(${source} → ${target}) failed: ${failure}`,
+        );
+      }
     } finally {
-      signal?.removeEventListener("abort", onAbort);
-    }
-    if (dumpExit !== 0 || restoreExit !== 0) {
-      const err = await new Response(restore.stderr).text();
-      await dropDatabase(temp);
-      // Reclaim first, report second. When WE killed them, the exit codes say
-      // nothing useful, so the abort is the truthful failure — and it must be a
-      // throw of `signal.reason`, not a fork-failed message a caller could retry
-      // its way around.
-      signal?.throwIfAborted();
-      throw new Error(`forkDatabase(${source} → ${target}) failed: ${err}`);
+      await rm(dir, { recursive: true, force: true });
     }
   }, signal);
 

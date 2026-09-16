@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { listPushesByPushId } from "@plugins/tasks/plugins/tasks-core/server";
 import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
@@ -12,35 +13,45 @@ import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainRoot } from "./main-plugins-dir";
 import type { PluginChangesResponse } from "../../core/protocol";
 
+// Each step serves an open HTTP request and reads only the local repo; a minute
+// is far past any useful answer, so only a wedged child reaches it.
+const EXTRACT_TIMEOUT_MS = 60_000;
+
+// `git archive -o <file>` then `tar -xf <file>`, never `git archive | tar -x`
+// through `Bun.spawn`: Bun relays a child-to-child pipe through JS and can drop
+// the stream's tail when the writer exits (the same loss that broke the DB fork).
 async function extractPluginsAtSha(sha: string): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), `review-${sha.slice(0, 8)}-`));
   const mainRoot = await getMainRoot();
-  const archive = Bun.spawn(
+  const archivePath = join(dir, "plugins.tar");
+  const opts = { timeoutMs: EXTRACT_TIMEOUT_MS };
+  const archive = await spawnCaptured(
     [
       GIT,
       "--no-optional-locks",
       "-C",
       mainRoot,
       "archive",
+      "-o",
+      archivePath,
       sha,
       "--",
       "plugins/",
     ],
-    { stdout: "pipe", stderr: "pipe" },
+    opts,
   );
-  const tar = Bun.spawn(["tar", "-x", "-C", dir], {
-    stdin: archive.stdout,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [archiveCode, tarCode] = await Promise.all([
-    archive.exited,
-    tar.exited,
-  ]);
-  if (archiveCode !== 0 || tarCode !== 0) {
+  const tar =
+    archive.exitCode === 0
+      ? await spawnCaptured(["tar", "-xf", archivePath, "-C", dir], opts)
+      : undefined;
+  if (archive.exitCode !== 0 || tar?.exitCode !== 0) {
     await rm(dir, { recursive: true, force: true });
-    throw new Error(`Failed to extract plugins at ${sha}`);
+    const detail = tar
+      ? `tar: ${tar.stderr}`
+      : `git archive: ${archive.stderr}`;
+    throw new Error(`Failed to extract plugins at ${sha}: ${detail}`);
   }
+  await rm(archivePath);
   return dir;
 }
 

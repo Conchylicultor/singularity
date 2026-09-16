@@ -11151,9 +11151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
-        - Uses:
-          - `infra/host/host-admission.defineHostPool`
-          - `packages/spawn-priority.backgroundArgv`
+        - Uses: `infra/host/host-admission.defineHostPool`
         - Exports (types):
           - `BackupInfo`
           - `ForkExclusions`
@@ -18782,7 +18780,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `conversations/runtime-tmux`
-          - `database/admin`
           - `infra/spawn`
       - Server:
         - Exports (values):
