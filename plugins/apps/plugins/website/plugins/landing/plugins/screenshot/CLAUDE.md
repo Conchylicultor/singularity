@@ -1,8 +1,8 @@
 # screenshot
 
 The homepage's picture of the claim: equin in desktop mode, drawn — the agent
-manager, a Pages document and Sonata playing a song as three overlapping windows
-on one surface — with a one-line caption.
+manager, a Pages document and Sonata's piano roll breaking a song down into
+chords, as three overlapping windows on one surface — with a one-line caption.
 
 It is a drawing, not a captured image, so it stays crisp at every width and
 re-tints with the site's theme. Its geometry and paint live together in
@@ -15,7 +15,7 @@ assistive technology.
 
 ## Plugin reference
 
-- Description: Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata playing a song as three windows side by side on one surface — with its caption.
+- Description: Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.
 - Web:
   - Contributes: `Website.Section` "Screenshot" → `ScreenshotSection`
   - Uses:

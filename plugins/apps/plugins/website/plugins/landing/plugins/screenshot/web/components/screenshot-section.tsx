@@ -5,7 +5,7 @@ import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import "./screenshot-section.css";
 
 const CAPTION =
-  "One surface: the agent manager, a Notion-like page and Sonata with a song playing, side by side.";
+  "One surface: the agent manager, a Notion-like page and Sonata breaking a song down into chords, side by side.";
 
 /** A grey text line of the drawing, `width` as a CSS length. `tone` picks the heading or accent bar. */
 function Line({ width, tone }: { width: string; tone?: "heading" | "accent" }) {
@@ -55,25 +55,56 @@ const AGENT_ROWS: { status: "busy" | "done" | "idle"; width: string }[] = [
   { status: "done", width: "65%" },
 ];
 
-/** Which of the 14 white keys, and which black keys (by left offset), are held down. */
-const WHITE_KEYS_DOWN = new Set([2, 8]);
-const BLACK_KEYS: { left: string; down?: boolean }[] = [
-  { left: "5.4%" },
-  { left: "12.5%" },
-  { left: "26.8%", down: true },
-  { left: "34%" },
-  { left: "41.1%" },
-  { left: "55.4%" },
-  { left: "62.5%" },
-  { left: "76.8%" },
-  { left: "84%", down: true },
-  { left: "91.1%" },
+/**
+ * Sonata's piano roll: left-hand (bass) and right-hand (chord) notes as blocks,
+ * each placed in percent of the roll. `tone` picks the hand; `soft` is the
+ * chord's top voice, drawn lighter.
+ */
+const NOTES: {
+  left: number;
+  top: number;
+  height: number;
+  tone: "bass" | "chord" | "soft";
+}[] = [
+  { left: 20, top: 4, height: 16, tone: "bass" },
+  { left: 12, top: 30, height: 14, tone: "bass" },
+  { left: 20, top: 54, height: 16, tone: "bass" },
+  { left: 12, top: 80, height: 14, tone: "bass" },
+  { left: 46, top: 6, height: 9, tone: "chord" },
+  { left: 54, top: 6, height: 9, tone: "chord" },
+  { left: 62, top: 6, height: 9, tone: "soft" },
+  { left: 46, top: 32, height: 9, tone: "chord" },
+  { left: 54, top: 32, height: 9, tone: "chord" },
+  { left: 62, top: 32, height: 9, tone: "soft" },
+  { left: 46, top: 58, height: 9, tone: "chord" },
+  { left: 54, top: 58, height: 9, tone: "chord" },
+  { left: 62, top: 58, height: 9, tone: "soft" },
+  { left: 74, top: 82, height: 18, tone: "chord" },
+  { left: 82, top: 76, height: 24, tone: "soft" },
 ];
+
+/** The progression panel's chord chips; the first is the chord playing now. */
+const PROGRESSION_CHIPS = 10;
+
+/**
+ * Three octaves of keys. Black keys sit on the boundary after these white keys
+ * of each octave (C#, D#, F#, G#, A#); `down` lists the keys held now.
+ */
+const OCTAVES = 3;
+const WHITE_KEYS = OCTAVES * 7;
+const WHITE_KEYS_DOWN = new Set([2, 12]);
+const BLACK_KEY_STEPS = [0, 1, 3, 4, 5];
+const BLACK_KEYS = Array.from({ length: OCTAVES }, (_, octave) =>
+  BLACK_KEY_STEPS.map((step) => ({
+    boundary: octave * 7 + step + 1,
+    down: (octave === 1 && step === 1) || (octave === 2 && step === 4),
+  })),
+).flat();
 
 /**
  * A picture of equin in desktop mode, drawn rather than captured: three windows
  * overlapping on one wallpaper — the agent manager mid-conversation, a Pages
- * document with a checklist, and Sonata playing "Clair de lune".
+ * document with a checklist, and Sonata's piano roll with its chord panel.
  *
  * Drawn, not a screenshot, so it is the same crisp picture at every width and
  * re-tints with the site's theme: every colour in `screenshot-section.css` is
@@ -158,17 +189,45 @@ export function ScreenshotSection() {
               </div>
             </Window>
             <Window kind="sonata" title="Sonata">
-              <div className="website-shot-player">
+              <div className="website-shot-toolbar">
+                <Line width="22%" tone="heading" />
+                <div className="website-shot-views">
+                  <i />
+                  <i className="is-on" />
+                  <i />
+                </div>
                 <i className="website-shot-play" />
-                <span>
-                  Now playing <b>Clair de lune</b> · Debussy
-                </span>
               </div>
-              <div className="website-shot-progress">
-                <i />
+              <div className="website-shot-studio">
+                <div className="website-shot-roll">
+                  {NOTES.map((note, index) => (
+                    <i
+                      key={index}
+                      className={`website-shot-note is-${note.tone}`}
+                      style={{
+                        left: `${note.left}%`,
+                        top: `${note.top}%`,
+                        height: `${note.height}%`,
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="website-shot-chords">
+                  <Line width="60%" tone="heading" />
+                  <div className="website-shot-progression">
+                    {Array.from({ length: PROGRESSION_CHIPS }, (_, index) => (
+                      <i
+                        key={index}
+                        className={index === 0 ? "is-on" : undefined}
+                      />
+                    ))}
+                  </div>
+                  <Line width="70%" />
+                  <Line width="50%" />
+                </div>
               </div>
               <div className="website-shot-keys">
-                {Array.from({ length: 14 }, (_, index) => (
+                {Array.from({ length: WHITE_KEYS }, (_, index) => (
                   <i
                     key={index}
                     className={
@@ -180,13 +239,15 @@ export function ScreenshotSection() {
                 ))}
                 {BLACK_KEYS.map((key) => (
                   <i
-                    key={key.left}
+                    key={key.boundary}
                     className={
                       key.down
                         ? "website-shot-black-key is-down"
                         : "website-shot-black-key"
                     }
-                    style={{ left: key.left }}
+                    style={{
+                      left: `calc(${(key.boundary / WHITE_KEYS) * 100}% - 1.2%)`,
+                    }}
                   />
                 ))}
               </div>

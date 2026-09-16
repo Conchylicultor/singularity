@@ -94,10 +94,10 @@
 }
 
 .website-shot-window.is-sonata {
-  left: 25%;
-  top: 58%;
-  width: 40%;
-  height: 34%;
+  left: 22%;
+  top: 48%;
+  width: 46%;
+  height: 46%;
   z-index: 3;
 }
 
@@ -278,53 +278,117 @@
   background: color-mix(in srgb, var(--chart-1) 8%, transparent);
 }
 
-/* ---- sonata ---- */
+/* ---- sonata: the piano roll ---- */
 .website-shot-window.is-sonata .website-shot-body {
   flex-direction: column;
 }
 
-.website-shot-player {
+.website-shot-toolbar {
   display: flex;
   align-items: center;
   gap: 0.7em;
-  padding: 0.7em 0.9em 0.35em;
+  padding: 0.55em 0.9em;
+  border-bottom: 1px solid var(--border);
 }
 
-.website-shot-player b {
-  display: inline;
-  font-weight: 600;
-  color: var(--foreground);
+.website-shot-toolbar i.website-shot-line {
+  margin: 0;
+}
+
+/* The Notation / Piano roll / Songsheet switcher, piano roll selected. */
+.website-shot-views {
+  display: flex;
+  gap: 0.25em;
+  margin-left: auto;
+  padding: 0.2em;
+  border-radius: 0.45em;
+  border: 1px solid var(--border);
+}
+
+.website-shot-views i {
+  width: 2em;
+  height: 0.65em;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.website-shot-views i.is-on {
+  background: color-mix(in srgb, var(--primary) 65%, transparent);
 }
 
 .website-shot i.website-shot-play {
   flex: none;
-  width: 1.3em;
-  height: 1.3em;
+  width: 1.2em;
+  height: 1.2em;
+  margin-left: auto;
   border-radius: 50%;
   background: var(--primary);
 }
 
-.website-shot-progress {
-  margin: 0 0.9em 0.55em;
-  height: 0.27em;
-  border-radius: 0.2em;
-  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+.website-shot-studio {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
-.website-shot-progress i {
-  width: 38%;
-  height: 100%;
-  border-radius: 0.2em;
-  background: linear-gradient(90deg, var(--primary), var(--chart-1));
+/* The roll: one faint bar line every sixth of its width. */
+.website-shot-roll {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 calc(16.66% - 1px),
+    color-mix(in srgb, var(--foreground) 5%, transparent) calc(16.66% - 1px)
+      16.66%
+  );
+}
+
+.website-shot i.website-shot-note {
+  position: absolute;
+  width: 4%;
+  border-radius: 0.3em;
+  background: var(--success);
+}
+
+.website-shot i.website-shot-note.is-chord {
+  background: var(--primary);
+}
+
+.website-shot i.website-shot-note.is-soft {
+  background: color-mix(in srgb, var(--primary) 55%, var(--foreground));
+}
+
+/* The chord panel: a heading, the progression's chips, then collapsed sections. */
+.website-shot-chords {
+  width: 30%;
+  padding: 0.7em;
+  border-left: 1px solid var(--border);
+}
+
+.website-shot-progression {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25em;
+  margin: 0.55em 0;
+}
+
+.website-shot-progression i {
+  height: 0.7em;
+  border-radius: 0.25em;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.website-shot-progression i.is-on {
+  background: var(--primary);
 }
 
 .website-shot-keys {
   position: relative;
   display: flex;
-  flex: 1;
-  margin: 0 0.55em 0.55em;
+  flex: none;
+  height: 22%;
   overflow: hidden;
-  border-radius: 0.35em;
 }
 
 .website-shot i.website-shot-key {
@@ -340,7 +404,7 @@
 .website-shot i.website-shot-black-key {
   position: absolute;
   top: 0;
-  width: 3.4%;
+  width: 2.4%;
   height: 60%;
   border-radius: 0 0 0.2em 0.2em;
   background: var(--background);
@@ -375,14 +439,21 @@
   }
 
   .website-shot-window.is-sonata {
-    left: 14%;
-    top: 60%;
-    width: 50%;
+    left: 10%;
+    top: 48%;
+    width: 62%;
   }
 }
 
 @media (max-width: 37.5rem) {
   .website-shot {
     font-size: 9px;
+  }
+
+  /* Too narrow for Sonata's chord panel and view switcher: the roll and the
+   * keyboard carry the picture. */
+  .website-shot-chords,
+  .website-shot-views {
+    display: none;
   }
 }

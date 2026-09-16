@@ -4,7 +4,7 @@ import { ScreenshotSection } from "./components/screenshot-section";
 
 export default {
   description:
-    "Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata playing a song as three windows side by side on one surface — with its caption.",
+    "Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.",
   contributions: [
     Website.Section({
       id: "screenshot",

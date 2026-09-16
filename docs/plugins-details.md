@@ -5285,7 +5285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/ui-kit.cn`
                   - `primitives/pane.PaneObject`
                   - `primitives/pane.useOpenPane`
-            - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata playing a song as three windows side by side on one surface — with its caption.
+            - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata breaking a song down into chords as three windows side by side on one surface — with its caption.
               - Web:
                 - Contributes: `Website.Section` "Screenshot" → `ScreenshotSection`
                 - Uses:
