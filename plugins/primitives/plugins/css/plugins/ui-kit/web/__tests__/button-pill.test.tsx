@@ -37,8 +37,12 @@ describe("pill padding", () => {
       </ButtonGroup>,
     );
     const cls = groupClass(container);
-    expect(cls).toContain("[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:pill-start");
-    expect(cls).toContain("[&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:pill-end");
+    expect(cls).toContain(
+      "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:pill-start",
+    );
+    expect(cls).toContain(
+      "[&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:pill-end",
+    );
   });
 
   it("a plain group declares no rounded end", () => {
