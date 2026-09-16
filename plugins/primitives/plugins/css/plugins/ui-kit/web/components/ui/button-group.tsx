@@ -31,13 +31,14 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
  * in (it carries the contribution's lineage attributes and generates no box),
  * so a group can take segments other plugins contribute.
  *
- * "First" and "last" never count base-ui's focus guards. While a popover or
- * menu is open, its trigger renders an invisible `<span data-base-ui-focus-guard>`
- * on each side of the trigger button, inside this group. Plain `:first-child` /
- * `:last-child` would then pick the guard, so an open trigger at either end
- * lost its rounded outer corners and shifted 1px. Every selector below uses
- * `:nth-child(1 of :not([data-base-ui-focus-guard]))` (and its `last` twin),
- * which counts only the real segments.
+ * "First" and "last" count only real segments: elements carrying
+ * `data-button-group-segment` (set by Button and SidebarMenuButton, after their
+ * incoming props so a trigger cannot overwrite it), or a `display:contents`
+ * box holding one. Anything else is skipped when finding the ends: an open
+ * popover or menu puts hidden elements inside the group (focus-guard spans
+ * beside its trigger, and an `aria-owns` span where its panel portals from),
+ * and a divider is not an end. A control that is not a Button and wants to be
+ * an end segment must carry the marker too.
  */
 function ButtonGroup({
   className,
@@ -51,20 +52,20 @@ function ButtonGroup({
       className={cn(
         "inline-flex items-stretch",
         // Segment radii: the first segment keeps its left corners, the last
-        // keeps its right corners, every inner corner is squared. Focus guards
-        // are not segments (see the doc comment).
-        "[&>:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))]:rounded-l-none [&>:not(:nth-last-child(1_of_:not([data-base-ui-focus-guard])))]:rounded-r-none",
-        "[&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-l-none [&>.contents:not(:nth-last-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-r-none",
+        // keeps its right corners, every inner corner is squared. Only marked
+        // segments count (see the doc comment).
+        "[&>:not(:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))]:rounded-l-none [&>:not(:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))]:rounded-r-none",
+        "[&>.contents:not(:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))>*]:rounded-l-none [&>.contents:not(:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))>*]:rounded-r-none",
         shape === "pill" &&
-          "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-l-full [&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-r-full [&>.contents:nth-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-l-full [&>.contents:nth-last-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-r-full",
+          "[&>:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:rounded-l-full [&>:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:rounded-r-full [&>.contents:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))>*]:rounded-l-full [&>.contents:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))>*]:rounded-r-full",
         // A split pill pads its two outer ends for their roundness: the first
         // segment's start and the last segment's end take the shape group's
         // pill extra (`pill-start` / `pill-end`), exactly as a whole pill
         // button's two ends do. The seams stay square and unpadded.
         shape === "pill" &&
-          "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:pill-start [&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:pill-end [&>.contents:nth-child(1_of_:not([data-base-ui-focus-guard]))>*]:pill-start [&>.contents:nth-last-child(1_of_:not([data-base-ui-focus-guard]))>*]:pill-end",
+          "[&>:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:pill-start [&>:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:pill-end [&>.contents:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))>*]:pill-start [&>.contents:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))>*]:pill-end",
         // Collapse the doubled border between adjacent segments into one seam.
-        "[&>:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))]:-ml-px [&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:-ml-px",
+        "[&>:not(:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))]:-ml-px [&>.contents:not(:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment]))))>*]:-ml-px",
         className,
       )}
       {...props}

@@ -38,10 +38,10 @@ describe("pill padding", () => {
     );
     const cls = groupClass(container);
     expect(cls).toContain(
-      "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:pill-start",
+      "[&>:nth-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:pill-start",
     );
     expect(cls).toContain(
-      "[&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:pill-end",
+      "[&>:nth-last-child(1_of_:is([data-button-group-segment],.contents:has(>[data-button-group-segment])))]:pill-end",
     );
   });
 

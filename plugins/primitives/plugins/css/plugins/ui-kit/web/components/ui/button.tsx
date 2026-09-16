@@ -175,6 +175,10 @@ function Button({
       data-loading={isLoading || undefined}
       onClick={onClick ? handleClick : undefined}
       {...props}
+      // After the spread: a popover/menu trigger rendering this Button passes
+      // its own `data-slot`, so only a marker nothing else sets survives. It is
+      // how ButtonGroup tells a segment from the hidden spans a library adds.
+      data-button-group-segment=""
     >
       {isLoading ? (
         iconOnly ? (

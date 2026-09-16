@@ -552,12 +552,20 @@ function SidebarMenuButton({
   const { isMobile, state } = useSidebar();
   const comp = useRender({
     defaultTagName: "button",
-    props: mergeProps<"button">(
-      {
-        className: cn(sidebarMenuButtonVariants({ variant, size }), className),
-      },
-      props,
-    ),
+    props: {
+      ...mergeProps<"button">(
+        {
+          className: cn(
+            sidebarMenuButtonVariants({ variant, size }),
+            className,
+          ),
+        },
+        props,
+      ),
+      // Last, so a trigger's props cannot drop it: ButtonGroup counts only
+      // marked segments (see button-group.tsx).
+      "data-button-group-segment": "",
+    },
     render: !tooltip ? render : <TooltipTrigger render={render} />,
     state: {
       slot: "sidebar-menu-button",
