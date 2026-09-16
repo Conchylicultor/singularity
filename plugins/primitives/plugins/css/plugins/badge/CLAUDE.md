@@ -18,11 +18,21 @@ label the one baseline-aligned item, so a chip in a sentence sits on that
 sentence's baseline. Don't drop it, and don't move it up to `items-baseline` on
 the shell — that drags the icon onto the baseline too and grows the box.
 
+## The content line keeps the label centred at any height
+
+Icon and label sit in an inner `inline-flex items-center` span, not directly in
+the shell. Don't flatten it: a baseline-aligned label goes to the **top** of its
+flex line, and a fixed-height shell (ToggleChip's `control-*`) makes that line
+the whole inner box — label at the top, icon centred. The inner span is only as
+tall as its content and is centred in the shell; the shell's baseline is still
+the label's. It takes `gap-inherit`, so callers keep setting the gap on the chip.
+
 ## Passthrough: `ref` is the OUTER element
 
-A badge renders two elements — the chip shell, and a `truncate` span holding the
-label. `ref` and everything else you spread land on the **shell**, the outer one;
-the inner span is how a long label ellipsizes, not something a caller addresses.
+A badge renders three elements — the chip shell, the content line inside it, and
+a `truncate` span holding the label. `ref` and everything else you spread land on
+the **shell**, the outer one; the inner spans are how the label centres and
+ellipsizes, not something a caller addresses.
 `ref` is newly typed (it was already flowing untyped through the old anonymous
 index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. See
 [the passthrough contract](../../../passthrough/CLAUDE.md).

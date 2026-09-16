@@ -21,7 +21,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["control-icon-xs", "control-icon-sm", "control-icon-md", "control-icon-lg"], group: "sg-control-icon", excludes: ["size", "h", "w"], under: [] },
   { classes: ["control-min-xs", "control-min-sm", "control-min-md", "control-min-lg"], group: "sg-control-min", excludes: ["min-h"], under: [] },
   { classes: ["px-control-xs", "px-control-sm", "px-control-md", "px-control-lg"], extend: "px" },
-  { classes: ["gap-control-xs", "gap-control-sm", "gap-control-md", "gap-control-lg"], extend: "gap" },
+  { classes: ["gap-control-xs", "gap-control-sm", "gap-control-md", "gap-control-lg", "gap-inherit"], extend: "gap" },
   { classes: ["h-chrome-bar", "h-chrome-pane"], extend: "h" },
   { classes: ["px-chrome"], extend: "px" },
   { classes: ["pl-chrome"], extend: "pl" },

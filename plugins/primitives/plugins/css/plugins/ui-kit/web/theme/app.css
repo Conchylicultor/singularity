@@ -480,6 +480,11 @@
 @utility gap-control-sm { gap: var(--control-gap-sm); } /* twmerge: extend gap */
 @utility gap-control-md { gap: var(--control-gap-md); } /* twmerge: extend gap */
 @utility gap-control-lg { gap: var(--control-gap-lg); } /* twmerge: extend gap */
+/* The gap a parent already set, taken by a box that groups its parent's children
+ * (Badge's content line). It picks no value of its own — whichever ramp step or
+ * control gap the caller set on the outer box is the one that applies — so the
+ * grouping box stays invisible in the spacing API. */
+@utility gap-inherit { gap: inherit; } /* twmerge: extend gap */
 
 /* Chrome dimension utilities — the single source of truth for app-chrome
  * heights and horizontal padding (toolbar, sidebar header, pane headers).

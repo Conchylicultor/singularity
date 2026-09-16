@@ -27,10 +27,11 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
 };
 
 /**
- * A badge renders TWO elements — the chip shell and the truncating label span
- * inside it. `ref` and everything spread beside it land on the SHELL, the outer
- * one: it is the chip as far as a caller is concerned, and the inner span is an
- * implementation detail of how a long label ellipsizes. See {@link Passthrough}.
+ * A badge renders three elements — the chip shell, the content line centred
+ * inside it, and the truncating label span in that line. `ref` and everything
+ * spread beside it land on the SHELL, the outer one: it is the chip as far as a
+ * caller is concerned, and the inner spans are implementation details of how
+ * the label centres and ellipsizes. See {@link Passthrough}.
  */
 export interface BadgeProps extends DensityControlled, Passthrough {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
@@ -96,28 +97,49 @@ export function Badge({
       {...copiesAsOwnText}
       {...rest}
     >
-      {icon}
       {/*
-       * `self-baseline` on the LABEL is what makes the shell's `align-baseline`
-       * mean anything, and it is the only line here that decides where a chip
-       * sits in a sentence.
+       * The chip's content line: icon + label, sized to its own content and
+       * centred in the shell by region-line's `items-center`. It is what keeps
+       * the label centred however tall the shell is.
        *
-       * An inline-flex box does not have a baseline of its own — it hands the
-       * line the baseline of its FIRST flex item. The first item here is the
-       * leading icon, and an SVG's baseline is its bottom edge. So a chip in
-       * running text used to hang its icon's bottom edge off the sentence's
-       * baseline, which carried the label about 3.5px higher than the words
-       * beside it and pushed the whole line taller to make room. Every chip in
-       * a paragraph read as floating.
+       * Without it, a shell given a fixed height (ToggleChip's control heights)
+       * left the label at the TOP of the space inside the padding while the icon
+       * sat in the middle: a baseline-aligned flex item has nowhere to go but
+       * the start edge of its line, and a single-line flex container with a
+       * fixed height makes that line the whole inner box. The label only looked
+       * centred while the padding happened to leave exactly one line of height.
+       * Inside this box the line is only as tall as its content, so there is no
+       * spare height for the label to sit at the top of.
        *
-       * Marking the label as the one baseline-aligned item makes the chip offer
-       * up its label's own text baseline instead, so the label sits on the
-       * sentence's baseline like a word. The icon still takes region-line's
-       * `items-center`, so it stays centred on the label, and the chip's box is
-       * exactly the size it was.
+       * `gap-inherit` takes the gap the caller set on the shell, so a caller
+       * still spaces icon and label with a gap class on the chip itself.
+       * `min-w-0` lets the box shrink so the label below can ellipsize.
        */}
-      <span className={cn("truncate self-baseline", mono && "font-mono")}>
-        {children}
+      <span className="inline-flex min-w-0 items-center gap-inherit">
+        {icon}
+        {/*
+         * `self-baseline` on the LABEL is what makes the shell's `align-baseline`
+         * mean anything, and it is the only line here that decides where a chip
+         * sits in a sentence.
+         *
+         * An inline-flex box does not have a baseline of its own — it hands the
+         * line the baseline of its FIRST flex item. The first item here is the
+         * leading icon, and an SVG's baseline is its bottom edge. So a chip in
+         * running text used to hang its icon's bottom edge off the sentence's
+         * baseline, which carried the label about 3.5px higher than the words
+         * beside it and pushed the whole line taller to make room. Every chip in
+         * a paragraph read as floating.
+         *
+         * Marking the label as the one baseline-aligned item makes this content
+         * line offer up the label's own text baseline, and the shell hands on
+         * the baseline of its only item — this line — so the label sits on the
+         * sentence's baseline like a word. The icon still takes `items-center`,
+         * so it stays centred on the label, and the chip's box is exactly the
+         * size it was.
+         */}
+        <span className={cn("truncate self-baseline", mono && "font-mono")}>
+          {children}
+        </span>
       </span>
     </As>
   );

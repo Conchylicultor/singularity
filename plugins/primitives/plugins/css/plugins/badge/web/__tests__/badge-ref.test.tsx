@@ -5,8 +5,9 @@ import { Badge } from "../internal/badge";
 
 afterEach(cleanup);
 
-// A badge renders TWO host elements: the chip shell, and the `truncate` span
-// that ellipsizes a long label inside it. So "where does `ref` land" is a real
+// A badge renders three host elements: the chip shell, the content line centred
+// inside it, and the `truncate` span that ellipsizes a long label in that line.
+// So "where does `ref` land" is a real
 // question here rather than a formality — and the answer has to be the SHELL,
 // the node a caller's `data-*` also lands on. Badge declared no `ref` at all
 // before the passthrough contract; it was flowing untyped through the anonymous
