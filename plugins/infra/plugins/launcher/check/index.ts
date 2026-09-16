@@ -225,12 +225,11 @@ const gatewayEnvExplicitCheck: Check = {
 // reaches every process the backend starts, forever — deleting it from
 // `process.env` afterwards does not help, because a Bun child with no explicit
 // `env` receives the environment its parent STARTED with. So these travel on
-// argv, and their old environment names may appear in code only at the
-// transition sites listed here: the gateway's branch that still hands the
-// variable to a backend whose spec predates the flag, and the backend's one
-// fallback read of it. When the transition ends, delete the sites' code and
-// then their entries — the check reports an entry whose site no longer names
-// the variable, so the list cannot outlive the code.
+// argv, and their old environment names may not appear in code at all. A
+// future move of a value onto argv can list transition sites — files still
+// allowed to name the variable while old spawners and old readers coexist —
+// and the check reports a site that no longer names it, so the list cannot
+// outlive the transition code. SOCKET_PATH's transition is over: no sites.
 //
 // Comments are stripped first (a comment explaining the retirement reads
 // nothing), and tests are exempt (a test asserting the variable's ABSENCE has
@@ -241,10 +240,7 @@ const PER_PROCESS_ENV: Record<
 > = {
   SOCKET_PATH: {
     argv: "--socket",
-    transitionSites: [
-      "gateway/worktree.go",
-      "plugins/infra/plugins/runtime-identity/core/internal/serving-socket.ts",
-    ],
+    transitionSites: [],
   },
 };
 
@@ -254,7 +250,7 @@ const THIS_FILE = "plugins/infra/plugins/launcher/check/index.ts";
 const perProcessEnvOnArgvCheck: Check = {
   id: "launcher:per-process-env-on-argv",
   description:
-    "A per-process value (a backend's socket path) travels on argv, never in the environment: its old variable name may appear in code only at its listed transition sites",
+    "A per-process value (a backend's socket path) travels on argv, never in the environment: its old variable name may appear in code only at its listed transition sites (none for SOCKET_PATH)",
   async run() {
     const root = await getWorktreeRoot();
     const names = Object.keys(PER_PROCESS_ENV);

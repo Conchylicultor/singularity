@@ -76,12 +76,8 @@ from the namespace.
 
 It used to be the `SOCKET_PATH` environment variable, which reached every process
 a backend started (the tmux server, toolbar builds, `supervised-exec` children).
-**Transition:** the gateway passes `--socket` only for a spec that says
-`"socketTransport": "argv"` (every build writes it) and only once it is itself
-restarted. Until then the path still comes in the environment, and
-`readServingSocket()` falls back to it with a warning. It is the one TypeScript
-file allowed to name the variable — `launcher:per-process-env-on-argv` holds
-that list. Design:
+There is no fallback to it any more, and `launcher:per-process-env-on-argv` bans
+the name in code. Design:
 [`research/2026-09-15-global-backend-env-leak-followups.md`](../../../../research/2026-09-15-global-backend-env-leak-followups.md).
 
 ## Redeclaring

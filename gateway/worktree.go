@@ -89,13 +89,6 @@ type Spec struct {
 	// serializes as it always did.
 	Composition string `json:"composition,omitempty"`
 
-	// SocketTransport says how the backend in this spec's checkout expects its
-	// socket path: "argv" (as `--socket <path>`) or absent (the legacy
-	// SOCKET_PATH environment variable). Every build writes "argv"
-	// (writeWorktreeSpec), so the field is present exactly when the backend code
-	// that will run reads the flag. See backendLaunch.
-	SocketTransport string `json:"socketTransport,omitempty"`
-
 	// rev identifies the spec.json revision this value was parsed from. It rides
 	// INSIDE Spec — rather than as a sibling field on Worktree — so a spec and
 	// the fingerprint asserting "this is what's on disk" travel through the same
@@ -964,8 +957,7 @@ func (w *Worktree) promoteBackend(bk *backend) {
 
 // backendLaunch returns what a backend is told at spawn beyond the declared
 // environment: the arguments appended to its argv (after any taskpolicy
-// wrapping, so they belong to the backend itself rather than to the wrapper)
-// and any per-child environment entries.
+// wrapping, so they belong to the backend itself rather than to the wrapper).
 //
 // Both values travel on ARGV, never in the environment. An env var reaches
 // every descendant forever: main's backend was the first process to talk to the
@@ -975,22 +967,8 @@ func (w *Worktree) promoteBackend(bk *backend) {
 // and every process a backend started knew the backend's own socket (read by
 // runtime-identity's readServingSocket —
 // research/2026-09-15-global-backend-env-leak-followups.md).
-//
-// TRANSITION: a spec written before `--socket` existed has no socketTransport,
-// and the backend its checkout runs reads SOCKET_PATH from the environment and
-// nothing else. That backend still gets it there, so an un-rebased worktree
-// keeps booting under a new gateway. Delete this branch, and the field, once no
-// such spec is left.
-func backendLaunch(spec *Spec, name, socketPath string) (args []string, env []string, err error) {
-	args = []string{"--namespace", name}
-	switch spec.SocketTransport {
-	case "argv":
-		return append(args, "--socket", socketPath), nil, nil
-	case "":
-		return args, []string{fmt.Sprintf("SOCKET_PATH=%s", socketPath)}, nil
-	default:
-		return nil, nil, fmt.Errorf("spec socketTransport %q is not one this gateway knows (\"argv\", or absent)", spec.SocketTransport)
-	}
+func backendLaunch(name, socketPath string) []string {
+	return []string{"--namespace", name, "--socket", socketPath}
 }
 
 // startBackend builds and starts a backend process on the given socketPath.
@@ -1023,19 +1001,13 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	}
 	// The backend's namespace and socket travel on argv (backendLaunch),
 	// appended last so they are arguments of the backend, not of the wrapper.
-	launchArgs, extraEnv, err := backendLaunch(spec, w.Name, socketPath)
-	if err != nil {
-		return nil, err
-	}
-	argv = append(append([]string{}, argv...), launchArgs...)
+	argv = append(append([]string{}, argv...), backendLaunch(w.Name, socketPath)...)
 	cmd := w.cfg.ChildEnv.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
 	// The backend's environment is exactly the declared runtime environment
-	// (-child-env, captured once at boot — see env.go), plus the legacy socket
-	// variable for a spec that still needs it. Nothing the gateway's starter
-	// carried reaches a backend unless it was declared. With overrides by name,
-	// so a SOCKET_PATH in the base could never win over this backend's own.
-	cmd.Env = w.cfg.ChildEnv.With(extraEnv...)
+	// (-child-env, captured once at boot — see env.go). Nothing the gateway's
+	// starter carried reaches a backend unless it was declared.
+	cmd.Env = w.cfg.ChildEnv.With()
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stdout, err := cmd.StdoutPipe()

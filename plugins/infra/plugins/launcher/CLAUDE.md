@@ -143,13 +143,12 @@ inherits everything.
 
 `launcher:per-process-env-on-argv` keeps a value that belongs to ONE process
 out of the environment. A backend's socket path is the case today: it travels
-as `--socket`, and the old `SOCKET_PATH` name may appear in code only at its
-listed transition sites (the gateway's branch for specs that predate the flag,
-and the backend's one fallback read). Deleting the variable from `process.env`
+as `--socket`, and the old `SOCKET_PATH` name may not appear in code at all
+(tests excepted). Deleting the variable from `process.env`
 after reading it would not stop the leak: a Bun child with no explicit `env`
-receives the environment its parent started with. The check also reports a
-listed site that no longer names the variable, so the list goes when the
-transition code does.
+receives the environment its parent started with. A future value moving onto argv can
+list transition sites that may still name its variable; the check reports a
+listed site that no longer does, so the list goes when the transition code does.
 
 `pickHostEnv(source)` is the narrow sibling of `pickRuntimeEnv`: only the host
 facts (`RUNTIME_HOST_ENV`), for a third-party tool the runtime starts. The

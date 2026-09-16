@@ -104,24 +104,13 @@ export function writeWorktreeSpec({
   // `web`/`command`/`zeroCache` when unset), since the gateway treats a missing `command` as
   // "use the bun bin/index.ts convention" and a missing `zeroCache` as
   // "no zero-cache sidecar for this worktree".
-  //
-  // `socketTransport` is the one key always written, and it is not a
-  // parameter. It tells the gateway that the backend in THIS checkout reads its
-  // socket from `--socket <path>` (runtime-identity's readServingSocket), so the
-  // gateway can stop putting the path in the backend's environment, where every
-  // process the backend starts inherits it. A spec an older checkout wrote has
-  // no such key, and the gateway keeps handing that backend SOCKET_PATH, which
-  // is all its code knows. The spec is the right place for this because it is
-  // written from the same checkout the gateway will spawn, while the gateway
-  // itself is rebuilt only by `./singularity start`.
   const spec: {
     server: string;
     web?: string;
     command?: string[];
     zeroCache?: ZeroCacheSpec;
     composition?: string;
-    socketTransport: "argv";
-  } = { server, socketTransport: "argv" };
+  } = { server };
   if (web) spec.web = web;
   if (command) spec.command = command;
   if (zeroCache) spec.zeroCache = zeroCache;

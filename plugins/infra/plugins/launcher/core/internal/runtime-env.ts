@@ -33,9 +33,7 @@
 //   keychain works without them (secrets use the native keyring addon), and
 //   agent panes already run `claude` under `env -i`.
 // - SOCKET_PATH: a backend's socket is per process, so it travels on the
-//   backend's argv (`--socket`), where no descendant inherits it. The gateway
-//   still sets it per child, never from this base, for a spec.json written
-//   before `--socket` existed (gateway/worktree.go backendLaunch).
+//   backend's argv (`--socket`), where no descendant inherits it.
 // - PG*: the database location is declared in `database.json`. libpq lets the
 //   environment win over that file, so a stray PGHOST in the starting shell
 //   would silently point a toolbar build's readiness probes at another server.
