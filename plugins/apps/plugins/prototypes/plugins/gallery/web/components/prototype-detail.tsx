@@ -147,6 +147,12 @@ function StageBody() {
  * `src` is built once here (`usePrototypeSrc`) and handed down whole: a stage
  * never composes a frame URL, so none can drop the picks, the cache-bust or
  * the shown version.
+ *
+ * The last part of the body's loading gate: the stage waits for the user's
+ * picks, as it waits for the list and the version above, so a frame never
+ * opens on the defaults and then swaps to the variant the user picked. Gated
+ * HERE rather than beside the list, because the picks exist only for a
+ * prototype that does — "Prototype not found" must not wait on them.
  */
 function ReadyStage({
   meta,
@@ -159,25 +165,31 @@ function ReadyStage({
   version: number;
   stage: PrototypeStage;
 }) {
-  const src = usePrototypeSrc(meta, version);
-  return (
-    // The positioning context the picker pins to.
-    <div className="relative h-full">
-      {renderIsolated(PrototypeStages.Stage, stage as unknown as Contribution, {
-        meta,
-        gallery,
-        src,
-      })}
-      {/* One corner, stacked: the options picker, and under it — on a
-          recorded version — what that version is, with Restore and Back to
-          latest. The picker opens upward, so it never covers the pill. Each
-          renders nothing when it has nothing to say. */}
-      <Pin to="bottom-right" offset="md">
-        <Stack direction="col" gap="sm" align="end">
-          <OptionsPicker meta={meta} />
-          <PastVersionPill />
-        </Stack>
-      </Pin>
-    </div>
-  );
+  // No `error` arm: a picks record that cannot be read (a malformed
+  // `_picks/<id>.json`) stays broken until someone fixes it, so it renders as
+  // the default error placeholder naming the problem — never as a spinner
+  // that never ends.
+  return matchResource(usePrototypeSrc(meta, version), {
+    pending: () => <Loading variant="block" />,
+    ready: (src) => (
+      // The positioning context the picker pins to.
+      <div className="relative h-full">
+        {renderIsolated(
+          PrototypeStages.Stage,
+          stage as unknown as Contribution,
+          { meta, gallery, src },
+        )}
+        {/* One corner, stacked: the options picker, and under it — on a
+            recorded version — what that version is, with Restore and Back to
+            latest. The picker opens upward, so it never covers the pill. Each
+            renders nothing when it has nothing to say. */}
+        <Pin to="bottom-right" offset="md">
+          <Stack direction="col" gap="sm" align="end">
+            <OptionsPicker meta={meta} />
+            <PastVersionPill />
+          </Stack>
+        </Pin>
+      </div>
+    ),
+  });
 }

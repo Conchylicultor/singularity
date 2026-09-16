@@ -42,14 +42,15 @@ import { REPO_ROOT, repoConfigDir } from "@plugins/infra/plugins/paths/server";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { CONFIG_DIR } from "./config-dir";
 import {
-  recordAgentWrite,
-  noteAgentWriteComplete,
-  revertAgentWrites as revertLedger,
-  type TrioPaths,
-  type LedgerEntry,
-  type RevertOutcome,
+  defineAgentWriteLedger,
+  type AgentWriteLedgerEntry,
   type FileSnapshot,
-} from "./agent-write-ledger";
+} from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/server";
+import {
+  configLedgerDocument,
+  configLedgerKey,
+  type ConfigDocumentFile,
+} from "./config-ledger-key";
 
 interface CacheEntry {
   scopeId: string;
@@ -81,8 +82,25 @@ export interface ConfigWriteOpts {
   scopeId?: string;
 }
 
+/**
+ * The config documents an agent-origin request overwrote, held so the e2e
+ * harness can put them back — config's ledger in the shared agent-write ledger
+ * primitive. Design:
+ * `research/2026-08-30-global-agent-config-write-revert-ledger.md`.
+ *
+ * Defined HERE, beside the write paths, because its `restore` is
+ * `applyRestore` below, which needs `refreshEntry` / `getEntry` /
+ * `ensureScopeEntry` / `disposeScopeEntry` — all module-private to this file.
+ * `scope-fork.ts` records through the same handle.
+ */
+export const configWriteLedger = defineAgentWriteLedger<ConfigDocumentFile>({
+  id: "config",
+  label: "Config documents",
+  restore: applyRestore,
+});
+
 /** The trio of files a document is made of, for the agent-write ledger. */
-function trioPathsOf(entry: CacheEntry): TrioPaths {
+function trioPathsOf(entry: CacheEntry): Record<ConfigDocumentFile, string> {
   return {
     origin: entry.userOriginPath,
     override: entry.userOverwritesPath,
@@ -99,10 +117,9 @@ function recordWrite(
   entry: CacheEntry,
   operation: string,
 ): void {
-  recordAgentWrite(
+  configWriteLedger.record(
     opts.writer,
-    entry.storePath,
-    entry.scopeId,
+    configLedgerKey(entry.storePath, entry.scopeId),
     trioPathsOf(entry),
     operation,
   );
@@ -110,7 +127,10 @@ function recordWrite(
 
 /** Refresh the ledger's "what the agent left" snapshot, after the write lands. */
 function noteWrite(opts: ConfigWriteOpts, entry: CacheEntry): void {
-  noteAgentWriteComplete(opts.writer, entry.storePath, entry.scopeId);
+  configWriteLedger.noteComplete(
+    opts.writer,
+    configLedgerKey(entry.storePath, entry.scopeId),
+  );
 }
 
 // 2D cache keyed by (descriptor × scopeId). Inner key "" (BASE_SCOPE) is the base
@@ -1007,13 +1027,19 @@ function restoreFile(path: string, snapshot: FileSnapshot): void {
  * `config-v2.values` push and every subscribed browser serving the agent's
  * value indefinitely. Going through `refreshEntry` / `ensureScopeEntry` makes
  * the update deterministic.
+ *
+ * The ledger's `restore` for {@link configWriteLedger}; it has already checked
+ * that no file moved since the agent's last write.
  */
-async function applyRestore(entry: LedgerEntry): Promise<void> {
+async function applyRestore(
+  entry: AgentWriteLedgerEntry<ConfigDocumentFile>,
+): Promise<void> {
   restoreFile(entry.paths.origin, entry.before.origin);
   restoreFile(entry.paths.override, entry.before.override);
   restoreFile(entry.paths.ancestor, entry.before.ancestor);
 
-  const descriptor = getDescriptorByStorePath(entry.storePath);
+  const { storePath, scopeId } = configLedgerDocument(entry.key);
+  const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) {
     // Renamed or removed between the run and the revert. The bytes are back,
     // which is the user-visible fact; there is no cache entry left to re-sync.
@@ -1022,7 +1048,7 @@ async function applyRestore(entry: LedgerEntry): Promise<void> {
     return;
   }
 
-  if (!entry.scopeId) {
+  if (!scopeId) {
     const base = getEntry(descriptor, BASE_SCOPE);
     if (base) refreshEntry(descriptor, base);
     return;
@@ -1033,21 +1059,9 @@ async function applyRestore(entry: LedgerEntry): Promise<void> {
   // Rebuild rather than refresh — the same dispose/ensure pair forkDescriptor
   // and removeDescriptor use, so a reverted fork lands in the cache state those
   // functions would have produced.
-  disposeScopeEntry(descriptor, entry.scopeId);
+  disposeScopeEntry(descriptor, scopeId);
   const stillExists =
     existsSync(entry.paths.origin) || existsSync(entry.paths.override);
-  if (stillExists) await ensureScopeEntry(descriptor, entry.scopeId);
-  notifyDescriptorScopeChange(entry.storePath, entry.scopeId);
-}
-
-/**
- * Restore every config document an agent-origin request overwrote, and clear
- * what was restored.
- *
- * Idempotent — an empty ledger returns three empty arrays — which is what makes
- * it safe as the e2e harness's start-of-run repair for a previous run killed
- * before its own revert.
- */
-export async function revertAgentConfigWrites(): Promise<RevertOutcome> {
-  return revertLedger(applyRestore);
+  if (stillExists) await ensureScopeEntry(descriptor, scopeId);
+  notifyDescriptorScopeChange(storePath, scopeId);
 }

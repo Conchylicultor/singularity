@@ -14,7 +14,11 @@ export {
   usePrototypePicks,
   usePrototypeSrc,
 } from "./context";
-export type { PrototypeDetailContextValue, PrototypeStage } from "./context";
+export type {
+  PicksRead,
+  PrototypeDetailContextValue,
+  PrototypeStage,
+} from "./context";
 export { PrototypeStages, PrototypeVersionActions } from "./slots";
 export type { PrototypeStageContribution, PrototypeStageProps } from "./slots";
 

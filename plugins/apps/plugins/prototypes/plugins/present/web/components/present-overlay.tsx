@@ -166,7 +166,8 @@ export function PresentOverlay({
 /**
  * The presented prototype, on the variant the pane is showing: the same
  * `usePrototypeSrc` URL as Focus and Compare, so presenting never drops the
- * reader's picks.
+ * reader's picks — and, like them, it waits for the picks rather than opening
+ * on the defaults.
  */
 function PresentedFrame({
   meta,
@@ -175,6 +176,11 @@ function PresentedFrame({
   meta: PrototypeMeta;
   version: number;
 }) {
-  const src = usePrototypeSrc(meta, version);
-  return <ScaledIframe meta={meta} src={src} upscale />;
+  // No `error` arm: a picks record that cannot be read stays broken until
+  // someone fixes it, so it renders as the default error placeholder (its
+  // message) rather than as a spinner that never ends.
+  return matchResource(usePrototypeSrc(meta, version), {
+    pending: () => <Loading variant="block" />,
+    ready: (src) => <ScaledIframe meta={meta} src={src} upscale />,
+  });
 }

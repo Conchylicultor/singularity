@@ -125,28 +125,24 @@ function PresentItem({
  * own (`usePrototypeSrc`): the same `?v=` cache-bust the in-app iframes use, so
  * a new tab never opens a copy an agent has already edited past, and the picked
  * options, so it opens on the variant on screen — which makes it the link to
- * share for "this version". The item waits for both resources rather than
- * opening an un-busted, pick-less URL while they load.
+ * share for "this version". The item waits for both resources and the picks
+ * rather than opening an un-busted, pick-less URL while they load.
  */
 function NewTabItem({ name }: { name: string }) {
   const loaded = useCombinedResources({
     rows: useResource(prototypesResource),
     version: useResource(prototypesVersionResource),
   });
-  const pending = (
-    <PresentItem
-      icon={MdOpenInNew}
-      label="New browser tab"
-      hint="Opens the prototype on its own"
-      disabled
-    />
-  );
   return matchResource(loaded, {
-    pending: () => pending,
-    error: () => pending,
+    pending: () => <NewTabEntry src={null} />,
+    error: () => <NewTabEntry src={null} />,
     ready: ({ rows, version }) => {
       const meta = rows.find((p) => p.name === name);
-      return meta ? <NewTabReady meta={meta} version={version} /> : pending;
+      return meta ? (
+        <NewTabReady meta={meta} version={version} />
+      ) : (
+        <NewTabEntry src={null} />
+      );
     },
   });
 }
@@ -158,13 +154,26 @@ function NewTabReady({
   meta: PrototypeMeta;
   version: number;
 }) {
-  const src = usePrototypeSrc(meta, version);
+  return matchResource(usePrototypeSrc(meta, version), {
+    pending: () => <NewTabEntry src={null} />,
+    error: () => <NewTabEntry src={null} />,
+    ready: (src) => <NewTabEntry src={src} />,
+  });
+}
+
+/** The item itself — disabled until there is a URL to open (`null`). */
+function NewTabEntry({ src }: { src: string | null }) {
   return (
     <PresentItem
       icon={MdOpenInNew}
       label="New browser tab"
       hint="Opens the prototype on its own"
-      onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
+      disabled={src === null}
+      onClick={
+        src === null
+          ? undefined
+          : () => window.open(src, "_blank", "noopener,noreferrer")
+      }
     />
   );
 }

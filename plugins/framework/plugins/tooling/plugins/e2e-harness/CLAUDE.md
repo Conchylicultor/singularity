@@ -131,18 +131,23 @@ writes an `ok` receipt with a new dist and leaves the previous backend running,
 so a run can still be green against a new frontend talking to old server code.
 Nothing here can see that — the receipt records one build id for both halves.
 
-## A run puts the user's config back
+## A run puts the user's data back
 
 A DataView writes its per-instance sort / filter / groupBy straight back through
-config_v2 into the user's DURABLE config layer. So a script that clicks "Group by
-Kind" to verify grouping leaves the surface grouped for the user — and poisons
-its own next run's baseline (a "0 expanded elements" baseline became 44; the
-assertion saw 44 → 44 and failed, looking exactly like a product bug).
+config_v2 into the user's DURABLE config layer, and a prototype's option picker
+writes the shared picks record. So a script that clicks "Group by Kind" to
+verify grouping leaves the surface grouped for the user — and poisons its own
+next run's baseline (a "0 expanded elements" baseline became 44; the assertion
+saw 44 → 44 and failed, looking exactly like a product bug).
 
 `withBrowser` now reverts that automatically, so **do not hand-write a teardown
-that puts a control back**. The server records the pre-write bytes of every
-config document a request carrying the agent-origin header overwrites, and the
-harness restores them:
+that puts a control back**. The server records the pre-write bytes of
+everything a request carrying the agent-origin header overwrites — one ledger
+per domain, all through the shared
+[`agent-write-ledger`](../../../../../infra/plugins/request-origin/plugins/agent-write-ledger/CLAUDE.md)
+primitive — and the harness restores them (`settleAgentWrites` /
+`repairAgentWrites` in `e2e/agent-writes.ts`, which name no domain; each line
+they print reads `<ledger label>: <key>`):
 
 - **at the START of every run**, before chromium launches — repairing a previous
   run killed by Ctrl-C, SIGKILL or a Playwright timeout, which is the half no

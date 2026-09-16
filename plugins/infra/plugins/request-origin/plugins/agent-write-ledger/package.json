@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-infra-request-origin-agent-write-ledger",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -3,6 +3,7 @@ import { checkoutNamespace } from "@plugins/infra/plugins/paths/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { fillSegment } from "@plugins/primitives/plugins/pane/core";
 import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
+import { prototypeUrl, type OptionPicks } from "../core";
 
 // Where a minted prototype can be LOOKED AT, which is the only thing a
 // prototype is for — so both verbs print it.
@@ -28,6 +29,36 @@ const DETAIL_SEGMENT = "proto/:name/:stage?";
  *
  * A factory rather than a per-id function because resolving the namespace shells
  * out to git, and `prototype list` formats a URL for every prototype on disk.
+ */
+export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
+  const at = await checkoutUrl();
+  return (id) =>
+    at(
+      `${prototypesApp.basePath}/${fillSegment(DETAIL_SEGMENT, { name: id }).join("/")}`,
+    );
+}
+
+/**
+ * The raw DOCUMENT of one variant of a prototype, on this checkout's origin —
+ * `http://<ns>.localhost:9000/api/prototypes/<id>/index.html?palette=azure`.
+ * Built by the one document-URL builder the frames use (`prototypeUrl`), so the
+ * terminal's link and the pane's frame name a variant the same way. Loading it
+ * renders that variant and writes nothing: the server stamps the query onto
+ * the page, the user's picks stay as they are.
+ */
+export async function prototypeDocumentUrlFormatter(): Promise<{
+  /** The path on the origin — what `screenshot.ts --path` takes. */
+  path: (id: string, picks: OptionPicks) => string;
+  /** The whole URL. */
+  url: (id: string, picks: OptionPicks) => string;
+}> {
+  const at = await checkoutUrl();
+  const path = (id: string, picks: OptionPicks) => prototypeUrl(id, { picks });
+  return { path, url: (id, picks) => at(path(id, picks)) };
+}
+
+/**
+ * `path` → `http://<ns>.localhost:9000<path>`, on this checkout's namespace.
  *
  * The namespace is minted from the CHECKOUT the command runs in, never from a
  * RUNTIME namespace: a CLI process declares none, and asking for one throws.
@@ -35,11 +66,7 @@ const DETAIL_SEGMENT = "proto/:name/:stage?";
  * that mint: it asks git which checkout this root is and applies the elision
  * rule, so neither half is spelled again here.
  */
-export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
+async function checkoutUrl(): Promise<(path: string) => string> {
   const ns = await checkoutNamespace(await getWorktreeRoot());
-  return (id) =>
-    namespaceUrl(
-      ns,
-      `${prototypesApp.basePath}/${fillSegment(DETAIL_SEGMENT, { name: id }).join("/")}`,
-    );
+  return (path) => namespaceUrl(ns, path);
 }

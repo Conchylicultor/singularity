@@ -138,15 +138,51 @@ every real tree change run `adoptAll`, so the prototypes that predate history,
 and any folder made by hand, get a v0. Every backend races to do it; the lock
 makes one win.
 
+## Option picks (`shared/picks.ts`)
+
+Which variant of each option the user picked is ONE record per prototype,
+`_picks/<id>.json` (`{ "palette": "azure" }`), shared by every surface: main,
+every worktree deploy, every browser, and the CLI. It used to be per-browser
+localStorage, which left agents blind (their headless browser saw only the
+defaults) and gave each `*.localhost:9000` origin its own picks. Design:
+`research/2026-09-16-global-shared-prototype-option-picks.md`.
+
+- **Raw, grammar-checked only** (`isOptionName` / `isOptionValue` from
+  `core/options.ts`, `v` reserved) — never judged against the live
+  declaration, because a pick can target an option only a recorded version
+  declares. Every read still goes through `resolvePicks`, per document.
+- `openPicksStore(root).write(id, change)` — one `set` or `reset` (never the
+  whole record, so two surfaces picking different options cannot clobber each
+  other), read-modify-write under the per-prototype flock (`withHistoryLock`,
+  `_picks/<id>.lock`), temp-then-rename with a `.tmp` suffix the watcher's
+  extension filter skips. A reset unlinks the file; a no-op writes nothing.
+  Missing file = `{}`; a malformed file THROWS (never read as "nothing picked").
+- `prototypes.picks` (push, keyed by `name`) + `PUT /api/prototypes/:name/picks`
+  (`setPrototypePicks`). The writer notifies at once; every other backend hears
+  it through the watcher (`picks-recorded`, `tree-path.ts`), which bumps no
+  version — the frames reload because their `src` carries the picks.
+- **Automated sessions are undone.** The PUT records into the
+  `prototype-picks` agent-write ledger
+  (`infra/request-origin/agent-write-ledger`) inside the lock, around the one
+  write, so an E2E that clicks the picker has its picks put back when its run
+  ends. Agents never write picks: there is no CLI setter, and a variant is
+  rendered through its document URL (`?<option>=<value>`), which saves nothing.
+- `_picks/` is `_`-prefixed, so it is never listed as a prototype and never
+  enters the reload signature; the file routes refuse it (404) like `_history/`.
+
 ## `./singularity prototype`
 
-Five verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
+Six verbs, contributed as a `cli/` collected dir — auto-discovered, so there is
 no registry edit and no codegen edit; `./singularity build` regenerates
 `cli.generated.ts` from the filesystem.
 
 - `prototype new [title]` — mint a folder and print its id, its path and its URL.
-- `prototype list` — id, title and URL for every prototype on disk, plus any
+- `prototype list` — id, title and URL for every prototype on disk, a
+  `picked:` line when the user's picks differ from the defaults, plus any
   `problems[]` the folder carries.
+- `prototype options <id>` — each option with the value on screen (picked /
+  default) and its values, the document URL of exactly that variant, and the
+  `screenshot.ts --path …` line that renders it. Read-only.
 - `prototype log <id> [-p]` — versions newest first, with each request and
   agent summary; `-p` adds each version's diff.
 - `prototype checkpoint <id> [-m <msg>]` — record a `manual` version now.
@@ -183,7 +219,9 @@ by hand: the namespace is minted with `checkoutNamespace(root)` off the CHECKOUT
 `.localhost:9000` comes from
 `namespaceUrl`, and `/prototypes` from `prototypesApp.basePath`. The one literal
 is the detail pane's own `proto/:name/:stage?` segment — it is declared in
-`gallery/web`, which a terminal verb must not import.
+`gallery/web`, which a terminal verb must not import. The same origin prefixes
+`prototype options`' document URL, which comes from `prototypeUrl()` — the
+builder the frames use — so the terminal and the pane name a variant alike.
 
 ## The contract this serves
 
@@ -277,6 +315,8 @@ the browser keeps the old `styles.css` and an edit looks like it didn't land.
   version declares. Built by `prototypeVersionUrl(name, sha, { picks })`.
 - `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore`
   version (`restorePrototypeVersion`, via `implement()`).
+- `PUT /api/prototypes/:name/picks` → 204, body `{ kind: "set", option, value }`
+  or `{ kind: "reset" }` (`setPrototypePicks`); 404 for an unknown prototype.
 
 Each `:param` matches exactly one segment and the router has no wildcard, so a
 prototype folder is flat by construction — `<name>/assets/x.svg` is unserveable.
@@ -291,6 +331,8 @@ never compete with the four-segment file route.
   automatically.
 - `prototypes.history` — one prototype's versions + `dirty` (push, keyed by
   `name`); see Version history.
+- `prototypes.picks` — one prototype's stored option picks (push, keyed by
+  `name`); see Option picks.
 
 `onReady` starts a `createFileWatcher` over `prototypes/`, watching every
 extension a prototype can ship (`.html/.css/.js/.json` plus images and
@@ -332,8 +374,10 @@ but its name is not a forbidden reference target. The check catches copied
 
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
 `prototypesResource` / `prototypesVersionResource` / `prototypeHistoryResource`
-(descriptors), `prototypeUrl()` / `prototypeVersionUrl()`, the `listPrototypes` /
-`createPrototype` / `restorePrototypeVersion` endpoints, the version shapes
+/ `prototypePicksResource` (descriptors), `prototypeUrl()` /
+`prototypeVersionUrl()`, the `listPrototypes` / `createPrototype` /
+`restorePrototypeVersion` / `setPrototypePicks` endpoints, the picks shapes
+(`StoredPicks`, `PicksChange`, `applyPicksChange`), the version shapes
 (`PrototypeVersion`, `PrototypeHistory`), and the id format (`newPrototypeId`,
 `PROTOTYPE_ID_RE`, `isPrototypeId`). The server barrel adds `checkpointPrototype`
 for the `checkpoints` plugin's end-of-turn job.
@@ -342,18 +386,20 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Server:
   - Contributes:
     - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.version"
     - `resource.declare` "prototypes.history"
+    - `resource.declare` "prototypes.picks"
   - Uses:
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.REPO_ROOT`
+    - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
   - Exports (values):
     - `checkpointPrototype`
     - `listPrototypeMetas`
@@ -361,11 +407,13 @@ for the `checkpoints` plugin's end-of-turn job.
   - Resources:
     - `prototypes.history` (push)
     - `prototypes.list` (push)
+    - `prototypes.picks` (push)
     - `prototypes.version` (push)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
     - `POST /api/prototypes/:name/versions/:sha/restore`
+    - `PUT /api/prototypes/:name/picks`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -377,6 +425,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `OptionDeclaration`
     - `OptionPicks`
     - `OptionSource`
+    - `PicksChange`
     - `PrototypeFolder`
     - `PrototypeHistory`
     - `PrototypeMeta`
@@ -384,10 +433,14 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeProblem`
     - `PrototypeVersion`
     - `PrototypeVersionKind`
+    - `StoredPicks`
   - Exports (values):
+    - `applyPicksChange`
     - `createPrototype`
     - `foldOptions`
     - `humanizeToken`
+    - `isOptionName`
+    - `isOptionValue`
     - `isPrototypeId`
     - `isScannableFile`
     - `listPrototypes`
@@ -397,6 +450,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `parseMocks`
     - `parseOptionDeclaration`
     - `pickedValue`
+    - `PicksChangeSchema`
     - `picksFromQuery`
     - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
@@ -408,6 +462,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeHistorySchema`
     - `PrototypeMetaSchema`
     - `PrototypeOptionSchema`
+    - `prototypePicksResource`
     - `PrototypeProblemSchema`
     - `PROTOTYPES_API_BASE`
     - `prototypesResource`
@@ -419,6 +474,8 @@ for the `checkpoints` plugin's end-of-turn job.
     - `readPrototypeOptions`
     - `resolvePicks`
     - `restorePrototypeVersion`
+    - `setPrototypePicks`
+    - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
 - Cross-plugin:

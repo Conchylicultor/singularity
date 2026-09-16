@@ -34,19 +34,23 @@ import {
  * tray"). Hover, focus or a tap expands it into one row of chips per option —
  * chips, not a dropdown, because a dropdown's menu renders in a portal outside
  * the hover box and moving the pointer into it would close the panel under it.
- * A pick is written to the pane's remembered picks; the frame's `src` carries
- * them, so the frame reloads on the new variant.
+ * A pick is written to the prototype's one shared record of picks (every
+ * surface showing it follows, live); the frame's `src` carries them, so the
+ * frame reloads on the new variant.
  *
  * The chips are the options of the document ON SCREEN
  * (`usePrototypeOptions`): on a recorded version, the ones that version
  * declared — so a variant the live page has since dropped is still there to
- * pick. Renders nothing when that document declares none.
+ * pick. Renders nothing when that document declares none, and nothing while
+ * the picks are unknown — the stage under it is still loading then, and a pill
+ * naming the defaults would claim a choice the user may not have made.
  */
 export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
   const { setPick, resetPicks } = usePrototypeDetail();
   const options = usePrototypeOptions(meta);
-  const picks = usePrototypePicks(meta);
-  if (options.length === 0) return null;
+  const read = usePrototypePicks(meta);
+  if (options.length === 0 || read.pending) return null;
+  const picks = read.data;
   const summary = options
     .map((o) => humanizeToken(pickedValue(o, picks)))
     .join(" · ");
@@ -80,7 +84,13 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
                 key={option.name}
                 option={option}
                 value={pickedValue(option, picks)}
-                onPick={(value) => setPick(option.name, value)}
+                onPick={(value) => {
+                  // The chip already on screen: nothing to write, and a write
+                  // would reach every surface showing this prototype.
+                  if (value !== pickedValue(option, picks)) {
+                    setPick(option.name, value);
+                  }
+                }}
               />
             ))}
             {Object.keys(picks).length > 0 ? (

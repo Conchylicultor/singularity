@@ -9,6 +9,7 @@ import {
   adoptPrototypeHistories,
   prototypeHistoryLiveResource,
 } from "./history";
+import { prototypePicksLiveResource } from "./picks";
 import { seedTemplate } from "./seed";
 import {
   prototypesResource,
@@ -103,17 +104,22 @@ async function refresh(): Promise<void> {
  * Sort one batch of watcher events. A version recorded under `_history/`
  * (by this backend or any other — the store is host-global) re-reads that one
  * history and nothing else: the prototype's bytes did not move, so nothing may
- * reload. Everything else outside `_history/` goes through the signature gate.
+ * reload. Picks written under `_picks/` likewise re-read that one prototype's
+ * picks and bump nothing — the frames follow on their own, because their `src`
+ * carries the picks. Everything else goes through the signature gate.
  */
 function onTreeEvents(paths: string[]): void {
   let treeMoved = false;
   const recorded = new Set<string>();
+  const picked = new Set<string>();
   for (const path of paths) {
     const kind = classifyTreePath(prototypesDir.path, path);
     if (kind.kind === "version-recorded") recorded.add(kind.id);
+    else if (kind.kind === "picks-recorded") picked.add(kind.id);
     else if (kind.kind === "tree") treeMoved = true;
   }
   for (const id of recorded) notifyHistory(id);
+  for (const name of picked) prototypePicksLiveResource.notify({ name });
   if (treeMoved) void runTracked("prototypes:refresh", () => refresh());
 }
 
@@ -152,7 +158,8 @@ export async function startPrototypesWatcher(): Promise<void> {
     // and Chrome blocks that over file:// (the `prototypes:self-contained`
     // check rejects such a script tag, so an external .jsx cannot exist).
     // `.json` also passes each history's `latest.json` stamp — git's own
-    // files carry no extension, so they never reach `onChange`.
+    // files carry no extension, so they never reach `onChange` — and each
+    // `_picks/<id>.json` (their `.lock` and `.json.tmp` do not pass).
     extensions: [
       ".html",
       ".css",

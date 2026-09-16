@@ -48,7 +48,17 @@ export {
   pickedValue,
   picksFromQuery,
   humanizeToken,
+  isOptionName,
+  isOptionValue,
 } from "./options";
+export {
+  StoredPicksSchema,
+  PicksChangeSchema,
+  applyPicksChange,
+  prototypePicksResource,
+  setPrototypePicks,
+} from "./picks";
+export type { StoredPicks, PicksChange } from "./picks";
 export type {
   PrototypeOption,
   OptionDeclaration,

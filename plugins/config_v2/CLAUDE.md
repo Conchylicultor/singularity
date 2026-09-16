@@ -224,22 +224,23 @@ job or boot. It replaced the trailing optional `scopeId`, so omitting it is a
 same reason descriptors carry `source`: `origin` already means `.origin.jsonc`.
 
 When the writer is `agent`, the document's **whole trio** (origin / override /
-ancestor) is snapshotted before the write and held in a ledger under its own
-`agent-write-ledger` data dir — deliberately NOT under `configDir`, which
-`forkConfig` copies into every new worktree. The trio, not just the override,
-because `forkDescriptorScope` writes the scoped origin too and the conflict
-resolvers touch the ancestor.
+ancestor) is snapshotted before the write, in config's ledger (`id: "config"`,
+label "Config documents") of the shared
+[`agent-write-ledger`](../infra/plugins/request-origin/plugins/agent-write-ledger/CLAUDE.md)
+primitive — which owns capture, persistence, the divergence check and the
+`/api/agent-writes` routes the e2e harness calls. The trio, not just the
+override, because `forkDescriptorScope` writes the scoped origin too and the
+conflict resolvers touch the ancestor.
 
-`POST /api/config-v2/agent-writes/revert` restores them and clears what it
-restored. It is idempotent, which is what lets the e2e harness call it at the
-start of every run to repair a previous run that was killed. Revert **skips any
-document whose bytes moved since the agent last wrote it** (reported as
-`diverged`): someone else owns it now, and restoring would destroy their edit.
-
-Why the revert goes through the server rather than the harness rewriting files:
-`refreshEntry` / `ensureScopeEntry` are what re-sync the in-memory cache and
-every subscribed browser. A filesystem restore would depend on the `CONFIG_DIR`
-watcher, which is push-latency, not correctness (see above).
+config_v2 keeps two things. **The handle**, `configWriteLedger` in
+`registry.ts`, which every write path (and `scope-fork.ts`) records through. Its
+key is `<storePath>` or `<storePath> @<scopeId>` (`config-ledger-key.ts`), read
+back out by the restore. **The restore**, `applyRestore`, beside the private
+cache helpers it needs: it puts the bytes back and then re-syncs through
+`refreshEntry` / `ensureScopeEntry`. That re-sync is why the revert goes through
+the server rather than the harness rewriting files: a filesystem restore would
+depend on the `CONFIG_DIR` watcher, which is push-latency, not correctness (see
+above).
 
 **Not covered:** provider-backed (secret) fields, which return before touching
 the JSONC layer at all — an agent write there is not revertible by a bytes
@@ -306,6 +307,9 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.repoConfigDir`
+    - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
+    - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
+    - `infra/request-origin/agent-write-ledger.FileSnapshot`
   - Exports (types):
     - `ConfigWriteOpts`
     - `FieldStorageProvider`
@@ -329,7 +333,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `registerFieldStorageProvider`
     - `removeDescriptorScope`
     - `resetConfigByPath`
-    - `revertAgentConfigWrites`
     - `setConfig`
     - `setConfigByPath`
     - `watchConfig`
@@ -376,8 +379,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `ResolvedConfig`
     - `ResolvedLayer`
   - Exports (values):
-    - `agentWriteEntrySchema`
-    - `agentWriteLedger`
     - `APP_SCOPE_DIR`
     - `appScopeId`
     - `codeConfigProxy`
@@ -419,7 +420,6 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
     - `readTypedConfig`
     - `readTypedConfigWithLayer`
     - `removeDescriptorScope`
-    - `revertAgentWrites`
     - `REVIEW_MARKER`
     - `scopeAppId`
     - `setConfigField`

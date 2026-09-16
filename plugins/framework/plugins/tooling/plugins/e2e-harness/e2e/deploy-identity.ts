@@ -45,7 +45,7 @@
  * namespace resolution has already excluded the wrong-app class this check
  * exists for; what is left is a staleness question, and staleness is worth a
  * line on stderr, not a refusal. Warning also keeps
- * `repairAgentConfigWrites("start")` reachable — the half no teardown can
+ * `repairAgentWrites("start")` reachable — the half no teardown can
  * provide.
  *
  * # What this does NOT prove

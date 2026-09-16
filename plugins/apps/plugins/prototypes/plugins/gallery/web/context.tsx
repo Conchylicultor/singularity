@@ -7,27 +7,36 @@ import {
   type ReactNode,
 } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import {
+  applyPicksChange,
+  prototypePicksResource,
   prototypeUrl,
   prototypeVersionUrl,
   resolvePicks,
+  setPrototypePicks,
   type OptionPicks,
+  type PicksChange,
   type PrototypeMeta,
   type PrototypeOption,
   type PrototypeVersion,
+  type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { PrototypeStages, type PrototypeStageContribution } from "./slots";
 
-/**
- * How long a picked option is remembered for a prototype on this device. A
- * preference, not a draft: long enough that coming back to a prototype next
- * month still shows the variant you left it on.
- */
-const PICKS_TTL_MS = 90 * 24 * 60 * 60 * 1000;
-
 /** A contributed stage as the pane reads it back: renderable only via `renderIsolated`. */
 export type PrototypeStage = SealContributions<PrototypeStageContribution>;
+
+/**
+ * Something derived from the picks: not known yet (still loading, or the load
+ * failed — `error` says which), or known. The picks are the user's choice, so
+ * while they are unknown there is nothing to stand in for them — the defaults
+ * would be a claim about what the user picked, reversed a moment later. A
+ * readiness gate (`matchResource`, `useCombinedResources`) takes it as is.
+ */
+export type PicksRead<T> =
+  { pending: true; error: Error | null } | { pending: false; data: T };
 
 export interface PrototypeDetailContextValue {
   /** The directory slug of the prototype this pane is showing. */
@@ -41,11 +50,13 @@ export interface PrototypeDetailContextValue {
   stage: PrototypeStage | null;
   setStage: (id: string) => void;
   /**
-   * The option values picked for this prototype, as REMEMBERED — unjudged,
-   * since the declaration they must match is not known here. Read them through
+   * The option values picked for this prototype, as STORED — the one shared
+   * record every surface reads (`prototypes.picks`), with this pane's own
+   * not-yet-confirmed changes already applied. Unjudged, since the declaration
+   * they must match is not known here: read them through
    * {@link usePrototypePicks}, never directly.
    */
-  storedPicks: Readonly<Record<string, string>>;
+  picks: PicksRead<StoredPicks>;
   setPick: (option: string, value: string) => void;
   resetPicks: () => void;
   /**
@@ -107,17 +118,48 @@ export function PrototypeDetailProvider({
   // be "whichever stage sorts first".
   const stage = stages.find((s) => s.id === stageId) ?? stages[0] ?? null;
 
-  // Remembered per prototype on this device (localStorage), so a pick survives
-  // leaving the pane and coming back — and, because it lives HERE rather than
-  // inside the frame, it survives the reload every edit triggers.
-  const [storedPicks, setStoredPicks, clearPicks] = useDraft<
-    Record<string, string>
-  >("prototype-options", {}, { scope: name, ttl: PICKS_TTL_MS });
-  const setPick = useCallback(
-    (option: string, value: string) =>
-      setStoredPicks((prev) => ({ ...prev, [option]: value })),
-    [setStoredPicks],
+  // ONE shared record per prototype (`_picks/<id>.json` on the server), so the
+  // variant picked here is the variant main, every worktree deploy, every
+  // browser and the agents' CLI see — live. Living outside the frame is what
+  // makes a pick survive the reload every edit triggers.
+  //
+  // Optimistic, so a chip answers the click at once; a failed write keeps the
+  // pick on screen and shows in the sync-status cloud (never-revert). Coarse
+  // confirmation: a pick is one small record with no identity worth matching,
+  // and the first push after the write IS the record as the server now holds
+  // it — including a pick made meanwhile somewhere else, which then wins.
+  const params = useMemo(() => ({ name }), [name]);
+  const stored = useOptimisticResource<
+    StoredPicks,
+    PicksChange,
+    { name: string }
+  >({
+    resource: prototypePicksResource,
+    params,
+    apply: applyPicksChange,
+    mutate: (change) =>
+      fetchEndpoint(setPrototypePicks, { name }, { body: change }),
+    label: "prototype options",
+    describeOp: (change) =>
+      change.kind === "reset" ? "reset" : `${change.option}=${change.value}`,
+  });
+  const picks = useMemo<PicksRead<StoredPicks>>(
+    () =>
+      stored.pending
+        ? { pending: true, error: stored.error }
+        : { pending: false, data: stored.data },
+    [stored.pending, stored.error, stored.data],
   );
+  const { dispatch } = stored;
+  const setPick = useCallback(
+    (option: string, value: string) => {
+      dispatch({ kind: "set", option, value });
+    },
+    [dispatch],
+  );
+  const resetPicks = useCallback(() => {
+    dispatch({ kind: "reset" });
+  }, [dispatch]);
 
   // Held WITH the prototype it belongs to, so switching prototype shows the
   // new one live without an effect resetting anything: a version recorded for
@@ -140,9 +182,9 @@ export function PrototypeDetailProvider({
       stages,
       stage,
       setStage: onStageChange,
-      storedPicks,
+      picks,
       setPick,
-      resetPicks: clearPicks,
+      resetPicks,
       shownVersion,
       showVersion,
     }),
@@ -151,9 +193,9 @@ export function PrototypeDetailProvider({
       stages,
       stage,
       onStageChange,
-      storedPicks,
+      picks,
       setPick,
-      clearPicks,
+      resetPicks,
       shownVersion,
       showVersion,
     ],
@@ -179,18 +221,22 @@ export function usePrototypeOptions(
 }
 
 /**
- * The picks that apply to the document on screen: the remembered ones still
- * valid against ITS declaration ({@link usePrototypeOptions}), defaults left
- * out (the page already carries them). One memory per prototype, judged per
- * document — so a palette picked on v3 carries to the live page when it still
- * has that palette, and is simply not applied where it does not.
+ * The picks that apply to the document on screen: the stored ones still valid
+ * against ITS declaration ({@link usePrototypeOptions}), defaults left out (the
+ * page already carries them). One record per prototype, judged per document —
+ * so a palette picked on v3 carries to the live page when it still has that
+ * palette, and is simply not applied where it does not. Pending until the
+ * record is known.
  */
-export function usePrototypePicks(meta: PrototypeMeta): OptionPicks {
-  const { storedPicks } = usePrototypeDetail();
+export function usePrototypePicks(meta: PrototypeMeta): PicksRead<OptionPicks> {
+  const { picks } = usePrototypeDetail();
   const options = usePrototypeOptions(meta);
-  return useMemo(
-    () => resolvePicks(options, storedPicks),
-    [options, storedPicks],
+  return useMemo<PicksRead<OptionPicks>>(
+    () =>
+      picks.pending
+        ? picks
+        : { pending: false, data: resolvePicks(options, picks.data) },
+    [options, picks],
   );
 }
 
@@ -205,11 +251,24 @@ export function usePrototypePicks(meta: PrototypeMeta): OptionPicks {
  * - a recorded version: that version's frozen document, carrying the picks
  *   valid against the options THAT version declares. No cache-bust, since a
  *   sha addresses content that never changes.
+ *
+ * Pending while the picks are: a URL built without them would open a variant
+ * the user did not pick, and then swap to theirs.
  */
-export function usePrototypeSrc(meta: PrototypeMeta, version: number): string {
+export function usePrototypeSrc(
+  meta: PrototypeMeta,
+  version: number,
+): PicksRead<string> {
   const { shownVersion } = usePrototypeDetail();
   const picks = usePrototypePicks(meta);
-  return shownVersion === null
-    ? prototypeUrl(meta.name, { v: version, picks })
-    : prototypeVersionUrl(meta.name, shownVersion.sha, { picks });
+  return useMemo<PicksRead<string>>(() => {
+    if (picks.pending) return picks;
+    const src =
+      shownVersion === null
+        ? prototypeUrl(meta.name, { v: version, picks: picks.data })
+        : prototypeVersionUrl(meta.name, shownVersion.sha, {
+            picks: picks.data,
+          });
+    return { pending: false, data: src };
+  }, [meta.name, version, shownVersion, picks]);
 }

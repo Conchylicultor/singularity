@@ -57,6 +57,21 @@ const VALUE_RE = /^[a-z0-9][a-z0-9-]*$/;
 /** The query key the app's reload cache-bust already owns. */
 const RESERVED_NAMES = new Set(["v"]);
 
+/**
+ * Whether `name` can name an option: the grammar a declaration's name follows,
+ * with the reserved `v` excluded. The one spelling of that rule outside a
+ * declaration — a stored pick (`picks.ts`) is judged by it, never by a regex
+ * typed out a second time.
+ */
+export function isOptionName(name: string): boolean {
+  return NAME_RE.test(name) && !RESERVED_NAMES.has(name);
+}
+
+/** Whether `value` can be one of an option's values — see {@link isOptionName}. */
+export function isOptionValue(value: string): boolean {
+  return VALUE_RE.test(value);
+}
+
 const SYNTAX = '"<name>: <value> | <value>"';
 
 /** Parse one `content` attribute: `palette: violet | indigo | azure`. */

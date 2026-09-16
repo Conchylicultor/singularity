@@ -12,9 +12,9 @@ import type {
  * happen that a script cannot be trusted to remember:
  *
  *  - the agent-origin headers go onto the browser context, which is what makes
- *    every page and config write the run causes attributable and revertible;
- *  - the config the run wrote is restored, at both ends (see
- *    `e2e/agent-writes.ts`);
+ *    every page and durable write the run causes attributable and revertible;
+ *  - what the run wrote (config documents, prototype option picks, …) is
+ *    restored, at both ends (see `e2e/agent-writes.ts`);
  *  - the browser is closed, so a run does not leak a Chromium process.
  *
  * All three are guarantees about the WHOLE fleet, and each of them is only as
@@ -75,8 +75,8 @@ const check: Check = {
       hint:
         "Use `withBrowser(async (h) => { const { page } = await h.session(); … })` from " +
         "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e. A direct launch skips the " +
-        "agent-origin headers (so the run's pages and config writes are unattributable and " +
-        "unrevertible), skips the config revert that puts the user's settings back, and skips " +
+        "agent-origin headers (so the run's pages and durable writes are unattributable and " +
+        "unrevertible), skips the agent-write revert that puts the user's data back, and skips " +
         "browser.close().",
     };
   },

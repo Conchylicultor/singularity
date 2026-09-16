@@ -2,6 +2,17 @@
 
 Date: 2026-08-30 · Category: global (e2e-harness + config_v2 + infra)
 
+> **Update 2026-09-16 — generalized.** A second domain (prototype option picks)
+> needed the same undo, so the ledger moved out of config_v2 into the shared
+> `infra/request-origin/agent-write-ledger` primitive: `defineAgentWriteLedger`
+> with a named file set per entry, one file per ledger
+> (`<namespace>/<id>.json`), and `GET /api/agent-writes` /
+> `POST /api/agent-writes/revert` aggregating every ledger. The capture, divergence
+> and restore logic below is unchanged; config_v2 is now one ledger
+> (`"config"`). The `/api/config-v2/agent-writes*` routes and `<ns>/ledger.json`
+> described below are gone. See
+> [`2026-09-16-global-shared-prototype-option-picks.md`](2026-09-16-global-shared-prototype-option-picks.md) § 4.
+
 ## Context
 
 A DataView writes its per-view-instance `sort` / `filter` / `groupBy` straight back through

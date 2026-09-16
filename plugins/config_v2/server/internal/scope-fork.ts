@@ -14,14 +14,11 @@ import {
   ensureScopeEntry,
   disposeScopeEntry,
   notifyDescriptorScopeChange,
+  configWriteLedger,
 } from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
 import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
-import {
-  recordAgentWrite,
-  noteAgentWriteComplete,
-  type TrioPaths,
-} from "./agent-write-ledger";
+import { configLedgerKey, type ConfigDocumentFile } from "./config-ledger-key";
 
 // The trio of files a scoped document is made of. Computed from the scope dir
 // rather than read off a CacheEntry, because a fork writes files BEFORE the
@@ -30,7 +27,7 @@ function scopedTrioPaths(
   hierarchyPath: string,
   scopeId: string,
   name: string,
-): TrioPaths {
+): Record<ConfigDocumentFile, string> {
   const dir = userScopedDir(hierarchyPath, scopeId);
   return {
     origin: join(dir, `${name}.origin.jsonc`),
@@ -50,15 +47,14 @@ function recordScopeWrite(
   scopeId: string,
   operation: string,
 ): { done: () => void } {
-  const storePath = `${hierarchyPath}/${name}.jsonc`;
-  recordAgentWrite(
+  const key = configLedgerKey(`${hierarchyPath}/${name}.jsonc`, scopeId);
+  configWriteLedger.record(
     writer,
-    storePath,
-    scopeId,
+    key,
     scopedTrioPaths(hierarchyPath, scopeId, name),
     operation,
   );
-  return { done: () => noteAgentWriteComplete(writer, storePath, scopeId) };
+  return { done: () => configWriteLedger.noteComplete(writer, key) };
 }
 
 // Fork ONE descriptor into a scope: snapshot its scope-effective value set into

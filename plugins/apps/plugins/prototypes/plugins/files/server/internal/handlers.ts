@@ -6,6 +6,7 @@ import {
   listPrototypes,
 } from "../../core";
 import { HISTORY_DIR_NAME } from "../../shared/history/store";
+import { PICKS_DIR_NAME } from "../../shared/picks";
 import { mintPrototype } from "../../shared/mint";
 import { listPrototypeMetas } from "./list";
 import { contentTypeForPath, resolvePrototypeFile } from "./paths";
@@ -43,7 +44,7 @@ export function handlePrototypeFile(
 ): Response {
   const name = params.name;
   if (!name) return new Response("missing name", { status: 400 });
-  if (name === HISTORY_DIR_NAME) return historyNotServed();
+  if (isInternalDir(name)) return internalNotServed();
 
   const { search } = new URL(req.url);
   const location = `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${search}`;
@@ -70,7 +71,7 @@ export async function handlePrototypeAsset(
   const name = params.name;
   const fileName = params.file;
   if (!name || !fileName) return new Response("missing name", { status: 400 });
-  if (name === HISTORY_DIR_NAME) return historyNotServed();
+  if (isInternalDir(name)) return internalNotServed();
 
   const abs = resolvePrototypeFile(name, fileName);
   if (abs === null) {
@@ -94,10 +95,16 @@ export async function handlePrototypeAsset(
 }
 
 /**
- * `_history/` sits in the served tree beside the prototypes, and holds each
- * one's private git repo. Its internals are never served — a version's files
- * are, through the versions route, which reads them out of git.
+ * `_history/` and `_picks/` sit in the served tree beside the prototypes:
+ * each one's private git repo, and each one's option picks. Their internals are
+ * never served — a version's files are, through the versions route, which
+ * reads them out of git; the picks are, through the `prototypes.picks`
+ * resource.
  */
-function historyNotServed(): Response {
+function isInternalDir(name: string): boolean {
+  return name === HISTORY_DIR_NAME || name === PICKS_DIR_NAME;
+}
+
+function internalNotServed(): Response {
   return new Response("not found", { status: 404 });
 }

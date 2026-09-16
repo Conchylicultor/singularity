@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
   foldOptions,
   humanizeToken,
+  isOptionName,
+  isOptionValue,
   parseOptionDeclaration,
   pickedValue,
   picksFromQuery,
@@ -51,6 +53,32 @@ describe("parseOptionDeclaration", () => {
     expect(reasonOf("p: a | b | a")).toContain('"a" is listed twice');
     expect(reasonOf("p: only")).toContain("at least two");
     expect(reasonOf("")).toContain('"<name>:"');
+  });
+});
+
+describe("isOptionName / isOptionValue", () => {
+  test("the declaration's grammar, v reserved", () => {
+    for (const ok of ["palette", "pane-style", "p2"]) {
+      expect(isOptionName(ok)).toBe(true);
+    }
+    for (const bad of ["v", "Palette", "3d", "-x", "", "a b", "a_b"]) {
+      expect(isOptionName(bad)).toBe(false);
+    }
+    for (const ok of ["azure", "3-octaves", "88-keys"]) {
+      expect(isOptionValue(ok)).toBe(true);
+    }
+    for (const bad of ["Azure", "-x", "", "soft tray", "a_b"]) {
+      expect(isOptionValue(bad)).toBe(false);
+    }
+  });
+
+  test("agrees with parseOptionDeclaration", () => {
+    expect(parseOptionDeclaration("v: a | b").kind).toBe("malformed");
+    expect(isOptionName("v")).toBe(false);
+    expect(parseOptionDeclaration("keys: 3-octaves | 88-keys").kind).toBe(
+      "declared",
+    );
+    expect(isOptionValue("3-octaves")).toBe(true);
   });
 });
 

@@ -8,12 +8,13 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  *
  * Every leaf works straight against the filesystem, never over HTTP, and that
  * is the whole point of having them: the prototypes tree is host-global and
- * outside every checkout, so an agent can mint, enumerate and read or rewind
- * the history of mocks with no backend running and nothing built.
+ * outside every checkout, so an agent can mint, enumerate, see which variant
+ * the user picked, and read or rewind the history of mocks with no backend
+ * running and nothing built.
  *
  * This file is reached on EVERY `./singularity` invocation (commander needs the
  * names and flags before it can parse argv), so it imports `defineCliCommand`
- * and nothing else; `mintPrototype`, the lister and the history store sit
+ * and nothing else; `mintPrototype`, the lister, the picks and history stores sit
  * behind the dynamic `run: () => import(…)`. `cli:command-declarations-light` measures that
  * closure. The generics are pinned so this declaration is checked against each
  * implementation's default export — see `cli/core/internal/command.ts`.
@@ -41,9 +42,23 @@ export default defineCliCommand({
     defineCliCommand<[], object>({
       name: "list",
       description:
-        "List every prototype — id, title and URL — read straight off the " +
+        "List every prototype — id, title and URL, and the options the user " +
+        "has picked when any differ from the defaults — read straight off the " +
         "host-global prototypes dir. Needs no running backend.",
       run: () => import("./list"),
+    }),
+    defineCliCommand<[string], object>({
+      name: "options",
+      description:
+        "Show which variant of a prototype the user is looking at: each " +
+        "option it declares with the value on screen (picked, or the page's " +
+        "default) and its values, then the document URL of exactly that " +
+        "variant and the screenshot.ts command that renders it. The picks are " +
+        "the user's — one shared record every surface reads — so this is " +
+        "read-only; render another variant through its URL instead. Needs no " +
+        "running backend.",
+      arguments: [{ name: "<id>", description: "the prototype's id" }],
+      run: () => import("./options"),
     }),
     defineCliCommand<[string], { patch?: boolean }>({
       name: "log",

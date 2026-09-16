@@ -1,11 +1,15 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
+import { isPrototypeId, resolvePicks, type PrototypeMeta } from "../core";
 import { listPrototypeMetas } from "../shared/list-metas";
+import { openPicksStore, type PicksStore } from "../shared/picks";
 import { prototypeUrlFormatter } from "./prototype-url";
 
 /**
  * `./singularity prototype list` — every prototype on disk, with the URL that
- * opens it.
+ * opens it and, when the user has picked a variant other than the defaults,
+ * which one.
  *
  * Reads the tree through the same `listPrototypeMetas()` the server's list
  * endpoint and live resource use — it sits in `shared/` precisely so this
@@ -27,10 +31,13 @@ const run: CliAction<[], object> = async () => {
   }
 
   const url = await prototypeUrlFormatter();
+  const picksStore = openPicksStore(prototypesDir.path);
   const width = Math.max(...metas.map((m) => m.name.length));
   for (const meta of metas) {
     console.log(`${meta.name.padEnd(width)}  ${meta.title}`);
     console.log(`${" ".repeat(width)}  ${url(meta.name)}`);
+    const picked = await pickedLine(picksStore, meta);
+    if (picked !== null) console.log(`${" ".repeat(width)}  ${picked}`);
     // A malformed folder is listed, never hidden — same rule as the gallery
     // card, which shows the problems rather than dropping the prototype.
     for (const problem of meta.problems) {
@@ -39,5 +46,24 @@ const run: CliAction<[], object> = async () => {
     }
   }
 };
+
+/**
+ * `picked: palette=azure, density=compact` — the variant the user is looking
+ * at, when it is not the page as written. The user's shared picks, judged
+ * against the live page's options like the pane judges them; the details (and
+ * the variant's own URL) are `prototype options <id>`.
+ */
+async function pickedLine(
+  store: PicksStore,
+  meta: PrototypeMeta,
+): Promise<string | null> {
+  // A hand-made folder is not referenceable by id, so it has no picks — the
+  // server refuses to store any for it.
+  if (!isPrototypeId(meta.name) || meta.options.length === 0) return null;
+  const picks = resolvePicks(meta.options, await store.read(meta.name));
+  const entries = Object.entries(picks);
+  if (entries.length === 0) return null;
+  return `picked: ${entries.map(([k, v]) => `${k}=${v}`).join(", ")}`;
+}
 
 export default run;

@@ -78,7 +78,11 @@ The Prototypes app's two panes:
     that version's frozen document instead (`prototypeVersionUrl`), with the
     picks judged against THAT version's options and no cache-bust — which is
     how Focus, Compare's mock half and all four Present destinations follow
-    the stepper without knowing it exists.
+    the stepper without knowing it exists. It returns a pending union
+    (`PicksRead`) until the picks are known: a URL built without them would
+    open the defaults and then swap to the user's variant, so every consumer
+    renders its loading state instead (the stage body's gate, Present's frame,
+    a disabled New-tab item).
   - **Version stepper** (`version-stepper.tsx`, the `version` header action) —
     `‹ v3 of 7 ›` over `files`' per-prototype `prototypes.history` resource.
     The pane's only version state is `shownVersion` on the provider: the
@@ -129,18 +133,26 @@ The Prototypes app's two panes:
     into one row of chips per option. It is app DOM over the stage, never in
     the prototype's page — that is what keeps switchers out of the designs.
     Chips, not a dropdown: a dropdown's portaled menu sits outside the hover box,
-    so reaching for it would close the panel. Picks are remembered per
-    prototype on this device (`useDraft`, scoped by name, on the provider) —
-    living outside the frame is what makes them survive the reload every edit
-    causes. One memory per prototype, judged per document:
-    `usePrototypeOptions(meta)` is the declaration of the document on screen
-    (the shown version's, else the live page's) and `usePrototypePicks(meta)`
-    resolves the remembered picks against it (picks it does not declare
-    drop), so a palette picked on v3 carries to the live page wherever the
-    live page still has it.
+    so reaching for it would close the panel. Picks are `files`' ONE shared
+    record per prototype (`prototypes.picks`, `_picks/<id>.json`): every tab
+    and every deploy shows the same variant and follows a pick live, and
+    agents read it with `./singularity prototype options <id>`. The provider
+    reads it through `useOptimisticResource` (a chip answers at once; a failed
+    write stays on screen and shows in the sync-status cloud) and writes one
+    change per click (`set` / `reset`). Living outside the frame is what makes
+    picks survive the reload every edit causes. One record per prototype,
+    judged per document: `usePrototypeOptions(meta)` is the declaration of the
+    document on screen (the shown version's, else the live page's) and
+    `usePrototypePicks(meta)` resolves the stored picks against it (picks it
+    does not declare drop), so a palette picked on v3 carries to the live page
+    wherever the live page still has it. The picker renders nothing until the
+    picks are known.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
-    plus a line naming the picked options when any differ from the defaults —
-    and, when a recorded version is on screen, a line naming that version
+    plus a line naming the picked options when any differ from the defaults
+    (`pickedVariantLine` — a snapshot from launch time), a line pointing at
+    `./singularity prototype options <id>` for the picks as they are NOW
+    (`currentPicksLine`; the user may flip a variant mid-conversation), and,
+    when a recorded version is on screen, a line naming that version
     (number and sha) and the `prototype restore` command that brings it back,
     since "make this darker" may be about v3 rather than the live folder.
 
@@ -247,6 +259,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/optimistic-mutation.useOptimisticResource`
     - `primitives/overlay/floating-action.FloatingAction`
     - `primitives/overlay/floating-action.FloatingActionFadeIn`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
@@ -255,12 +268,12 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.useOpenPane`
-    - `primitives/persistent-draft.useDraft`
     - `primitives/relative-time.RelativeTime`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `primitives/slot-render.renderIsolated`
     - `shell/notifications.toast`
   - Exports (types):
+    - `PicksRead`
     - `PrototypeDetailContextValue`
     - `PrototypeStage`
     - `PrototypeStageContribution`

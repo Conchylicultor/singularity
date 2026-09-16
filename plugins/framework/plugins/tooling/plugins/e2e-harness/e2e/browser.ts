@@ -24,10 +24,7 @@ import { flag } from "./args";
 import { capture, type Captured } from "./capture";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { onBeforeFinish } from "./report";
-import {
-  repairAgentConfigWrites,
-  settleAgentConfigWrites,
-} from "./agent-writes";
+import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
 import { isTargetOrigin, unconsumedPage } from "./target";
 
@@ -224,7 +221,7 @@ export async function withBrowser<T>(
   fn: (h: Harness) => Promise<T>,
 ): Promise<T> {
   // PROVE THE DEPLOY FIRST — before the repair below, not after it, and that
-  // order is the highest-value half of this whole check. `repairAgentConfigWrites`
+  // order is the highest-value half of this whole check. `repairAgentWrites`
   // POSTs to the RESOLVED ORIGIN, so while the target was derived from a
   // directory name every browser script run from a worktree agent session began
   // by reverting the user's live config documents on MAIN. A refusal has to land
@@ -238,7 +235,7 @@ export async function withBrowser<T>(
   // reads is taken after the user's real config has been restored.
   //
   // On the normal path, not in a `finally`, so `process.exit` cannot skip it.
-  await repairAgentConfigWrites("start");
+  await repairAgentWrites("start");
 
   let browser: Browser;
   try {
@@ -256,8 +253,8 @@ export async function withBrowser<T>(
     // bounds what can still reach the server to what is already dispatched.
     // Then drain those. Only then revert, or the revert races a write.
     await browser.close();
-    await settleAgentConfigWrites();
-    await repairAgentConfigWrites("end");
+    await settleAgentWrites();
+    await repairAgentWrites("end");
     assertPageWasConsumed();
   };
 
@@ -282,11 +279,11 @@ export async function withBrowser<T>(
           // every future script, and ad-hoc `screenshot.ts --click` drives, with
           // nothing to opt into and nothing to remember. Server-side the mark
           // drives two things: the agent-origin plugin turns it into a swept,
-          // segregated page, and config_v2 records every config document a
-          // marked request overwrites so this harness can put it back (see
-          // `agent-writes.ts`).
+          // segregated page, and every agent-write ledger (config documents,
+          // prototype option picks, …) records what a marked request
+          // overwrites so this harness can put it back (see `agent-writes.ts`).
           // research/2026-07-29-global-agent-origin-provenance-for-pages.md
-          // research/2026-08-30-global-agent-config-write-revert-ledger.md
+          // research/2026-09-16-global-shared-prototype-option-picks.md
           extraHTTPHeaders: agentOriginHeaders(originSource()),
         });
         await keepOriginHeadersOnTarget(context);

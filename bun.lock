@@ -3193,6 +3193,10 @@
       "name": "@singularity/plugin-infra-request-origin",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/request-origin/plugins/agent-write-ledger": {
+      "name": "@singularity/plugin-infra-request-origin-agent-write-ledger",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/retention": {
       "name": "@singularity/plugin-infra-retention",
       "version": "0.0.1",
@@ -7441,6 +7445,8 @@
     "@singularity/plugin-infra-query-resource": ["@singularity/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
 
     "@singularity/plugin-infra-request-origin": ["@singularity/plugin-infra-request-origin@workspace:plugins/infra/plugins/request-origin"],
+
+    "@singularity/plugin-infra-request-origin-agent-write-ledger": ["@singularity/plugin-infra-request-origin-agent-write-ledger@workspace:plugins/infra/plugins/request-origin/plugins/agent-write-ledger"],
 
     "@singularity/plugin-infra-retention": ["@singularity/plugin-infra-retention@workspace:plugins/infra/plugins/retention"],
 

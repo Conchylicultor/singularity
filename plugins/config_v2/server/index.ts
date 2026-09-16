@@ -6,8 +6,6 @@ import {
   forkDescriptorScope as forkDescriptorScopeEndpoint,
   removeDescriptorScope as removeDescriptorScopeEndpoint,
   configSnapshot as configSnapshotEndpoint,
-  agentWriteLedger as agentWriteLedgerEndpoint,
-  revertAgentWrites as revertAgentWritesEndpoint,
 } from "../core";
 import {
   initConfigWatcher,
@@ -29,10 +27,6 @@ import {
   handleRemoveDescriptorScope,
 } from "./internal/scope-handlers";
 import { handleConfigSnapshot } from "./internal/snapshot-handler";
-import {
-  handleAgentWrites,
-  handleRevertAgentWrites,
-} from "./internal/agent-write-handlers";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
@@ -46,7 +40,6 @@ export {
   deleteOverrideByPath,
   mergeConflictByPath,
   getRawFileContent,
-  revertAgentConfigWrites,
 } from "./internal/registry";
 export type { ConfigWriteOpts } from "./internal/registry";
 export {
@@ -84,8 +77,6 @@ export default {
     [forkDescriptorScopeEndpoint.route]: handleForkDescriptorScope,
     [removeDescriptorScopeEndpoint.route]: handleRemoveDescriptorScope,
     [configSnapshotEndpoint.route]: handleConfigSnapshot,
-    [agentWriteLedgerEndpoint.route]: handleAgentWrites,
-    [revertAgentWritesEndpoint.route]: handleRevertAgentWrites,
   },
   // Blocking: the config registry must be built before resources resolve, so
   // config-driven loaders don't briefly serve empty during a hot-swap.

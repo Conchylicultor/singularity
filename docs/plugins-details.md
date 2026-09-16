@@ -2827,18 +2827,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
-        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
               - `resource.declare` "prototypes.list"
               - `resource.declare` "prototypes.version"
               - `resource.declare` "prototypes.history"
+              - `resource.declare` "prototypes.picks"
             - Uses:
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
               - `infra/file-watcher.createFileWatcher`
               - `infra/file-watcher.FileWatcher`
               - `infra/paths.REPO_ROOT`
+              - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
             - Exports (values):
               - `checkpointPrototype`
               - `listPrototypeMetas`
@@ -2846,11 +2848,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Resources:
               - `prototypes.history` (push)
               - `prototypes.list` (push)
+              - `prototypes.picks` (push)
               - `prototypes.version` (push)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
               - `POST /api/prototypes/:name/versions/:sha/restore`
+              - `PUT /api/prototypes/:name/picks`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
@@ -2862,6 +2866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `OptionDeclaration`
               - `OptionPicks`
               - `OptionSource`
+              - `PicksChange`
               - `PrototypeFolder`
               - `PrototypeHistory`
               - `PrototypeMeta`
@@ -2869,10 +2874,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeProblem`
               - `PrototypeVersion`
               - `PrototypeVersionKind`
+              - `StoredPicks`
             - Exports (values):
+              - `applyPicksChange`
               - `createPrototype`
               - `foldOptions`
               - `humanizeToken`
+              - `isOptionName`
+              - `isOptionValue`
               - `isPrototypeId`
               - `isScannableFile`
               - `listPrototypes`
@@ -2882,6 +2891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `parseMocks`
               - `parseOptionDeclaration`
               - `pickedValue`
+              - `PicksChangeSchema`
               - `picksFromQuery`
               - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
@@ -2893,6 +2903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeHistorySchema`
               - `PrototypeMetaSchema`
               - `PrototypeOptionSchema`
+              - `prototypePicksResource`
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesResource`
@@ -2904,6 +2915,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `readPrototypeOptions`
               - `resolvePicks`
               - `restorePrototypeVersion`
+              - `setPrototypePicks`
+              - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
           - Cross-plugin:
@@ -2966,6 +2979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/optimistic-mutation.useOptimisticResource`
               - `primitives/overlay/floating-action.FloatingAction`
               - `primitives/overlay/floating-action.FloatingActionFadeIn`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
@@ -2974,12 +2988,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.useOpenPane`
-              - `primitives/persistent-draft.useDraft`
               - `primitives/relative-time.RelativeTime`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
+              - `PicksRead`
               - `PrototypeDetailContextValue`
               - `PrototypeStage`
               - `PrototypeStageContribution`
@@ -7255,6 +7269,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/file-watcher.FileWatcher`
       - `infra/paths.REPO_ROOT`
       - `infra/paths.repoConfigDir`
+      - `infra/request-origin/agent-write-ledger.AgentWriteLedgerEntry`
+      - `infra/request-origin/agent-write-ledger.defineAgentWriteLedger`
+      - `infra/request-origin/agent-write-ledger.FileSnapshot`
     - Exports (types):
       - `ConfigWriteOpts`
       - `FieldStorageProvider`
@@ -7278,7 +7295,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `registerFieldStorageProvider`
       - `removeDescriptorScope`
       - `resetConfigByPath`
-      - `revertAgentConfigWrites`
       - `setConfig`
       - `setConfigByPath`
       - `watchConfig`
@@ -7325,8 +7341,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ResolvedConfig`
       - `ResolvedLayer`
     - Exports (values):
-      - `agentWriteEntrySchema`
-      - `agentWriteLedger`
       - `APP_SCOPE_DIR`
       - `appScopeId`
       - `codeConfigProxy`
@@ -7368,7 +7382,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `readTypedConfig`
       - `readTypedConfigWithLayer`
       - `removeDescriptorScope`
-      - `revertAgentWrites`
       - `REVIEW_MARKER`
       - `scopeAppId`
       - `setConfigField`
@@ -16607,6 +16620,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/health`
           - `infra/jobs`
           - `infra/ndjson-stream`
+          - `infra/request-origin/agent-write-ledger`
           - `infra/secrets`
           - `infra/trash`
           - `page/annotations/agent-access`
@@ -17940,6 +17954,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ORIGIN_SOURCE_HEADER`
           - `originOf`
           - `systemOrigin`
+      - Plugins:
+        - **`agent-write-ledger`** — Shared agent-write ledger: defineAgentWriteLedger lets a domain snapshot the files an agent-origin request is about to overwrite (first write wins) and put them back on revert, skipping anything a person edited since; GET /api/agent-writes and POST /api/agent-writes/revert aggregate every registered ledger for the e2e harness.
+          - Server:
+            - Uses: `infra/endpoints.implement`
+            - Exports (types):
+              - `AgentWriteLedger`
+              - `AgentWriteLedgerEntry`
+              - `AgentWriteLedgerOptions`
+              - `FileSnapshot`
+            - Exports (values): `defineAgentWriteLedger`
+            - Routes:
+              - `GET /api/agent-writes`
+              - `POST /api/agent-writes/revert`
+          - Core:
+            - Uses: `infra/endpoints.defineEndpoint`
+            - Exports (types):
+              - `AgentWriteEntrySummary`
+              - `AgentWriteLedgerSummary`
+              - `AgentWritesRevertOutcome`
+              - `AgentWritesStatus`
+            - Exports (values):
+              - `agentWriteEntrySummarySchema`
+              - `agentWriteLedgerSummarySchema`
+              - `agentWrites`
+              - `agentWritesRevertOutcomeSchema`
+              - `agentWritesStatusSchema`
+              - `revertAgentWrites`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/files`
+              - `config_v2`
     - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
         - Uses:
@@ -27245,6 +27290,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useOptimisticResource`
       - Cross-plugin:
         - Imported by:
+          - `apps/prototypes/gallery`
           - `apps/sonata/track-mixer`
           - `conversations/conversations-view/data-view/queue`
           - `conversations/conversations-view/queue`
@@ -28021,7 +28067,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed persistence with optional entity scope and TTL auto-expiry: useDraft is the reactive useState drop-in (all calls on one key stay in sync within and across tabs); readDraft/writeDraft are the render-free imperative twin for callers writing at input frequency.
       - Cross-plugin:
         - Imported by:
-          - `apps/prototypes/gallery`
           - `apps/sonata/library`
           - `apps/sonata/rich/chord-readout`
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`

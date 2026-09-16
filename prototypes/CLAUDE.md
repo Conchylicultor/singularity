@@ -196,6 +196,41 @@ version of the design to look at.
 A line that cannot be an option (malformed, a missing or unknown default, a
 duplicate) is left out of the picker and reported as a problem on the card.
 
+### Which variant is the user looking at?
+
+The user's picks are one shared record per prototype: every tab and every
+deploy (main and each worktree) shows the same variant and follows a new pick
+live. Read it from the terminal:
+
+```bash
+./singularity prototype options <id>
+```
+
+It prints each option with the value on screen (picked, or the page's default)
+and its values, then the document URL of exactly that variant. If you were
+launched from Improve, your prompt says what was picked at launch; the user may
+have flipped it since, so run this when it matters. `prototype list` shows a
+`picked:` line under each prototype that is not on its defaults.
+
+### Rendering a variant yourself
+
+Load the prototype's document with the options in its query — the same
+`?<option>=<value>` the app puts on its frames:
+
+```bash
+./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+  --path "/api/prototypes/<id>/index.html?palette=azure&pane=floating"
+```
+
+The server stamps the values onto `<html data-*>`, so the page renders that
+variant; a name or value the page does not declare is a 400, not the default.
+`prototype options` prints the line for the current variant, ready to run.
+
+**Never change the user's picks.** They are the user's choice of what to look
+at; there is no command that sets them, and loading a document URL saves
+nothing. (A browser script that clicks the picker does change them, for
+everybody — the e2e harness puts them back when its run ends.)
+
 ## A prototype can be anything
 
 Not necessarily a full-screen app. A single button, one card, a menu opening, a

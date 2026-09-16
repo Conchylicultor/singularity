@@ -14,7 +14,11 @@ import {
   type PrototypeHistory,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
-import { OPTIONS_RULE, pickedVariantLine } from "./launch-rules";
+import {
+  OPTIONS_RULE,
+  currentPicksLine,
+  pickedVariantLine,
+} from "./launch-rules";
 
 /**
  * The detail pane's header controls, each a zero-prop contribution to
@@ -92,7 +96,7 @@ function shownVersionLine(
 
 /** Launches an agent to iterate on the open prototype. */
 export function ImproveButton() {
-  const { name, storedPicks, shownVersion } = usePrototypeDetail();
+  const { name, picks, shownVersion } = usePrototypeDetail();
   const list = useResource(prototypesResource);
   const history = useResource(prototypeHistoryResource, { name });
   return (
@@ -108,9 +112,14 @@ export function ImproveButton() {
       placeholder="What should change? (optional)"
       align="end"
       // Until the list is known there is no declaration to say which variant
-      // is on screen against, so the launch waits for it — and likewise for the
-      // history when a recorded version is on screen, to say which one.
-      disabled={list.pending || (shownVersion !== null && history.pending)}
+      // is on screen against, and until the picks are known there is no saying
+      // which variant the user picked — so the launch waits for both; likewise
+      // for the history when a recorded version is on screen, to say which one.
+      disabled={
+        list.pending ||
+        picks.pending ||
+        (shownVersion !== null && history.pending)
+      }
       onLaunched={(conv) => {
         toast({
           type: "prototype",
@@ -131,6 +140,12 @@ export function ImproveButton() {
             "the prototype list is still loading — cannot say which variant is on screen",
           );
         }
+        if (picks.pending) {
+          // Unreachable: the popover is disabled while the picks load.
+          throw new Error(
+            "the prototype's option picks are still loading — cannot say which variant is on screen",
+          );
+        }
         if (shownVersion !== null) {
           if (history.pending) {
             // Unreachable: the popover is disabled while the history loads.
@@ -146,9 +161,12 @@ export function ImproveButton() {
           shownVersion?.options ??
           list.data.find((p) => p.name === name)?.options;
         const variant = options
-          ? pickedVariantLine(resolvePicks(options, storedPicks))
+          ? pickedVariantLine(resolvePicks(options, picks.data))
           : null;
         if (variant) parts.push(variant);
+        // What was on screen at launch is a snapshot; the user can flip a
+        // variant mid-conversation, so point at the live answer too.
+        if (options && options.length > 0) parts.push(currentPicksLine(name));
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);
         return { prompt: parts.join("\n\n") };

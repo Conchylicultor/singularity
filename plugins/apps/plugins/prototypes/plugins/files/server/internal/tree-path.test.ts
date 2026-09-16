@@ -24,6 +24,25 @@ describe("classifyTreePath", () => {
     }
   });
 
+  test("a picks file is that id's picks changing", () => {
+    expect(classifyTreePath(ROOT, `${ROOT}/_picks/${ID}.json`)).toEqual({
+      kind: "picks-recorded",
+      id: ID,
+    });
+  });
+
+  test("anything else under _picks is internal", () => {
+    for (const path of [
+      `${ROOT}/_picks/${ID}.json.tmp`,
+      `${ROOT}/_picks/${ID}.lock`,
+      `${ROOT}/_picks/not-an-id.json`,
+      `${ROOT}/_picks/nested/${ID}.json`,
+      `${ROOT}/_picks`,
+    ]) {
+      expect(classifyTreePath(ROOT, path)).toEqual({ kind: "picks-internal" });
+    }
+  });
+
   test("a prototype's files and the template are the tree", () => {
     expect(classifyTreePath(ROOT, `${ROOT}/${ID}/index.html`)).toEqual({
       kind: "tree",
