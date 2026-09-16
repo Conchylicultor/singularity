@@ -12,3 +12,10 @@ export const SOURCE_URL = "https://github.com/Conchylicultor/singularity";
  */
 export const CONTACT_EMAIL = "hello@equin.ai";
 export const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
+
+/**
+ * Where a visitor files a bug report, a feature request or a question: a new
+ * issue on the source repository. Derived from `SOURCE_URL` so the two cannot
+ * point at different repositories.
+ */
+export const ISSUES_URL = `${SOURCE_URL}/issues/new`;

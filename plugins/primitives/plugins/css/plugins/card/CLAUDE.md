@@ -55,7 +55,8 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
     - `apps/pages/welcome/recent-pages`
     - `apps/sonata/library`
     - `apps/website/landing/contact`
-    - `apps/website/landing/fork`
+    - `apps/website/landing/hero`
+    - `apps/website/landing/layers`
     - `conversations/conversation-view/code/file-pane/markdown`
     - `conversations/conversation-view/jsonl-viewer/collapsible-card`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`

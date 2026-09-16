@@ -5204,7 +5204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/studio/explorer`
               - `apps/studio/graph`
-    - **`website`** — Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
+    - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, placeholder pages for the apps vision, the foundations and the story, and how to get in touch.
       - Plugins:
         - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
           - Web:
@@ -5240,9 +5240,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `issueTitle`
               - `MAX_ISSUE_URL_LENGTH`
               - `readableIdea`
-        - **`landing`** — Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
+        - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
           - Plugins:
-            - **`contact`** — Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
+            - **`contact`** — Getting in touch: the homepage's closing band — an email for anyone who wants to support the vision, and GitHub issues for bug reports, feature requests and questions. The address itself and the source link live in the shell's site footer.
               - Web:
                 - Contributes: `Website.Section` "Contact" → `ContactSection`
                 - Uses:
@@ -5254,57 +5254,70 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
-            - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
+            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
               - Web:
-                - Contributes: `Website.Section` "Fork" → `ForkSection`
+                - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
-                  - `apps/website/questions/apps.appsPane`
-                  - `apps/website/questions/harness.harnessPane`
                   - `apps/website/shell.Website`
-                  - `apps/website/shell.WebsiteBand`
+                  - `apps/website/shell.WebsiteHero`
                   - `primitives/css/card.Card`
                   - `primitives/css/grid.Grid`
                   - `primitives/css/inline.Inline`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
+            - **`layers`** — Landing layers band: 'What is equin?' as three stacked, clickable layers — the technical foundations, the applications built on them (by category, future ones dimmed), and the vision of one OS-like surface — each opening its own page.
+              - Web:
+                - Contributes: `Website.Section` "Layers" → `LayersSection`
+                - Uses:
+                  - `apps/website/pages/apps.appsPane`
+                  - `apps/website/pages/foundations.foundationsPane`
+                  - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteBand`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/card.Card`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/fill.Fill`
+                  - `primitives/css/grid.Grid`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.cn`
                   - `primitives/pane.PaneObject`
                   - `primitives/pane.useOpenPane`
-            - **`hero`** — Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.
+            - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata playing a song as three windows side by side on one surface — with its caption.
               - Web:
-                - Contributes: `Website.Section` "Hero" → `HeroSection`
+                - Contributes: `Website.Section` "Screenshot" → `ScreenshotSection`
                 - Uses:
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteBand`
-                  - `primitives/css/coords.Placed`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
-            - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.
+            - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
               - Web:
                 - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
                 - Uses:
+                  - `apps/website/pages/story.storyPane`
                   - `apps/website/shell.Website`
                   - `apps/website/shell.WebsiteArrow`
                   - `apps/website/shell.WebsiteBand`
-                  - `apps/website/story.storyPane`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/pane.useOpenPane`
-        - **`questions`** — The two question pages of the public website: what apps evolve into, and what engineering looks like when no human reviews the code.
+        - **`pages`** — The inner pages of the public website: the vision for applications, the technical foundations, and the story of how equin came to be.
           - Plugins:
-            - **`apps`** — The applications page of the equin website: the /website/apps pane answering 'what will apps evolve into?', its Apps nav link, and the WebsiteApps.Section slot the answer is written into.
+            - **`apps`** — The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Apps nav link, and the WebsiteApps.Section slot the page is written into.
               - Web:
                 - Slots: `WebsiteApps.Section`
                 - Contributes:
                   - `Pane.Register` "website-apps"
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                 - Uses:
-                  - `apps/website/shell.WebsiteBand`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
+                  - `apps/website/shell.WebsiteSoon`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
@@ -5313,37 +5326,54 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `appsPane`
                   - `WebsiteApps`
               - Cross-plugin:
-                - Imported by: `apps/website/landing/fork`
-            - **`harness`** — The engineering page of the equin website: the /website/harness pane answering 'what does software engineering look like when no human reviews the code?', its Harness nav link, and the WebsiteHarness.Section slot the answer is written into.
+                - Imported by: `apps/website/landing/layers`
+            - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — and the WebsiteFoundations.Section slot the page is written into.
               - Web:
-                - Slots: `WebsiteHarness.Section`
-                - Contributes:
-                  - `Pane.Register` "website-harness"
-                  - `WebsiteHeader` "harness" → `HarnessNavItem`
+                - Slots: `WebsiteFoundations.Section`
+                - Contributes: `Pane.Register` "website-foundations"
                 - Uses:
-                  - `apps/website/shell.WebsiteBand`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
+                  - `apps/website/shell.WebsiteSoon`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/slot-render.defineRenderSlot`
+                - Exports (values):
+                  - `foundationsPane`
+                  - `WebsiteFoundations`
+              - Cross-plugin:
+                - Imported by: `apps/website/landing/layers`
+            - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
+              - Web:
+                - Slots: `WebsiteStory.Section`
+                - Contributes:
+                  - `Pane.Register` "website-story"
+                  - `WebsiteHeader` "story" → `StoryNavItem`
+                - Uses:
+                  - `apps/website/shell.WebsiteChrome`
+                  - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `primitives/css/spacing.Stack`
-                  - `primitives/css/text.Text`
+                  - `apps/website/shell.WebsiteSoon`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
                   - `primitives/slot-render.defineRenderSlot`
                 - Exports (values):
-                  - `harnessPane`
-                  - `WebsiteHarness`
+                  - `storyPane`
+                  - `WebsiteStory`
               - Cross-plugin:
-                - Imported by: `apps/website/landing/fork`
+                - Imported by: `apps/website/landing/story-link`
         - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
           - Web:
             - Slots:
-              - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.fork`, `apps.website.landing.hero`, `apps.website.landing.story-link`
-              - `WebsiteHeader` ← `apps.website.improve`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `primitives.pane`
+              - `Website.Section` ← `apps.website.landing.contact`, `apps.website.landing.hero`, `apps.website.landing.layers`, `apps.website.landing.screenshot`, `apps.website.landing.story-link`
+              - `WebsiteHeader` ← `apps.website.improve`, `apps.website.pages.apps`, `apps.website.pages.story`, `apps.website.shell`, `primitives.pane`
             - Contributes:
               - `Apps.App` "equin" → `WebsiteLayout`
               - `WebsiteHeader` "wordmark" → `WebsiteWordmark`
+              - `WebsiteHeader` "github" → `WebsiteGithubLink`
               - `Pane.Register` "website-landing"
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
@@ -5352,6 +5382,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/app-icon.mdAppIcon`
               - `layouts/full-pane.FullPane`
               - `primitives/css/cluster.Cluster`
+              - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Inset`
@@ -5363,6 +5394,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.subThemeScope`
+              - `primitives/icon-button.IconButton`
               - `primitives/pane.AnyPane`
               - `primitives/pane.definePaneHeaderSlot`
               - `primitives/pane.defineRoute`
@@ -5379,46 +5411,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WebsiteBand`
               - `WebsiteChrome`
               - `WebsiteHeader`
+              - `WebsiteHero`
               - `WebsiteNavLink`
+              - `WebsiteSoon`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports (values):
               - `CONTACT_EMAIL`
               - `CONTACT_MAILTO`
+              - `ISSUES_URL`
               - `SOURCE_URL`
               - `websiteApp`
           - Cross-plugin:
             - Imported by:
               - `apps/website/improve`
               - `apps/website/landing/contact`
-              - `apps/website/landing/fork`
               - `apps/website/landing/hero`
+              - `apps/website/landing/layers`
+              - `apps/website/landing/screenshot`
               - `apps/website/landing/story-link`
-              - `apps/website/questions/apps`
-              - `apps/website/questions/harness`
-              - `apps/website/story`
-        - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
-          - Web:
-            - Slots: `WebsiteStory.Section`
-            - Contributes:
-              - `Pane.Register` "website-story"
-              - `WebsiteHeader` "story" → `StoryNavItem`
-            - Uses:
-              - `apps/website/shell.WebsiteBand`
-              - `apps/website/shell.WebsiteChrome`
-              - `apps/website/shell.WebsiteHeader`
-              - `apps/website/shell.WebsiteNavLink`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/pane.defineRoute`
-              - `primitives/pane.Pane`
-              - `primitives/pane.useOpenPane`
-              - `primitives/slot-render.defineRenderSlot`
-            - Exports (values):
-              - `storyPane`
-              - `WebsiteStory`
-          - Cross-plugin:
-            - Imported by: `apps/website/landing/story-link`
+              - `apps/website/pages/apps`
+              - `apps/website/pages/foundations`
+              - `apps/website/pages/story`
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
@@ -22173,6 +22187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/release/release-info`
               - `apps/studio/contributions`
               - `apps/website/improve`
+              - `apps/website/landing/layers`
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `backup/runs-arm`
@@ -22317,7 +22332,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/welcome/recent-pages`
               - `apps/sonata/library`
               - `apps/website/landing/contact`
-              - `apps/website/landing/fork`
+              - `apps/website/landing/hero`
+              - `apps/website/landing/layers`
               - `conversations/conversation-view/code/file-pane/markdown`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
@@ -22360,6 +22376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/contributions`
               - `apps/studio/explorer`
               - `apps/website/improve`
+              - `apps/website/landing/layers`
               - `code-explorer`
               - `config_v2/settings`
               - `conversations/agents`
@@ -22703,7 +22720,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/progress/sections`
               - `apps/sonata/rich/chord-overlay`
               - `apps/sonata/songsheet`
-              - `apps/website/landing/hero`
+              - `apps/website/shell`
               - `debug/profiling`
               - `debug/profiling/ops/op-gantt`
               - `debug/timeline`
@@ -22751,6 +22768,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/compositions/contributors`
               - `apps/studio/compositions/release/release-logs`
               - `apps/website/improve`
+              - `apps/website/landing/layers`
               - `apps/website/shell`
               - `auth`
               - `auth/apple-signing/setup-wizard`
@@ -22850,7 +22868,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/browser/start-page`
               - `apps/sonata/library`
               - `apps/website/landing/contact`
-              - `apps/website/landing/fork`
+              - `apps/website/landing/hero`
+              - `apps/website/landing/layers`
               - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
               - `debug/health-monitor`
               - `page/formatting/color`
@@ -22909,7 +22928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/sources/ultimate-guitar`
               - `apps/studio/contributions/tables/row-count`
               - `apps/studio/explorer`
-              - `apps/website/landing/fork`
+              - `apps/website/landing/hero`
               - `apps/website/shell`
               - `backup/runs-arm`
               - `build/build-info`
@@ -23401,6 +23420,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/gallery`
               - `apps/sonata/sources/midi`
               - `apps/sonata/track-mixer`
+              - `apps/website/landing/layers`
               - `auth`
               - `backup`
               - `backup/runs-arm`
@@ -23768,12 +23788,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/improve`
               - `apps/website/landing/contact`
-              - `apps/website/landing/fork`
               - `apps/website/landing/hero`
-              - `apps/website/questions/apps`
-              - `apps/website/questions/harness`
+              - `apps/website/landing/layers`
+              - `apps/website/landing/screenshot`
               - `apps/website/shell`
-              - `apps/website/story`
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `auth/google-maps/setup-wizard`
@@ -24048,7 +24066,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/mail/sync-status`
               - `apps/studio/compositions/release`
               - `apps/studio/compositions/release/release-info`
-              - `apps/website/landing/fork`
+              - `apps/website/landing/hero`
               - `build`
               - `build/build-status`
               - `config_v2/settings`
@@ -24257,13 +24275,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/improve`
               - `apps/website/landing/contact`
-              - `apps/website/landing/fork`
               - `apps/website/landing/hero`
+              - `apps/website/landing/layers`
+              - `apps/website/landing/screenshot`
               - `apps/website/landing/story-link`
-              - `apps/website/questions/apps`
-              - `apps/website/questions/harness`
               - `apps/website/shell`
-              - `apps/website/story`
               - `auth`
               - `auth/apple-signing/setup-wizard`
               - `auth/google-maps/setup-wizard`
@@ -24765,6 +24781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/studio/graph`
               - `apps/website/improve`
               - `apps/website/landing/contact`
+              - `apps/website/landing/layers`
               - `apps/website/landing/story-link`
               - `apps/website/shell`
               - `auth`
@@ -26444,6 +26461,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/compositions/entry-points`
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
+          - `apps/website/shell`
           - `build`
           - `build/build-logs`
           - `code-explorer`
@@ -27708,7 +27726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/segmented-progress-bar/dots`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
-        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.questions.apps`, `apps.website.questions.harness`, `apps.website.shell`, `apps.website.story`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
+        - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.deployments`, `apps.deploy.servers`, `apps.events.event-list`, `apps.events.shell`, `apps.events.sources`, `apps.events.sources.source-detail.runs`, `apps.mail.reading-pane`, `apps.mail.search`, `apps.mail.shell`, `apps.mail.threads`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.studio.compositions`, `apps.studio.compositions.release`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.website.pages.apps`, `apps.website.pages.foundations`, `apps.website.pages.story`, `apps.website.shell`, `auth.apple-signing.setup-wizard`, `auth.google-maps.setup-wizard`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `code-explorer.commit-detail`, `config_v2.settings`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.config-orphans`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.ops`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.trace.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
         - Contributes:
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `welcomePane.Actions` "title" → `PaneTitleItem`
@@ -27972,12 +27990,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer/membership`
           - `apps/studio/graph`
           - `apps/studio/shell`
-          - `apps/website/landing/fork`
+          - `apps/website/landing/layers`
           - `apps/website/landing/story-link`
-          - `apps/website/questions/apps`
-          - `apps/website/questions/harness`
+          - `apps/website/pages/apps`
+          - `apps/website/pages/foundations`
+          - `apps/website/pages/story`
           - `apps/website/shell`
-          - `apps/website/story`
           - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google`
@@ -28608,10 +28626,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/shell`
           - `apps/studio/explorer`
           - `apps/studio/shell`
-          - `apps/website/questions/apps`
-          - `apps/website/questions/harness`
+          - `apps/website/pages/apps`
+          - `apps/website/pages/foundations`
+          - `apps/website/pages/story`
           - `apps/website/shell`
-          - `apps/website/story`
           - `config_v2/fields`
           - `config_v2/settings`
           - `conversations/agents`

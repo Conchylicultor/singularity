@@ -86,6 +86,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/studio/compositions/release/release-info`
     - `apps/studio/contributions`
     - `apps/website/improve`
+    - `apps/website/landing/layers`
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `backup/runs-arm`

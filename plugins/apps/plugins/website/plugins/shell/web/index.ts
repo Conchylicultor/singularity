@@ -7,6 +7,7 @@ import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { websiteApp } from "../core";
 import { WebsiteLayout } from "./components/website-layout";
 import { WebsiteWordmark } from "./components/website-wordmark";
+import { WebsiteGithubLink } from "./components/website-github-link";
 import { WebsiteHeader, Website } from "./slots";
 import { landingPane } from "./panes";
 import { equinDocumentTheme, equinTheme } from "./internal/theme";
@@ -15,6 +16,8 @@ export { Website, WebsiteHeader } from "./slots";
 export { WebsiteNavLink } from "./components/website-nav-link";
 export { WebsiteArrow } from "./components/website-arrow";
 export { WebsiteBand } from "./components/website-band";
+export { WebsiteHero } from "./components/website-hero";
+export { WebsiteSoon } from "./components/website-soon";
 export type { WebsiteBandRhythm } from "./components/website-band";
 export { WebsiteChrome } from "./components/website-chrome";
 export { landingPane } from "./panes";
@@ -29,6 +32,8 @@ export default {
       component: WebsiteLayout,
     }),
     WebsiteHeader({ id: "wordmark", component: WebsiteWordmark }),
+    // The source link, beside the pages — see `config/apps/website/shell/header.jsonc`.
+    WebsiteHeader({ id: "github", component: WebsiteGithubLink }),
     Pane.Register({ pane: landingPane }),
     // The site's theme, selected for the website app in
     // `config/ui/theme-engine/@app/website/theme.jsonc`. Contributed by the

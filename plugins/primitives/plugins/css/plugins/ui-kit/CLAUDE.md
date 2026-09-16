@@ -496,6 +496,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/studio/graph`
     - `apps/website/improve`
     - `apps/website/landing/contact`
+    - `apps/website/landing/layers`
     - `apps/website/landing/story-link`
     - `apps/website/shell`
     - `auth`

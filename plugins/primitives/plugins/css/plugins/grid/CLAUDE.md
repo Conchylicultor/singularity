@@ -70,7 +70,8 @@ Shared (both paths):
     - `apps/browser/start-page`
     - `apps/sonata/library`
     - `apps/website/landing/contact`
-    - `apps/website/landing/fork`
+    - `apps/website/landing/hero`
+    - `apps/website/landing/layers`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `debug/health-monitor`
     - `page/formatting/color`

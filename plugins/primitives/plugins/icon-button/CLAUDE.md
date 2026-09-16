@@ -99,6 +99,7 @@ icon+count button it stands in for — carries a per-site
     - `apps/studio/compositions/entry-points`
     - `apps/studio/explorer/membership`
     - `apps/studio/graph`
+    - `apps/website/shell`
     - `build`
     - `build/build-logs`
     - `code-explorer`

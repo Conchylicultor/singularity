@@ -1,0 +1,35 @@
+/* The page heading's paint — the site's one bespoke paint.
+ *
+ * `.website-hero-wash` is the ambient glow behind every page's heading: an
+ * ellipse of the brand accent fading through the cyan counter-accent, blurred
+ * wide. Both stops READ the active theme (`--primary` and `--chart-1`) rather
+ * than pinning colours of their own, so the wash re-tints with a theme swap
+ * instead of becoming the one blue that survives it. Mixing with transparent in
+ * sRGB is what keeps the hue and lowers only the alpha.
+ *
+ * The box it paints is placed by `WebsiteHero` (`<Placed>`: a 1100×700 tile
+ * centred on the page, its top 120px above the document's top edge) and is
+ * decorative — click-through, and never clipped, so its tail softens the top of
+ * the band below exactly as far as the design intends. */
+.website-hero-wash {
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--primary) 36%, transparent),
+    color-mix(in srgb, var(--chart-1) 12%, transparent) 40%,
+    transparent 70%
+  );
+  filter: blur(40px);
+}
+
+/* The emphasised half of a heading: the accent gradient painted THROUGH the
+ * glyphs, from the full-strength azure to the cyan — the azure end is what
+ * makes the gradient read as a gradient rather than as one light blue.
+ * `color: transparent` is what lets the clipped background show; the fallback
+ * if `background-clip: text` is unsupported is invisible text, which is why the
+ * plain half of the sentence carries the meaning on its own. */
+.website-hero-accent {
+  background-image: linear-gradient(90deg, var(--primary), var(--chart-1));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

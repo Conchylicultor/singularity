@@ -24,7 +24,8 @@ export const WebsiteHeader = definePaneHeaderSlot();
 export const Website = {
   /**
    * Landing-page bands, rendered top-to-bottom on the index pane at
-   * `/website` — the hero, the fork, the story link, the contact band. Each
+   * `/website` — the hero, the screenshot, the three layers, the story link, the
+   * contact band. Each
    * section owns its full-width band (compose `WebsiteBand`).
    *
    * Reading order is authored in `config/apps/website/shell/section.jsonc`, NOT

@@ -6,8 +6,8 @@
  * `:root` because the header is pane chrome, rendered outside the page body.
  *
  * The band rhythms are the page's vertical score. A marketing page breathes in
- * a different unit from app chrome — 120px above its one headline, 96px after
- * the fork — and the density spacing ramp tops out at its 2xl step (2rem,
+ * a different unit from app chrome — 112px above its one headline, 72px between
+ * two bands — and the density spacing ramp tops out at its 2xl step (2rem,
  * sized for chrome). Rather than stack ramp steps to approximate, each band
  * names its ROLE on the page and this file says what that role measures. A new
  * band picks a rhythm; it never writes a number. */
@@ -15,15 +15,20 @@
   --website-measure: 65rem; /* 1040px */
 }
 
-/* The title page: the one headline, 120px above, 88px below. */
+/* The title page: the one headline, 112px above, 72px below. */
 .website-band-hero {
-  padding-block: 7.5rem 5.5rem;
+  padding-block: 7rem 4.5rem;
 }
 
-/* A band that follows straight on from the one above — the fork reads as the
- * hero's second half — so it opens flush and closes with 96px. */
-.website-band-continuation {
-  padding-block: 0 6rem;
+/* A section of the homepage between two rules: 72px either side. */
+.website-band-section {
+  padding-block: 4.5rem;
+}
+
+/* An inner page's heading: 88px above, 48px below — closer to the text it
+ * introduces than the homepage's title page is. */
+.website-band-page-hero {
+  padding-block: 5.5rem 3rem;
 }
 
 /* One quiet line on its own rule: 48px either side. */
@@ -41,8 +46,7 @@
   padding-block: 1.75rem 2.5rem;
 }
 
-/* An inner page's heading band (the question pages, the story): the
- * interlude's rhythm, so a page that is only a heading so far still breathes. */
+/* A body band of an inner page: the interlude's rhythm. */
 .website-band-page {
   padding-block: 3rem;
 }

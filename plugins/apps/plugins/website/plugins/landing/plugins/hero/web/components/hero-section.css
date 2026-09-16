@@ -1,33 +1,14 @@
-/* The hero's ambient wash — the site's one bespoke paint.
- *
- * An ellipse of the brand accent fading through the cyan counter-accent, blurred
- * wide. Both stops READ the active theme (`--primary` and `--chart-1`) rather
- * than pinning colours of their own, so the wash re-tints with a preset swap
- * instead of becoming the one blue that survives a re-theme. Mixing with
- * transparent in sRGB is what keeps the hue and lowers only the alpha.
- *
- * The box it paints is placed by the hero (`<Placed>`: a 1100×700 tile centred
- * on the page, its top 120px above the document's top edge) and is decorative —
- * click-through, and never clipped, so its tail can soften the top of the cards
- * band below exactly as far as the design intends. */
-.website-hero-wash {
-  background: radial-gradient(
-    ellipse at center,
-    color-mix(in srgb, var(--primary) 36%, transparent),
-    color-mix(in srgb, var(--chart-1) 12%, transparent) 40%,
-    transparent 70%
-  );
-  filter: blur(40px);
+/* A property tile is a flat panel the glow shows through: the card colour at
+ * 70%, so the hero's wash tints it rather than stopping at its edge. Mixed from
+ * `--card`, never a colour of its own. */
+.website-hero-property {
+  background-color: color-mix(in srgb, var(--card) 70%, transparent);
 }
 
-/* The emphasised half of the headline: the accent gradient painted THROUGH the
- * glyphs, so the sentence carries the brand colour without a second element.
- * `color: transparent` is what lets the clipped background show; the fallback if
- * `background-clip: text` is unsupported is invisible text, which is why the
- * plain half of the sentence carries the meaning on its own. */
-.website-hero-accent {
-  background-image: linear-gradient(90deg, var(--primary), var(--chart-1));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* The property's dot glows in its own colour: a soft halo painted from
+ * `currentColor`, so the dot's text-colour class is the one place its hue is
+ * named. Decorative paint rather than a shadow token — the shadow scale is for
+ * elevation, and a glow is not a height. */
+.website-hero-property-dot {
+  box-shadow: 0 0 10px currentColor;
 }

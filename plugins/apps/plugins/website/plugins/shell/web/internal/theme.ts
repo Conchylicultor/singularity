@@ -27,7 +27,7 @@ const colorPalette = colorPaletteGroup.fragment({
     popover: "oklch(0.1814 0.0158 261.54)",
     popoverForeground: "oklch(0.9674 0.0013 286.38)",
     // The brand colour: the wordmark's full stop, the headline gradient, the
-    // users' dot, every hover.
+    // property dots, every hover.
     primary: AZURE,
     primaryForeground: WHITE,
     // The filled control is the FOREGROUND, inverted — a white pill with black
@@ -83,8 +83,8 @@ const colorPalette = colorPaletteGroup.fragment({
 });
 
 /**
- * The chart ramp starts at the site's cyan counter-accent — the developers'
- * dot and the far end of the headline gradient read `--chart-1` — and walks
+ * The chart ramp starts at the site's cyan counter-accent — the far end of the
+ * headline gradient reads `--chart-1` — and walks
  * toward the azure.
  */
 const chart = chartGroup.fragment({
@@ -127,7 +127,7 @@ const fontFamily = fontFamilyGroup.fragment(
  * 1.6 line, and captions are the 12px eyebrow.
  *
  * Line heights are lengths (the group's contract), each the role's size × its
- * designed ratio — 1.02 for the headline, 1.15 for a card's question, 1.6 for
+ * designed ratio — 1.02 for the headline, 1.15 for a section title, 1.6 for
  * running text.
  */
 const typeScale = typeScaleGroup.fragment(
@@ -143,7 +143,7 @@ const typeScale = typeScaleGroup.fragment(
     // 78px / 1.02 — the one headline.
     fontSizeDisplay: "4.875rem",
     lineHeightDisplay: "4.9725rem",
-    // 30px / 1.15 — a fork card's question.
+    // 30px / 1.15 — a section's title ("What is equin?").
     fontSizeTitle: "1.875rem",
     lineHeightTitle: "2.15625rem",
     // 24px / 1.6 — a contact card's heading; the wordmark.

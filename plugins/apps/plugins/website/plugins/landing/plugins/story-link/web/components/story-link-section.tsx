@@ -5,16 +5,16 @@ import {
   WebsiteArrow,
   WebsiteBand,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { storyPane } from "@plugins/apps/plugins/website/plugins/story/web";
+import { storyPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/web";
 
 const PROMPT = "Curious how equin came to be?";
 const LINK = "Read the full story and context";
 
 /**
- * The band between the fork and the contact block: one line offering the story
- * page to a reader who wants the context rather than either answer.
+ * The band between the layers and the contact block: one line offering the
+ * story page to a reader who wants the context behind the project.
  *
- * It is a sentence with a link in it, not a call to action — the two cards above
+ * It is a sentence with a link in it, not a call to action — the layer cards above
  * are the page's real choices, and this must not compete with them. Which is why
  * it is one centred line on its own rule, and why the link is the `inline`
  * aspect of a `link` button — it takes the sentence's own size and sits in its

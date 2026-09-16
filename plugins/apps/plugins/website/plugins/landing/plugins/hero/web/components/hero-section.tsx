@@ -1,79 +1,89 @@
-import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { WebsiteHero } from "@plugins/apps/plugins/website/plugins/shell/web";
 import "./hero-section.css";
 
-const HEADLINE_LEAD = "A self-evolving operating system, ";
-const HEADLINE_ACCENT = "shaped by agents";
-const LEDE_LEAD =
-  "Most teams use agents to build the same applications, only faster. ";
+const HEADLINE_LEAD = "A personal OS that ";
+const HEADLINE_ACCENT = "evolves on request";
 const LEDE_BRAND = "equin";
 const LEDE_TAIL =
-  " is a bet that this misses the bigger picture: a harness exploring the future of software engineering, and an agentic operating system in daily use.";
+  " is an experimental open-source platform to rebuild custom versions of every application, tailored to each user's unique needs. An exploration of the new kind of software that agents unlock.";
 
 /**
- * The wash's geometry, as the design measured it: a 1100×700 ellipse tile
- * centred on the page, its top 120px above the document's top edge. The
- * document's top edge is the site header's top — the header floats over the
- * page, 72px tall above this band, and is clear at rest so the wash shows
- * through it — so the tile starts 192px above the band.
- * Measurements, not ramp steps, which is what `<Placed>` is for. The width
- * caps at the pane's so a narrow viewport never scrolls sideways to reach it
- * (the blur beyond the box is ink, not scrollable overflow).
+ * The three properties the headline's claim rests on. A closed set of three
+ * sentences, not a collection — plain data.
  */
-const WASH_WIDTH = "min(68.75rem, 100%)";
-const WASH_HEIGHT = "43.75rem";
-const WASH_TOP = "-12rem";
+const PROPERTIES = [
+  {
+    name: "Self-evolving",
+    body: "The application modifies itself as your needs evolve.",
+  },
+  {
+    name: "Integrated",
+    body: "One unified application, rather than many isolated ones.",
+  },
+  {
+    name: "Personal",
+    body: "Built for your own use case, not the average one.",
+  },
+];
 
 /**
- * The homepage's opening statement, and everything above the fork: one sentence
- * saying what equin is, and one paragraph saying why that is worth a bet.
+ * The homepage's opening: one sentence saying what equin is, the paragraph that
+ * says what that means, and the three properties it rests on.
  *
- * Centred, and the only band on the site that is — a page whose whole job is one
- * sentence reads best with nothing beside it. Everything below returns to the
- * left edge, which is what makes the hero feel like a title page rather than the
- * house style. The headline and the lede each cap their own measure inside the
- * band's (900px and 700px), centred by the stack.
- *
- * The accent half of the headline is a gradient painted through the glyphs, over
- * a wash of the same two colours behind the band. Both live in
- * `hero-section.css` and both read theme tokens — see that file before pinning a
- * colour here. The wash is deliberately NOT clipped to the band: its tail softens
- * the top of the cards below, as the design intends, and it sits under the text
- * because the band's measure box is positioned after it.
+ * The heading, its lede and the glow behind them are the shell's
+ * `WebsiteHero` — every page opens the same way. What is the homepage's own is
+ * the row of three properties under the lede: small flat tiles, left-aligned
+ * inside the centred heading so each reads as a sentence, capped at 860px so
+ * the row stays narrower than the reading measure.
  */
 export function HeroSection() {
   return (
-    <div className="relative">
-      <Placed
-        x={{ center: "50%", size: WASH_WIDTH }}
-        y={{ start: WASH_TOP, size: WASH_HEIGHT }}
-        decorative
-        className="website-hero-wash"
-      />
-      <WebsiteBand rhythm="hero" className="relative text-center">
-        <Stack gap="2xl" align="center">
-          <Text
-            as="h1"
-            variant="display"
-            className="max-w-[56.25rem] tracking-tighter"
+    <WebsiteHero
+      kind="home"
+      lead={HEADLINE_LEAD}
+      accent={HEADLINE_ACCENT}
+      trail="."
+      lede={
+        <>
+          <Text className="text-foreground font-semibold">{LEDE_BRAND}</Text>
+          {LEDE_TAIL}
+        </>
+      }
+    >
+      <Grid
+        minCellWidth="14rem"
+        mode="fit"
+        gap="md"
+        className="w-full max-w-[53.75rem] text-left"
+      >
+        {PROPERTIES.map((property) => (
+          <Card
+            key={property.name}
+            className="website-hero-property p-lg rounded-xl shadow-none"
           >
-            {HEADLINE_LEAD}
-            <span className="website-hero-accent">{HEADLINE_ACCENT}</span>.
-          </Text>
-          <Text
-            as="p"
-            variant="subheading"
-            tone="muted"
-            className="max-w-[43.75rem] font-normal"
-          >
-            {LEDE_LEAD}
-            <Text className="text-foreground font-semibold">{LEDE_BRAND}</Text>
-            {LEDE_TAIL}
-          </Text>
-        </Stack>
-      </WebsiteBand>
-    </div>
+            <Stack gap="2xs">
+              <Inline gap="sm">
+                <StatusDot
+                  colorClass="bg-primary text-primary"
+                  className="website-hero-property-dot"
+                />
+                <Text variant="label" className="font-semibold">
+                  {property.name}
+                </Text>
+              </Inline>
+              <Text as="p" variant="label" tone="muted" className="font-normal">
+                {property.body}
+              </Text>
+            </Stack>
+          </Card>
+        ))}
+      </Grid>
+    </WebsiteHero>
   );
 }

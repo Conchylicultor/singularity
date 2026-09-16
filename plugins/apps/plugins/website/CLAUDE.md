@@ -1,26 +1,24 @@
 # website
 
-The public equin site: a homepage that makes one claim, forks into two questions,
-and offers a way to write.
+The public equin site: a homepage that makes one claim — a personal OS that
+evolves on request — shows it, maps the project in three layers, and offers a
+way to write.
 
 It is not a product page — there is nothing to download and nothing to install.
-One developer's proof of concept, addressed to two readers, so the homepage's job
-is to state the claim, let each reader pick themselves, and then get out of the
-way:
+One developer's open-source proof of concept, so the homepage's job is to state
+the claim, show what it looks like, and then get out of the way:
 
 - [`landing`](plugins/landing/CLAUDE.md) — the homepage's bands: the hero, the
-  fork, the story link, the contact block.
-- [`questions`](plugins/questions/CLAUDE.md) — one page per question
-  (`/website/apps`, `/website/harness`), each with its own section slot the
-  answer gets written into.
-- [`story`](plugins/story/CLAUDE.md) — `/website/story`: where equin came from.
-  Also unwritten, on purpose.
+  screenshot, the layers, the story link, the contact block.
+- [`pages`](plugins/pages/CLAUDE.md) — the inner pages (`/website/apps`,
+  `/website/foundations`, `/website/story`), each with its own section slot the
+  page gets written into. Placeholders for now.
 - [`improve`](plugins/improve/CLAUDE.md) — the header's Improve button: the
   visitor describes a change, watches a scripted replay of what an agent would
   do with it, and can file it as a prefilled GitHub issue. No agent runs here.
 - [`shell`](plugins/shell/CLAUDE.md) — the app entry, the shared site header
-  every page wears, and the band / page / footer chrome (`WebsiteBand`,
-  `WebsiteChrome`).
+  every page wears, and the band / heading / page / footer chrome
+  (`WebsiteBand`, `WebsiteHero`, `WebsiteChrome`).
 
 ## The rules that are easy to break
 
@@ -37,11 +35,11 @@ selected for the website app by one file,
 `config/ui/theme-engine/@app/website/theme.jsonc`. That selection is the whole
 per-app theme: a group equin leaves out paints its schema defaults, never the
 desktop's runtime choice, so there is nothing else to pin. Every component reads
-semantic tokens and type roles; the only bespoke paint on the whole site is the
-hero's wash and headline gradient, and even those are mixed from `--primary` /
-`--chart-1`. Never hardcode a colour in a website component. The one scale the
-token groups cannot carry is the page's vertical rhythm (120px over the
-headline, 96px after the fork — far above the density ramp's 2rem ceiling), which
+semantic tokens and type roles; the bespoke paint (the heading's wash and
+gradient, the drawn desktop screenshot, the cards' lift) is mixed from theme
+tokens too. Never hardcode a colour in a website component. The one scale the
+token groups cannot carry is the page's vertical rhythm (112px over the
+headline, 72px around a section — far above the density ramp's 2rem ceiling), which
 `WebsiteBand` takes as a named `rhythm` declared in the shell's
 `website-band.css`.
 
@@ -60,20 +58,21 @@ everywhere a reader can see it; `Singularity` is only the repository's name.
 
 ## Plugin reference
 
-- Description: Website — the public-facing site of equin: the homepage's claim and its fork into two questions, a page for each answer, the story, and how to get in touch.
+- Description: Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, placeholder pages for the apps vision, the foundations and the story, and how to get in touch.
 - Sub-plugins:
   - **`improve`** — The website's Improve button: the header's call to action, a popover where a visitor describes a change to the page, watches a scripted replay of what equin would do with it, and files it as a prefilled GitHub issue.
-  - **`landing`** — Landing-page bands of the public website: the hero, the fork into the two questions, the story link, and the contact block.
+  - **`landing`** — Landing-page bands of the public website: the hero, the desktop screenshot, the three layers of equin, the story link, and the contact block.
     - Plugins:
-      - **`contact`** — Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
-      - **`fork`** — Landing fork band: the homepage's two questions as two side-by-side click targets, each opening its own answer page.
-      - **`hero`** — Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.
-      - **`story-link`** — Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.
-  - **`questions`** — The two question pages of the public website: what apps evolve into, and what engineering looks like when no human reviews the code.
+      - **`contact`** — Getting in touch: the homepage's closing band — an email for anyone who wants to support the vision, and GitHub issues for bug reports, feature requests and questions. The address itself and the source link live in the shell's site footer.
+      - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).
+      - **`layers`** — Landing layers band: 'What is equin?' as three stacked, clickable layers — the technical foundations, the applications built on them (by category, future ones dimmed), and the vision of one OS-like surface — each opening its own page.
+      - **`screenshot`** — Landing screenshot band: a drawn picture of equin in desktop mode — the agent manager, a Pages document and Sonata playing a song as three windows side by side on one surface — with its caption.
+      - **`story-link`** — Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
+  - **`pages`** — The inner pages of the public website: the vision for applications, the technical foundations, and the story of how equin came to be.
     - Plugins:
-      - **`apps`** — The applications page of the equin website: the /website/apps pane answering 'what will apps evolve into?', its Apps nav link, and the WebsiteApps.Section slot the answer is written into.
-      - **`harness`** — The engineering page of the equin website: the /website/harness pane answering 'what does software engineering look like when no human reviews the code?', its Harness nav link, and the WebsiteHarness.Section slot the answer is written into.
+      - **`apps`** — The applications page of the equin website: the /website/apps pane on the vision for applications (a placeholder heading for now), its Apps nav link, and the WebsiteApps.Section slot the page is written into.
+      - **`foundations`** — The technical foundations page of the equin website: the /website/foundations pane on how equin is built — framework, harness, plugin system (a placeholder heading for now) — and the WebsiteFoundations.Section slot the page is written into.
+      - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
   - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears.
-  - **`story`** — The story page of the equin website: the /website/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into.
 
 <!-- AUTOGENERATED:END -->

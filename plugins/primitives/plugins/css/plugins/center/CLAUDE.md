@@ -64,6 +64,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/studio/contributions`
     - `apps/studio/explorer`
     - `apps/website/improve`
+    - `apps/website/landing/layers`
     - `code-explorer`
     - `config_v2/settings`
     - `conversations/agents`

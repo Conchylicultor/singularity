@@ -1,4 +1,4 @@
-// @hash 637278f988a3
+// @hash 78594e415dac
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,8 +7,9 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.website.landing.contact:contact",
-    "apps.website.landing.fork:fork",
     "apps.website.landing.hero:hero",
+    "apps.website.landing.layers:layers",
+    "apps.website.landing.screenshot:screenshot",
     "apps.website.landing.story-link:story-link"
   ]
 }

@@ -9,7 +9,7 @@
 //   - the call-to-action pill takes its height and inline padding from the
 //     theme's small-control density tokens plus the shape's pill extra, while
 //     the quiet nav links at the same size pad without it;
-//   - a fork card lifts 3px under the pointer;
+//   - a layer card lifts 3px under the pointer;
 //   - the forward arrows (story link, contact call to action) step 4px toward
 //     their destination on hover.
 //
@@ -36,7 +36,7 @@ const out = arg("out", "/tmp/site-chrome");
 const MEASURE_PX = 1040;
 
 /** The header's quiet nav links, in reading order (`header.jsonc`). */
-const NAV_WORDS = ["For users", "For developers", "Story"];
+const NAV_WORDS = ["Apps", "Story"];
 
 /** A CSS colour's alpha, from the `rgb()` / `rgba()` / `color()` a computed style returns. */
 function alphaOf(color: string): number {
@@ -149,10 +149,10 @@ await withBrowser(async (h) => {
   );
 
   // --- nav link hover: colour only -------------------------------------------
-  const forUsers = page.getByRole("button", { name: "For users", exact: true });
-  await forUsers.hover();
+  const appsLink = page.getByRole("button", { name: "Apps", exact: true });
+  await appsLink.hover();
   await page.waitForTimeout(250);
-  const navBg = await computed(forUsers, "background-color");
+  const navBg = await computed(appsLink, "background-color");
   r.ok("a quiet nav link paints no hover box", alphaOf(navBg) === 0, navBg);
 
   // --- the call to action's width comes from the theme -----------------------
@@ -189,7 +189,7 @@ await withBrowser(async (h) => {
   // Same small size, two shapes: the ghost links take the preset's 12px, and the
   // pill adds the shape group's 6px pill extra on each rounded end. So the nav
   // words sit the mock's ~29px apart (12 + 4px gap + 12) while the pill keeps 18.
-  const linkPad = await computed(forUsers, "padding-inline-start");
+  const linkPad = await computed(appsLink, "padding-inline-start");
   r.ok(
     "a quiet nav link's inline padding is 12px",
     linkPad === "12px",
@@ -242,8 +242,9 @@ await withBrowser(async (h) => {
     `widths ${rules.join(", ")}px, measure ${MEASURE_PX}px`,
   );
 
-  // --- fork card lift --------------------------------------------------------
-  const card = page.getByRole("button", { name: /What will apps evolve into/ });
+  // --- layer card lift -------------------------------------------------------
+  const card = page.getByRole("button", { name: /The technical foundations/ });
+  await card.scrollIntoViewIfNeeded();
   await card.hover();
   const lifted = await waitFor(
     async () => translateOf(await computed(card, "transform"))[1],
@@ -251,7 +252,7 @@ await withBrowser(async (h) => {
     { timeoutMs: 2000, intervalMs: 50 },
   );
   r.ok(
-    "a fork card lifts 3px under the pointer",
+    "a layer card lifts 3px under the pointer",
     lifted.ok,
     `translateY ${lifted.value}px`,
   );

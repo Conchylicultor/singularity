@@ -7,31 +7,39 @@ import {
   WebsiteArrow,
   WebsiteBand,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { CONTACT_MAILTO } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { SiGithub } from "react-icons/si";
+import {
+  CONTACT_MAILTO,
+  ISSUES_URL,
+} from "@plugins/apps/plugins/website/plugins/shell/core";
 
 const OFFERS = [
   {
     heading: "Interested in supporting this vision?",
     body: "Investors, collaborators, and anyone who thinks software should evolve itself.",
     action: "Get in touch",
+    href: CONTACT_MAILTO,
+    external: false,
     emphasis: "filled" as const,
   },
   {
-    heading: "Asking for help?",
-    body: "Building an agentic harness, or lost in a large codebase? Every email gets read.",
-    action: "Send an email",
+    heading: "Have feedback?",
+    body: "Send your bug reports, feature requests and questions on GitHub.",
+    action: "Open an issue",
+    href: ISSUES_URL,
+    external: true,
     emphasis: "outline" as const,
   },
 ];
 
 /**
- * The page's closing band: two reasons to write.
+ * The page's closing band: two ways to reach the project, one per reader.
  *
- * Both cards lead to the same address on purpose. The split is not two inboxes,
- * it is two readers — someone who wants to back this, and someone who is stuck on
- * the same problem — and naming which one you are is what makes an email easy to
- * start writing. The address itself, and the source on GitHub, sit in the site
- * footer just below, which every page wears.
+ * Someone who wants to back this writes an email; someone using equin files
+ * their bug, feature request or question on GitHub, where it can be tracked.
+ * Two readers, two different destinations — never the same address twice. The
+ * address itself, and the source on GitHub, sit in the site footer just below,
+ * which every page wears.
  *
  * The filled button is the site's INVERTED fill (the foreground colour with dark
  * type — `secondary` in the site's palette), the other an outline; the brand
@@ -42,8 +50,7 @@ export function ContactSection() {
     <WebsiteBand divider rhythm="closing">
       {/* `fit` collapses the empty trailing track: at the site's measure a 20rem
           minimum packs three, and two cards in a three-track row read as one
-          card missing. Same minimum as the fork above, so the two card rows on
-          the page break at the same width. */}
+          card missing. */}
       <Grid minCellWidth="22rem" mode="fit" gap="lg">
         {OFFERS.map((offer) => (
           <Card key={offer.heading} className="rounded-2xl shadow-none">
@@ -59,8 +66,16 @@ export function ContactSection() {
               <Button
                 variant={offer.emphasis === "filled" ? "secondary" : "outline"}
                 className="font-semibold"
-                render={<a href={CONTACT_MAILTO} />}
+                render={
+                  <a
+                    href={offer.href}
+                    // GitHub opens beside the site; an email stays in place.
+                    target={offer.external ? "_blank" : undefined}
+                    rel={offer.external ? "noreferrer noopener" : undefined}
+                  />
+                }
               >
+                {offer.external && <SiGithub />}
                 {offer.action}
                 {offer.emphasis === "filled" && <WebsiteArrow />}
               </Button>

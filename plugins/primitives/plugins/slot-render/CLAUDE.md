@@ -274,10 +274,10 @@ the outcome too, with no separate code path.
     - `apps/sonata/shell`
     - `apps/studio/explorer`
     - `apps/studio/shell`
-    - `apps/website/questions/apps`
-    - `apps/website/questions/harness`
+    - `apps/website/pages/apps`
+    - `apps/website/pages/foundations`
+    - `apps/website/pages/story`
     - `apps/website/shell`
-    - `apps/website/story`
     - `config_v2/fields`
     - `config_v2/settings`
     - `conversations/agents`

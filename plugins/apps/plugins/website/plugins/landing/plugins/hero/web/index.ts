@@ -4,7 +4,7 @@ import { HeroSection } from "./components/hero-section";
 
 export default {
   description:
-    "Landing hero band: the site's one headline — what equin is — over an ambient accent wash, and the paragraph that sets up the two questions below it.",
+    "Landing hero band: the site's one headline — what equin is — with the lede under it and the three properties the claim rests on (self-evolving, integrated, personal).",
   contributions: [
     Website.Section({ id: "hero", label: "Hero", component: HeroSection }),
   ],

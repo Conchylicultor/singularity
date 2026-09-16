@@ -997,36 +997,40 @@
       "name": "@singularity/plugin-apps-website-landing-contact",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/landing/plugins/fork": {
-      "name": "@singularity/plugin-apps-website-landing-fork",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/website/plugins/landing/plugins/hero": {
       "name": "@singularity/plugin-apps-website-landing-hero",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/layers": {
+      "name": "@singularity/plugin-apps-website-landing-layers",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/screenshot": {
+      "name": "@singularity/plugin-apps-website-landing-screenshot",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/landing/plugins/story-link": {
       "name": "@singularity/plugin-apps-website-landing-story-link",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/questions": {
-      "name": "@singularity/plugin-apps-website-questions",
+    "plugins/apps/plugins/website/plugins/pages": {
+      "name": "@singularity/plugin-apps-website-pages",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/questions/plugins/apps": {
-      "name": "@singularity/plugin-apps-website-questions-apps",
+    "plugins/apps/plugins/website/plugins/pages/plugins/apps": {
+      "name": "@singularity/plugin-apps-website-pages-apps",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/questions/plugins/harness": {
-      "name": "@singularity/plugin-apps-website-questions-harness",
+    "plugins/apps/plugins/website/plugins/pages/plugins/foundations": {
+      "name": "@singularity/plugin-apps-website-pages-foundations",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/story": {
+      "name": "@singularity/plugin-apps-website-pages-story",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/shell": {
       "name": "@singularity/plugin-apps-website-shell",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/website/plugins/story": {
-      "name": "@singularity/plugin-apps-website-story",
       "version": "0.0.1",
     },
     "plugins/auth": {
@@ -6398,21 +6402,23 @@
 
     "@singularity/plugin-apps-website-landing-contact": ["@singularity/plugin-apps-website-landing-contact@workspace:plugins/apps/plugins/website/plugins/landing/plugins/contact"],
 
-    "@singularity/plugin-apps-website-landing-fork": ["@singularity/plugin-apps-website-landing-fork@workspace:plugins/apps/plugins/website/plugins/landing/plugins/fork"],
-
     "@singularity/plugin-apps-website-landing-hero": ["@singularity/plugin-apps-website-landing-hero@workspace:plugins/apps/plugins/website/plugins/landing/plugins/hero"],
+
+    "@singularity/plugin-apps-website-landing-layers": ["@singularity/plugin-apps-website-landing-layers@workspace:plugins/apps/plugins/website/plugins/landing/plugins/layers"],
+
+    "@singularity/plugin-apps-website-landing-screenshot": ["@singularity/plugin-apps-website-landing-screenshot@workspace:plugins/apps/plugins/website/plugins/landing/plugins/screenshot"],
 
     "@singularity/plugin-apps-website-landing-story-link": ["@singularity/plugin-apps-website-landing-story-link@workspace:plugins/apps/plugins/website/plugins/landing/plugins/story-link"],
 
-    "@singularity/plugin-apps-website-questions": ["@singularity/plugin-apps-website-questions@workspace:plugins/apps/plugins/website/plugins/questions"],
+    "@singularity/plugin-apps-website-pages": ["@singularity/plugin-apps-website-pages@workspace:plugins/apps/plugins/website/plugins/pages"],
 
-    "@singularity/plugin-apps-website-questions-apps": ["@singularity/plugin-apps-website-questions-apps@workspace:plugins/apps/plugins/website/plugins/questions/plugins/apps"],
+    "@singularity/plugin-apps-website-pages-apps": ["@singularity/plugin-apps-website-pages-apps@workspace:plugins/apps/plugins/website/plugins/pages/plugins/apps"],
 
-    "@singularity/plugin-apps-website-questions-harness": ["@singularity/plugin-apps-website-questions-harness@workspace:plugins/apps/plugins/website/plugins/questions/plugins/harness"],
+    "@singularity/plugin-apps-website-pages-foundations": ["@singularity/plugin-apps-website-pages-foundations@workspace:plugins/apps/plugins/website/plugins/pages/plugins/foundations"],
+
+    "@singularity/plugin-apps-website-pages-story": ["@singularity/plugin-apps-website-pages-story@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story"],
 
     "@singularity/plugin-apps-website-shell": ["@singularity/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
-
-    "@singularity/plugin-apps-website-story": ["@singularity/plugin-apps-website-story@workspace:plugins/apps/plugins/website/plugins/story"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 

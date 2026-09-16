@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-pages",
+  "description": "The inner pages of the public website: the vision for applications, the technical foundations, and the story of how equin came to be.",
+  "private": true,
+  "version": "0.0.1"
+}

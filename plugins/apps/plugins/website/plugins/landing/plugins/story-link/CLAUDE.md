@@ -1,10 +1,10 @@
 # story-link
 
-One line on the homepage, between the fork and the contact block: the offer of
-[`story`](../../../story/CLAUDE.md) to a reader who wants the context rather than
-either answer.
+One line on the homepage, between the layers and the contact block: the offer of
+[`story`](../../../pages/plugins/story/CLAUDE.md) to a reader who wants the
+context behind the project.
 
-It must stay quieter than the two cards above it — those are the page's real
+It must stay quieter than the layer cards above it — those are the page's real
 choice. A sentence with a link in it, on its own rule, and nothing filled. Keep
 its words and the story page's opening the same.
 
@@ -12,14 +12,14 @@ its words and the story page's opening the same.
 
 ## Plugin reference
 
-- Description: Landing story-link band: the one quiet line between the fork and the contact block, offering the story page to a reader who wants the context rather than either answer.
+- Description: Landing story-link band: the one quiet line between the layers and the contact block, offering the story page to a reader who wants the context behind the project.
 - Web:
   - Contributes: `Website.Section` "Story link" → `StoryLinkSection`
   - Uses:
+    - `apps/website/pages/story.storyPane`
     - `apps/website/shell.Website`
     - `apps/website/shell.WebsiteArrow`
     - `apps/website/shell.WebsiteBand`
-    - `apps/website/story.storyPane`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/pane.useOpenPane`

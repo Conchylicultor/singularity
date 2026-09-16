@@ -245,13 +245,11 @@ fixed raw size escapes per-site via
     - `apps/studio/graph`
     - `apps/website/improve`
     - `apps/website/landing/contact`
-    - `apps/website/landing/fork`
     - `apps/website/landing/hero`
+    - `apps/website/landing/layers`
+    - `apps/website/landing/screenshot`
     - `apps/website/landing/story-link`
-    - `apps/website/questions/apps`
-    - `apps/website/questions/harness`
     - `apps/website/shell`
-    - `apps/website/story`
     - `auth`
     - `auth/apple-signing/setup-wizard`
     - `auth/google-maps/setup-wizard`

@@ -1,4 +1,4 @@
-// @hash 9ca2122347d2
+// @hash fda8bb56495b
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,10 +7,10 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.website.improve:improve",
-    "apps.website.questions.apps:apps",
-    "apps.website.questions.harness:harness",
+    "apps.website.pages.apps:apps",
+    "apps.website.pages.story:story",
     "apps.website.shell:wordmark",
-    "apps.website.story:story",
+    "apps.website.shell:github",
     "primitives.pane:title"
   ]
 }

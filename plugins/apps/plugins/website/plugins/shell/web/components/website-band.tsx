@@ -15,11 +15,18 @@ const MEASURE = "mx-auto w-full max-w-(--website-measure)";
  * measures and why the density ramp is not the source.
  */
 export type WebsiteBandRhythm =
-  "hero" | "continuation" | "interlude" | "closing" | "footer" | "page";
+  | "hero"
+  | "page-hero"
+  | "section"
+  | "interlude"
+  | "closing"
+  | "footer"
+  | "page";
 
 const RHYTHM_CLASS: Record<WebsiteBandRhythm, string> = {
   hero: "website-band-hero",
-  continuation: "website-band-continuation",
+  "page-hero": "website-band-page-hero",
+  section: "website-band-section",
   interlude: "website-band-interlude",
   closing: "website-band-closing",
   footer: "website-band-footer",
@@ -50,7 +57,7 @@ export interface WebsiteBandProps {
  *
  * Every website section is a full-width strip whose content sits on ONE shared
  * reading measure, centred in the viewport — so the wordmark, the hero, the two
- * question cards and the footer all line up on the same left and right edges no
+ * layer cards and the footer all line up on the same left and right edges no
  * matter which plugin drew them. That measure is declared here and nowhere else;
  * a section that sets its own `max-w-*` is a section that will drift.
  *

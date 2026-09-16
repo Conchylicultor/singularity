@@ -547,8 +547,8 @@
       "parent": null
     },
     {
-      "paneId": "website-harness",
-      "segment": "harness",
+      "paneId": "website-foundations",
+      "segment": "foundations",
       "appIndex": false,
       "parent": null
     },

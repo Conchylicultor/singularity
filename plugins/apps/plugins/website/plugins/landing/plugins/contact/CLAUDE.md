@@ -1,15 +1,15 @@
 # contact
 
-The homepage's closing band: two cards, two reasons to write to the person
-behind equin.
+The homepage's closing band: two cards, one per reader — an email for anyone
+who wants to support the vision, and GitHub issues for anyone with a bug
+report, a feature request or a question.
 
 The band is only the cards. The address is a site-level fact declared in the
 shell (`shell/core/site.ts`, beside `SOURCE_URL`), and the email and GitHub links
 live in the shell's footer, which every page wears — do not repeat them here.
 
-The two cards lead to the same inbox. The split is two READERS — someone who wants
-to back this, and someone who is stuck on the same problem — not two inboxes;
-naming which one you are is what makes the email easy to start. Do not add a form:
+The two cards lead to two DIFFERENT places — never the same address twice, which
+reads as redundant. Do not add a form:
 there is no backend behind this site, and a form that goes nowhere is worse than
 an address. (The header's Improve button is not a form either: it posts nothing,
 it hands the visitor's idea off to GitHub as a prefilled issue.)
@@ -18,7 +18,7 @@ it hands the visitor's idea off to GitHub as a prefilled issue.)
 
 ## Plugin reference
 
-- Description: Getting in touch: the homepage's closing band — two reasons to write, two cards leading to the one address the site publishes. The address itself and the source link live in the shell's site footer.
+- Description: Getting in touch: the homepage's closing band — an email for anyone who wants to support the vision, and GitHub issues for bug reports, feature requests and questions. The address itself and the source link live in the shell's site footer.
 - Web:
   - Contributes: `Website.Section` "Contact" → `ContactSection`
   - Uses:
