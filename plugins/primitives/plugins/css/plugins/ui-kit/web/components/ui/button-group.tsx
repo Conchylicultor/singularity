@@ -30,6 +30,14 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
  * it. That is the box a slot contribution rendered with `renderIsolated` sits
  * in (it carries the contribution's lineage attributes and generates no box),
  * so a group can take segments other plugins contribute.
+ *
+ * "First" and "last" never count base-ui's focus guards. While a popover or
+ * menu is open, its trigger renders an invisible `<span data-base-ui-focus-guard>`
+ * on each side of the trigger button, inside this group. Plain `:first-child` /
+ * `:last-child` would then pick the guard, so an open trigger at either end
+ * lost its rounded outer corners and shifted 1px. Every selector below uses
+ * `:nth-child(1 of :not([data-base-ui-focus-guard]))` (and its `last` twin),
+ * which counts only the real segments.
  */
 function ButtonGroup({
   className,
@@ -42,14 +50,15 @@ function ButtonGroup({
       data-slot="button-group"
       className={cn(
         "inline-flex items-stretch",
-        // Segment radii: first child keeps its left corners, last child keeps
-        // its right corners, every inner corner is squared.
-        "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:last-child)]:rounded-r-none",
-        "[&>.contents:not(:first-child)>*]:rounded-l-none [&>.contents:not(:last-child)>*]:rounded-r-none",
+        // Segment radii: the first segment keeps its left corners, the last
+        // keeps its right corners, every inner corner is squared. Focus guards
+        // are not segments (see the doc comment).
+        "[&>:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))]:rounded-l-none [&>:not(:nth-last-child(1_of_:not([data-base-ui-focus-guard])))]:rounded-r-none",
+        "[&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-l-none [&>.contents:not(:nth-last-child(1_of_:not([data-base-ui-focus-guard])))>*]:rounded-r-none",
         shape === "pill" &&
-          "[&>*:first-child]:rounded-l-full [&>*:last-child]:rounded-r-full [&>.contents:first-child>*]:rounded-l-full [&>.contents:last-child>*]:rounded-r-full",
+          "[&>:nth-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-l-full [&>:nth-last-child(1_of_:not([data-base-ui-focus-guard]))]:rounded-r-full [&>.contents:nth-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-l-full [&>.contents:nth-last-child(1_of_:not([data-base-ui-focus-guard]))>*]:rounded-r-full",
         // Collapse the doubled border between adjacent segments into one seam.
-        "[&>*:not(:first-child)]:-ml-px [&>.contents:not(:first-child)>*]:-ml-px",
+        "[&>:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))]:-ml-px [&>.contents:not(:nth-child(1_of_:not([data-base-ui-focus-guard])))>*]:-ml-px",
         className,
       )}
       {...props}
