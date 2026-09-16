@@ -140,6 +140,7 @@ Never hand-edit the generated SQL to interleave the DML: a schema migration's SQ
 - Server:
   - Uses:
     - `database.db`
+    - `database.DbExecutor`
     - `infra/entities.DefaultedKeys`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`

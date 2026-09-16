@@ -6,7 +6,7 @@ import {
   type PgTable,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import type { FieldsRecord } from "@plugins/fields/core";
 import {
   defaultNow,
@@ -87,14 +87,22 @@ export interface EntityExtension<
   // The parent key's name: the key column's JS property and the wire field.
   readonly key: K;
   // The full row, server-only columns included.
-  get(id: string): Promise<ExtensionTable<F, D>["$inferSelect"] | undefined>;
+  //
+  // Every accessor takes an optional executor (the pool by default): a caller
+  // writing the parent row and its extension in ONE transaction passes its `tx`,
+  // since the pool cannot see a parent row that transaction has not committed.
+  get(
+    id: string,
+    exec?: DbExecutor,
+  ): Promise<ExtensionTable<F, D>["$inferSelect"] | undefined>;
   upsert(
     id: string,
     patch: Partial<
       Omit<ExtensionTable<F, D>["$inferInsert"], K | ExtensionTimestamp>
     >,
+    exec?: DbExecutor,
   ): Promise<ExtensionTable<F, D>["$inferSelect"]>;
-  delete(id: string): Promise<void>;
+  delete(id: string, exec?: DbExecutor): Promise<void>;
 }
 
 // The handle type a given shape + meta produce.
@@ -179,17 +187,21 @@ export function defineExtension<
     // construction.
     schema: shape.schema,
     key,
-    async get(id: string) {
-      const rows = await db
+    async get(id: string, exec: DbExecutor = db) {
+      const rows = await exec
         .select()
         .from(table)
         .where(eq(keyColumn, id))
         .limit(1);
       return rows[0];
     },
-    async upsert(id: string, patch: Record<string, unknown>) {
+    async upsert(
+      id: string,
+      patch: Record<string, unknown>,
+      exec: DbExecutor = db,
+    ) {
       const now = new Date();
-      const rows = await db
+      const rows = await exec
         .insert(table)
         .values({ ...patch, [key]: id, updatedAt: now })
         .onConflictDoUpdate({
@@ -199,8 +211,8 @@ export function defineExtension<
         .returning();
       return rows[0];
     },
-    async delete(id: string): Promise<void> {
-      await db.delete(table).where(eq(keyColumn, id));
+    async delete(id: string, exec: DbExecutor = db): Promise<void> {
+      await exec.delete(table).where(eq(keyColumn, id));
     },
   }) as unknown as ExtensionOf<Sh, M>;
 }

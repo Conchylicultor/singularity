@@ -23,6 +23,7 @@
     - `trigger` "tasks.auto-start-cancel-on-drop"
   - Uses:
     - `database.db`
+    - `database.DbExecutor`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`

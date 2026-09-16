@@ -20,6 +20,7 @@ import {
   closeConversation,
 } from "../core/endpoints";
 import { startPoller } from "./internal/poller";
+import { registerOrphanedAttemptReport } from "./internal/orphaned-attempt-report";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import {
   maybeLaunchTaskJob,
@@ -109,6 +110,7 @@ export default {
     userTurnSent,
   ],
   onReady: () => {
+    registerOrphanedAttemptReport();
     startPoller();
     startTurnEmitter();
   },

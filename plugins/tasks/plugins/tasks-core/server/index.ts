@@ -204,6 +204,15 @@ export type { ConversationStatusChangedPayload } from "./internal/tables-events"
 // `withTaskStatusChange`, which derives the affected set from the graph and
 // brackets the write itself.
 export { withTaskStatusBatch, runStatusBatchOn } from "./internal/status-batch";
+
+// Announces an attempt the boot sweep found with no conversation — a broken
+// launch invariant. A higher plugin registers the mapping to a report.
+export { orphanedAttemptSink } from "./internal/sweep-orphaned-attempts";
+export type { OrphanedAttempt } from "./internal/sweep-orphaned-attempts";
+
+// Test support: this plugin's derived views + rollups, installed onto a
+// migrations-only throwaway (`createTestDb`) by a suite outside this plugin.
+export { installTaskDerivedSchema } from "./internal/install-derived-schema";
 export type { DbExecutor } from "./internal/status-batch";
 
 export {

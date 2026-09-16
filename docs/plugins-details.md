@@ -7747,7 +7747,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.conversationAttachments`
       - `tasks/tasks-core.createAttempt`
       - `tasks/tasks-core.createTask`
-      - `tasks/tasks-core.deleteAttempt`
+      - `tasks/tasks-core.DbExecutor`
       - `tasks/tasks-core.deleteConversationRow`
       - `tasks/tasks-core.getAttempt`
       - `tasks/tasks-core.getConversation`
@@ -7763,11 +7763,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `tasks/tasks-core.listGoneConversations`
       - `tasks/tasks-core.markConversationClosed`
       - `tasks/tasks-core.markConversationGone`
+      - `tasks/tasks-core.orphanedAttemptSink`
       - `tasks/tasks-core.setConversationHibernated`
       - `tasks/tasks-core.taskStatusChanged`
       - `tasks/tasks-core.updateConversation`
       - `tasks/tasks-core.updateTask`
       - `tasks/tasks-core.updateTaskTitle`
+      - `tasks/tasks-core.withTaskStatusBatch`
     - DB schema:
       - `plugins/conversations/server/internal/tables-created-event.ts`
       - `plugins/conversations/server/internal/tables-turn-completed-event.ts`
@@ -11132,6 +11134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `stats/cost`
       - `tasks`
       - `tasks/auto-start`
+      - `tasks/task-category`
       - `tasks/task-effort`
       - `tasks/task-preprompt`
       - `tasks/tasks-core`
@@ -16749,6 +16752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database.DbExecutor`
           - `infra/entities.DefaultedKeys`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
@@ -31152,6 +31156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `trigger` "tasks.auto-start-cancel-on-drop"
         - Uses:
           - `database.db`
+          - `database.DbExecutor`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
@@ -31267,6 +31272,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes: `resource.declare` "task-categories"
         - Uses:
+          - `database.db`
+          - `database.DbExecutor`
           - `infra/endpoints.implement`
           - `infra/entity-extensions.defineExtension`
           - `infra/query-resource.queryResource`
@@ -31789,6 +31796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/rank.RankExecutor`
           - `primitives/rank.withRank`
         - DB schema:
+          - `plugins/tasks/plugins/tasks-core/server/internal/install-derived-schema.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`
@@ -31810,6 +31818,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DbExecutor`
           - `InsertConversationInput`
           - `InsertPushInput`
+          - `OrphanedAttempt`
           - `Push`
           - `PushLandedPayload`
           - `Task`
@@ -31859,6 +31868,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `insertConversation`
           - `insertConversationOnConflictDoNothing`
           - `insertPush`
+          - `installTaskDerivedSchema`
           - `isDescendant`
           - `listActiveConversations`
           - `listAttempts`
@@ -31878,6 +31888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `listTasks`
           - `markConversationClosed`
           - `markConversationGone`
+          - `orphanedAttemptSink`
           - `pushesByAttemptResource`
           - `pushesResource`
           - `pushLanded`

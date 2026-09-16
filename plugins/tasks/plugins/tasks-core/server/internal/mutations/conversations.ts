@@ -50,8 +50,11 @@ async function conversationContext(
   };
 }
 
-async function taskIdForAttempt(attemptId: string): Promise<string | null> {
-  const [row] = await db
+async function taskIdForAttempt(
+  attemptId: string,
+  exec: DbExecutor = db,
+): Promise<string | null> {
+  const [row] = await exec
     .select({ taskId: _attempts.taskId })
     .from(_attempts)
     .where(eq(_attempts.id, attemptId))
@@ -86,13 +89,20 @@ export async function insertConversationRow(
   return row;
 }
 
-export async function insertConversation(input: InsertConversationInput) {
-  const taskId = await taskIdForAttempt(input.attemptId);
+// `exec`: pass the transaction when the conversation must commit together with
+// its attempt (see conversations' `commitConversation`) — the attempt lookup
+// below then reads on that transaction, which is the only connection that can
+// see an attempt it has not committed yet.
+export async function insertConversation(
+  input: InsertConversationInput,
+  exec: DbExecutor = db,
+) {
+  const taskId = await taskIdForAttempt(input.attemptId, exec);
   // An orphan conversation (its attempt/task already deleted during teardown)
   // seeds the scope with NOTHING: an empty seed set costs no query and emits
   // nothing, which is the honest reading of "no task's status can have moved".
-  await withTaskStatusChange(taskId ?? [], db, async () => {
-    await insertConversationRow(db, {
+  await withTaskStatusChange(taskId ?? [], exec, async () => {
+    await insertConversationRow(exec, {
       id: input.id,
       attemptId: input.attemptId,
       runtime: input.runtime,
@@ -103,7 +113,7 @@ export async function insertConversation(input: InsertConversationInput) {
       title: input.title ?? null,
     });
   });
-  const [row] = await db
+  const [row] = await exec
     .select()
     .from(conversations)
     .where(eq(conversations.id, input.id))

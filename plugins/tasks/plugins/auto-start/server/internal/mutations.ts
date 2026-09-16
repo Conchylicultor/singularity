@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -44,8 +44,16 @@ export async function setTaskAutoStart(
 // Atomic CAS: delete the ext-table row and return true iff this caller
 // won the race. Collapses at-least-once trigger delivery into exactly-one
 // launch in maybeLaunchTaskJob.
-export async function claimAutoStart(id: string): Promise<boolean> {
-  const [row] = await db
+//
+// Run it on the launch's transaction (`exec`) so the claim and the launch
+// commit together: the DELETE row-locks the marker, so a concurrent claimer
+// blocks until this transaction ends — then finds the row gone (we committed)
+// or claims it itself (we rolled back, and the marker came back with it).
+export async function claimAutoStart(
+  id: string,
+  exec: DbExecutor = db,
+): Promise<boolean> {
+  const [row] = await exec
     .delete(_tasksAutoStartExt)
     .where(eq(_tasksAutoStartExt.taskId, id))
     .returning({ taskId: _tasksAutoStartExt.taskId });

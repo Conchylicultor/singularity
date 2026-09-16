@@ -68,7 +68,7 @@
     - `tasks/tasks-core.conversationAttachments`
     - `tasks/tasks-core.createAttempt`
     - `tasks/tasks-core.createTask`
-    - `tasks/tasks-core.deleteAttempt`
+    - `tasks/tasks-core.DbExecutor`
     - `tasks/tasks-core.deleteConversationRow`
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.getConversation`
@@ -84,11 +84,13 @@
     - `tasks/tasks-core.listGoneConversations`
     - `tasks/tasks-core.markConversationClosed`
     - `tasks/tasks-core.markConversationGone`
+    - `tasks/tasks-core.orphanedAttemptSink`
     - `tasks/tasks-core.setConversationHibernated`
     - `tasks/tasks-core.taskStatusChanged`
     - `tasks/tasks-core.updateConversation`
     - `tasks/tasks-core.updateTask`
     - `tasks/tasks-core.updateTaskTitle`
+    - `tasks/tasks-core.withTaskStatusBatch`
   - DB schema:
     - `plugins/conversations/server/internal/tables-created-event.ts`
     - `plugins/conversations/server/internal/tables-turn-completed-event.ts`

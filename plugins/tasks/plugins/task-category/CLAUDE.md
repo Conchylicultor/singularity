@@ -56,6 +56,8 @@ Consumers read only the generic aggregate:
 - Server:
   - Contributes: `resource.declare` "task-categories"
   - Uses:
+    - `database.db`
+    - `database.DbExecutor`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `infra/query-resource.queryResource`

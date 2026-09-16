@@ -1,11 +1,14 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import {
   getTask,
   hasBlockingDep,
   listAttemptsForTask,
+  withTaskStatusBatch,
+  type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   buildTaskPrompt,
@@ -15,16 +18,60 @@ import {
   claimAutoStart,
   getTaskAutoStart,
 } from "@plugins/tasks/plugins/auto-start/server";
-import { createConversation } from "./lifecycle";
+import {
+  commitConversation,
+  finishConversation,
+  prepareConversation,
+  type PreparedConversation,
+} from "./lifecycle";
+
+// The transactional heart of an auto-launch: claim the marker and commit the
+// launch on ONE transaction. Returns whether this call launched.
+//
+// THE RULE: the marker and the launch commit together. A throw, a crash or a
+// killed connection anywhere in here rolls the whole thing back — the marker is
+// still there, and there is no attempt, no conversation and no fork/spawn job —
+// so the job's own retry, or the boot reconcile, launches the task again.
+// Nothing is ever left stranded with its marker consumed and no launch.
+//
+// And never twice: the claim is a `DELETE … RETURNING` on the marker row, which
+// row-locks it. A concurrent runner's claim blocks on that lock until this
+// transaction ends, then finds the row gone (we committed: it returns false) or
+// claims it itself (we rolled back). Exactly one launch commits.
+//
+// `tx` must be a status batch's executor (`withTaskStatusBatch` /
+// `runStatusBatchOn`) — the launch's status-changing writes assert it.
+export async function launchArmedTask(
+  tx: DbExecutor,
+  taskId: string,
+  prepared: PreparedConversation,
+): Promise<boolean> {
+  // Backstop for a launch that stalls between statements (the 2026-09-15
+  // incident hung mid-launch for 2.5 hours): Postgres kills an idle-in-
+  // transaction session after 30s, the transaction rolls back, and the marker
+  // comes back on its own — no restart needed. The deadline audit still files
+  // the hang as a job-deadline report, so it stays visible.
+  await tx.execute(sql`SET LOCAL idle_in_transaction_session_timeout = '30s'`);
+
+  // Another runner claimed it (and committed), or it was cancelled.
+  if (!(await claimAutoStart(taskId, tx))) return false;
+
+  // A manual start raced in before our claim. Returning commits the consumed
+  // marker, as before: the task already has its launch, just not ours.
+  if ((await listAttemptsForTask(taskId, tx)).length > 0) return false;
+
+  await commitConversation(tx, prepared);
+  return true;
+}
 
 // Job that launches a queued task once all its dependencies are non-blocking.
 // Invoked by maybeLaunchOnStatusJob (static trigger on taskStatusChanged), by
 // armTaskAutoStart when a task is armed, and by the boot reconcile warm-up.
 //
 // Concurrency: triggers can fire concurrently (multiple deps flipping at
-// once, or retried jobs). The atomic claimAutoStart() acts as a CAS on
-// auto_start_at — exactly one runner wins and proceeds to launch; all
-// others see the marker already cleared and exit.
+// once, or retried jobs). `launchArmedTask` claims the marker and launches in
+// one transaction, so exactly one runner commits a launch; all others see the
+// marker already cleared and exit.
 //
 // Dedup on taskId: since the status event became closure-correct, one settle
 // on a task with many dependents can wake this job for the same task several
@@ -34,10 +81,10 @@ import { createConversation } from "./lifecycle";
 // row does the same single check the N rows would have done.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
-  // instant: indexed reads plus the atomic claim. `createConversation` on this
-  // path only writes rows and ENQUEUES `database.fork` + `conversations.spawn`
-  // (no attemptId ⇒ never the synchronous reuse branch), so the agent launch
-  // itself is those jobs' hold, not this one's.
+  // instant: indexed reads, then one transaction of indexed writes that
+  // ENQUEUES `database.fork` + `conversations.spawn` (no attemptId ⇒ never the
+  // synchronous reuse branch), so the agent launch itself is those jobs' hold,
+  // not this one's.
   hold: "instant",
   input: z.object({
     taskId: z.string(),
@@ -73,26 +120,24 @@ export const maybeLaunchTaskJob = defineJob({
     // Some other dep is still blocking; another trigger will fire later.
     if (await hasBlockingDep(taskId, db)) return;
 
-    // Atomic claim: only one concurrent runner gets `true`. Every other
-    // enqueue (duplicate trigger, retry, racing dep flip) sees the marker
-    // already cleared and bails here without launching.
-    if (!(await claimAutoStart(taskId))) return;
-
-    // Manual start could have raced in before our claim; if so, exit.
-    // Marker is already cleared by the claim, so no extra cleanup needed.
-    const attempts = await listAttemptsForTask(taskId);
-    if (attempts.length > 0) return;
-
-    // Marker is cleared; if createConversation throws, retry is harmless
-    // (next run sees no ext row and exits). A stuck-on-failure task
-    // is better than a runaway spawn.
-    const model = ext.autoStartModel;
-    await createConversation({
+    // Reads first, outside any transaction: nothing slow runs while the
+    // marker's row lock is held. A duplicate runner prepares too and then
+    // loses the claim — it has written nothing, so that costs nothing.
+    const prepared = await prepareConversation({
       taskId,
-      model,
+      model: ext.autoStartModel,
       prompt: buildTaskPrompt(t),
       spawnedBy: cause,
     });
+
+    // The marker and the launch commit together (see `launchArmedTask`). A
+    // throw rolls back with the task still armed and graphile retries; if every
+    // attempt fails the row dead-letters (reported by queue health) and the
+    // next boot's reconcile tries again.
+    const launched = await withTaskStatusBatch((tx) =>
+      launchArmedTask(tx, taskId, prepared),
+    );
+    if (launched) await finishConversation(prepared);
   },
 });
 

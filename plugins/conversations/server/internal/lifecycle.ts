@@ -3,7 +3,6 @@ import { existsSync } from "node:fs";
 import {
   createTask,
   createAttempt,
-  deleteAttempt,
   getAttempt,
   insertConversation,
   getConversation,
@@ -11,7 +10,10 @@ import {
   updateConversation,
   updateTask,
   setConversationHibernated,
+  withTaskStatusBatch,
+  type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { Runtime } from "./runtime";
 import {
   DEFAULT_MODEL,
@@ -56,22 +58,60 @@ async function resolveTaskEffort(
   return (await getTaskEffort(taskId))?.level;
 }
 
-export async function createConversation(
-  opts: {
-    runtimeId?: string;
-    taskId?: string;
-    attemptId?: string;
-    prompt?: string;
-    model?: ConversationModel;
-    spawnedBy?: string;
-    kind?: ConversationKind;
-    forkFromConversationId?: string;
-    prepromptId?: string;
-    effort?: EffortLevel;
-  } = {},
-): Promise<Conversation> {
+export interface CreateConversationOpts {
+  runtimeId?: string;
+  taskId?: string;
+  attemptId?: string;
+  prompt?: string;
+  model?: ConversationModel;
+  spawnedBy?: string;
+  kind?: ConversationKind;
+  forkFromConversationId?: string;
+  prepromptId?: string;
+  effort?: EffortLevel;
+}
+
+// The `runtime.create` options a launch spawns with — the spawn job's `create`
+// input, and the inline reuse-branch spawn's options.
+interface SpawnCreate {
+  prompt?: string;
+  model: ConversationModel;
+  effort?: EffortLevel;
+  resumeSessionId?: string;
+  forkSession: boolean;
+}
+
+// Everything a conversation launch needs to know, resolved BEFORE any write.
+// Produced by `prepareConversation`, consumed by `commitConversation` (the
+// writes, on one transaction) and `finishConversation` (what runs after commit).
+export interface PreparedConversation {
+  runtimeId: string;
+  conversationId: string;
+  model: ConversationModel;
+  spawnedBy: string;
+  kind: ConversationKind;
+  // The caller's raw prompt, for the `conversationCreated` payload.
+  rawPrompt: string | undefined;
+  prepromptId: string | undefined;
+  worktreePath: string;
+  create: SpawnCreate;
+  target:
+    // Reuse an existing attempt's worktree (fork / +Sonnet / fork-session).
+    | { kind: "reuse"; attemptId: string }
+    // Mint a new attempt (and a new task when `taskId` is absent).
+    | { kind: "new"; attemptId: string; taskId: string | undefined };
+}
+
+// Phase 1 of a launch: READS ONLY. Everything slow or off-DB (fork-source
+// lookup, the worktree root, attachment resolution, preprompt/effort lookups)
+// happens here, before any transaction is open — so a hang here holds no lock
+// and has written nothing.
+export async function prepareConversation(
+  opts: CreateConversationOpts = {},
+): Promise<PreparedConversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
-  const runtime = Runtime.get(runtimeId);
+  // Resolve now so an unknown runtime throws before anything is written.
+  Runtime.get(runtimeId);
 
   // When forking, inherit the source's attempt (same worktree) and claude
   // session id; let the caller still override `model` so the +Sonnet/+Opus
@@ -111,12 +151,12 @@ export async function createConversation(
   const spawnedBy = opts.spawnedBy ?? runtimeNamespace();
 
   let worktreePath: string;
-  let conversationId: string;
-  let createdAttemptId: string | undefined;
+  let target: PreparedConversation["target"];
   // The task this conversation belongs to, used to resolve a per-task preprompt
   // (baked into the first user turn as a <special_instructions> block). Derived
   // from the existing attempt when reusing a worktree, otherwise the task we
-  // launch under.
+  // launch under — undefined when the commit will create the task, which then
+  // has no preprompt or effort of its own yet.
   let effectiveTaskId: string | undefined;
 
   if (attemptId) {
@@ -124,79 +164,24 @@ export async function createConversation(
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
     effectiveTaskId = attempt.taskId;
-    conversationId = newConversationId();
+    target = { kind: "reuse", attemptId };
   } else {
-    let taskId = opts.taskId;
-    if (!taskId) {
-      const task = await createTask({
-        title: "Untitled",
-        author: spawnedBy,
-      });
-      await setTaskCategory(
-        task.id,
-        opts.kind === "system" ? "system" : "conversations",
-      );
-      taskId = task.id;
-    }
-    effectiveTaskId = taskId;
-
-    createdAttemptId = newAttemptId();
-    const thisAttemptId = createdAttemptId;
-    attemptId = thisAttemptId;
+    effectiveTaskId = opts.taskId;
+    const newId = newAttemptId();
     // Derived purely from the id, so the path is known before the worktree dir
     // exists. `setupWorktree` (the multi-second `git worktree add` checkout) is
-    // deferred to the durable `conversations.spawn` job below — off the
-    // interactive response — and `createAttempt` inserts a row that carries the
+    // deferred to the durable `conversations.spawn` job — off the interactive
+    // response — and `createAttempt` inserts a row that carries the
     // not-yet-existent path (it is never existence-checked at write time).
-    worktreePath = await worktreePathFor(thisAttemptId);
-    void runTracked("conversations:fork-config", () =>
-      forkConfig(thisAttemptId),
-    );
-    await createAttempt({ id: thisAttemptId, taskId, worktreePath });
-    // The fork is a detached supervised job: it runs in its own process, so a
-    // backend restart mid-fork does not interrupt it (the workflow re-attaches
-    // to the running child). Enqueued after createAttempt so the attempt row
-    // exists before the job can run. A failed fork retries, then dead-letters
-    // (Debug → Queue) with a deduped fork-error notification; its output is on
-    // the `database-fork` log channel (`logs/database-fork.jsonl`).
-    await databaseForkJob.enqueue({
-      source: "singularity",
-      target: thisAttemptId,
-    });
-    conversationId = newConversationId();
+    worktreePath = await worktreePathFor(newId);
+    target = { kind: "new", attemptId: newId, taskId: opts.taskId };
   }
 
   // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
   // so every entry point (HTTP create, agent launch, auto-start) gets it.
-  // Wrapped in try/catch: if anything throws before insertConversation, the newly
-  // created attempt has no conversation and must be cleaned up — otherwise the task
-  // shows in_progress forever. The error is re-thrown so the caller still sees it.
-  let resolvedPrompt: string | undefined;
-  try {
-    resolvedPrompt = opts.prompt
-      ? (await resolveAttachmentRefs(opts.prompt)).text
-      : undefined;
-
-    await insertConversation({
-      id: conversationId,
-      attemptId,
-      runtime: runtimeId,
-      model,
-      spawnedBy,
-      kind: opts.kind ?? "user",
-    });
-  } catch (err) {
-    if (createdAttemptId) {
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      await deleteAttempt(createdAttemptId).catch((e) => {
-        console.error(
-          `[conversations] failed to delete orphaned attempt ${createdAttemptId} during cleanup`,
-          e,
-        );
-      });
-    }
-    throw err;
-  }
+  let resolvedPrompt = opts.prompt
+    ? (await resolveAttachmentRefs(opts.prompt)).text
+    : undefined;
 
   // Resolve the preprompt (config list-item id → text). An explicit
   // opts.prepromptId (ad-hoc launch input) takes precedence over the task
@@ -227,69 +212,174 @@ export async function createConversation(
   // mutation (unlike preprompt, ultracode rides --settings, not the transcript).
   const effort = opts.effort ?? (await resolveTaskEffort(effectiveTaskId));
 
-  const create = {
-    prompt: resolvedPrompt,
+  return {
+    runtimeId,
+    conversationId: newConversationId(),
     model,
-    effort,
-    resumeSessionId,
-    forkSession: !!opts.forkFromConversationId,
+    spawnedBy,
+    kind: opts.kind ?? "user",
+    rawPrompt: opts.prompt,
+    prepromptId,
+    worktreePath,
+    target,
+    create: {
+      prompt: resolvedPrompt,
+      model,
+      effort,
+      resumeSessionId,
+      forkSession: !!opts.forkFromConversationId,
+    },
   };
+}
 
-  const conv = (await getConversation(conversationId)) as Conversation;
+// Phase 2 of a launch: WRITES ONLY, every one on `tx`. The task (when there is
+// none), the attempt, the durable fork + spawn jobs, the conversation row and
+// its `conversationCreated` emit commit together or not at all — a throw, a
+// crash or a killed connection anywhere in here leaves no attempt without a
+// conversation (no phantom "In progress") and no job for rows that do not
+// exist. Run it inside `withTaskStatusBatch` (or `runStatusBatchOn`): the
+// status-changing writes assert they are on the batch's tx.
+export async function commitConversation(
+  tx: DbExecutor,
+  p: PreparedConversation,
+): Promise<Conversation> {
+  // `EmitTx`/`EnqueueTx` name the NodePgDatabase facade; a PgTransaction is
+  // structurally that at runtime (same narrow cast as tasks-core's
+  // `withTaskStatusChange`).
+  const queueTx = tx as EmitTx;
+
+  if (p.target.kind === "new") {
+    const { attemptId } = p.target;
+    let taskId = p.target.taskId;
+    if (!taskId) {
+      const task = await createTask(
+        { title: "Untitled", author: p.spawnedBy },
+        tx,
+      );
+      await setTaskCategory(
+        task.id,
+        p.kind === "system" ? "system" : "conversations",
+        tx,
+      );
+      taskId = task.id;
+    }
+    await createAttempt(
+      { id: attemptId, taskId, worktreePath: p.worktreePath },
+      tx,
+    );
+    // The fork is a detached supervised job: it runs in its own process, so a
+    // backend restart mid-fork does not interrupt it (the workflow re-attaches
+    // to the running child). The enqueue is a row on this transaction, so it
+    // exists iff the attempt does. A failed fork retries, then dead-letters
+    // (Debug → Queue) with a deduped fork-error notification; its output is on
+    // the `database-fork` log channel (`logs/database-fork.jsonl`).
+    await databaseForkJob.enqueue(
+      { source: "singularity", target: attemptId },
+      { tx: queueTx },
+    );
+  }
+
+  const conv = await insertConversation(
+    {
+      id: p.conversationId,
+      attemptId: p.target.attemptId,
+      runtime: p.runtimeId,
+      model: p.model,
+      spawnedBy: p.spawnedBy,
+      kind: p.kind,
+    },
+    tx,
+  );
 
   // Emit right after insert — the subscribers (title-gen, queue-rank, preprompt
   // snapshot) need only the row, never the live session — so it fires whether the
   // spawn happens inline (reuse branch) or in the background job (new branch).
-  await conversationCreated.emit({
-    conversationId: conv.id,
-    taskId: conv.taskId,
-    model: conv.model,
-    spawnedBy: conv.spawnedBy!,
-    createdAt: conv.createdAt.toISOString(),
-    prompt: opts.prompt?.trim() || undefined,
-    kind: conv.kind,
-    prepromptId,
-  });
+  // On `tx`, so no subscriber job exists for a conversation that rolled back.
+  await conversationCreated.emit(
+    {
+      conversationId: conv.id,
+      taskId: conv.taskId,
+      model: conv.model,
+      spawnedBy: conv.spawnedBy!,
+      createdAt: conv.createdAt.toISOString(),
+      prompt: p.rawPrompt?.trim() || undefined,
+      kind: conv.kind,
+      prepromptId: p.prepromptId,
+    },
+    { tx: queueTx },
+  );
 
-  if (createdAttemptId) {
+  if (p.target.kind === "new") {
     // New-worktree branch: background the multi-second `git worktree add` +
     // `runtime.create` in a durable graphile job so the interactive Launch
-    // response returns immediately with a `starting` row. Enqueued in parallel
-    // with the DB fork (they have no ordering dependency). On failure the job
-    // records a deduped notification and retries; the poller owns the eventual
+    // response returns immediately with a `starting` row. It has no ordering
+    // dependency on the DB fork. On failure the job records a deduped
+    // notification and retries; the poller owns the eventual
     // `starting → gone` transition.
-    await spawnConversationJob.enqueue({
-      conversationId,
-      attemptId: attemptId!,
-      worktreePath,
-      runtimeId,
-      needsWorktreeSetup: true,
-      create,
-    });
-  } else {
-    // Reuse-attempt branch (fork / +Sonnet / fork-session): the worktree already
-    // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
-    // synchronous — no job-pickup latency for the interactive fork buttons.
-    try {
-      await runtime.create(conversationId, worktreePath, create);
-    } catch (err) {
-      // Without this, the row stays at "starting" forever — the poller skips
-      // starting rows, and the UI just shows "Starting…" with a terminal pane
-      // that prints "can't find session" because tmux never created one.
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      await updateConversation(conversationId, {
-        status: "gone",
-        endedAt: new Date(),
-      }).catch((e) => {
-        console.error(
-          `[conversations] failed to mark ${conversationId} gone after runtime.create error`,
-          e,
-        );
-      });
-      throw err;
-    }
+    await spawnConversationJob.enqueue(
+      {
+        conversationId: p.conversationId,
+        attemptId: p.target.attemptId,
+        worktreePath: p.worktreePath,
+        runtimeId: p.runtimeId,
+        needsWorktreeSetup: true,
+        create: p.create,
+      },
+      { tx: queueTx },
+    );
   }
 
+  return conv;
+}
+
+// Phase 3 of a launch: what runs only once the commit has landed.
+export async function finishConversation(
+  p: PreparedConversation,
+): Promise<void> {
+  if (p.target.kind === "new") {
+    // Copy main's config dir for the new worktree. Fire-and-forget, as before,
+    // but only after commit: a rolled-back launch leaves no config dir behind.
+    const { attemptId } = p.target;
+    void runTracked("conversations:fork-config", () => forkConfig(attemptId));
+    return;
+  }
+
+  // Reuse-attempt branch (fork / +Sonnet / fork-session): the worktree already
+  // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
+  // synchronous — no job-pickup latency for the interactive fork buttons.
+  try {
+    await Runtime.get(p.runtimeId).create(
+      p.conversationId,
+      p.worktreePath,
+      p.create,
+    );
+  } catch (err) {
+    // Without this, the row stays at "starting" forever — the poller skips
+    // starting rows, and the UI just shows "Starting…" with a terminal pane
+    // that prints "can't find session" because tmux never created one.
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    await updateConversation(p.conversationId, {
+      status: "gone",
+      endedAt: new Date(),
+    }).catch((e) => {
+      console.error(
+        `[conversations] failed to mark ${p.conversationId} gone after runtime.create error`,
+        e,
+      );
+    });
+    throw err;
+  }
+}
+
+// prepare (reads) → commit (one transaction) → finish (post-commit effects).
+export async function createConversation(
+  opts: CreateConversationOpts = {},
+): Promise<Conversation> {
+  const prepared = await prepareConversation(opts);
+  const conv = await withTaskStatusBatch((tx) =>
+    commitConversation(tx, prepared),
+  );
+  await finishConversation(prepared);
   return conv;
 }
 
