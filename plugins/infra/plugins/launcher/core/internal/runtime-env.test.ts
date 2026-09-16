@@ -190,3 +190,19 @@ describe("pickRuntimeEnv normalizes PATH", () => {
     expect(picked.HOME).toBe("/fixture/home");
   });
 });
+
+describe("pickHostEnv normalizes PATH", () => {
+  test("a tool the runtime runs never inherits a version-pinned tool directory", () => {
+    const mise = "/fixture/home/.local/share/mise";
+    const picked = pickHostEnv({
+      HOME: "/fixture/home",
+      PATH: `${mise}/installs/bun/1.3.13/bin:${mise}/shims:/fixture/bin`,
+    });
+    expect(picked.PATH).toBe(`${mise}/shims:/fixture/bin`);
+  });
+
+  test("an already-normalized PATH passes through unchanged", () => {
+    const path = "/fixture/home/.local/share/mise/shims:/fixture/bin";
+    expect(pickHostEnv({ PATH: path }).PATH).toBe(path);
+  });
+});
