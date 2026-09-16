@@ -2761,12 +2761,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
             - Register: `defineJob('prototypes.checkpoint-turn')`
-        - **`compare`** — The Compare stage of the prototype detail pane: the prototype mock beside the real app thing it declares it mocks (<meta name="mocks" content="<kind>:<ref>">), both live and both at one shared width the reader changes. Owns the declaration dispatch and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route) is a child plugin contributed into the open Counterpart.Kind registry.
+        - **`compare`** — The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
           - Web:
-            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
-            - Contributes: `PrototypeStages.Stage` "Compare" → `CompareStage`
+            - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
+            - Contributes:
+              - `PrototypeStages.Stage` "Compare" → `CompareStage`
+              - `PrototypeDetailScope` → `CompareAgainstProvider`
             - Uses:
+              - `apps/prototypes/gallery.PrototypeDetailScope`
+              - `apps/prototypes/gallery.PrototypeStageProps`
               - `apps/prototypes/gallery.PrototypeStages`
+              - `apps/prototypes/gallery.usePrototypeDetail`
               - `primitives/bar.Bar`
               - `primitives/css/badge.Badge`
               - `primitives/css/clip.Clip`
@@ -2782,17 +2787,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/loading.Loading`
               - `primitives/slot-render.defineDispatchSlot`
             - Exports (types):
+              - `CompareAgainst`
               - `CounterpartKindMeta`
               - `CounterpartKindProps`
+              - `CounterpartPreset`
               - `CounterpartResolution`
+              - `CounterpartSpec`
               - `WidthChoices`
             - Exports (values):
               - `Counterpart`
+              - `MockFrame`
+              - `useCompareAgainst`
               - `useCounterpartKinds`
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
+              - `apps/prototypes/compare/version`
           - Core:
             - Exports (types):
               - `CompareHalf`
@@ -2821,6 +2832,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `primitives/embed.embedUrl`
                   - `primitives/embed.isEmbeddedDocument`
                   - `primitives/pane.parseUrl`
+            - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options. Never declared by a page: offered as "Latest version" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
+              - Web:
+                - Contributes:
+                  - `Counterpart.Kind` "Prototype version" → `VersionCounterpart`
+                  - `PrototypeVersionActions` "compare-with-latest" → `CompareWithLatest`
+                - Uses:
+                  - `apps/prototypes/compare.Counterpart`
+                  - `apps/prototypes/compare.CounterpartKindProps`
+                  - `apps/prototypes/compare.CounterpartResolution`
+                  - `apps/prototypes/compare.MockFrame`
+                  - `apps/prototypes/compare.useCompareAgainst`
+                  - `apps/prototypes/gallery.PrototypeVersionActions`
+                  - `apps/prototypes/gallery.useCloseVersionList`
+                  - `apps/prototypes/gallery.usePrototypeDetail`
+                  - `apps/prototypes/gallery.usePrototypeDocumentSrc`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/live-state.matchResource`
+                  - `primitives/live-state.useCombinedResources`
+                  - `primitives/live-state.useResource`
         - **`files`** — Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), seeds the repo's _template/ into it, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html data-*>, stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Server:
             - Contributes:
@@ -2925,7 +2956,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
               - `prototypeDetailPane.Actions` ← `apps.prototypes.gallery`, `apps.prototypes.present`, `primitives.pane`
               - `PrototypeStages.Stage` ← `apps.prototypes.compare`, `apps.prototypes.gallery`
-              - `PrototypeVersionActions` ← `apps.prototypes.gallery`
+              - `PrototypeVersionActions` ← `apps.prototypes.compare.version`, `apps.prototypes.gallery`
+              - `PrototypeDetailScope` ← `apps.prototypes.compare`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `Pane.Register` "prototypes-detail"
@@ -2984,6 +3016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `primitives/shortcuts.useSurfaceShortcuts`
+              - `primitives/slot-render.defineWrapperSlot`
               - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
@@ -2995,17 +3028,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `OptionsPicker`
               - `prototypeDetailPane`
+              - `PrototypeDetailScope`
               - `prototypesGalleryPane`
               - `PrototypeStages`
               - `PrototypeVersionActions`
               - `ScaledIframe`
+              - `useCloseVersionList`
               - `usePrototypeDetail`
+              - `usePrototypeDocumentSrc`
               - `usePrototypePicks`
               - `usePrototypeSrc`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
               - `apps/prototypes/compare`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/present`
         - **`present`** — Present a prototype without the app around it, in four sizes: filling this app tab's surface (the tab bar stays, so the user can keep switching tabs), filling this browser tab, filling the screen (Fullscreen API), or opened as its own document in a new browser tab. Contributed into the detail pane's Actions.
           - Web:
@@ -15835,6 +15872,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/pages/page-tree`
               - `apps/pages/starred`
               - `apps/prototypes/compare`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/prototypes/present`
               - `apps/prototypes/thumbnails`
@@ -22205,6 +22243,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/compare`
               - `apps/prototypes/compare/fixture`
               - `apps/prototypes/compare/route`
+              - `apps/prototypes/compare/version`
               - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/sources/midi/folders`
@@ -26487,6 +26526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/page-tree`
           - `apps/pages/starred`
           - `apps/pages/trash`
+          - `apps/prototypes/compare/version`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`
           - `apps/sonata/audio/engine`
@@ -26901,6 +26941,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/pages/starred`
           - `apps/pages/trash`
           - `apps/pages/welcome/recent-pages`
+          - `apps/prototypes/compare/version`
           - `apps/prototypes/files`
           - `apps/prototypes/gallery`
           - `apps/prototypes/present`

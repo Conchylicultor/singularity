@@ -63,13 +63,28 @@ await withBrowser(async (h) => {
   );
   r.ok("the pane switched to Compare", both.ok, JSON.stringify(both.value));
   r.ok("the list closed", (await action.count()) === 0);
-  r.ok("the mock half shows a recorded version", both.value.mock?.includes("/versions/") === true, both.value.mock ?? "");
-  r.ok("the counterpart half shows the live folder", both.value.counterpart?.includes("/index.html") === true && !both.value.counterpart.includes("/versions/"), both.value.counterpart ?? "");
+  r.ok(
+    "the mock half shows a recorded version",
+    both.value.mock?.includes("/versions/") === true,
+    both.value.mock ?? "",
+  );
+  r.ok(
+    "the counterpart half shows the live folder",
+    both.value.counterpart?.includes("/index.html") === true &&
+      !both.value.counterpart.includes("/versions/"),
+    both.value.counterpart ?? "",
+  );
   r.ok(
     "Against reads Latest version",
-    await page.getByRole("radio", { name: "Latest version", checked: true }).isVisible(),
+    await page
+      .getByRole("radio", { name: "Latest version", checked: true })
+      .isVisible(),
   );
-  r.ok("the URL names the compare stage", page.url().includes("/compare"), page.url());
+  r.ok(
+    "the URL names the compare stage",
+    page.url().includes("/compare"),
+    page.url(),
+  );
   await snap(page, out, "compare");
 
   await page.getByRole("radio", { name: "Declared" }).click();
@@ -77,9 +92,15 @@ await withBrowser(async (h) => {
   await snap(page, out, "declared");
   r.ok(
     "Declared is selected after clicking it",
-    await page.getByRole("radio", { name: "Declared", checked: true }).isVisible(),
+    await page
+      .getByRole("radio", { name: "Declared", checked: true })
+      .isVisible(),
   );
 
-  r.ok("no page errors", captured.pageErrors.length === 0, captured.pageErrors.join(" | "));
+  r.ok(
+    "no page errors",
+    captured.pageErrors.length === 0,
+    captured.pageErrors.join(" | "),
+  );
   await r.finish();
 });
