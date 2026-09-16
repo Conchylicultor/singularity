@@ -20,7 +20,7 @@ export { missingScopes } from "./scopes";
 export default {
   collapsed: true,
   description:
-    "Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry.",
+    "Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry.",
   loadBearing: true,
   contributions: [],
   slots: { ...Auth, accounts: accountsPane },

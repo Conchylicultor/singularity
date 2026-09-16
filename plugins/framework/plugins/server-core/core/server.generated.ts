@@ -276,6 +276,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "integrations/plugins/gmail", id: "integrations.gmail", loader: () => import("@plugins/integrations/plugins/gmail/server"), dependsOn: ["auth", "config_v2"] },
   { pluginPath: "integrations/plugins/google-maps/plugins/places-api", id: "integrations.google-maps.places-api", loader: () => import("@plugins/integrations/plugins/google-maps/plugins/places-api/server"), dependsOn: [] },
   { pluginPath: "integrations/plugins/google-maps", id: "integrations.google-maps", loader: () => import("@plugins/integrations/plugins/google-maps/server"), dependsOn: ["auth"] },
+  { pluginPath: "integrations/plugins/hooktheory", id: "integrations.hooktheory", loader: () => import("@plugins/integrations/plugins/hooktheory/server"), dependsOn: ["auth", "infra/plugins/endpoints"] },
   { pluginPath: "packages/plugins/flock", id: "packages.flock", loader: () => import("@plugins/packages/plugins/flock/server"), dependsOn: [] },
   { pluginPath: "packages/plugins/host-semaphore", id: "packages.host-semaphore", loader: () => import("@plugins/packages/plugins/host-semaphore/server"), dependsOn: ["infra/plugins/paths", "packages/plugins/flock"] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/server"), dependsOn: [] },

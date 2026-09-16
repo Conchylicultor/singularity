@@ -1,12 +1,23 @@
 # Auth
 
-Centralized OAuth 2.0 / API key infrastructure for third-party services. Provider sub-plugins live in `plugins/auth/plugins/<id>/`.
+Centralized OAuth 2.0 / API key / password sign-in infrastructure for third-party services. Provider sub-plugins live in `plugins/auth/plugins/<id>/`.
+
+## Provider kinds
+
+The closed list is `AUTH_PROVIDER_KINDS` in `core/internal/lib.ts`; everything that branches on a kind (the descriptor check, the token read, the Accounts row) is exhaustive — a `switch` with a `never` default, or a `Record` over every kind — so a new kind is a type error wherever it is unhandled.
+
+- **`oauth2`** — popup consent flow, refresh loop. `descriptor.oauth`.
+- **`apikey`** — the user pastes a key (usually through a setup pane the provider registers as `configureCredentials`); `descriptor.apiKey.verify` probes it before it is stored.
+- **`password`** — the user types a username + password once, in the generic sign-in dialog the Accounts row opens (`web/components/password-sign-in-dialog.tsx`). `POST /api/auth/sign-in/:provider` hands them to `descriptor.password.exchange`, which trades them for the provider's long-lived token and throws the provider's own message on a rejection. Central stores **only the token** (in the same `apiKey` field an API key uses) and drops the password — never persisted, never logged; a stored password would be a strictly worse secret to hold. The web contribution's `passwordSignIn` carries the dialog's wording (username label, sign-up link). Example: `auth/plugins/hooktheory`.
+
+`apikey` and `password` accounts are both *static credentials*: `getAccessToken` / `getTokenFromCentral` return the stored value with `expiresAt: MAX_SAFE_INTEGER` and no scopes. Nothing marks one stale (the refresh loop walks only oauth2), and Disconnect deletes it locally without revoking it upstream — when the provider revokes it, the next call fails and the user signs in again.
 
 ## Topology
 
 - **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateResource` all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
 - **Tokens persist via the central secrets store.** Encrypted blob at `~/.singularity/state/secrets/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
 - **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.singularity/state/gateway/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` — the manifest covers it.
+- **A provider added on a branch reads "Unavailable" in its own worktree's Accounts pane.** Central runs main's code, so it knows the provider only once the branch is merged; the row says so instead of offering a Connect that central would reject.
 - **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateResource.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
 
 ## How a consumer plugin uses it
@@ -32,6 +43,8 @@ try {
 A worktree backend that needs a token currently has no in-process helper — it would `fetch("http://localhost:9000/api/auth/token", …)` against central via the gateway. No such consumer exists yet; we add the helper when one does.
 
 ## How a provider sub-plugin is structured
+
+An OAuth provider (an `apikey` or `password` provider skips `shared/` and `server/` — it has no client credentials to configure; see `google-maps` / `hooktheory`):
 
 ```
 plugins/auth/plugins/<id>/
@@ -78,17 +91,19 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
   - Slots:
-    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.notion`
+    - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.hooktheory`, `auth.notion`
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
     - `accountsPane.Actions` ← `primitives.pane`
   - Uses:
     - `config_v2/settings.configNavPane`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
@@ -96,8 +111,13 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.DialogDescription`
+    - `primitives/css/ui-kit.DialogTitle`
+    - `primitives/css/ui-kit.Input`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`
@@ -138,6 +158,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `GetAccessTokenArgs`
     - `OAuth2Config`
     - `ParsedTokenResponse`
+    - `PasswordConfig`
     - `ResolvedCredentials`
     - `TokenFailure`
     - `TokenNeedsConsent`
@@ -161,6 +182,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `GET /api/auth/callback/:provider`
     - `POST /api/auth/disconnect/:provider`
     - `POST /api/auth/api-key/:provider`
+    - `POST /api/auth/sign-in/:provider`
     - `GET /api/auth/state`
     - `POST /api/auth/token`
 - Core:
@@ -180,8 +202,10 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `GetTokenBody`
     - `OAuth2Config`
     - `ParsedTokenResponse`
+    - `PasswordConfig`
     - `ResolvedCredentials`
     - `SetApiKeyBody`
+    - `SignInBody`
     - `TokenFailure`
     - `TokenNeedsConsent`
     - `TokenResponse`
@@ -193,6 +217,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthNeedsConsentError`
     - `AuthProviderUnknownError`
     - `authStateResource`
+    - `AuthStateValueSchema`
     - `defineAuthProvider`
     - `disconnect`
     - `DisconnectBodySchema`
@@ -203,6 +228,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `oauthStart`
     - `setApiKey`
     - `SetApiKeyBodySchema`
+    - `signIn`
+    - `SignInBodySchema`
 - Cross-plugin:
   - Imported by:
     - `apps/settings/accounts`
@@ -211,11 +238,13 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `auth/google-maps`
     - `auth/google-maps/setup-wizard`
     - `auth/google/setup-wizard`
+    - `auth/hooktheory`
     - `auth/notion`
     - `backup/runs-arm`
     - `backup/targets/google-drive`
     - `integrations/gmail`
     - `integrations/google-maps`
+    - `integrations/hooktheory`
   - Endpoint callers: `setup-wizard`
 - Server:
   - Exports (types):
@@ -237,6 +266,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - **`google-maps`** — Google Maps Platform API-key provider. The key is stored in the central auth token store (encrypted, shared across worktrees) and verified against the Places API before it is accepted.
     - Plugins:
       - **`setup-wizard`** — Guided setup pane for the Google Maps Platform API key: project → Places API → billing → key → paste. Also contributes the Accounts provider row.
+  - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
   - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
 
 <!-- AUTOGENERATED:END -->

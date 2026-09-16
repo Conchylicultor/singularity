@@ -1,4 +1,10 @@
-export type AuthProviderKind = "oauth2" | "apikey";
+/**
+ * How a provider's credential is obtained. The closed list both runtimes read:
+ * the descriptor type, the state resource's wire schema, and every `switch` on
+ * a kind derive from it, so a new kind is a type error wherever it is unhandled.
+ */
+export const AUTH_PROVIDER_KINDS = ["oauth2", "apikey", "password"] as const;
+export type AuthProviderKind = (typeof AUTH_PROVIDER_KINDS)[number];
 
 export interface AuthIdentity {
   accountId: string;
@@ -51,13 +57,44 @@ export interface ApiKeyConfig {
   verify?: (apiKey: string) => Promise<AuthIdentity>;
 }
 
+/**
+ * A provider that trades a username + password for a long-lived token. Central
+ * calls `exchange` once, stores ONLY the returned token (as the account's static
+ * credential, like an API key), and drops the password — it is never persisted
+ * or logged. From then on the account behaves exactly like an api-key account.
+ */
+export interface PasswordConfig {
+  // The dialog's wording (username label, sign-up link) is presentational and
+  // lives on the provider's web `Auth.Provider` contribution (`passwordSignIn`)
+  // — the browser cannot read a central descriptor.
+  /**
+   * Throws on a rejected sign-in, with the provider's own wording as the
+   * message — it is shown to the user verbatim.
+   */
+  exchange: (creds: {
+    username: string;
+    password: string;
+  }) => Promise<{ token: string; identity: AuthIdentity }>;
+}
+
 export interface AuthProviderDescriptor {
   id: string;
   name: string;
   kind: AuthProviderKind;
   oauth?: OAuth2Config;
   apiKey?: ApiKeyConfig;
+  password?: PasswordConfig;
 }
+
+/**
+ * The config branch each kind requires. A `Record` over every kind, so a new
+ * kind with no branch named here is a type error, not a silently unchecked one.
+ */
+const CONFIG_FIELD = {
+  oauth2: "oauth",
+  apikey: "apiKey",
+  password: "password",
+} as const satisfies Record<AuthProviderKind, keyof AuthProviderDescriptor>;
 
 /**
  * Identity helper. The descriptor is just data — this function is the
@@ -67,14 +104,10 @@ export interface AuthProviderDescriptor {
 export function defineAuthProvider(
   descriptor: AuthProviderDescriptor,
 ): AuthProviderDescriptor {
-  if (descriptor.kind === "oauth2" && !descriptor.oauth) {
+  const field = CONFIG_FIELD[descriptor.kind];
+  if (!descriptor[field]) {
     throw new Error(
-      `defineAuthProvider("${descriptor.id}"): kind="oauth2" requires .oauth`,
-    );
-  }
-  if (descriptor.kind === "apikey" && !descriptor.apiKey) {
-    throw new Error(
-      `defineAuthProvider("${descriptor.id}"): kind="apikey" requires .apiKey`,
+      `defineAuthProvider("${descriptor.id}"): kind="${descriptor.kind}" requires .${field}`,
     );
   }
   if (!/^[a-z][a-z0-9-]*$/.test(descriptor.id)) {

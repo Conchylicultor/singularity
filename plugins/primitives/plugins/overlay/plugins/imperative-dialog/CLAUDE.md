@@ -67,6 +67,7 @@ owns only the content + a `DialogTitle` (for a11y). Never wrap your own
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
     - `apps/sonata/sources/ultimate-guitar`
+    - `auth`
     - `primitives/overlay/imperative-dialog/confirm`
     - `ui/theme-engine/theme-gallery`
 - Sub-plugins:

@@ -1,18 +1,11 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { AuthStateValueSchema } from "./resources";
+import { AuthIdentitySchema, AuthStateValueSchema } from "./resources";
 
 export const DisconnectBodySchema = z.object({
   accountId: z.string().optional(),
 });
 export type DisconnectBody = z.infer<typeof DisconnectBodySchema>;
-
-const AuthIdentitySchema = z.object({
-  accountId: z.string(),
-  email: z.string().optional(),
-  displayName: z.string().optional(),
-  avatarUrl: z.string().optional(),
-});
 
 // Discriminated union mirroring TokenResponse (token-types.ts) on the wire.
 const TokenResponseSchema = z.union([
@@ -42,6 +35,14 @@ export const SetApiKeyBodySchema = z.object({
 });
 export type SetApiKeyBody = z.infer<typeof SetApiKeyBodySchema>;
 
+// The password crosses browser → gateway → central once, in this body. Central
+// trades it for the provider's token and drops it — never stored, never logged.
+export const SignInBodySchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+});
+export type SignInBody = z.infer<typeof SignInBodySchema>;
+
 export const GetTokenBodySchema = z.object({
   providerId: z.string(),
   accountId: z.string().optional(),
@@ -66,6 +67,12 @@ export const disconnect = defineEndpoint({
 export const setApiKey = defineEndpoint({
   route: "POST /api/auth/api-key/:provider",
   body: SetApiKeyBodySchema,
+  response: z.object({ ok: z.literal(true), identity: AuthIdentitySchema }),
+});
+
+export const signIn = defineEndpoint({
+  route: "POST /api/auth/sign-in/:provider",
+  body: SignInBodySchema,
   response: z.object({ ok: z.literal(true), identity: AuthIdentitySchema }),
 });
 

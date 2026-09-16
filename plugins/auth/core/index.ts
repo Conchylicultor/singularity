@@ -4,18 +4,26 @@ export {
   oauthCallback,
   disconnect,
   setApiKey,
+  signIn,
   getAuthState,
   getToken,
   DisconnectBodySchema,
   SetApiKeyBodySchema,
+  SignInBodySchema,
   GetTokenBodySchema,
 } from "./endpoints";
-export type { DisconnectBody, SetApiKeyBody, GetTokenBody } from "./endpoints";
+export type {
+  DisconnectBody,
+  SetApiKeyBody,
+  SignInBody,
+  GetTokenBody,
+} from "./endpoints";
 export type {
   AuthProviderDescriptor,
   AuthProviderKind,
   OAuth2Config,
   ApiKeyConfig,
+  PasswordConfig,
   AuthIdentity,
   AuthAccountState,
   AuthStateValue,
@@ -30,7 +38,7 @@ export {
   AuthKeychainLockedError,
   AuthCredentialsMissingError,
 } from "./internal/errors";
-export { authStateResource } from "./resources";
+export { authStateResource, AuthStateValueSchema } from "./resources";
 export type {
   GetAccessTokenArgs,
   TokenResponse,

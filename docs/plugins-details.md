@@ -6034,16 +6034,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `ui/theme-engine`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
     - Slots:
-      - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.notion`
+      - `Auth.Provider` ← `auth.apple-signing.setup-wizard`, `auth.google`, `auth.google-maps.setup-wizard`, `auth.hooktheory`, `auth.notion`
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
     - Uses:
       - `config_v2/settings.configNavPane`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
+      - `infra/endpoints.getEndpointErrorMessage`
+      - `infra/endpoints.useEndpointMutation`
       - `primitives/css/badge.Badge`
       - `primitives/css/fill.Fill`
       - `primitives/css/rigid.rigidClass`
@@ -6051,8 +6053,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.Button`
       - `primitives/css/ui-kit.cn`
+      - `primitives/css/ui-kit.DialogDescription`
+      - `primitives/css/ui-kit.DialogTitle`
+      - `primitives/css/ui-kit.Input`
       - `primitives/live-state.ResourceResult`
       - `primitives/live-state.useResource`
+      - `primitives/loading.Loading`
+      - `primitives/overlay/imperative-dialog.openDialog`
       - `primitives/pane.defineRoute`
       - `primitives/pane.Pane`
       - `primitives/pane.useOpenPane`
@@ -6093,6 +6100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GetAccessTokenArgs`
       - `OAuth2Config`
       - `ParsedTokenResponse`
+      - `PasswordConfig`
       - `ResolvedCredentials`
       - `TokenFailure`
       - `TokenNeedsConsent`
@@ -6116,6 +6124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GET /api/auth/callback/:provider`
       - `POST /api/auth/disconnect/:provider`
       - `POST /api/auth/api-key/:provider`
+      - `POST /api/auth/sign-in/:provider`
       - `GET /api/auth/state`
       - `POST /api/auth/token`
   - Core:
@@ -6135,8 +6144,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `GetTokenBody`
       - `OAuth2Config`
       - `ParsedTokenResponse`
+      - `PasswordConfig`
       - `ResolvedCredentials`
       - `SetApiKeyBody`
+      - `SignInBody`
       - `TokenFailure`
       - `TokenNeedsConsent`
       - `TokenResponse`
@@ -6148,6 +6159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `AuthNeedsConsentError`
       - `AuthProviderUnknownError`
       - `authStateResource`
+      - `AuthStateValueSchema`
       - `defineAuthProvider`
       - `disconnect`
       - `DisconnectBodySchema`
@@ -6158,6 +6170,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `oauthStart`
       - `setApiKey`
       - `SetApiKeyBodySchema`
+      - `signIn`
+      - `SignInBodySchema`
   - Cross-plugin:
     - Imported by:
       - `apps/settings/accounts`
@@ -6166,11 +6180,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `auth/google-maps`
       - `auth/google-maps/setup-wizard`
       - `auth/google/setup-wizard`
+      - `auth/hooktheory`
       - `auth/notion`
       - `backup/runs-arm`
       - `backup/targets/google-drive`
       - `integrations/gmail`
       - `integrations/google-maps`
+      - `integrations/hooktheory`
     - Endpoint callers: `setup-wizard`
   - Server:
     - Exports (types):
@@ -6318,6 +6334,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values): `googleMapsSetupPane`
           - Cross-plugin:
             - Imported by: `integrations/google-maps`
+    - **`hooktheory`** — Hooktheory Accounts row: signs in with a Hooktheory username and password through the shared password sign-in dialog. Hooktheory (TheoryTab) username/password provider. The password is traded once for Hooktheory's long-lived API token; only the token is stored, in the central auth token store (encrypted, shared across worktrees).
+      - Web:
+        - Contributes: `Auth.Provider` "Hooktheory"
+        - Uses: `auth.Auth`
+      - Central:
+        - Uses: `auth.registerAuthProvider`
+      - Core:
+        - Exports (values):
+          - `HOOKTHEORY_API_BASE`
+          - `HOOKTHEORY_PROVIDER_ID`
+          - `HOOKTHEORY_SIGN_UP_URL`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Web:
         - Contributes:
@@ -16623,6 +16650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/request-origin/agent-write-ledger`
           - `infra/secrets`
           - `infra/trash`
+          - `integrations/hooktheory`
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes/agent-page`
           - `page/annotations/todo/task-link`
@@ -18533,6 +18561,53 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PlacesApiError`
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
+    - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers.
+      - Server:
+        - Uses:
+          - `auth.getTokenFromCentral`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+        - Exports (values):
+          - `getTheorytabSection`
+          - `getTrendNodes`
+          - `getTrendSongs`
+        - Routes:
+          - `GET /api/hooktheory/trends/nodes`
+          - `GET /api/hooktheory/trends/songs`
+          - `GET /api/hooktheory/sections/:id`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types):
+          - `HookpadChord`
+          - `HookpadKey`
+          - `HookpadMeter`
+          - `HookpadNote`
+          - `HookpadTempo`
+          - `TheorytabSection`
+          - `TheorytabYoutube`
+          - `TrendNode`
+          - `TrendSong`
+        - Exports (values):
+          - `ChordIdSchema`
+          - `HookpadChordSchema`
+          - `HookpadKeySchema`
+          - `HookpadMeterSchema`
+          - `HookpadNoteSchema`
+          - `HookpadTempoSchema`
+          - `HooktheoryApiError`
+          - `HooktheoryNotSignedInError`
+          - `HooktheoryProviderUnavailableError`
+          - `HooktheorySectionNotFoundError`
+          - `ProgressionParamSchema`
+          - `ProgressionSchema`
+          - `theorytabSectionEndpoint`
+          - `TheorytabSectionIdSchema`
+          - `TheorytabSectionSchema`
+          - `TheorytabYoutubeSchema`
+          - `TrendNodeSchema`
+          - `trendNodesEndpoint`
+          - `TrendSongSchema`
+          - `trendSongsEndpoint`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -26986,6 +27061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/studio/explorer`
           - `apps/studio/explorer/excluded`
           - `apps/studio/graph`
+          - `auth`
           - `auth/apple-signing/setup-wizard`
           - `auth/google/setup-wizard`
           - `backup`
@@ -27508,6 +27584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
               - `apps/sonata/sources/ultimate-guitar`
+              - `auth`
               - `primitives/overlay/imperative-dialog/confirm`
               - `ui/theme-engine/theme-gallery`
           - Plugins:

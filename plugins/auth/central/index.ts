@@ -3,6 +3,7 @@ import { handleOAuthStart } from "./internal/handlers/oauth-start";
 import { handleOAuthCallback } from "./internal/handlers/oauth-callback";
 import { handleDisconnect } from "./internal/handlers/disconnect";
 import { handleSetApiKey } from "./internal/handlers/api-key";
+import { handleSignIn } from "./internal/handlers/sign-in";
 import { handleGetState } from "./internal/handlers/state";
 import { handleGetToken } from "./internal/handlers/token";
 import { authStateResource } from "./internal/auth-resource";
@@ -12,6 +13,7 @@ import {
   oauthCallback,
   disconnect,
   setApiKey,
+  signIn,
   getAuthState,
   getToken,
 } from "@plugins/auth/core";
@@ -32,6 +34,7 @@ export type {
   AuthAccountState,
   OAuth2Config,
   ApiKeyConfig,
+  PasswordConfig,
   ResolvedCredentials,
   ParsedTokenResponse,
   AuthEnvAccessor,
@@ -51,12 +54,13 @@ export {
 
 export default {
   description:
-    "Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.",
+    "Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.",
   httpRoutes: {
     [oauthStart.route]: handleOAuthStart,
     [oauthCallback.route]: handleOAuthCallback,
     [disconnect.route]: handleDisconnect,
     [setApiKey.route]: handleSetApiKey,
+    [signIn.route]: handleSignIn,
     [getAuthState.route]: handleGetState,
     [getToken.route]: handleGetToken,
   },

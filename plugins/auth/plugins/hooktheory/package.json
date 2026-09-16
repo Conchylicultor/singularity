@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-auth-hooktheory",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Hooktheory (TheoryTab) username/password credential for the auth registry."
+}

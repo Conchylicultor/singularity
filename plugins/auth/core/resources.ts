@@ -1,18 +1,23 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { centralResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
-import type { AuthStateValue, AuthAccountState } from "./internal/lib";
+import {
+  AUTH_PROVIDER_KINDS,
+  type AuthIdentity,
+  type AuthStateValue,
+  type AuthAccountState,
+} from "./internal/lib";
 
-const AuthIdentitySchema = z.object({
+export const AuthIdentitySchema = z.object({
   accountId: z.string(),
   email: z.string().optional(),
   displayName: z.string().optional(),
   avatarUrl: z.string().optional(),
-});
+}) satisfies ZodParser<AuthIdentity>;
 
 const AuthAccountStateSchema = z.object({
   connected: z.boolean(),
-  kind: z.enum(["oauth2", "apikey"]),
+  kind: z.enum(AUTH_PROVIDER_KINDS),
   credentialsConfigured: z.boolean(),
   identity: AuthIdentitySchema.optional(),
   scopes: z.array(z.string()).optional(),

@@ -15,6 +15,17 @@ export interface AuthProviderContribution {
   helpUrl?: string;
   /** Optional callback to override the "Configure credentials" button action. */
   configureCredentials?: () => void;
+  /**
+   * Wording for the sign-in dialog of a `kind: "password"` provider. Optional —
+   * the dialog works without it. Presentational, like `helpUrl`: the exchange
+   * itself lives in the central descriptor.
+   */
+  passwordSignIn?: {
+    /** Label of the username field. Defaults to "Username". */
+    usernameLabel?: string;
+    /** When set, the dialog offers a "Create an account" link to it. */
+    signUpUrl?: string;
+  };
 }
 
 export interface AuthScopeRequirement {

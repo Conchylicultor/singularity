@@ -41,6 +41,37 @@ export async function setApiKey(
   return identity;
 }
 
+/**
+ * Trade a username + password for the provider's long-lived token and store
+ * ONLY the token, in the same static-credential field an API key uses. The
+ * password lives no longer than this call: it is never persisted or logged.
+ */
+export async function signInWithPassword(
+  providerId: string,
+  username: string,
+  password: string,
+): Promise<AuthIdentity> {
+  const descriptor = getProvider(providerId);
+  if (descriptor.kind !== "password" || !descriptor.password) {
+    throw new Error(
+      `auth: signInWithPassword called on non-password provider "${providerId}"`,
+    );
+  }
+  const { token, identity } = await descriptor.password.exchange({
+    username,
+    password,
+  });
+  await setAccount(providerId, "primary", {
+    kind: "password",
+    apiKey: token,
+    identity,
+    connectedAt: Date.now(),
+  });
+  invalidateAuthStateCache();
+  notifyAuthState();
+  return identity;
+}
+
 export async function emitAuthChanged(): Promise<void> {
   invalidateAuthStateCache();
   notifyAuthState();

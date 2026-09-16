@@ -1057,6 +1057,10 @@
       "name": "@singularity/plugin-auth-google-setup-wizard",
       "version": "0.0.1",
     },
+    "plugins/auth/plugins/hooktheory": {
+      "name": "@singularity/plugin-auth-hooktheory",
+      "version": "0.0.1",
+    },
     "plugins/auth/plugins/notion": {
       "name": "@singularity/plugin-auth-notion",
       "version": "0.0.1",
@@ -3272,6 +3276,10 @@
     },
     "plugins/integrations/plugins/google-maps/plugins/places-api": {
       "name": "@singularity/plugin-integrations-google-maps-places-api",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/hooktheory": {
+      "name": "@singularity/plugin-integrations-hooktheory",
       "version": "0.0.1",
     },
     "plugins/layouts": {
@@ -6420,6 +6428,8 @@
 
     "@singularity/plugin-auth-google-setup-wizard": ["@singularity/plugin-auth-google-setup-wizard@workspace:plugins/auth/plugins/google/plugins/setup-wizard"],
 
+    "@singularity/plugin-auth-hooktheory": ["@singularity/plugin-auth-hooktheory@workspace:plugins/auth/plugins/hooktheory"],
+
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
 
     "@singularity/plugin-backup": ["@singularity/plugin-backup@workspace:plugins/backup"],
@@ -7483,6 +7493,8 @@
     "@singularity/plugin-integrations-google-maps": ["@singularity/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
 
     "@singularity/plugin-integrations-google-maps-places-api": ["@singularity/plugin-integrations-google-maps-places-api@workspace:plugins/integrations/plugins/google-maps/plugins/places-api"],
+
+    "@singularity/plugin-integrations-hooktheory": ["@singularity/plugin-integrations-hooktheory@workspace:plugins/integrations/plugins/hooktheory"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 

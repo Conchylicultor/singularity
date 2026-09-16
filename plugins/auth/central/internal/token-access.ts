@@ -1,9 +1,5 @@
 import { getProvider, listProviders } from "./registry";
-import {
-  getAccount,
-  patchAccount,
-  type StoredAccount,
-} from "./token-store";
+import { getAccount, patchAccount, type StoredAccount } from "./token-store";
 import { resolveCredentials } from "./credentials";
 import { refreshAccessToken } from "./oauth-flow";
 import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
@@ -129,21 +125,33 @@ export async function getAccessTokenInternal(
     };
   }
 
-  if (account.kind === "apikey") {
-    if (!account.apiKey) {
+  switch (account.kind) {
+    // A static credential: an API key stored as pasted, or the long-lived token
+    // a password sign-in traded for. Neither expires nor carries scopes.
+    case "apikey":
+    case "password":
+      if (!account.apiKey) {
+        return {
+          ok: false,
+          needsConsent: true,
+          reason: "no-account",
+        };
+      }
       return {
-        ok: false,
-        needsConsent: true,
-        reason: "no-account",
+        ok: true,
+        accessToken: account.apiKey,
+        expiresAt: Number.MAX_SAFE_INTEGER,
+        scopes: [],
+        identity: account.identity,
       };
+    case "oauth2":
+      break;
+    default: {
+      const unknownKind: never = account.kind;
+      throw new Error(
+        `auth: account "${args.providerId}/${accountId}" has unknown kind "${String(unknownKind)}"`,
+      );
     }
-    return {
-      ok: true,
-      accessToken: account.apiKey,
-      expiresAt: Number.MAX_SAFE_INTEGER,
-      scopes: [],
-      identity: account.identity,
-    };
   }
 
   if (args.scopes && args.scopes.length > 0) {

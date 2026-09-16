@@ -104,6 +104,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `apps/studio/explorer`
     - `apps/studio/explorer/excluded`
     - `apps/studio/graph`
+    - `auth`
     - `auth/apple-signing/setup-wizard`
     - `auth/google/setup-wizard`
     - `backup`
