@@ -540,6 +540,23 @@ describe("isGroupableField", () => {
     ).toBe(false);
   });
 
+  test("a `data`-only field is refused, even when it asks to be groupable", () => {
+    // `data` is display-only: with no comparable `value` there is nothing to
+    // bucket, whatever the flag or the type's registry answer says.
+    expect(
+      isGroupableField(
+        {
+          id: "avatar",
+          label: "Avatar",
+          type: "spec",
+          data: () => ({ glyph: "★" }),
+          groupable: true,
+        },
+        hasGroupingIn("spec"),
+      ),
+    ).toBe(false);
+  });
+
   test("a type that declares no grouping is not groupable by default", () => {
     // The same enum field, against a registry where nothing is registered —
     // proof that the answer comes from the predicate and nowhere else.

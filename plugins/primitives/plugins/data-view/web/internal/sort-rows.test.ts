@@ -139,6 +139,35 @@ describe("makeSortComparator", () => {
     expect(makeSortComparator([], fields)).toBeNull();
   });
 
+  it("ignores a `data`-only field: display data is never a sort key", () => {
+    const withData: FieldDef<Row>[] = [
+      ...fields,
+      {
+        id: "avatar",
+        label: "Avatar",
+        type: "spec",
+        data: (r) => ({ glyph: r.name }),
+        sortable: true,
+      },
+    ];
+    expect(
+      makeSortComparator([{ fieldId: "avatar", direction: "asc" }], withData),
+    ).toBeNull();
+    // A later resolvable rule still sorts, the `data` rule dropped ahead of it.
+    const cmp = makeSortComparator(
+      [
+        { fieldId: "avatar", direction: "asc" },
+        { fieldId: "num", direction: "asc" },
+      ],
+      withData,
+    );
+    const rows: Row[] = [
+      { id: "a", num: 2, name: "a" },
+      { id: "b", num: 1, name: "b" },
+    ];
+    expect(ids([...rows].sort(cmp!))).toEqual(["b", "a"]);
+  });
+
   it("is stable: equal rows keep source order", () => {
     const rows: Row[] = [
       { id: "a", num: 1 },

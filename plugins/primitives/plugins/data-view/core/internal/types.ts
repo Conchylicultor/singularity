@@ -275,6 +275,12 @@ export interface FieldDef<TRow> {
    * to the array-aware filter predicate. Mutually exclusive with `value`.
    */
   values?: (row: TRow) => string[];
+  /**
+   * Structured, display-only projection. Read ONLY by the field type's cell
+   * (`TableCellProps.data`). Never sorted, filtered, grouped or searched — pair
+   * it with `value` if the field must also be comparable.
+   */
+  data?: (row: TRow) => unknown;
   /** Custom renderer; falls back to String(value ?? ""). */
   cell?: (row: TRow) => ReactNode;
   /**
@@ -321,6 +327,13 @@ export interface FieldDef<TRow> {
   cover?: boolean;
   /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
   primary?: boolean;
+  /**
+   * This field is the row's leading visual (its avatar): list, gallery and tree
+   * render its cell in the row's leading slot, ahead of any per-view
+   * `leading`/`leadingIcon` content, and leave it out of the body. At most one
+   * per schema. The table keeps it as an ordinary column.
+   */
+  leading?: boolean;
   /**
    * Which titled section of the schema this field belongs to — the heading it
    * is listed under in every "choose a field" surface (filter, sort, group-by,
@@ -660,6 +673,9 @@ export interface TableCellProps {
   value: FieldValue;
   /** Multi-value projection (`field.values(raw)`) for tags-style read cells. */
   values?: readonly string[];
+  /** `field.data(raw)` — the structured display projection, `unknown` at this
+   *  boundary exactly like `raw` / `FieldDef.config`. */
+  data?: unknown;
   field: FieldDef<unknown>;
   raw?: unknown;
 }

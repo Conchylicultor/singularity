@@ -4,9 +4,12 @@ import {
   evaluateNode,
   FieldCell,
   GroupedSections,
+  leadingSlot,
   makeSortComparator,
   partitionIntoSections,
+  pickLeadingField,
   pickPrimaryField,
+  readFallback,
   resolveBodyFields,
   rowToneClass,
   useItemActionZones,
@@ -70,6 +73,9 @@ function DefaultRow<TRow>(props: {
   depth: number;
   primaryField: FieldDef<TRow> | undefined;
   secondaryFields: FieldDef<TRow>[];
+  /** The schema's leading field (the row's avatar), rendered in the icon slot
+   *  ahead of `options.leadingIcon`. */
+  leadingField: FieldDef<TRow> | undefined;
   options: TreeViewOptions<TRow>;
   /** Per-row emphasis, threaded from `DataViewRenderProps.rowTone`. */
   rowTone: ((row: TRow) => RowTone) | undefined;
@@ -81,6 +87,7 @@ function DefaultRow<TRow>(props: {
     depth,
     primaryField,
     secondaryFields,
+    leadingField,
     options,
     rowTone,
     revealedActions,
@@ -93,7 +100,6 @@ function DefaultRow<TRow>(props: {
   const isAlias = node.alias;
 
   const primaryValue = primaryField?.value?.(row);
-  const primaryString = String(primaryValue ?? "");
   // Per-row emphasis composed with the consumer's own per-row label class, which
   // stays the escape hatch and therefore wins: `rowTone` is the semantic form to
   // reach for first, not a policy imposed over a hand-written one.
@@ -114,7 +120,7 @@ function DefaultRow<TRow>(props: {
           primaryField as FieldDef<unknown>,
           primaryValue ?? null,
           row,
-        ) ?? primaryString)
+        ) ?? readFallback(primaryField as FieldDef<unknown>, primaryValue))
     : null;
 
   let label: ReactNode;
@@ -155,7 +161,13 @@ function DefaultRow<TRow>(props: {
       ? (helpers) => options.rowMenu!(helpers, row)
       : undefined;
 
-  const leadingIcon = options.leadingIcon?.(row);
+  const leadingIcon = leadingSlot({
+    field: leadingField as FieldDef<unknown> | undefined,
+    row,
+    resolveCell,
+    resolveEditor,
+    own: options.leadingIcon?.(row),
+  });
   const trailing = options.trailing?.(row);
   const accent = options.rowAccent?.(row);
 
@@ -303,10 +315,16 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     () => resolveBodyFields(fields, props.state.visibleFields),
     [fields, props.state.visibleFields],
   );
-  const primaryField = useMemo(() => pickPrimaryField(vis), [vis]);
+  // The leading field (the row's avatar) renders in `RowChrome`'s icon slot, so
+  // it is out of the label pick and the secondary chips.
+  const leadingField = useMemo(() => pickLeadingField(vis), [vis]);
+  const primaryField = useMemo(
+    () => pickPrimaryField(vis.filter((f) => f !== leadingField)),
+    [vis, leadingField],
+  );
   const secondaryFields = useMemo(
-    () => vis.filter((f) => f.id !== primaryField?.id),
-    [vis, primaryField],
+    () => vis.filter((f) => f.id !== primaryField?.id && f !== leadingField),
+    [vis, primaryField, leadingField],
   );
   const resolveOperatorSet = useResolveOperatorSet();
 
@@ -449,6 +467,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           depth={rowProps.depth}
           primaryField={primaryField}
           secondaryFields={secondaryFields}
+          leadingField={leadingField}
           options={options}
           rowTone={rowTone}
           revealedActions={revealedActions}
@@ -460,6 +479,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       options,
       primaryField,
       secondaryFields,
+      leadingField,
       rowTone,
       revealedActions,
     ],

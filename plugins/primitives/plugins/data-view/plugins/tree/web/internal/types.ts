@@ -15,7 +15,8 @@ import type {
  * are web types of the tree primitive, and `core` may not import `web`.
  */
 export interface TreeViewOptions<TRow> {
-  /** Leading icon rendered immediately before the primary-field label. */
+  /** Leading icon rendered immediately before the primary-field label, after
+   *  the schema's leading field (`FieldDef.leading`), if any. */
   leadingIcon?: (row: TRow) => ReactNode;
   /**
    * Persistent trailing content rendered after the label (a status badge, count,

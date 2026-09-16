@@ -10,8 +10,10 @@ where the chunky gallery cards and the wide multi-column table don't fit.
 Each item is one `Row` (the `row` primitive), so the active-row affordance,
 hover-revealed trailing actions, and leading icon slot all come for free:
 
-- **leading slot** — `options.leading?.(row)` → `Row`'s `icon` slot (icon /
-  avatar / status-dot).
+- **leading slot** — the schema's leading field (`FieldDef.leading`), then
+  `options.leading?.(row)` → `Row`'s `icon` slot (icon / avatar / status-dot).
+  The leading field is out of the title pick, the subtitle and the trailing
+  cell. See the data-view CLAUDE.md ("Leading field").
 - **selection** — `selected = rowKey(row) === selectedRowId` → `Row` maps it to
   `bg-accent` (the same highlight the tree view uses). Baked in from the start.
 - **click** — `onRowActivate`.
@@ -134,7 +136,8 @@ conditional hook.
 
 `options` (= `viewOptions.list`) is a `ListViewOptions<TRow>`:
 
-- `leading?(row)` — leading slot per row (icon / avatar / status-dot).
+- `leading?(row)` — leading slot per row (icon / avatar / status-dot),
+  rendered after the schema's leading field, if any.
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
 - `lines?` — rows per item, `1 | 2` (default `1`, one line — see above).
@@ -175,7 +178,9 @@ conditional hook.
     - `primitives/data-view.FieldCell`
     - `primitives/data-view.GroupedSections`
     - `primitives/data-view.ItemActionsDescriptor`
+    - `primitives/data-view.leadingSlot`
     - `primitives/data-view.ManualOrderConfig`
+    - `primitives/data-view.pickLeadingField`
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.rowToneClass`

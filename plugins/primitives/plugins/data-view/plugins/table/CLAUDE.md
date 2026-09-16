@@ -22,6 +22,9 @@ primary, or promote a new column to primary asc), **preserving secondary rules**
 so a header click never wipes a multi-sort. The `data-table` primitive is
 load-bearing and stays untouched.
 
+The table has no leading slot: a field declaring `FieldDef.leading` is an
+ordinary column here (see `data-view/CLAUDE.md`, "Leading field").
+
 The view passes nothing for the row inset: `DataTable` rows follow the ambient
 rail unconditionally, which is the same rail the rest of a DataView's bands read —
 see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.

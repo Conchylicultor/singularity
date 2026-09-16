@@ -13,6 +13,8 @@ import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import {
   FieldCell,
   GroupedSections,
+  leadingSlot,
+  pickLeadingField,
   pickPrimaryField,
   resolveBodyFields,
   rowToneClass,
@@ -184,7 +186,11 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   const coverField = pickCoverField(vis, options.coverField);
-  const titleField = pickPrimaryField(vis);
+  // The leading field (the card's avatar) renders beside the body in
+  // `DataCard`'s leading block, so it is out of the title pick and the property
+  // rows. The cover pick above is untouched: the cover stays media.
+  const leadingField = pickLeadingField(vis);
+  const titleField = pickPrimaryField(vis.filter((f) => f !== leadingField));
 
   // Single source of cell markup — shared by the plain and windowed branches.
   const renderCell = (cell: GalleryCell): ReactNode => {
@@ -207,7 +213,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
     const media = renderMedia(options, coverField, row);
     const bodyFields = vis.filter(
-      (f) => f.id !== titleField?.id && f.id !== coverField?.id,
+      (f) =>
+        f.id !== titleField?.id &&
+        f.id !== coverField?.id &&
+        f.id !== leadingField?.id,
     );
     const actionProps = {
       row,
@@ -229,7 +238,13 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         selected={key === props.selectedRowId}
         onActivate={props.rowActivation?.(row)}
         media={media}
-        leading={options.leading?.(row)}
+        leading={leadingSlot({
+          field: leadingField,
+          row,
+          resolveCell,
+          resolveEditor,
+          own: options.leading?.(row),
+        })}
         actions={revealed?.(actionProps)}
         footer={
           persistent ? (

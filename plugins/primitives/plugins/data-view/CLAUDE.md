@@ -261,6 +261,29 @@ The `FieldDef.primary` flag selects the tree row label field (shared
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
+### Leading field
+
+`FieldDef.leading: true` marks the row's **leading visual** (its avatar). list,
+gallery and tree render that field's cell in their leading slot — `Row.icon`,
+`DataCard.leading`, `RowChrome.icon` — and leave it out of the body: never the
+title / label pick, never a list subtitle or trailing term, a gallery property
+row, or a tree secondary chip. The gallery's **cover is untouched**; the cover
+stays media. The **table** has no leading slot, so there it is an ordinary
+column.
+
+- **Composition, not replacement.** The field renders **first**, then the view's
+  own per-view option (list/gallery `leading`, tree `leadingIcon`) — most of
+  those put a status glyph there, not an identity, and a surface can want both
+  (avatar, then status dot). One shared `leadingSlot(...)` (web barrel) renders
+  the pair for all three views, so the order cannot drift; it returns
+  `undefined` when there is neither, so a host slot still sees "no icon".
+- **Resolved from the visible set.** Each view calls `pickLeadingField` over the
+  same `resolveBodyFields(...)` result it already renders from, so hiding the
+  field in Properties hides the avatar.
+- **At most one per schema.** `pickLeadingField` throws when two fields declare
+  it. There is no type-based fallback: data-view names no field type, so only
+  the flag qualifies.
+
 Beyond the single-parent tree, `getAliasParents` declares optional **reference
 edges**: the row *also* appears as a read-only leaf ("alias") under each
 returned parent id (e.g. the pages sidebar rendering linked pages as children
@@ -817,6 +840,30 @@ is taken to render a chip too (which is how Events keeps its "source type no
 longer installed" fallback). An override that renders plain text for a chip-typed
 field loses its middots; cosmetic, and the price of not making every consumer
 re-declare what its type already said.
+
+## Structured display data (`data`)
+
+`FieldDef.value` is the **comparable** projection — sort, filter, search and
+group-by all read it — so it is scalar. `FieldDef.values` is the multi-value
+twin for tags. `FieldDef.data?: (row) => unknown` is the third projection:
+**structured and display-only**, e.g. an avatar spec `{ icon, color, svgNodes }`.
+
+- **Read only by the field type's cell.** `useResolveCell` computes
+  `data: field.data?.(row)` itself and hands it on as `TableCellProps.data`
+  (`unknown` at that boundary, like `raw`), so every read site — `FieldCell` and
+  the tree's primary label alike — gets it with no signature change. The type's
+  cell asserts the shape it expects.
+- **Inert by construction.** Nothing comparable reads it: `makeSortComparator`
+  drops a rule whose field has no `value`, `isGroupableField` refuses a
+  value-less field whatever `groupable` says, the filter picker lists only types
+  with an operator set, and default search indexes `value`/`values` only. Pair
+  `data` with `value` when a field must also sort or filter. It **does** appear
+  in Properties, where hiding it hides it.
+- **Fails loudly when nothing can draw it.** `FieldCell`'s last-resort
+  `String(value ?? "")` is refused for a `data` field: with no `cell` override
+  and no contributed cell for its type, it throws `MissingDataCellError` naming
+  the field id and type. A blank cell would hide the real mistake — the type's
+  cell plugin missing from the composition.
 
 ## Row activation is PER ROW
 
@@ -1488,7 +1535,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
     - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
     - `DataViewSlots.Control` ← `primitives.data-view`
-    - `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
+    - `DataViewSlots.Cell` ← `fields.avatar.table`, `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
     - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
     - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
     - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
@@ -1615,6 +1662,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `ItemActions`
     - `ItemActionsDescriptor`
     - `ItemActionZone`
+    - `LeadingSlotProps`
     - `ManualOrderConfig`
     - `MergedDataViewProps`
     - `PartitionOptions`
@@ -1650,10 +1698,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `IDENTITY_GROUPING_SET`
     - `isFilterGroup`
     - `isGroupableField`
+    - `leadingSlot`
     - `makeSortComparator`
     - `MergedDataView`
+    - `MissingDataCellError`
     - `partitionIntoSections`
+    - `pickLeadingField`
     - `pickPrimaryField`
+    - `readFallback`
     - `resolveBodyFields`
     - `rowToneClass`
     - `useDataViewControls`
@@ -1714,6 +1766,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/trace/pane`
+    - `fields/avatar/table`
     - `fields/bool/data-view-codec`
     - `fields/bool/data-view-group`
     - `fields/bool/filter`

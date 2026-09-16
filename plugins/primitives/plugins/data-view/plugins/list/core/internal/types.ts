@@ -6,7 +6,8 @@ import type { ReactNode } from "react";
  * `DataViewRenderProps.options`.
  */
 export interface ListViewOptions<TRow> {
-  /** Leading slot per row (icon / avatar / status-dot). */
+  /** Leading slot per row (icon / avatar / status-dot), rendered after the
+   *  schema's leading field (`FieldDef.leading`), if any. */
   leading?: (row: TRow) => ReactNode;
   /**
    * Full row-body override (escape hatch). Owns its own content; still wrapped

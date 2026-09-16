@@ -164,7 +164,9 @@ reusing `buildTree`, subtree-preserving `filterTree` search, the anchor-only DnD
   a primitive-owned `absolute inset-0` layer painted *over* the row, so a
   translucent overlay composes with the hover/selected backgrounds. Use this
   instead of faking a full-row background inside `trailing`.
-- `leadingIcon?(row)` — icon rendered before the label.
+- `leadingIcon?(row)` — icon rendered before the label, after the schema's
+  leading field (`FieldDef.leading`), if any — that field is out of the label
+  pick and the secondary chips. See the data-view CLAUDE.md ("Leading field").
 - `trailing?(row)` — persistent content rendered after the label (status badge,
   count, …). Always visible — distinct from `itemActions`, which are hover-revealed.
 - `rowMenu?(helpers, row)` — items for the row's hover-revealed "⋯" more-menu
@@ -223,9 +225,12 @@ CLAUDE.md ("Row tone").
     - `primitives/data-view.HierarchyConfig`
     - `primitives/data-view.ItemActionProps`
     - `primitives/data-view.ItemActionsDescriptor`
+    - `primitives/data-view.leadingSlot`
     - `primitives/data-view.makeSortComparator`
     - `primitives/data-view.partitionIntoSections`
+    - `primitives/data-view.pickLeadingField`
     - `primitives/data-view.pickPrimaryField`
+    - `primitives/data-view.readFallback`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.RowTone`
     - `primitives/data-view.rowToneClass`

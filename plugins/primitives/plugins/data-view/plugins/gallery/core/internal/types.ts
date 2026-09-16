@@ -34,7 +34,8 @@ export interface GalleryViewOptions<TRow> {
   /**
    * Leading block rendered beside the body (icon / avatar / status dot), the
    * gallery twin of `ListViewOptions.leading` → `Row`'s `icon` slot. Distinct
-   * from `cover`, which is a full-width region ABOVE the body.
+   * from `cover`, which is a full-width region ABOVE the body. Rendered after
+   * the schema's leading field (`FieldDef.leading`), if any.
    */
   leading?: (row: TRow) => ReactNode;
   /** Card density, mirroring the list's row density. Default `"md"`. */

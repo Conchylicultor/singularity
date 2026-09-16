@@ -44,7 +44,10 @@ into its measured `scrollMargin`, so the two compose with no wiring.
 - `renderBody?(row)` — replace the card's BODY (title + property rows) only.
 - `leading?(row)` — block rendered *beside* the body (icon / avatar / status
   dot), the twin of `ListViewOptions.leading` → `Row`'s `icon`. Distinct from
-  `cover`, which is full-width and sits ABOVE the body.
+  `cover`, which is full-width and sits ABOVE the body. Rendered after the
+  schema's leading field (`FieldDef.leading`), if any — that field is out of the
+  title pick and the property rows, but never the cover. See the data-view
+  CLAUDE.md ("Leading field").
 - `size?` — card density, `"sm" | "md"` (default `"md"`).
 - `cover?(row)` — produce the default card's cover region as a `CoverContent`:
   `{ kind: "image", src }` | `{ kind: "icon", icon }` | `{ kind: "node", node }`,
@@ -109,6 +112,8 @@ hand-roll a *button* inside the body. It just has no card to own.
     - `primitives/data-view.FieldDef`
     - `primitives/data-view.GroupedSections`
     - `primitives/data-view.ItemActionsDescriptor`
+    - `primitives/data-view.leadingSlot`
+    - `primitives/data-view.pickLeadingField`
     - `primitives/data-view.pickPrimaryField`
     - `primitives/data-view.resolveBodyFields`
     - `primitives/data-view.rowToneClass`

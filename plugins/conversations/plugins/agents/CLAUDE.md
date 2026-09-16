@@ -46,6 +46,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/header.Conversation`
     - `conversations/model-provider.useVisibleModels`
+    - `fields/avatar/table.avatarFieldDef`
     - `infra/endpoints.fetchEndpoint`
     - `primitives/avatar.Avatar`
     - `primitives/avatar.AVATAR_COLOR_KEYS`

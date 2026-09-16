@@ -2111,6 +2111,10 @@
       "name": "@singularity/plugin-fields-avatar-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/avatar/plugins/table": {
+      "name": "@singularity/plugin-fields-avatar-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool": {
       "name": "@singularity/plugin-fields-bool",
       "version": "0.0.1",
@@ -6947,6 +6951,8 @@
     "@singularity/plugin-fields-avatar": ["@singularity/plugin-fields-avatar@workspace:plugins/fields/plugins/avatar"],
 
     "@singularity/plugin-fields-avatar-config": ["@singularity/plugin-fields-avatar-config@workspace:plugins/fields/plugins/avatar/plugins/config"],
+
+    "@singularity/plugin-fields-avatar-table": ["@singularity/plugin-fields-avatar-table@workspace:plugins/fields/plugins/avatar/plugins/table"],
 
     "@singularity/plugin-fields-bool": ["@singularity/plugin-fields-bool@workspace:plugins/fields/plugins/bool"],
 

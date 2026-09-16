@@ -91,6 +91,7 @@ export function useResolveCell(): (
       return renderIsolated(Cell, contribution, {
         value,
         values,
+        data: field.data?.(row),
         field,
         raw: row,
       } satisfies TableCellProps);

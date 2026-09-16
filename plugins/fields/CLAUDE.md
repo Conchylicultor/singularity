@@ -176,7 +176,7 @@ tokens, so anything that imports the barrels back would cycle.
     - `registerFieldResolver`
     - `resolveTypeChain`
 - Sub-plugins:
-  - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
+  - **`avatar`** [2 sub-plugins] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
   - **`bool`** [9 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
   - **`date`** [9 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.

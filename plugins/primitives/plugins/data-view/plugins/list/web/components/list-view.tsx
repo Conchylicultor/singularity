@@ -12,6 +12,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   FieldCell,
   GroupedSections,
+  leadingSlot,
+  pickLeadingField,
   pickPrimaryField,
   resolveBodyFields,
   rowToneClass,
@@ -189,9 +191,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }
 
-  const titleField = pickPrimaryField(vis);
-  const trailingFields = vis.filter((f) => f.align === "end");
-  const subtitleFields = vis.filter(
+  // The leading field (the row's avatar) renders in `Row`'s icon slot, so it is
+  // out of the title pick, the subtitle and the trailing cell alike.
+  const leadingField = pickLeadingField(vis);
+  const bodyFields = vis.filter((f) => f !== leadingField);
+  const titleField = pickPrimaryField(bodyFields);
+  const trailingFields = bodyFields.filter((f) => f.align === "end");
+  const subtitleFields = bodyFields.filter(
     (f) => f.id !== titleField?.id && f.align !== "end",
   );
 
@@ -287,7 +293,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         // put inside it. A non-activating row is a plain container, which is
         // what lets its body hold a real control.
         onClick={props.rowActivation?.(row)}
-        icon={options.leading?.(row)}
+        icon={leadingSlot({
+          field: leadingField,
+          row,
+          resolveCell,
+          resolveEditor,
+          own: options.leading?.(row),
+        })}
         actions={revealed?.({
           row,
           hasChildren: props.hasChildren?.(key) ?? false,

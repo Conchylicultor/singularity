@@ -7960,6 +7960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view.conversationPane`
           - `conversations/conversation-view/header.Conversation`
           - `conversations/model-provider.useVisibleModels`
+          - `fields/avatar/table.avatarFieldDef`
           - `infra/endpoints.fetchEndpoint`
           - `primitives/avatar.Avatar`
           - `primitives/avatar.AVATAR_COLOR_KEYS`
@@ -13767,6 +13768,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/avatar.SvgNode`
             - Exports (types): `AvatarFieldDef`
             - Exports (values): `avatarField`
+        - **`table`** — Avatar field type: data-view table cell (icon + color disc) plus the avatarFieldDef authoring helper.
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "avatar" → `AvatarCell`
+            - Uses:
+              - `primitives/avatar.Avatar`
+              - `primitives/data-view.DataViewSlots`
+            - Exports (types):
+              - `AvatarFieldData`
+              - `AvatarFieldDefOptions`
+            - Exports (values):
+              - `AvatarCell`
+              - `AvatarCellDataError`
+              - `avatarFieldDef`
+          - Cross-plugin:
+            - Imported by: `conversations/agents`
     - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "bool"
@@ -21912,6 +21928,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-ui/item`
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `fields/avatar/config`
+          - `fields/avatar/table`
     - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
       - Web:
         - Uses:
@@ -25198,7 +25215,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
           - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
           - `DataViewSlots.Control` ← `primitives.data-view`
-          - `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
+          - `DataViewSlots.Cell` ← `fields.avatar.table`, `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`
           - `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`
           - `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
           - `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`
@@ -25325,6 +25342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ItemActions`
           - `ItemActionsDescriptor`
           - `ItemActionZone`
+          - `LeadingSlotProps`
           - `ManualOrderConfig`
           - `MergedDataViewProps`
           - `PartitionOptions`
@@ -25360,10 +25378,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `IDENTITY_GROUPING_SET`
           - `isFilterGroup`
           - `isGroupableField`
+          - `leadingSlot`
           - `makeSortComparator`
           - `MergedDataView`
+          - `MissingDataCellError`
           - `partitionIntoSections`
+          - `pickLeadingField`
           - `pickPrimaryField`
+          - `readFallback`
           - `resolveBodyFields`
           - `rowToneClass`
           - `useDataViewControls`
@@ -25424,6 +25446,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
           - `debug/trace/pane`
+          - `fields/avatar/table`
           - `fields/bool/data-view-codec`
           - `fields/bool/data-view-group`
           - `fields/bool/filter`
@@ -25614,6 +25637,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldDef`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
+              - `primitives/data-view.leadingSlot`
+              - `primitives/data-view.pickLeadingField`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.rowToneClass`
@@ -25657,7 +25682,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.FieldCell`
               - `primitives/data-view.GroupedSections`
               - `primitives/data-view.ItemActionsDescriptor`
+              - `primitives/data-view.leadingSlot`
               - `primitives/data-view.ManualOrderConfig`
+              - `primitives/data-view.pickLeadingField`
               - `primitives/data-view.pickPrimaryField`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.rowToneClass`
@@ -25755,9 +25782,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view.HierarchyConfig`
               - `primitives/data-view.ItemActionProps`
               - `primitives/data-view.ItemActionsDescriptor`
+              - `primitives/data-view.leadingSlot`
               - `primitives/data-view.makeSortComparator`
               - `primitives/data-view.partitionIntoSections`
+              - `primitives/data-view.pickLeadingField`
               - `primitives/data-view.pickPrimaryField`
+              - `primitives/data-view.readFallback`
               - `primitives/data-view.resolveBodyFields`
               - `primitives/data-view.RowTone`
               - `primitives/data-view.rowToneClass`
