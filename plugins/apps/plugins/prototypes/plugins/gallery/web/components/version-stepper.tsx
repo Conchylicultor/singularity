@@ -155,6 +155,7 @@ function ReadyStepper({ history }: { history: PrototypeHistory }) {
             go(step ?? null);
             setListOpen(false);
           }}
+          onClose={() => setListOpen(false)}
         />
       </InlinePopover>
       <IconButton

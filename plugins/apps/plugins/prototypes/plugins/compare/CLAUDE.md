@@ -1,10 +1,12 @@
 # compare
 
-The **Compare** stage of the prototype detail pane: the prototype mock on the
-left, the real app thing it says it mocks on the right, both live, both
-interactive, and both at **one width** the reader changes.
+The **Compare** stage of the prototype detail pane: the document on screen on
+the left, a counterpart on the right, both live, both interactive, and both at
+**one width** the reader changes. The counterpart is, by default, the real app
+thing the prototype says it mocks — or one the reader picked (below), such as
+the prototype's own latest version.
 
-This plugin owns three things and names no kind of counterpart:
+This plugin owns four things and names no kind of counterpart:
 
 1. **Reading the declaration.** A prototype names its counterpart in its own
    document, as `<meta name="mocks" content="<kind>:<ref>">`. The `files`
@@ -13,12 +15,37 @@ This plugin owns three things and names no kind of counterpart:
 2. **Dispatching on the kind.** `Counterpart.Kind` (`web/slots.tsx`) is a
    dispatch slot keyed on the tag. A kind is a child plugin under `plugins/`
    contributing `{ match: "<tag>", label, example, component }`. Shipped kinds:
-   `fixture` (a layout-harness fixture), and `route` / `app` (the running app
+   `fixture` (a layout-harness fixture), `route` / `app` (the running app
    at a path — the screen alone, or the whole app with its rail and tab bar;
-   one plugin, two contributions). Another kind is a new folder here and no
-   edit to this plugin.
-3. **The chrome** (`counterpart-stage.tsx`): the width control, both halves,
-   the per-half error boundary.
+   one plugin, two contributions), and `version` (another version of the
+   prototype itself). Another kind is a new folder here and no edit to this
+   plugin.
+3. **What the stage compares against** (`web/against.tsx`). See below.
+4. **The chrome** (`counterpart-stage.tsx`): the Against, width and zoom
+   controls, both halves, the per-half error boundary.
+
+## Declared or picked: what the stage compares against
+
+The stage shows ONE `<kind>:<ref>` spec (`CounterpartSpec`): the one the reader
+picked, else the one the page declares. Either goes through the same dispatch,
+so a kind cannot tell which it was handed.
+
+- **A kind can offer counterparts undeclared**: `presets: [{ ref, label }]` on
+  its contribution. The stage's **Against** control lists "Declared" plus every
+  kind's presets (`useOfferedCounterparts()`); with no presets anywhere the
+  control is absent. The `version` kind offers `version:latest` as "Latest
+  version".
+- **A kind a page never declares** leaves out `example`, and is then not listed
+  in the "how to declare one" copy.
+- **The pick** lives in `CompareAgainstProvider`, contributed into the gallery's
+  `PrototypeDetailScope` wrapper slot, so the header, the version list's row
+  actions and the stage share it. It is held with the prototype's name (opening
+  another prototype drops it, as the shown version does) and it is not in the
+  URL — the pane's route has room for one optional part, the stage.
+  `useCompareAgainst().compareAgainst(spec)` picks a spec AND switches to this
+  stage: that is how the `version` plugin's **Compare with latest** hover
+  action on a past version works (it also shows that version on the left, so
+  the stepper keeps stepping the left half through history).
 
 ## The contract: a kind resolves, the stage renders
 
@@ -46,7 +73,7 @@ The kind's `target` prop is everything after the first colon; it is not named
 
 | State | Decided by | What the reader sees |
 | --- | --- | --- |
-| no tag | the parser | "does not say what it is a mockup of" + every registered kind's example line |
+| no tag (and nothing picked) | the parser | "does not say what it is a mockup of" + every declarable kind's example line |
 | malformed | the parser (also a `problems[]` entry on the card and Focus banner) | the raw line, the reason, the syntax, the known kinds |
 | unknown kind | the dispatch fallback (`UnknownKind`, in `slots.tsx`) | "nothing in this worktree shows a `<tag>:` counterpart" + the known kinds |
 | unresolvable ref | the kind itself | the kind's own sentence (fixture: missing / region; route: no app / no pane) |
@@ -177,12 +204,17 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
 
 ## Plugin reference
 
-- Description: The Compare stage of the prototype detail pane: the prototype mock beside the real app thing it declares it mocks (<meta name="mocks" content="<kind>:<ref>">), both live and both at one shared width the reader changes. Owns the declaration dispatch and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route) is a child plugin contributed into the open Counterpart.Kind registry.
+- Description: The Compare stage of the prototype detail pane: the document on screen beside a counterpart, both live and both at one shared width the reader changes. The counterpart is the real app thing the prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), or one the reader picks in the stage's Against control or through a row action (another version of the prototype). Owns the dispatch, the picked-counterpart state and the side-by-side chrome; each kind of counterpart (a layout-harness fixture, the running app at a route, a version of the prototype) is a child plugin contributed into the open Counterpart.Kind registry.
 - Web:
-  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`
-  - Contributes: `PrototypeStages.Stage` "Compare" → `CompareStage`
+  - Slots: `Counterpart.Kind` ← `apps.prototypes.compare.fixture`, `apps.prototypes.compare.route`, `apps.prototypes.compare.version`
+  - Contributes:
+    - `PrototypeStages.Stage` "Compare" → `CompareStage`
+    - `PrototypeDetailScope` → `CompareAgainstProvider`
   - Uses:
+    - `apps/prototypes/gallery.PrototypeDetailScope`
+    - `apps/prototypes/gallery.PrototypeStageProps`
     - `apps/prototypes/gallery.PrototypeStages`
+    - `apps/prototypes/gallery.usePrototypeDetail`
     - `primitives/bar.Bar`
     - `primitives/css/badge.Badge`
     - `primitives/css/clip.Clip`
@@ -198,17 +230,23 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types):
+    - `CompareAgainst`
     - `CounterpartKindMeta`
     - `CounterpartKindProps`
+    - `CounterpartPreset`
     - `CounterpartResolution`
+    - `CounterpartSpec`
     - `WidthChoices`
   - Exports (values):
     - `Counterpart`
+    - `MockFrame`
+    - `useCompareAgainst`
     - `useCounterpartKinds`
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
+    - `apps/prototypes/compare/version`
 - Core:
   - Exports (types):
     - `CompareHalf`
@@ -220,5 +258,6 @@ Design: `research/2026-09-10-global-prototype-counterpart-kinds.md`.
 - Sub-plugins:
   - **`fixture`** — The fixture: counterpart kind for the prototype Compare stage: the real app component a prototype mocks, as a layout-harness fixture looked up by id (fixture:<id>) in this worktree's catalog and rendered live at the stage's shared width. The only place prototypes are tied to app internals.
   - **`route`** — The route: and app: counterpart kinds for the prototype Compare stage: the running app itself, framed at an in-app path on this deploy's own origin — chromeless for route: (route:/agents/c/123: no rail, no tab bar, just the screen) and with its chrome for app: (app:/agents: rail, tab bar and action bar included) — so a whole-screen or whole-app mock is compared against the real thing as this branch renders it, never a second implementation that could drift.
+  - **`version`** — The version: counterpart kind for the prototype Compare stage: another version of the prototype itself (version:latest — the live folder — or version:<sha>), framed beside the version on screen at the same width with the same picked options. Never declared by a page: offered as "Latest version" in the stage's Against control, and as a "Compare with latest" hover action on every past version in the version list.
 
 <!-- AUTOGENERATED:END -->

@@ -17,7 +17,11 @@ export function KindExamples({
 }: {
   kinds: readonly CounterpartKindMeta[];
 }): ReactElement {
-  if (kinds.length === 0) {
+  // Only the kinds a page can declare; the rest are picked in the stage.
+  const declarable = kinds.flatMap((k) =>
+    k.example === undefined ? [] : [{ label: k.label, example: k.example }],
+  );
+  if (declarable.length === 0) {
     return (
       <Text variant="caption" tone="muted">
         No counterpart kind is contributed in this worktree.
@@ -26,7 +30,7 @@ export function KindExamples({
   }
   return (
     <Stack gap="xs">
-      {kinds.map((k) => (
+      {declarable.map((k) => (
         <Stack key={k.example} gap="2xs">
           <Text variant="caption" tone="muted">
             {k.label}

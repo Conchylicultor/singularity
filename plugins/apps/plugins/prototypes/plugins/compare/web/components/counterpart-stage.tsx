@@ -59,11 +59,17 @@ export function CounterpartStage({
   resolution,
   meta,
   src,
+  mockSubtitle,
+  against,
 }: {
   resolution: CounterpartResolution;
   meta: PrototypeMeta;
   /** The mock's document URL, as the pane built it (picks included). */
   src: string;
+  /** Caption under the mock half's heading (its title, and version). */
+  mockSubtitle: string;
+  /** The Against control, leading the stage's bar; `null` for none. */
+  against: ReactNode;
 }): ReactElement {
   const widths =
     resolution.status === "found" ? resolution.widths : PLACEHOLDER_WIDTHS;
@@ -97,6 +103,7 @@ export function CounterpartStage({
       header={
         <Bar tier="pane">
           <Stack direction="row" gap="sm" align="center">
+            {against}
             <Text variant="label">Width</Text>
             {/* One choice is not a choice; the control would be a label. */}
             {widths.length > 1 ? (
@@ -166,7 +173,7 @@ export function CounterpartStage({
                 <Half
                   half="mock"
                   title="Prototype mock"
-                  subtitle={meta.title}
+                  subtitle={mockSubtitle}
                   halfRef={halfRef}
                   frameRef={frameRef}
                 >

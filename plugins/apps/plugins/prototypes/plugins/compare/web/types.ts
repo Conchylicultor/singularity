@@ -60,8 +60,35 @@ export interface CounterpartKindMeta {
   /**
    * A COMPLETE example `content` value, e.g.
    * `fixture:control-panel/setting-rail`. The "declares nothing" copy lists
-   * every registered kind's example, so the syntax the reader is shown is the
+   * every kind that has one, so the syntax the reader is shown is the
    * registry's, never a hardcoded pair.
+   *
+   * Absent for a kind a prototype never declares — one the reader only ever
+   * picks in the stage (a version of the prototype itself). Such a kind is not
+   * listed as something to write in a page.
    */
-  example: string;
+  example?: string;
+  /**
+   * Counterparts of this kind the stage offers in its "Against" control,
+   * whatever the prototype declares — e.g. the prototype's latest version.
+   */
+  presets?: readonly CounterpartPreset[];
+}
+
+/** One counterpart a kind offers without it being declared. */
+export interface CounterpartPreset {
+  /** The ref, as it would follow `<kind>:`. */
+  ref: string;
+  /** What the Against control reads, e.g. "Latest version". */
+  label: string;
+}
+
+/**
+ * Which counterpart the stage shows: a kind tag and a ref into it — the same
+ * pair a `<meta name="mocks" content="<tag>:<ref>">` declaration parses into,
+ * or one the reader picked.
+ */
+export interface CounterpartSpec {
+  tag: string;
+  ref: string;
 }

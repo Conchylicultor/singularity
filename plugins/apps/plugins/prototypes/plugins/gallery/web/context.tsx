@@ -23,7 +23,11 @@ import {
   type PrototypeVersion,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { PrototypeStages, type PrototypeStageContribution } from "./slots";
+import {
+  PrototypeDetailScope,
+  PrototypeStages,
+  type PrototypeStageContribution,
+} from "./slots";
 
 /** A contributed stage as the pane reads it back: renderable only via `renderIsolated`. */
 export type PrototypeStage = SealContributions<PrototypeStageContribution>;
@@ -202,7 +206,8 @@ export function PrototypeDetailProvider({
   );
   return (
     <PrototypeDetailContext.Provider value={value}>
-      {children}
+      {/* Inside the provider, so a sibling plugin's wrapper can read it. */}
+      <PrototypeDetailScope.Wrap>{children}</PrototypeDetailScope.Wrap>
     </PrototypeDetailContext.Provider>
   );
 }
@@ -217,7 +222,15 @@ export function usePrototypeOptions(
   meta: PrototypeMeta,
 ): readonly PrototypeOption[] {
   const { shownVersion } = usePrototypeDetail();
-  return shownVersion?.options ?? meta.options;
+  return documentOptions(meta, shownVersion);
+}
+
+/** The options `version` declares — the live page's (`meta`) for `null`. */
+function documentOptions(
+  meta: PrototypeMeta,
+  version: PrototypeVersion | null,
+): readonly PrototypeOption[] {
+  return version?.options ?? meta.options;
 }
 
 /**
@@ -246,12 +259,6 @@ export function usePrototypePicks(meta: PrototypeMeta): PicksRead<OptionPicks> {
  * through this, so none of them can show a different variant — or a different
  * version — from the others.
  *
- * - live (no version picked): its `index.html`, cache-busted by `version` and
- *   carrying the picked options.
- * - a recorded version: that version's frozen document, carrying the picks
- *   valid against the options THAT version declares. No cache-bust, since a
- *   sha addresses content that never changes.
- *
  * Pending while the picks are: a URL built without them would open a variant
  * the user did not pick, and then swap to theirs.
  */
@@ -260,15 +267,34 @@ export function usePrototypeSrc(
   version: number,
 ): PicksRead<string> {
   const { shownVersion } = usePrototypeDetail();
-  const picks = usePrototypePicks(meta);
+  return usePrototypeDocumentSrc(meta, shownVersion, version);
+}
+
+/**
+ * The url of ONE document of the open prototype — `version`, or the live
+ * folder for `null` — whichever the pane shows. For a frame that shows a
+ * document OTHER than the one on screen (Compare's "latest version" half);
+ * the document on screen is {@link usePrototypeSrc}.
+ *
+ * - live: its `index.html`, cache-busted by `cacheBust` (the live
+ *   `prototypesVersionResource` value) and carrying the picked options.
+ * - a recorded version: that version's frozen document, carrying the picks
+ *   valid against the options THAT version declares. No cache-bust, since a
+ *   sha addresses content that never changes.
+ */
+export function usePrototypeDocumentSrc(
+  meta: PrototypeMeta,
+  version: PrototypeVersion | null,
+  cacheBust: number,
+): PicksRead<string> {
+  const { picks } = usePrototypeDetail();
   return useMemo<PicksRead<string>>(() => {
     if (picks.pending) return picks;
+    const resolved = resolvePicks(documentOptions(meta, version), picks.data);
     const src =
-      shownVersion === null
-        ? prototypeUrl(meta.name, { v: version, picks: picks.data })
-        : prototypeVersionUrl(meta.name, shownVersion.sha, {
-            picks: picks.data,
-          });
+      version === null
+        ? prototypeUrl(meta.name, { v: cacheBust, picks: resolved })
+        : prototypeVersionUrl(meta.name, version.sha, { picks: resolved });
     return { pending: false, data: src };
-  }, [meta.name, version, shownVersion, picks]);
+  }, [meta, version, cacheBust, picks]);
 }

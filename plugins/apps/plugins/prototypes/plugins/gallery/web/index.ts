@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { prototypesGalleryPane, prototypeDetailPane } from "./panes";
-import { PrototypeStages, PrototypeVersionActions } from "./slots";
+import {
+  PrototypeDetailScope,
+  PrototypeStages,
+  PrototypeVersionActions,
+} from "./slots";
 import { StageSwitcher, ImproveButton } from "./components/detail-actions";
 import { FocusStage } from "./components/focus-stage";
 import { VersionStepper } from "./components/version-stepper";
@@ -13,14 +17,20 @@ export { OptionsPicker } from "./components/options-picker";
 export {
   usePrototypeDetail,
   usePrototypePicks,
+  usePrototypeDocumentSrc,
   usePrototypeSrc,
 } from "./context";
+export { useCloseVersionList } from "./components/version-list";
 export type {
   PicksRead,
   PrototypeDetailContextValue,
   PrototypeStage,
 } from "./context";
-export { PrototypeStages, PrototypeVersionActions } from "./slots";
+export {
+  PrototypeDetailScope,
+  PrototypeStages,
+  PrototypeVersionActions,
+} from "./slots";
 export type { PrototypeStageContribution, PrototypeStageProps } from "./slots";
 
 export default {
@@ -59,5 +69,6 @@ export default {
     "prototypes-detail": prototypeDetailPane,
     stage: PrototypeStages.Stage,
     "version-actions": PrototypeVersionActions,
+    "detail-scope": PrototypeDetailScope,
   },
 } satisfies PluginDefinition;

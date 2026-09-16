@@ -75,6 +75,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `apps/prototypes/compare`
     - `apps/prototypes/compare/fixture`
     - `apps/prototypes/compare/route`
+    - `apps/prototypes/compare/version`
     - `apps/prototypes/gallery`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`

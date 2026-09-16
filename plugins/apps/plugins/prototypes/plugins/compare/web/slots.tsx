@@ -3,7 +3,11 @@ import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web"
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { CounterpartKindMeta, CounterpartKindProps } from "./types";
+import type {
+  CounterpartKindMeta,
+  CounterpartKindProps,
+  CounterpartSpec,
+} from "./types";
 import { KindExamples } from "./components/notices";
 
 /**
@@ -34,6 +38,29 @@ export const Counterpart = {
  */
 export function useCounterpartKinds(): readonly CounterpartKindMeta[] {
   return Counterpart.Kind.useContributions();
+}
+
+/** One counterpart the stage offers whatever the prototype declares. */
+export interface OfferedCounterpart {
+  spec: CounterpartSpec;
+  label: string;
+}
+
+/**
+ * Every registered kind's presets (`CounterpartKindMeta.presets`), as the specs
+ * the Against control offers. A kind matched by a pattern rather than a plain
+ * tag has no single tag to name, so it offers none.
+ */
+export function useOfferedCounterparts(): readonly OfferedCounterpart[] {
+  const kinds = Counterpart.Kind.useContributions();
+  return kinds.flatMap((k) => {
+    const tag = k.match;
+    if (typeof tag !== "string") return [];
+    return (k.presets ?? []).map((p) => ({
+      spec: { tag, ref: p.ref },
+      label: p.label,
+    }));
+  });
 }
 
 /**

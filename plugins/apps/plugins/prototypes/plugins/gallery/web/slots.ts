@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
+import { defineWrapperSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type {
   PrototypeMeta,
   PrototypeVersion,
@@ -67,3 +68,12 @@ export const PrototypeStages = {
  * not a branch in the list.
  */
 export const PrototypeVersionActions = defineItemActions<PrototypeVersion>();
+
+/**
+ * Wrappers folded around the whole detail pane — header and body both, inside
+ * the pane's own provider (so a wrapper can read `usePrototypeDetail()`). For
+ * state a sibling plugin shares between a header control, a version-list row
+ * action and its stage: the `compare` plugin keeps "what Compare compares
+ * against" here, and this plugin names no wrapper.
+ */
+export const PrototypeDetailScope = defineWrapperSlot();

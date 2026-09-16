@@ -1,3 +1,4 @@
+import { createContext, useContext } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import {
   DataView,
@@ -19,6 +20,25 @@ import type {
 import { PrototypeVersionActions } from "../slots";
 
 const VERSIONS_VIEW = defineDataView("prototypes.versions");
+
+/**
+ * Closes the popover the version list sits in. Set by {@link VersionList};
+ * `null` outside one.
+ */
+const CloseVersionListContext = createContext<(() => void) | null>(null);
+
+/**
+ * For a row action that takes the reader somewhere on the pane (Compare's
+ * "compare with latest"): close the list so it stops covering the stage. A row
+ * action is only ever rendered inside the list, so a missing one throws.
+ */
+export function useCloseVersionList(): () => void {
+  const close = useContext(CloseVersionListContext);
+  if (close === null) {
+    throw new Error("useCloseVersionList must be used within a VersionList");
+  }
+  return close;
+}
 
 /**
  * How each kind of version reads. Keyed by the store's closed kind set, so a
@@ -75,34 +95,39 @@ export function VersionList({
   history,
   selected,
   onPick,
+  onClose,
 }: {
   history: PrototypeHistory;
   selected: string | undefined;
   onPick: (version: PrototypeVersion) => void;
+  /** Close the popover the list sits in (for row actions). */
+  onClose: () => void;
 }) {
   return (
-    <DataView<PrototypeVersion>
-      storageKey={VERSIONS_VIEW}
-      // The compact toolbar is one bar whose only control (search, in the
-      // options popover) appears on hover — without a title the bar reads as an
-      // empty band above the rows.
-      title={
-        history.versions.length === 1
-          ? "1 version"
-          : `${history.versions.length} versions`
-      }
-      rows={history.versions}
-      fields={FIELDS}
-      rowKey={(v) => v.sha}
-      views={["list"]}
-      defaultView="all"
-      density="compact"
-      selectedRowId={selected}
-      onRowActivate={onPick}
-      itemActions={PrototypeVersionActions}
-      searchAccessor={(v) => `v${v.n} ${v.subject}`}
-      emptyState="No version matches."
-    />
+    <CloseVersionListContext.Provider value={onClose}>
+      <DataView<PrototypeVersion>
+        storageKey={VERSIONS_VIEW}
+        // The compact toolbar is one bar whose only control (search, in the
+        // options popover) appears on hover — without a title the bar reads as an
+        // empty band above the rows.
+        title={
+          history.versions.length === 1
+            ? "1 version"
+            : `${history.versions.length} versions`
+        }
+        rows={history.versions}
+        fields={FIELDS}
+        rowKey={(v) => v.sha}
+        views={["list"]}
+        defaultView="all"
+        density="compact"
+        selectedRowId={selected}
+        onRowActivate={onPick}
+        itemActions={PrototypeVersionActions}
+        searchAccessor={(v) => `v${v.n} ${v.subject}`}
+        emptyState="No version matches."
+      />
+    </CloseVersionListContext.Provider>
   );
 }
 
