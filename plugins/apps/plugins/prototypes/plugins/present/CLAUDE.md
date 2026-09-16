@@ -24,6 +24,11 @@ The first three share one stage (same live iframe, scaled UP to fill — the
 pane's stage never upscales; a presentation should), so they cannot drift.
 `PresentPlacement` is ordered by coverage: `surface` < `viewport` < `screen`.
 
+**The options picker comes along** (the gallery's `OptionsPicker`, bottom-right,
+hover-revealed like the ×), so a theme or variant can be switched while
+presenting. It must stay inline DOM inside the stage box — anything portaled to
+`body` is invisible under the Fullscreen API.
+
 The overlay is rendered with `key={placement}`, so switching destination is an
 explicit remount rather than a portal-container swap React would reconcile into
 a half-move.
@@ -45,6 +50,7 @@ another way to view a prototype is a sibling plugin, not an edit here.
   - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
   - Uses:
     - `apps-core/tabs.useSurfaceFocused`
+    - `apps/prototypes/gallery.OptionsPicker`
     - `apps/prototypes/gallery.prototypeDetailPane`
     - `apps/prototypes/gallery.ScaledIframe`
     - `apps/prototypes/gallery.usePrototypeSrc`

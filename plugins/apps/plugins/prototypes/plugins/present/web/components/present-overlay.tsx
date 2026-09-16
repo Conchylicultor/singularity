@@ -23,6 +23,7 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
+  OptionsPicker,
   ScaledIframe,
   usePrototypeSrc,
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
@@ -168,6 +169,13 @@ export function PresentOverlay({
  * `usePrototypeSrc` URL as Focus and Compare, so presenting never drops the
  * reader's picks — and, like them, it waits for the picks rather than opening
  * on the defaults.
+ *
+ * The pane's options picker comes along, in the corner it has in the pane, so
+ * a theme or variant can still be switched while presenting — there is no pane
+ * header to go back to in `viewport`/`screen`. It is inline DOM (no portal),
+ * so it stays inside the fullscreened subtree. Revealed on hover like the exit
+ * button: at rest the presentation shows only the design. It draws nothing
+ * while the picks are unknown, which is the same wait the frame is in.
  */
 function PresentedFrame({
   meta,
@@ -176,11 +184,19 @@ function PresentedFrame({
   meta: PrototypeMeta;
   version: number;
 }) {
-  // No `error` arm: a picks record that cannot be read stays broken until
-  // someone fixes it, so it renders as the default error placeholder (its
-  // message) rather than as a spinner that never ends.
-  return matchResource(usePrototypeSrc(meta, version), {
-    pending: () => <Loading variant="block" />,
-    ready: (src) => <ScaledIframe meta={meta} src={src} upscale />,
-  });
+  const src = usePrototypeSrc(meta, version);
+  return (
+    <>
+      {/* No `error` arm: a picks record that cannot be read stays broken until
+          someone fixes it, so it renders as the default error placeholder (its
+          message) rather than as a spinner that never ends. */}
+      {matchResource(src, {
+        pending: () => <Loading variant="block" />,
+        ready: (url) => <ScaledIframe meta={meta} src={url} upscale />,
+      })}
+      <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
+        <OptionsPicker meta={meta} />
+      </Pin>
+    </>
+  );
 }

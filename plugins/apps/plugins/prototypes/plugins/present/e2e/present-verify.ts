@@ -1,11 +1,13 @@
 // Verifies the Present menu on a prototype's detail pane: each of the four
-// destinations actually takes the prototype somewhere, and Escape brings it
+// destinations actually takes the prototype somewhere, the options picker comes
+// along (and still switches the variant while fullscreen), and Escape brings it
 // back. Manual only — nothing runs this automatically.
 //
 // Usage:
 //   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
 //     [--name <prototype>] [--out <prefix>] [--headed]
 
+import type { Page } from "playwright";
 import {
   agentFetch,
   arg,
@@ -13,21 +15,47 @@ import {
   pathUrl,
   report,
   snap,
+  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  humanizeToken,
+  type PrototypeMeta,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 const out = arg("out", "/tmp/present-verify");
 
-async function firstPrototypeName(): Promise<string> {
+/**
+ * The prototype to present: the named one, else the first that declares options
+ * (a theme, a palette) — those are what the picker assertions need. Falls back
+ * to the first prototype at all, and the picker assertions then skip.
+ */
+async function target(): Promise<PrototypeMeta> {
   const res = await agentFetch(`/api/prototypes`);
   if (!res.ok) throw new Error(`GET /api/prototypes → ${res.status}`);
-  const rows = (await res.json()) as { name: string }[];
-  const first = rows[0];
-  if (!first) throw new Error("no prototypes exist to present");
-  return first.name;
+  const rows = (await res.json()) as PrototypeMeta[];
+  const wanted = arg("name");
+  const meta = wanted
+    ? rows.find((p) => p.name === wanted)
+    : (rows.find((p) => p.options.length > 0) ?? rows[0]);
+  if (!meta) throw new Error(wanted ? `no prototype ${wanted}` : "no prototypes exist to present");
+  return meta;
 }
 
-const name = arg("name") ?? (await firstPrototypeName());
+const meta = await target();
+const name = meta.name;
+// The option a chip will switch while fullscreen, and a value that is not the
+// one already on screen. Absent when the prototype declares no options.
+const option = meta.options.find((o) => o.values.some((v) => v !== o.default));
+const otherValue = option?.values.find((v) => v !== option.default);
+
+/** The prototype document's frame URL, wherever it is mounted. */
+function frameUrl(page: Page): string | undefined {
+  return page
+    .frames()
+    .find((f) => f.url().includes(`/api/prototypes/${name}/index.html`))
+    ?.url();
+}
 
 await withBrowser(async (h) => {
   const r = report(`present — ${name}`);
@@ -42,6 +70,17 @@ await withBrowser(async (h) => {
   // One chip of the app tab strip — the thing "In this app tab" must NOT
   // cover, and the thing every other destination does cover.
   const tabChip = page.locator("[data-app-tab]").first();
+  const picker = dialog.getByLabel("Prototype options");
+
+  /** The picker travels with the presentation — the only way to switch variant
+      once the pane header is gone. Skipped on a prototype declaring none. */
+  async function pickerIsPresent(where: string) {
+    if (!option) return;
+    r.ok(
+      `the options picker is on the ${where} presentation`,
+      (await picker.count()) === 1,
+    );
+  }
 
   // --- In this app tab ---------------------------------------------------
   await present.click();
@@ -65,6 +104,7 @@ await withBrowser(async (h) => {
     (await dialog.locator("iframe").count()) === 1,
   );
   r.ok("the app tab bar is still visible", await tabChip.isVisible());
+  await pickerIsPresent("in-this-app-tab");
   await snap(page, out, "in-this-app-tab");
 
   await page.keyboard.press("Escape");
@@ -84,6 +124,7 @@ await withBrowser(async (h) => {
       box.height >= viewport.height - 1,
     `dialog ${JSON.stringify(box)} viewport ${JSON.stringify(viewport)}`,
   );
+  await pickerIsPresent("in-this-browser-tab");
   await snap(page, out, "in-this-browser-tab");
 
   await page.keyboard.press("Escape");
@@ -104,6 +145,29 @@ await withBrowser(async (h) => {
       () => false,
     );
   r.ok("fullscreen hands the stage to the browser", fullscreened);
+  await pickerIsPresent("fullscreen");
+  // The load-bearing one: the picker still WORKS inside the fullscreened
+  // element — hovering opens its chips, and a chip reloads the frame on the
+  // picked variant, with no pane header to go back to.
+  if (option && otherValue !== undefined) {
+    await picker.hover();
+    const group = dialog.getByRole("radiogroup", {
+      name: humanizeToken(option.name),
+    });
+    await group.waitFor({ state: "visible", timeout: 5000 });
+    await group.getByRole("radio", { name: humanizeToken(otherValue) }).click();
+    const switched = await waitFor(
+      () => Promise.resolve(frameUrl(page)),
+      (url) => url !== undefined && url.includes(`${option.name}=${otherValue}`),
+      { timeoutMs: 15_000 },
+    );
+    r.ok(
+      `a chip switches ${option.name} to "${otherValue}" while fullscreen`,
+      switched.ok,
+      switched.value,
+    );
+    await page.mouse.move(5, 5);
+  }
   await snap(page, out, "fullscreen");
   await page.evaluate(async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
