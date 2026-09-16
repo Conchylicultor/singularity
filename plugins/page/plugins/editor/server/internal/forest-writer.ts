@@ -1067,9 +1067,16 @@ export async function writeBlockPatch(
     await updateBlockFields(ctx.tx, b.id, fullRow(b, stored.get(b.id)!));
   }
 
+  // A parked row sits at a scratch rank until its final pair is written, so
+  // phase 2 writes BOTH halves of that pair from the placement — never only the
+  // halves the update names. An update naming just `parentId` (a move whose rank
+  // string is still free under the new parent) would otherwise land at its park
+  // key: out of order at best, and onto a sibling's final rank at worst.
+  const parked = new Map(placements.map((p) => [p.id, p] as const));
   for (const u of updates) {
     const before = stored.get(u.id)!;
     const changes = u.changes;
+    const placement = parked.get(u.id);
     // ONLY the named columns. `rewriteBlockData` validates against the EFFECTIVE
     // type, which is the point of the two-way split below:
     //  - `data` named → validate it against the type this write leaves the row
@@ -1081,8 +1088,10 @@ export async function writeBlockPatch(
     //    unreadable row later.
     const type = namesField(changes, "type") ? changes.type! : before.type;
     const set: BlockColumnChanges = { updatedAt: new Date() };
-    if (namesField(changes, "parentId")) set.parentId = changes.parentId!;
-    if (namesField(changes, "rank")) set.rank = changes.rank!.toJSON();
+    if (placement) {
+      set.parentId = placement.parentId;
+      set.rank = placement.rank;
+    }
     if (namesField(changes, "expanded")) set.expanded = changes.expanded!;
     if (namesField(changes, "type")) set.type = changes.type!;
     if (namesField(changes, "data"))

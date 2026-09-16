@@ -869,3 +869,67 @@ describe("a data edit never changes a page's author — refused on every rewrite
     expect(await storedData("HUMAN")).toEqual({ title: "HUMAN", icon: null });
   });
 });
+
+describe("applyPageBlockPatch — a move that names only `parentId`", () => {
+  test("keeps its rank under the new parent instead of landing at its park key", async () => {
+    // P ▸ [A ▸ [x a0, y a1], B, q]. `x` and `y` move under B keeping their rank
+    // strings, so their updates name `parentId` alone; `q` moves in after them.
+    // Parking bumps x and y to a2 / a3 under A — a phase 2 that wrote only the
+    // named fields left them there, putting x on q's a2 (the unique index fired).
+    await seedBlock({
+      id: "P",
+      parentId: null,
+      pageId: null,
+      type: "page",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "A",
+      parentId: "P",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "x",
+      parentId: "A",
+      pageId: "P",
+      type: "text",
+      rank: "a0",
+    });
+    await seedBlock({
+      id: "y",
+      parentId: "A",
+      pageId: "P",
+      type: "text",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "B",
+      parentId: "P",
+      pageId: "P",
+      type: "text",
+      rank: "a1",
+    });
+    await seedBlock({
+      id: "q",
+      parentId: "P",
+      pageId: "P",
+      type: "text",
+      rank: "a2",
+    });
+
+    await patch({
+      updates: [
+        { id: "x", changes: { parentId: "B" } },
+        { id: "y", changes: { parentId: "B" } },
+        { id: "q", changes: { parentId: "B", rank: Rank.from("a2") } },
+      ],
+    });
+
+    expect(await liveChildren("B")).toEqual(["x", "y", "q"]);
+    expect((await row("x"))?.rank).toBe("a0");
+    expect((await row("y"))?.rank).toBe("a1");
+    expect(await liveChildren("A")).toEqual([]);
+  });
+});
