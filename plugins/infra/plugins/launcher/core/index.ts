@@ -5,6 +5,7 @@ export {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_WITHHELD_ENV,
   isRuntimeEnvName,
+  pickHostEnv,
   pickRuntimeEnv,
   runtimeEnvNames,
 } from "./internal/runtime-env";

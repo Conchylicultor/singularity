@@ -27,8 +27,10 @@ import { bootPluginGraph, runShutdownHooks } from "../shared/boot-stages";
 //
 // WHAT `exec` SKIPS, AND WHY EACH WOULD BE WRONG HERE:
 //
-// - **Socket bind.** There is nothing to serve, and `SOCKET_PATH` is not set in
-//   a child. Binding would also collide with the live backend's own socket.
+// - **Socket bind.** There is nothing to serve, and a child is never handed a
+//   socket: only the serving entry point calls `readServingSocket()`, and
+//   `servingSocketPath()` throws here. Binding would also collide with the
+//   live backend's own socket.
 // - **`markServerReady()`.** This process is not a serving backend. The flag is
 //   read by exactly one caller, `GET /api/health/ready` (infra/health), and exec
 //   mounts no routes — but setting it would still be a claim that is false.

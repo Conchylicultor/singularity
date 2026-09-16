@@ -503,6 +503,11 @@ func loadSpec(path string) (*Spec, error) {
 	if spec.Web != "" && !filepath.IsAbs(spec.Web) {
 		return nil, errors.New("web must be an absolute path when provided")
 	}
+	// Rejected here, at load, like every other schema error: the previous spec
+	// stays live instead of a spawn failing later on a value nothing handles.
+	if spec.SocketTransport != "" && spec.SocketTransport != "argv" {
+		return nil, fmt.Errorf("socketTransport must be \"argv\" or absent, got %q", spec.SocketTransport)
+	}
 	return &spec, nil
 }
 

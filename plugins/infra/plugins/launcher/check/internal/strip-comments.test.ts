@@ -10,6 +10,10 @@ describe("stripComments keeps length and line numbers", () => {
   test.each([
     ["a.ts", "const a = 1; // KEEP_OUT\n/* x\n y */ const b = 2;\n"],
     ["a.go", 'x := 1 // KEEP_OUT\n/* a\n b */ y := "s"\n'],
+    [
+      "a.rs",
+      'let x = 1; // KEEP_OUT\n/* a /* b\n */ c\n */ let y = r#"s\n"#;\n',
+    ],
     [".githooks/h", "echo hi # KEEP_OUT\n# whole line\nexit 0\n"],
   ])("%s", (path, code) => {
     const stripped = stripComments(path, code);
@@ -66,7 +70,7 @@ describe("TypeScript", () => {
   });
 });
 
-describe("Go and Rust", () => {
+describe("Go", () => {
   test("drops comments; keeps strings, raw strings and runes", () => {
     const code = [
       "// IN_LINE_COMMENT",
@@ -85,10 +89,100 @@ describe("Go and Rust", () => {
     }
   });
 
-  test("a Rust lifetime is not a char literal", () => {
+  test("block comments do not nest", () => {
+    const kept = words("gateway/x.go", "/* a /* b */ AFTER_BLOCK */");
+    expect(kept).toContain("AFTER_BLOCK");
+  });
+});
+
+// No Rust file in the scanned tree uses raw strings, nested comments or
+// multi-line strings today, so these fixtures are the only thing exercising
+// the Rust reader's handling of them.
+describe("Rust", () => {
+  const rs = "tauri/src-tauri/src/lib.rs";
+
+  test("drops comments; keeps strings", () => {
+    const code = [
+      "/// IN_DOC_COMMENT",
+      'let a = env("IN_STRING"); // IN_TRAILING',
+      'let e = "http://AFTER_URL"; /* IN_BLOCK */ let f = IN_CODE;',
+    ].join("\n");
+    const kept = words(rs, code);
+    for (const k of ["IN_STRING", "AFTER_URL", "IN_CODE"]) {
+      expect(kept).toContain(k);
+    }
+    for (const gone of ["IN_DOC_COMMENT", "IN_TRAILING", "IN_BLOCK"]) {
+      expect(kept).not.toContain(gone);
+    }
+  });
+
+  test("a lifetime is not a char literal", () => {
     const code = "fn f<'a>(x: &'a str) { g(\"IN_STRING\") } // IN_COMMENT";
-    const kept = words("tauri/src/lib.rs", code);
+    const kept = words(rs, code);
     expect(kept).toContain("IN_STRING");
+    expect(kept).not.toContain("IN_COMMENT");
+  });
+
+  test("block comments nest", () => {
+    const code = "/* a /* b */ IN_OUTER_COMMENT */ AFTER_BLOCK";
+    const kept = words(rs, code);
+    expect(kept).not.toContain("IN_OUTER_COMMENT");
+    expect(kept).toContain("AFTER_BLOCK");
+  });
+
+  test("a // inside a raw string is not a comment", () => {
+    const kept = words(rs, 'let u = r"http://IN_RAW"; let v = AFTER_RAW;');
+    expect(kept).toContain("IN_RAW");
+    expect(kept).toContain("AFTER_RAW");
+  });
+
+  test('a hashed raw string ends only at a quote with as many #: "# inside r##"…"## stays string', () => {
+    const code =
+      'let s = r##"a "# // STILL_RAW"##; // IN_COMMENT\nlet t = AFTER;';
+    const kept = words(rs, code);
+    expect(kept).toContain("STILL_RAW");
+    expect(kept).toContain("AFTER");
+    expect(kept).not.toContain("IN_COMMENT");
+  });
+
+  test("byte and C raw strings are raw strings", () => {
+    const code =
+      'let b = br#"// IN_BYTE_RAW"#; let c = cr"// IN_C_RAW"; X_CODE';
+    const kept = words(rs, code);
+    for (const k of ["IN_BYTE_RAW", "IN_C_RAW", "X_CODE"]) {
+      expect(kept).toContain(k);
+    }
+  });
+
+  test("a string may span lines", () => {
+    const code =
+      'let s = "line one\nhttp://IN_SECOND_LINE";\nlet t = AFTER; // IN_COMMENT';
+    const kept = words(rs, code);
+    expect(kept).toContain("IN_SECOND_LINE");
+    expect(kept).toContain("AFTER");
+    expect(kept).not.toContain("IN_COMMENT");
+  });
+
+  test("a raw identifier is not a raw string", () => {
+    const code = 'let r#type = 1; let s = "IN_STRING"; // IN_COMMENT';
+    const kept = words(rs, code);
+    expect(kept).toContain("IN_STRING");
+    expect(kept).not.toContain("IN_COMMENT");
+  });
+
+  test("a byte char holding a quote does not open a string", () => {
+    const code = "let q = b'\"'; let x = AFTER_CHAR; // IN_COMMENT";
+    const kept = words(rs, code);
+    expect(kept).toContain("AFTER_CHAR");
+    expect(kept).not.toContain("IN_COMMENT");
+  });
+
+  test("a backtick is an ordinary character, not a Go raw string", () => {
+    // Read as Go, the stray backtick would open a raw string running to the
+    // end of the file, and the comment after it would survive as "code".
+    const code = "m!(`); // IN_COMMENT\nlet y = AFTER_TICK;";
+    const kept = words(rs, code);
+    expect(kept).toContain("AFTER_TICK");
     expect(kept).not.toContain("IN_COMMENT");
   });
 });

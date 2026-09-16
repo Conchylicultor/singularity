@@ -5,6 +5,7 @@ import {
   RUNTIME_FORWARDED_TOOL_ENV,
   RUNTIME_HOST_ENV,
   RUNTIME_WITHHELD_ENV,
+  pickHostEnv,
   pickRuntimeEnv,
   runtimeEnvNames,
 } from "./runtime-env";
@@ -63,6 +64,29 @@ describe("pickRuntimeEnv", () => {
   test("skips names whose value is undefined", () => {
     expect(pickRuntimeEnv({ HOME: undefined, SINGULARITY_DIR: "/d" })).toEqual({
       SINGULARITY_DIR: "/d",
+    });
+  });
+});
+
+describe("pickHostEnv", () => {
+  test("keeps only the host facts, dropping installation settings too", () => {
+    const picked = pickHostEnv({
+      HOME: "home-value",
+      PATH: "/usr/bin",
+      LANG: "en_US.UTF-8",
+      LC_ALL: undefined,
+      SINGULARITY_DIR: "/data",
+      SINGULARITY_AUTH_GOOGLE_CLIENT_SECRET: "secret",
+      PLAYWRIGHT_BROWSERS_PATH: "/pw",
+      CLAUDECODE: "1",
+      CLAUDE_CODE_EXTRA_BODY: "{}",
+      SOCKET_PATH: "/sock",
+      SINGULARITY_CONVERSATION_ID: "conv-1",
+    });
+    expect(picked).toEqual({
+      HOME: "home-value",
+      PATH: "/usr/bin",
+      LANG: "en_US.UTF-8",
     });
   });
 });

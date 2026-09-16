@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { pickHostEnv } from "@plugins/infra/plugins/launcher/core";
 import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -8,13 +9,20 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { recordClaudeCliCall } from "./record-call";
 
-// Strip inherited Claude Code env vars so one-shot `claude --print` calls
-// don't inherit the parent session's settings (e.g. CLAUDE_CODE_EXTRA_BODY
-// with adaptive thinking, which Haiku doesn't support).
-const cleanEnv: Record<string, string> = {};
-for (const [k, v] of Object.entries(process.env)) {
-  if (v !== undefined && !k.startsWith("CLAUDE_CODE_")) cleanEnv[k] = v;
-}
+// A one-shot `claude --print` starts from the host facts alone (HOME, USER,
+// PATH, locale — `pickHostEnv`), never from this process's environment.
+//
+// It used to copy that environment minus every CLAUDE_CODE_* name, because a
+// backend started from an agent shell carried the shell's Claude session
+// variables, and one of them (CLAUDE_CODE_EXTRA_BODY with adaptive thinking)
+// broke Haiku calls outright. A denylist only catches the names somebody
+// already noticed, and what a process may have inherited is an open set — so
+// the list is closed instead. It is also right whatever the backend was
+// started with, including by a gateway that predates the declared runtime
+// environment. Agent panes run `claude` the same way (`env -i` over a closed
+// list, runtime-tmux's agent-session-env.ts), which is the evidence that
+// its login and keychain access need nothing beyond these.
+const claudeEnv = pickHostEnv(process.env);
 
 export interface RunClaudePrintInput {
   tier: ModelTier;
@@ -96,7 +104,7 @@ export async function runClaudePrint(
     // already cover this).
     const result = await spawnCaptured([CLAUDE_BIN, ...args], {
       cwd: "/tmp",
-      env: cleanEnv,
+      env: claudeEnv,
       stdin: input.prompt,
       timeoutMs,
     });

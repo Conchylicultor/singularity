@@ -1,4 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { servingSocketPath } from "@plugins/infra/plugins/runtime-identity/core";
 import { getStatsProfiling } from "../../shared/endpoints";
 
 interface Span {
@@ -10,19 +11,71 @@ interface Span {
 }
 
 const ENDPOINTS = [
-  { url: "/api/stats/commits/cumulative", phase: "stats:commits", label: "commits/cumulative" },
-  { url: "/api/stats/commits/rate?bucket=day", phase: "stats:commits", label: "commits/rate" },
-  { url: "/api/stats/commits/lines/cumulative", phase: "stats:commits", label: "lines/cumulative" },
-  { url: "/api/stats/commits/lines/rate?bucket=day", phase: "stats:commits", label: "lines/rate" },
-  { url: "/api/stats/cost/totals?scope=singularity", phase: "stats:cost", label: "cost/totals" },
-  { url: "/api/stats/cost/daily?scope=singularity", phase: "stats:cost", label: "cost/daily" },
-  { url: "/api/stats/cost/daily-by-family?scope=singularity", phase: "stats:cost", label: "cost/daily-by-family" },
-  { url: "/api/stats/cost/cumulative?scope=singularity", phase: "stats:cost", label: "cost/cumulative" },
-  { url: "/api/stats/cost/token-mix?scope=singularity", phase: "stats:cost", label: "cost/token-mix" },
-  { url: "/api/stats/cost/sessions?limit=50&scope=singularity", phase: "stats:cost", label: "cost/sessions" },
-  { url: "/api/stats/cost/distribution?scope=singularity", phase: "stats:cost", label: "cost/distribution" },
-  { url: "/api/stats/cost/avg-per-conversation?scope=singularity", phase: "stats:cost", label: "cost/avg-per-conv" },
-  { url: "/api/stats/tasks/cumulative", phase: "stats:tasks", label: "tasks/cumulative" },
+  {
+    url: "/api/stats/commits/cumulative",
+    phase: "stats:commits",
+    label: "commits/cumulative",
+  },
+  {
+    url: "/api/stats/commits/rate?bucket=day",
+    phase: "stats:commits",
+    label: "commits/rate",
+  },
+  {
+    url: "/api/stats/commits/lines/cumulative",
+    phase: "stats:commits",
+    label: "lines/cumulative",
+  },
+  {
+    url: "/api/stats/commits/lines/rate?bucket=day",
+    phase: "stats:commits",
+    label: "lines/rate",
+  },
+  {
+    url: "/api/stats/cost/totals?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/totals",
+  },
+  {
+    url: "/api/stats/cost/daily?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/daily",
+  },
+  {
+    url: "/api/stats/cost/daily-by-family?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/daily-by-family",
+  },
+  {
+    url: "/api/stats/cost/cumulative?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/cumulative",
+  },
+  {
+    url: "/api/stats/cost/token-mix?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/token-mix",
+  },
+  {
+    url: "/api/stats/cost/sessions?limit=50&scope=singularity",
+    phase: "stats:cost",
+    label: "cost/sessions",
+  },
+  {
+    url: "/api/stats/cost/distribution?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/distribution",
+  },
+  {
+    url: "/api/stats/cost/avg-per-conversation?scope=singularity",
+    phase: "stats:cost",
+    label: "cost/avg-per-conv",
+  },
+  {
+    url: "/api/stats/tasks/cumulative",
+    phase: "stats:tasks",
+    label: "tasks/cumulative",
+  },
   { url: "/api/stats/tasks/daily", phase: "stats:tasks", label: "tasks/daily" },
 ] as const;
 
@@ -59,10 +112,9 @@ function parseServerTimingChildren(
 }
 
 export const handleStatsProfiling = implement(getStatsProfiling, async () => {
-  const socketPath = process.env.SOCKET_PATH;
-  if (!socketPath) {
-    return { spans: [], totalMs: 0 };
-  }
+  // This backend's own socket. It throws in a process that serves nothing,
+  // where the old env read returned an empty profile that looked like "no data".
+  const socketPath = servingSocketPath();
 
   const t0 = performance.now();
 
@@ -70,7 +122,9 @@ export const handleStatsProfiling = implement(getStatsProfiling, async () => {
     ENDPOINTS.map(async (ep) => {
       const fetchStart = performance.now() - t0;
       try {
-        const res = await fetch(`http://localhost${ep.url}`, { unix: socketPath } as any);
+        const res = await fetch(`http://localhost${ep.url}`, {
+          unix: socketPath,
+        } as any);
         const fetchDuration = performance.now() - t0 - fetchStart;
         const serverTimingHeader = res.headers.get("Server-Timing");
         return { ep, fetchStart, fetchDuration, serverTimingHeader };
@@ -94,7 +148,12 @@ export const handleStatsProfiling = implement(getStatsProfiling, async () => {
       durationMs: fetchDuration,
     });
     spans.push(
-      ...parseServerTimingChildren(serverTimingHeader, ep.label, ep.phase, fetchStart),
+      ...parseServerTimingChildren(
+        serverTimingHeader,
+        ep.label,
+        ep.phase,
+        fetchStart,
+      ),
     );
   }
 

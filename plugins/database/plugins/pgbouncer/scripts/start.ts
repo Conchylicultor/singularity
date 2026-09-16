@@ -23,7 +23,10 @@ const PG_USER = "singularity";
 const PG_SOCKET_DIR = PGBOUNCER_SOCKET_DIR; // same dir
 
 const READY_TIMEOUT_MS = 30_000;
-const SOCKET_PATH = join(PGBOUNCER_SOCKET_DIR, `.s.PGSQL.${PGBOUNCER_PORT}`);
+const PGBOUNCER_SOCKET = join(
+  PGBOUNCER_SOCKET_DIR,
+  `.s.PGSQL.${PGBOUNCER_PORT}`,
+);
 
 // ─── platform detection ──────────────────────────────────────
 
@@ -33,7 +36,10 @@ function platformPackage(): string {
     linux: { arm64: "linux-arm64", x64: "linux-x64" },
   };
   const pkg = mapping[process.platform]?.[process.arch];
-  if (!pkg) throw new Error(`pgbouncer: unsupported platform ${process.platform}/${process.arch}`);
+  if (!pkg)
+    throw new Error(
+      `pgbouncer: unsupported platform ${process.platform}/${process.arch}`,
+    );
   return `@equin/pgbouncer-${pkg}`;
 }
 
@@ -51,9 +57,18 @@ function resolveBinary(): string {
     return override;
   }
   const pluginRoot = dirname(import.meta.dir);
-  const bin = join(pluginRoot, "node_modules", platformPackage(), "native", "bin", "pgbouncer");
+  const bin = join(
+    pluginRoot,
+    "node_modules",
+    platformPackage(),
+    "native",
+    "bin",
+    "pgbouncer",
+  );
   if (!existsSync(bin)) {
-    throw new Error(`pgbouncer: binary not found at ${bin}; run \`bun install\``);
+    throw new Error(
+      `pgbouncer: binary not found at ${bin}; run \`bun install\``,
+    );
   }
   return bin;
 }
@@ -62,7 +77,7 @@ function resolveBinary(): string {
 
 function pingSocket(timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const sock = connect(SOCKET_PATH);
+    const sock = connect(PGBOUNCER_SOCKET);
     const timer = setTimeout(() => {
       sock.destroy();
       resolve(false);
@@ -126,13 +141,17 @@ async function main(): Promise<void> {
   writeConfig();
   writeUserlist();
 
-  console.log(`pgbouncer: starting (socket=${PGBOUNCER_SOCKET_DIR}, port=${PGBOUNCER_PORT})`);
+  console.log(
+    `pgbouncer: starting (socket=${PGBOUNCER_SOCKET_DIR}, port=${PGBOUNCER_PORT})`,
+  );
   const result = spawnSync(binary, [PGBOUNCER_CONFIG_FILE, "-d"], {
     stdio: "pipe",
   });
   if (result.status !== 0) {
     const out = result.stderr?.toString() || result.stdout?.toString() || "";
-    throw new Error(`pgbouncer start failed: ${out} (see ${PGBOUNCER_LOG_FILE})`);
+    throw new Error(
+      `pgbouncer start failed: ${out} (see ${PGBOUNCER_LOG_FILE})`,
+    );
   }
 
   // Wait for socket readiness.
@@ -144,7 +163,9 @@ async function main(): Promise<void> {
     }
     await Bun.sleep(300);
   }
-  throw new Error(`pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms`);
+  throw new Error(
+    `pgbouncer: did not become ready within ${READY_TIMEOUT_MS}ms`,
+  );
 }
 
 main().catch((err) => {

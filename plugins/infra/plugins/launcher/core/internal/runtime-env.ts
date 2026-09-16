@@ -17,7 +17,7 @@
 // and passes the names as the gateway's required `-child-env` flag
 // (`runtimeEnvNames`). The gateway holds no list of its own: it forwards to its
 // children only the names this file declares, plus what it sets per child
-// (SOCKET_PATH, ZERO_*). That makes two boundaries, starter → gateway and
+// (ZERO_* for a zero-cache). That makes two boundaries, starter → gateway and
 // gateway → child, and one declaration for both.
 //
 // An allowlist, not a denylist of known-bad names: what a starter's environment
@@ -32,7 +32,10 @@
 //   SECURITYSESSIONID. They describe the starter's terminal, not the host. The
 //   keychain works without them (secrets use the native keyring addon), and
 //   agent panes already run `claude` under `env -i`.
-// - SOCKET_PATH: the gateway sets it per backend.
+// - SOCKET_PATH: a backend's socket is per process, so it travels on the
+//   backend's argv (`--socket`), where no descendant inherits it. The gateway
+//   still sets it per child, never from this base, for a spec.json written
+//   before `--socket` existed (gateway/worktree.go backendLaunch).
 // - PG*: the database location is declared in `database.json`. libpq lets the
 //   environment win over that file, so a stray PGHOST in the starting shell
 //   would silently point a toolbar build's readiness probes at another server.
@@ -206,6 +209,25 @@ export function pickRuntimeEnv(
   for (const [name, value] of Object.entries(source)) {
     if (value === undefined) continue;
     if (isRuntimeEnvName(name)) picked[name] = value;
+  }
+  return picked;
+}
+
+/**
+ * Only the host facts of `source` (RUNTIME_HOST_ENV) whose value is set: the
+ * environment for a third-party tool the runtime runs, which needs to know who
+ * and where the user is and nothing about this installation. Narrower than
+ * `pickRuntimeEnv` on purpose — that one also carries the SINGULARITY_*
+ * installation settings and OAuth client credentials, which a tool like the
+ * claude CLI has no business seeing.
+ */
+export function pickHostEnv(
+  source: Record<string, string | undefined>,
+): Record<string, string> {
+  const picked: Record<string, string> = {};
+  for (const name of RUNTIME_HOST_ENV) {
+    const value = source[name];
+    if (value !== undefined) picked[name] = value;
   }
   return picked;
 }

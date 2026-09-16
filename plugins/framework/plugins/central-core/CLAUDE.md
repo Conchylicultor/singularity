@@ -25,7 +25,7 @@ plugins/framework/plugins/central-core/
 
 ## How It Works
 
-1. `bin/index.ts` starts `Bun.serve({ unix: process.env.SOCKET_PATH })` on the Unix socket the gateway hands it.
+1. `bin/index.ts` starts `Bun.serve({ unix })` on the Unix socket the gateway hands it as `--socket <path>` (`readServingSocket()`, `infra/runtime-identity`).
 2. Each plugin declares its routes via a `CentralPluginDefinition` (defined in `core/types.ts`).
 3. `bin/plugins.ts` is a flat list of plugin imports — structurally identical to the server and web registries.
 4. At startup, plugins are topo-sorted by `dependsOn`, registered sequentially, then `onReady` runs concurrently.

@@ -108,7 +108,8 @@ Two boundaries, one declaration:
 2. **Gateway → every child.** It also passes the required
    `-child-env <runtimeEnvNames().join(",")>` (prefixes spelled `NAME_*`). The
    gateway holds no list of its own; it forwards only those names, plus its
-   per-child additions (`SOCKET_PATH`, `ZERO_*`). See `gateway/CLAUDE.md`.
+   per-child additions (`ZERO_*` for a zero-cache). A backend's socket path is
+   not one of them: it travels on argv (`--socket`). See `gateway/CLAUDE.md`.
 
 **Adding a variable:** write the reader, then run `./singularity check`.
 `launcher:runtime-env-declared` fails on any `SINGULARITY_*` name that code
@@ -127,6 +128,20 @@ checks for those.
 `gateway/env.go`, no non-test Go file may call `os.Environ()`,
 `exec.Command(Context)()` or `os.StartProcess()` — a command with a nil `Env`
 inherits everything.
+
+`launcher:per-process-env-on-argv` keeps a value that belongs to ONE process
+out of the environment. A backend's socket path is the case today: it travels
+as `--socket`, and the old `SOCKET_PATH` name may appear in code only at its
+listed transition sites (the gateway's branch for specs that predate the flag,
+and the backend's one fallback read). Deleting the variable from `process.env`
+after reading it would not stop the leak: a Bun child with no explicit `env`
+receives the environment its parent started with. The check also reports a
+listed site that no longer names the variable, so the list goes when the
+transition code does.
+
+`pickHostEnv(source)` is the narrow sibling of `pickRuntimeEnv`: only the host
+facts (`RUNTIME_HOST_ENV`), for a third-party tool the runtime starts. The
+one-shot `claude --print` (`infra/claude-cli`) runs under it.
 
 Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../../research/2026-09-15-global-declared-runtime-environment.md).
 
@@ -180,6 +195,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
 - Core:
   - Exports (values):
     - `isRuntimeEnvName`
+    - `pickHostEnv`
     - `pickRuntimeEnv`
     - `RUNTIME_FORWARDED_ENV`
     - `RUNTIME_FORWARDED_PREFIXES`

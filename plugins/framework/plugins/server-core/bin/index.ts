@@ -32,7 +32,10 @@ import {
 // resolved once for both boot modes.
 import { serverEntries, hasCoreBarrel } from "./active-runtime";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
-import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  isMain,
+  readServingSocket,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 
 // ── QoS boost (main backend only) ───────────────────────────────
@@ -195,13 +198,14 @@ async function safeHandle(
 //
 // SERVE ONLY, and this is the one phase that interleaves INTO the shared boot
 // sequence — hence `beforeReadyBarrier` below rather than a call after it.
-// `SOCKET_PATH` is required here and nowhere else: an `exec` child has no
-// socket and must not need one.
+// The socket is read here and nowhere else: an `exec` child has no socket and
+// must not need one. It arrives as `--socket <path>` from the gateway
+// (runtime-identity's readServingSocket, which also records it for code that
+// must reach this backend over HTTP).
 function bindSocket(ordered: LoadedServerPlugin[]): void {
   populateRoutes(ordered);
 
-  const socketPath = Bun.env.SOCKET_PATH;
-  if (!socketPath) throw new Error("SOCKET_PATH env var is required");
+  const socketPath = readServingSocket();
 
   const endSocketBind = profilerStart(
     "socketBind",

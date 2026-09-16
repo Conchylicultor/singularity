@@ -16,6 +16,7 @@ import {
   topoSortPlugins,
 } from "@plugins/framework/plugins/plugin-loader/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { readServingSocket } from "@plugins/infra/plugins/runtime-identity/core";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -244,8 +245,10 @@ for (const plugin of ordered) {
 wsRoutes["/ws/central-notifications"] = notificationsWsHandler;
 registerHttpRoute("GET /api/central-resources/:key", handleResourceHttp);
 
-const socketPath = Bun.env.SOCKET_PATH;
-if (!socketPath) throw new Error("SOCKET_PATH env var is required");
+// The socket the gateway handed this backend, as `--socket <path>` (with a
+// transition fallback to the old environment variable — see
+// runtime-identity's serving-socket.ts).
+const socketPath = readServingSocket();
 
 // Default every API response to `cache-control: no-store` unless the handler set
 // its own — the dispatch-layer floor beneath handleResourceHttp's own explicit

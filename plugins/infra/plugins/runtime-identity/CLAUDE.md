@@ -1,13 +1,16 @@
 # runtime-identity
 
-**Which namespace is THIS PROCESS?** One module, three functions, and a throw
-when nobody said.
+**Which namespace is THIS PROCESS — and, for a serving backend, which socket
+does it answer on?** What the spawner hands a process at its entry point,
+declared once there, read everywhere else, and a throw when nobody said.
 
 ```ts
 import {
   declareRuntimeNamespace,
   runtimeNamespace,
   isMain,
+  readServingSocket,
+  servingSocketPath,
 } from "@plugins/infra/plugins/runtime-identity/core";
 ```
 
@@ -57,6 +60,30 @@ source and test.
 Design:
 [`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`](../../../../research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md).
 
+## The serving socket
+
+A gateway-spawned backend is also handed the Unix socket it serves on, as
+`--socket <path>`. Only the gateway knows it: a backend alternates between
+`<ns>.sock` and `<ns>.next.sock` across hot restarts, so it cannot be derived
+from the namespace.
+
+- `readServingSocket()` is called once, by each serving entry point just before
+  it binds (`server-core/bin/index.ts` `bindSocket`, `central-core/bin/index.ts`).
+  It reads the flag and records the path.
+- `servingSocketPath()` answers code that must reach its own backend over HTTP
+  (the stats profiling endpoint). It throws in a process that serves nothing — a
+  CLI, a test, an `exec` child — rather than handing it somebody else's socket.
+
+It used to be the `SOCKET_PATH` environment variable, which reached every process
+a backend started (the tmux server, toolbar builds, `supervised-exec` children).
+**Transition:** the gateway passes `--socket` only for a spec that says
+`"socketTransport": "argv"` (every build writes it) and only once it is itself
+restarted. Until then the path still comes in the environment, and
+`readServingSocket()` falls back to it with a warning. It is the one TypeScript
+file allowed to name the variable — `launcher:per-process-env-on-argv` holds
+that list. Design:
+[`research/2026-09-15-global-backend-env-leak-followups.md`](../../../../research/2026-09-15-global-backend-env-leak-followups.md).
+
 ## Redeclaring
 
 `declareRuntimeNamespace` is idempotent for the same value and THROWS on a
@@ -72,7 +99,7 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
 
 ## Plugin reference
 
-- Description: The namespace a PROCESS runs as, declared once at its entry point and read everywhere else. A backend is handed it as `--namespace` by the gateway, an exec child by its spawner; asking for one that was never declared throws.
+- Description: What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws.
 - Core:
   - Uses:
     - `infra/namespace.MAIN_WORKTREE_NAME`
@@ -80,8 +107,10 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
   - Exports (values):
     - `declareRuntimeNamespace`
     - `isMain`
+    - `readServingSocket`
     - `resetRuntimeNamespaceForTest`
     - `runtimeNamespace`
+    - `servingSocketPath`
 - Cross-plugin:
   - Imported by:
     - `infra/jobs/supervised-run`

@@ -17653,6 +17653,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports (values):
           - `isRuntimeEnvName`
+          - `pickHostEnv`
           - `pickRuntimeEnv`
           - `RUNTIME_FORWARDED_ENV`
           - `RUNTIME_FORWARDED_PREFIXES`
@@ -18044,7 +18045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/todo/task-link`
           - `primitives/usage-rank`
           - `reports`
-    - **`runtime-identity`** — The namespace a PROCESS runs as, declared once at its entry point and read everywhere else. A backend is handed it as `--namespace` by the gateway, an exec child by its spawner; asking for one that was never declared throws.
+    - **`runtime-identity`** — What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws.
       - Core:
         - Uses:
           - `infra/namespace.MAIN_WORKTREE_NAME`
@@ -18052,8 +18053,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `declareRuntimeNamespace`
           - `isMain`
+          - `readServingSocket`
           - `resetRuntimeNamespaceForTest`
           - `runtimeNamespace`
+          - `servingSocketPath`
       - Cross-plugin:
         - Imported by:
           - `infra/jobs/supervised-run`

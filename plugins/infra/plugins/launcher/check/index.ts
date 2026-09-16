@@ -12,7 +12,7 @@ import { stripComments } from "./internal/strip-comments";
 
 const DECLARATION = "plugins/infra/plugins/launcher/core";
 
-/** Test sources are exempt from both checks: a test builds its own environment. */
+/** Test sources are exempt from every check here: a test builds its own environment. */
 function isTestFile(path: string): boolean {
   return (
     /\.test\.tsx?$/.test(path) ||
@@ -218,4 +218,102 @@ const gatewayEnvExplicitCheck: Check = {
   },
 };
 
-export default [runtimeEnvDeclaredCheck, gatewayEnvExplicitCheck];
+// ── launcher:per-process-env-on-argv ───────────────────────────────────────
+//
+// Some values belong to ONE process: a backend's socket path is the socket
+// that backend serves on, and nobody else's. In the environment such a value
+// reaches every process the backend starts, forever — deleting it from
+// `process.env` afterwards does not help, because a Bun child with no explicit
+// `env` receives the environment its parent STARTED with. So these travel on
+// argv, and their old environment names may appear in code only at the
+// transition sites listed here: the gateway's branch that still hands the
+// variable to a backend whose spec predates the flag, and the backend's one
+// fallback read of it. When the transition ends, delete the sites' code and
+// then their entries — the check reports an entry whose site no longer names
+// the variable, so the list cannot outlive the code.
+//
+// Comments are stripped first (a comment explaining the retirement reads
+// nothing), and tests are exempt (a test asserting the variable's ABSENCE has
+// to spell it).
+const PER_PROCESS_ENV: Record<
+  string,
+  { argv: string; transitionSites: readonly string[] }
+> = {
+  SOCKET_PATH: {
+    argv: "--socket",
+    transitionSites: [
+      "gateway/worktree.go",
+      "plugins/infra/plugins/runtime-identity/core/internal/serving-socket.ts",
+    ],
+  },
+};
+
+// This file spells every name it bans, in the table above.
+const THIS_FILE = "plugins/infra/plugins/launcher/check/index.ts";
+
+const perProcessEnvOnArgvCheck: Check = {
+  id: "launcher:per-process-env-on-argv",
+  description:
+    "A per-process value (a backend's socket path) travels on argv, never in the environment: its old variable name may appear in code only at its listed transition sites",
+  async run() {
+    const root = await getWorktreeRoot();
+    const names = Object.keys(PER_PROCESS_ENV);
+    const offenders: string[] = [];
+    const named = new Set<string>();
+    for (const name of names) {
+      const sources = await listCandidateSources({
+        root,
+        grepArg: name,
+        fixed: true,
+        pathspecs: NAME_PATHSPECS,
+      });
+      const re = new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`);
+      const allowed = PER_PROCESS_ENV[name]!.transitionSites;
+      for (const { rel, src } of sources) {
+        if (isTestFile(rel) || rel === THIS_FILE) continue;
+        const lines = stripComments(rel, src).split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          if (!re.test(lines[i]!)) continue;
+          if (allowed.includes(rel)) named.add(`${name} ${rel}`);
+          else offenders.push(`${name}  ${rel}:${i + 1}`);
+        }
+      }
+    }
+    const stale = names.flatMap((name) =>
+      PER_PROCESS_ENV[name]!.transitionSites.filter(
+        (site) => !named.has(`${name} ${site}`),
+      ).map((site) => `${name}  ${site}`),
+    );
+
+    if (offenders.length === 0 && stale.length === 0) return { ok: true };
+
+    const problems: string[] = [];
+    if (offenders.length > 0) {
+      problems.push(
+        `${offenders.length} use(s) of a per-process variable outside its transition sites:\n    ${offenders.join("\n    ")}`,
+      );
+    }
+    if (stale.length > 0) {
+      problems.push(
+        `${stale.length} transition site(s) that no longer name their variable:\n    ${stale.join("\n    ")}`,
+      );
+    }
+    const argvHints = names
+      .map((name) => `${name} → ${PER_PROCESS_ENV[name]!.argv}`)
+      .join(", ");
+    return {
+      ok: false,
+      message: problems.join("\n"),
+      hint:
+        `These values travel on argv (${argvHints}). A serving backend reads its socket with readServingSocket(), and code that must reach its own backend asks servingSocketPath() (@plugins/infra/plugins/runtime-identity/core). ` +
+        "Never read or set the variable: in the environment it reaches every process the backend starts. " +
+        `A stale site means its transition code is gone — delete the entry in ${THIS_FILE}.`,
+    };
+  },
+};
+
+export default [
+  runtimeEnvDeclaredCheck,
+  gatewayEnvExplicitCheck,
+  perProcessEnvOnArgvCheck,
+];

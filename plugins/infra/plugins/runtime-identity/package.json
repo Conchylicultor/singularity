@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-infra-runtime-identity",
   "version": "0.0.1",
   "private": true,
-  "description": "The namespace a PROCESS runs as, declared once at its entry point and read everywhere else. A backend is handed it as `--namespace` by the gateway, an exec child by its spawner; asking for one that was never declared throws."
+  "description": "What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws."
 }
