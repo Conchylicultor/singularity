@@ -15507,6 +15507,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.lineAt`
               - `plugin-meta/parse-utils.maskSource`
               - `plugin-meta/plugin-tree.buildPluginTree`
+              - `reports/check-thread-stall.CHECK_THREAD_STALL_KIND`
+              - `reports/check-thread-stall.checkThreadStallMessage`
+              - `reports/check-thread-stall.CheckThreadStallOwner`
+              - `reports/check-thread-stall.CheckThreadStallPayload`
+              - `reports/check-thread-stall.NO_SAMPLES_OWNER`
+              - `reports/check-thread-stall.STALL_REPORT_MS`
+              - `reports/check-thread-stall.TOTAL_REPORT_MS`
+              - `reports/outbox.fileReportFromProcess`
+              - `reports/outbox.mergeBaseWithMain`
             - Exports (types):
               - `CandidateSource`
               - `CheckCache`
@@ -17081,6 +17090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs/supervised-job`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-tree`
+          - `reports/outbox`
       - Server:
         - Exports (types):
           - `FileWatcher`
@@ -17852,6 +17862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `release`
           - `release/bundles`
+          - `reports/outbox`
           - `review/plugin-changes`
           - `stats/commits`
           - `stats/cost`
@@ -18259,6 +18270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/checks`
           - `framework/tooling/format`
           - `infra/paths`
+          - `reports/outbox`
     - **`ssh`** — Hermetic SSH client primitive: sshRun (one remote command) and sshUpload (one file, over scp) open a session to (host, port, user) with EXACTLY the private key they are given — IdentitiesOnly + IdentityAgent=none + -F /dev/null keep the machine's own agent, config and multiplexed sessions out, so a connection test proves the key it was handed works — and return a discriminated result whose failures are classified from OpenSSH stderr (dns / unreachable / timeout / auth / host-key-mismatch / command-failed / unknown). Both are built from one shared hermetic invocation, so the isolation flags cannot drift between them. Host-key policy is pinned-or-learn with no 'off'; the key is materialized 0600 into a mkdtemp dir removed in finally. An upload lands on a staging sibling and is renamed over its destination, so it can neither fail because the destination is being executed nor leave a truncated file where a working one was.
       - Cross-plugin:
         - Imported by: `apps/deploy/health`
@@ -29636,7 +29648,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
   - Web:
-    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
+    - Slots: `Reports.KindView` ← `conversations.transcript-watcher`, `database.query-deadline`, `debug.boot-budget`, `debug.boot-watchdog`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.report-storm`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.stuck-spans`, `reports.adaptive-bar`, `reports.caret-flight`, `reports.check-thread-stall`, `reports.collab-hydration`, `reports.crash`, `reports.live-state-stale-drop`, `reports.optimistic-divergence`, `reports.page-undo-conflict`, `reports.render-loop`, `reports.theme-resolution`, `reports.turn-unconfirmed`, `reports.viewport-escape`
     - Contributes: `ConfigV2.WebRegister` "reports"
     - Uses:
       - `config_v2.ConfigV2`
@@ -29684,6 +29696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports (values):
       - `_reports`
       - `DEFAULT_REPORT_DEBOUNCE_MS`
+      - `isReportKindRegistered`
       - `recordReport`
       - `recordReportDebounced`
       - `reportInvestigationSink`
@@ -29745,6 +29758,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/worktree/removal-audit`
       - `reports/adaptive-bar`
       - `reports/caret-flight`
+      - `reports/check-thread-stall`
       - `reports/collab-hydration`
       - `reports/crash`
       - `reports/endpoint-errors`
@@ -29752,6 +29766,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `reports/live-state-stale-drop`
       - `reports/noise-rules`
       - `reports/optimistic-divergence`
+      - `reports/outbox`
       - `reports/page-undo-conflict`
       - `reports/plugin-load-errors`
       - `reports/render-loop`
@@ -29799,6 +29814,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `caretFlightFingerprint`
           - `CaretFlightPayloadSchema`
+    - **`check-thread-stall`** — Check-thread-stall report kind's Debug → Reports summary view: one line naming how long the check thread stalled, its top owner and what it was mostly doing. The report itself is filed by the check runner through the report outbox — no collector here. Check-thread-stall report kind: validates the check runner's thread-stall payloads (trigger stall = one stall of ≥ 2 s, fingerprinted by its top owner; trigger total = a run whose stalls add up to ≥ 20 s, one row), filed through the report outbox, and renders a task naming the owner, its stacks, the waiting-vs-working split and the run's transcript. Warning, re-arms every 6 h.
+      - Web:
+        - Contributes: `Reports.KindView` → `CheckThreadStallSummary`
+        - Uses: `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "check-thread-stall"
+        - Uses:
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/checks`
+      - Core:
+        - Exports (types):
+          - `CheckThreadStallOwner`
+          - `CheckThreadStallPayload`
+        - Exports (values):
+          - `CHECK_THREAD_STALL_KIND`
+          - `checkThreadStallFingerprint`
+          - `checkThreadStallMessage`
+          - `CheckThreadStallPayloadSchema`
+          - `dominantKind`
+          - `formatSeconds`
+          - `NO_SAMPLES_OWNER`
+          - `STALL_REPORT_MS`
+          - `TOTAL_REPORT_MS`
     - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
       - Web:
         - Contributes:
@@ -29908,6 +29948,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `optimisticDivergenceFingerprint`
           - `OptimisticDivergencePayloadSchema`
           - `StoredOptimisticDivergencePayloadSchema`
+    - **`outbox`** — Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+      - Server:
+        - Uses:
+          - `infra/file-watcher.createFileWatcher`
+          - `infra/file-watcher.FileWatcher`
+          - `reports.isReportKindRegistered`
+          - `reports.recordReport`
+      - Core:
+        - Uses:
+          - `infra/paths.REPO_ROOT`
+          - `infra/spawn.spawnCaptured`
+        - Exports (types):
+          - `FileReportOutcome`
+          - `MergeBaseResult`
+          - `OutboxCode`
+          - `OutboxEntry`
+          - `ProcessReport`
+        - Exports (values):
+          - `fileReportFromProcess`
+          - `isOutboxEntryName`
+          - `isOutboxTempName`
+          - `mergeBaseWithMain`
+          - `OUTBOX_MAX_PENDING`
+          - `OutboxCodeSchema`
+          - `OutboxEntrySchema`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/checks`
     - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
       - Web:
         - Contributes:

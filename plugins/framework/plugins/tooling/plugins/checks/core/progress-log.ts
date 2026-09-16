@@ -5,7 +5,12 @@ import {
   claimStackSampler,
   type StackSampler,
 } from "@plugins/infra/plugins/stack-sampler/core";
+import {
+  fileReportFromProcess,
+  mergeBaseWithMain,
+} from "@plugins/reports/plugins/outbox/core";
 import { checkProgressLogDir } from "../data-dirs";
+import { openStallReporter, type StallReportSink } from "./stall-report";
 import type { OwnerShare, StallKind } from "./thread-attribution";
 import {
   openThreadWatch,
@@ -311,6 +316,13 @@ export interface ProgressRun {
    * the transcript and the console, so it never holds a watch handle of its own.
    */
   finish(allOk: boolean): ThreadSummary;
+  /**
+   * Resolves once every stall report this run started filing has been written
+   * (see `stall-report.ts`). Never rejects. The runner awaits it before
+   * returning, because its caller may `process.exit()` next — and an outbox
+   * write still in flight then is a report lost.
+   */
+  reportsFiled(): Promise<void>;
 }
 
 /**
@@ -322,6 +334,11 @@ export interface ProgressRun {
 export interface ProgressRunDeps {
   write: (record: ProgressRecord) => void;
   sampler: StackSampler;
+  /**
+   * Where stall reports go. Required, so a test cannot forget it and file into
+   * the host-global outbox — which main would drain into real reports.
+   */
+  reports: StallReportSink;
 }
 
 /**
@@ -355,6 +372,10 @@ export function openProgressRun(args: ProgressRunArgs): ProgressRun {
     // only caller is the `check` command), and a second claim under this same
     // owner is the same handle — so there is nothing to release.
     sampler: claimStackSampler("check-runner"),
+    reports: {
+      file: fileReportFromProcess,
+      mergeBase: () => mergeBaseWithMain(REPO_ROOT),
+    },
   });
 }
 
@@ -370,6 +391,11 @@ interface ProgressRunArgs {
    * it and gets a fresh uuid.
    */
   runId?: string;
+  /**
+   * The run's transcript (`check-<runId>.log`), when it writes one — named in
+   * the stall reports so a reader lands on the full detail.
+   */
+  transcriptPath?: string | null;
 }
 
 /** `openProgressRun` over any writer and sampler — see `ProgressRunDeps`. */
@@ -403,6 +429,15 @@ export function startProgressRun(
   const inFlight = new Set<string>();
   const inBootstrap = new Set<string>();
 
+  // Stalls that miss the track's target become reports (stall-report.ts). The
+  // record, the transcript and the console line are unchanged by it.
+  const reporter = openStallReporter({
+    worktree,
+    runId,
+    transcript: args.transcriptPath ?? null,
+    sink: deps.reports,
+  });
+
   // `.unref()` so this timer can never be the reason the process stays alive —
   // the heartbeat exists to observe a hang, not to cause one.
   const heartbeat = setInterval(() => {
@@ -423,8 +458,12 @@ export function startProgressRun(
     startedAt,
     inFlight: () => ({ running: [...inFlight], bootstrap: [...inBootstrap] }),
     sampler: deps.sampler,
-    onStall: (stall) =>
-      deps.write({ ...stamp(), phase: "stall", ...stallRecord(stall) }),
+    onStall: (stall) => {
+      deps.write({ ...stamp(), phase: "stall", ...stallRecord(stall) });
+      // Filed as the stall closes, not at `finish()`: a run killed mid-pass
+      // still reports the stalls it already had.
+      reporter.stall(stall);
+    },
   });
 
   return {
@@ -478,6 +517,7 @@ export function startProgressRun(
       // line on every path — the early exits included.
       const thread = watch.stop();
       deps.write({ ...stamp(), phase: "thread", ...threadRecord(thread) });
+      reporter.finish(thread);
       deps.write({
         ...stamp(),
         phase: "done",
@@ -486,6 +526,7 @@ export function startProgressRun(
       });
       return thread;
     },
+    reportsFiled: () => reporter.settled(),
   };
 }
 

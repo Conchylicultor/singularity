@@ -1,11 +1,15 @@
-// The classification of every DURABLE log channel (`defineLogSink({ id })`) in
-// the repo. Local to this check ON PURPOSE: a low-level channel primitive
-// (log-channels) must never name reports or the timeline (dependency
-// inversion), and a registry refactor onto `defineLogSink` itself was rejected
-// as disproportionate (~18 channels for a guardrail). So the classification
-// lives here, and the check enforces that every durable channel is a CONSCIOUS,
-// REVIEWED choice — not that every channel must be a report (health is
+// The classification of every DURABLE sink in the repo: each `defineLogSink({ id })`
+// log channel and each bare `defineFileSink({ id })` file (the only durable form
+// a CLI process can use). Local to this check ON PURPOSE: the low-level sink
+// primitives (log-channels, file-sink) must never name reports or the timeline
+// (dependency inversion), and a registry refactor onto the primitives themselves
+// was rejected as disproportionate (~25 sinks for a guardrail). So the
+// classification lives here, and the check enforces that every durable sink is
+// a CONSCIOUS, REVIEWED choice — not that every sink must be a report (health is
 // continuous), only that a new durable signal cannot appear un-classified.
+//
+// Ids are one namespace across both primitives (a defineLogSink channel owns a
+// file sink under its own id; the check fails if both declare one id).
 //
 // `consumer` is the primary classification. The check enforces:
 //   • report      → MUST carry a `reportKind` that resolves to a live
@@ -13,22 +17,22 @@
 //   • timeline     → MUST carry a `timelineSource` in TIMELINE_SOURCES.
 //   • rendering-only / internal → no wiring assertion, but the `note` must say
 //                    honestly what reads it (or that nothing durable does).
-// A channel may ALSO carry the other field (boot / duress-episodes feed BOTH a
+// A sink may ALSO carry the other field (boot / duress-episodes feed BOTH a
 // report and the timeline); whichever fields are present are validated.
 
-export type ChannelConsumer =
+export type SinkConsumer =
   "report" | "timeline" | "rendering-only" | "internal";
 
-export interface ChannelAccounting {
-  consumer: ChannelConsumer;
+export interface SinkAccounting {
+  consumer: SinkConsumer;
   note: string;
-  /** For report (or dual) channels: the ReportKind this channel's lines file. */
+  /** For report (or dual) sinks: the ReportKind this sink's records file. */
   reportKind?: string;
-  /** For timeline (or dual) channels: the TimelineSource this channel feeds. */
+  /** For timeline (or dual) sinks: the TimelineSource this sink feeds. */
   timelineSource?: string;
 }
 
-export const ACCOUNTING: Record<string, ChannelAccounting> = {
+export const ACCOUNTING: Record<string, SinkAccounting> = {
   // ── Durable FAILURE signals: report + timeline (the front door). ──────────
   boot: {
     consumer: "report",
@@ -46,6 +50,12 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
     consumer: "report",
     reportKind: "worktree-removed-externally",
     note: "Worktree checkout removal audit (infra/worktree/removal-audit). Two line kinds: `in-app` (every removeWorktree call, with caller) is forensic detail, and `disappeared` is the signal — a checkout that vanishes with no in-app line claiming it files the worktree-removed-externally report. The in-app lines exist to make that NEGATIVE evidence conclusive: without them, 'nothing we did explains this' is an inference rather than a fact. Deduped per worktree name so a burst (the 2026-08-09 event took 22 checkouts) collapses onto one task.",
+  },
+
+  "check-progress": {
+    consumer: "report",
+    reportKind: "check-thread-stall",
+    note: "Per-check-run progress log (defineFileSink, checks/core/progress-log.ts; CLI-only, host-global). Thread-stall records of 2 s or more and run totals of 20 s or more are filed as check-thread-stall reports through the report outbox at write time. Also read back by `./singularity check --status` (runs that never finished) and by the build/push parent to place a check subprocess's spans on its op lane.",
   },
 
   // ── Continuous health series: timeline heat strips (never a report). ──────
@@ -72,6 +82,15 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
   deploy: {
     consumer: "rendering-only",
     note: "`singularity deploy converge|ship` output, streamed into the Deploy app's Deployments section. A deploy progress log, not a failure funnel: a failed run's own verdict is the CLI's message, surfaced on the deployment row via the `deploy.runs` live resource — the human is watching the run they just started, so it needs no alert funnel.",
+  },
+
+  "op-log": {
+    consumer: "rendering-only",
+    note: "Unified host op log (defineFileSink, debug/profiling/op-log): requested/granted/completed phases of every build / push / check. Read back through the sink's bounded tail reader by the Debug → Profiling ops Gantt + op detail, and by stats/pushes. A profiling record, not a failure funnel.",
+  },
+  "signal-origin": {
+    consumer: "rendering-only",
+    note: "Who killed an op (defineFileSink, cli/op-runtime signal-origin-log; CLI-only, host-global): one line per catchable fatal signal reaching build/check/push, plus arm failures. Read by build/build-termination's endpoint and shown as the termination detail on a build run (build-info). The durable 'this build died' fact is the build run's own outcome; this names the sender.",
   },
 
   // ── Internal diagnostics: human-readable prose, no durable consumer. ──────
@@ -138,5 +157,13 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
   "events-refresh": {
     consumer: "internal",
     note: "Events refresh engine cadence-tick accounting plus the non-runs (source deleted or disabled between enqueue and dispatch). Diagnostic prose covering only what the ledger structurally cannot: every run that actually happened is a durable `event_source_runs` row, and a failed one also parks the classified error on the source row — both surfaced in the app, so this channel is not the failure funnel.",
+  },
+  "build-progress": {
+    consumer: "internal",
+    note: "Per-build progress log (defineFileSink, cli/op-runtime build-progress; CLI-only, host-global): span enter/leave with RSS, heartbeat, completion. Read back only by a waiting build's checkout-lock message to name what the lock holder is stuck in, and by humans investigating a wedge. No durable consumer.",
+  },
+  "client-log": {
+    consumer: "internal",
+    note: "Representative family bound (defineFileSink, log-channels client-ingress) for the browser clientLog channels written through openDynamicSink. Makes the open-ended family enumerable in getFileSinks(); the file itself is written only if a browser names a channel `client-log`. The per-channel files are debug logs read by humans (tail) and the Debug → Logs viewer; no failure funnel.",
   },
 };

@@ -359,6 +359,7 @@ run everywhere.
     - `primitives/terminal`
     - `release`
     - `release/bundles`
+    - `reports/outbox`
     - `review/plugin-changes`
     - `stats/commits`
     - `stats/cost`

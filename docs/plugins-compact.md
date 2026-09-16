@@ -382,7 +382,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`node-types`** [3 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 
-- **`reports`** [16 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
+- **`reports`** [18 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:

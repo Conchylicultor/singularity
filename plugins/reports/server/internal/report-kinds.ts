@@ -63,3 +63,14 @@ export const ReportKind = defineServerContribution<ReportKindSpec>(
   "report-kind",
   { docLabel: (k) => k.kind },
 );
+
+/**
+ * Whether some plugin in this composition registered a `ReportKind` for
+ * `kind`. For a caller that must tell "a kind this build does not know yet"
+ * apart from "a malformed report" BEFORE handing it to `recordReport`, which
+ * throws on both — the report outbox, whose entries can come from a branch
+ * that added a kind main has not merged.
+ */
+export function isReportKindRegistered(kind: string): boolean {
+  return ReportKind.getContributions().some((k) => k.kind === kind);
+}

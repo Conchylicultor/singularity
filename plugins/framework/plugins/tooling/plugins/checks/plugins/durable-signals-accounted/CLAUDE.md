@@ -1,8 +1,15 @@
 # durable-signals-accounted
 
-Every **durable** (`defineLogSink`-declared) log channel must be a conscious,
-reviewed classification — so a new durable failure signal can never again reach
-no alert funnel silently.
+Every **durable sink** must be a conscious, reviewed classification — so a new
+durable failure signal can never again reach no alert funnel silently. A durable
+sink is a file that outlives the process that wrote it, declared through either
+primitive:
+
+- `defineLogSink({ id, description })` — a server log channel (it owns a file
+  sink under its own id);
+- `defineFileSink({ id, description, path })` — a bare bounded file, the only
+  durable form a CLI process can use (e.g. `check-progress`, `build-progress`,
+  `signal-origin`).
 
 The 2026-07-17 incident's root cause was exactly that: an 11.5-minute never-ready
 boot of main sat on the durable `boot` channel, consumed by nothing — the
@@ -13,41 +20,54 @@ fails the build.
 
 ## What it enforces
 
-`check/accounting.ts` is a LOCAL allowlist `Record<channelId, { consumer, note,
-reportKind?, timelineSource? }>`. Local on purpose — a low-level channel
-primitive must never name reports/timeline (dependency inversion), and a
-`definePersistedChannel` registry refactor was rejected as disproportionate
-(~18 channels for a guardrail). The check:
+`check/accounting.ts` is a LOCAL allowlist `Record<sinkId, { consumer, note,
+reportKind?, timelineSource? }>`, one namespace across both primitives. Local on
+purpose — a low-level sink primitive must never name reports/timeline
+(dependency inversion), and a registry refactor onto the primitives was rejected
+as disproportionate. The check:
 
-1. **Every durable channel is classified.** `findMarkerCalls` finds every
-   `defineLogSink({ id, description })` call site (string- and comment-safe via
-   full masking, scan-tree + untracked aware via `listCandidateSources`);
-   `parseStringField` reads the `id` field back from the original — a string
-   literal resolves directly, an `export const NAME = "…"` reference is resolved
-   by grep. An unresolvable id (a computed expression, or a const with no live
-   declaration) is a LOUD failure — the check cannot classify what it cannot
-   name. A found id missing from the allowlist fails with the classification
-   obligation.
-2. **Report/timeline classifications are coherent.** A `report` entry's
+1. **Every durable sink is classified.** `findMarkerCalls` finds every
+   `defineLogSink({ … })` and `defineFileSink({ … })` call site (string- and
+   comment-safe via full masking, scan-tree + untracked aware via
+   `listCandidateSources`, `*.test.ts(x)` excluded — a test's sink is a tmp-dir
+   throwaway); `parseStringField` reads the `id` field back from the original — a
+   string literal resolves directly, an `export const NAME = "…"` reference is
+   resolved by grep. An unresolvable id (a computed expression, or a const with
+   no live declaration) is a LOUD failure — the check cannot classify what it
+   cannot name. A found id missing from the allowlist fails with the
+   classification obligation.
+2. **Computed ids are named exemptions, and they cannot go stale.**
+   `COMPUTED_ID_EXEMPTIONS` in `check/scan.ts` lists a file + primitive + reason
+   for each deliberate computed id. Today there is one: `defineLogSink`'s own
+   body (`log-channels/server/internal/log.ts`) calls `defineFileSink({ id:
+   spec.id })`, and those ids are the `defineLogSink` call sites already scanned.
+   An exemption that no longer matches a computed-id call fails, so it can never
+   silently excuse the next computed id written in that file.
+3. **No id through both primitives.** The two share one accounting entry, so an
+   id declared by a `defineLogSink` in one file and a `defineFileSink` in another
+   fails loudly.
+4. **Report/timeline classifications are coherent.** A `report` entry's
    `reportKind` must resolve to a live `ReportKind({ kind })` call site; a
    `timeline` entry's `timelineSource` must be in `TIMELINE_SOURCES` (imported
-   from the timeline plugin — its single source of truth). A channel that feeds
+   from the timeline plugin — its single source of truth). A sink that feeds
    BOTH (boot, duress-episodes) carries both fields and both are validated.
-3. **No stale entries.** Every allowlist key must still have a live call site.
+5. **No stale entries.** Every allowlist key must still have a live call site.
 
-It does NOT force every channel to be a report — `health` is continuous, so it is
-a timeline heat strip; most channels are `internal` diagnostics. It forces every
-durable channel to be a **reviewed decision**.
+It does NOT force every sink to be a report — `health` is continuous, so it is
+a timeline heat strip; most sinks are `internal` diagnostics. It forces every
+durable sink to be a **reviewed decision**.
 
 ## Detection is AST-shaped, not line-based
 
-A `defineLogSink({ id, description })` call spans multiple lines (the `id:` field
-sits on its own line), so detection cannot be a line-based grep. It runs through
-`findMarkerCalls(src, "defineLogSink")` over fully-masked source, slicing each
-call's args from the original and reading the `id` field with `parseStringField`
-— so the whole call is matched regardless of line layout, and a `defineLogSink`
-written inside a comment or string literal never matches. There is no multi-line
-escape hatch to under-enforce.
+A sink declaration spans multiple lines (the `id:` field sits on its own line),
+so detection cannot be a line-based grep. The pure helpers in `check/scan.ts`
+(`scanSinkCalls`, `inventorySinks`, unit-tested in `scan.test.ts`) run
+`findMarkerCalls(src, marker)` over fully-masked source, slicing each call's args
+from the original and reading the `id` field with `parseStringField` — so the
+whole call is matched regardless of line layout, and a declaration written inside
+a comment or string literal never matches. A call whose args do not start with
+an object literal (the primitive's own function signature) is skipped. There is
+no multi-line escape hatch to under-enforce.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

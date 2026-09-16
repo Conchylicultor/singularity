@@ -4679,6 +4679,10 @@
       "name": "@singularity/plugin-reports-caret-flight",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/check-thread-stall": {
+      "name": "@singularity/plugin-reports-check-thread-stall",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/collab-hydration": {
       "name": "@singularity/plugin-reports-collab-hydration",
       "version": "0.0.1",
@@ -4709,6 +4713,10 @@
     },
     "plugins/reports/plugins/optimistic-divergence": {
       "name": "@singularity/plugin-reports-optimistic-divergence",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/outbox": {
+      "name": "@singularity/plugin-reports-outbox",
       "version": "0.0.1",
     },
     "plugins/reports/plugins/page-undo-conflict": {
@@ -8140,6 +8148,8 @@
 
     "@singularity/plugin-reports-caret-flight": ["@singularity/plugin-reports-caret-flight@workspace:plugins/reports/plugins/caret-flight"],
 
+    "@singularity/plugin-reports-check-thread-stall": ["@singularity/plugin-reports-check-thread-stall@workspace:plugins/reports/plugins/check-thread-stall"],
+
     "@singularity/plugin-reports-collab-hydration": ["@singularity/plugin-reports-collab-hydration@workspace:plugins/reports/plugins/collab-hydration"],
 
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
@@ -8155,6 +8165,8 @@
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
 
     "@singularity/plugin-reports-optimistic-divergence": ["@singularity/plugin-reports-optimistic-divergence@workspace:plugins/reports/plugins/optimistic-divergence"],
+
+    "@singularity/plugin-reports-outbox": ["@singularity/plugin-reports-outbox@workspace:plugins/reports/plugins/outbox"],
 
     "@singularity/plugin-reports-page-undo-conflict": ["@singularity/plugin-reports-page-undo-conflict@workspace:plugins/reports/plugins/page-undo-conflict"],
 

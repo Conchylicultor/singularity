@@ -34,7 +34,7 @@ export type {
   ReportNoiseRuleSpec,
   ReportNoiseInput,
 } from "./internal/noise-rules";
-export { ReportKind } from "./internal/report-kinds";
+export { ReportKind, isReportKindRegistered } from "./internal/report-kinds";
 export type { RecordReportResult } from "./internal/record-report";
 export type { StormSummary, StormRosterEntry } from "./internal/fan-out";
 export type {

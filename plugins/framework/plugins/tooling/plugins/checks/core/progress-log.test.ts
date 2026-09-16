@@ -9,6 +9,7 @@ import {
   startProgressRun,
   type ProgressRecord,
 } from "./progress-log";
+import type { StallReportSink } from "./stall-report";
 import { STALL_MS } from "./thread-watch";
 
 // Never the host-global sink, never the real sampler: records go to an array,
@@ -37,6 +38,16 @@ const IN_CHECK_X: StackSample = {
   ],
 };
 
+/**
+ * Never the host-global outbox — main would drain a test's entry into a real
+ * report. These suites' stalls stay under the report threshold anyway; the
+ * thresholds are stall-report.test.ts's subject.
+ */
+const noReports: StallReportSink = {
+  file: async () => ({ outcome: "refused", pending: 0 }),
+  mergeBase: async () => ({ ok: false, reason: "test" }),
+};
+
 function fakeSampler(batch: StackSample[]): StackSampler {
   return { drain: () => batch };
 }
@@ -54,7 +65,7 @@ describe("startProgressRun", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: ["no-such-check"] },
-      { write, sampler: fakeSampler([]) },
+      { write, sampler: fakeSampler([]), reports: noReports },
     );
     const summary = run.finish(false);
     expect(records.map((r) => r.phase)).toEqual(["run", "thread", "done"]);
@@ -81,7 +92,7 @@ describe("startProgressRun", () => {
     const { records, write } = recorder();
     const run = startProgressRun(
       { scope: null, requested: null },
-      { write, sampler: fakeSampler([IN_CHECK_X]) },
+      { write, sampler: fakeSampler([IN_CHECK_X]), reports: noReports },
     );
     run.checkStarted("x");
     const wallStart = performance.now();

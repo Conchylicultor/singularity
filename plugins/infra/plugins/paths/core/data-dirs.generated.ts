@@ -40,5 +40,6 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/data-dirs"), dependsOn: [] },
   { pluginPath: "release/plugins/bundles", id: "release.bundles", loader: () => import("@plugins/release/plugins/bundles/data-dirs"), dependsOn: [] },
   { pluginPath: "reports", id: "reports", loader: () => import("@plugins/reports/data-dirs"), dependsOn: [] },
+  { pluginPath: "reports/plugins/outbox", id: "reports.outbox", loader: () => import("@plugins/reports/plugins/outbox/data-dirs"), dependsOn: [] },
   { pluginPath: "stats/plugins/cost", id: "stats.cost", loader: () => import("@plugins/stats/plugins/cost/data-dirs"), dependsOn: [] },
 ];

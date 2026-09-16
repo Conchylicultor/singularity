@@ -197,6 +197,25 @@ Where it lands:
   lines, on a passing run too. It never changes the verdict.
 - **`./singularity check --status`**: a `thread stalled N× so far` line under
   each open run.
+- **Debug → Reports and the bell**, for a stall or run that misses the track's
+  targets ([`core/stall-report.ts`](core/stall-report.ts)). One stall of ≥ 2 s
+  files a `check-thread-stall` report the moment it closes, so a killed run
+  still reports; one row per top owner, each new stall by it bumping the
+  count. A run whose stalls add up to ≥ 20 s files one more at `finish()`, on
+  a single `total` row. The thresholds are the targets (longest stall under
+  2 s, total under 20 s), not today's numbers, so both fire on most full
+  passes until the remaining stalls are fixed. Filing is async and can never
+  change the verdict; the runner awaits it before returning so an exiting
+  process does not lose it. The kind lives in
+  `plugins/reports/plugins/check-thread-stall`.
+
+  A CLI has no server, so the reports go through the **report outbox**
+  (`plugins/reports/plugins/outbox`), which main's backend drains. Each entry
+  carries this checkout's `git merge-base HEAD main` (read once per run, on the
+  first report) and the repo files on the reported stacks (dependency and
+  native frames left out). **Main drops the report when it has changed any of
+  those files since that merge-base** — the stall may already be fixed there —
+  and files it otherwise, including a stall this branch itself introduced.
 
 **Reading an owner** ([`core/thread-attribution.ts`](core/thread-attribution.ts)):
 
@@ -318,6 +337,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `plugin-meta/parse-utils.lineAt`
     - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/plugin-tree.buildPluginTree`
+    - `reports/check-thread-stall.CHECK_THREAD_STALL_KIND`
+    - `reports/check-thread-stall.checkThreadStallMessage`
+    - `reports/check-thread-stall.CheckThreadStallOwner`
+    - `reports/check-thread-stall.CheckThreadStallPayload`
+    - `reports/check-thread-stall.NO_SAMPLES_OWNER`
+    - `reports/check-thread-stall.STALL_REPORT_MS`
+    - `reports/check-thread-stall.TOTAL_REPORT_MS`
+    - `reports/outbox.fileReportFromProcess`
+    - `reports/outbox.mergeBaseWithMain`
   - Exports (types):
     - `CandidateSource`
     - `CheckCache`

@@ -41,6 +41,7 @@ moved (see `apps/prototypes/files`).
     - `infra/jobs/supervised-job`
     - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-tree`
+    - `reports/outbox`
 - Server:
   - Exports (types):
     - `FileWatcher`

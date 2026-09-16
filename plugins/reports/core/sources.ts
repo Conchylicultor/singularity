@@ -31,6 +31,11 @@ export const SERVER_REPORT_SOURCES = [
   // distinction is the whole content of the report: the process decided its
   // state was unrecoverable and said so before leaving.
   "server-fatal",
+  // A report filed by a process with NO server — a CLI run, a supervised child —
+  // through the report outbox (plugins/reports/plugins/outbox), and recorded by
+  // main's drain. Server-only so the browser endpoint cannot claim it: nothing
+  // over HTTP comes from a CLI.
+  "cli",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

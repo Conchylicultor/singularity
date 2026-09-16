@@ -1,5 +1,6 @@
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type {
   Check,
   CheckContext,
@@ -302,6 +303,14 @@ export async function runChecks(
     scope: requestedScopes,
     requested,
     runId: options.logRun?.runId,
+    // Derived, not read off `transcript` below: the transcript opens after the
+    // run, and the path is a pure function of the same two ids.
+    transcriptPath: options.logRun
+      ? worktreeArtifacts.checkLog(
+          options.logRun.worktree,
+          options.logRun.runId,
+        )
+      : null,
   });
 
   // The transcript opens HERE, beside the progress run and for the same reason:
@@ -337,6 +346,7 @@ export async function runChecks(
     // here like anywhere else.
     const thread = progress.finish(false);
     transcript?.finish([message], false, thread);
+    await progress.reportsFiled();
     return false;
   }
 
@@ -358,6 +368,7 @@ export async function runChecks(
       console.error(message);
       const thread = progress.finish(false);
       transcript?.finish([message], false, thread);
+      await progress.reportsFiled();
       return false;
     }
   }
@@ -381,6 +392,7 @@ export async function runChecks(
       console.error(message);
       const thread = progress.finish(false);
       transcript?.finish([message], false, thread);
+      await progress.reportsFiled();
       return false;
     }
   }
@@ -400,6 +412,7 @@ export async function runChecks(
     console.error(message);
     const thread = progress.finish(false);
     transcript?.finish([message], false, thread);
+    await progress.reportsFiled();
     return false;
   }
 
@@ -771,6 +784,7 @@ export async function runChecks(
     // this changes no semantics.
     const thread = progress.finish(false);
     transcript?.finish([`run aborted: ${String(err)}`], false, thread);
+    await progress.reportsFiled();
     throw err;
   }
 
@@ -891,6 +905,10 @@ export async function runChecks(
 
   // Closes the transcript (thread block, trailer) and prunes the family.
   transcript?.finish(trailer, allOk, thread);
+  // Every exit awaits the run's stall reports: the command may `process.exit()`
+  // as soon as this returns, and an outbox write still in flight would be lost.
+  // Never rejects, so it cannot change the verdict.
+  await progress.reportsFiled();
 
   return allOk;
 }
