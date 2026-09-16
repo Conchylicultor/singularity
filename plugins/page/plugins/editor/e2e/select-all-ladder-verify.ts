@@ -152,7 +152,11 @@ await withBrowser(async (h) => {
     await driver.selectedCount(),
     0,
   );
-  r.eq("page-link picker search: its text is selected", await domSelection(page), "qq");
+  r.eq(
+    "page-link picker search: its text is selected",
+    await domSelection(page),
+    "qq",
+  );
   await page.keyboard.press("Escape");
   await page.waitForTimeout(400);
 
