@@ -26,6 +26,10 @@ export const spawnConversationJob = defineJob({
   // `runtime.create` opens a tmux session running the `claude` CLI. Nothing
   // shorter than the work bounds either.
   hold: "minutes",
+  inProcess:
+    "Both steps are idempotent — `setupWorktree` no-ops once the checkout exists " +
+    "and `runtime.create` no-ops once a live session exists — so a spawn killed " +
+    "by a restart simply re-runs and skips whatever already landed.",
   input: z.object({
     conversationId: z.string(),
     attemptId: z.string(),

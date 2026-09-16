@@ -14,11 +14,13 @@ export {
   cronDedupEventsTest,
   supersededEventsTest,
   queueSaturateEventsTest,
+  detachedSleepEventsTest,
   SubscribeBodySchema,
   EmitBodySchema,
   DirectEnqueueBodySchema,
   DeleteTargetingBodySchema,
   QueueSaturateBodySchema,
+  DetachedSleepBodySchema,
 } from "./endpoints";
 export type {
   SubscribeBody,
@@ -26,4 +28,5 @@ export type {
   DirectEnqueueBody,
   DeleteTargetingBody,
   QueueSaturateBody,
+  DetachedSleepBody,
 } from "./endpoints";

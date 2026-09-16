@@ -69,6 +69,29 @@ Four more harnesses beside it, same plugin, same verdict shape:
   (not released) once the holder dies, never shows up as a dead job, and the
   newer row runs to completion. See "Superseded rows" below.
 
+## Run identity: a run is a queue row
+
+A job row has two identities (`server/internal/run-identity.ts`):
+
+- **Queue key** (graphile `job_key`) — which enqueues collapse onto one pending
+  row. `singletonJobKey(name)` for `dedup: "singleton"`, shared by `enqueue()`
+  and the cron item; `${name}:${key}` for a keyed dedup; none for `"none"`.
+- **Run id** (`ctx.workflowRunId`) — the key of the step/wait logs a durable
+  workflow replays. `workflowRunIdFor(payload, jobId)` is the one derivation:
+  - **keyed dedup** bakes `${name}:${key}` — one run per key, so a second
+    enqueue coalesces into the same (even suspended) workflow;
+  - **everything else** — singleton, none, cron ticks — is `${name}:job:${jobId}`.
+    The row id survives retries, sweeper reclaims, and an enqueue or tick
+    collapsing onto the pending row;
+  - **resume rows** carry the suspended run's id explicitly.
+
+So **"singleton" means at most one PENDING row, not at most one live
+workflow**: an enqueue while a singleton workflow is suspended starts a new run.
+A dead run's log can no longer be replayed by the next run of the job. Dead-job
+GC and the sweeper's superseded DELETE discard the logs of the rows they remove
+— only row-owned run ids, since a baked (keyed/resume) id is shared with
+whatever row holds that key next.
+
 ## Superseded rows
 
 **A row graphile retires while it is locked is superseded, not dead.** Queue a
@@ -143,6 +166,22 @@ long handlers took all four slots and everything behind them stopped, observed a
 There is one declaration and no second field: `hold` picks both the reservation
 tier and the deadline that aborts `ctx.signal`. A lane and a budget cannot
 disagree if there is only one thing to declare.
+
+### `minutes` must say why it runs in process (`inProcess`)
+
+`hold: "minutes"` does not compile without `inProcess: string` (and `instant` /
+`seconds` cannot declare it; an empty reason throws at define time). A `minutes`
+handler runs inside the backend, so any deploy or restart kills it mid-run and
+it re-runs from scratch — while holding one of the four long-work slots for its
+whole duration. The reason is one honest sentence saying why that is acceptable
+(e.g. "both steps are idempotent; a rerun no-ops what landed").
+
+If it is not acceptable — long work that must survive a restart, or must not
+hold a worker slot — use `defineSupervisedJob`
+(`plugins/supervised-job`), which runs the body as a detached child the backend
+re-attaches to. The stale-worktree reaper and the database fork were written as
+plain `minutes` jobs by default and died mid-run on deploys; this field makes
+that a stated choice rather than the path of least resistance.
 
 ### The deadline is a SIBLING of the ceiling, not the same number
 
@@ -460,6 +499,7 @@ sweeper will reclaim it.
     - `holdForTask`
     - `installQueueSchema`
     - `isJobDeadlineExceededError`
+    - `isNonRetryableError`
     - `isSuspendSignal`
     - `JOB_SLOT_FLOOR_KIND`
     - `JobDeadlineExceededError`
@@ -481,6 +521,7 @@ sweeper will reclaim it.
     - `QueueSchemaMissingError`
     - `reachableSlots`
     - `RUNNERS`
+    - `singletonJobKey`
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
     - `UNSAFE_getRegisteredJob`
@@ -552,7 +593,6 @@ sweeper will reclaim it.
     - `apps/prototypes/checkpoints`
     - `apps/prototypes/thumbnails`
     - `apps/sonata/sources/midi/folders`
-    - `backup`
     - `build`
     - `conversations`
     - `conversations/conversation-category`
@@ -577,7 +617,6 @@ sweeper will reclaim it.
     - `debug/read-set-shrink`
     - `debug/session-divergence`
     - `debug/slow-ops`
-    - `debug/worktree-cleanup`
     - `improve`
     - `infra/attachments`
     - `infra/events`
@@ -595,7 +634,5 @@ sweeper will reclaim it.
 - Sub-plugins:
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock deadline and has ctx.signal aborted, job-zombie (error) when it is still holding its slot a grace period later, and job-slot-floor (error) when the written-off slots add up to a runner that can no longer do its job.
   - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
-  - **`supervised-run`** — Long-running out-of-process work that survives a backend restart: a detached child whose merged output goes to a transcript FILE (published live by tailing it, so there is no pipe-shaped path to lose), a POSIX shim that records any command's exit status into an atomic marker, and ONE boot reconciler over every registered kind that closes the dead and re-attaches the living.
-  - **`supervised-task`** — An out-of-process body that is not a command line: defineSupervisedTask registers an ordinary async function under an id, and `./singularity supervised-exec <id> <payloadJson>` boots the plugin graph in exec mode and runs it — so work assembled from contributions (backup's sources and targets) can be supervised as a detached child exactly like a CLI verb.
 
 <!-- AUTOGENERATED:END -->

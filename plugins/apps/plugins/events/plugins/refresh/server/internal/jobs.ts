@@ -31,6 +31,10 @@ export const refreshSourceJob = defineJob({
   // nothing shorter than the work — and `slowThresholdMs` below is 180s,
   // above the `seconds` ceiling.
   hold: "minutes",
+  inProcess:
+    "A run re-marks its source row as running when it starts and only writes " +
+    "events after a full extraction, so a refresh killed mid-run is simply " +
+    "re-fetched from scratch by the retry or the next cadence tick.",
   input: z.object({ sourceId: z.string() }),
   event: z.never(),
   dedup: { key: (input) => input.sourceId },

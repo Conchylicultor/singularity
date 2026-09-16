@@ -1,4 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import { supervisedJobRunsRetention } from "./internal/retention";
+import { reconcileSupervisedRuns } from "./internal/run/supervisor";
+import { _supervisedJobRuns } from "./internal/tables";
 import { runEnded } from "./internal/tables-run-ended";
 
 export { defineSupervisedJob } from "./internal/define-supervised-job";
@@ -7,18 +11,22 @@ export type {
   SupervisedJob,
   SupervisedJobClaimMeta,
   SupervisedJobEndedMeta,
-  SupervisedJobKindSpec,
+  SupervisedJobLedger,
   SupervisedJobSpawn,
+  SupervisedRunContext,
+  SupervisedStepsContext,
 } from "./internal/define-supervised-job";
+export type { RunStep, StepOutcome } from "./internal/steps";
 export { cancelSupervisedJob } from "./internal/cancel";
-// `awaitSupervisedRun` — the observe-then-wait loop on its own — is deliberately
-// NOT exported. It was, briefly, for a workflow owning several sequential runs
-// (deploy's converge → release → ship), until deploy found an answer needing no
-// copy of the close rule at all: wait for the exit marker OR the ledger row
-// already being closed, leaving the pid reasoning in the reconciler where it
-// lives. With no caller left, exporting it would offer a subtle precondition
-// (`pid` must be a child YOU started) that nothing exercises — the footgun
-// without the contract. Re-export this one line the day a real caller appears.
+// The type a consumer's ledger implements (`listUnfinished` returns these).
+export type { UnfinishedRun } from "./internal/run/registry";
+// The built-in ledger's table, exported for drizzle-kit's table discovery.
+export { _supervisedJobRuns } from "./internal/tables";
+// Deliberately NOT exported: the supervisor (`startSupervisedRun`,
+// `killSupervisedRun`, `defineSupervisedRunKind`) and the observe-then-wait loop
+// (`awaitSupervisedRun`). `defineSupervisedJob` is the one way to start a
+// detached child — a workflow owning several sequential children uses its
+// `steps` body — so none of them has a spelling outside this plugin.
 // `_supervisedRunEndedTriggers` is exported for drizzle-kit alone: it discovers
 // tables by filename glob, and a table it cannot see is a table it emits a
 // spurious DROP for.
@@ -34,5 +42,19 @@ export default {
   // The event's own table, mounted here so the register phase completes before
   // any consumer's `onReady` can emit or subscribe. Every supervised job's kind
   // registers itself through its own `defineSupervisedJob` token.
-  register: [runEnded],
+  register: [runEnded, supervisedJobRunsRetention],
+  contributions: [
+    ExcludeFromFork({
+      table: _supervisedJobRuns,
+      reason:
+        "Runs of this backend's own detached children, closed from exit markers on this machine; an inherited open row would hold a job's lock in a fresh worktree until the reconciler wrote it off as a hard kill.",
+    }),
+  ],
+  // The reconciler is registered ONCE here, not once per consumer, and this is
+  // where the duplication actually dies: `reconcileOrphanBuilds` and
+  // `reconcileOrphanReleases` are two near-copies of one loop, and each solved a
+  // different subset of the problem. `onReady` rather than `onReadyBlocking`
+  // because nothing about serving a request depends on it — a run adopted a
+  // second late is a run adopted.
+  onReady: () => reconcileSupervisedRuns(),
 } satisfies ServerPluginDefinition;

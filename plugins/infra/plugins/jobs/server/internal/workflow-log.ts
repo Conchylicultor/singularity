@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runInBackgroundLane } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isNonRetryableError } from "./non-retryable";
@@ -72,6 +72,31 @@ export async function deleteWorkflowLog(
 }
 
 /**
+ * {@link deleteWorkflowLog} for a whole set of runs, in two statements whatever
+ * the set's size — for the sweeps that remove many queue rows at once. The ids
+ * travel as ONE jsonb parameter: drizzle expands a JS array into one bound
+ * parameter per element, and a large dead-row backlog would otherwise run into
+ * Postgres's parameter cap.
+ */
+export async function deleteWorkflowLogs(
+  exec: EnqueueTx,
+  workflowRunIds: readonly string[],
+): Promise<void> {
+  if (workflowRunIds.length === 0) return;
+  const ids = JSON.stringify(workflowRunIds);
+  await exec
+    .delete(_jobSteps)
+    .where(
+      sql`${_jobSteps.workflowRunId} IN (SELECT jsonb_array_elements_text(${ids}::jsonb))`,
+    );
+  await exec
+    .delete(_jobWaits)
+    .where(
+      sql`${_jobWaits.workflowRunId} IN (SELECT jsonb_array_elements_text(${ids}::jsonb))`,
+    );
+}
+
+/**
  * `deleteWorkflowLog` against the worktree database, on the terms a finished
  * dispatch needs: it never throws, and its DB work is declared background.
  *
@@ -88,12 +113,29 @@ export async function deleteWorkflowLog(
  * research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
  */
 export async function discardWorkflowLog(workflowRunId: string): Promise<void> {
+  await discardWorkflowLogs([workflowRunId]);
+}
+
+/**
+ * {@link discardWorkflowLog} for a set of runs, on the same never-throw,
+ * background-lane terms — for a sweep that has already removed the queue rows
+ * and must not have its own outcome replaced by a cleanup complaint.
+ * `database` is the worktree database in production; a test hands it a
+ * throwaway one.
+ */
+export async function discardWorkflowLogs(
+  workflowRunIds: readonly string[],
+  database: EnqueueTx = db,
+): Promise<void> {
+  if (workflowRunIds.length === 0) return;
   try {
-    await runInBackgroundLane(() => deleteWorkflowLog(db, workflowRunId));
+    await runInBackgroundLane(() =>
+      deleteWorkflowLogs(database, workflowRunIds),
+    );
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(
-      `[jobs] cleanup of step/wait logs failed for workflow ${workflowRunId}`,
+      `[jobs] cleanup of step/wait logs failed for ${workflowRunIds.length} workflow(s), first ${workflowRunIds[0]}`,
       err,
     );
   }

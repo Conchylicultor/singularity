@@ -18,7 +18,7 @@
  * `exitCode > 128`; that is the original guess wearing a different hat.
  */
 
-import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 
 /**
  * The prefix `./singularity deploy`'s `refuse()` puts on every named refusal.

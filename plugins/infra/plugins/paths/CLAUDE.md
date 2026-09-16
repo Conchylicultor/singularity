@@ -347,8 +347,7 @@ run everywhere.
     - `framework/tooling/guards`
     - `infra/claude-cli`
     - `infra/git/git-watcher`
-    - `infra/jobs/supervised-run`
-    - `infra/jobs/supervised-task`
+    - `infra/jobs/supervised-job`
     - `infra/launcher`
     - `infra/worktree`
     - `infra/worktree/reclaim`

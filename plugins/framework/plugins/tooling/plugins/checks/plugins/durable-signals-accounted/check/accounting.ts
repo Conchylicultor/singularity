@@ -91,9 +91,17 @@ export const ACCOUNTING: Record<string, ChannelAccounting> = {
     consumer: "internal",
     note: "Boot-time notifications read-set reconciliation diagnostics (shell/notifications). Not a failure signal.",
   },
+  "events-test-detached-sleep": {
+    consumer: "internal",
+    note: "Transcript of the infra/events-test detached-sleep harness (supervised-job restart-survival probe); read by hand while verifying, nothing consumes it.",
+  },
   "worktree-cleanup": {
     consumer: "internal",
     note: "Stale-worktree/DB-fork reap-job diagnostics (debug/worktree-cleanup).",
+  },
+  "database-fork": {
+    consumer: "internal",
+    note: "Detached database.fork child transcript (database/fork); failures surface via the DB-fork-failed notification and the job dead-letter.",
   },
   "slow-ops": {
     consumer: "internal",

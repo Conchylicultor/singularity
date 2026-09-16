@@ -79,9 +79,10 @@ export const releaseJob = defineSupervisedJob({
   name: "release.run.supervised",
   input: releaseJobInput,
 
-  kind: {
-    id: RELEASE_RUN_KIND_ID,
-    channel: releaseLog,
+  channel: releaseLog,
+
+  ledger: {
+    kindId: RELEASE_RUN_KIND_ID,
     listUnfinished,
     setPid,
     // The bare terminal stamp, and nothing else. Everything with a side effect
@@ -93,23 +94,23 @@ export const releaseJob = defineSupervisedJob({
     // transcript tail, so an adopted release is back on screen with nothing for
     // this plugin to rebuild.
     closeRow: closeReleaseRow,
-  },
 
-  /**
-   * The claim IS the lock. Losing it means another release of this composition
-   * is already in flight, and the handler then stops with nothing spawned — the
-   * `already-running` outcome, reached the only way that is safe under
-   * concurrency.
-   */
-  claim: async (input) =>
-    (await claimRelease({
-      releaseId: input.releaseId,
-      composition: input.composition,
-      target: input.target,
-      intent: input.intent,
-    }))
-      ? input.releaseId
-      : null,
+    /**
+     * The claim IS the lock. Losing it means another release of this composition
+     * is already in flight, and the handler then stops with nothing spawned — the
+     * `already-running` outcome, reached the only way that is safe under
+     * concurrency.
+     */
+    claim: async (input) =>
+      (await claimRelease({
+        releaseId: input.releaseId,
+        composition: input.composition,
+        target: input.target,
+        intent: input.intent,
+      }))
+        ? input.releaseId
+        : null,
+  },
 
   /**
    * Async because the environment is ASSEMBLED: other plugins contribute extra

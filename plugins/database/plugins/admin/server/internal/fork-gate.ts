@@ -31,8 +31,7 @@ const { size: forkSize } = HOST_POOLS["db-fork"];
 // with TRUE host-wide occupancy.
 const gate = defineHostPool({ id: "db-fork", size: forkSize });
 
-// `signal` is optional and ambient — the `database.fork` job passes its
-// `ctx.signal`. It cancels a pending acquire and, once held, releases the slot as
+// `signal` is optional and ambient (no current caller passes one). It cancels a pending acquire and, once held, releases the slot as
 // soon as the body is abandoned rather than when it finally settles.
 //
 // The second half is only honest because `forkDatabase` kills the dump/restore

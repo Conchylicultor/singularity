@@ -2,81 +2,49 @@ import { z } from "zod";
 import {
   abortDurableRun,
   defineJob,
+  isNonRetryableError,
   type JobCtx,
   type JobFactory,
+  type ScheduleSpec,
 } from "@plugins/infra/plugins/jobs/server";
+import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import type { RunTerminal } from "../../core";
 import {
-  defineSupervisedRunKind,
-  startSupervisedRun,
-  type SupervisedRunKind,
-  type SupervisedRunKindSpec,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import type { SupervisedTaskInvocation } from "@plugins/infra/plugins/jobs/plugins/supervised-task/core";
+  applyFailurePolicy,
+  builtinKindIdFor,
+  builtinLedgerFor,
+  JOB_WIDE_LOCK_KEY,
+  readRecordedFailure,
+} from "./builtin-ledger";
 import { finishSupervisedRun } from "./finish";
 import { superviseRuns } from "./loop";
+import {
+  defineRunBodyTask,
+  type RunBodyTask,
+  type SupervisedRunContext,
+} from "./run-body";
+import {
+  defineSupervisedRunKind,
+  type SupervisedRunKind,
+  type UnfinishedRun,
+} from "./run/registry";
+import { startSupervisedRun } from "./run/supervisor";
 import { spawnClaimedRun } from "./spawn-claimed";
+import { runStepsBody, type RunStep, type SupervisedJobSpawn } from "./steps";
 import { runEnded } from "./tables-run-ended";
 
-/** Where a supervised job's child comes from: an argv, and how to run it. */
-export interface SupervisedJobSpawn {
-  readonly argv: readonly string[];
-  readonly cwd?: string;
-  /**
-   * Entries ADDED to this backend's environment — not a replacement for it.
-   * Handed to `startSupervisedRun` unchanged.
-   */
-  readonly envOverrides?: Record<string, string>;
-}
-
-/**
- * The supervised-run kind a job owns: everything `defineSupervisedRunKind` takes
- * except `finish`, which the wrapper assembles, plus the one write `finish`
- * needs.
- *
- * `finish` is not a consumer's to write, because what it must do is fixed: close
- * the row, announce the end, and take no other action. What varies per kind is
- * only the write itself, which is {@link SupervisedJobKindSpec.closeRow}.
- */
-export type SupervisedJobKindSpec = Omit<SupervisedRunKindSpec, "finish"> & {
-  /**
-   * Stamp this run's ledger row with its terminal outcome **if the row is still
-   * open** — `WHERE finished_at IS NULL`, and nothing else.
-   *
-   * **A bare write. No notification, no convergence reconcile, no enqueue.** It
-   * runs in the reconciler of every backend that sees the run end, including one
-   * that knows nothing about the workflow that started it, so anything with a
-   * side effect belongs in {@link DefineSupervisedJobSpec.onEnded} instead,
-   * where it happens exactly once.
-   *
-   * This is the safety net that keeps a kind from wedging: if the owning
-   * workflow dies — dead-lettered, or killed in the moment between spawning its
-   * child and recording that it did — this is the only thing left that can close
-   * the row, and an open row holds the kind's partial unique in-flight index
-   * against every future run.
-   *
-   * In the ordinary case this write is also the one that WINS: it runs before
-   * the announcement that eventually resumes the handler, so by the time
-   * `onEnded` runs the row is already closed. Write anything beyond the terminal
-   * outcome from `onEnded` unconditionally rather than under a
-   * `finished_at IS NULL` guard, or it will silently never happen.
-   */
-  closeRow(runId: string, terminal: RunTerminal): Promise<void>;
-};
+export type { SupervisedJobSpawn, SupervisedRunContext };
 
 /** What the wrapper can tell `claim` about the workflow doing the claiming. */
 export interface SupervisedJobClaimMeta {
   /**
-   * The durable identity of the workflow that will own this run from now until
-   * its outcome is recorded.
-   *
-   * Offered because a consumer that records it on its own ledger row can answer
-   * two questions nothing else can: which workflow to cancel alongside the
-   * process (see `cancelSupervisedJob`), and — for a row still open with no
-   * live workflow behind it — that this run's owner is gone. Ignoring it is
-   * fine; nothing in the wrapper reads it back.
+   * The durable identity of the workflow that will own this run until its
+   * outcome is recorded. A ledger that records it can attribute a row still open
+   * with no live workflow behind it. Ignoring it is fine.
    */
   readonly workflowRunId: string;
+  /** 1-indexed spawn attempt within the workflow — always 1 for `steps`. */
+  readonly attempt: number;
 }
 
 /** What `onEnded` is told beyond the run's own identity and outcome. */
@@ -88,238 +56,394 @@ export interface SupervisedJobEndedMeta<I> {
 }
 
 /**
- * Everything a supervised job declares EXCEPT where its child comes from.
+ * A job's OWN ledger: the table it records its runs in, as the five verbs the
+ * primitive needs. For a job with a domain and a UI of its own — build,
+ * release, backup, deploy — whose runs are data in that domain
+ * (federation, not a shared table).
  *
- * Not exported: {@link DefineSupervisedJobSpec} is the only spelling of a spec,
- * and it is the union that makes `argv` and `task` mutually exclusive.
+ * Omit it and the job uses the built-in `supervised_job_runs` ledger instead.
  */
-interface SupervisedJobSpecBase<N extends string, S extends z.ZodType> {
+export interface SupervisedJobLedger<I> {
+  /**
+   * The supervised-run kind id, and the filename prefix of every artifact the
+   * job writes. Lowercase alphanumeric, no separator.
+   */
+  readonly kindId: string;
+  /**
+   * Mint this run's ledger row and answer its id, or `null` when the claim lost
+   * its race.
+   *
+   * **The claiming INSERT is the lock** — a partial unique index on the job's
+   * own scope `WHERE finished_at IS NULL` decides, so a check-then-act before
+   * the insert has a TOCTOU window. Seed the row with `process.pid` so it does
+   * not read as an orphan before the child's pid is known.
+   *
+   * May instead ADOPT a row the caller already inserted (deploy claims in its
+   * endpoint so a busy server answers 409 on the click): answer its id, or
+   * `null` when that row is already closed.
+   *
+   * Runs inside a memoized step, so exactly once per attempt.
+   */
+  claim(input: I, meta: SupervisedJobClaimMeta): Promise<string | null>;
+  /**
+   * Every run of this job that has not been stamped with an outcome, in THIS
+   * namespace. A worktree DB is a fork of main's, so an unscoped read would
+   * reap another machine's runs.
+   */
+  listUnfinished(): Promise<readonly UnfinishedRun[]>;
+  /** Record the pid of the process now serving `runId`. */
+  setPid(runId: string, pid: number): Promise<void>;
+  /**
+   * Stamp this run's row with its terminal outcome **if it is still open** —
+   * `WHERE finished_at IS NULL`, and nothing else.
+   *
+   * A bare write, called from the reconciler of every backend that sees the run
+   * end, from the retry ladder before the next claim, and after a spawn that
+   * never started a child. So: idempotent, first-writer-wins, no side effects.
+   * Side effects belong in `onEnded` (or, for `steps`, in the body).
+   */
+  closeRow(runId: string, terminal: RunTerminal): Promise<void>;
+  /**
+   * `steps` only: step `step` of run `runId` is about to spawn. Record which
+   * child a restarted backend should look for, and answer `false` when the run
+   * was closed meanwhile — the step then spawns nothing and the body gets
+   * `{ state: "run-closed" }`.
+   */
+  beginStep?(runId: string, step: string): Promise<boolean>;
+  /**
+   * A run this process did not start has been adopted: rebuild whatever
+   * in-memory live view the job keeps for it. Only for a job holding one.
+   */
+  onReattach?(runId: string): void;
+}
+
+/** What a `steps` body is handed. */
+export interface SupervisedStepsContext {
+  /** The run id `ledger.claim` answered. */
+  readonly runId: string;
+  /** Spawn one child and wait for it — see `runStepsBody` in `steps.ts`. */
+  readonly step: RunStep;
+  /** The job context, for waits the body needs between steps. */
+  readonly ctx: JobCtx;
+}
+
+/** Everything every supervised job declares, whatever runs. */
+interface SupervisedJobBase<N extends string, S extends z.ZodType> {
   /** Job name, as it appears in the queue (`build.run.supervised`). */
   name: N;
   /** Schema for the value `.enqueue()` takes. Parsed once, at enqueue. */
   input: S;
-  /** This job's supervised-run kind — see {@link SupervisedJobKindSpec}. */
-  kind: SupervisedJobKindSpec;
+  /** Where the supervisor publishes the children's live output. */
+  channel: LogChannel;
   /**
-   * Mint this kind's ledger row and answer the id of the run it stands for, or
-   * `null` when the claim lost its race.
-   *
-   * **The claiming INSERT is the lock** — the kind's partial unique index on its
-   * own scope `WHERE finished_at IS NULL` is what wins or loses, so a
-   * check-then-act before the insert has a TOCTOU window and a lock built on it
-   * does not hold. Seed the row with `process.pid` so it does not read as an
-   * orphan in the moment before the child's pid is known.
-   *
-   * Runs inside a memoized step, so it happens exactly once per attempt even
-   * across restarts and resumes.
+   * Run on a recurring schedule. The job then becomes `dedup: "singleton"`
+   * (one pending row) with the cron; the cron payload is `input.parse({})`.
+   * Absent, the job is `dedup: "none"`, because a pending singleton row takes
+   * the LATEST payload, which would merge two distinct requests.
    */
-  claim(
-    input: z.infer<S>,
-    meta: SupervisedJobClaimMeta,
-  ): Promise<string | null>;
+  schedule?: ScheduleSpec;
+}
+
+/** The two bodies that run ONE child per attempt. */
+interface SingleChildCommon<S extends z.ZodType> {
   /**
-   * The run ENDED — do this kind's terminal WORK: the notification, the
-   * convergence reconcile, any data beyond the terminal outcome.
-   *
-   * This is the exactly-once arm. The row itself is already closed by
-   * {@link SupervisedJobKindSpec.closeRow}, which runs in the reconciler before
-   * the announcement that resumes this handler — so **do not gate work here on
-   * the row still being open**, and read the row back rather than assuming
-   * anything about who stamped it.
-   *
-   * Two rules:
-   *
-   * - **It must be idempotent**, because it is deliberately NOT memoized in a
-   *   step. A step that throws is cached as a permanent failure and replays its
-   *   error forever, which would make the work most worth retrying the one piece
-   *   that never gets a second chance. A retry of the job re-runs this, and the
-   *   job's retry budget is what makes a transient failure survivable.
-   * - **Throwing here fails the job**, which is correct: a failure to do the
-   *   terminal work is the wrapper's own failure, and it earns the retry and the
-   *   crash report. A failed CHILD is not — see {@link DefineSupervisedJobSpec}.
+   * How many children may be spawned in sequence while the run keeps failing.
+   * Default **1**. Each attempt is a NEW run (new id, transcript, marker), with
+   * a durable backoff between them. Raise it only for work whose failures are
+   * transient AND whose partial effects are safe to repeat.
    */
-  onEnded(
+  runAttempts?: number;
+  /**
+   * The run ENDED — do the terminal WORK: a notification, a convergence
+   * reconcile, data beyond the outcome. The row is already closed by
+   * `closeRow` in the ordinary case, so read it back rather than gating on it.
+   *
+   * **Idempotent**, because it is not memoized: it re-runs for every earlier
+   * attempt on a replay. Throwing fails the job.
+   *
+   * With the built-in ledger, the failure policy runs right after it (see
+   * `applyFailurePolicy`).
+   */
+  onEnded?(
     runId: string,
     terminal: RunTerminal,
     meta: SupervisedJobEndedMeta<z.infer<S>>,
   ): Promise<void>;
-  /**
-   * How many children may be spawned in sequence while the run keeps failing.
-   * Default **1**: a failed build, deploy or backup stays failed and visible,
-   * which is what every consumer does today.
-   *
-   * Each attempt is a NEW run — new id, new transcript, new marker — because
-   * out-of-process work cannot be resumed, only redone. Raise it only for work
-   * whose failures are genuinely transient AND whose partial effects are safe to
-   * repeat.
-   */
-  runAttempts?: number;
+  hold?: never;
+  steps?: never;
 }
 
-/** A child named by a command line — build, release, deploy. */
-interface SupervisedJobArgvSource<S extends z.ZodType> {
+/** A child named by a command line — build, release. */
+interface ArgvBody<S extends z.ZodType> {
   /**
-   * The command to supervise for this run.
-   *
-   * May be async, and that is not just convenience: a kind whose environment is
-   * assembled from contributions (release collects `APPLE_*` from its
-   * `Release.EnvProvider` slot) has to await that assembly, and the values are
-   * secrets that must NOT travel through `input` — the job's input is persisted
-   * verbatim in the graphile payload. Resolved inside the spawn step, so it runs
-   * exactly once per attempt.
+   * The command to supervise for this run. May be async (an environment
+   * assembled from contributions — secrets that must NOT travel through
+   * `input`, which is persisted verbatim). Resolved inside the spawn step.
    */
   argv(
     input: z.infer<S>,
     runId: string,
   ): SupervisedJobSpawn | Promise<SupervisedJobSpawn>;
-  task?: never;
+  run?: never;
 }
 
-/** A child that runs a registered `defineSupervisedTask` body — backup. */
-interface SupervisedJobTaskSource<S extends z.ZodType> {
+/** A child that runs in-process code — backup, the reaper, the fork. */
+interface RunBody<S extends z.ZodType> {
   /**
-   * The registered task to run for this run, as
-   * `someTask.invoke(payload)`.
+   * The work, run in its own process: `./singularity supervised-exec <name>`
+   * boots the plugin graph in `exec` mode and calls this with the job's input.
+   * Contributions, config and the database are all present, exactly as in the
+   * backend. `log` writes to the transcript.
    *
-   * The alternative to {@link SupervisedJobArgvSource.argv} for work that has no
-   * command line of its own: a body assembled from plugin contributions, which
-   * `./singularity supervised-exec` boots an `exec` runtime to run. Everything
-   * downstream — detach, transcript, marker, reconcile, resume — is identical;
-   * only what is spawned differs.
-   *
-   * The type is not a second spelling of `argv`. A `SupervisedTaskInvocation` is
-   * minted ONLY by `SupervisedTask.invoke`, so the id in the argv is a
-   * registered id by construction and the payload was checked against that
-   * task's own schema at the call site that knows both.
+   * With the built-in ledger, a throw records `error_message` and `retryable`
+   * (false for a `NonRetryableError`) on the run's row before the child exits 1.
    */
-  task(input: z.infer<S>, runId: string): SupervisedTaskInvocation;
+  run(input: z.infer<S>, ctx: SupervisedRunContext): Promise<void>;
   argv?: never;
+}
+
+/** Where a single-child job records its runs. */
+type LedgerChoice<S extends z.ZodType> =
+  | {
+      ledger: SupervisedJobLedger<z.infer<S>>;
+      /** Only the built-in ledger locks by key; an own ledger's claim IS its lock. */
+      lock?: never;
+    }
+  | {
+      ledger?: undefined;
+      /**
+       * Built-in ledger only: what one run excludes. Two runs whose inputs give
+       * the same key never run at once. Omitted, the whole job is one lock.
+       */
+      lock?: (input: z.infer<S>) => string;
+    };
+
+/** Several children, sequenced in the backend — deploy. */
+interface StepsBody<S extends z.ZodType> {
+  /**
+   * A durable workflow in the backend that runs children one at a time through
+   * `step`, suspending between them (no slot held while a child runs). The
+   * wrapper passes suspend signals through untouched and releases the
+   * workflow's suspension state when the body returns (or throws a
+   * `NonRetryableError`).
+   *
+   * A step whose spawn started no child answers `not-started`: record the
+   * verdict in your own words. Once the body is done, the wrapper closes any
+   * such child's row that is still open, with the hard-kill sentinel.
+   */
+  steps(input: z.infer<S>, ctx: SupervisedStepsContext): Promise<void>;
+  /**
+   * Required: the built-in ledger closes a run when its ONE child ends, which
+   * is not what a sequence is.
+   */
+  ledger: SupervisedJobLedger<z.infer<S>>;
+  /**
+   * What bounds the backend code between steps. Default `instant`; `seconds`
+   * when a body does a timed read between steps. Never `minutes` — long work is
+   * a step.
+   */
+  hold?: "instant" | "seconds";
+  argv?: never;
+  run?: never;
+  lock?: never;
+  /** A sequence decides its own retries. */
+  runAttempts?: never;
+  /** The body sees every step's terminal; there is no single one to hand here. */
+  onEnded?: never;
 }
 
 /**
  * What a supervised job declares.
  *
- * A union over WHERE THE CHILD COMES FROM, so declaring both — or neither — is a
- * tsc error rather than a runtime branch: the two are alternatives, and a spec
- * carrying both says nothing about which one wins.
+ * Exactly one of `argv` / `run` / `steps`; a single-child body takes an own
+ * `ledger` or the built-in one (optionally with `lock`); `steps` requires an
+ * own ledger and forbids `runAttempts`; `hold` exists only for `steps` and is
+ * never `minutes`. Every other combination is a tsc error.
  */
 export type DefineSupervisedJobSpec<
   N extends string,
   S extends z.ZodType,
-> = SupervisedJobSpecBase<N, S> &
-  (SupervisedJobArgvSource<S> | SupervisedJobTaskSource<S>);
+> = SupervisedJobBase<N, S> &
+  (
+    | (SingleChildCommon<S> & (ArgvBody<S> | RunBody<S>) & LedgerChoice<S>)
+    | StepsBody<S>
+  );
 
 /**
- * Resolve this attempt's child command from whichever source the spec declared.
- *
- * A `SupervisedTaskInvocation` already IS a spawn (argv + cwd), so the task arm
- * needs no translation here — which is what keeps the knowledge of the
- * `supervised-exec` verb, and of how a payload is encoded, inside
- * `supervised-task` where it belongs.
- */
-async function commandFor<S extends z.ZodType>(
-  source: SupervisedJobArgvSource<S> | SupervisedJobTaskSource<S>,
-  input: z.infer<S>,
-  runId: string,
-): Promise<SupervisedJobSpawn> {
-  return source.argv !== undefined
-    ? await source.argv(input, runId)
-    : source.task(input, runId);
-}
-
-/**
- * A registered supervised job. One `register:` token mounts both halves — the
- * queue job and the supervised-run kind — because a kind that is defined but not
- * registered is never reconciled, and a job whose kind is missing throws at the
- * spawn.
+ * A registered supervised job. One `register:` token mounts the queue job, the
+ * supervised-run kind and, for a `run` body, the child task.
  */
 export interface SupervisedJob<
   N extends string,
   S extends z.ZodType,
 > extends JobFactory<N, S, z.ZodNever> {
-  /**
-   * The supervised-run kind this job owns. Consumers need it to reach the
-   * primitive's own operations for a run — `killSupervisedRun` via
-   * `cancelSupervisedJob`, most of all.
-   */
+  /** The supervised-run kind this job owns (for `cancelSupervisedJob`). */
   readonly kind: SupervisedRunKind;
 }
 
+/** A ledger with the verbs the wrapper calls, whichever kind it is. */
+interface ResolvedLedger<I> {
+  readonly kindId: string;
+  readonly builtin: boolean;
+  claim(input: I, meta: SupervisedJobClaimMeta): Promise<string | null>;
+  listUnfinished(): Promise<readonly UnfinishedRun[]>;
+  setPid(runId: string, pid: number): Promise<void>;
+  closeRow(runId: string, terminal: RunTerminal): Promise<void>;
+  beginStep?: (runId: string, step: string) => Promise<boolean>;
+  onReattach?: (runId: string) => void;
+}
+
+function resolveLedger<N extends string, S extends z.ZodType>(
+  spec: DefineSupervisedJobSpec<N, S>,
+): ResolvedLedger<z.infer<S>> {
+  const own = spec.ledger;
+  if (own !== undefined) {
+    return {
+      kindId: own.kindId,
+      builtin: false,
+      claim: (input, meta) => own.claim(input, meta),
+      listUnfinished: () => own.listUnfinished(),
+      setPid: (runId, pid) => own.setPid(runId, pid),
+      closeRow: (runId, terminal) => own.closeRow(runId, terminal),
+      ...(own.beginStep === undefined
+        ? {}
+        : {
+            beginStep: (runId: string, step: string) =>
+              own.beginStep!(runId, step),
+          }),
+      ...(own.onReattach === undefined
+        ? {}
+        : { onReattach: (runId: string) => own.onReattach!(runId) }),
+    };
+  }
+  const builtin = builtinLedgerFor(spec.name);
+  const lock = spec.steps === undefined ? spec.lock : undefined;
+  return {
+    kindId: builtinKindIdFor(spec.name),
+    builtin: true,
+    claim: (input, meta) =>
+      builtin.claim({
+        lockKey: lock === undefined ? JOB_WIDE_LOCK_KEY : lock(input),
+        attempt: meta.attempt,
+        workflowRunId: meta.workflowRunId,
+      }),
+    listUnfinished: builtin.listUnfinished,
+    setPid: builtin.setPid,
+    closeRow: builtin.closeRow,
+  };
+}
+
 /**
- * Declare a job whose body is a process that outlives the backend that started
- * it.
+ * Declare a job whose body runs in processes that outlive the backend that
+ * started them — the one way to start a detached child.
  *
  * ```ts
- * export const buildJob = defineSupervisedJob({
- *   name: "build.run.supervised",
- *   input: z.object({ trigger: z.enum(["manual", "auto"]) }),
- *   kind: { id: "build", channel: buildLog, listUnfinished, setPid },
- *   claim: (input) => claimBuildRun(input),
- *   argv: (input, runId) => ({ argv: ["./singularity", "build"], cwd: REPO_ROOT }),
- *   onEnded: async (runId, terminal) => { await stampBuildRow(runId, terminal); },
+ * export const forkJob = defineSupervisedJob({
+ *   name: "database.fork",
+ *   input: z.object({ target: z.string() }),
+ *   channel: forkLog,
+ *   lock: (input) => input.target,
+ *   runAttempts: 5,
+ *   run: async (input, { log }) => { … },
  * });
  * ```
  *
- * Mounted with `register: [buildJob]`, started with `buildJob.enqueue(input)`.
+ * Mounted with `register: [forkJob]`, started with `forkJob.enqueue(input)`.
+ * What each part is load-bearing for is in this plugin's CLAUDE.md.
  *
- * What this composes, and what each part is load-bearing for, is in this
- * plugin's CLAUDE.md. The two decisions taken HERE rather than left to a
- * consumer are:
- *
- * - **`hold: "instant"`.** One run of this handler claims a row, spawns a
- *   detached child and suspends — milliseconds. The hold table's reviewer
- *   heuristic is literally "does it spawn?", which would say `minutes` and burn
- *   one of only four slots that can serve long work for the length of a build.
- *   Making it unspellable is the fix; a consumer whose `onEnded` genuinely
- *   exceeds the class ceiling files a slot-hog report naming the real defect.
- * - **`dedup: "none"`.** Not an oversight and not a policy about overlap — the
- *   claim is what prevents overlap. It is protection from a trap in the step
- *   log: `worker.ts` deletes `_jobSteps` / `_jobWaits` only on the completed
- *   path, and a singleton's `workflowRunId` is the constant `${jobName}:_`, so
- *   ONE failed run would leave cached steps and a resolved wait that every later
- *   run replays — skipping the spawn entirely and never building again. A fresh
- *   uuid per enqueue makes that collision unspellable.
+ * `hold` is `instant` for a single-child job and not a consumer's to choose:
+ * one dispatch claims, spawns detached and suspends — milliseconds.
  */
 export function defineSupervisedJob<N extends string, S extends z.ZodType>(
   spec: DefineSupervisedJobSpec<N, S>,
 ): SupervisedJob<N, S> {
-  const runAttempts = spec.runAttempts ?? 1;
-  if (!Number.isInteger(runAttempts) || runAttempts < 1) {
-    throw new Error(
-      `[supervised-job] ${spec.name}: runAttempts must be a positive integer, got ${String(spec.runAttempts)}`,
-    );
-  }
+  const ledger = resolveLedger(spec);
 
-  const { closeRow, ...runKind } = spec.kind;
   const kind = defineSupervisedRunKind({
-    ...runKind,
+    id: ledger.kindId,
+    channel: spec.channel,
+    listUnfinished: ledger.listUnfinished,
+    setPid: ledger.setPid,
+    ...(ledger.onReattach === undefined
+      ? {}
+      : { onReattach: ledger.onReattach }),
     // Close the row, then say the run ended — and nothing else. The outcome
-    // does not travel with the announcement (see `RunEndedPayload`) and no
-    // consumer work hangs off it: the job handler owns that, and it re-reads
-    // the marker rather than believing anything it was told. `finish` runs at
-    // most once per run per PROCESS, so an emit can be lost to a restart and
-    // must never be the only thing that closes a run — the close above and the
-    // handler's bounded wait are the two halves that make that survivable.
+    // does not travel with the announcement (see `RunEndedPayload`); the
+    // workflow re-reads the marker.
     finish: (runId, terminal) =>
       finishSupervisedRun(
         {
-          closeRow: (id, outcome) => spec.kind.closeRow(id, outcome),
-          announce: (id) => runEnded.emit({ kindId: runKind.id, runId: id }),
+          closeRow: ledger.closeRow,
+          announce: (id) => runEnded.emit({ kindId: ledger.kindId, runId: id }),
         },
         runId,
         terminal,
       ),
   });
 
-  const job = defineJob({
+  let task: RunBodyTask | null = null;
+  let hold: "instant" | "seconds" = "instant";
+  let run: (args: { input: z.infer<S>; ctx: JobCtx }) => Promise<void>;
+
+  if (spec.steps !== undefined) {
+    hold = spec.hold ?? "instant";
+    const body = spec.steps;
+    run = ({ input, ctx }) => runStepsJob(body, kind, ledger, input, ctx);
+  } else {
+    const runAttempts = spec.runAttempts ?? 1;
+    if (!Number.isInteger(runAttempts) || runAttempts < 1) {
+      throw new Error(
+        `[supervised-job] ${spec.name}: runAttempts must be a positive integer, got ${String(spec.runAttempts)}`,
+      );
+    }
+    let command: (
+      input: z.infer<S>,
+      runId: string,
+      attempt: number,
+    ) => Promise<SupervisedJobSpawn>;
+    if (spec.run !== undefined) {
+      const runTask = defineRunBodyTask({
+        name: spec.name,
+        input: spec.input,
+        run: spec.run,
+        recordErrors: ledger.builtin,
+      });
+      task = runTask;
+      command = (input, runId, attempt) =>
+        Promise.resolve(runTask.invoke({ runId, attempt, input }));
+    } else {
+      const argv = spec.argv;
+      command = async (input, runId) => await argv(input, runId);
+    }
+    const onEnded = spec.onEnded;
+    run = ({ input, ctx }) =>
+      runSingleChildJob({
+        jobName: spec.name,
+        kind,
+        ledger,
+        runAttempts,
+        command,
+        onEnded,
+        input,
+        ctx,
+      });
+  }
+
+  const common = {
     name: spec.name,
-    hold: "instant",
+    hold,
     input: spec.input,
     event: z.never(),
-    dedup: "none",
-    run: ({ input, ctx }) =>
-      runSupervisedJob(spec, kind, runAttempts, input, ctx),
-  });
+    run,
+  };
+  const job =
+    spec.schedule !== undefined
+      ? defineJob({
+          ...common,
+          dedup: "singleton",
+          schedule: spec.schedule,
+        })
+      : defineJob({ ...common, dedup: "none" });
 
   return {
     ...job,
@@ -328,81 +452,144 @@ export function defineSupervisedJob<N extends string, S extends z.ZodType>(
     _factory: "defineSupervisedJob",
     _doc: { label: spec.name },
     async register() {
-      // The kind first: `startSupervisedRun` asserts its kind is registered, and
-      // both writes happen in the framework's register phase, before any
-      // `onReady` — which is what lets `supervised-run`'s single reconciler see
-      // the complete set of kinds when it runs.
-      //
-      // AWAITED, not fire-and-forget: `Registration.register()` is declared
-      // `void | Promise<void>`, so both calls carry a maybe-Promise however
-      // synchronous today's implementations are. Dropping either result would
-      // let the framework's register phase finish before the write landed.
+      // The kind first: the supervisor asserts its kind is registered, and all
+      // three writes happen in the register phase, before any `onReady` — which
+      // is what lets the single reconciler see every kind. The task is what
+      // `supervised-exec` resolves in the child, so it is registered in the
+      // child's own register phase by this same token.
       await kind.register();
+      if (task !== null) await task.register();
       await job.register();
     },
   };
 }
 
-async function runSupervisedJob<N extends string, S extends z.ZodType>(
-  spec: DefineSupervisedJobSpec<N, S>,
-  kind: SupervisedRunKind,
-  runAttempts: number,
-  input: z.infer<S>,
-  ctx: JobCtx,
-): Promise<void> {
-  const result = await superviseRuns({
-    kind,
-    runAttempts,
-    ctx,
-    spawn: async () => {
-      const runId = await spec.claim(input, {
-        workflowRunId: ctx.workflowRunId,
-      });
-      if (runId === null) return null;
-      const command = await commandFor(spec, input, runId);
-      // From here the ledger row exists, so a failing spawn must not leave it
-      // open — an unfinished row IS this kind's lock. See `spawnClaimedRun`.
-      const { pid } = await spawnClaimedRun(
-        {
-          start: () =>
-            startSupervisedRun(kind, {
-              runId,
-              argv: command.argv,
-              cwd: command.cwd,
-              envOverrides: command.envOverrides,
-            }),
-          closeRow: (id, outcome) => spec.kind.closeRow(id, outcome),
-        },
-        runId,
-      );
-      return { runId, pid };
-    },
-    onEnded: (started, terminal, attempt) =>
-      spec.onEnded(started.runId, terminal, { input, attempt }),
-  });
+async function runSingleChildJob<I>(opts: {
+  jobName: string;
+  kind: SupervisedRunKind;
+  ledger: ResolvedLedger<I>;
+  runAttempts: number;
+  command: (
+    input: I,
+    runId: string,
+    attempt: number,
+  ) => Promise<SupervisedJobSpawn>;
+  onEnded:
+    | ((
+        runId: string,
+        terminal: RunTerminal,
+        meta: SupervisedJobEndedMeta<I>,
+      ) => Promise<void>)
+    | undefined;
+  input: I;
+  ctx: JobCtx;
+}): Promise<void> {
+  const { kind, ledger, input, ctx } = opts;
+  let result;
+  try {
+    result = await superviseRuns({
+      kind,
+      runAttempts: opts.runAttempts,
+      ctx,
+      spawn: async (attempt) => {
+        const runId = await ledger.claim(input, {
+          workflowRunId: ctx.workflowRunId,
+          attempt,
+        });
+        if (runId === null) return null;
+        const command = await opts.command(input, runId, attempt);
+        // From here the ledger row exists, so a failing spawn must not leave it
+        // open — an unfinished row IS the job's lock. See `spawnClaimedRun`.
+        const { pid } = await spawnClaimedRun(
+          {
+            start: () =>
+              startSupervisedRun(kind, {
+                runId,
+                argv: command.argv,
+                cwd: command.cwd,
+                envOverrides: command.envOverrides,
+              }),
+            closeRow: ledger.closeRow,
+          },
+          runId,
+        );
+        return { runId, pid };
+      },
+      closeRow: ledger.closeRow,
+      onEnded: async (started, terminal, attempt) => {
+        await opts.onEnded?.(started.runId, terminal, { input, attempt });
+        if (!ledger.builtin) return;
+        applyFailurePolicy({
+          jobName: opts.jobName,
+          runId: started.runId,
+          terminal,
+          attempt,
+          runAttempts: opts.runAttempts,
+          failure:
+            terminal.exitCode === 0
+              ? null
+              : await readRecordedFailure(started.runId),
+        });
+      },
+    });
+  } catch (err) {
+    // A dead-lettering failure (the built-in failure policy, or an `onEnded`
+    // declaring its own failure deterministic) ends this workflow for good, so
+    // release its suspension state on the way out, exactly as a recorded
+    // outcome does below. Anything else — a suspend signal, a transient error
+    // the retry will replay — passes through with the workflow intact.
+    if (isNonRetryableError(err)) await abortDurableRun(ctx.workflowRunId);
+    throw err;
+  }
 
   if (result.outcome === "not-claimed") return;
 
-  // The run is over and its outcome is recorded, so nothing should resume this
-  // workflow again. That is not automatic: an iteration the loop skipped (the
-  // marker appeared on a replay, before the wait it had already armed was
-  // consulted) leaves a pending wait row with a timeout scheduled behind it.
-  // Releasing our own suspension state is the same second half of cancellation
-  // `cancelSupervisedJob` performs — done here, where the run is finished, and
-  // never on a live one.
+  // The run is over and its outcome recorded, so nothing should resume this
+  // workflow again — release a wait some iteration armed and then skipped.
   await abortDurableRun(ctx.workflowRunId);
 
-  // And that is the end of it. **A non-zero exit code is DATA, not an
-  // exception**: this handler's job is to claim, spawn, wait and record, and a
-  // build that exits 1 means it did all four. That is a success of the job and a
-  // failure of the build, and only the second is news. Throwing would file a
-  // crash report and a dead-letter for every failed build — which is not what a
-  // failed build is today — and would offer graphile's row retry as a way to
-  // "re-run" out-of-process work, which it cannot: the only retry that means
-  // anything here is a fresh child, which is `runAttempts`. The failure surfaces
-  // where it already does, in the ledger row and the kind's own notification.
-  //
-  // The wrapper's OWN failures do still throw, from wherever they happen — a
-  // failing `onEnded`, a failing claim or spawn, a DB write that will not land.
-  // Those earn the retry budget and the report.
+  // **With an own ledger, a non-zero exit code is DATA, not an exception**: the
+  // failed run surfaces in the job's own row, UI and notification, and a throw
+  // would file a dead-letter for every failed build. The built-in ledger has no
+  // UI, so its failure policy (in `onEnded` above) throws instead.
+}
+
+async function runStepsJob<I>(
+  body: (input: I, ctx: SupervisedStepsContext) => Promise<void>,
+  kind: SupervisedRunKind,
+  ledger: ResolvedLedger<I>,
+  input: I,
+  ctx: JobCtx,
+): Promise<void> {
+  const runId = await ctx.step("claim", () =>
+    ledger.claim(input, { workflowRunId: ctx.workflowRunId, attempt: 1 }),
+  );
+  if (runId === null) return;
+
+  try {
+    await runStepsBody({
+      ctx,
+      kind,
+      runId,
+      beginStep: ledger.beginStep,
+      closeRow: ledger.closeRow,
+      listUnfinished: ledger.listUnfinished,
+      start: (childId, spawn) =>
+        startSupervisedRun(kind, {
+          runId: childId,
+          argv: spawn.argv,
+          cwd: spawn.cwd,
+          envOverrides: spawn.envOverrides,
+        }),
+      body: (step) => body(input, { runId, step, ctx }),
+    });
+  } catch (err) {
+    // A suspend signal passes through untouched (`runStepsBody` rethrows it
+    // first). A body error fails the job; one declaring itself deterministic
+    // ends the workflow for good, so its suspension state is released exactly
+    // as a returning body's is below. Anything else keeps it for the retry.
+    if (isNonRetryableError(err)) await abortDurableRun(ctx.workflowRunId);
+    throw err;
+  }
+  await abortDurableRun(ctx.workflowRunId);
 }

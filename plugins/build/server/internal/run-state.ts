@@ -1,8 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute, isMainCompositionBuild } from "@plugins/build/core";
 import {

@@ -14,7 +14,7 @@
  * the only admissible source.
  */
 
-import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 
 /** Everything known about a finished release, as ONE value. */
 export interface ReleaseEnding {

@@ -19,9 +19,9 @@ import type { DeployVerb } from "../../core/runs";
  * supervised leg's outcome arrived at the kind's `finish` rather than at the
  * call that started it, and because an `update` spent minutes between its legs
  * awaiting a release in-process with nothing durable to resume from. The
- * sequence is a job now: `ctx.step` remembers which legs have been spawned and
- * `ctx.waitFor` is the wait, so "who is sequencing this run" stopped being a
- * question about which process is alive.
+ * sequence is a `defineSupervisedJob` `steps` body now: each leg is a step,
+ * whose memo remembers the child it spawned and whose wait is durable, so "who
+ * is sequencing this run" stopped being a question about which process is alive.
  */
 export type DeployLeg = "converge" | "ship";
 
@@ -55,6 +55,62 @@ export function parseLegRunId(
   const leg = id.slice(at + 1);
   if (!LEGS.includes(leg as DeployLeg)) return null;
   return { runId: id.slice(0, at), leg: leg as DeployLeg };
+}
+
+/**
+ * A `steps` step name as the leg it names. The job's step names ARE the leg
+ * names — that is what keeps a step's child id equal to {@link legRunId} — so
+ * any other name reaching the ledger is a defect, and throws.
+ */
+export function asDeployLeg(step: string): DeployLeg {
+  const leg = LEGS.find((candidate) => candidate === step);
+  if (leg === undefined) {
+    throw new Error(
+      `[deploy] step ${JSON.stringify(step)} is not a leg (${LEGS.join(", ")}).`,
+    );
+  }
+  return leg;
+}
+
+/**
+ * The command one leg runs: `./singularity deploy <leg> <composition> --server
+ * <server>`, plus `--release <runId>` for a ship that pinned one.
+ *
+ * A pure function of the ledger row, so the line announcing a leg (written as
+ * the leg begins) and the argv actually spawned cannot name different commands.
+ *
+ * `./singularity` from the checkout this backend was built from (the caller's
+ * `cwd` is `REPO_ROOT`), so the CLI resolves the SAME namespace: it reads its
+ * deployment record over HTTP from `<worktree>.localhost:9000` and its server
+ * row from that worktree's DB fork.
+ *
+ * Nothing is passed to say which namespace that is, and nothing needs to be. The
+ * child is a CLI process, so it mints the namespace from the checkout it is
+ * standing in (`checkoutNamespace(REPO_ROOT)` in the deploy command's
+ * `internal/target.ts`) — and that checkout IS this backend's own, because
+ * `cwd` is `REPO_ROOT`. The two agree by construction rather than by a value
+ * riding along in the environment, which is what the old wording relied on and
+ * what quietly made every worktree's deploy act on main's records.
+ */
+export function legArgv(
+  row: {
+    readonly compositionId: string;
+    readonly serverId: string;
+    readonly releaseRunId: string | null;
+  },
+  leg: DeployLeg,
+): string[] {
+  return [
+    "./singularity",
+    "deploy",
+    leg,
+    row.compositionId,
+    "--server",
+    row.serverId,
+    ...(leg === "ship" && row.releaseRunId !== null
+      ? ["--release", row.releaseRunId]
+      : []),
+  ];
 }
 
 /** Which leg a verb spawns first. An `update` always converges before it ships. */

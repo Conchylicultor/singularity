@@ -25,8 +25,10 @@ import {
   checkoutNamespace,
   checkoutRef,
   worktreeArtifacts,
+  worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import {
+  MAIN_WORKTREE_NAME,
   NAMESPACE_RE,
   namespaceUrl,
   type Namespace,
@@ -277,6 +279,21 @@ async function waitForPg(): Promise<void> {
   );
 }
 
+// Where a stuck or failed fork is diagnosed. `database.fork` is enqueued and
+// supervised by MAIN's backend, so its dead-letter is on main's Debug → Queue and
+// its transcript (the detached child's output) is main's `database-fork` log.
+function forkDiagnosisHint(): string {
+  const forkLog = join(
+    worktreeDataDir(MAIN_WORKTREE_NAME),
+    "logs",
+    "database-fork.jsonl",
+  );
+  return (
+    `Check Debug → Queue on the main app for a dead \`database.fork\` job, ` +
+    `and the fork's log at ${forkLog}.`
+  );
+}
+
 async function waitForWorktreeDatabase(name: string): Promise<void> {
   if (await databaseReady(name)) return; // standard path, ~always already done
 
@@ -297,27 +314,34 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
     );
     if (done) return;
     console.error(
-      `ERROR: DB fork for "${name}" did not finish within 120s. The database.fork ` +
-        `job may be dead — check /api/jobs on the main app.`,
+      `ERROR: DB fork for "${name}" did not finish within 120s. ` +
+        forkDiagnosisHint(),
     );
     process.exit(1);
   }
 
   // No DB and no restore in flight. Either a standard-path job is still queued/
   // gated, or this worktree was created outside Singularity and has no job at
-  // all. Grace-poll briefly for the queued case, then fail actionably.
+  // all. Grace-poll for the queued case, then fail actionably. 60 s, not less:
+  // the fork runs in a detached `supervised-exec` child, which spends an exec
+  // boot of the whole plugin graph (then the fork plan) before it creates the
+  // temp DB — so "no temp yet" is the normal state for the first stretch of a
+  // healthy fork.
   const done = await retryUntil(
     async (attempt) => {
       if (await databaseReady(name)) return true;
       if (attempt === 0) console.log(`Waiting for DB fork "${name}"…`);
       return null;
     },
-    { delay: fixed(1_000), deadline: 20_000, onDeadline: () => false },
+    { delay: fixed(1_000), deadline: 60_000, onDeadline: () => false },
   );
   if (done) return;
   console.error(
     [
-      `ERROR: no database for "${name}" and no fork in flight.`,
+      `ERROR: no database for "${name}" and no fork in flight after 60s.`,
+      "",
+      "If this worktree was created from Singularity, its fork may have failed.",
+      forkDiagnosisHint(),
       "",
       "If this worktree was created outside Singularity (git worktree add),",
       "create its database with:",

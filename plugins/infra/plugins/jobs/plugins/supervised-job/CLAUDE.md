@@ -1,9 +1,106 @@
 # supervised-job
 
-A build, a release, a deploy — work that runs for half an hour in a process of
-its own — is an ordinary entry in the queue. `defineSupervisedJob` is the whole
-of it: `defineJob` + a `supervised-run` kind + `ctx.waitFor`, composed once so no
-consumer composes them again.
+A build, a release, a deploy, a backup — work that runs for half an hour in a
+process of its own — is an ordinary entry in the queue. `defineSupervisedJob` is
+the whole of it: `defineJob` + a supervised-run kind + `ctx.waitFor`, composed
+once so no consumer composes them again. **It is the one way to start a detached
+child**; the supervisor underneath has no public spelling.
+
+## The declaration
+
+```ts
+defineSupervisedJob({
+  name, input, channel,
+  // WHAT runs — exactly one of:
+  argv:  (input, runId) => ({ argv, cwd?, envOverrides? }),  // one child, a command line
+  run:   async (input, { runId, log }) => { … },             // one child, in-process code
+  steps: async (input, { runId, step, ctx }) => { … },       // several children, sequenced
+  // WHERE runs are recorded:
+  ledger?: { kindId, claim, listUnfinished, setPid, closeRow, beginStep?, onReattach? },
+  lock?:   (input) => string,     // built-in ledger only
+  schedule?, runAttempts?, onEnded?,   // runAttempts / onEnded: single-child only
+  hold?: "instant" | "seconds",   // steps only
+});
+```
+
+One `register: [job]` token mounts the queue job, the run kind and, for `run`,
+the child task. The type forbids two or zero bodies, `lock` with `ledger`,
+`steps` without `ledger`, `runAttempts` / `onEnded` with `steps`, and `hold`
+anywhere but `steps` (never `minutes`) — `define-supervised-job.test.ts` holds
+the `@ts-expect-error` for each.
+
+### Bodies
+
+- **`argv`** — the child is that command line (build, release).
+- **`run`** — the child is `./singularity supervised-exec <job name>
+  <{runId, attempt, input}>`, booted in `exec` mode, calling the function. The
+  input is re-parsed against the job's schema in the child. `log(line, stream?)`
+  writes stdout/stderr, which is the transcript the parent tails into `channel`
+  — one process writes each log file. With the built-in ledger a throw records
+  `error_message` and `retryable = !isNonRetryableError(err)` on the row, then
+  exits 1; with an own ledger it just rethrows (the body writes its own row).
+- **`steps`** — a durable workflow in the backend (deploy). `step(name, { argv, cwd?,
+  envOverrides? })`, inside a memoized `ctx.step`, asks `ledger.beginStep?(runId,
+  name)` (false ⇒ `{ state: "run-closed" }`, nothing spawned), spawns child
+  `${runId}.${name}`, then waits with the observe-then-wait loop and returns `{
+  state: "ended", runId, terminal }`. A spawn that failed before any child
+  existed is memoized as a VALUE and answered `{ state: "not-started", runId,
+  message }`, so the body records its own verdict in its own words (a thrown
+  step would replay its error forever). **Once the body is done** — returned or
+  thrown, never on a suspend — `runStepsBody` closes each such child's row with
+  the hard-kill sentinel through `closeRow` (first-writer-wins, so a no-op after a
+  body that stamped its run). That last-resort close is what makes "a child that
+  never started cannot hold the lock" structural rather than each body's duty.
+  A spawn that failed with a child possibly running throws and suppresses every
+  close in that dispatch. The wrapper passes suspend signals through untouched
+  and calls `abortDurableRun` when the body returns or throws a
+  `NonRetryableError`. `claim` runs once, in a `claim` step; a `null` ends the workflow
+  without running the body.
+  - **Durable names: the memo is `spawn:<name>`, the waits `<name>:<i>`.** They
+    are the names deploy's hand-written sequence recorded before it moved onto
+    `steps`, kept byte-for-byte so a deploy suspended across that release
+    re-attaches instead of spawning a leg twice (`steps.test.ts` asserts the
+    literals). That sequence memoized `{ state: "spawned" }` with no pid, so a
+    replay of that shape recovers the pid from `listUnfinished` (absent ⇒ the
+    child's row was closed ⇒ `null`: marker, else the hard kill the reconciler
+    already recorded). A body's own `ctx.step` / `ctx.waitFor` names must avoid
+    both shapes.
+  - **No `{ run }` step.** A child finds its body by id in a registry filled at
+    module eval; a closure written inside a running `steps` body has no id. Work
+    that needs one is its own `run`-body job the sequence waits on.
+
+### Ledgers
+
+- **Own ledger** (build, release, backup, deploy): the kind verbs plus `claim`,
+  with an explicit `kindId`. A failed run is data in that table and UI; a
+  non-zero exit is not an exception (see below). `claim` may adopt a row the
+  caller already inserted, answering `null` when it is closed.
+- **Built-in ledger** `supervised_job_runs` (omit `ledger`): for jobs with no
+  domain of their own.
+  - `UNIQUE (job_name, lock_key) WHERE finished_at IS NULL` is the lock; `claim`
+    is an INSERT against it (a 23505 on that index answers `null`). No `lock` ⇒
+    one job-wide key, so at most one run of the job at a time.
+  - `closeRow` is the only writer of the outcome. Excluded from forks, so no
+    namespace column; kept 30 days after `finished_at` (`defineRetention`, per
+    worktree).
+  - Kind id derived from the name (`database.fork` → `databasefork`), asserted
+    `^[a-z][a-z0-9]*$`; a collision throws at register.
+  - **The dead-letter is its failure surface**, applied after any `onEnded`:
+    exit 0 → done; failed and (not retryable, or the last attempt) → throw
+    `NonRetryableError` naming the job, run, exit and the recorded error (or
+    "killed or crashed before recording an error — see the transcript"); failed
+    otherwise → retry. A hard kill or a reboot's TERM records no flag, so it stays
+    retryable. Deterministic on replay: it re-runs for earlier attempts with the
+    same row and attempt number, so it answers the same.
+
+### The retry ladder (`runAttempts`)
+
+Each attempt is a new run. Between two attempts the loop sleeps durably
+(`e^attempt` s: ~3, 7, 20, 55, capped at 60 — no slot held), then calls
+`closeRow` on the previous attempt's run (idempotent) before the next claim —
+after a restart the next claim could otherwise lose to the previous attempt's
+still-open row, and that memoized loss ended the ladder silently. A claim lost on
+attempt ≥ 2 now throws.
 
 ## Long work, short runs
 
@@ -22,8 +119,9 @@ The handler is short at both ends and empty in the middle:
 `ctx.waitFor` RETURNS from the handler through the jobs plugin's suspend
 sentinel: the graphile row is deleted, the slot is released, and the workflow
 comes back later as a fresh dispatch. So a workflow may span an hour while every
-one of its runs is milliseconds — which is why `hold` is **`instant`** and why a
-consumer cannot set it. The hold table's reviewer heuristic is literally "does it
+one of its runs is milliseconds — which is why a single-child job's `hold` is
+**`instant`** and a consumer cannot set it (a `steps` body may say `seconds`, for
+a timed read between steps). The hold table's reviewer heuristic is literally "does it
 spawn? → `minutes`", and `minutes` is one of only four slots that can serve long
 work; spending one for the length of a build is exactly the wedge those
 reservations exist to prevent. A consumer whose `onEnded` really does exceed the
@@ -64,65 +162,45 @@ wait-first loop hangs until its timeout on a run that was over before it started
 ### `awaitSupervisedRun` is internal, and stays that way
 
 The observe-then-wait half is its own function, `awaitSupervisedRun(ctx, { kind,
-runId, pid, name })`, which `superviseRuns` calls — so the loop above is a thin
-ladder over it and the two cannot drift.
+runId, pid, name })`, which both `superviseRuns` and the `steps` runner call — so
+the loop above is a thin ladder over it and the two cannot drift. It is **not
+exported**: a workflow owning several sequential children is a `steps` body, not
+a hand-written loop over the supervisor.
 
-It is **not exported**, and the reason is worth keeping. It was exported briefly
-for deploy, whose `update` owns three sequential runs (converge leg → release →
-ship leg) under one ledger row and so cannot be a `defineSupervisedJob`. Deploy
-then found a better answer that needs no copy of the close rule at all: wait for
-the leg's exit marker **or** the ledger row already being closed, since `finish`
-→ `closeRow` is what stamps a hard-killed run — the pid reasoning stays in the
-reconciler, where it already lives. With no caller left, exporting it would offer
-a subtle precondition that nothing exercises.
-
-That precondition, in case a real caller ever appears: **`pid` must be the pid of
-a child YOU started for this run.** With no marker, a pid that is not alive IS the
+Its precondition, which is why it stays internal: **`pid` must be the pid of a
+child YOU started for this run.** With no marker, a pid that is not alive IS the
 hard-kill outcome — the close rule, correct for a row with no process behind it —
 so `pid: null` returns the `-1` sentinel immediately. Right for a run you started,
-wrong for a run whose id you merely know. It takes the kind HANDLE rather than an
-id (a handle can only be obtained by having defined the kind) and asserts
-registration on the way in, because a wait on a kind nobody registered is a wait
-nothing will ever wake.
+wrong for a run whose id you merely know (deploy's wait on a RELEASE goes through
+`release`'s own `awaitRelease` for exactly that reason). It takes the kind HANDLE
+rather than an id and asserts registration on the way in, because a wait on a kind
+nobody registered is a wait nothing will ever wake.
 
-## `dedup: "none"`, and why it is not a policy about overlap
+## `dedup`: `"none"`, or `"singleton"` with a `schedule`
 
-Overlap is prevented by the **claim**: each kind keeps its own ledger with a
-partial unique index `WHERE finished_at IS NULL`, and the claiming INSERT is what
-wins or loses. `dedup` is set to `"none"` for an unrelated reason — to stay out
-of a trap in the step log.
+Overlap is prevented by the **claim**: every ledger has a partial unique index
+`WHERE finished_at IS NULL`, and the claiming INSERT wins or loses. `dedup` is not
+a policy about overlap.
 
-`worker.ts` deletes `_jobSteps` / `_jobWaits` only on the **completed** path; a
-throw exits before the cleanup. A `singleton` workflow's `workflowRunId` is the
-constant `${jobName}:_`, so after ONE failed run the next enqueue replays the
-previous run's cached steps and its resolved wait — it would skip the spawn
-entirely and never build again. `dedup: "none"` mints a fresh uuid per enqueue,
-so no two runs can ever share a step log.
+- **No `schedule` ⇒ `dedup: "none"`.** A pending singleton row takes the LATEST
+  payload, so two different builds or releases enqueued back to back would merge
+  into one. Every enqueue is its own row.
+- **`schedule` ⇒ `dedup: "singleton"` plus the cron**, as `defineJob`'s union
+  requires (graphile's cron path uses the singleton job key; a non-singleton
+  would insert a row every tick). The cron payload is `input.parse({})`.
 
-The handler still cleans up after itself: on the way out it calls
-`abortDurableRun(ctx.workflowRunId)`, releasing a wait some iteration armed and
-then skipped (the marker appeared on a replay before that wait was consulted).
-Without it, a stale resume re-dispatches the handler minutes after the run is
-already recorded.
+Either way the run's identity is its **queue row** — `ctx.workflowRunId` is
+`${name}:job:${jobId}` (the jobs plugin's "Run identity"). So a failed run's
+cached steps and resolved waits can never be replayed by a later run, which is
+what once forced supervised jobs to `"none"` and a scheduled one to be split into
+a separate tick job. That split is gone: `backup.run.supervised` carries its own
+schedule. A tick that fires while a run is in flight claims nothing and returns.
 
-### A scheduled supervised job is TWO jobs, and that is the intended shape
-
-`defineJob`'s spec is a union in which declaring `schedule` narrows `dedup` to
-`"singleton"`. A supervised job is fixed at `"none"`. So **a supervised job cannot
-carry a `schedule`**, and a cron-driven kind is written as a separate two-line
-`defineJob` — singleton, `hold: "instant"` — whose whole body is
-`theSupervisedJob.enqueue(…)`. `backup.run.schedule` is the worked example.
-
-Not an oversight, and do not "fix" the union: both halves are load-bearing in
-opposite directions. graphile's cron path hardcodes the singleton job key
-`${name}:_`, so a scheduled non-singleton inserts a fresh row every tick (the
-2026-08-17 queue wedge); and a supervised singleton would reuse that same
-constant as its `workflowRunId`, hitting the step-log trap above and never
-spawning again after one failure.
-
-Nothing is lost by the split. Overlap was never the tick's problem — the claim is
-the lock, so a tick that fires while a run is in flight claims nothing and
-returns.
+The handler still cleans up after itself: on the way out (a recorded outcome, or a
+dead-lettering failure) it calls `abortDurableRun(ctx.workflowRunId)`, releasing a
+wait some iteration armed and then skipped (the marker appeared on a replay
+before that wait was consulted). Without it, a stale resume re-dispatches the
+handler minutes after the run is already recorded.
 
 ## `finish` closes the row; `onEnded` does the work
 
@@ -131,7 +209,7 @@ The split is by **what** each arm does, not by which one runs:
 - **`finish`** (in the reconciler, in every backend) — close the ledger row if it
   is still open, then emit `runEnded`. A bare terminal write and an
   announcement; nothing else. The consumer supplies the write as
-  `kind.closeRow`.
+  `ledger.closeRow`.
 - **`onEnded`** (in the job handler) — the terminal WORK: the notification, the
   convergence reconcile, any data beyond the outcome. Exactly-once, because only
   this arm has side effects.
@@ -191,7 +269,7 @@ the guard compensates **only on positive proof that no child exists**. An
 unrecognised error counts as "a child may be running": a wedged kind is loud and
 a restart clears it, a duplicated build is neither.
 
-## A non-zero exit code is DATA, not an exception
+## A non-zero exit code is DATA, not an exception (own ledger)
 
 The handler claims, spawns, waits and records. A build that exits 1 means it did
 all four: **that is a success of the job and a failure of the build**, and only
@@ -202,6 +280,10 @@ which is not what a failed build is today — and would dangle graphile's row re
 as a way to "re-run" out-of-process work, which it cannot do: a retry replays the
 memoized spawn step and re-derives the same outcome. The only retry that means
 anything here is a **fresh child**, which is `runAttempts`.
+
+The **built-in ledger** is the exception to this section: it has no UI, so its
+failure policy throws `NonRetryableError` and the dead-letter is the surface (see
+"Ledgers" above).
 
 What DOES throw is the wrapper's own failure: `onEnded` throwing, a failing claim
 or spawn, a DB write that will not land. Those earn the retry budget and the
@@ -241,7 +323,269 @@ and records the hard-kill outcome.
   property; the fix, if it ever matters, belongs there.
 - **The close rule is written twice** — here in `observeRun`, and in
   `supervised-run`'s `settleRun`. They must agree. The intended end state is one
-  exported rule in `supervised-run/core` that both call.
+  exported rule in this plugin's `core/` that both call.
+
+## The supervisor: detach, transcript, exit marker, reconciler
+
+_Folded in from the former `supervised-run` plugin; now `server/internal/run/` and `core/`._
+
+Work that outlives the backend that started it: a build, a release, a deploy.
+One primitive owns detach + pid + transcript + reconcile + re-attach.
+
+### The file IS the stream
+
+**The child's stdout and stderr go to a file descriptor, not a pipe**, and the
+supervisor publishes by _tailing that file_. Do not add a pipe-shaped "live"
+path beside it. A pipe belongs to the process that created it, so a live pipe
+forces a second artifact-shaped recovery path — and the recovery path is the one
+that rots, because nothing exercises it until something has already gone wrong.
+Release proved it: `resolveOrphanExitCode` read an artifact only the _parent_
+wrote, so a genuinely orphaned release always got the `-1` sentinel. One path
+means a restart is not a special case — the boot tailer is the same code as the
+spawn-time tailer.
+
+Change detection is `file-watcher` (the repo bans polling). ONE subscription
+serves every live run of every kind, which is why `runs/` is its own directory
+rather than files beside the build artifacts.
+
+**stdout and stderr merge** (same fd). Interleaving order survives, the
+per-line classification does not — two files with two tailers would invert that
+trade, which is worse for a transcript read top to bottom. Cost: log viewers
+that tint `stream === "stderr"` red render a supervised run in one colour.
+Nothing counts, filters or badges on it.
+
+For a consumer reading the transcript back (deploy's `verbFailureMessage`): a
+scan keyed on line CONTENT survives the merge unchanged — feed it the transcript
+lines instead of a stderr-only array. Only a "last non-blank **stderr** line"
+fallback degrades, to "last non-blank line".
+
+### The exit code is captured by the SPAWN
+
+Every argv is wrapped in a POSIX shim, so this works for any command and
+"forgot to record the exit code" is unspellable:
+
+```sh
+trap 'g=TERM; i=1' TERM; trap 'g=INT; i=1' INT; trap 'g=HUP; i=1' HUP
+"$@" & c=$!
+wait "$c"; s=$?
+while [ "$i" = 1 ] && kill -0 "$c" 2>/dev/null; do i=0; wait "$c"; s=$?; done
+[ -n "$g" ] || g=-
+printf '%s %s\n' "$s" "$g" > "$T.tmp.$$" && mv "$T.tmp.$$" "$T"; exit "$s"
+```
+
+Marker body: `<status> <signal-or-dash>`, e.g. `0 -`, `143 TERM`. Signal names
+are bare POSIX (no `SIG`). A marker that exists but does not parse **throws**
+(`RunMarkerError`) — it is a writer defect, and answering `null` would file it
+under "hard-killed" behind a plausible `-1`.
+
+Four clauses look redundant and are not:
+
+- **Background child + `wait`, not a foreground `"$@"`.** SIGTERM's default
+  disposition kills the shell outright, so a group signal would leave no marker
+  and a _cancelled_ run would be indistinguishable from a hard kill.
+- **Traps BEFORE the `&`.** Between them the shell still has the default
+  disposition, and a signal landing there loses the marker. Safe because a
+  handler-trap is reset to default in the child (only `trap ''` is inherited).
+- **One trap per signal recording its NAME**, not a shared `trap :`. The null
+  command is enough to make `wait` return but throws away the one fact only the
+  shell has — see below.
+- **The `wait` retry.** A trapped signal makes `wait` return `128+signo`
+  **immediately — the child has not necessarily exited**. Without the retry the
+  shim recorded `143 TERM` and exited while a child that handles TERM (what
+  `./singularity build` does via `installFatalSignalExit`) was still shutting
+  down: reparented, unwatched, real exit code lost. With it, `42 TERM`. The
+  `kill -0` guard is required, not defensive — a second `wait` on an
+  already-reaped pid returns 127 and prints `wait: pid N is not a child of this
+shell` into the transcript. `kill -0` succeeds on a zombie and fails once our
+  own `wait` reaped it, and a pid cannot be recycled before it is reaped.
+
+⚠️ **SIGINT does not cancel a run.** POSIX makes a non-interactive shell set
+SIGINT to ignore for an asynchronous list's commands, and ignore is inherited
+across `exec` — measured, the child ran to completion and exited 0. The shim
+traps INT so it does not die and orphan the child, and records
+`exitCode: 0, signalCode: "INT"`, which is what actually happened.
+`killSupervisedRun` uses SIGTERM; don't reach for INT.
+
+#### `signalCode` is observed, never derived
+
+**`128 + signo` cannot tell a kill from a program that chose `exit(143)`** —
+they are the same number. That ambiguity is what recorded
+`drun-1787890652933-wr3v6d` as `Exited with code 143`, a sentence about a
+command that never exited and never refused. So `RunTerminal.signalCode` comes
+from the trap having _fired_, and **nothing may re-derive killed-ness from
+`exitCode > 128`** — not here, not in a consumer.
+
+In particular the shim deliberately does **not** fall back to
+`kill -l $((s-128))` when the trap did not fire. That looks like a free second
+source and is the original guess one layer down: it turns a genuine `exit 143`
+into `signalCode: "TERM"`. The test pair `a kill and a deliberate exit(143) are
+told apart` fails the moment anyone adds it.
+
+The honest cost: a child signalled _individually_, leaving `sh` untouched,
+records `null`. Nothing here does that — every kill goes to the process group —
+so `null` reads as "not observed as killed", never "exited normally".
+
+**The finish instant is the marker's mtime**, never `new Date()` at reconcile.
+Reusing `now` inflates a recovered run's Duration by the whole gap before
+something noticed (release does this and is wrong for it).
+
+**No marker ⇒ hard SIGKILL ⇒ the `-1` sentinel, with `signalCode: null`.**
+SIGKILL runs no handler, so absence is the only evidence it can leave and there
+is no signal name anyone observed; `-1` is a status no child can produce, so the
+case stays legible without claiming one.
+
+### The close rule (build's, verbatim)
+
+```
+close?  =  !(terminal == null && isPidAlive(pid))
+value   =  terminal ?? { exitCode: -1, finishedAt: now }
+```
+
+A marker present closes the run even while the pid is alive — the shim writes it
+_before_ exiting. Callers claim their ledger row **before** spawning, seeded
+with `process.pid`: the claiming INSERT (partial unique index on the kind's
+scope `WHERE finished_at IS NULL`) is what wins or loses the race, and the
+seeded pid stops the fresh row looking like an orphan.
+
+**The reconciler is registered once, here, not per consumer** — that is where
+`reconcileOrphanBuilds` / `reconcileOrphanReleases` died. `register:` token, so
+the register phase completes before any `onReady` sees the kind set.
+
+#### A stamped row is not a finished process
+
+The reconciler also drops runs the ledger no longer lists — the caller's own CLI
+closing its own row, which is the ordinary case. **That drop goes through the
+close rule above, never through a bare untrack**, and the difference is not
+cosmetic: `./singularity build` stamps its row after the health probe and then
+runs for another ~100s of compose-serve tail (measured: 75.8s). Dropping it on
+the ledger's say-so stopped the tail mid-run — truncating the live log for every
+kind that stamps early — and, once it was the last live run, tore down the
+watcher, so the exit marker landed with nobody listening and `finish` was
+**never called at all**.
+
+So the condition for leaving the live set is the run having ENDED, not its row
+having been stamped. **The set is still bounded by exactly the argument it was
+before**: every child either writes a marker (every death but SIGKILL runs the
+shim's trap) or its pid dies, and the reconcile pass re-checks both on the same
+timer. All that moved is WHEN a run leaves — at the first tick after its child
+really ended, rather than the first tick after someone wrote to a table.
+
+`supervisor.test.ts` is the regression guard, driven through the real reconciler
+with a fake ledger and real child processes.
+
+### Kill signals the process GROUP
+
+`killSupervisedRun` sends to `-pid`. The shim does not forward signals, so
+signalling it alone kills the supervisor and leaves the work running,
+reparented. The group exists because the spawn is `detached: true` — itself
+load-bearing: the gateway hot-restarts a backend by signalling its whole process
+group, which is what killed a running deploy 0.9 s after spawn on 2026-08-28.
+
+### A ledger's verbs
+
+`defineSupervisedJob` builds the kind from the ledger (`finish` = `closeRow` then
+announce). `onReattach` is only for a job holding an in-memory live view; the tail
+is already restarted by the time it is called.
+
+- **`listUnfinished` must be scoped to this namespace.** A worktree DB is a fork
+  of main's and inherits its rows; unscoped, this reaps another machine's runs.
+- **`finish` means the run ENDED, not "you are the one closing the row".** It is
+  called for a run whose row the caller's own CLI stamped minutes earlier (see
+  above), because that is the only edge a consumer's terminal work — a
+  notification, a convergence reconcile — has to hang from. So: the write must be
+  first-writer-wins (`WHERE finished_at IS NULL`), and anything BESIDE the write
+  must still be correct against an already-stamped row. Read the row back rather
+  than assuming this call closed it.
+
+### Growth bounds
+
+- **Published**: `TRANSCRIPT_CEILING_BYTES` (16 MiB) per run, then one
+  "transcript truncated" line and silence. Protects the channel's ring and its
+  `.jsonl` sink.
+- **On disk**: newest 50 run sets per kind per worktree, trimmed when the next
+  run of that kind starts. `defineRetention` does not apply — it is a nightly
+  DELETE over a _table_, and these are files.
+- **Residual**: one run's transcript file is bounded only by that run. It is a
+  kernel fd the child owns; capping it mid-run would race the writer.
+
+## `run` bodies: out-of-process work that is not a command line
+
+_Folded in from the former `supervised-task` plugin; now `server/internal/task/`
+(the registry), `server/internal/run-body.ts`, `cli/` (the `supervised-exec`
+command) and `core/`._
+
+The supervisor supervises an argv. Build and release each have one; a backup
+does not — it is ~11 contributed `BackupSource`s staged into a directory, one
+`tar`, and ~2 contributed `BackupTarget`s. A `run` body's task is the argv that
+stands for such a body:
+
+```
+./singularity supervised-exec <job name> <{"runId","attempt","input"}>
+```
+
+The task is registered under the job name by the job's own `register:` token,
+and is internal — there is no separate task to declare. Detach, pid, transcript,
+exit marker, boot reconcile, suspend and resume are unchanged. A `run` body
+changes **what** is spawned, never how it is supervised.
+
+### `exec` is the whole trick
+
+The child runs `server-core`'s `exec` boot mode, which is the same sequence
+`serve` runs, stopped after `onReadyBlocking`. So the body sees the contributions
+it needs, the config registry and its parent's database — and none of the
+machinery a short-lived process must not start: no socket, no graphile runners,
+no cron, no git watcher, and above all **no supervised-run reconciler**, which in
+a child would adopt and write off the very run that spawned it.
+
+Read `server-core`'s "Boot modes" before adding to `onReadyBlocking` or moving
+main-only work earlier: a child of main's backend is HANDED main's namespace, so
+`isMain()` is **true** there, and nothing misbehaves today only because every
+main-only side effect hangs off a phase `exec` skips.
+
+### What the child is told, and what it merely inherits
+
+**Identity is plumbed, on argv.** `invoke()` appends `--namespace
+<runtimeNamespace()>` to every child's command line, and `supervised-exec`
+declares that option as REQUIRED — so a child cannot start without being told
+which app it is. That namespace resolves both the per-worktree database and,
+through that namespace's `spec.json`, the composition registry: same app, same DB
+as the parent, because the parent SAID so.
+
+It used to be inherited instead, through a `SINGULARITY_WORKTREE` environment
+variable, and that is exactly the failure this replaced: an environment variable
+reaches every descendant forever, so a value nobody chose became every agent
+session's identity
+(`research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md`).
+
+Everything else still comes from the ambient environment —
+`startSupervisedRun` spawns with `{ ...process.env }`:
+
+- **`PATH`** — `tar`, `gzip`, `pg_dump` resolve exactly as in the backend.
+- **cwd** is `REPO_ROOT`, because `./singularity` is a path.
+
+A task that needs anything else puts it in the payload, not the environment.
+Keep payloads small: they are JSON on a command line.
+
+`supervised-exec` declares `detachable: true`. A supervised child is meant to
+outlive the backend that started it, and the orphan guard — armed for every
+`./singularity` invocation — would otherwise be free to kill it.
+
+### Failure is loud
+
+An unknown id throws, naming the id and listing the registered ones. Returning
+quietly would exit 0, the shim would write a `0 -` marker, and the ledger would
+record a successful run that did nothing at all. Malformed payload JSON throws
+the same way; `execute` parses and runs in one call, so a value the schema
+refused can never reach the body.
+
+All of it exits 1, which the shim records and the supervising job reads. A failed
+task is a failed RUN, not a failed job — see "A non-zero exit code is DATA" above.
+
+### Why the task is registered by the job, not declared beside it
+
+The child's argv is minted only by the registered task's `invoke`, and the task
+and the job are one declaration — so the id in the argv is a registered id by
+construction, and the job and the body it spawns cannot drift apart.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -249,40 +593,79 @@ and records the hard-kill outcome.
 
 - Description: Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
 - Server:
+  - Contributes: `fork-data-exclusion` "supervised_job_runs"
   - Uses:
+    - `database.db`
+    - `database/admin.ExcludeFromFork`
     - `infra/events.defineTriggerEvent`
+    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.FileWatcher`
     - `infra/jobs.abortDurableRun`
     - `infra/jobs.defineJob`
+    - `infra/jobs.isNonRetryableError`
+    - `infra/jobs.isSuspendSignal`
     - `infra/jobs.JobCtx`
     - `infra/jobs.JobFactory`
-    - `infra/jobs/supervised-run.assertRegistered`
-    - `infra/jobs/supervised-run.defineSupervisedRunKind`
-    - `infra/jobs/supervised-run.isSupervisedSpawnError`
-    - `infra/jobs/supervised-run.KillOutcome`
-    - `infra/jobs/supervised-run.killSupervisedRun`
-    - `infra/jobs/supervised-run.startSupervisedRun`
-    - `infra/jobs/supervised-run.SupervisedRunKind`
-    - `infra/jobs/supervised-run.SupervisedRunKindSpec`
-  - DB schema: `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
+    - `infra/jobs.NonRetryableError`
+    - `infra/jobs.ScheduleSpec`
+    - `infra/paths.pruneWorktreeRunArtifacts`
+    - `infra/paths.REPO_ROOT`
+    - `infra/paths.RUN_TERMINAL_SUFFIX`
+    - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
+    - `infra/paths.worktreeArtifacts`
+    - `infra/retention.defineRetention`
+  - DB schema:
+    - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
+    - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
   - Exports (types):
     - `DefineSupervisedJobSpec`
     - `RunEndedPayload`
+    - `RunStep`
+    - `StepOutcome`
     - `SupervisedJob`
     - `SupervisedJobClaimMeta`
     - `SupervisedJobEndedMeta`
-    - `SupervisedJobKindSpec`
+    - `SupervisedJobLedger`
     - `SupervisedJobSpawn`
+    - `SupervisedRunContext`
+    - `SupervisedStepsContext`
+    - `UnfinishedRun`
   - Exports (values):
+    - `_supervisedJobRuns`
     - `_supervisedRunEndedTriggers`
     - `cancelSupervisedJob`
     - `defineSupervisedJob`
     - `runEnded`
-  - Register: `defineTriggerEvent('supervisedRun.ended')`
+  - Register:
+    - `defineTriggerEvent('supervisedRun.ended')`
+    - `defineJob('retention.supervised_job_runs')`
+- Core:
+  - Uses:
+    - `infra/paths.worktreeArtifacts`
+    - `infra/runtime-identity.runtimeNamespace`
+  - Exports (types):
+    - `RunTerminal`
+    - `SupervisedTaskInvocation`
+  - Exports (values):
+    - `assertRunId`
+    - `assertRunKindId`
+    - `HARD_KILL_EXIT_CODE`
+    - `isPidAlive`
+    - `readRunTerminal`
+    - `RUN_TERMINAL_ENV`
+    - `RunMarkerError`
+    - `SUPERVISED_EXEC_COMMAND`
+    - `supervisedArgv`
+- Cli:
+  - Uses: `framework/server-core.runExec`
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
     - `backup`
     - `build`
+    - `database/fork`
+    - `debug/worktree-cleanup`
+    - `infra/events-test`
     - `release`
 
 <!-- AUTOGENERATED:END -->

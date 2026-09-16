@@ -181,6 +181,7 @@ count accumulates across drops.
     - `database/change-feed`
     - `database/derived-tables`
     - `database/derived-views`
+    - `database/fork`
     - `database/live-state-snapshot`
     - `database/migrations`
     - `debug/boot-events`
@@ -195,6 +196,7 @@ count accumulates across drops.
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `infra/attachments`
+    - `infra/events-test`
     - `infra/host/duress`
     - `infra/jobs`
     - `infra/worktree/removal-audit`

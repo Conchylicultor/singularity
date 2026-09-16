@@ -1,4 +1,4 @@
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import type { RunTerminal } from "../../core";
 
 /**
  * The two things a supervised-run kind does the instant its run ends, and the

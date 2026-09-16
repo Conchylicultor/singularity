@@ -10,7 +10,6 @@ import { handleRunsQuery } from "./internal/handle-runs-query";
 import { deploymentsServerResource } from "./internal/resources";
 import {
   deployRunsServerResource,
-  deployVerbKind,
   reconcileDeployLiveView,
 } from "./internal/run-state";
 import { deployRunJob } from "./internal/run-deploy";
@@ -46,16 +45,15 @@ export default {
     Resource.Declare(deployRunsServerResource),
     Resource.Declare(deployRunsRevisionServerResource),
   ],
-  // `deployVerbKind` is mounted, not merely defined: the supervised-run
-  // primitive's single boot reconciler loops the kinds registered by the time
-  // its own `onReady` runs, so an unmounted kind would start CLI legs that
-  // nothing ever adopts or closes. `deployRunJob` is the sequence that drives
-  // those legs — the durable replacement for the in-process `runUpdate`.
-  register: [deployRunRetention, deployVerbKind, deployRunJob],
+  // `deployRunJob` mounts the queue job AND its supervised-run kind in one
+  // token: the supervisor's single boot reconciler loops the kinds registered by
+  // the time its own `onReady` runs, so an unmounted job would start CLI legs
+  // that nothing ever adopts or closes.
+  register: [deployRunRetention, deployRunJob],
   onReady: async () => {
     // The live view is process memory and died with the last backend. The
-    // supervised-run reconciler rebuilds the runs with a live LEG
-    // (`onReattach`), but an `update` in its release build has no leg — its
+    // supervisor's reconciler rebuilds the runs with a live LEG (the ledger's
+    // `onReattach`), but an `update` in its release build has no leg — its
     // sequence is a suspended workflow — so this is the one thing that can put
     // it back on screen before that workflow's next wake.
     await reconcileDeployLiveView();

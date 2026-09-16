@@ -38,7 +38,7 @@ moved (see `apps/prototypes/files`).
     - `conversations/transcript-watcher`
     - `infra/corpus-index`
     - `infra/git/git-watcher`
-    - `infra/jobs/supervised-run`
+    - `infra/jobs/supervised-job`
     - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-tree`
 - Server:

@@ -4,7 +4,7 @@
  *
  * That suite covered `readBuildTerminal`, `isPidAlive` and the `close?`
  * composition. All three now belong to the supervised-run primitive and are
- * tested there (`supervised-run/core/internal/terminal.test.ts`), against the
+ * tested there (`supervised-job/core/internal/terminal.test.ts`), against the
  * same real files and real pids — so keeping a second copy here would be two
  * suites asserting one rule, which is how they drift.
  *

@@ -7,20 +7,18 @@
  * again" — both are contracts, not machinery, so an in-memory step log exercises
  * the real algorithm while the parts that must not be faked (a marker on disk, a
  * pid in the process table) stay real. Same trade
- * `supervised-run/server/internal/supervisor.test.ts` makes for the reconciler.
+ * `run/supervisor.test.ts` makes for the reconciler.
  */
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import {
-  HARD_KILL_EXIT_CODE,
-  type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import { HARD_KILL_EXIT_CODE, type RunTerminal } from "../../core";
 import type { LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { defineSupervisedRunKind } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import { defineSupervisedRunKind } from "./run/registry";
 import {
   awaitSupervisedRun,
+  backoffMsAfter,
   superviseRuns,
   type LoopCtx,
   type StartedRunAttempt,
@@ -88,14 +86,23 @@ function createCtx(onWait?: (name: string) => void): {
   ctx: LoopCtx;
   steps: string[];
   waits: string[];
+  sleeps: number[];
 } {
   const recorded = new Map<string, unknown>();
   const steps: string[] = [];
   const waits: string[] = [];
+  const sleeps: number[] = [];
   return {
     steps,
     waits,
+    sleeps,
     ctx: {
+      // The durable sleep, recorded and returned at once — a replay re-walks
+      // the same sleeps in the same order, which is what a test observes.
+      sleep: (ms: number): Promise<void> => {
+        sleeps.push(ms);
+        return Promise.resolve();
+      },
       async step<R>(name: string, fn: () => Promise<R> | R): Promise<R> {
         steps.push(name);
         if (recorded.has(name)) return recorded.get(name) as R;
@@ -171,6 +178,7 @@ describe("superviseRuns", () => {
     const result = await superviseRuns({
       kind,
       runAttempts: 1,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: () => Promise.resolve(null),
       onEnded: (started, terminal, attempt) => {
@@ -196,6 +204,7 @@ describe("superviseRuns", () => {
     const result = await superviseRuns({
       kind,
       runAttempts: 1,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
@@ -231,6 +240,7 @@ describe("superviseRuns", () => {
     await superviseRuns({
       kind,
       runAttempts: 1,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
@@ -256,6 +266,7 @@ describe("superviseRuns", () => {
     const result = await superviseRuns({
       kind,
       runAttempts: 1,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: () => Promise.resolve({ runId, pid: proc.pid }),
       onEnded: (started, terminal, attempt) => {
@@ -290,6 +301,7 @@ describe("superviseRuns", () => {
     const result = await superviseRuns({
       kind,
       runAttempts: 2,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: (attempt) => {
         const runId = attempt === 1 ? first : second;
@@ -332,6 +344,7 @@ describe("superviseRuns", () => {
     await superviseRuns({
       kind,
       runAttempts: 2,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: (attempt) =>
         Promise.resolve({
@@ -352,6 +365,7 @@ describe("superviseRuns", () => {
     await superviseRuns({
       kind,
       runAttempts: 3,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: () => {
         spawns += 1;
@@ -381,6 +395,7 @@ describe("superviseRuns", () => {
     const spec = {
       kind,
       runAttempts: 1,
+      closeRow: () => Promise.resolve(),
       ctx,
       spawn: (): Promise<StartedRunAttempt> => {
         spawns += 1;
@@ -407,6 +422,103 @@ describe("superviseRuns", () => {
     expect(ended).toEqual([
       { runId, attempt: 1, exitCode: 0, signalCode: null },
     ]);
+  });
+});
+
+describe("the retry ladder", () => {
+  test("closes the previous attempt's row after a durable backoff, before the next claim", async () => {
+    const first = uniqueRunId("ladder1");
+    const second = uniqueRunId("ladder2");
+    const events: string[] = [];
+    const { ctx, sleeps } = createCtx();
+    const sleep = ctx.sleep;
+    ctx.sleep = (ms) => {
+      events.push(`sleep:${ms}`);
+      return sleep(ms);
+    };
+
+    await superviseRuns({
+      kind,
+      runAttempts: 2,
+      ctx,
+      spawn: (attempt) => {
+        const runId = attempt === 1 ? first : second;
+        events.push(`spawn:${runId}`);
+        writeMarker(runId, attempt === 1 ? "1 -\n" : "0 -\n");
+        return Promise.resolve({ runId, pid: process.pid });
+      },
+      closeRow: (runId, terminal) => {
+        events.push(`close:${runId}:${terminal.exitCode}`);
+        return Promise.resolve();
+      },
+      onEnded: (started) => {
+        events.push(`ended:${started.runId}`);
+        return Promise.resolve();
+      },
+    });
+
+    expect(events).toEqual([
+      `spawn:${first}`,
+      `ended:${first}`,
+      "sleep:2718",
+      `close:${first}:1`,
+      `spawn:${second}`,
+      `ended:${second}`,
+    ]);
+    expect(sleeps).toEqual([2718]);
+  });
+
+  test("a retry that loses its claim throws instead of ending quietly", async () => {
+    const first = uniqueRunId("lostretry");
+    const { ctx } = createCtx();
+
+    const err = await rejection(
+      superviseRuns({
+        kind,
+        runAttempts: 2,
+        ctx,
+        spawn: (attempt) => {
+          if (attempt === 2) return Promise.resolve(null);
+          writeMarker(first, "1 -\n");
+          return Promise.resolve({ runId: first, pid: process.pid });
+        },
+        closeRow: () => Promise.resolve(),
+        onEnded: () => Promise.resolve(),
+      }),
+    );
+
+    expect(err.message).toContain("attempt 2 lost its claim");
+  });
+
+  test("the backoff is e^attempt seconds, capped at a minute", () => {
+    expect([1, 2, 3, 4, 5, 10].map(backoffMsAfter)).toEqual([
+      2718, 7389, 20086, 54598, 60000, 60000,
+    ]);
+  });
+
+  test("a replay re-walks the same backoffs and spawns nothing twice", async () => {
+    const ids = [1, 2, 3].map((n) => uniqueRunId(`replaybackoff${n}`));
+    const { ctx, sleeps } = createCtx();
+    let spawns = 0;
+    const spec = {
+      kind,
+      runAttempts: 3,
+      ctx,
+      spawn: (attempt: number): Promise<StartedRunAttempt> => {
+        spawns += 1;
+        const runId = ids[attempt - 1]!;
+        writeMarker(runId, "1 -\n");
+        return Promise.resolve({ runId, pid: process.pid });
+      },
+      closeRow: () => Promise.resolve(),
+      onEnded: () => Promise.resolve(),
+    };
+
+    await superviseRuns(spec);
+    await superviseRuns(spec);
+
+    expect(spawns).toBe(3);
+    expect(sleeps).toEqual([2718, 7389, 2718, 7389]);
   });
 });
 

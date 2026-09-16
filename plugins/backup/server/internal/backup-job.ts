@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { getConfig } from "@plugins/config_v2/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { BACKUP_RUN_KIND } from "@plugins/backup/core";
+import { backupConfig } from "../../shared/config";
 import { backupLog } from "./backup-log";
-import { backupTask } from "./backup-task";
+import { runBackupBody } from "./backup-body";
 import {
   claimBackupRun,
   closeBackupRow,
@@ -14,7 +16,7 @@ import {
  * One backup, as an ordinary durable job whose body runs in its own process.
  *
  * The handler claims this namespace's single in-flight slot, spawns
- * `./singularity supervised-exec backup.run` detached, and SUSPENDS — it holds a
+ * `./singularity supervised-exec backup.run.supervised` detached, and SUSPENDS — it holds a
  * worker slot for milliseconds, not for the length of a `pg_dump` fan-out plus a
  * `tar` plus a Drive upload. Whichever backend is alive when the child's exit
  * marker lands is the one that wakes and records the outcome.
@@ -43,9 +45,11 @@ export const backupRunJob = defineSupervisedJob({
     trigger: z.enum(["manual", "periodic"]).default("periodic"),
   }),
 
-  kind: {
-    id: BACKUP_RUN_KIND,
-    channel: backupLog,
+  channel: backupLog,
+
+  ledger: {
+    kindId: BACKUP_RUN_KIND,
+    claim: (input) => claimBackupRun(input.trigger),
     listUnfinished: listUnfinishedBackups,
     setPid: setBackupPid,
     // The bare terminal stamp for a row the child never closed, and nothing
@@ -55,31 +59,28 @@ export const backupRunJob = defineSupervisedJob({
     closeRow: closeBackupRow,
   },
 
-  claim: (input) => claimBackupRun(input.trigger),
+  // The `run` body: a backup has no command line of its own, so the child is
+  // `./singularity supervised-exec` running this function. The child writes its
+  // own row (manifest, sizes, per-target results, `finished_at`) as its last
+  // act, which is why there is no `onEnded`: nothing outside the archive
+  // changes when a backup finishes, and `closeRow` covers a child that never
+  // got that far.
+  run: (input, { runId }) => runBackupBody(runId, input.trigger),
 
-  // The `task` arm rather than `argv`: a backup has no command line of its own.
-  // `invoke` is the only producer of an invocation, so the id in the spawned
-  // argv is a registered id by construction and the payload is checked against
-  // the task's own schema right here.
-  task: (input, runId) => backupTask.invoke({ runId, trigger: input.trigger }),
-
-  // Nothing. A backup's terminal work is entirely the row it writes, and the
-  // child writes that itself as its last act — there is no notification, no
-  // downstream reconcile, nothing outside the archive that a finished backup
-  // changes. `closeRow` covers the case where the child never got that far.
-  //
-  // Left as an explicit empty body rather than an optional field: `onEnded` is
-  // where a kind's exactly-once side effects go, and "this kind has none" is
-  // worth stating once here instead of being inferred from an absent key.
-  //
-  // In particular the manifest, the archive size and the per-target results are
-  // NOT written here, and cannot be: they are produced inside the child, and the
-  // only channel back to the parent is the database the child is already writing
-  // to. So the child writes them, and this arm has nothing left to do.
-  onEnded: async () => {},
+  // The nightly tick, on the job itself. Recur on the user-configured cron;
+  // empty disables. Read once at worker startup (a change takes effect on the
+  // next restart). Main-only, because `perWorktree` is left off: `BACKUPS_DIR`
+  // is host-global, and one tick per live worktree would mean N archives and N
+  // uploads of the same machine. The cron payload is `input.parse({})`, which
+  // the `trigger` default makes `periodic`. A tick that fires while a backup is
+  // running loses the claim and returns.
+  schedule: {
+    cron: () => getConfig(backupConfig).periodicCron.trim() || null,
+  },
 
   // Two spawns at most, each a genuinely fresh run: `spawn` calls `claim` again,
-  // so attempt 2 gets a new uuid, a new transcript and a new marker, and it can
-  // claim at all only because attempt 1's row is closed before the handler wakes.
+  // so attempt 2 gets a new uuid, a new transcript and a new marker. Before it
+  // claims, the ladder waits a durable backoff and closes attempt 1's row, so
+  // the claim cannot lose to it.
   runAttempts: 2,
 });

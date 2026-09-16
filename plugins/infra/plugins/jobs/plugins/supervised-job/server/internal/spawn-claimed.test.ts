@@ -9,11 +9,8 @@
  * `failUnstartedRelease`; it lives here so build and deploy get it too.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  HARD_KILL_EXIT_CODE,
-  type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import { SupervisedSpawnError } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import { HARD_KILL_EXIT_CODE, type RunTerminal } from "../../core";
+import { SupervisedSpawnError } from "./run/supervisor";
 import { spawnClaimedRun } from "./spawn-claimed";
 
 /**

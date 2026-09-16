@@ -308,6 +308,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `infra/events-test`
     - `infra/host/contention`
     - `infra/jobs`
+    - `infra/jobs/supervised-job`
     - `infra/query-resource`
     - `infra/retention`
     - `infra/trash`

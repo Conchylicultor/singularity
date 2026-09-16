@@ -113,7 +113,7 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `servingSocketPath`
 - Cross-plugin:
   - Imported by:
-    - `infra/jobs/supervised-run`
+    - `infra/jobs/supervised-job`
     - `infra/paths`
     - `plugin-meta/barrel-import`
 

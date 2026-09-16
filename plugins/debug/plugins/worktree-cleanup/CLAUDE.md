@@ -45,6 +45,22 @@ it contains any per-target failure (log + a deduped `worktree-reap-failed`
 report) and the retry is structural — the checkout is gone, so its stranded
 namespaces are precisely what the marker-owned branch enumerates next tick.
 
+## The hourly sweep runs detached
+
+`worktree-cleanup.reap-stale` is a `defineSupervisedJob` with a `run` body: the
+sweep runs in its own `./singularity supervised-exec` child, so a deploy or
+restart of main no longer kills it mid-reap, and it holds no worker slot while it
+runs. The built-in ledger (`supervised_job_runs`) locks it job-wide — an hourly
+tick or the boot enqueue that lands during a sweep loses its claim and returns.
+`runAttempts: 1`: the next tick is the retry, and a failed sweep dead-letters
+(Debug → Queue) with the child's error. The child writes its lines to stdout /
+stderr through `log`; the supervising backend tails them into the
+`worktree-cleanup` channel (`logs/worktree-cleanup.jsonl`), so the child never
+publishes to the sink itself. There is no time limit on a sweep; each git call
+keeps its own timeout.
+
+The manual delete endpoints still run `reapAttempt` inside the request.
+
 ## The step vocabulary is shared
 
 `ReapStep` lives in `shared/endpoints.ts`, so the server's `onStep` and the
@@ -95,7 +111,7 @@ the panel until it is given something to say.
     - `infra/endpoints.implement`
     - `infra/host/host-read-pool.heavyReadSlotCount`
     - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `infra/jobs.defineJob`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `infra/paths.GIT`
     - `infra/paths.worktreesDir`
@@ -116,7 +132,7 @@ the panel until it is given something to say.
     - `tasks/tasks-core.getAttempt`
     - `tasks/tasks-core.listAttempts`
     - `tasks/tasks-core.listTasks`
-  - Register: `defineJob('worktree-cleanup.reap-stale')`
+  - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
   - Routes:
     - `GET /api/debug/worktrees`
     - `POST /api/debug/worktrees/bulk-delete`

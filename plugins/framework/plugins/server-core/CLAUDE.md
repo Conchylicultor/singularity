@@ -320,7 +320,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `unboundedWindowKeys`
     - `withNotifyBatch`
 - Cross-plugin:
-  - Imported by: `infra/jobs/supervised-task`
+  - Imported by: `infra/jobs/supervised-job`
 - Cli:
   - Exports (values): `runExec`
 

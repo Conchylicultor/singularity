@@ -2,14 +2,18 @@ import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
-import { defineJob, LEGACY_JOB_TASK } from "@plugins/infra/plugins/jobs/server";
+import {
+  defineJob,
+  LEGACY_JOB_TASK,
+  singletonJobKey,
+} from "@plugins/infra/plugins/jobs/server";
 import { fail } from "./queue-probe";
 
 // End-to-end check of the cron path's dedup: repeated ticks of one scheduled job
 // collapse onto ONE pending row, and that row's `run_at` does not move.
 //
 // Both halves are load-bearing and the second is the subtle one. `buildCronItems`
-// (jobs/worker.ts) passes `jobKey: \`${job.name}:_\`` with
+// (jobs/worker.ts) passes `jobKey: singletonJobKey(job.name)` with
 // `jobKeyMode: "preserve_run_at"`:
 //
 //   · Without the key, every tick INSERTed a brand-new row forever — 57 copies
@@ -65,14 +69,14 @@ const JOB_TASK = LEGACY_JOB_TASK;
 
 const JOB_NAME = "events_test.cron-dedup";
 
-/** Byte-identical to what `buildCronItems` passes and to what `enqueue()` derives
- * for a `dedup: "singleton"` job (`${name}:${"_"}`). Sharing it is the point: a
- * manual enqueue and a cron tick collapse onto the SAME pending row instead of
- * racing as two — which arm B below asserts directly. */
-const CRON_JOB_KEY = `${JOB_NAME}:_`;
+/** The one derivation `buildCronItems` and `enqueue()` both use for a
+ * `dedup: "singleton"` job. Sharing it is the point: a manual enqueue and a cron
+ * tick collapse onto the SAME pending row instead of racing as two — which arm B
+ * below asserts directly. */
+const CRON_JOB_KEY = singletonJobKey(JOB_NAME);
 
 /** A scheduled job's tick payload: the job name and its default input, no
- * `workflowRunId` (the worker derives that per tick from graphile's `_cron`). */
+ * `workflowRunId` (the worker derives the run from the row id). */
 const CRON_PAYLOAD = JSON.stringify({ jobName: JOB_NAME, input: {} });
 
 const MAX_ATTEMPTS = 5;

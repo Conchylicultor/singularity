@@ -55,8 +55,8 @@ function assertSafeName(name: string): void {
 // silently produce a full ~2 GB fork that looks like it worked. A required
 // parameter forces every caller to name where its exclusion set came from; see
 // `forkExclusions()` in ./fork-exclusion, which fails loudly on the empty case.
-// `signal` is optional and ambient — the `database.fork` job passes its
-// `ctx.signal`. It cancels the host `db-fork` acquire, and once the slot is held
+// `signal` is optional and ambient (no current caller passes one: the
+// `database.fork` job runs detached with no deadline). It cancels the host `db-fork` acquire, and once the slot is held
 // it SIGKILLs the dump/restore pair, whose non-zero exits then take the existing
 // failure path: the temp DB is dropped and the call throws. That ordering is the
 // point — the temp is reclaimed BEFORE the abort is reported, so cancelling a fork
@@ -93,8 +93,8 @@ export async function forkDatabase(
   const temp = forkTempName(target);
   // No stale-temp reap: forkTempName is per-invocation unique, so there is never
   // a stale temp of *our own* name to drop. Orphan reclamation is solely the
-  // fork-temp-sweep's job now. Accepted trade-off: a failing target's graphile
-  // retries (maxAttempts:5) each mint a fresh temp, so up to ~5 orphan
+  // fork-temp-sweep's job now. Accepted trade-off: a failing target's
+  // retries (runAttempts: 5) each mint a fresh temp, so up to ~5 orphan
   // `f_*__forking` DBs can accumulate between the 15-min sweeps — disk cost, not
   // correctness; the sweep's zero-active-connections gate reclaims them.
   await getAdminPool().query(`CREATE DATABASE "${temp}"`);

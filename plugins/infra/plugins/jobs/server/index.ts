@@ -39,6 +39,7 @@ export {
   QueueSchemaMissingError,
 } from "./internal/queue-schema";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
+export { singletonJobKey } from "./internal/run-identity";
 export type {
   DefineJobSpec,
   EnqueueOpts,
@@ -54,7 +55,10 @@ export {
   UNSAFE_installDurableHooks,
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
-export { NonRetryableError } from "./internal/non-retryable";
+export {
+  NonRetryableError,
+  isNonRetryableError,
+} from "./internal/non-retryable";
 export {
   JobDeadlineExceededError,
   isJobDeadlineExceededError,

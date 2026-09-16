@@ -10,7 +10,7 @@
  * silently.
  */
 import { describe, expect, test } from "bun:test";
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import type { RunTerminal } from "../../core";
 import { finishSupervisedRun } from "./finish";
 
 const TERMINAL: RunTerminal = {

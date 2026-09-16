@@ -72,7 +72,10 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `infra/jobs.queryRecentDeadJobs`
     - `infra/jobs.queryRunningJobs`
     - `infra/jobs.reachableSlots`
+    - `infra/jobs.singletonJobKey`
     - `infra/jobs.UNSAFE_sweepStuckLocks`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `primitives/log-channels.defineLogSink`
   - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
   - Register:
     - `defineJob('events_test.log')`
@@ -81,6 +84,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `defineJob('events_test.superseded')`
     - `defineJob('events_test.saturate-sleeper')`
     - `defineJob('events_test.dead-letter')`
+    - `defineSupervisedJob('events-test.detached-sleep')`
     - `defineTriggerEvent('events_test.pinged')`
   - Routes:
     - `POST /api/events-test/subscribe`
@@ -98,9 +102,11 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `POST /api/events-test/cron-dedup`
     - `POST /api/events-test/superseded`
     - `POST /api/events-test/queue-saturate`
+    - `POST /api/events-test/detached-sleep`
 - Shared:
   - Exports (types):
     - `DeleteTargetingBody`
+    - `DetachedSleepBody`
     - `DirectEnqueueBody`
     - `EmitBody`
     - `QueueSaturateBody`
@@ -111,6 +117,8 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `deleteEventsTestTargeting`
     - `deleteEventsTestTrigger`
     - `DeleteTargetingBodySchema`
+    - `DetachedSleepBodySchema`
+    - `detachedSleepEventsTest`
     - `DirectEnqueueBodySchema`
     - `directEnqueueEventsTest`
     - `EmitBodySchema`

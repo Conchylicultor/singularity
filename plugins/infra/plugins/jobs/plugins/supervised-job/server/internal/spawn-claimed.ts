@@ -1,8 +1,5 @@
-import {
-  HARD_KILL_EXIT_CODE,
-  type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import { isSupervisedSpawnError } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import { HARD_KILL_EXIT_CODE, type RunTerminal } from "../../core";
+import { isSupervisedSpawnError } from "./run/supervisor";
 
 /** The two halves of starting a run whose ledger row already exists. */
 export interface SpawnClaimedArms {
@@ -75,7 +72,7 @@ export async function spawnClaimedRun(
  * run, which nothing recovers from, while leaving it held wedges the kind until
  * the backend restarts, which is loud and recoverable.
  */
-function childMayBeRunning(err: unknown): boolean {
+export function childMayBeRunning(err: unknown): boolean {
   return !isSupervisedSpawnError(err) || err.childStarted;
 }
 

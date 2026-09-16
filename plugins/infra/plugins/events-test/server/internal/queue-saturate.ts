@@ -66,6 +66,9 @@ export const saturateSleeper = defineJob({
   // `minutes` rows reach only the wide runner's slots, so a handful of these
   // fill that class while shorter classes keep their reserved slots.
   hold: SLEEPER_HOLD,
+  inProcess:
+    "A test sleeper does no work: killed mid-sleep it has nothing to redo, and " +
+    "holding a `minutes` worker slot in process is the whole point of it.",
   input: z.object({ sleepMs: z.number().int().min(0) }),
   event: z.never(),
   // Every call enqueues fresh rows: a singleton would collapse the sleepers

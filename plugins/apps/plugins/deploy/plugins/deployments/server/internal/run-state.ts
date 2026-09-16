@@ -7,12 +7,11 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import {
-  defineSupervisedRunKind,
-  type UnfinishedRun,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import { runEnded } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import type {
+  SupervisedJobLedger,
+  UnfinishedRun,
+} from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import {
   deployRunsResource as deployRunsDescriptor,
   DeployRunSchema,
@@ -25,8 +24,10 @@ import { deployLog } from "./deploy-log";
 import { isUniqueViolation } from "./constraint-violation";
 import { DEPLOY_RUN_KIND_ID } from "./kind-id";
 import {
+  asDeployLeg,
   finalLeg,
   firstLeg,
+  legArgv,
   legRunId,
   parseLegRunId,
   type DeployLeg,
@@ -145,8 +146,8 @@ export async function claimRun(opts: {
       verb: body.verb,
       // Exactly what was passed as `--release`: a converge has no such flag, a
       // ship that named no run legitimately pinned nothing, and an update has
-      // not resolved its bundle yet — `beginLeg` writes it when the ship leg is
-      // spawned.
+      // not resolved its bundle yet — `pinShipBundle` writes it just before the
+      // ship leg is spawned.
       releaseRunId: body.verb === "ship" ? (body.release ?? null) : null,
       // Only knowable once a bundle resolves, which no verb has done yet.
       commitSha: null,
@@ -228,7 +229,8 @@ async function inFlightConflict(deployment: Deployment): Promise<HttpError> {
 
 /**
  * Record which leg this run is about to spawn — durably, before the spawn — and
- * say whether the run is still open to receive it.
+ * answer the row's facts the leg's command is built from, or `null` when the run
+ * is no longer open to receive it.
  *
  * The ledger row is the only thing a restarted backend has to find the child
  * with, so the leg id has to be there before the child exists.
@@ -237,29 +239,45 @@ async function inFlightConflict(deployment: Deployment): Promise<HttpError> {
  * can reach this after something else has already closed its run (the
  * reconciler stamping a hard-killed leg, most of all), and spawning then would
  * put a live child behind a finished row — a deploy nobody is watching, against
- * a host the record says is done with. `false` means stop.
- *
- * `fields` carries the pinned bundle when there is one, written in the SAME
- * statement as the leg pointer so the row can never be observed about to ship
- * without naming what it is shipping.
+ * a host the record says is done with. `null` means stop.
  */
 export async function beginLeg(
   runId: string,
   leg: DeployLeg,
-  fields?: { release: string; commitSha: string | null },
-): Promise<boolean> {
-  const updated = await db
+): Promise<{
+  compositionId: string;
+  serverId: string;
+  releaseRunId: string | null;
+} | null> {
+  const [updated] = await db
     .update(_deployRuns)
-    .set({
-      legRunId: legRunId(runId, leg),
-      pid: process.pid,
-      ...(fields === undefined
-        ? {}
-        : { releaseRunId: fields.release, commitSha: fields.commitSha }),
-    })
+    .set({ legRunId: legRunId(runId, leg), pid: process.pid })
     .where(and(eq(_deployRuns.id, runId), isNull(_deployRuns.finishedAt)))
-    .returning({ id: _deployRuns.id });
-  return updated.length > 0;
+    .returning({
+      compositionId: _deployRuns.compositionId,
+      serverId: _deployRuns.serverId,
+      releaseRunId: _deployRuns.releaseRunId,
+    });
+  return updated ?? null;
+}
+
+/**
+ * Record the bundle an `update`'s ship leg is about to ship — the pinned release
+ * run id and the commit its own manifest names — while the run is still open.
+ *
+ * Written before the ship leg begins (`beginLeg`, from the job's `beginStep`), so
+ * the row never names a ship leg that has spawned without also naming what it
+ * ships. No answer: a run closed meanwhile is refused by `beginLeg` one step
+ * later, which is where the sequence stops.
+ */
+export async function pinShipBundle(
+  runId: string,
+  pin: { release: string; commitSha: string | null },
+): Promise<void> {
+  await db
+    .update(_deployRuns)
+    .set({ releaseRunId: pin.release, commitSha: pin.commitSha })
+    .where(and(eq(_deployRuns.id, runId), isNull(_deployRuns.finishedAt)));
 }
 
 /**
@@ -327,36 +345,56 @@ export async function failRun(
 }
 
 /**
- * The deploy plugin's supervised-run kind: the adapter between `deploy_runs` and
- * the one primitive that owns detach, pid, transcript, reconcile and re-attach.
+ * `deploy.run`'s ledger: the adapter between `deploy_runs` and the one factory
+ * that owns detach, pid, transcript, reconcile, re-attach and the durable
+ * sequence (`defineSupervisedJob`'s `steps` body, in `run-deploy.ts`).
  *
- * Mounted in `register: [...]` (see `../index.ts`) rather than started here, so
- * the kind is registered before the primitive's `onReady` reconciles — a kind
- * defined but never mounted would start runs nothing ever closes.
+ * The unit the supervisor names is a **leg**, not a run: an `update` is two
+ * children and each is tracked separately (see `legs.ts`). Everything below
+ * therefore translates leg id ⇄ ledger row — which works because the job's step
+ * names ARE the leg names, so a step's child id `<runId>.<step>` is exactly
+ * `legRunId(runId, leg)`.
  *
- * The unit this names is a **leg**, not a run: an `update` is two spawns and the
- * primitive tracks each separately (see `legs.ts`). Everything below therefore
- * translates leg id ⇄ ledger row.
- *
- * `finish` is close-then-announce, the same two arms `defineSupervisedJob` gives
- * a kind it owns. Deploy builds them by hand because it is the one consumer
- * whose job owns SEVERAL sequential runs — converge, a release, ship — which is
- * a shape `defineSupervisedJob`'s one-claim-one-spawn contract cannot express.
- * The rules are still that plugin's: the close is a bare, idempotent,
- * first-writer-wins write that runs in every backend, and it happens BEFORE the
- * announcement so a failing emit still leaves a closed row.
+ * The factory builds the kind's `finish` from `closeRow` as close-then-announce,
+ * which is what this plugin's hand-built kind did: the close is a bare,
+ * idempotent, first-writer-wins write that runs in every backend, and it happens
+ * BEFORE the announcement so a failing emit still leaves a closed row.
  */
-export const deployVerbKind = defineSupervisedRunKind({
-  id: DEPLOY_RUN_KIND_ID,
-  channel: deployLog,
+export const deployRunLedger: SupervisedJobLedger<{ runId: string }> = {
+  kindId: DEPLOY_RUN_KIND_ID,
+  claim: ({ runId }) => adoptRun(runId),
   listUnfinished,
   setPid,
-  finish: async (legId, terminal) => {
-    await closeDeployRow(legId, terminal);
-    await runEnded.emit({ kindId: DEPLOY_RUN_KIND_ID, runId: legId });
+  closeRow: closeDeployRow,
+  beginStep: async (runId, step) => {
+    const leg = asDeployLeg(step);
+    const row = await beginLeg(runId, leg);
+    if (row === null) return false;
+    deployLog.publish(`$ ${legArgv(row, leg).join(" ")}`);
+    return true;
   },
   onReattach: reattachRun,
-});
+};
+
+/**
+ * Adopt the row the ENDPOINT claimed (`claimRun`): its id while it is open, or
+ * `null` when something has already closed it — the queued job then has nothing
+ * to sequence.
+ *
+ * The claim is not taken here because its refusal is a 409 that has to reach the
+ * button that was clicked. A missing row is not a lost race but a defect (the
+ * job was enqueued for a run nobody inserted), so it throws.
+ */
+async function adoptRun(runId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ finishedAt: _deployRuns.finishedAt })
+    .from(_deployRuns)
+    .where(eq(_deployRuns.id, runId));
+  if (!row) {
+    throw new Error(`[deploy] no run row for ${runId} — nothing to sequence.`);
+  }
+  return row.finishedAt === null ? runId : null;
+}
 
 /**
  * Every leg this namespace has actually SPAWNED that has not been stamped with

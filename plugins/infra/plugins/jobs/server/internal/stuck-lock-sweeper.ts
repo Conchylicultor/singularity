@@ -6,7 +6,10 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { jobLockHeldExpr, jobNameExpr, supersededExpr } from "./introspection";
 import { jobsLog } from "./jobs-log";
+import type { EnqueueTx } from "./registry";
+import { ownedWorkflowRunIds } from "./run-identity";
 import { emitQueueActivity } from "./slot-ledger";
+import { discardWorkflowLogs } from "./workflow-log";
 
 // Recovery floor for jobs that were mid-execution when their worker died
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
@@ -95,6 +98,8 @@ const DroppedRowSchema = z.object({
   // tuple): locked ⇒ its worker died holding it; unlocked ⇒ its run had
   // already ended on graphile's own fail or shutdown path.
   owner_died: z.boolean(),
+  // The payload's baked run id, if any — see `ownedWorkflowRunIds`.
+  baked_run_id: z.string().nullable(),
 });
 
 // Exported for the events-test harnesses (crash-recovery, queue-lock-no-steal,
@@ -124,7 +129,10 @@ const DroppedRowSchema = z.object({
 // (`resetLockedAt.js:12`), so the first crash after adopting named queues would
 // wedge every job in the lane for four hours — a new outage, strictly worse than
 // the one `serial` was introduced to fix.
-export async function sweepOnce(): Promise<void> {
+//
+// `database` is the worktree database in production; a test hands it a
+// throwaway one.
+export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // The superseded half, FIRST. A superseded row (`supersededExpr`) was retired
   // by graphile while it was running, because a newer copy of the same job was
   // queued — see jobs/CLAUDE.md, "Superseded rows". Its work is owned by that
@@ -146,7 +154,7 @@ export async function sweepOnce(): Promise<void> {
   //
   // A serial lane held by a row deleted here has no live holder any more, so the
   // queue half below reclaims it on the same tick, unchanged.
-  const dropped = await executeRows(db, {
+  const dropped = await executeRows(database, {
     label: "stuck-lock-sweep: superseded",
     row: DroppedRowSchema,
     query: sql`
@@ -159,9 +167,18 @@ export async function sweepOnce(): Promise<void> {
            )
     RETURNING j.id::text AS id,
               ${jobNameExpr} AS job_name,
-              (j.locked_at IS NOT NULL) AS owner_died
+              (j.locked_at IS NOT NULL) AS owner_died,
+              j.payload->>'workflowRunId' AS baked_run_id
   `,
   });
+
+  // The dropped rows' step/wait logs go with them: no dispatch will ever finish
+  // these runs, and the newer copy is a different row and so a different run.
+  // A row whose worker died never reached `dispatch()`'s teardown, so without
+  // this its log would leak. Row-owned run ids only (`ownedWorkflowRunIds`
+  // says why); never throws, so a cleanup failure cannot stop the reclaims
+  // below.
+  await discardWorkflowLogs(ownedWorkflowRunIds(dropped), database);
 
   for (const row of dropped) {
     if (row.owner_died) {
@@ -185,7 +202,7 @@ export async function sweepOnce(): Promise<void> {
   // A row retired between the DELETE above and this statement would otherwise be
   // released here and reported as re-queued, when it can never run again; left
   // locked, it is dropped — with the right wording — on the next tick.
-  const reclaimed = await executeRows(db, {
+  const reclaimed = await executeRows(database, {
     label: "stuck-lock-sweep: jobs",
     row: ReclaimedRowSchema,
     query: sql`
@@ -230,7 +247,7 @@ export async function sweepOnce(): Promise<void> {
   // column (`sql/000011.sql:40`: `(locked_at is null)`) and Postgres recomputes
   // it — writing to it is an error, and reading it as separate state would let
   // the two disagree.
-  const reclaimedQueues = await executeRows(db, {
+  const reclaimedQueues = await executeRows(database, {
     label: "stuck-lock-sweep: queues",
     row: ReclaimedQueueRowSchema,
     query: sql`

@@ -155,6 +155,7 @@ check would have been a patch on a footgun.
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `history/engine`
+    - `infra/jobs/supervised-job`
     - `infra/trash`
     - `page/annotations/agent-notes/authorship`
     - `page/annotations/todo/task-link`

@@ -1,12 +1,12 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
   HARD_KILL_EXIT_CODE,
   isPidAlive,
   type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+} from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { _backupRuns } from "./tables";
 
 /** The index the claiming INSERT contends on — see `./tables.ts`. */

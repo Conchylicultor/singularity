@@ -60,7 +60,7 @@ export default {
       // published while it runs by tailing that file. As build, release and
       // deploy migrate onto it, their three entries below are deleted — the
       // exemption converges on this one line instead of spreading.
-      "plugins/infra/plugins/jobs/plugins/supervised-run/server/internal/supervisor.ts",
+      "plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/run/supervisor.ts",
       // Long-lived supervised child: the gateway process outlives the call.
       "plugins/infra/plugins/launcher/server/internal/boot.ts",
       // Long-lived preview server, started and left running.

@@ -4,20 +4,15 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import {
-  abortDurableRun,
-  defineJob,
   isSuspendSignal,
+  NonRetryableError,
   type JobCtx,
 } from "@plugins/infra/plugins/jobs/server";
-import { startSupervisedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
 import {
-  readRunTerminal,
-  type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import {
-  runEnded,
-  type RunEndedPayload,
+  defineSupervisedJob,
+  type RunStep,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { serverHealth } from "@plugins/apps/plugins/deploy/plugins/health/server";
 import { awaitRelease, enqueueRelease } from "@plugins/release/server";
 import {
@@ -35,15 +30,15 @@ import {
 } from "../../core/runs";
 import type { RunDeploymentBody } from "../../core/endpoints";
 import { deployLog } from "./deploy-log";
-import { DEPLOY_RUN_KIND_ID } from "./kind-id";
-import { legRunId, type DeployLeg } from "./legs";
+import { legArgv, type DeployLeg } from "./legs";
 import { readTranscriptTail } from "./transcript";
 import { verbSucceeded, type VerbEnding } from "./verb-outcome";
 import {
   beginLeg,
   claimRun,
-  deployVerbKind,
+  deployRunLedger,
   failRun,
+  pinShipBundle,
   setRunPhase,
 } from "./run-state";
 import { _deployRuns } from "./tables";
@@ -87,48 +82,42 @@ export async function startDeployRun(opts: {
 const deployRunJobInput = z.object({ runId: z.string() });
 
 /**
- * One deploy run, as a durable sequence.
+ * One deploy run, as a durable sequence of supervised children.
  *
  * **This is the migration's whole point.** `update` is converge → build a
  * candidate → ship, and it used to be one in-process async function that
  * `await`ed a release for tens of minutes in the middle. That await is exactly
  * the window the 2026-08-28 incident died in: an unrelated `./singularity build`
  * hot-restarted the backend, the gateway signalled its process group, and
- * `drun-1787890652933-wr3v6d` lost its ship 0.9 s after spawning it. The legs
- * survived that once they became supervised runs; the SEQUENCE between them did
- * not, which is why an adopted converge used to be recorded as "the update was
- * interrupted".
+ * `drun-1787890652933-wr3v6d` lost its ship 0.9 s after spawning it.
  *
- * Now every step of the sequence is a `ctx.step` and every gap is a
- * `ctx.waitFor`, so the handler returns through the jobs plugin's suspend
- * sentinel and comes back as a fresh dispatch — in whichever backend is alive by
- * then. Nothing holds a worker slot while a leg or a release runs, and there is
- * no in-memory map of who is sequencing what, because the question no longer
- * exists.
+ * A `defineSupervisedJob` `steps` body: each leg is a `step` — spawned detached
+ * inside a memoized step, then waited on with the shared observe-then-wait loop
+ * — and every other gap is a `ctx.step` or a `ctx.waitFor`. So the handler
+ * returns through the jobs plugin's suspend sentinel and comes back as a fresh
+ * dispatch in whichever backend is alive by then. Nothing holds a worker slot
+ * while a leg or a release runs.
  *
- * `hold` is **`seconds`**, not `instant` and not `minutes`. The spawns here are
- * detached and suspended on, so they bound nothing; what does bound a dispatch
- * is one `git` read (`compareToHead`, behind the shared heavy-read pool) plus a
- * handful of indexed queries. `instant` would be a claim of no blocking I/O
- * that a `git` invocation makes false; `minutes` would spend one of only four
- * slots that can serve genuinely long work on a handler that runs for
- * milliseconds. If the work here ever does exceed the class ceiling, the
- * slot-hog report names the real defect.
+ * **The step names ARE the leg names** (`converge`, `ship`), so a step's child
+ * id `<runId>.<step>` is `legRunId(runId, leg)` — the id the ledger records and
+ * the transcript and marker are named by.
  *
- * `maxAttempts` is the default. A retry re-enters the handler, replays the
- * memoized steps and finds the run already closed (see {@link loadOpenRun}), so
- * a failure that stamped its run cannot re-run it against the host.
+ * `hold` is **`seconds`**, not `instant`: what bounds a dispatch is one `git`
+ * read (`compareToHead`, behind the shared heavy-read pool) plus a handful of
+ * indexed queries. `instant` would be a claim of no blocking I/O that a `git`
+ * invocation makes false.
+ *
+ * The ledger's `claim` ADOPTS the row the endpoint claimed (`startDeployRun`),
+ * answering `null` when it is already closed, so a job for a finished run
+ * sequences nothing.
  */
-export const deployRunJob = defineJob({
+export const deployRunJob = defineSupervisedJob({
   name: "deploy.run",
-  hold: "seconds",
   input: deployRunJobInput,
-  event: z.never(),
-  // A fresh workflow id per enqueue. The claim is what prevents overlap, and a
-  // `singleton` key would let one failed run's cached steps and resolved waits
-  // be replayed by the next — the trap `supervised-job` documents.
-  dedup: "none",
-  run: ({ input, ctx }) => runDeploy(input.runId, ctx),
+  channel: deployLog,
+  hold: "seconds",
+  ledger: deployRunLedger,
+  steps: (input, { step, ctx }) => runDeploy(input.runId, step, ctx),
 });
 
 /** The ledger facts the sequence runs on. Immutable for the life of the run. */
@@ -141,15 +130,13 @@ interface OpenRun {
 }
 
 /**
- * The run this workflow is for, or null when it is already over.
- *
- * Read on every dispatch rather than carried in the input, so a resumed sequence
- * cannot act on a stale copy — and so a run that something else has already
- * closed (the reconciler stamping a hard-killed leg; a retry after a failure
- * that stamped its own run) stops here instead of spawning against a host the
- * record says is done with.
+ * The run this workflow is for, read on every dispatch rather than carried in
+ * the input, so a resumed sequence cannot act on a stale copy. Whether it is
+ * still OPEN is not decided here: the claim decided that once, and afterwards a
+ * closed run surfaces where it matters — a leg's `beginStep` refusing, or a
+ * leg's failed terminal.
  */
-async function loadOpenRun(runId: string): Promise<OpenRun | null> {
+async function loadRun(runId: string): Promise<OpenRun> {
   const [row] = await db
     .select()
     .from(_deployRuns)
@@ -157,7 +144,6 @@ async function loadOpenRun(runId: string): Promise<OpenRun | null> {
   if (!row) {
     throw new Error(`[deploy] no run row for ${runId} — nothing to sequence.`);
   }
-  if (row.finishedAt !== null) return null;
   return {
     id: row.id,
     // Parsed rather than cast: a `verb` outside the union would otherwise reach
@@ -169,9 +155,12 @@ async function loadOpenRun(runId: string): Promise<OpenRun | null> {
   };
 }
 
-async function runDeploy(runId: string, ctx: JobCtx): Promise<void> {
-  const run = await loadOpenRun(runId);
-  if (run === null) return;
+async function runDeploy(
+  runId: string,
+  step: RunStep,
+  ctx: JobCtx,
+): Promise<void> {
+  const run = await loadRun(runId);
 
   // The phase a failure would be attributed to, advanced as the sequence moves.
   // A single-verb run has no phases and `publishLiveRun` drops it; it is carried
@@ -179,11 +168,11 @@ async function runDeploy(runId: string, ctx: JobCtx): Promise<void> {
   let phase: DeployPhase = run.verb === "ship" ? "ship" : "converge";
   try {
     if (run.verb === "update") {
-      await runUpdate(run, ctx, (next) => {
+      await runUpdate(run, step, ctx, (next) => {
         phase = next;
       });
     } else {
-      await runLeg(run, ctx, run.verb, shipArgs(run));
+      await runLeg(run, step, ctx, run.verb, legArgv(run, run.verb));
     }
   } catch (err) {
     // `ctx.waitFor` returns from the handler by THROWING a suspend sentinel, so
@@ -193,28 +182,17 @@ async function runDeploy(runId: string, ctx: JobCtx): Promise<void> {
     // The row is the server's exclusivity lock, so an escaping exception is not
     // just a lost status: it would hold that server until something reconciled
     // it. Stamped AND rethrown — the run gets its verdict, and the job still
-    // fails loudly and earns its report. A retry then finds the run closed and
-    // returns.
-    await failRun(
-      run.id,
-      err instanceof Error ? err.message : String(err),
-      phase,
-    );
-    throw err;
+    // fails loudly and earns its report.
+    const message = err instanceof Error ? err.message : String(err);
+    await failRun(run.id, message, phase);
+    // Non-retryable once the run carries its verdict: a retry replays the
+    // memoized claim and steps against a closed run, so it cannot redo anything
+    // — it would only re-fail until the job dead-letters. One attempt, still a
+    // loud dead-letter. (A `failRun` that itself threw skips this, so a
+    // transient DB failure keeps its retry.)
+    throw new NonRetryableError(message, { cause: err });
   }
-
-  // The sequence is over and its outcome recorded, so nothing should resume this
-  // workflow again. That is not automatic: an iteration a wait loop skipped (the
-  // marker appeared on a replay before the wait it had armed was consulted)
-  // leaves a pending wait row with a timeout scheduled behind it.
-  await abortDurableRun(ctx.workflowRunId);
-}
-
-/** `--release <runId>` for a `ship` that pinned one; nothing for anything else. */
-function shipArgs(run: OpenRun): readonly string[] {
-  return run.verb === "ship" && run.releaseRunId !== null
-    ? ["--release", run.releaseRunId]
-    : [];
+  // The factory releases the workflow's suspension state once this returns.
 }
 
 /**
@@ -226,11 +204,17 @@ function shipArgs(run: OpenRun): readonly string[] {
  * CLI commands the row actions launch, and the build/no-build decision is
  * `resolveBundle` + `compareToHead` — the same authority `ship` itself consults,
  * asked one step earlier so the user does not have to. Each leg's failure ends
- * the run with that leg's own words (written by the kind's `closeRow`, not from
- * here), and `phase` is left pointing at the leg that failed.
+ * the run with that leg's own words (written by the ledger's `closeRow`, not
+ * from here), and `phase` is left pointing at the leg that failed.
+ *
+ * The durable names here (`platform`, `begin-ship`, `bundle-decision`,
+ * `enqueue-release`, `release:<i>`, `pin-bundle`, `ended:<leg>`) are the ones
+ * the pre-`steps` sequence recorded, so a deploy suspended across that change
+ * resumes where it was. Only `pin-ship` is new, and replays harmlessly.
  */
 async function runUpdate(
   run: OpenRun,
+  step: RunStep,
   ctx: JobCtx,
   setPhase: (phase: DeployPhase) => void,
 ): Promise<void> {
@@ -252,7 +236,13 @@ async function runUpdate(
   //    content-compare `put`, and the restart is gated on the running process
   //    predating its configuration), so running it before every ship costs a
   //    warm host nothing and repairs drift on a cold one.
-  const converge = await runLeg(run, ctx, "converge", []);
+  const converge = await runLeg(
+    run,
+    step,
+    ctx,
+    "converge",
+    legArgv(run, "converge"),
+  );
   if (!converge.ok) return;
 
   // Point the ledger at the ship leg BEFORE the build, not when the ship is
@@ -262,7 +252,14 @@ async function runUpdate(
   // as a finished run to anything that looks. `listUnfinished` skips a leg with
   // no transcript, so naming an unspawned leg does not offer it to the
   // reconciler to close.
-  if (!(await ctx.step("begin-ship", () => beginLeg(run.id, "ship")))) return;
+  if (
+    !(await ctx.step(
+      "begin-ship",
+      async () => (await beginLeg(run.id, "ship")) !== null,
+    ))
+  ) {
+    return;
+  }
 
   setPhase("build");
   await setRunPhase(run.id, "build");
@@ -308,41 +305,22 @@ async function runUpdate(
     await failRun(run.id, pinned.message, "build");
     return;
   }
+  // The row names what it is about to ship before the ship leg can begin.
+  await ctx.step("pin-ship", () =>
+    pinShipBundle(run.id, {
+      release: pinned.runId,
+      commitSha: pinned.commitSha,
+    }),
+  );
   setPhase("ship");
   await setRunPhase(run.id, "ship");
-  await runLeg(run, ctx, "ship", ["--release", pinned.runId], {
-    release: pinned.runId,
-    commitSha: pinned.commitSha,
-  });
-}
-
-/**
- * `./singularity` from the checkout this backend was built from, so the CLI
- * resolves the SAME namespace: it reads its deployment record over HTTP from
- * `<worktree>.localhost:9000` and its server row from that worktree's DB fork.
- *
- * Nothing is passed to say which namespace that is, and nothing needs to be. The
- * child is a CLI process, so it mints the namespace from the checkout it is
- * standing in (`checkoutNamespace(REPO_ROOT)` in the deploy command's
- * `internal/target.ts`) — and that checkout IS this backend's own, because
- * `cwd` is `REPO_ROOT`. The two agree by construction rather than by a value
- * riding along in the environment, which is what the old wording relied on and
- * what quietly made every worktree's deploy act on main's records.
- */
-function deployArgv(
-  run: OpenRun,
-  verb: DeployLeg,
-  extra: readonly string[],
-): string[] {
-  return [
-    "./singularity",
-    "deploy",
-    verb,
-    run.compositionId,
-    "--server",
-    run.serverId,
-    ...extra,
-  ];
+  await runLeg(
+    run,
+    step,
+    ctx,
+    "ship",
+    legArgv({ ...run, releaseRunId: pinned.runId }, "ship"),
+  );
 }
 
 /** What one leg did, as far as the SEQUENCE is concerned. */
@@ -352,55 +330,47 @@ interface LegResult {
 }
 
 /**
- * Spawn one CLI leg, suspend until it ends, and say whether it succeeded —
- * **without stamping the run**.
+ * Run one CLI leg as a step and say whether it succeeded — **without stamping
+ * the run**.
  *
- * The stamp is the kind's `closeRow`, in the supervised-run reconciler, and that
+ * The stamp is the ledger's `closeRow`, in the supervisor's reconciler, and that
  * split is the durability: a leg's outcome is recorded from its own exit marker
  * by whichever backend sees it end, whether or not this workflow is still alive
  * to notice. What happens here is only what the sequence needs — is there more
- * to do?
- *
- * The leg is spawned **detached**, in its own process group, because a plain
- * child shares the backend's group and the gateway signals that whole group when
- * it hot-restarts a backend. The spawn sits inside a memoized step, so a resume
- * re-attaches to the child it already started rather than starting a second one.
+ * to do? A leg whose run was closed before it could begin (`run-closed`) has
+ * nothing to add to what the row already carries.
  */
 async function runLeg(
   run: OpenRun,
+  step: RunStep,
   ctx: JobCtx,
   leg: DeployLeg,
-  extra: readonly string[],
-  pin?: { release: string; commitSha: string | null },
+  argv: readonly string[],
 ): Promise<LegResult> {
-  const legId = legRunId(run.id, leg);
-  const spawned = await ctx.step(`spawn:${leg}`, () =>
-    spawnLeg(run, leg, extra, pin),
-  );
-  if (spawned.state === "run-closed") return { ok: false };
-  if (spawned.state === "failed") {
+  const outcome = await step(leg, { argv, cwd: REPO_ROOT });
+  if (outcome.state === "run-closed") return { ok: false };
+  if (outcome.state === "not-started") {
+    // No process ever ran (no `./singularity`, EAGAIN), so there is no exit
+    // code and no transcript to quote: the run's verdict is this sentence. The
+    // factory closes the leg's row only after this, and only if it is still open.
+    deployLog.publish(
+      `[failed] could not run ${argv.join(" ")}: ${outcome.message}`,
+      "stderr",
+    );
     await failRun(
       run.id,
-      `could not run \`deploy ${leg}\`: ${spawned.message}`,
+      `could not run \`deploy ${leg}\`: ${outcome.message}`,
       leg,
     );
     return { ok: false };
   }
-
-  // Stable per position in this workflow, so a resume re-walks the same durable
-  // wait names. A run has at most one leg of each kind.
-  const observed = await awaitLeg(run.id, legId, ctx, leg);
-  // Something already closed the whole run — a hard-killed leg the reconciler
-  // stamped, or a `failRun` on a retried attempt. There is nothing left to
-  // sequence and nothing to say about it that the row does not already carry.
-  if (observed.state === "run-closed") return { ok: false };
 
   // Memoized, so a resume that re-walks the sequence does not re-announce a leg
   // that ended twenty minutes ago — every wake of the release wait replays this
   // path, and a `[done] deploy converge` per wake would be six of them on one
   // build. It also means the transcript tail is read once rather than per wake.
   return ctx.step(`ended:${leg}`, () =>
-    announceLeg(run, leg, legId, observed.terminal),
+    announceLeg(run, leg, outcome.runId, outcome.terminal),
   );
 }
 
@@ -428,119 +398,6 @@ function announceLeg(
     "stderr",
   );
   return { ok: false };
-}
-
-/**
- * How long one suspension waits for a leg's `supervisedRun.ended` before waking
- * anyway.
- *
- * The same five minutes `supervised-job` uses, and for the same reason: the
- * event is a wake-up, the artifacts are the authority, and a bounded re-look
- * costs a lost event one interval instead of the whole deploy.
- */
-const LEG_WAIT_MS = 5 * 60 * 1000;
-
-/** Where one leg stands, according to the two things that cannot lie. */
-type LegObservation =
-  | { readonly state: "running" }
-  | { readonly state: "ended"; readonly terminal: RunTerminal }
-  /** Something already closed the whole run — the sequence is over. */
-  | { readonly state: "run-closed" };
-
-/**
- * Wait until this leg has ended, or until the run it belongs to is over.
- *
- * **The pid never enters this reasoning, and that is deliberate.** The close
- * rule `supervised-job` applies — marker present ⇒ ended, no marker with a dead
- * pid ⇒ hard kill — lives in the supervised-run reconciler, which reaches this
- * leg through `listUnfinished` and stamps the row through the kind's
- * `closeRow`. So the SIGKILL case the pid arm exists for arrives here as a
- * closed ledger row, and there is no second copy of the rule to keep in step
- * with the first. What is left is two facts, both of them files or rows nobody
- * has to interpret: the leg's exit marker, and whether the run is still open.
- *
- * **Observe before waiting.** `startSupervisedRun` settles a run whose marker is
- * already on disk by the time the spawn returns, so its announcement can fire
- * while this handler is still inside its spawn step with no trigger armed. A
- * wait-first loop would hang until its timeout on a leg that was over before it
- * started.
- */
-async function awaitLeg(
-  runId: string,
-  legId: string,
-  ctx: JobCtx,
-  name: string,
-): Promise<Exclude<LegObservation, { state: "running" }>> {
-  for (let iteration = 0; ; iteration++) {
-    const observation = await observeLeg(runId, legId);
-    if (observation.state !== "running") return observation;
-    // The payload is discarded, deliberately — this is a wake-up. `null` (the
-    // timeout arm) and an event are the same instruction: go and look.
-    await ctx.waitFor<RunEndedPayload>(runEnded, {
-      where: { kindId: DEPLOY_RUN_KIND_ID, runId: legId },
-      timeoutMs: LEG_WAIT_MS,
-      name: `${name}:${iteration}`,
-    });
-  }
-}
-
-async function observeLeg(
-  runId: string,
-  legId: string,
-): Promise<LegObservation> {
-  const terminal = readRunTerminal(DEPLOY_RUN_KIND_ID, legId);
-  if (terminal !== null) return { state: "ended", terminal };
-  const [row] = await db
-    .select({ finishedAt: _deployRuns.finishedAt })
-    .from(_deployRuns)
-    .where(eq(_deployRuns.id, runId));
-  if (!row || row.finishedAt !== null) return { state: "run-closed" };
-  return { state: "running" };
-}
-
-type SpawnResult =
-  | { readonly state: "spawned" }
-  /** The run was closed under us — nothing was spawned and nothing should be. */
-  | { readonly state: "run-closed" }
-  | { readonly state: "failed"; readonly message: string };
-
-/**
- * Name the leg durably, then spawn it. Runs inside a memoized step.
- *
- * A spawn that never started (missing `./singularity`, EAGAIN) is returned as a
- * VALUE rather than thrown: a step that throws is cached as a permanent failure
- * and replays its error forever, so the run would never get its verdict.
- */
-async function spawnLeg(
-  run: OpenRun,
-  leg: DeployLeg,
-  extra: readonly string[],
-  pin?: { release: string; commitSha: string | null },
-): Promise<SpawnResult> {
-  const argv = deployArgv(run, leg, extra);
-  // The leg id is durable BEFORE the spawn, because it is the only thing a
-  // restarted backend has to find the child with — and the write refuses if the
-  // run has been closed in the meantime.
-  if (!(await beginLeg(run.id, leg, pin))) return { state: "run-closed" };
-  deployLog.publish(`$ ${argv.join(" ")}`);
-  try {
-    // The pid is recorded on the row by the kind's `setPid`, which is where the
-    // reconciler reads it. The sequence does not need it: it waits on the exit
-    // marker and on the row, never on the process table (see `awaitLeg`).
-    await startSupervisedRun(deployVerbKind, {
-      runId: legRunId(run.id, leg),
-      argv,
-      cwd: REPO_ROOT,
-    });
-    return { state: "spawned" };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    deployLog.publish(
-      `[failed] could not run ${argv.join(" ")}: ${message}`,
-      "stderr",
-    );
-    return { state: "failed", message };
-  }
 }
 
 type PlatformResult =

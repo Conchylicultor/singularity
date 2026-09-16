@@ -25,6 +25,10 @@ export const checkpointTurnJob = defineJob({
   // shorter than the work bounds it ("does it spawn?"). The transcript read is
   // one local file chain.
   hold: "minutes",
+  inProcess:
+    "`checkpointPrototype` is idempotent per turn message, so a checkpoint killed " +
+    "mid-run re-records as `unchanged` or completes on retry; it runs on every " +
+    "turn, far too often to pay a detached child's boot, and one git commit is short.",
   input: z.object({}).passthrough(),
   event: z
     .object({

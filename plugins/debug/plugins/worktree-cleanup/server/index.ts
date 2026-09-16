@@ -23,8 +23,9 @@ export default {
   contributions: [worktreeReapFailedKind],
   // Drain the stale-registry backlog promptly after boot rather than waiting up
   // to an hour for the next scheduled tick. The reap job is main-only (DBs +
-  // the registry are global cluster resources) and `dedup: "singleton"` keeps
-  // this enqueue from piling up; steady-state runs find nothing to do.
+  // the registry are global cluster resources). A sweep that survived the
+  // restart is still running detached, so this enqueue's claim loses and it
+  // returns; steady-state runs find nothing to do.
   onReady: () => {
     if (!isMain()) return;
     void worktreeReapJob.enqueue({});

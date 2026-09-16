@@ -73,9 +73,10 @@ export const buildJob = defineSupervisedJob({
   name: "build.run.supervised",
   input: buildJobInput,
 
-  kind: {
-    id: BUILD_RUN_KIND_ID,
-    channel: buildLog,
+  channel: buildLog,
+
+  ledger: {
+    kindId: BUILD_RUN_KIND_ID,
     listUnfinished,
     setPid,
     // The bare terminal stamp, and nothing else. Everything with a side effect
@@ -87,35 +88,35 @@ export const buildJob = defineSupervisedJob({
     // called — which is what makes a build's output keep scrolling across the
     // restart the build itself causes.
     closeRow: closeBuildRow,
-  },
 
-  /**
-   * The claim IS the lock, and it is taken inside the handler's memoized spawn
-   * step. A request that lost the race simply stops: auto-build is a convergence
-   * loop, so it is re-derived at the next edge rather than queued.
-   *
-   * `getHeadCommit()` is sampled HERE rather than at the enqueue, so the row
-   * names the tree the build actually starts on rather than whatever the
-   * checkout was on when the request was made. It is not a baseline anyone
-   * carries — the convergence decision is re-derived from durable state at every
-   * terminal edge (see `reconcileDeployment`), which is what survives this
-   * process being killed by its own build.
-   */
-  claim: async (input) => {
-    const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const targets = targetsOf(input);
-    if (
-      !(await claimBuildRun({
-        buildId,
-        trigger: input.trigger,
-        commitHash: getHeadCommit(),
-        targets,
-      }))
-    ) {
-      return null;
-    }
-    if (input.trigger === "auto") await notifyBuildStarted(buildId, targets);
-    return buildId;
+    /**
+     * The claim IS the lock, and it is taken inside the handler's memoized spawn
+     * step. A request that lost the race simply stops: auto-build is a convergence
+     * loop, so it is re-derived at the next edge rather than queued.
+     *
+     * `getHeadCommit()` is sampled HERE rather than at the enqueue, so the row
+     * names the tree the build actually starts on rather than whatever the
+     * checkout was on when the request was made. It is not a baseline anyone
+     * carries — the convergence decision is re-derived from durable state at every
+     * terminal edge (see `reconcileDeployment`), which is what survives this
+     * process being killed by its own build.
+     */
+    claim: async (input) => {
+      const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const targets = targetsOf(input);
+      if (
+        !(await claimBuildRun({
+          buildId,
+          trigger: input.trigger,
+          commitHash: getHeadCommit(),
+          targets,
+        }))
+      ) {
+        return null;
+      }
+      if (input.trigger === "auto") await notifyBuildStarted(buildId, targets);
+      return buildId;
+    },
   },
 
   argv: (input, runId) => {

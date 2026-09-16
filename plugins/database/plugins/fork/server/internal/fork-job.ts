@@ -1,8 +1,7 @@
 import { z } from "zod";
-import {
-  defineJob,
-  NonRetryableError,
-} from "@plugins/infra/plugins/jobs/server";
+import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
+import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import {
   describeUndeclaredSchema,
@@ -12,42 +11,50 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import type { ForkOutcome } from "@plugins/database/plugins/admin/server";
 
-// Durable, self-healing worktree DB fork. The enqueue is a committed row in
-// graphile-worker; if the worker dies mid-fork the job is never marked complete
-// and re-runs when the backend's worker reboots. `forkDatabase` is idempotent
-// (no-op once the canonical DB exists), so retries are safe.
+// The fork's transcript, at `logs/database-fork.jsonl` of the backend that
+// supervises it. Its only writer is that backend, tailing the child's output;
+// the child evaluates this module too (exec mode boots the plugin graph) but
+// never publishes, and the file sink is only built on first publish.
+const forkLog = defineLogSink({
+  id: "database-fork",
+  description:
+    "Worktree DB fork transcript: pg_dump | pg_restore of main's DB into a new worktree's database, and its outcome.",
+});
+
+// Durable, self-healing worktree DB fork, run in a detached child
+// (`./singularity supervised-exec database.fork`). A restart or deploy of the
+// backend no longer interrupts a `pg_dump | pg_restore` in flight: the child
+// keeps going and whichever backend is alive when it exits records the outcome.
+//
+// `lock: target` — the built-in ledger's open row for this target is the
+// in-flight lock, so a second enqueue for the same worktree loses its claim
+// while a fork runs. `forkDatabase` is idempotent (no-op once the canonical DB
+// exists) and atomic-publish, so a retry is safe; `runAttempts: 5` retries a
+// failed fork with a durable backoff (~3, 7, 20, 55 s) between attempts.
 //
 // Lives in its own `database/fork` plugin rather than `database/admin` because
 // `infra/jobs` already depends on `database/admin` (for `connectionString`);
-// putting a `defineJob` consumer back in `admin` would form an import cycle.
-export const databaseForkJob = defineJob({
+// putting a job consumer back in `admin` would form an import cycle.
+export const databaseForkJob = defineSupervisedJob({
   name: "database.fork",
-  // minutes: `pg_dump | pg_restore` subprocesses; nothing shorter bounds them.
-  hold: "minutes",
   input: z.object({ source: z.string(), target: z.string() }),
-  // Direct-enqueue only (kicked off when a conversation/worktree is created).
-  event: z.never(),
-  // jobKey "database.fork:<target>" — replace-if-not-running per target.
-  dedup: { key: (input) => input.target },
-  maxAttempts: 5,
-  run: async ({ input: { source, target }, ctx: { signal } }) => {
+  channel: forkLog,
+  lock: (input) => input.target,
+  runAttempts: 5,
+  async run({ source, target }, { log }) {
+    log(`fork ${source} → ${target}: starting`);
     // Only the fork itself is inside the try: a failure to raise a bell about
     // what the fork FOUND must never be reported as the fork having failed.
     let outcome: ForkOutcome;
     try {
-      // Read the declared exclusion set here, inside a booted backend, where
+      // Read the declared exclusion set here, inside a booted runtime, where
       // server contributions have been collected. `forkExclusions()` throws
       // rather than returning an empty set, so a process that never booted can
       // never quietly fork everything.
-      //
-      // `signal` is this dispatch's deadline. Passing it is what makes giving up
-      // on this handler mean something: it cancels the host-wide `db-fork` acquire
-      // and kills the dump/restore pair, so an overrunning fork stops occupying one
-      // of the box's two fork slots instead of holding it until the process
-      // restarts.
-      outcome = await forkDatabase(source, target, forkExclusions(), signal);
+      outcome = await forkDatabase(source, target, forkExclusions());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      log(`fork ${source} → ${target} failed: ${message}`, "stderr");
       await recordNotification({
         type: "db",
         title: "DB fork failed",
@@ -59,22 +66,23 @@ export const databaseForkJob = defineJob({
       // against the same catalog fail identically every time — so it
       // dead-letters after this one attempt instead of re-running a 2 GB dump
       // four more times and re-notifying on each. It is still loud, still a
-      // dead-letter, still visible at /api/jobs; the fix is a contribution edit,
-      // not a retry.
+      // dead-letter in Debug → Queue; the fix is a contribution edit, not a
+      // retry.
       if (err instanceof ForkPlanError) throw new NonRetryableError(message);
-      // Everything else may be transient (a busy cluster, a restart mid-restore)
-      // and retries.
+      // Everything else may be transient (a busy cluster) and retries.
       throw err;
     }
+    log(`fork ${source} → ${target}: ${outcome.kind}`);
 
     // A schema nobody claimed means main's rows for it are now in this fork, and
     // in every fork after it. Not worth failing a fork over (see
     // `ForkPlan.undeclaredSchemas` for why refusing would be the worse trade),
     // but very much worth a human deciding — so it reaches the bell rather than
-    // only a backend log nobody reads. Deduped per SCHEMA, not per fork, so it
-    // appears once and stays until dismissed instead of once per worktree.
+    // only a log nobody reads. Deduped per SCHEMA, not per fork, so it appears
+    // once and stays until dismissed instead of once per worktree.
     if (outcome.kind !== "forked") return;
     for (const s of outcome.plan.undeclaredSchemas) {
+      log(`undeclared schema: ${describeUndeclaredSchema(s)}`, "stderr");
       await recordNotification({
         type: "db",
         title: "Schema not covered by any fork exclusion",

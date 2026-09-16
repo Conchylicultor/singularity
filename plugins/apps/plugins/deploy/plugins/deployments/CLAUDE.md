@@ -140,16 +140,49 @@ Three things are load-bearing about how it is built:
 `DeployRun.phase` reports which leg is live, as a field rather than something a
 UI parses out of the log. It stays pointing at the leg a failed run died on.
 
-**The sequence is a durable job** (`deploy.run`, `internal/run-deploy.ts`), not
-an in-process async function: every step is a `ctx.step` and every gap is a
-`ctx.waitFor`, so the handler returns through the jobs plugin's suspend sentinel
-and comes back as a fresh dispatch in whichever backend is alive by then. The
-middle phase enqueues a release (`enqueueRelease`) and waits for it with
-`awaitRelease` — the build must be recorded in `release_runs`, which only that
-engine can do — and the wait costs no worker slot and survives any number of
-restarts. Its `hold` is `seconds`: the spawns here are detached and suspended on,
-so what actually bounds a dispatch is one `git` read (`compareToHead`) plus a few
-indexed queries.
+**The sequence is a supervised job with a `steps` body** (`deploy.run`,
+`internal/run-deploy.ts`):
+
+```ts
+defineSupervisedJob({
+  name: "deploy.run", input: { runId }, channel: deployLog, hold: "seconds",
+  ledger: deployRunLedger,            // internal/run-state.ts
+  steps: (input, { step, ctx }) => …, // converge step → decide build → awaitRelease → pin → ship step
+});
+```
+
+- **Each leg is a `step`**: spawned detached inside a memoized step, then waited
+  on with `supervised-job`'s observe-then-wait loop, holding no worker slot. A
+  single verb is one step; `update` is converge step → build decision →
+  `awaitRelease(ctx, …)` → pin → ship step. The step names ARE the leg names, so
+  a step's child id is `legRunId(runId, leg)`.
+- **The ledger** (`deployRunLedger`) is `deploy_runs`: `claim` ADOPTS the row the
+  endpoint already claimed (`null` once it is closed; a missing row throws),
+  `listUnfinished` / `setPid` / `closeRow` (`closeDeployRow`) / `onReattach`
+  (`reattachRun`) as below, and `beginStep` = `beginLeg`, which names the leg on
+  the row before the spawn and refuses once the run is closed — the body then
+  gets `run-closed` and stops. An `update`'s pinned bundle is written by its own
+  memoized step (`pinShipBundle`) just before the ship step.
+- **Every gap is a `ctx.step` or `ctx.waitFor`**, so the handler returns through
+  the jobs plugin's suspend sentinel and comes back as a fresh dispatch in
+  whichever backend is alive by then. The middle phase enqueues a release
+  (`enqueueRelease`) and waits with `awaitRelease` — the build must be recorded in
+  `release_runs`, which only that engine can do.
+- **A thrown error is stamped** with `failRun` and rethrown as a
+  `NonRetryableError` (original as `cause`): once the run carries its verdict a
+  retry would only replay memoized steps against a closed run. Suspend signals
+  pass through untouched (`isSuspendSignal`).
+- **A leg whose process never started** (`not-started`) is logged as
+  `[failed] could not run …` and stamped by `failRun` as "could not run `deploy
+  <leg>`: …"; the factory's last-resort hard-kill close runs after, and is then
+  a no-op.
+- **The durable names are the pre-`steps` sequence's** (`platform`,
+  `spawn:<leg>`, `<leg>:<i>`, `ended:<leg>`, `begin-ship`, `bundle-decision`,
+  `enqueue-release`, `release:<i>`, `pin-bundle`; only `claim` and `pin-ship` are
+  new and replay harmlessly), so a deploy suspended across that change resumes
+  rather than spawning a leg twice.
+- `hold` is `seconds`: what bounds a dispatch is one `git` read
+  (`compareToHead`) plus a few indexed queries.
 
 ### Converge's idempotence contract
 
@@ -179,8 +212,8 @@ environment.
   resource (the `release.previews` shape), bounded at one entry per deployment
   row, carrying `phase` so a running `update` reports which leg it is on. It is
   rebuilt at boot from the ledger and never persisted, so it cannot go stale.
-  Two things rebuild it, and they cover different runs: the supervised-run
-  kind's `onReattach`, for a run with a live LEG, and this plugin's own
+  Two things rebuild it, and they cover different runs: the ledger's
+  `onReattach`, for a run with a live LEG, and this plugin's own
   `onReady` (`reconcileDeployLiveView`), for every other open run — which is the
   case this migration created, an `update` sitting in its release build with no
   leg of its own. The phase is derived rather than remembered: a named leg with
@@ -207,7 +240,7 @@ and are correctness:
   is on the row, so a phase change does not require the process pushing it to be
   the one that started the run — which is not a nicety: a resumed `update` is
   routinely in a different backend from the one that claimed it.
-- **A leg's outcome is stamped by the kind's `closeRow`, in the reconciler** —
+- **A leg's outcome is stamped by the ledger's `closeRow`, in the reconciler** —
   not by the sequencer. That is what records a deploy's verdict whether or not
   its workflow is still alive, and it is why the ledger no longer needs an
   in-memory "is somebody sequencing this?" flag. `failRun` is the sequencer's
@@ -226,7 +259,7 @@ full transcript, where the ledger holds the one-line outcome.
 ### A run survives the backend that started it
 
 The CLI is spawned as a **supervised run**
-([`infra/jobs/supervised-run`](../../../../../infra/plugins/jobs/plugins/supervised-run/CLAUDE.md)),
+([`infra/jobs/supervised-job`](../../../../../infra/plugins/jobs/plugins/supervised-job/CLAUDE.md)),
 which is the fix for the incident this plugin used to lose runs to: a plain child
 shares the backend's process group, the gateway signals that whole group when it
 hot-restarts a backend, and every `./singularity build` of this worktree does
@@ -285,14 +318,11 @@ an `update`'s converge, the one ending that means "more is coming". Every other
 ending is the run's. That rule is readable by a reconciler in any backend, which
 is exactly why no flag is needed.
 
-**The sequence waits on two facts, and the pid is not one of them.** `awaitLeg`
-suspends on `supervisedRun.ended` for that leg and, on every wake, looks at the
-leg's exit marker and at whether the run's row is still open. It deliberately
-does NOT re-apply the close rule's other half (no marker + a dead pid ⇒ hard
-kill): that arm lives in the supervised-run reconciler, which reaches the leg
-through `listUnfinished` and stamps the row through `closeRow`, so a SIGKILLed
-leg arrives here as a **closed row** rather than as a pid check. One rule, in one
-place, and the sequence reads its result instead of re-deriving it.
+**A leg's end is detected like every other supervised child**: its exit marker,
+else a dead pid ⇒ hard kill (`-1`). A SIGKILLed leg therefore reaches the body as
+a failed terminal — announced, and the sequence stops — while the reconciler
+closes the row through `closeRow` with the same outcome. A run closed before a
+leg could begin reaches it as `run-closed` from `beginStep`.
 
 The old third arm — "an update's converge succeeded and the sequence was cut, so
 record the run as an interrupted failure" — is gone, because the thing it
@@ -399,15 +429,11 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `fields/server-capabilities.resolveFieldFilterSql`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
-    - `infra/jobs.abortDurableRun`
-    - `infra/jobs.defineJob`
     - `infra/jobs.isSuspendSignal`
     - `infra/jobs.JobCtx`
-    - `infra/jobs/supervised-job.runEnded`
-    - `infra/jobs/supervised-job.RunEndedPayload`
-    - `infra/jobs/supervised-run.defineSupervisedRunKind`
-    - `infra/jobs/supervised-run.startSupervisedRun`
-    - `infra/jobs/supervised-run.UnfinishedRun`
+    - `infra/jobs.NonRetryableError`
+    - `infra/jobs/supervised-job.defineSupervisedJob`
+    - `infra/jobs/supervised-job.RunStep`
     - `infra/paths.REPO_ROOT`
     - `infra/paths.worktreeArtifacts`
     - `infra/retention.defineRetention`
@@ -431,8 +457,7 @@ any consumer — the `Servers.Fields` ← `health.StatusField` precedent.
     - `deploymentsServerResource`
   - Register:
     - `defineJob('retention.deploy_runs')`
-    - `defineSupervisedRunKind('deploy')`
-    - `defineJob('deploy.run')`
+    - `defineSupervisedJob('deploy.run')`
   - Resources:
     - `deploy.deployments` (push)
     - `deploy.runs` (push)

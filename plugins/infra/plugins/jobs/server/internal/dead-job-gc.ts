@@ -1,9 +1,18 @@
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
-import { defineJob } from "./registry";
+import { defineJob, type EnqueueTx } from "./registry";
+import { ownedWorkflowRunIds } from "./run-identity";
 import { emitQueueActivity } from "./slot-ledger";
+import { deleteWorkflowLogs } from "./workflow-log";
+
+const PurgedRowSchema = z.object({
+  id: z.string(),
+  job_name: z.string(),
+  baked_run_id: z.string().nullable(),
+});
 
 // Bound on the durable archive so it can't itself accumulate unbounded.
 // Every reconcile enforces BOTH: rows older than the TTL are dropped, and the
@@ -20,8 +29,13 @@ const ARCHIVE_CAP = 2000;
 //
 // "dead" = exhausted retries AND not currently locked (`attempts >= max_attempts
 // AND locked_at IS NULL`) — never reap a row a worker is actively running.
-export async function reconcileDeadJobs(): Promise<void> {
-  await db.transaction(async (tx) => {
+//
+// `database` is the worktree database in production; a test hands it a
+// throwaway one.
+export async function reconcileDeadJobs(
+  database: EnqueueTx = db,
+): Promise<void> {
+  await database.transaction(async (tx) => {
     // Archive: insert dead queue rows into dead_jobs. ON CONFLICT DO NOTHING
     // keeps this safe to run on every boot / re-fork.
     await tx.execute(sql`
@@ -38,13 +52,27 @@ export async function reconcileDeadJobs(): Promise<void> {
       ON CONFLICT (id) DO NOTHING
     `);
 
-    // Purge: delete the archived rows from the queue.
-    await tx.execute(sql`
+    // Purge: delete the archived rows from the queue — and the step/wait logs
+    // of the runs that die with them. A row that died WITHOUT a final dispatch
+    // (its worker was killed on the last attempt, then reclaimed past its
+    // budget) never reached `dispatch()`'s own teardown, so nothing else would
+    // ever delete its log. Only row-owned run ids are touched — see
+    // `ownedWorkflowRunIds` for why a baked (keyed / resume) id is left alone.
+    // Same transaction: the log goes exactly when the row does.
+    const purged = await executeRows(tx, {
+      label: "dead-job-gc: purge",
+      row: PurgedRowSchema,
+      query: sql`
       DELETE FROM graphile_worker._private_jobs j
        USING graphile_worker._private_tasks t
        WHERE t.id = j.task_id
          AND ${deadJobPredicate}
-    `);
+      RETURNING j.id::text AS id,
+                ${jobNameExpr} AS job_name,
+                j.payload->>'workflowRunId' AS baked_run_id
+    `,
+    });
+    await deleteWorkflowLogs(tx, ownedWorkflowRunIds(purged));
 
     // Bound the archive: drop rows past the TTL.
     await tx.execute(sql`

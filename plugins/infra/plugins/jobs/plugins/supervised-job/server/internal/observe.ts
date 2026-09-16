@@ -3,7 +3,7 @@ import {
   isPidAlive,
   readRunTerminal,
   type RunTerminal,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+} from "../../core";
 
 /**
  * Where a supervised run stands, right now, according to the two things that
@@ -53,7 +53,7 @@ export type RunObservation =
  * The rule is stated twice in this repo — `supervisedRun`'s own `settleRun`
  * applies it to the runs a live backend is tailing, and this applies it to the
  * run one job workflow is waiting on. They must agree; the intended end state is
- * one exported rule in `supervised-run/core` that both call.
+ * one exported rule in this plugin's `core/` that both call.
  */
 export function observeRun(
   kindId: string,

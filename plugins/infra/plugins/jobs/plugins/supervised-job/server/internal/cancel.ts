@@ -1,7 +1,4 @@
-import {
-  killSupervisedRun,
-  type KillOutcome,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import { killSupervisedRun, type KillOutcome } from "./run/supervisor";
 import type { z } from "zod";
 import type { SupervisedJob } from "./define-supervised-job";
 

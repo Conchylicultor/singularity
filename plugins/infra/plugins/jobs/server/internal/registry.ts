@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TaskSpec } from "graphile-worker";
 import type { PoolClient } from "pg";
@@ -13,6 +12,7 @@ import {
 } from "../../core/hold";
 import { DEFAULT_MAX_ATTEMPTS } from "./constants";
 import { withQueueSchemaAssert } from "./queue-schema";
+import { singletonJobKey } from "./run-identity";
 import type { WaitForOptions } from "./step-ctx";
 import { getWorkerUtils } from "./worker";
 
@@ -38,12 +38,15 @@ export interface JobCtx {
   /** 1-indexed attempt number — starts at 1 on the first try. */
   attempt: number;
   /**
-   * Stable identity for this workflow run across suspends and resumes.
-   * For `dedup: "singleton"` or `dedup: { key }`, this is
-   * `${jobName}:${effectiveKey}` (namespaced so two different jobs
-   * picking the same natural id don't collide on `_jobWaits` /
-   * `_jobSteps`); for `dedup: "none"`, a generated uuid.
-   * Used as the key for the step and wait logs.
+   * Stable identity for this workflow run across retries, suspends and
+   * resumes — the key for the step and wait logs.
+   *
+   * For `dedup: { key }` it is `${jobName}:${key}`: one run per key, so a
+   * second enqueue with that key coalesces into the same (possibly suspended)
+   * workflow. Everything else — `dedup: "singleton"`, `dedup: "none"`, cron
+   * ticks — runs as its queue ROW, `${jobName}:job:${jobId}` (`run-identity.ts`).
+   * So "singleton" means at most one PENDING row, not at most one live
+   * workflow: a new enqueue while a workflow is suspended starts a new run.
    */
   workflowRunId: string;
   /**
@@ -304,6 +307,9 @@ interface BaseJobSpec<
    * reservation tier AND the deadline that aborts `ctx.signal`
    * (`deadlineMsFor`). There is deliberately no second field, so a lane and a
    * budget cannot disagree.
+   *
+   * `minutes` additionally requires an `inProcess` reason — see
+   * {@link HoldSpec}.
    */
   hold: HoldClass;
   /**
@@ -352,14 +358,45 @@ interface BaseJobSpec<
 }
 
 /**
+ * The hold dimension of a job spec. A `minutes` handler runs inside the
+ * backend for as long as its work takes, so a deploy or restart kills it
+ * mid-run and it re-runs from scratch — and it holds a worker slot throughout.
+ * That is a legitimate choice for some work, but it has to be a CHOICE, so the
+ * type makes the author state it: `hold: "minutes"` does not compile without
+ * `inProcess`. Rung 2 of the fix ladder — the stale-worktree reaper and the
+ * database fork were written as `minutes` jobs by default, and both died
+ * mid-run on deploys.
+ */
+type HoldSpec =
+  | {
+      hold: "instant" | "seconds";
+      /** Only a `minutes` job states why it runs in process. */
+      inProcess?: never;
+    }
+  | {
+      hold: "minutes";
+      /**
+       * One honest sentence saying why dying mid-run (on any deploy or
+       * restart) and re-running from scratch is acceptable for this work, and
+       * why it may hold a worker slot for its whole duration.
+       *
+       * If it is not acceptable — long work that must survive a restart, or
+       * must not hold a worker slot — it does not belong in `defineJob`: use
+       * `defineSupervisedJob` (`@plugins/infra/plugins/jobs/plugins/supervised-job/server`),
+       * which runs the body as a detached child the backend re-attaches to.
+       */
+      inProcess: string;
+    };
+
+/**
  * A job spec — either unscheduled with any {@link Dedup}, or scheduled and
- * therefore `dedup: "singleton"`.
+ * therefore `dedup: "singleton"` — intersected with its {@link HoldSpec}.
  *
  * **Why a union rather than two optional fields.** A keyed schedule is
  * meaningless on its own terms: the cron payload is always `input.parse({})`,
  * so a `key(input)` function is evaluated against one constant value and yields
  * one constant key — i.e. a singleton wearing a costume. Worse, the cron item
- * built in `worker.ts` hardcodes the singleton job key `${job.name}:_`, and
+ * built in `worker.ts` always uses the singleton job key `singletonJobKey(name)`, and
  * that key is only TOTAL over scheduled jobs if a scheduled job cannot declare
  * anything else. Before that key existed the cron path ignored `dedup`
  * altogether and every tick inserted a new row forever — 57 copies each of six
@@ -371,26 +408,28 @@ export type DefineJobSpec<
   N extends string,
   S extends z.ZodType,
   E extends z.ZodType,
-> =
-  | (BaseJobSpec<N, S, E> & {
-      dedup: Dedup<S>;
-      /** Unscheduled. Declare `schedule` and `dedup` narrows to `"singleton"`. */
-      schedule?: undefined;
-    })
-  | (BaseJobSpec<N, S, E> & {
-      /** Forced by {@link schedule} — see the union's note above. */
-      dedup: "singleton";
-      /**
-       * Run this job on a recurring schedule (see {@link ScheduleSpec}). The jobs
-       * worker builds a graphile-worker cron item from this at startup.
-       *
-       * Scheduled jobs MUST have an `input` schema that parses `{}` (all fields
-       * optional or defaulted) — the cron payload is built from `input.parse({})`.
-       * If that throws, the worker fails loud at startup (it's a defineJob misuse,
-       * not a runtime condition).
-       */
-      schedule: ScheduleSpec;
-    });
+> = HoldSpec &
+  (
+    | (BaseJobSpec<N, S, E> & {
+        dedup: Dedup<S>;
+        /** Unscheduled. Declare `schedule` and `dedup` narrows to `"singleton"`. */
+        schedule?: undefined;
+      })
+    | (BaseJobSpec<N, S, E> & {
+        /** Forced by {@link schedule} — see the union's note above. */
+        dedup: "singleton";
+        /**
+         * Run this job on a recurring schedule (see {@link ScheduleSpec}). The jobs
+         * worker builds a graphile-worker cron item from this at startup.
+         *
+         * Scheduled jobs MUST have an `input` schema that parses `{}` (all fields
+         * optional or defaulted) — the cron payload is built from `input.parse({})`.
+         * If that throws, the worker fails loud at startup (it's a defineJob misuse,
+         * not a runtime condition).
+         */
+        schedule: ScheduleSpec;
+      })
+  );
 
 export interface JobFactory<
   N extends string,
@@ -407,9 +446,10 @@ export interface JobFactory<
 // dispatch time so adding jobs at runtime (future) doesn't require a restart.
 export const jobRegistry = new Map<string, RegisteredJob>();
 
-// Internal payload shape the worker sees. `workflowRunId` is derived from
-// the dedup strategy at enqueue time — absent for cron ticks, where the
-// worker derives it from the injected `_cron.ts` instead.
+// Internal payload shape the worker sees. `workflowRunId` is baked only where
+// the run is not the row: a keyed dedup (`${name}:${key}`) and a resume row
+// (the suspended run's id). Absent otherwise — the worker derives the run from
+// the row id via `workflowRunIdFor` (`run-identity.ts`).
 export interface JobTaskPayload {
   jobName: string;
   workflowRunId?: string;
@@ -417,8 +457,8 @@ export interface JobTaskPayload {
   event?: unknown;
   /**
    * Injected by graphile-worker's cron scheduler on each tick (absent for
-   * direct enqueues). `ts` is the per-minute UTC tick timestamp; the worker
-   * derives a stable per-tick `workflowRunId` from it.
+   * direct enqueues). `ts` is the per-minute UTC tick timestamp. Not an
+   * identity: a tick that collapses onto a pending row is that row's run.
    */
   _cron?: { ts: string; backfilled?: boolean };
 }
@@ -544,6 +584,15 @@ export function defineJob<
   S extends z.ZodType,
   E extends z.ZodType,
 >(spec: DefineJobSpec<N, S, E>): JobFactory<N, S, E> {
+  // The type requires a reason for `minutes`; an empty string satisfies
+  // the type and states nothing, so it is refused here, at define time.
+  if (spec.hold === "minutes" && spec.inProcess.trim() === "") {
+    throw new Error(
+      `[jobs] ${spec.name}: hold "minutes" needs a non-empty \`inProcess\` ` +
+        `reason — or move the work to defineSupervisedJob`,
+    );
+  }
+
   // Registry write moved into `register()` (the framework calls it during
   // the plugin register phase). `enqueue` doesn't read `jobRegistry` —
   // graphile-worker resolves the handler at job-pickup time, which only
@@ -557,22 +606,24 @@ export function defineJob<
     // the post-transform shape; the worker re-parses as a safety check.
     const parsed = spec.input.parse(input);
 
-    let effectiveJobKey: string | undefined;
+    // Queue identity and run identity (see `run-identity.ts`). Only a keyed
+    // dedup bakes a run id: one run per key is its contract. A singleton and a
+    // `none` row bake nothing, and the worker derives the run from the row id —
+    // so a singleton's key collapses pending rows without making every run of
+    // the job share one step log.
+    let graphileJobKey: string | null = null;
+    let workflowRunId: string | undefined;
     if (spec.dedup === "singleton") {
-      effectiveJobKey = "_";
+      graphileJobKey = singletonJobKey(spec.name);
     } else if (spec.dedup !== "none") {
-      effectiveJobKey = spec.dedup.key(parsed as z.infer<typeof spec.input>);
+      graphileJobKey = `${spec.name}:${spec.dedup.key(parsed as z.infer<typeof spec.input>)}`;
+      workflowRunId = graphileJobKey;
     }
-
-    const workflowRunId = effectiveJobKey
-      ? `${spec.name}:${effectiveJobKey}`
-      : randomUUID();
-    const graphileJobKey = effectiveJobKey ? workflowRunId : null;
     const maxAttempts =
       opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     const payload: JobTaskPayload = {
       jobName: spec.name,
-      workflowRunId,
+      ...(workflowRunId === undefined ? {} : { workflowRunId }),
       input: parsed,
       event: opts?._event,
     };

@@ -163,6 +163,7 @@ Two more things that look wrong but are load-bearing:
     - `infra/claude-cli`
     - `infra/events-test`
     - `infra/jobs`
+    - `infra/jobs/supervised-job`
     - `infra/launcher`
     - `infra/worktree/reclaim`
     - `reports`

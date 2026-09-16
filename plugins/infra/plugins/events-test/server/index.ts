@@ -22,6 +22,7 @@ import {
   handleSubscribe,
   handleWaitIdle,
 } from "./internal/handle";
+import { detachedSleep, handleDetachedSleep } from "./internal/detached-sleep";
 import { logPing } from "./internal/log-job";
 import { pinged } from "./internal/tables";
 import {
@@ -40,6 +41,7 @@ import {
   cronDedupEventsTest,
   supersededEventsTest,
   queueSaturateEventsTest,
+  detachedSleepEventsTest,
 } from "../shared/endpoints";
 
 export default {
@@ -60,6 +62,7 @@ export default {
     [cronDedupEventsTest.route]: handleCronDedup,
     [supersededEventsTest.route]: handleSuperseded,
     [queueSaturateEventsTest.route]: handleQueueSaturate,
+    [detachedSleepEventsTest.route]: handleDetachedSleep,
   },
   register: [
     logPing,
@@ -68,6 +71,7 @@ export default {
     supersededProbe,
     saturateSleeper,
     deadLetterProbe,
+    detachedSleep,
     pinged,
   ],
   onShutdown: abortSaturationSleepers,

@@ -157,3 +157,17 @@ export const queueSaturateEventsTest = defineEndpoint({
     runAt: z.string().nullable(),
   }),
 });
+
+// Enqueues the `events-test.detached-sleep` supervised job (a `run` body in a
+// detached child). Fields optional for the same reason as queue-saturate's.
+export const DetachedSleepBodySchema = z.object({
+  seconds: z.number().int().min(0).max(3600).optional(),
+  fail: z.enum(["none", "retryable", "non-retryable"]).optional(),
+});
+export type DetachedSleepBody = z.infer<typeof DetachedSleepBodySchema>;
+
+export const detachedSleepEventsTest = defineEndpoint({
+  route: "POST /api/events-test/detached-sleep",
+  body: DetachedSleepBodySchema,
+  response: z.object({ ok: z.literal(true) }),
+});

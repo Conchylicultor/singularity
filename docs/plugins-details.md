@@ -721,15 +721,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/server-capabilities.resolveFieldFilterSql`
               - `infra/endpoints.HttpError`
               - `infra/endpoints.implement`
-              - `infra/jobs.abortDurableRun`
-              - `infra/jobs.defineJob`
               - `infra/jobs.isSuspendSignal`
               - `infra/jobs.JobCtx`
-              - `infra/jobs/supervised-job.runEnded`
-              - `infra/jobs/supervised-job.RunEndedPayload`
-              - `infra/jobs/supervised-run.defineSupervisedRunKind`
-              - `infra/jobs/supervised-run.startSupervisedRun`
-              - `infra/jobs/supervised-run.UnfinishedRun`
+              - `infra/jobs.NonRetryableError`
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `infra/jobs/supervised-job.RunStep`
               - `infra/paths.REPO_ROOT`
               - `infra/paths.worktreeArtifacts`
               - `infra/retention.defineRetention`
@@ -753,8 +749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `deploymentsServerResource`
             - Register:
               - `defineJob('retention.deploy_runs')`
-              - `defineSupervisedRunKind('deploy')`
-              - `defineJob('deploy.run')`
+              - `defineSupervisedJob('deploy.run')`
             - Resources:
               - `deploy.deployments` (push)
               - `deploy.runs` (push)
@@ -6365,7 +6360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Shared:
         - Exports (values): `notionAuthConfig`
 
-- **`backup`** — Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised task, so a backend restart mid-`tar` no longer kills the backup.
+- **`backup`** — Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
   - Web:
     - Slots:
       - `BackupRunDetail.Section` ← `backup.runs-arm`
@@ -6407,9 +6402,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `database.db`
       - `database/sql-column.parsedJson`
       - `infra/endpoints.implement`
-      - `infra/jobs.defineJob`
       - `infra/jobs/supervised-job.defineSupervisedJob`
-      - `infra/jobs/supervised-task.defineSupervisedTask`
       - `infra/paths.BACKUPS_DIR`
       - `primitives/log-channels.Log`
     - DB schema: `plugins/backup/server/internal/tables.ts`
@@ -6417,10 +6410,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `_backupRuns`
       - `BackupSource`
       - `BackupTarget`
-    - Register:
-      - `defineSupervisedJob('backup.run.supervised')`
-      - `defineSupervisedTask('backup.run')`
-      - `defineJob('backup.run.schedule')`
+    - Register: `defineSupervisedJob('backup.run.supervised')`
     - Routes: `POST /api/backup/run`
   - Core:
     - Uses: `primitives/pane.defineRoute`
@@ -11131,6 +11121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/events-test`
       - `infra/host/contention`
       - `infra/jobs`
+      - `infra/jobs/supervised-job`
       - `infra/query-resource`
       - `infra/retention`
       - `infra/trash`
@@ -11229,6 +11220,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/claude-cli`
           - `infra/events-test`
           - `infra/jobs`
+          - `infra/jobs/supervised-job`
           - `infra/launcher`
           - `infra/worktree/reclaim`
           - `reports`
@@ -11386,10 +11378,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
           - `infra/jobs.NonRetryableError`
+          - `infra/jobs/supervised-job.defineSupervisedJob`
+          - `primitives/log-channels.defineLogSink`
           - `shell/notifications.recordNotification`
         - Exports (values): `databaseForkJob`
         - Register:
-          - `defineJob('database.fork')`
+          - `defineSupervisedJob('database.fork')`
           - `defineJob('database.fork-temp-sweep')`
         - Routes: `GET /api/db/fork-exclusions`
       - Core:
@@ -13608,7 +13602,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.implement`
           - `infra/host/host-read-pool.heavyReadSlotCount`
           - `infra/host/host-read-pool.withHeavyReadSlot`
-          - `infra/jobs.defineJob`
+          - `infra/jobs/supervised-job.defineSupervisedJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `infra/paths.GIT`
           - `infra/paths.worktreesDir`
@@ -13629,7 +13623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks/tasks-core.getAttempt`
           - `tasks/tasks-core.listAttempts`
           - `tasks/tasks-core.listTasks`
-        - Register: `defineJob('worktree-cleanup.reap-stale')`
+        - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
         - Routes:
           - `GET /api/debug/worktrees`
           - `POST /api/debug/worktrees/bulk-delete`
@@ -15411,7 +15405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `unboundedWindowKeys`
           - `withNotifyBatch`
       - Cross-plugin:
-        - Imported by: `infra/jobs/supervised-task`
+        - Imported by: `infra/jobs/supervised-job`
       - Cli:
         - Exports (values): `runExec`
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
@@ -16995,7 +16989,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs.queryRecentDeadJobs`
           - `infra/jobs.queryRunningJobs`
           - `infra/jobs.reachableSlots`
+          - `infra/jobs.singletonJobKey`
           - `infra/jobs.UNSAFE_sweepStuckLocks`
+          - `infra/jobs/supervised-job.defineSupervisedJob`
+          - `primitives/log-channels.defineLogSink`
         - DB schema: `plugins/infra/plugins/events-test/server/internal/tables.ts`
         - Register:
           - `defineJob('events_test.log')`
@@ -17004,6 +17001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `defineJob('events_test.superseded')`
           - `defineJob('events_test.saturate-sleeper')`
           - `defineJob('events_test.dead-letter')`
+          - `defineSupervisedJob('events-test.detached-sleep')`
           - `defineTriggerEvent('events_test.pinged')`
         - Routes:
           - `POST /api/events-test/subscribe`
@@ -17021,9 +17019,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `POST /api/events-test/cron-dedup`
           - `POST /api/events-test/superseded`
           - `POST /api/events-test/queue-saturate`
+          - `POST /api/events-test/detached-sleep`
       - Shared:
         - Exports (types):
           - `DeleteTargetingBody`
+          - `DetachedSleepBody`
           - `DirectEnqueueBody`
           - `EmitBody`
           - `QueueSaturateBody`
@@ -17034,6 +17034,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `deleteEventsTestTargeting`
           - `deleteEventsTestTrigger`
           - `DeleteTargetingBodySchema`
+          - `DetachedSleepBodySchema`
+          - `detachedSleepEventsTest`
           - `DirectEnqueueBodySchema`
           - `directEnqueueEventsTest`
           - `EmitBodySchema`
@@ -17080,7 +17082,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/transcript-watcher`
           - `infra/corpus-index`
           - `infra/git/git-watcher`
-          - `infra/jobs/supervised-run`
+          - `infra/jobs/supervised-job`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-tree`
       - Server:
@@ -17382,6 +17384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `holdForTask`
           - `installQueueSchema`
           - `isJobDeadlineExceededError`
+          - `isNonRetryableError`
           - `isSuspendSignal`
           - `JOB_SLOT_FLOOR_KIND`
           - `JobDeadlineExceededError`
@@ -17403,6 +17406,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `QueueSchemaMissingError`
           - `reachableSlots`
           - `RUNNERS`
+          - `singletonJobKey`
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
           - `UNSAFE_getRegisteredJob`
@@ -17474,7 +17478,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/prototypes/checkpoints`
           - `apps/prototypes/thumbnails`
           - `apps/sonata/sources/midi/folders`
-          - `backup`
           - `build`
           - `conversations`
           - `conversations/conversation-category`
@@ -17499,7 +17502,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/read-set-shrink`
           - `debug/session-divergence`
           - `debug/slow-ops`
-          - `debug/worktree-cleanup`
           - `improve`
           - `infra/attachments`
           - `infra/events`
@@ -17542,70 +17544,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `JobSlotFloorPayloadSchema`
         - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the child runs — then wakes on the supervisedRun.ended event, re-reads the child's exit marker (the authority; the event is only a wake-up) and records the outcome, surviving any number of backend restarts in between.
           - Server:
+            - Contributes: `fork-data-exclusion` "supervised_job_runs"
             - Uses:
+              - `database.db`
+              - `database/admin.ExcludeFromFork`
               - `infra/events.defineTriggerEvent`
+              - `infra/file-watcher.createFileWatcher`
+              - `infra/file-watcher.FileWatcher`
               - `infra/jobs.abortDurableRun`
               - `infra/jobs.defineJob`
+              - `infra/jobs.isNonRetryableError`
+              - `infra/jobs.isSuspendSignal`
               - `infra/jobs.JobCtx`
               - `infra/jobs.JobFactory`
-              - `infra/jobs/supervised-run.assertRegistered`
-              - `infra/jobs/supervised-run.defineSupervisedRunKind`
-              - `infra/jobs/supervised-run.isSupervisedSpawnError`
-              - `infra/jobs/supervised-run.KillOutcome`
-              - `infra/jobs/supervised-run.killSupervisedRun`
-              - `infra/jobs/supervised-run.startSupervisedRun`
-              - `infra/jobs/supervised-run.SupervisedRunKind`
-              - `infra/jobs/supervised-run.SupervisedRunKindSpec`
-            - DB schema: `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
+              - `infra/jobs.NonRetryableError`
+              - `infra/jobs.ScheduleSpec`
+              - `infra/paths.pruneWorktreeRunArtifacts`
+              - `infra/paths.REPO_ROOT`
+              - `infra/paths.RUN_TERMINAL_SUFFIX`
+              - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
+              - `infra/paths.worktreeArtifacts`
+              - `infra/retention.defineRetention`
+            - DB schema:
+              - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables-run-ended.ts`
+              - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/tables.ts`
             - Exports (types):
               - `DefineSupervisedJobSpec`
               - `RunEndedPayload`
+              - `RunStep`
+              - `StepOutcome`
               - `SupervisedJob`
               - `SupervisedJobClaimMeta`
               - `SupervisedJobEndedMeta`
-              - `SupervisedJobKindSpec`
+              - `SupervisedJobLedger`
               - `SupervisedJobSpawn`
+              - `SupervisedRunContext`
+              - `SupervisedStepsContext`
+              - `UnfinishedRun`
             - Exports (values):
+              - `_supervisedJobRuns`
               - `_supervisedRunEndedTriggers`
               - `cancelSupervisedJob`
               - `defineSupervisedJob`
               - `runEnded`
-            - Register: `defineTriggerEvent('supervisedRun.ended')`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/deploy/deployments`
-              - `backup`
-              - `build`
-              - `release`
-        - **`supervised-run`** — Long-running out-of-process work that survives a backend restart: a detached child whose merged output goes to a transcript FILE (published live by tailing it, so there is no pipe-shaped path to lose), a POSIX shim that records any command's exit status into an atomic marker, and ONE boot reconciler over every registered kind that closes the dead and re-attaches the living.
-          - Server:
-            - Uses:
-              - `infra/file-watcher.createFileWatcher`
-              - `infra/file-watcher.FileWatcher`
-              - `infra/paths.pruneWorktreeRunArtifacts`
-              - `infra/paths.RUN_TERMINAL_SUFFIX`
-              - `infra/paths.RUN_TRANSCRIPT_SUFFIX`
-              - `infra/paths.worktreeArtifacts`
-            - Exports (types):
-              - `KillOutcome`
-              - `StartedRun`
-              - `SupervisedRunKind`
-              - `SupervisedRunKindSpec`
-              - `UnfinishedRun`
-            - Exports (values):
-              - `assertRegistered`
-              - `defineSupervisedRunKind`
-              - `isSupervisedSpawnError`
-              - `killSupervisedRun`
-              - `reconcileSupervisedRuns`
-              - `startSupervisedRun`
-              - `SupervisedSpawnError`
-              - `TRANSCRIPT_CEILING_BYTES`
+            - Register:
+              - `defineTriggerEvent('supervisedRun.ended')`
+              - `defineJob('retention.supervised_job_runs')`
           - Core:
             - Uses:
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
-            - Exports (types): `RunTerminal`
+            - Exports (types):
+              - `RunTerminal`
+              - `SupervisedTaskInvocation`
             - Exports (values):
               - `assertRunId`
               - `assertRunKindId`
@@ -17614,26 +17605,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `readRunTerminal`
               - `RUN_TERMINAL_ENV`
               - `RunMarkerError`
+              - `SUPERVISED_EXEC_COMMAND`
               - `supervisedArgv`
-          - Cross-plugin:
-            - Imported by:
-              - `apps/deploy/deployments`
-              - `infra/jobs/supervised-job`
-        - **`supervised-task`** — An out-of-process body that is not a command line: defineSupervisedTask registers an ordinary async function under an id, and `./singularity supervised-exec <id> <payloadJson>` boots the plugin graph in exec mode and runs it — so work assembled from contributions (backup's sources and targets) can be supervised as a detached child exactly like a CLI verb.
-          - Server:
-            - Uses: `infra/paths.REPO_ROOT`
-            - Exports (types):
-              - `DefineSupervisedTaskSpec`
-              - `RegisteredSupervisedTask`
-              - `SupervisedTask`
-            - Exports (values): `defineSupervisedTask`
           - Cli:
             - Uses: `framework/server-core.runExec`
           - Cross-plugin:
-            - Imported by: `backup`
-          - Core:
-            - Exports (types): `SupervisedTaskInvocation`
-            - Exports (values): `SUPERVISED_EXEC_COMMAND`
+            - Imported by:
+              - `apps/deploy/deployments`
+              - `backup`
+              - `build`
+              - `database/fork`
+              - `debug/worktree-cleanup`
+              - `infra/events-test`
+              - `release`
     - **`launcher`**
       - Server:
         - Uses:
@@ -17860,8 +17844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/guards`
           - `infra/claude-cli`
           - `infra/git/git-watcher`
-          - `infra/jobs/supervised-run`
-          - `infra/jobs/supervised-task`
+          - `infra/jobs/supervised-job`
           - `infra/launcher`
           - `infra/worktree`
           - `infra/worktree/reclaim`
@@ -18069,6 +18052,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `history/engine`
+          - `infra/jobs/supervised-job`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/todo/task-link`
@@ -18088,7 +18072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `servingSocketPath`
       - Cross-plugin:
         - Imported by:
-          - `infra/jobs/supervised-run`
+          - `infra/jobs/supervised-job`
           - `infra/paths`
           - `plugin-meta/barrel-import`
     - **`runtime-profiler`**
@@ -27266,6 +27250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/change-feed`
           - `database/derived-tables`
           - `database/derived-views`
+          - `database/fork`
           - `database/live-state-snapshot`
           - `database/migrations`
           - `debug/boot-events`
@@ -27280,6 +27265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/timeline`
           - `debug/worktree-cleanup`
           - `infra/attachments`
+          - `infra/events-test`
           - `infra/host/duress`
           - `infra/jobs`
           - `infra/worktree/removal-audit`

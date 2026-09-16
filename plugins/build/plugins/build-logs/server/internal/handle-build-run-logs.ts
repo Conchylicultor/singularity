@@ -2,7 +2,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync } from "node:fs";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
-import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import { readRunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { BUILD_RUN_KIND_ID } from "@plugins/build/plugins/run-ledger/core";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";

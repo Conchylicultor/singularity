@@ -3,10 +3,11 @@
 ## The backup runs OUT OF PROCESS
 
 `backup.run.supervised` is a `defineSupervisedJob`: it claims the ledger row,
-spawns `./singularity supervised-exec backup.run` **detached**, and suspends. So
-a backend restart mid-`tar` no longer kills the backup — the child outlives it
-and whichever backend is up when the exit marker lands records the outcome.
-Everything that used to be the job's `run` body is now `backup-task.ts`.
+spawns `./singularity supervised-exec backup.run.supervised` **detached**, and
+suspends. So a backend restart mid-`tar` no longer kills the backup — the child
+outlives it and whichever backend is up when the exit marker lands records the
+outcome. The body is the job's `run` (`backup-body.ts`), which the child calls;
+the job keeps its own ledger (`backup_runs`), which the child writes itself.
 
 Three consequences that look like bugs and are not:
 
@@ -15,10 +16,11 @@ Three consequences that look like bugs and are not:
   survived the restart. Closing rows is `closeBackupRow`, driven by the child's
   own exit marker. The filesystem sweep it still does is skipped entirely while
   a backup's pid is alive, for the same reason.
-- **The cron is a separate job** (`backup.run.schedule`). A scheduled job must
-  be `dedup: "singleton"` and a supervised one must be `dedup: "none"`; both
-  halves are load-bearing, so the tick enqueues rather than being the run. See
-  `backup-schedule.ts`.
+- **The cron is on the job itself** (`schedule` on `backup.run.supervised`, so
+  it is `dedup: "singleton"`: one pending row, and a manual enqueue landing on a
+  pending tick's row takes its payload). A run's identity is its queue row, so a
+  scheduled supervised job cannot replay an earlier run's steps. A tick that
+  fires while a backup is running loses the claim and returns.
 - **`backup_runs.namespace` exists but the runs arm still reports `null`.** The
   column scopes `listUnfinished` (a worktree DB is a fork of main's and inherits
   its rows) and gives the in-flight unique index something to contend on. It is
@@ -38,7 +40,7 @@ path — unreachable today, silent corruption if it ever is not.
 
 ## Plugin reference
 
-- Description: Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised task, so a backend restart mid-`tar` no longer kills the backup.
+- Description: Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target that lost its OAuth token) are contributed by the backup arm. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets. The assembly runs OUT OF PROCESS as a supervised job's `run` body, so a backend restart mid-`tar` no longer kills the backup.
 - Web:
   - Slots:
     - `BackupRunDetail.Section` ← `backup.runs-arm`
@@ -80,9 +82,7 @@ path — unreachable today, silent corruption if it ever is not.
     - `database.db`
     - `database/sql-column.parsedJson`
     - `infra/endpoints.implement`
-    - `infra/jobs.defineJob`
     - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/jobs/supervised-task.defineSupervisedTask`
     - `infra/paths.BACKUPS_DIR`
     - `primitives/log-channels.Log`
   - DB schema: `plugins/backup/server/internal/tables.ts`
@@ -90,10 +90,7 @@ path — unreachable today, silent corruption if it ever is not.
     - `_backupRuns`
     - `BackupSource`
     - `BackupTarget`
-  - Register:
-    - `defineSupervisedJob('backup.run.supervised')`
-    - `defineSupervisedTask('backup.run')`
-    - `defineJob('backup.run.schedule')`
+  - Register: `defineSupervisedJob('backup.run.supervised')`
   - Routes: `POST /api/backup/run`
 - Core:
   - Uses: `primitives/pane.defineRoute`

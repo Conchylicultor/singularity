@@ -1,9 +1,6 @@
 import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
-import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
-import {
-  assertRegistered,
-  type SupervisedRunKind,
-} from "@plugins/infra/plugins/jobs/plugins/supervised-run/server";
+import type { RunTerminal } from "../../core";
+import { assertRegistered, type SupervisedRunKind } from "./run/registry";
 import { observeRun } from "./observe";
 import { runEnded, type RunEndedPayload } from "./tables-run-ended";
 
@@ -100,16 +97,30 @@ export async function awaitSupervisedRun(
 }
 
 /**
- * What this loop needs from a job context: memoized steps, and the durable wait.
+ * What this loop needs from a job context: memoized steps, the durable wait, and
+ * the durable sleep between attempts.
  *
  * Structurally satisfied by `JobCtx`, so the handler passes `ctx` straight
- * through. Declared narrowly because the loop's correctness rests on exactly two
- * properties of the surrounding machinery — a step runs once per workflow run
- * and replays its result thereafter, and a wait suspends and resumes under a
- * name — so a test supplying both is exercising the real algorithm rather than a
- * rehearsal of it.
+ * through. Declared narrowly because the loop's correctness rests on exactly
+ * these properties of the surrounding machinery — a step runs once per workflow
+ * run and replays its result thereafter, and a wait or a sleep suspends and
+ * resumes in the same order on every replay — so a test supplying them is
+ * exercising the real algorithm rather than a rehearsal of it.
  */
-export type LoopCtx = Pick<JobCtx, "step" | "waitFor">;
+export type LoopCtx = Pick<JobCtx, "step" | "waitFor" | "sleep">;
+
+/** The cap on the durable backoff between two attempts. */
+const MAX_BACKOFF_MS = 60_000;
+
+/**
+ * How long to wait, holding no slot, after attempt `attempt` failed and before
+ * the next one claims: `e^attempt` seconds — about 3, 7, 20 and 55 s — capped at
+ * a minute. A pure function of the attempt number, so a replay sleeps the same
+ * sequence and the durable sleep names line up.
+ */
+export function backoffMsAfter(attempt: number): number {
+  return Math.min(MAX_BACKOFF_MS, Math.round(Math.exp(attempt) * 1000));
+}
 
 /** One spawned child: the run it serves, and the process group it lives in. */
 export interface StartedRunAttempt {
@@ -132,8 +143,18 @@ export interface SuperviseRunsSpec {
    */
   spawn(attempt: number): Promise<StartedRunAttempt | null>;
   /**
-   * The run has ENDED — stamp its row and do this kind's terminal work. Called
-   * once per attempt that reached a terminal, before the next attempt claims.
+   * The ledger's bare terminal write — see `SupervisedJobLedger.closeRow`.
+   *
+   * Called for the previous attempt's run before the next attempt claims.
+   * Ordinarily a no-op (the reconciler closed it when the marker landed), but
+   * after a restart the next claim can otherwise lose to the previous attempt's
+   * still-open row — and that loss, memoized, would end the ladder silently.
+   */
+  closeRow(runId: string, terminal: RunTerminal): Promise<void>;
+  /**
+   * The run has ENDED — do this kind's terminal work. Called once per attempt
+   * that reached a terminal (and again on every replay: it is not memoized),
+   * before the next attempt claims. Throwing ends the ladder.
    */
   onEnded(
     started: StartedRunAttempt,
@@ -159,7 +180,7 @@ export type SuperviseRunsResult =
  *
  * The whole shape of a supervised job lives here, and it is short at both ends
  * and empty in the middle: spawn and suspend, then be woken and read the marker.
- * Nothing holds a worker slot while a child runs — {@link SuperviseRunsSpec.wake}
+ * Nothing holds a worker slot while a child runs — `ctx.waitFor`
  * RETURNS from the handler through the jobs plugin's suspend sentinel, and the
  * workflow comes back as a fresh dispatch.
  *
@@ -175,20 +196,39 @@ export type SuperviseRunsResult =
  *
  * **A retry is a new child.** When `runAttempts > 1`, the next iteration calls
  * `spawn` again and gets a fresh run id, a fresh transcript and a fresh marker —
- * out-of-process work cannot be resumed, only redone. `onEnded` runs before the
- * next claim, deliberately: it is what stamps the previous attempt's row, and
- * the kind's partial unique in-flight index would refuse the next claim while
- * that row is still open.
+ * out-of-process work cannot be resumed, only redone. Between two attempts the
+ * loop sleeps durably ({@link backoffMsAfter}) and then calls `closeRow` on the
+ * previous attempt's run, because the kind's partial unique in-flight index
+ * would refuse the next claim while that row is still open. A retry that loses
+ * its claim anyway throws — it is never a quiet "someone else is running".
  */
 export async function superviseRuns(
   spec: SuperviseRunsSpec,
 ): Promise<SuperviseRunsResult> {
   let last: SuperviseRunsResult = { outcome: "not-claimed" };
+  let previous: { runId: string; terminal: RunTerminal } | null = null;
   for (let attempt = 1; attempt <= spec.runAttempts; attempt++) {
+    if (previous !== null) {
+      // A durable backoff, holding no slot, then make sure the previous
+      // attempt's row cannot win against this attempt's claim.
+      await spec.ctx.sleep(backoffMsAfter(attempt - 1));
+      await spec.closeRow(previous.runId, previous.terminal);
+    }
     const started = await spec.ctx.step(`spawn:${attempt}`, () =>
       spec.spawn(attempt),
     );
-    if (started === null) return { outcome: "not-claimed" };
+    if (started === null) {
+      if (attempt === 1) return { outcome: "not-claimed" };
+      // A retry that loses its claim is not "someone else is running this": the
+      // previous attempt's row was closed just above, so what holds the lock is
+      // a run this workflow did not start, or a close that did not land.
+      // Returning would end the ladder with the failure unrecorded.
+      throw new Error(
+        `[supervised-job] ${spec.kind.id}: attempt ${attempt} lost its claim ` +
+          `after attempt ${attempt - 1} (${previous?.runId ?? "?"}) failed — ` +
+          `the retry never ran.`,
+      );
+    }
 
     // `run-ended:<attempt>` as the prefix, so the durable wait names come out
     // `run-ended:<attempt>:<iteration>` — the spelling every supervised job has
@@ -203,6 +243,7 @@ export async function superviseRuns(
     await spec.onEnded(started, terminal, attempt);
     last = { outcome: "ended", runId: started.runId, attempt, terminal };
     if (terminal.exitCode === 0) break;
+    previous = { runId: started.runId, terminal };
   }
   return last;
 }

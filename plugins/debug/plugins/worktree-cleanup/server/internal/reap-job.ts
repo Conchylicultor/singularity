@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { recordReport } from "@plugins/reports/server";
 import { WorktreeGitTimeoutError } from "@plugins/infra/plugins/worktree/server";
@@ -11,7 +11,13 @@ import {
 } from "./reap-policy";
 import { reapAttempt } from "./reap";
 
-const log = defineLogSink({
+// The reaper's ops log, at `logs/worktree-cleanup.jsonl`. Its only WRITER is the
+// backend that supervises a sweep: it tails the child's transcript into this
+// channel. The child evaluates this same module (exec mode boots the plugin
+// graph), which registers the channel in the child's own in-memory registry —
+// harmless, because the file sink is built lazily on first publish and the
+// child never publishes; it only writes lines through `log`.
+const reapLog = defineLogSink({
   id: "worktree-cleanup",
   description:
     "Worktree-cleanup reaper ops log: stale git worktree + Postgres DB-fork removals.",
@@ -39,44 +45,26 @@ async function pMap<T>(
 // main runtime only (no perWorktree) — DBs are a global cluster resource, so a
 // single sweep covers all worktrees (mirrors database.fork-temp-sweep).
 //
-// Per-target failures are contained (logged, not re-thrown): one corrupt fork
-// must not block the rest, and the sweep is idempotent — the next hourly run
-// retries whatever this run could not reap.
-export const worktreeReapJob = defineJob({
+// The sweep runs in a detached child (`./singularity supervised-exec`), so a
+// deploy or restart of the backend no longer kills it part-way, and no worker
+// slot is held for its length. The built-in ledger's job-wide lock keeps it to
+// one sweep at a time: an hourly tick or the boot enqueue that lands while a
+// sweep is in flight loses its claim and returns.
+//
+// `runAttempts: 1`: the sweep is idempotent and the next hourly tick IS the
+// retry, so a failed sweep dead-letters once (Debug → Queue) instead of
+// re-running straight away.
+//
+// Per-target failures are contained (logged + reported, not re-thrown): one
+// corrupt fork must not block the rest.
+export const worktreeReapJob = defineSupervisedJob({
   name: "worktree-cleanup.reap-stale",
-  // minutes: drives `git worktree remove` subprocesses (3 at a time) under the
-  // host-wide worktree-mutate flock and drops Postgres fork DBs. Orthogonal to
-  // the `serial: true` below — that bounds how many ticks may hold a slot at
-  // once; this declares how long one of them holds it.
-  hold: "minutes",
   input: z.object({}),
-  event: z.never(),
-  dedup: "singleton",
-  // `dedup: "singleton"` is NOT enough to bound this job's slot cost, and the
-  // difference is what makes `serial` load-bearing here rather than tidy.
-  // graphile clears a job_key on a row that is no longer `is_available`
-  // (sql/000018.sql:107-116), and a LOCKED row is not available — so a tick that
-  // fires while the previous run is still going does not collapse onto it, it
-  // inserts a fresh row that gets fetched into a second slot. The git
-  // subprocesses this handler drives are now bounded (see removeWorktreeUnlogged
-  // in infra/worktree), so "still going" can no longer mean forever — but a bound
-  // is minutes, not instant, so a slow sweep still overlaps the next tick and
-  // would still accumulate one slot per hour.
-  //
-  // `serial` bounds it at exactly one slot no matter how many ticks overlap:
-  // graphile refuses to FETCH a job whose queue is busy, so the later ticks wait
-  // in the ready backlog, where waiting costs nothing and is visible to
-  // queue-health.
-  serial: true,
+  channel: reapLog,
   schedule: { cron: "0 * * * *" }, // hourly
-  async run({ ctx: { signal } }) {
-    // `signal` is this dispatch's deadline. Threading it is what makes giving up
-    // on this handler mean anything: `reapAttempt` reaches the host-wide
-    // `worktree-mutate` flock and `collectReapable`'s hygiene fan-out reaches the
-    // heavy-read gate, so an overrunning sweep stops holding host resources every
-    // other backend on the box shares, instead of holding them until this process
-    // restarts (the 2026-08-17 shape, from the inside).
-    const scan = await collectReapable(Date.now(), signal);
+  runAttempts: 1,
+  async run(_input, { log }) {
+    const scan = await collectReapable(Date.now());
     const targets = scan.targets;
     const namespaceTargets = scan.namespaceTargets;
     let reaped = 0;
@@ -87,13 +75,13 @@ export const worktreeReapJob = defineJob({
     // readdir inversion removed), and `hygieneProbes` is K — the residual git
     // fan-out. K is what decides whether a negative hygiene cache is worth any
     // state at all; if it stays single-digit, the answer is no.
-    log.publish(
+    log(
       `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length}`,
     );
 
     // Failures of the REPORTING path, not of a reap. Collected rather than
     // thrown where they happen, and re-thrown once the sweep is over — see the
-    // inner catch and the throw at the end of the handler.
+    // inner catch and the throw at the end of the body.
     const reportFailures: string[] = [];
 
     // One containment, both passes. A failure here is CONTAINED — one corrupt
@@ -105,30 +93,14 @@ export const worktreeReapJob = defineJob({
     // `worktree-mutate` slot, i.e. the 2026-08-17 outage caught in the act. So
     // every contained failure also files a report, which reaches Debug → Reports
     // and the bell.
-    //
-    // It is also where this dispatch's abort is honoured, for the same reason it
-    // is where containment lives: both passes go through it, so neither can be
-    // left behind when one is edited.
     const contain = async (
       targetId: string,
       work: () => Promise<void>,
     ): Promise<void> => {
-      // Once this dispatch has been abandoned, stop taking new targets. Returning
-      // rather than throwing is deliberate, and matches the reasoning in the
-      // report catch below: a throw from inside a pMap worker rejects the shared
-      // Promise.all, and a second failure from another in-flight worker would
-      // then surface as an unhandled rejection instead of a job failure. The
-      // abort is re-raised once, after both passes, where nothing is in flight.
-      if (signal.aborted) return;
       try {
         await work();
       } catch (err) {
-        // Being told to stop is not a reap failure. Without this, the abort would
-        // be filed as a `worktree-reap-failed` report per remaining target —
-        // turning one cancellation into a burst of misattributed alerts about
-        // worktrees that were never actually broken.
-        if (signal.aborted) return;
-        log.publish(`reap ${targetId} failed: ${String(err)}`, "stderr");
+        log(`reap ${targetId} failed: ${String(err)}`, "stderr");
         // `timedOut` is read from the ERROR'S TYPE, never from its message: the
         // throw site knows for certain whether it killed a child, and a report
         // that fingerprints a wedge apart from an ordinary failure must not rest
@@ -152,12 +124,12 @@ export const worktreeReapJob = defineJob({
           // Not swallowed — parked, and re-thrown below once every target has
           // been attempted. recordReport throws on a wiring bug (no registered
           // kind, a payload its schema rejects) and on a DB failure; both must
-          // fail the job loudly, so neither may be dropped here. But throwing
+          // fail the run loudly, so neither may be dropped here. But throwing
           // from inside this worker would abandon the remaining targets — the
           // very containment this catch exists to preserve — and pMap's other
           // in-flight workers are only awaited through the Promise.all that a
           // throw here rejects, so a second failure would surface as an
-          // unhandled rejection instead of a job failure. Parking keeps the
+          // unhandled rejection instead of a run failure. Parking keeps the
           // sweep whole AND the failure loud.
           reportFailures.push(String(reportErr));
         }
@@ -172,7 +144,7 @@ export const worktreeReapJob = defineJob({
     // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
     await pMap(targets, 3, (t: ReapTarget) =>
       contain(t.id, async () => {
-        await reapAttempt(t.id, { worktreePath: t.worktreePath, signal });
+        await reapAttempt(t.id, { worktreePath: t.worktreePath });
         reaped++;
       }),
     );
@@ -190,28 +162,14 @@ export const worktreeReapJob = defineJob({
       }),
     );
 
-    log.publish(
+    log(
       `auto-reap: ${reaped}/${targets.length} reaped, ` +
         `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed`,
     );
 
-    // An abandoned dispatch outranks everything below. The sweep is incomplete by
-    // construction, and the worker needs `signal.reason` ITSELF — wrapping it, or
-    // reporting something else instead, would read as an ordinary job failure
-    // rather than as this run overrunning its budget. Parked reporting failures
-    // are logged here rather than lost, since the throw below will not run.
-    if (signal.aborted && reportFailures.length > 0) {
-      log.publish(
-        `auto-reap: ${reportFailures.length} failure report(s) could not be recorded ` +
-          `before the run was aborted: ${reportFailures.join("; ")}`,
-        "stderr",
-      );
-    }
-    signal.throwIfAborted();
-
-    // The sweep itself is finished; now fail the job so a broken reporting path
-    // is visible in queue-health rather than being the second silent failure in
-    // the same handler. The sweep is idempotent, so the retry costs nothing.
+    // The sweep itself is finished; now fail the run so a broken reporting path
+    // is visible as a dead-lettered job (the built-in ledger records this message)
+    // rather than being the second silent failure in the same body.
     if (reportFailures.length > 0) {
       throw new Error(
         `worktree reap: ${reportFailures.length} failure report(s) could not be ` +

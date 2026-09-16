@@ -153,11 +153,12 @@ export async function createConversation(
       forkConfig(thisAttemptId),
     );
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
-    // Durable fork via a graphile job: the enqueue is a committed row, so an
-    // interrupted fork (e.g. backend restart mid-fork) is re-run when the
-    // worker reboots instead of bricking the worktree. Enqueued after
-    // createAttempt so the attempt row exists before the job can run. Failures
-    // surface via the job's deduped fork-error notification and /api/jobs.
+    // The fork is a detached supervised job: it runs in its own process, so a
+    // backend restart mid-fork does not interrupt it (the workflow re-attaches
+    // to the running child). Enqueued after createAttempt so the attempt row
+    // exists before the job can run. A failed fork retries, then dead-letters
+    // (Debug → Queue) with a deduped fork-error notification; its output is on
+    // the `database-fork` log channel (`logs/database-fork.jsonl`).
     await databaseForkJob.enqueue({
       source: "singularity",
       target: thisAttemptId,

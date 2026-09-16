@@ -41,6 +41,7 @@ import {
   type JobTaskPayload,
 } from "./registry";
 import { armDeadline } from "./deadline";
+import { singletonJobKey, workflowRunIdFor } from "./run-identity";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { LOCK_HELD, withJobLock } from "./job-lock";
 import { markJobPermanentlyFailed } from "./introspection";
@@ -114,8 +115,8 @@ export function installScheduledCronItems(): void {
 // hold-class task at that class's priority — the same derivation every enqueue
 // path uses, so a scheduled job is reachable by exactly the runners its class
 // says it is. The per-tick payload carries the job name and its default input,
-// and graphile injects `_cron`.
-function buildCronItems(): ParsedCronItem[] {
+// and graphile injects `_cron`. Exported for `run-identity.test.ts`.
+export function buildCronItems(): ParsedCronItem[] {
   const items: ParsedCronItem[] = [];
   const main = isMain();
   for (const job of getScheduledJobs()) {
@@ -156,12 +157,10 @@ function buildCronItems(): ParsedCronItem[] {
           // per-minute monitors, including the queue-health monitor whose whole
           // purpose is to report that condition.
           //
-          // `${job.name}:_` is deliberately byte-identical to the key
-          // `enqueue()` derives for a `dedup: "singleton"` job (registry.ts:
-          // `effectiveJobKey = "_"`, then `workflowRunId = ${spec.name}:${effectiveJobKey}`,
-          // which becomes the graphile job_key). Sharing it is the point: a
-          // manual `enqueue()` and a cron tick then collapse onto the SAME
-          // pending row instead of racing as two. That key is only TOTAL
+          // `singletonJobKey` is the same derivation `enqueue()` uses for a
+          // `dedup: "singleton"` job (`run-identity.ts`). Sharing it is the
+          // point: a manual `enqueue()` and a cron tick then collapse onto the
+          // SAME pending row instead of racing as two. That key is only TOTAL
           // because `DefineJobSpec` types a scheduled job as `dedup: "singleton"` —
           // if a schedule could be keyed, this line would be a lie for it.
           //
@@ -197,7 +196,7 @@ function buildCronItems(): ParsedCronItem[] {
           // stuck-lock sweeper instead of dead-lettering — the fresh tick row
           // is its retry, so it never reaches `queue-dead-job` or the dead
           // archive.
-          jobKey: `${job.name}:_`,
+          jobKey: singletonJobKey(job.name),
           jobKeyMode: "preserve_run_at",
           // A scheduled job that declared `serial` must tick INTO its own queue,
           // or every cron tick would be the one insertion that escapes the
@@ -210,12 +209,13 @@ function buildCronItems(): ParsedCronItem[] {
           queueName: queueNameFor(job),
         },
         // NOTE the payload deliberately carries NO `workflowRunId`. `jobKey` is
-        // QUEUE-ROW identity (at most one pending row per job); `workflowRunId`
-        // is RUN identity (per tick), and it is the memoization key for
-        // `_jobSteps` / `_jobWaits`. `dispatch()` below derives it per tick from
-        // the `_cron.ts` graphile injects. Collapsing the two would make every
-        // tick of a scheduled workflow replay the FIRST tick's cached steps
-        // forever.
+        // QUEUE-ROW dedup (at most one pending row per job); `workflowRunId` is
+        // RUN identity, the memoization key for `_jobSteps` / `_jobWaits`.
+        // `dispatch()` derives it from the row id (`workflowRunIdFor`), so each
+        // row a tick inserts is its own run, and a tick collapsing onto a
+        // pending row joins that row's run. Collapsing run and key would make
+        // every tick of a scheduled workflow replay the FIRST tick's cached
+        // steps forever.
       }),
     );
   }
@@ -516,15 +516,11 @@ async function dispatch(
     throw err;
   }
 
-  // Direct enqueues bake in `workflowRunId`. Cron ticks don't — graphile
-  // injects `_cron.ts` (the per-minute UTC tick), so derive a stable per-tick
-  // id from it. The `legacy:` fallback covers any pre-workflowRunId rows still
-  // queued during a rolling upgrade.
-  const workflowRunId =
-    payload.workflowRunId ??
-    (payload._cron
-      ? `${payload.jobName}:${payload._cron.ts}`
-      : `legacy:${meta.jobId}`);
+  // One derivation for every row: a keyed dedup or resume row carries its run
+  // id, everything else (singleton, none, cron tick) is its own row's run. See
+  // `run-identity.ts`. The row id survives retries and sweeper reclaims, so a
+  // retry still replays its own cached steps.
+  const workflowRunId = workflowRunIdFor(payload, meta.jobId);
 
   // One controller per dispatch, not per job name and not per workflow: the unit
   // being bounded is a single run holding a single worker slot. A suspended
@@ -685,15 +681,14 @@ async function dispatch(
           await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
         }
         // The workflow is over — no attempt of it will ever run again — so its
-        // step and wait logs go with it. Leaking them is a CORRECTNESS bug, not
-        // untidiness: `workflowRunId` is not unique per run. For `dedup:
-        // "singleton"` it is the constant `${jobName}:_` (registry.ts), so the
-        // NEXT enqueue of that job is the SAME workflow id. Left behind, a
-        // cached `_jobSteps` row makes `ctx.step` return a result for work the
-        // new run never did, and a `resolved` `_jobWaits` row makes
-        // `ctx.waitFor` return a stale payload instantly instead of suspending
-        // — so a singleton workflow that fails once would silently skip its own
-        // side effects forever after.
+        // step and wait logs go with it. For a keyed dedup that is a
+        // CORRECTNESS matter, not tidiness: its run id is `${jobName}:${key}`,
+        // so the NEXT enqueue with that key is the SAME workflow id. Left
+        // behind, a cached `_jobSteps` row makes `ctx.step` return a result for
+        // work the new run never did, and a `resolved` `_jobWaits` row makes
+        // `ctx.waitFor` return a stale payload instantly instead of suspending.
+        // A row-derived run id (`${jobName}:job:${jobId}`) is never reused, so
+        // there it only stops the log leaking.
         //
         // Ordered AFTER the budget collapse and gated on `workflowDead`, which
         // is the whole safety argument: replay of cached steps on a RETRY is a

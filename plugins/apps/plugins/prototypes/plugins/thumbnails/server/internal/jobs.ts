@@ -49,6 +49,10 @@ export const renderThumbnailJob = defineJob({
   // than the work. Orthogonal to `serial` below — that bounds how many run at
   // once, this bounds how long one may hold a slot.
   hold: "minutes",
+  inProcess:
+    "A render lost to a restart only leaves a card without its picture until " +
+    "the next enqueue re-renders it (the cache is content-addressed), and renders " +
+    "are too frequent and short to pay a detached child's boot for each one.",
   input: z.object({ name: z.string(), key: z.string() }),
   event: z.never(),
   dedup: { key: (input) => input.name },

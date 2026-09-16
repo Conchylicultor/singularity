@@ -1,7 +1,7 @@
 /**
  * The close rule, against real marker files and real processes.
  *
- * Same method as `supervised-run/server/internal/supervisor.test.ts`: the
+ * Same method as `run/supervisor.test.ts`: the
  * decision is what has to be right, and it is decidable without a database, so
  * it is tested directly rather than through a job dispatch. A live child is a
  * real `sleep`, a dead one is a real reaped process — `isPidAlive` is not
@@ -11,7 +11,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-run/core";
+import { HARD_KILL_EXIT_CODE } from "../../core";
 import { observeRun } from "./observe";
 
 const worktree = runtimeNamespace();
