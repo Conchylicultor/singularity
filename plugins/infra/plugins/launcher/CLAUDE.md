@@ -113,15 +113,20 @@ Two boundaries, one declaration:
 
 `PATH` is the one forwarded name not passed through verbatim.
 `normalizeRuntimePath` strips mise's **resolved per-version** tool directories
-(`…/mise/installs/<tool>/<version>/bin`) out of it and keeps the shims, so the
-runtime tree re-resolves its tools per invocation from the committed
-`mise.toml`. A shell with mise activated puts those resolved directories ahead
+(`…/mise/installs/<tool>/<version>/bin`) out of it and puts the shims **first**,
+so the runtime tree re-resolves its tools per invocation from the committed
+`mise.toml` + `mise.lock`. First, because a PATH that lists `/opt/homebrew/bin` or
+`~/.cargo/bin` ahead of the shims runs Homebrew's tmux and rustup's default rust
+whatever the lock says; a shim with no version configured for its directory falls
+through to the next entry, so nothing outside the repo loses its system copy.
+A shell with mise activated puts those resolved directories ahead
 of the shims — right for a shell, re-activated per directory; wrong for a daemon
 that snapshots PATH once and spawns backends against it for weeks. That is how
 every backend on this host ran Bun 1.3.13 (a symlink resolved in May 2026) long
 after `mise.toml` could have said otherwise, and Bun 1.3.13 closes pooled
-Postgres sockets out from under live queries. A pin change therefore needs
-`./singularity start` to reach the already-running gateway.
+Postgres sockets out from under live queries. Backends pick up a `mise.lock` change on
+their next restart; a change to this PATH rule itself needs `./singularity start`
+to reach the already-running gateway.
 
 **Adding a variable:** write the reader, then run `./singularity check`.
 `launcher:runtime-env-declared` fails on any `SINGULARITY_*` name that code

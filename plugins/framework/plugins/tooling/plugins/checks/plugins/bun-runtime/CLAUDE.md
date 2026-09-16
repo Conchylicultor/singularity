@@ -1,18 +1,18 @@
 # bun-runtime
 
-Fails if the running Bun is not the exact version `mise.toml` pins, or if that
-Bun closes a finished child's extra stdio fds a second time.
+Fails if the running Bun is not the exact release `mise.lock` records, or if
+that Bun closes a finished child's extra stdio fds a second time.
 
 Three arms, narrowest first:
 
-1. `mise.toml`'s `[tools] bun` is an exact `x.y.z`.
-2. `Bun.version` equals that pin.
+1. `mise.lock` records one exact release for bun.
+2. `Bun.version` equals it.
 3. A probe, run as its own process, tries to reproduce the defect — child with
    an extra stdio pipe, close the fd we were handed, put a live unix socket on
    the freed number, drop the child and force GC, then check the socket
    survived. 12 rounds, ~0.4 s; a bad Bun is caught in round 2, every time.
 
-Arms 1–2 are bookkeeping: they stop the committed pin and the running process
+Arms 1–2 are bookkeeping: they stop the committed lock and the running process
 drifting apart, and give a failure a name. Arm 3 is the guard, and it
 reproduces the defect rather than comparing version numbers **on purpose** — a
 known-good-version allowlist goes stale the moment upstream regresses.
@@ -22,19 +22,19 @@ Tree-scoped with `cacheSignature: () => null`, like `no-gitlinks`: `build` and
 and the verdict reads state no tree hash covers, so nothing is cached and no
 PASS can transfer to a process running a different Bun.
 
-## Why the pin must be exact
+## Why an exact committed release
 
-`mise.toml` said `bun = "latest"` from the day it was written. mise resolves
-that once, at install time; nothing afterwards records which build it landed on.
-This machine resolved it in May 2026 and ran 1.3.13 for four months with no file
-in the repo saying so — while that Bun (fixed upstream in oven-sh/bun#33828,
-first shipped in **1.4.0**; 1.3.14 still has it) closed pooled Postgres sockets
-mid-query, because Playwright hands Chromium two extra pipe fds on every launch.
+`mise.toml` said `bun = "latest"` with no lock from the day it was written. mise
+resolves that once, at install time; nothing afterwards recorded which build it
+landed on. This machine resolved it in May 2026 and ran 1.3.13 for four months
+while that Bun (fixed upstream in oven-sh/bun#33828, first shipped in **1.4.0**;
+1.3.14 still has it) closed pooled Postgres sockets mid-query, because Playwright
+hands Chromium two extra pipe fds on every launch.
 
-The pin governs the whole runtime tree only because `launcher/core`'s
-`normalizeRuntimePath` strips mise's resolved per-version tool directories out
-of the PATH the gateway starts with. Without it, backends resolve `bun` against
-a directory frozen into the starter's shell and never read `mise.toml` at all.
+`mise.toml` still asks for `latest`; `mise.lock` is the committed answer, moved
+only by `./singularity toolchain upgrade` (see `plugins/toolchain`), which runs
+this check on the candidate release before it can land. The floor (≥ 1.4.0)
+lives in `plugins/toolchain/core`, enforced by `toolchain:resolved`.
 
 ## Limits
 

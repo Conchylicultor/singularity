@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "fs";
+import { existsSync, readFileSync, rmSync, statSync } from "fs";
 import { join, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
@@ -7,6 +7,14 @@ import {
   getWorktreeRoot,
   spawnPassthrough,
 } from "@plugins/infra/plugins/spawn/core";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
+import {
+  parseJunit,
+  writeTestStatus,
+  type TestRunnerName,
+  type TestRunnerOutcome,
+  type TestStatus,
+} from "@plugins/framework/plugins/cli/plugins/test/core";
 import {
   TEST_FILE_GLOB,
   isTestFilePath,
@@ -75,6 +83,33 @@ async function runRunner(
   return exitCode;
 }
 
+/**
+ * What one runner's exit and JUnit report say failed, as stable identities (see
+ * `TestRunnerOutcome.failures`). The report is read and then deleted: the
+ * outcome in `test-status.json` is the durable record, the XML only its source.
+ */
+function runnerOutcome(
+  runner: TestRunnerName,
+  exitCode: number,
+  files: readonly string[],
+  reportPath: string,
+): TestRunnerOutcome {
+  const failures: string[] = [];
+  const unreported: string[] = [];
+  if (existsSync(reportPath)) {
+    const report = parseJunit(readFileSync(reportPath, "utf8"));
+    rmSync(reportPath);
+    failures.push(...report.failures);
+    // A file that threw while loading never reaches the report — nor does one
+    // that registered no cases — so all that can be said is that it is missing.
+    const reported = new Set(report.files);
+    unreported.push(...files.filter((file) => !reported.has(file)));
+  }
+  if (exitCode !== 0 && failures.length === 0)
+    failures.push(`(${runner} exited ${exitCode})`);
+  return { runner, exitCode, files: files.length, failures, unreported };
+}
+
 const run: CliAction<[string[]], object> = async (paths) => {
   const root = await getWorktreeRoot();
   const targets = paths.length > 0 ? paths : [DEFAULT_TARGET];
@@ -137,13 +172,36 @@ const run: CliAction<[string[]], object> = async (paths) => {
   const outcome = await withDirectOp(
     "test",
     { max: cpuBudget().B },
-    async (grant) => {
+    async (grant, ctx) => {
       const env = { ...process.env, ...grant.env() };
+      // The run's machine-readable record, written before either runner starts
+      // so a killed run reads `running` rather than a previous run's verdict.
+      // `toolchain upgrade` compares two of these, before and after.
+      const { slug } = ctx;
+      const status: TestStatus = {
+        opId: ctx.opId,
+        pid: process.pid,
+        startedAt: new Date().toISOString(),
+        targets: runnerArgs,
+        status: "running",
+        finishedAt: null,
+        runners: [],
+      };
+      writeTestStatus(slug, status);
+      const bunReport = worktreeArtifacts.testReport(slug, ctx.opId, "bun");
+      const domReport = worktreeArtifacts.testReport(slug, ctx.opId, "vitest");
+
       const bunExit =
         bun.length > 0
           ? await runRunner(
               "bun:test",
-              [process.execPath, "test", ...runnerArgs],
+              [
+                process.execPath,
+                "test",
+                "--reporter=junit",
+                `--reporter-outfile=${bunReport}`,
+                ...runnerArgs,
+              ],
               root,
               env,
             )
@@ -161,6 +219,11 @@ const run: CliAction<[string[]], object> = async (paths) => {
                 "vitest",
                 "run",
                 `--maxWorkers=${grant.units}`,
+                // `default` first: naming any reporter replaces vitest's
+                // console output unless it is named too.
+                "--reporter=default",
+                "--reporter=junit",
+                `--outputFile.junit=${domReport}`,
                 ...runnerArgs,
               ],
               root,
@@ -192,6 +255,13 @@ const run: CliAction<[string[]], object> = async (paths) => {
         bunExit !== null && bunExit !== 0 ? "bun:test" : null,
         domExit !== null && domExit !== 0 ? "vitest" : null,
       ].filter((name): name is string => name !== null);
+      if (bunExit !== null)
+        status.runners.push(runnerOutcome("bun:test", bunExit, bun, bunReport));
+      if (domExit !== null)
+        status.runners.push(runnerOutcome("vitest", domExit, dom, domReport));
+      status.status = failed.length === 0 ? "passed" : "failed";
+      status.finishedAt = new Date().toISOString();
+      writeTestStatus(slug, status);
       if (failed.length === 0) return "success";
       console.error(`\nFAILED: ${failed.join(", ")}`);
       return "failed";

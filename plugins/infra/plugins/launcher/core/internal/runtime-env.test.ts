@@ -143,12 +143,22 @@ describe("normalizeRuntimePath", () => {
   // both bake a developer's layout into source and read as a claim about it.
   const MISE = "/fixture/home/.local/share/mise";
 
-  test("drops mise's resolved tool directories and keeps its shims", () => {
+  test("drops mise's resolved tool directories and puts its shims first", () => {
     expect(
       normalizeRuntimePath(
         `/fixture/pkg/bin:${MISE}/installs/bun/latest/bin:${MISE}/installs/go/1.24.13/bin:${MISE}/installs/tmux/3.6a:${MISE}/shims:/fixture/bin`,
       ),
-    ).toBe(`/fixture/pkg/bin:${MISE}/shims:/fixture/bin`);
+    ).toBe(`${MISE}/shims:/fixture/pkg/bin:/fixture/bin`);
+  });
+
+  test("a system copy of a tool can never shadow the one mise declares", () => {
+    // The 2026-09-16 shape: Homebrew and rustup ahead of the shims, so the
+    // runtime ran their tmux and rust instead of mise's.
+    expect(
+      normalizeRuntimePath(
+        `/fixture/homebrew/bin:/fixture/home/.cargo/bin:${MISE}/shims`,
+      ),
+    ).toBe(`${MISE}/shims:/fixture/homebrew/bin:/fixture/home/.cargo/bin`);
   });
 
   test("the version frozen into PATH is exactly what must not survive", () => {
@@ -165,12 +175,11 @@ describe("normalizeRuntimePath", () => {
     ).toBe(`${MISE}/shims:/fixture/bin`);
   });
 
-  test("leaves a PATH with no mise install dir untouched", () => {
+  test("leaves a PATH with no mise entry untouched, and is idempotent", () => {
     const plain = "/fixture/pkg/bin:/fixture/bin";
     expect(normalizeRuntimePath(plain)).toBe(plain);
-    expect(normalizeRuntimePath(`${MISE}/shims:/fixture/bin`)).toBe(
-      `${MISE}/shims:/fixture/bin`,
-    );
+    const normalized = `${MISE}/shims:/fixture/bin`;
+    expect(normalizeRuntimePath(normalized)).toBe(normalized);
   });
 
   test("a path that merely mentions mise elsewhere is not a tool directory", () => {

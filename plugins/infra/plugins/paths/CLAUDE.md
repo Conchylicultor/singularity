@@ -343,6 +343,7 @@ run everywhere.
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `framework/cli/op-runtime`
+    - `framework/cli/test`
     - `framework/tooling/checks`
     - `framework/tooling/guards`
     - `infra/claude-cli`

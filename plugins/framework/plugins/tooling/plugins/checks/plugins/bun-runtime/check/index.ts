@@ -8,6 +8,7 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
+import { isExactRelease, parseMiseLock } from "@plugins/toolchain/core";
 
 /** The probe's own exit protocol — see the file it names. */
 const PROBE = "internal/fd-double-close-probe.ts";
@@ -20,22 +21,25 @@ const PROBE_DEFECT_EXIT = 3;
  */
 const PROBE_TIMEOUT_MS = 60_000;
 
-/** An exact release, the only thing this check accepts as a pin. */
-const EXACT_VERSION = /^\d+\.\d+\.\d+$/;
-
 /**
- * `bun = "…"` inside mise.toml's `[tools]` table. Anchored to the table so a
- * `bun` key under some other section can never be read as the toolchain pin.
+ * Bun's exact release as `mise.lock` records it. `mise.toml` asks for `latest`;
+ * the lock is the committed answer, and the only thing this check accepts as
+ * "the Bun this repo runs". `toolchain:resolved` owns the lock's shape (one
+ * exact release per tool, within its floor); this only needs Bun's entry.
  */
-function readPinnedBun(root: string): string | null {
-  const text = readFileSync(join(root, "mise.toml"), "utf8");
-  const opensTools = /^\[tools\]$/m.exec(text);
-  if (opensTools === null) return null;
-  const afterHeader = text.slice(opensTools.index + opensTools[0].length);
-  const nextTable = /^\[/m.exec(afterHeader);
-  const table =
-    nextTable === null ? afterHeader : afterHeader.slice(0, nextTable.index);
-  return /^\s*bun\s*=\s*"([^"]*)"/m.exec(table)?.[1] ?? null;
+function readLockedBun(root: string): string | null {
+  let text: string;
+  try {
+    text = readFileSync(join(root, "mise.lock"), "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const versions = parseMiseLock(text).get("bun") ?? [];
+  const [only] = versions;
+  return versions.length === 1 && only !== undefined && isExactRelease(only)
+    ? only
+    : null;
 }
 
 const BACKGROUND =
@@ -51,7 +55,7 @@ const BACKGROUND =
  * double-close a child's extra stdio fds.
  *
  * Three arms, narrowest first. The first two are bookkeeping — they keep the
- * committed pin and the running process from drifting apart, and give a failure
+ * committed lock and the running process from drifting apart, and give a failure
  * a name. The third is the actual guard: it reproduces the defect rather than
  * checking a version number, so it also catches a future Bun that regresses,
  * which no allowlist of known-good versions could.
@@ -72,37 +76,29 @@ const check: Check = {
   // It costs ~0.4 s, which is what makes that affordable.
   cacheSignature: () => null,
   description:
-    "the running Bun is the exact version mise.toml pins, and it does not double-close a child's extra stdio fds",
+    "the running Bun is the exact release mise.lock records, and it does not double-close a child's extra stdio fds",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
 
-    const pinned = readPinnedBun(root);
-    if (pinned === null) {
-      return {
-        ok: false,
-        message: "mise.toml declares no `bun` under [tools].",
-        hint: 'Add `bun = "<exact version>"` to the [tools] table.',
-      };
-    }
-    if (!EXACT_VERSION.test(pinned)) {
+    const locked = readLockedBun(root);
+    if (locked === null) {
       return {
         ok: false,
         message:
-          `mise.toml pins bun as "${pinned}", which is not an exact version. ` +
-          "A floating pin makes the Bun that actually runs an invisible machine fact: mise resolves it " +
-          "once, at install time, and nothing afterwards records or rechecks which build that was. " +
-          "That is how this repo came to sit on 1.3.13 for four months. " +
+          "mise.lock records no single exact release for bun. Without it the Bun that actually runs is an " +
+          "invisible machine fact: mise resolves `latest` once, at install time, and nothing afterwards records " +
+          "or rechecks which build that was. That is how this repo came to sit on 1.3.13 for four months. " +
           BACKGROUND,
-        hint: 'Pin one release, e.g. `bun = "1.4.2"`, and run `mise install`.',
+        hint: "Restore the committed mise.lock; move Bun only with `./singularity toolchain upgrade`.",
       };
     }
-    if (Bun.version !== pinned) {
+    if (Bun.version !== locked) {
       return {
         ok: false,
-        message: `mise.toml pins bun ${pinned}, but this process is running ${Bun.version}.`,
+        message: `mise.lock records bun ${locked}, but this process is running ${Bun.version}.`,
         hint:
-          `Run \`mise install\` to get ${pinned}. If ${Bun.version} is the version you meant, ` +
-          "change the pin in mise.toml instead, so the committed file keeps naming what runs.",
+          `Run \`mise install\` to get ${locked}. To move to another release, run ` +
+          "`./singularity toolchain upgrade`, so the committed lock keeps naming what runs.",
       };
     }
 
@@ -121,8 +117,8 @@ const check: Check = {
         ok: false,
         message: `${said}\n${BACKGROUND}`,
         hint:
-          "Pin a Bun that does not have it — 1.4.0 and later are clean — in mise.toml, then `mise install`. " +
-          "If the pinned version is already 1.4.0 or later, this is a NEW regression upstream: stop, and report it.",
+          "Move to a Bun that does not have it — 1.4.0 and later are clean — with `./singularity toolchain upgrade`. " +
+          "If the locked version is already 1.4.0 or later, this is a NEW regression upstream: stop, and report it.",
       };
     }
     if (probe.exitCode !== 0) {

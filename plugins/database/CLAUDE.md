@@ -340,6 +340,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `tasks/task-effort`
     - `tasks/task-preprompt`
     - `tasks/tasks-core`
+    - `toolchain`
     - `ui/theme-engine/saved-themes`
 - Core:
   - Exports (types):

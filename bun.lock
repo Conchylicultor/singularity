@@ -4961,6 +4961,10 @@
       "name": "@singularity/plugin-tasks-worktree-identity",
       "version": "0.0.1",
     },
+    "plugins/toolchain": {
+      "name": "@singularity/plugin-toolchain",
+      "version": "0.0.1",
+    },
     "plugins/ui": {
       "name": "@singularity/plugin-ui",
       "version": "0.0.1",
@@ -8283,6 +8287,8 @@
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
 
     "@singularity/plugin-tasks-worktree-identity": ["@singularity/plugin-tasks-worktree-identity@workspace:plugins/tasks/plugins/worktree-identity"],
+
+    "@singularity/plugin-toolchain": ["@singularity/plugin-toolchain@workspace:plugins/toolchain"],
 
     "@singularity/plugin-ui": ["@singularity/plugin-ui@workspace:plugins/ui"],
 

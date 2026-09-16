@@ -208,7 +208,7 @@ const MISE_INSTALL_DIR = /(^|\/)mise\/installs\//;
 const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
 
 /**
- * PATH, with mise's resolved tool directories removed and its shims kept.
+ * PATH, with mise's resolved tool directories removed and its shims FIRST.
  *
  * A shell with mise activated does not put mise's shims on PATH and leave it
  * there — it puts the RESOLVED directory of each tool version in front of them.
@@ -216,7 +216,7 @@ const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
  * the runtime tree, which is one long-lived daemon: `./singularity start`
  * snapshots the starter's PATH into the gateway, and every backend it ever
  * spawns resolves `bun` against that snapshot. So the version baked into the
- * snapshot outlives any later change to `mise.toml`.
+ * snapshot outlives any later change to `mise.lock`.
  *
  * That is not hypothetical. On 2026-09-16 the gateway was still handing every
  * backend `…/mise/installs/bun/latest/bin`, a symlink resolved once in May, so
@@ -225,19 +225,28 @@ const MISE_SHIMS_DIR = /(^|\/)mise\/shims\/?$/;
  * — and reading `mise.toml` told you nothing about it.
  *
  * Dropping those entries leaves the shims, which re-resolve per invocation from
- * the `mise.toml` of the directory the process runs in. The committed pin then
- * governs the whole runtime tree, and asking for a version that is not
- * installed fails loudly at the shim instead of quietly running another one.
+ * the `mise.toml` + `mise.lock` of the directory the process runs in.
+ *
+ * The shims then go to the FRONT. The same day showed the other half of the
+ * hole: the gateway's PATH listed `/opt/homebrew/bin` and `~/.cargo/bin` ahead
+ * of the shims, so the runtime ran Homebrew's tmux and rustup's default rust
+ * while `mise.toml` declared versions nothing used. First is safe: a shim with
+ * no version configured for the directory it runs in falls through to the next
+ * PATH entry, so a process outside the repo still finds the system copy.
  *
  * If the stripped entries were the only way mise's tools were reachable, the
- * shims directory is derived from one of them and prepended, so this can never
- * hand the runtime a PATH with no toolchain on it.
+ * shims directory is derived from one of them, so this can never hand the
+ * runtime a PATH with no toolchain on it.
  */
 export function normalizeRuntimePath(value: string): string {
   const entries = value.split(":");
   const kept: string[] = [];
   const shimsDirs: string[] = [];
   for (const entry of entries) {
+    if (MISE_SHIMS_DIR.test(entry)) {
+      shimsDirs.push(entry);
+      continue;
+    }
     const at = entry.search(MISE_INSTALL_DIR);
     if (at < 0) {
       kept.push(entry);
@@ -247,8 +256,11 @@ export function normalizeRuntimePath(value: string): string {
     shimsDirs.push(`${root}${root.endsWith("/") ? "" : "/"}mise/shims`);
   }
   if (shimsDirs.length === 0) return value;
-  if (kept.some((entry) => MISE_SHIMS_DIR.test(entry))) return kept.join(":");
-  return [shimsDirs[0], ...kept].join(":");
+  // An explicit shims entry wins over one derived from an install dir, since
+  // it is the directory the starter's own mise actually uses.
+  const shims =
+    entries.find((entry) => MISE_SHIMS_DIR.test(entry)) ?? shimsDirs[0];
+  return [shims, ...kept].join(":");
 }
 
 /**

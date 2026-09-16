@@ -380,6 +380,24 @@ export const worktreeArtifacts = {
   buildStatus: (name: Namespace): string =>
     join(worktreeDataDir(name), "build-status.json"),
   /**
+   * This checkout's LAST `./singularity test` run: which runners ran and which
+   * test cases failed. A fixed path for the same reason as `buildStatus` — it is
+   * written when the run STARTS (`status: "running"`), so a killed run can never
+   * leave a previous run's verdict in its place.
+   */
+  testStatus: (name: Namespace): string =>
+    join(worktreeDataDir(name), "test-status.json"),
+  /** One runner's JUnit report for one test run. `test-<opId>-<runner>.xml`. */
+  testReport: (name: Namespace, opId: string, runner: string): string =>
+    join(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
+  /**
+   * This checkout's LAST `./singularity toolchain upgrade`: the versions it
+   * moved, the failures before and after, and the verdict. Fixed path, written
+   * at start, like `buildStatus`.
+   */
+  toolchainUpgrade: (name: Namespace): string =>
+    join(worktreeDataDir(name), "toolchain-upgrade.json"),
+  /**
    * One check run's full, untruncated transcript. ALWAYS id-keyed (like
    * `runTranscript`, unlike `buildStatus` directly above), and for a reason that
    * is the mirror image of the receipt's.

@@ -468,6 +468,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
     - `tasks/task-events`
     - `tasks/task-preprompt`
     - `tasks/task-title`
+    - `toolchain`
   - Extended by:
     - `conversations/conversation-view/notes` (table `conversations_ext_notes`)
     - `conversations/conversation-preprompt` (table `conversations_ext_preprompt`)
