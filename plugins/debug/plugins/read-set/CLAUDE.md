@@ -50,11 +50,10 @@ that have run since boot appear.
   - Slots: `readSetPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-read-set"
-    - `DebugApp.Sidebar` "Read-set" → `component`
+    - `DebugApp.Sidebar` "Read-set"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`

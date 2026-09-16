@@ -1197,13 +1197,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `eventListPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "event-list"
-              - `Events.Sidebar` "Events" → `component`
+              - `Events.Sidebar` "Events"
             - Uses:
               - `apps/events/events-core.useEventsRevision`
               - `apps/events/events-core.useSourceOriginUrl`
               - `apps/events/shell.Events`
               - `infra/endpoints.fetchEndpoint`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
@@ -1515,7 +1514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes:
               - `Pane.Register` "event-sources"
               - `Pane.Register` "event-source-detail"
-              - `Events.Sidebar` "Sources" → `component`
+              - `Events.Sidebar` "Sources"
               - `EventSourceActions` "open" → `SourceOpenAction`
               - `EventSourceActions` "enabled" → `SourceToggleAction`
               - `EventSourceActions` "delete" → `SourceDeleteAction`
@@ -1529,7 +1528,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/shell.Events`
               - `config_v2/fields.FieldRenderer`
               - `infra/endpoints.getEndpointErrorMessage`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/control-panel.ControlPanelPane`
               - `primitives/css/fill.Fill`
@@ -2173,7 +2171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `mail-search.actions` ← `primitives.pane`
               - `mail-message.actions` ← `primitives.pane`
             - Contributes:
-              - `Mail.Sidebar` "Search" → `MailSearchSidebar`
+              - `Mail.Sidebar` "Search"
               - `Pane.Register` "mail-search"
               - `Pane.Register` "mail-message"
             - Uses:
@@ -2181,7 +2179,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.fetchEndpoint`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/app-shell.SidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/fill.Fill`
@@ -2198,6 +2195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination.useInfiniteScroll`
               - `primitives/loading.Loading`
               - `primitives/pane.defineRoute`
+              - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
               - `primitives/pane.type`
@@ -2548,6 +2546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/page-reference.PageNavigation`
               - `page/page-reference.PageNavigationProvider`
               - `page/page-reference.usePageReferenceTint`
+              - `primitives/app-shell.SidebarItem`
               - `primitives/breadcrumb.Breadcrumb`
               - `primitives/breadcrumb.BreadcrumbSegment`
               - `primitives/css/center.Center`
@@ -3088,19 +3087,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes:
               - `Pane.Register` "accounts"
-              - `Settings.Sidebar` "Account" → `component`
+              - `Settings.Sidebar` "Account"
             - Uses:
               - `apps/settings/shell.Settings`
               - `auth.accountsPane`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/pane.openPane`
               - `primitives/pane.Pane`
         - **`appearance`** — Appearance settings surface: opens the theme customizer (presets, variants, tokens) as a Settings sidebar entry. The same customizer is also reachable from the floating action bar.
           - Web:
-            - Contributes: `Settings.Sidebar` "Appearance" → `component`
+            - Contributes: `Settings.Sidebar` "Appearance"
             - Uses:
               - `apps/settings/shell.Settings`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/pane.openPane`
               - `ui/theme-engine/theme-customizer.themeCustomizerPane`
         - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
@@ -3108,14 +3105,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `settings-config-index.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "settings-config-index"
-              - `Settings.Sidebar` "Config" → `ConfigSidebarButton`
+              - `Settings.Sidebar` "Config"
               - `Settings.RailBadge` → `ConfigConflictDot`
             - Uses:
               - `apps/settings/shell.Settings`
               - `config_v2/settings.ConfigNav`
-              - `config_v2/settings.ConfigSidebarButton`
+              - `config_v2/settings.configNavPane`
               - `primitives/live-state.useResource`
               - `primitives/pane.defineRoute`
+              - `primitives/pane.openPane`
               - `primitives/pane.Pane`
               - `primitives/pane.PaneChrome`
         - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
@@ -4683,7 +4681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "composition-detail"
               - `Pane.Register` "composition-compare"
               - `item-actions` "delete" → `DeleteAction`
-              - `Studio.Sidebar` "Compositions" → `component`
+              - `Studio.Sidebar` "Compositions"
             - Uses:
               - `apps/studio/explorer/membership.DIFF_LEGEND`
               - `apps/studio/shell.Studio`
@@ -4697,7 +4695,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/composition.useDiffMap`
               - `plugin-meta/composition.useManifestActions`
               - `plugin-meta/composition.useManifestItems`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/link-chip.LinkChip`
@@ -4912,14 +4909,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `contributions.actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "contributions"
-              - `Studio.Sidebar` "Contributions" → `component`
+              - `Studio.Sidebar` "Contributions"
             - Uses:
               - `apps/studio/shell.Studio`
               - `infra/endpoints.useEndpoint`
               - `plugin-meta/contributions-table.Contributions`
               - `plugin-meta/contributions-table.ContributionsRowClick`
               - `plugin-meta/contributions-table.FacetTableEntry`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -5063,12 +5059,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `explorerPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "explorer"
-              - `Studio.Sidebar` "Plugin" → `component`
+              - `Studio.Sidebar` "Plugin"
             - Uses:
               - `apps/studio/shell.Studio`
               - `infra/endpoints.useEndpoint`
               - `plugin-meta/plugin-view.pluginViewPane`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
               - `primitives/css/spacing.Stack`
@@ -5148,7 +5143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `graphCanvasPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "graph"
-              - `Studio.Sidebar` "Plugin Graph" → `component`
+              - `Studio.Sidebar` "Plugin Graph"
             - Uses:
               - `apps/studio/membership-tint.STATE_LEGEND`
               - `apps/studio/membership-tint.STATE_TINT`
@@ -5157,7 +5152,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/composition.useActiveMembership`
               - `plugin-meta/composition.useCompositionData`
               - `plugin-meta/composition.useGraph`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/clip.Clip`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
@@ -6370,13 +6364,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ConfigV2.WebRegister` "config"
       - `Pane.Register` "backup"
       - `Pane.Register` "backup-run"
-      - `DebugApp.Sidebar` "Backup" → `component`
+      - `DebugApp.Sidebar` "Backup"
     - Uses:
       - `apps/debug/shell.DebugApp`
       - `config_v2.ConfigV2`
       - `config_v2/config-link.ConfigGearButton`
       - `infra/endpoints.useEndpointMutation`
-      - `primitives/app-shell.sidebarNavItem`
       - `primitives/css/rail.useRailGuard`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/spacing.selfClass`
@@ -6652,7 +6645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `ActionBar.Item` → `BuildButton`
       - `Pane.Register` "build"
       - `Pane.Register` "build-detail"
-      - `DebugApp.Sidebar` "Builds" → `component`
+      - `DebugApp.Sidebar` "Builds"
       - `ConfigV2.WebRegister` "config"
     - Uses:
       - `apps-core/tabs.navigate`
@@ -6661,7 +6654,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `config_v2.ConfigV2`
       - `infra/endpoints.EndpointError`
       - `infra/endpoints.fetchEndpoint`
-      - `primitives/app-shell.sidebarNavItem`
       - `primitives/css/pin.Pin`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/scroll.Scroll`
@@ -7130,7 +7122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes:
       - `Pane.Register` "global-file-tree"
       - `Pane.Register` "conv-file-tree"
-      - `Shell.Sidebar` "Explorer" → `component`
+      - `Shell.Sidebar` "Explorer"
       - `Conversation.ActionBar` → `ConvTreeButton`
     - Uses:
       - `conversations.useConversationById`
@@ -7138,7 +7130,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `conversations/conversation-view/action-bar.Conversation`
       - `conversations/conversation-view/code/file-pane.FilePaneView`
       - `infra/endpoints.useEndpoint`
-      - `primitives/app-shell.sidebarNavItem`
       - `primitives/css/center.Center`
       - `primitives/css/clip.Clip`
       - `primitives/css/text.Text`
@@ -7616,7 +7607,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/control-panel.ControlPanelPane`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
-          - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
@@ -7627,9 +7617,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.SidebarMenu`
-          - `primitives/css/ui-kit.SidebarMenuButton`
-          - `primitives/css/ui-kit.SidebarMenuItem`
           - `primitives/data-view.DataView`
           - `primitives/data-view.defineDataView`
           - `primitives/data-view.FieldDef`
@@ -7659,7 +7646,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `ConfigDetailSlots`
           - `ConfigNav`
           - `configNavPane`
-          - `ConfigSidebarButton`
       - Server:
         - Uses:
           - `config_v2.acknowledgeConflictByPath`
@@ -7946,7 +7932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Pane.Register` "agent-system-detail"
           - `Pane.Register` "agent-side"
           - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
-          - `Shell.Sidebar` "Agents" → `component`
+          - `Shell.Sidebar` "Agents"
           - `Item.Avatar` → `AgentAvatarRow`
           - `Conversation.Header` → `AgentAvatarTitlePrefix`
           - `Agents.AgentActions` "delete" → `DeleteAgentAction`
@@ -7959,7 +7945,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/header.Conversation`
           - `conversations/model-provider.useVisibleModels`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/avatar.Avatar`
           - `primitives/avatar.AVATAR_COLOR_KEYS`
           - `primitives/avatar.AvatarPicker`
@@ -8109,12 +8094,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `allConversationsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "all-conversations"
-          - `Shell.Sidebar` "Conversation" → `component`
+          - `Shell.Sidebar` "Conversation"
         - Uses:
           - `conversations/conversation-ui/item.ConvStatusDot`
           - `conversations/conversation-view.conversationPane`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/inline.Inline`
           - `primitives/css/text.Text`
           - `primitives/data-view.DataView`
@@ -10819,11 +10803,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `recoveryPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "conversations-recover"
-          - `DebugApp.Sidebar` "Recovery" → `component`
+          - `DebugApp.Sidebar` "Recovery"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
@@ -11696,8 +11679,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Pane.Register` "debug-boot-profile"
           - `Pane.Register` "debug-boot-profile-detail"
           - `Pane.Register` "debug-boot-profiles-list"
-          - `DebugApp.Sidebar` "Boot Profile" → `component`
-          - `DebugApp.Sidebar` "Boot Profiles" → `component`
+          - `DebugApp.Sidebar` "Boot Profile"
+          - `DebugApp.Sidebar` "Boot Profiles"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `debug/profiling.formatDuration`
@@ -11712,7 +11695,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/placeholder.Placeholder`
@@ -11813,12 +11795,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `broadcastsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-broadcasts"
-          - `DebugApp.Sidebar` "Broadcasts" → `component`
+          - `DebugApp.Sidebar` "Broadcasts"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/fill.Fill`
@@ -11861,12 +11842,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `claudeCliCallsPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "claude-cli-calls"
-          - `DebugApp.Sidebar` "Claude CLI Calls" → `component`
+          - `DebugApp.Sidebar` "Claude CLI Calls"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
           - `infra/claude-cli.ClaudeCliCallDetail`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
@@ -11893,11 +11873,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `configOrphansPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "config-orphans"
-          - `DebugApp.Sidebar` "Config Orphans" → `component`
+          - `DebugApp.Sidebar` "Config Orphans"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
@@ -11934,12 +11913,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `healthMonitorPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-health-monitor"
-          - `DebugApp.Sidebar` "Health" → `component`
+          - `DebugApp.Sidebar` "Health"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/grid.Grid`
@@ -12001,13 +11979,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `heapSnapshotPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-heap-snapshot"
-          - `DebugApp.Sidebar` "Heap" → `component`
+          - `DebugApp.Sidebar` "Heap"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
           - `infra/endpoints.useEndpointMutation`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
@@ -12035,7 +12012,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `liveStateEmitPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "debug-live-state-emit"
-              - `DebugApp.Sidebar` "Live-State Emit" → `component`
+              - `DebugApp.Sidebar` "Live-State Emit"
               - `Core.Root` → `EmitInstaller`
             - Uses:
               - `apps/debug/shell.DebugApp`
@@ -12043,7 +12020,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
               - `infra/endpoints.useEndpointMutation`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -12116,11 +12092,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `liveStateHealthPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "live-state-health"
-          - `DebugApp.Sidebar` "Live State" → `component`
+          - `DebugApp.Sidebar` "Live State"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
@@ -12151,11 +12126,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Pane.Register` "logs"
           - `Pane.Register` "logs-channel"
-          - `DebugApp.Sidebar` "Logs" → `component`
+          - `DebugApp.Sidebar` "Logs"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
@@ -12177,12 +12151,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `memoryPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-memory"
-          - `DebugApp.Sidebar` "Memory" → `component`
+          - `DebugApp.Sidebar` "Memory"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.formatStatusLabel`
           - `primitives/css/center.Center`
@@ -12284,10 +12257,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `profilingPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-profiling"
-          - `DebugApp.Sidebar` "Profiling" → `component`
+          - `DebugApp.Sidebar` "Profiling"
         - Uses:
           - `apps/debug/shell.DebugApp`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/column.Column`
@@ -12586,11 +12558,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `queuePane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "queue"
-          - `DebugApp.Sidebar` "Queue" → `component`
+          - `DebugApp.Sidebar` "Queue"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
@@ -12764,11 +12735,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `readSetPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "debug-read-set"
-          - `DebugApp.Sidebar` "Read-set" → `component`
+          - `DebugApp.Sidebar` "Read-set"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.useEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/placeholder.Placeholder`
@@ -12818,11 +12788,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `renderProfilerPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "render-profiler"
-          - `DebugApp.Sidebar` "Render Profiler" → `component`
+          - `DebugApp.Sidebar` "Render Profiler"
           - `Core.Root` → `ProfilerInstaller`
         - Uses:
           - `apps/debug/shell.DebugApp`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/badge.BadgeVariant`
           - `primitives/css/cluster.Cluster`
@@ -12874,12 +12843,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Pane.Register` "reports"
           - `Pane.Register` "report-detail"
-          - `DebugApp.Sidebar` "Reports" → `component`
+          - `DebugApp.Sidebar` "Reports"
         - Uses:
           - `apps-core/tabs.navigate`
           - `apps/debug/shell.DebugApp`
           - `build.useStaleFrontend`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -13469,7 +13437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `Pane.Register` "traces"
               - `Pane.Register` "trace-detail"
               - `SlowEvents.View` "Events" → `EventsView`
-              - `DebugApp.Sidebar` "Slow Events" → `component`
+              - `DebugApp.Sidebar` "Slow Events"
             - Uses:
               - `apps/debug/shell.DebugApp`
               - `debug/profiling.formatDuration`
@@ -13482,7 +13450,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/endpoints.EndpointError`
               - `infra/endpoints.getEndpointErrorMessage`
               - `infra/endpoints.useEndpoint`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
@@ -13567,13 +13534,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "worktree-cleanup"
-          - `DebugApp.Sidebar` "Worktree Cleanup" → `component`
+          - `DebugApp.Sidebar` "Worktree Cleanup"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
           - `infra/endpoints.getEndpointErrorMessage`
           - `infra/ndjson-stream.readNdjson`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/placeholder.Placeholder`
@@ -13640,12 +13606,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `zeroTestPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "zero-test"
-          - `DebugApp.Sidebar` "Zero Test" → `component`
+          - `DebugApp.Sidebar` "Zero Test"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `database/zero/client.useZeroResource`
           - `database/zero/client.ZeroRoot`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
@@ -16951,11 +16916,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `eventsTestPane.Actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "events-test"
-          - `DebugApp.Sidebar` "Events Test" → `component`
+          - `DebugApp.Sidebar` "Events Test"
         - Uses:
           - `apps/debug/shell.DebugApp`
           - `infra/endpoints.fetchEndpoint`
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
           - `primitives/css/scroll.Scroll`
@@ -21838,6 +21802,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/collapsible.CollapsibleChevron`
           - `primitives/collapsible.useCollapsible`
           - `primitives/css/clip.Clip`
+          - `primitives/css/pin.Pin`
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.Button`
           - `primitives/css/ui-kit.Sidebar`
@@ -21856,7 +21821,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.renderIsolated`
           - `primitives/slot-render.RenderSlot`
         - Exports (types):
+          - `AppShellSidebarComponent`
           - `AppShellSidebarItem`
+          - `AppShellSidebarNav`
           - `AppShellToolbarAction`
           - `AppShellToolbarComponent`
           - `AppShellToolbarItem`
@@ -21865,58 +21832,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `AppShell`
           - `AppShellLayout`
-          - `sidebarNavItem`
-          - `SidebarNavItem`
+          - `SidebarItem`
           - `SidebarPaneSection`
       - Cross-plugin:
         - Imported by:
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
           - `apps/deploy/shell`
-          - `apps/events/event-list`
           - `apps/events/shell`
-          - `apps/events/sources`
           - `apps/file-explorer/shell`
-          - `apps/mail/search`
           - `apps/mail/shell`
+          - `apps/pages/page-tree`
           - `apps/pages/shell`
           - `apps/prototypes/shell`
-          - `apps/settings/accounts`
-          - `apps/settings/appearance`
           - `apps/settings/shell`
-          - `apps/studio/compositions`
-          - `apps/studio/contributions`
-          - `apps/studio/explorer`
-          - `apps/studio/graph`
           - `apps/studio/shell`
-          - `backup`
-          - `build`
-          - `code-explorer`
-          - `conversations/agents`
-          - `conversations/all-conversations`
-          - `conversations/recover`
-          - `debug/boot-profile`
-          - `debug/broadcasts`
-          - `debug/claude-cli-calls`
-          - `debug/config-orphans`
-          - `debug/health-monitor`
-          - `debug/heap-snapshot`
-          - `debug/live-state-churn/emit`
-          - `debug/live-state-health`
-          - `debug/logs`
-          - `debug/memory`
-          - `debug/profiling`
-          - `debug/queue`
-          - `debug/read-set`
-          - `debug/render-profiler`
-          - `debug/reports`
-          - `debug/trace/pane`
-          - `debug/worktree-cleanup`
-          - `debug/zero-test`
-          - `infra/events-test`
-          - `primitives/css/layout-harness`
-          - `stats`
-          - `tasks/task-detail`
           - `ui/sidebar-framing`
       - Core:
         - Exports (types): `SidebarFramingProps`
@@ -23060,10 +22990,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `layoutLabPane.Actions` ← `primitives.pane`
             - Contributes:
               - `Pane.Register` "layout-lab"
-              - `DebugApp.Sidebar` "Layout Lab" → `component`
+              - `DebugApp.Sidebar` "Layout Lab"
             - Uses:
               - `apps/debug/shell.DebugApp`
-              - `primitives/app-shell.sidebarNavItem`
               - `primitives/css/card.Card`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Inset`
@@ -23290,7 +23219,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/sonata/songsheet`
               - `build`
               - `build/build-logs`
-              - `config_v2/settings`
               - `conversations/conversation-view/jsonl-viewer/assistant-text`
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -23307,6 +23235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/place`
               - `page/read-only-view`
               - `page/video`
+              - `primitives/app-shell`
               - `primitives/data-view/gallery`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
@@ -30717,9 +30646,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `statsPane.Actions` ← `primitives.pane`
     - Contributes:
       - `Pane.Register` "stats"
-      - `Shell.Sidebar` "Stats" → `component`
+      - `Shell.Sidebar` "Stats"
     - Uses:
-      - `primitives/app-shell.sidebarNavItem`
       - `primitives/css/spacing.Inset`
       - `primitives/css/spacing.Stack`
       - `primitives/css/surface.Surface`
@@ -31457,9 +31385,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes:
           - `Pane.Register` "tasks-root"
           - `Pane.Register` "task-detail"
-          - `Shell.Sidebar` "Tasks" → `component`
+          - `Shell.Sidebar` "Tasks"
         - Uses:
-          - `primitives/app-shell.sidebarNavItem`
           - `primitives/detail-sections.defineDetailSections`
           - `primitives/live-state.useResource`
           - `primitives/pane.openPane`

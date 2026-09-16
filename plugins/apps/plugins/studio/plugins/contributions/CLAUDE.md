@@ -9,14 +9,13 @@
   - Slots: `contributions.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "contributions"
-    - `Studio.Sidebar` "Contributions" → `component`
+    - `Studio.Sidebar` "Contributions"
   - Uses:
     - `apps/studio/shell.Studio`
     - `infra/endpoints.useEndpoint`
     - `plugin-meta/contributions-table.Contributions`
     - `plugin-meta/contributions-table.ContributionsRowClick`
     - `plugin-meta/contributions-table.FacetTableEntry`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`

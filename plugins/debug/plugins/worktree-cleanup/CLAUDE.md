@@ -76,13 +76,12 @@ the panel until it is given something to say.
   - Slots: `worktreeCleanupPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "worktree-cleanup"
-    - `DebugApp.Sidebar` "Worktree Cleanup" → `component`
+    - `DebugApp.Sidebar` "Worktree Cleanup"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/ndjson-stream.readNdjson`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`

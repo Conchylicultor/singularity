@@ -11,9 +11,8 @@
     - `statsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "stats"
-    - `Shell.Sidebar` "Stats" → `component`
+    - `Shell.Sidebar` "Stats"
   - Uses:
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/surface.Surface`

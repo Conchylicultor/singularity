@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdSource } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventSourcesPane, eventSourceDetailPane } from "./panes";
 import { EventSourceActions, EventSourceDetail } from "./slots";
@@ -58,11 +57,9 @@ export default {
     Pane.Register({ pane: eventSourceDetailPane }),
     Events.Sidebar({
       id: "sources",
-      ...sidebarNavItem({
-        title: "Sources",
-        icon: MdSource,
-        onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
-      }),
+      title: "Sources",
+      icon: MdSource,
+      onClick: () => openPane(eventSourcesPane, {}, { mode: "root" }),
     }),
     // Ordered by how much each one changes: `open` only looks (and renders
     // nothing at all for a source that stands for no page), `enabled` is

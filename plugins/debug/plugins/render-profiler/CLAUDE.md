@@ -95,11 +95,10 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
   - Slots: `renderProfilerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "render-profiler"
-    - `DebugApp.Sidebar` "Render Profiler" → `component`
+    - `DebugApp.Sidebar` "Render Profiler"
     - `Core.Root` → `ProfilerInstaller`
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`
     - `primitives/css/cluster.Cluster`

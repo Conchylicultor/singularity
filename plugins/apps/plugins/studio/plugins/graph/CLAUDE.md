@@ -9,7 +9,7 @@
   - Slots: `graphCanvasPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "graph"
-    - `Studio.Sidebar` "Plugin Graph" → `component`
+    - `Studio.Sidebar` "Plugin Graph"
   - Uses:
     - `apps/studio/membership-tint.STATE_LEGEND`
     - `apps/studio/membership-tint.STATE_TINT`
@@ -18,7 +18,6 @@
     - `plugin-meta/composition.useActiveMembership`
     - `plugin-meta/composition.useCompositionData`
     - `plugin-meta/composition.useGraph`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`

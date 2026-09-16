@@ -121,13 +121,12 @@ part of the query key.
     - `eventListPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "event-list"
-    - `Events.Sidebar` "Events" → `component`
+    - `Events.Sidebar` "Events"
   - Uses:
     - `apps/events/events-core.useEventsRevision`
     - `apps/events/events-core.useSourceOriginUrl`
     - `apps/events/shell.Events`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

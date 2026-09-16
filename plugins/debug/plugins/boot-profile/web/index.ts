@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdTimeline, MdHistory } from "react-icons/md";
 import {
   bootProfilePane,
@@ -23,19 +22,15 @@ export default {
     Pane.Register({ pane: bootProfileListPane }),
     DebugApp.Sidebar({
       id: "boot-profile",
-      ...sidebarNavItem({
-        title: "Boot Profile",
-        icon: MdTimeline,
-        onClick: () => openPane(bootProfilePane, {}, { mode: "root" }),
-      }),
+      title: "Boot Profile",
+      icon: MdTimeline,
+      onClick: () => openPane(bootProfilePane, {}, { mode: "root" }),
     }),
     DebugApp.Sidebar({
       id: "boot-profiles-list",
-      ...sidebarNavItem({
-        title: "Boot Profiles",
-        icon: MdHistory,
-        onClick: () => openPane(bootProfileListPane, {}, { mode: "root" }),
-      }),
+      title: "Boot Profiles",
+      icon: MdHistory,
+      onClick: () => openPane(bootProfileListPane, {}, { mode: "root" }),
     }),
   ],
   slots: {

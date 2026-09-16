@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdAccountTree } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { explorerPane } from "./panes";
 import { Explorer } from "./slots";
@@ -24,11 +23,9 @@ export default {
     Pane.Register({ pane: explorerPane }),
     Studio.Sidebar({
       id: "explorer",
-      ...sidebarNavItem({
-        title: "Plugin",
-        icon: MdAccountTree,
-        onClick: () => openPane(explorerPane, {}, { mode: "root" }),
-      }),
+      title: "Plugin",
+      icon: MdAccountTree,
+      onClick: () => openPane(explorerPane, {}, { mode: "root" }),
     }),
   ],
   slots: { ...Explorer, explorer: explorerPane },

@@ -9,14 +9,15 @@
   - Slots: `settings-config-index.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "settings-config-index"
-    - `Settings.Sidebar` "Config" → `ConfigSidebarButton`
+    - `Settings.Sidebar` "Config"
     - `Settings.RailBadge` → `ConfigConflictDot`
   - Uses:
     - `apps/settings/shell.Settings`
     - `config_v2/settings.ConfigNav`
-    - `config_v2/settings.ConfigSidebarButton`
+    - `config_v2/settings.configNavPane`
     - `primitives/live-state.useResource`
     - `primitives/pane.defineRoute`
+    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
 

@@ -2,10 +2,10 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2ConflictMapResource } from "@plugins/config_v2/core";
 
 /**
- * Settings rail-icon attention dot for config conflicts. Mirrors the dot the
- * config sidebar entry already shows, reading the same aggregate conflict-locations
- * resource (base + every app scope), so an unresolved config conflict — base or
- * scoped-only — is visible from the app rail without opening Settings.
+ * Attention dot for config conflicts, reading the aggregate conflict-locations
+ * resource (base + every app scope) so a scoped-only conflict is visible too.
+ * Rendered in two places: on the Settings rail icon (so a conflict shows without
+ * opening Settings) and as the badge on the Config sidebar entry's icon.
  */
 export function ConfigConflictDot() {
   const result = useResource(configV2ConflictMapResource);

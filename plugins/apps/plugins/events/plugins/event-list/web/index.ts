@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdEventNote } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Events } from "@plugins/apps/plugins/events/plugins/shell/web";
 import { eventListPane } from "./panes";
 import { EventList } from "./slots";
@@ -23,11 +22,9 @@ export default {
     Pane.Register({ pane: eventListPane }),
     Events.Sidebar({
       id: "event-list",
-      ...sidebarNavItem({
-        title: "Events",
-        icon: MdEventNote,
-        onClick: () => openPane(eventListPane, {}, { mode: "root" }),
-      }),
+      title: "Events",
+      icon: MdEventNote,
+      onClick: () => openPane(eventListPane, {}, { mode: "root" }),
     }),
   ],
   slots: { ...EventList, "event-list": eventListPane },

@@ -4,11 +4,13 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { AppShellLayout } from "./components/app-shell-layout";
 export type {
   AppShellSidebarItem,
+  AppShellSidebarNav,
+  AppShellSidebarComponent,
   AppShellToolbarItem,
   AppShellToolbarAction,
   AppShellToolbarComponent,
 } from "./components/app-shell-layout";
-export { SidebarNavItem, sidebarNavItem } from "./components/sidebar-nav-item";
+export { SidebarItem } from "./components/sidebar-nav-item";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
 export { AppShell } from "./slots";
 export type { FramingContribution } from "./slots";

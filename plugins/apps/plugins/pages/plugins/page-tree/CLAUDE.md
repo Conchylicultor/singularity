@@ -100,6 +100,7 @@ route each render rather than remembered from how the page was opened.
     - `page/page-reference.PageNavigation`
     - `page/page-reference.PageNavigationProvider`
     - `page/page-reference.usePageReferenceTint`
+    - `primitives/app-shell.SidebarItem`
     - `primitives/breadcrumb.Breadcrumb`
     - `primitives/breadcrumb.BreadcrumbSegment`
     - `primitives/css/center.Center`

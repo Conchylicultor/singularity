@@ -9,12 +9,11 @@
   - Slots: `claudeCliCallsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "claude-cli-calls"
-    - `DebugApp.Sidebar` "Claude CLI Calls" → `component`
+    - `DebugApp.Sidebar` "Claude CLI Calls"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `conversations/model-provider.familyClass`
     - `infra/claude-cli.ClaudeCliCallDetail`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

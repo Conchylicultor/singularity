@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdBuild } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
@@ -32,11 +31,9 @@ export default {
     // the in-app entry point for the same panes.
     DebugApp.Sidebar({
       id: "build",
-      ...sidebarNavItem({
-        title: "Builds",
-        icon: MdBuild,
-        onClick: () => openPane(buildPane, {}, { mode: "root" }),
-      }),
+      title: "Builds",
+      icon: MdBuild,
+      onClick: () => openPane(buildPane, {}, { mode: "root" }),
     }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),
   ],

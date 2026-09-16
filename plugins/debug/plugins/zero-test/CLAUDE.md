@@ -15,12 +15,11 @@
   - Slots: `zeroTestPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "zero-test"
-    - `DebugApp.Sidebar` "Zero Test" → `component`
+    - `DebugApp.Sidebar` "Zero Test"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `database/zero/client.useZeroResource`
     - `database/zero/client.ZeroRoot`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

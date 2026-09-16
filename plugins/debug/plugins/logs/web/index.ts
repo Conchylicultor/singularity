@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdTerminal } from "react-icons/md";
 import { logsPane, logChannelPane } from "./panes";
 
@@ -14,11 +13,9 @@ export default {
     Pane.Register({ pane: logChannelPane }),
     DebugApp.Sidebar({
       id: "logs",
-      ...sidebarNavItem({
-        title: "Logs",
-        icon: MdTerminal,
-        onClick: () => openPane(logsPane, {}, { mode: "root" }),
-      }),
+      title: "Logs",
+      icon: MdTerminal,
+      onClick: () => openPane(logsPane, {}, { mode: "root" }),
     }),
   ],
   slots: { logs: logsPane, "logs-channel": logChannelPane },

@@ -30,12 +30,11 @@ The fold/unfold-this-subtree button is not the explorer's to ship either: the
     - `explorerPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "explorer"
-    - `Studio.Sidebar` "Plugin" → `component`
+    - `Studio.Sidebar` "Plugin"
   - Uses:
     - `apps/studio/shell.Studio`
     - `infra/endpoints.useEndpoint`
     - `plugin-meta/plugin-view.pluginViewPane`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
     - `primitives/css/spacing.Stack`

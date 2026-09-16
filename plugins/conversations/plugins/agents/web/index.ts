@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
@@ -39,11 +38,9 @@ export default {
     agentSidePane.Actions({ id: "expand-agent", component: ExpandAgentButton }),
     Shell.Sidebar({
       id: "agents",
-      ...sidebarNavItem({
-        title: "Agents",
-        icon: MdPrecisionManufacturing,
-        onClick: () => openPane(agentsRootPane, {}, { mode: "root" }),
-      }),
+      title: "Agents",
+      icon: MdPrecisionManufacturing,
+      onClick: () => openPane(agentsRootPane, {}, { mode: "root" }),
     }),
     Item.Avatar({
       match: ({ conv }) => conv.kind === "agent",

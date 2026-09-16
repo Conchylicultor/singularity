@@ -6,10 +6,9 @@
 
 - Description: Appearance settings surface: opens the theme customizer (presets, variants, tokens) as a Settings sidebar entry. The same customizer is also reachable from the floating action bar.
 - Web:
-  - Contributes: `Settings.Sidebar` "Appearance" → `component`
+  - Contributes: `Settings.Sidebar` "Appearance"
   - Uses:
     - `apps/settings/shell.Settings`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/pane.openPane`
     - `ui/theme-engine/theme-customizer.themeCustomizerPane`
 

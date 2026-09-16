@@ -19,11 +19,10 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
   - Contributes:
     - `Pane.Register` "logs"
     - `Pane.Register` "logs-channel"
-    - `DebugApp.Sidebar` "Logs" → `component`
+    - `DebugApp.Sidebar` "Logs"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/fill.Fill`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`

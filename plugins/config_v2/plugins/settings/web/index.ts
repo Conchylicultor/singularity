@@ -9,7 +9,6 @@ export {
   configDetailRoute,
 } from "./internal/panes";
 export { ConfigNav } from "./components/config-nav";
-export { ConfigSidebarButton } from "./components/config-sidebar-button";
 export { ConfigDetailSlots } from "./slots";
 export type {
   ConfigConflictContext,

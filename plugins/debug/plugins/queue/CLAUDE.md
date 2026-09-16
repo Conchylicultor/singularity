@@ -9,11 +9,10 @@
   - Slots: `queuePane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "queue"
-    - `DebugApp.Sidebar` "Queue" → `component`
+    - `DebugApp.Sidebar` "Queue"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

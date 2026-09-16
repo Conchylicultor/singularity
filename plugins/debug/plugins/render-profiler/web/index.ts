@@ -4,7 +4,6 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdInsights } from "react-icons/md";
 import { ProfilerInstaller } from "./internal/global-api";
 import { renderProfilerPane } from "./panes";
@@ -18,11 +17,9 @@ export default {
     Pane.Register({ pane: renderProfilerPane }),
     DebugApp.Sidebar({
       id: "render-profiler",
-      ...sidebarNavItem({
-        title: "Render Profiler",
-        icon: MdInsights,
-        onClick: () => openPane(renderProfilerPane, {}, { mode: "root" }),
-      }),
+      title: "Render Profiler",
+      icon: MdInsights,
+      onClick: () => openPane(renderProfilerPane, {}, { mode: "root" }),
     }),
     Core.Root({ component: ProfilerInstaller }),
   ],

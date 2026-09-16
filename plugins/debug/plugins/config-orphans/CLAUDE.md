@@ -9,11 +9,10 @@
   - Slots: `configOrphansPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "config-orphans"
-    - `DebugApp.Sidebar` "Config Orphans" → `component`
+    - `DebugApp.Sidebar` "Config Orphans"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

@@ -13,9 +13,8 @@
   - Contributes:
     - `Pane.Register` "tasks-root"
     - `Pane.Register` "task-detail"
-    - `Shell.Sidebar` "Tasks" → `component`
+    - `Shell.Sidebar` "Tasks"
   - Uses:
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/live-state.useResource`
     - `primitives/pane.openPane`

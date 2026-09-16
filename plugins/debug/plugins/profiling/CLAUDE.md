@@ -11,10 +11,9 @@
     - `profilingPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-profiling"
-    - `DebugApp.Sidebar` "Profiling" → `component`
+    - `DebugApp.Sidebar` "Profiling"
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/column.Column`

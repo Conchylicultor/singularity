@@ -14,6 +14,7 @@ import {
   pagesTreeRoute,
 } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
 import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
+import { SidebarItem } from "@plugins/primitives/plugins/app-shell/web";
 import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import {
   blockContentScope,
@@ -94,7 +95,7 @@ function PagesTreeBody(): ReactElement {
   return (
     <PaneChrome pane={pagesTreePane} title="Pages">
       <Pages.Sidebar.Render>
-        {(item) => <item.component />}
+        {(item) => <SidebarItem {...item} />}
       </Pages.Sidebar.Render>
     </PaneChrome>
   );

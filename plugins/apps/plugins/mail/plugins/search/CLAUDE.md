@@ -60,7 +60,7 @@ composes primitives.
     - `mail-search.actions` ← `primitives.pane`
     - `mail-message.actions` ← `primitives.pane`
   - Contributes:
-    - `Mail.Sidebar` "Search" → `MailSearchSidebar`
+    - `Mail.Sidebar` "Search"
     - `Pane.Register` "mail-search"
     - `Pane.Register` "mail-message"
   - Uses:
@@ -68,7 +68,6 @@ composes primitives.
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/app-shell.SidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -85,6 +84,7 @@ composes primitives.
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/loading.Loading`
     - `primitives/pane.defineRoute`
+    - `primitives/pane.openPane`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.type`

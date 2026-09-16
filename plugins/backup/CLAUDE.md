@@ -50,13 +50,12 @@ path — unreachable today, silent corruption if it ever is not.
     - `ConfigV2.WebRegister` "config"
     - `Pane.Register` "backup"
     - `Pane.Register` "backup-run"
-    - `DebugApp.Sidebar` "Backup" → `component`
+    - `DebugApp.Sidebar` "Backup"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `config_v2.ConfigV2`
     - `config_v2/config-link.ConfigGearButton`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.selfClass`

@@ -9,13 +9,12 @@
   - Slots: `heapSnapshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-heap-snapshot"
-    - `DebugApp.Sidebar` "Heap" → `component`
+    - `DebugApp.Sidebar` "Heap"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`

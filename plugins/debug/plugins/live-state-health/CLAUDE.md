@@ -22,11 +22,10 @@ instrumentation of its own.
   - Slots: `liveStateHealthPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "live-state-health"
-    - `DebugApp.Sidebar` "Live State" → `component`
+    - `DebugApp.Sidebar` "Live State"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`

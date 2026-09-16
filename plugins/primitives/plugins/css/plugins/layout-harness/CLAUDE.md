@@ -366,10 +366,9 @@ server-core tsconfig where `check`/`facet` live. The
   - Slots: `layoutLabPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "layout-lab"
-    - `DebugApp.Sidebar` "Layout Lab" → `component`
+    - `DebugApp.Sidebar` "Layout Lab"
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/card.Card`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Inset`

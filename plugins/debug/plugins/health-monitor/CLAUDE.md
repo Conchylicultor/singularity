@@ -108,12 +108,11 @@ measured overhead on a real worktree workload is still an open task.
   - Slots: `healthMonitorPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-health-monitor"
-    - `DebugApp.Sidebar` "Health" → `component`
+    - `DebugApp.Sidebar` "Health"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`

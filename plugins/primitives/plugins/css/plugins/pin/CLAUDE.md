@@ -117,7 +117,6 @@ offsets expressible on the semantic ramp.
     - `apps/sonata/songsheet`
     - `build`
     - `build/build-logs`
-    - `config_v2/settings`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
     - `conversations/conversation-view/jsonl-viewer/transcript-stats`
@@ -134,6 +133,7 @@ offsets expressible on the semantic ramp.
     - `page/place`
     - `page/read-only-view`
     - `page/video`
+    - `primitives/app-shell`
     - `primitives/data-view/gallery`
     - `primitives/data-view/list`
     - `primitives/data-view/table`

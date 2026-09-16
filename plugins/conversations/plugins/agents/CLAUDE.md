@@ -34,7 +34,7 @@ drag-reparent behavior. Do not reintroduce it; see
     - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
     - `agentSidePane.Actions` "expand-agent" → `ExpandAgentButton`
-    - `Shell.Sidebar` "Agents" → `component`
+    - `Shell.Sidebar` "Agents"
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.Header` → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
@@ -47,7 +47,6 @@ drag-reparent behavior. Do not reintroduce it; see
     - `conversations/conversation-view/header.Conversation`
     - `conversations/model-provider.useVisibleModels`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/avatar.Avatar`
     - `primitives/avatar.AVATAR_COLOR_KEYS`
     - `primitives/avatar.AvatarPicker`

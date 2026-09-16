@@ -9,7 +9,7 @@
   - Slots: `liveStateEmitPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-live-state-emit"
-    - `DebugApp.Sidebar` "Live-State Emit" → `component`
+    - `DebugApp.Sidebar` "Live-State Emit"
     - `Core.Root` → `EmitInstaller`
   - Uses:
     - `apps/debug/shell.DebugApp`
@@ -17,7 +17,6 @@
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`

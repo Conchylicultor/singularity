@@ -11,12 +11,11 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Slots: `memoryPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-memory"
-    - `DebugApp.Sidebar` "Memory" → `component`
+    - `DebugApp.Sidebar` "Memory"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.formatStatusLabel`
     - `primitives/css/center.Center`

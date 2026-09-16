@@ -12,6 +12,7 @@
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.useCollapsible`
     - `primitives/css/clip.Clip`
+    - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.Sidebar`
@@ -30,7 +31,9 @@
     - `primitives/slot-render.renderIsolated`
     - `primitives/slot-render.RenderSlot`
   - Exports (types):
+    - `AppShellSidebarComponent`
     - `AppShellSidebarItem`
+    - `AppShellSidebarNav`
     - `AppShellToolbarAction`
     - `AppShellToolbarComponent`
     - `AppShellToolbarItem`
@@ -39,58 +42,21 @@
   - Exports (values):
     - `AppShell`
     - `AppShellLayout`
-    - `sidebarNavItem`
-    - `SidebarNavItem`
+    - `SidebarItem`
     - `SidebarPaneSection`
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/debug/shell`
     - `apps/deploy/shell`
-    - `apps/events/event-list`
     - `apps/events/shell`
-    - `apps/events/sources`
     - `apps/file-explorer/shell`
-    - `apps/mail/search`
     - `apps/mail/shell`
+    - `apps/pages/page-tree`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
-    - `apps/settings/accounts`
-    - `apps/settings/appearance`
     - `apps/settings/shell`
-    - `apps/studio/compositions`
-    - `apps/studio/contributions`
-    - `apps/studio/explorer`
-    - `apps/studio/graph`
     - `apps/studio/shell`
-    - `backup`
-    - `build`
-    - `code-explorer`
-    - `conversations/agents`
-    - `conversations/all-conversations`
-    - `conversations/recover`
-    - `debug/boot-profile`
-    - `debug/broadcasts`
-    - `debug/claude-cli-calls`
-    - `debug/config-orphans`
-    - `debug/health-monitor`
-    - `debug/heap-snapshot`
-    - `debug/live-state-churn/emit`
-    - `debug/live-state-health`
-    - `debug/logs`
-    - `debug/memory`
-    - `debug/profiling`
-    - `debug/queue`
-    - `debug/read-set`
-    - `debug/render-profiler`
-    - `debug/reports`
-    - `debug/trace/pane`
-    - `debug/worktree-cleanup`
-    - `debug/zero-test`
-    - `infra/events-test`
-    - `primitives/css/layout-harness`
-    - `stats`
-    - `tasks/task-detail`
     - `ui/sidebar-framing`
 - Core:
   - Exports (types): `SidebarFramingProps`

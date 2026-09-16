@@ -92,7 +92,6 @@ contributor that hands a conflict to an agent.
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
-    - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
@@ -103,9 +102,6 @@ contributor that hands a conflict to an agent.
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
-    - `primitives/css/ui-kit.SidebarMenu`
-    - `primitives/css/ui-kit.SidebarMenuButton`
-    - `primitives/css/ui-kit.SidebarMenuItem`
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
@@ -135,7 +131,6 @@ contributor that hands a conflict to an agent.
     - `ConfigDetailSlots`
     - `ConfigNav`
     - `configNavPane`
-    - `ConfigSidebarButton`
 - Server:
   - Uses:
     - `config_v2.acknowledgeConflictByPath`

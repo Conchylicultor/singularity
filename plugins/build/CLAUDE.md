@@ -197,7 +197,7 @@ The two other edges of the same argument:
     - `ActionBar.Item` → `BuildButton`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
-    - `DebugApp.Sidebar` "Builds" → `component`
+    - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
   - Uses:
     - `apps-core/tabs.navigate`
@@ -206,7 +206,6 @@ The two other edges of the same argument:
     - `config_v2.ConfigV2`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`

@@ -9,12 +9,11 @@
   - Slots: `allConversationsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "all-conversations"
-    - `Shell.Sidebar` "Conversation" → `component`
+    - `Shell.Sidebar` "Conversation"
   - Uses:
     - `conversations/conversation-ui/item.ConvStatusDot`
     - `conversations/conversation-view.conversationPane`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/inline.Inline`
     - `primitives/css/text.Text`
     - `primitives/data-view.DataView`

@@ -28,7 +28,7 @@ worktrees, which is deliberate: repo paths coincide.
   - Contributes:
     - `Pane.Register` "global-file-tree"
     - `Pane.Register` "conv-file-tree"
-    - `Shell.Sidebar` "Explorer" → `component`
+    - `Shell.Sidebar` "Explorer"
     - `Conversation.ActionBar` → `ConvTreeButton`
   - Uses:
     - `conversations.useConversationById`
@@ -36,7 +36,6 @@ worktrees, which is deliberate: repo paths coincide.
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view/code/file-pane.FilePaneView`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/text.Text`

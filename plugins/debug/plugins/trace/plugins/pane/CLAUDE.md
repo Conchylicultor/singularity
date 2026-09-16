@@ -43,7 +43,7 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `Pane.Register` "traces"
     - `Pane.Register` "trace-detail"
     - `SlowEvents.View` "Events" → `EventsView`
-    - `DebugApp.Sidebar` "Slow Events" → `component`
+    - `DebugApp.Sidebar` "Slow Events"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `debug/profiling.formatDuration`
@@ -56,7 +56,6 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

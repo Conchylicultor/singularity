@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdLayers } from "react-icons/md";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { compositionsPane, compositionDetailPane, comparePane } from "./panes";
 import {
@@ -23,11 +22,9 @@ export default {
     CompositionItemActions({ id: "delete", component: DeleteAction }),
     Studio.Sidebar({
       id: "compositions",
-      ...sidebarNavItem({
-        title: "Compositions",
-        icon: MdLayers,
-        onClick: () => openPane(compositionsPane, {}, { mode: "root" }),
-      }),
+      title: "Compositions",
+      icon: MdLayers,
+      onClick: () => openPane(compositionsPane, {}, { mode: "root" }),
     }),
   ],
   slots: {

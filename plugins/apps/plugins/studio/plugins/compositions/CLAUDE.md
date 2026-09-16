@@ -106,7 +106,7 @@ are no per-interaction round-trips.
     - `Pane.Register` "composition-detail"
     - `Pane.Register` "composition-compare"
     - `item-actions` "delete" → `DeleteAction`
-    - `Studio.Sidebar` "Compositions" → `component`
+    - `Studio.Sidebar` "Compositions"
   - Uses:
     - `apps/studio/explorer/membership.DIFF_LEGEND`
     - `apps/studio/shell.Studio`
@@ -120,7 +120,6 @@ are no per-interaction round-trips.
     - `plugin-meta/composition.useDiffMap`
     - `plugin-meta/composition.useManifestActions`
     - `plugin-meta/composition.useManifestItems`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`

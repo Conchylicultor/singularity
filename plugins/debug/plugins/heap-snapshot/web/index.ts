@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdMemory } from "react-icons/md";
 import { heapSnapshotPane } from "./panes";
 
@@ -14,11 +13,9 @@ export default {
     Pane.Register({ pane: heapSnapshotPane }),
     DebugApp.Sidebar({
       id: "heap-snapshot",
-      ...sidebarNavItem({
-        title: "Heap",
-        icon: MdMemory,
-        onClick: () => openPane(heapSnapshotPane, {}, { mode: "root" }),
-      }),
+      title: "Heap",
+      icon: MdMemory,
+      onClick: () => openPane(heapSnapshotPane, {}, { mode: "root" }),
     }),
   ],
   slots: { "debug-heap-snapshot": heapSnapshotPane },

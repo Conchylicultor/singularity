@@ -156,7 +156,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
   - Contributes:
     - `Pane.Register` "event-sources"
     - `Pane.Register` "event-source-detail"
-    - `Events.Sidebar` "Sources" → `component`
+    - `Events.Sidebar` "Sources"
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
@@ -170,7 +170,6 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`
     - `infra/endpoints.getEndpointErrorMessage`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/control-panel.ControlPanelPane`
     - `primitives/css/fill.Fill`

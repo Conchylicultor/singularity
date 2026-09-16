@@ -34,12 +34,11 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
   - Contributes:
     - `Pane.Register` "reports"
     - `Pane.Register` "report-detail"
-    - `DebugApp.Sidebar` "Reports" → `component`
+    - `DebugApp.Sidebar` "Reports"
   - Uses:
     - `apps-core/tabs.navigate`
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

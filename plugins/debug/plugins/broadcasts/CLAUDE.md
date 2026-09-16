@@ -9,12 +9,11 @@
   - Slots: `broadcastsPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "debug-broadcasts"
-    - `DebugApp.Sidebar` "Broadcasts" → `component`
+    - `DebugApp.Sidebar` "Broadcasts"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`

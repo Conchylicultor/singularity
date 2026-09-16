@@ -46,7 +46,7 @@ export function LaunchSidebarItem() {
   const label = MODEL_REGISTRY[defaultModel].label;
 
   return (
-    <SidebarMenu className="px-sm">
+    <SidebarMenu>
       <SidebarMenuItem>
         <Line>
           <ButtonGroup className="w-full">

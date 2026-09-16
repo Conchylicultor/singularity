@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdFolderDelete } from "react-icons/md";
 import { worktreeCleanupPane } from "./panes";
 
@@ -14,11 +13,9 @@ export default {
     Pane.Register({ pane: worktreeCleanupPane }),
     DebugApp.Sidebar({
       id: "worktree-cleanup",
-      ...sidebarNavItem({
-        title: "Worktree Cleanup",
-        icon: MdFolderDelete,
-        onClick: () => openPane(worktreeCleanupPane, {}, { mode: "root" }),
-      }),
+      title: "Worktree Cleanup",
+      icon: MdFolderDelete,
+      onClick: () => openPane(worktreeCleanupPane, {}, { mode: "root" }),
     }),
   ],
   slots: { "worktree-cleanup": worktreeCleanupPane },

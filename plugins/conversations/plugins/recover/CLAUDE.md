@@ -9,11 +9,10 @@
   - Slots: `recoveryPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "conversations-recover"
-    - `DebugApp.Sidebar` "Recovery" → `component`
+    - `DebugApp.Sidebar` "Recovery"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`

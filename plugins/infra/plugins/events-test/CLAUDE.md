@@ -34,11 +34,10 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
   - Slots: `eventsTestPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "events-test"
-    - `DebugApp.Sidebar` "Events Test" → `component`
+    - `DebugApp.Sidebar` "Events Test"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `infra/endpoints.fetchEndpoint`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/scroll.Scroll`

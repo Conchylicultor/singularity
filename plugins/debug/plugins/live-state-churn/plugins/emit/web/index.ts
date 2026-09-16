@@ -4,7 +4,6 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdBolt } from "react-icons/md";
 import { EmitInstaller } from "./internal/global-api";
 import { liveStateEmitPane } from "./panes";
@@ -18,11 +17,9 @@ export default {
     Pane.Register({ pane: liveStateEmitPane }),
     DebugApp.Sidebar({
       id: "live-state-emit",
-      ...sidebarNavItem({
-        title: "Live-State Emit",
-        icon: MdBolt,
-        onClick: () => openPane(liveStateEmitPane, {}, { mode: "root" }),
-      }),
+      title: "Live-State Emit",
+      icon: MdBolt,
+      onClick: () => openPane(liveStateEmitPane, {}, { mode: "root" }),
     }),
     Core.Root({ component: EmitInstaller }),
   ],

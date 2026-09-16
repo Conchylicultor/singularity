@@ -8,11 +8,10 @@
 - Web:
   - Contributes:
     - `Pane.Register` "accounts"
-    - `Settings.Sidebar` "Account" → `component`
+    - `Settings.Sidebar` "Account"
   - Uses:
     - `apps/settings/shell.Settings`
     - `auth.accountsPane`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/pane.openPane`
     - `primitives/pane.Pane`
 

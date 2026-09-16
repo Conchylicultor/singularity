@@ -23,11 +23,44 @@ import {
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-export type AppShellSidebarItem = {
+import { SidebarItem } from "./sidebar-nav-item";
+type SidebarIcon = React.ComponentType<{ className?: string }>;
+
+/**
+ * A nav entry — the common case. Pure data: the shell draws the row
+ * ({@link SidebarItem}), so every nav entry in every app shares one inset,
+ * height, icon size and hover by construction. `badge` is an optional
+ * attention overlay pinned to the icon's corner; it renders `null` when there
+ * is nothing to flag. `component` is forbidden.
+ */
+export type AppShellSidebarNav = {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  component: React.ComponentType;
+  icon: SidebarIcon;
+  onClick: () => void;
+  badge?: React.ComponentType;
+  component?: never;
 };
+
+/**
+ * A custom sidebar region — a whole section the shell cannot describe as one
+ * nav row (a tree, a search box, a split launch control). `title`/`icon` still
+ * label it in the layout editor. Build its rows from `SidebarMenu`, which
+ * applies the sidebar's rail inset itself, so they align with nav entries.
+ */
+export type AppShellSidebarComponent = {
+  title: string;
+  icon: SidebarIcon;
+  component: React.ComponentType;
+  onClick?: never;
+  badge?: never;
+};
+
+/**
+ * A single sidebar contribution: a nav entry (data, drawn by the shell) xor a
+ * custom region (a component). An entry that merely needs a badge is still a
+ * nav entry — it does not get to redraw the row.
+ */
+export type AppShellSidebarItem = AppShellSidebarNav | AppShellSidebarComponent;
 
 type ToolbarIcon = React.ComponentType<{ className?: string }>;
 
@@ -246,7 +279,8 @@ export function AppShellLayout({
     // the `rail-follow` fallback (the pane-header `--chrome-pad-x`), so any
     // DataView rendered in a sidebar sits on the sidebar's pill rail: band
     // chrome (toolbar, section headers) at the rail, row pills inset by it —
-    // matching the nav items' `px-sm` wrapper. `--pad-row-x` ≡ `--space-sm` at
+    // and every `SidebarMenu` pays the same debt via its own `rail-follow`, so
+    // nav rows and DataView rows land on one rail with nobody writing `px-sm`. `--pad-row-x` ≡ `--space-sm` at
     // every density, so row content lands on the same rail as nav icon/label.
     //
     // `owe`, not `rail-sm`: it declares the rail WITHOUT paying it, so the
@@ -263,7 +297,9 @@ export function AppShellLayout({
         } as React.CSSProperties
       }
     >
-      <sidebarSlot.Render>{(item) => <item.component />}</sidebarSlot.Render>
+      <sidebarSlot.Render>
+        {(item) => <SidebarItem {...item} />}
+      </sidebarSlot.Render>
     </div>
   );
 

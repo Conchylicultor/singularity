@@ -75,8 +75,8 @@ unbounded.
     - `Pane.Register` "debug-boot-profile"
     - `Pane.Register` "debug-boot-profile-detail"
     - `Pane.Register` "debug-boot-profiles-list"
-    - `DebugApp.Sidebar` "Boot Profile" → `component`
-    - `DebugApp.Sidebar` "Boot Profiles" → `component`
+    - `DebugApp.Sidebar` "Boot Profile"
+    - `DebugApp.Sidebar` "Boot Profiles"
   - Uses:
     - `apps/debug/shell.DebugApp`
     - `debug/profiling.formatDuration`
@@ -91,7 +91,6 @@ unbounded.
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpoint`
     - `infra/endpoints.useEndpointMutation`
-    - `primitives/app-shell.sidebarNavItem`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
