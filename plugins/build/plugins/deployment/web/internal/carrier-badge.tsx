@@ -3,6 +3,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { MdDifference } from "react-icons/md";
 import type React from "react";
+import type { Resolvable } from "@plugins/primitives/plugins/live-state/core";
 import { sameCommit, type Carrier, type CarrierId } from "../../core";
 
 /** How each carrier is named to a human. Display metadata, so it lives in web. */
@@ -46,6 +47,38 @@ export function hasOtherBytes(
   return carrier.graph.resolved && carrier.graph.value !== served;
 }
 
+/**
+ * The commit a carrier's chip sits on in the chain.
+ *
+ * Normally the commit it was built at. The exception is the tab running the
+ * SAME bytes as the served bundle: a commit that changed nothing the browser
+ * runs (a server- or CLI-only change) rebuilds the dist with an unchanged graph
+ * hash, so the tab is not behind in any way a reload could fix. Its chip then
+ * sits with `web` — the newest commit known to compose those exact bytes —
+ * rather than on its own older build commit, where it would read as "stale"
+ * next to a Build button correctly offering no Reload. Both surfaces now ask the
+ * same question (graph hash vs the served one), so they cannot disagree.
+ *
+ * Only the served graph is ever compared: it is the one fingerprint whose commit
+ * we know. The tab's own build commit is not lost — the chip's hover names it.
+ */
+export function placementCommit(
+  carrier: Carrier,
+  carriers: Carrier[],
+): Resolvable<string> {
+  if (carrier.id !== "tab" || !carrier.graph.resolved) return carrier.commit;
+  const web = carriers.find((c) => c.id === "web");
+  if (
+    web === undefined ||
+    !web.graph.resolved ||
+    !web.commit.resolved ||
+    web.graph.value !== carrier.graph.value
+  ) {
+    return carrier.commit;
+  }
+  return web.commit;
+}
+
 /** Is this carrier pinned to `commit`? False for a carrier that cannot say. */
 export function isAtCommit(carrier: Carrier, commit: string): boolean {
   return carrier.commit.resolved && sameCommit(carrier.commit.value, commit);
@@ -72,16 +105,21 @@ export function CarrierBadge({
   atTarget,
   otherBytes,
   behind,
+  rowSha,
 }: {
   carrier: Carrier;
   atTarget: boolean;
   otherBytes: boolean;
   behind: number;
+  /** The commit of the row the chip sits on (see `placementCommit`). */
+  rowSha: string;
 }) {
   const label = CARRIER_LABEL[carrier.id];
-  const at = carrier.commit.resolved
-    ? carrier.commit.value
-    : carrier.commit.reason;
+  const at = !carrier.commit.resolved
+    ? carrier.commit.reason
+    : sameCommit(carrier.commit.value, rowSha)
+      ? carrier.commit.value
+      : `same bundle as this commit, built at ${carrier.commit.value}`;
   const distance =
     behind > 0
       ? `${behind} ${behind === 1 ? "commit" : "commits"} behind HEAD`
@@ -118,6 +156,7 @@ export function CarrierBadge({
  */
 export function carrierMarkers(
   carriers: Carrier[],
+  rowSha: string,
   target: string | null,
   served: string | null,
   behind: number,
@@ -129,9 +168,11 @@ export function carrierMarkers(
         <CarrierBadge
           key={c.id}
           carrier={c}
-          atTarget={target !== null && isAtCommit(c, target)}
+          // The chip sits on this row, so it is at the target iff the row is.
+          atTarget={target !== null && sameCommit(rowSha, target)}
           otherBytes={hasOtherBytes(c, served)}
           behind={behind}
+          rowSha={rowSha}
         />
       ))}
     </Inline>

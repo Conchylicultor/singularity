@@ -174,6 +174,17 @@ on a branch since pruned) and a checkout rebased under the tab both come back as
 While the walk is in flight the line says it is placing the commit, rather than
 asserting the commit is not on a chain that is about to contain it.
 
+### A tab running the served bytes sits with `web`
+
+A commit that changes nothing the browser runs (server, CLI, gateway) rebuilds
+the dist with the SAME graph hash, so the tab is not stale — the Build button
+correctly offers no Reload. Placing the tab chip on its own build commit would
+still draw it behind. `placementCommit` (`web/internal/carrier-badge.tsx`)
+instead puts a tab whose graph equals the served one on `web`'s commit — the
+newest commit known to compose those bytes — and the chip's hover keeps the
+real build commit. The chain and the Reload segment now ask the same question,
+so a tab chip below `web` always comes with a Reload.
+
 Each carrier chip also says its distance out loud (`This tab · 5 behind`), read
 straight off the row index — rows run newest-first, so the index IS the count.
 

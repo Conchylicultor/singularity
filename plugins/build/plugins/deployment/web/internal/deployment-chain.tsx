@@ -10,6 +10,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
+import type { Resolvable } from "@plugins/primitives/plugins/live-state/core";
 import {
   CHAIN_CAP,
   sameCommit,
@@ -22,6 +23,7 @@ import {
   carrierMarkers,
   hasOtherBytes,
   isAtCommit,
+  placementCommit,
   servedGraph,
 } from "./carrier-badge";
 import { useChainFrom, type ChainFromReading } from "./use-chain-from";
@@ -220,9 +222,9 @@ function PinList({
  * if the value is pulled out first. That is the union doing its job, not an
  * obstacle to cast around.
  */
-function rowOf(rows: CommitRow[], c: Carrier): number {
-  if (!c.commit.resolved) return -1;
-  const sha = c.commit.value;
+function rowOf(rows: CommitRow[], commit: Resolvable<string>): number {
+  if (!commit.resolved) return -1;
+  const sha = commit.value;
   return rows.findIndex((r) => sameCommit(r.sha, sha));
 }
 
@@ -235,8 +237,14 @@ function rowOf(rows: CommitRow[], c: Carrier): number {
  * other carrier there is. A carrier that cannot name a commit is skipped — there
  * is nothing to walk from, and its own reason is already what gets rendered.
  */
-function extensionBase(offChain: Carrier[]): string | null {
-  for (const c of offChain) if (c.commit.resolved) return c.commit.value;
+function extensionBase(
+  offChain: Carrier[],
+  carriers: Carrier[],
+): string | null {
+  for (const c of offChain) {
+    const commit = placementCommit(c, carriers);
+    if (commit.resolved) return commit.value;
+  }
   return null;
 }
 
@@ -265,11 +273,17 @@ function ChainArm({
   carriers: Carrier[];
   served: string | null;
 }) {
-  const reachesTarget = (c: Carrier) => isAtCommit(c, state.target);
+  // Where each carrier's chip goes — for a tab running the served bytes, the
+  // served bundle's commit rather than its own older build commit.
+  const at = (c: Carrier) => placementCommit(c, carriers);
+  const reachesTarget = (c: Carrier) => {
+    const commit = at(c);
+    return commit.resolved && sameCommit(commit.value, state.target);
+  };
   const offServerChain = carriers.filter(
-    (c) => rowOf(state.chain.commits, c) < 0,
+    (c) => rowOf(state.chain.commits, at(c)) < 0,
   );
-  const reading = useChainFrom(extensionBase(offServerChain));
+  const reading = useChainFrom(extensionBase(offServerChain, carriers));
 
   // The extension is a superset of the server's chain — it walks from further
   // back to the same target — so it REPLACES rather than merges.
@@ -282,7 +296,7 @@ function ChainArm({
   const placed = new Map<number, Carrier[]>();
   const elsewhere: Carrier[] = [];
   for (const c of carriers) {
-    const idx = rowOf(rows, c);
+    const idx = rowOf(rows, at(c));
     if (idx < 0) elsewhere.push(c);
     else placed.set(idx, [...(placed.get(idx) ?? []), c]);
   }
@@ -304,7 +318,7 @@ function ChainArm({
   // one of the two. A tab never moves this line — a tab is not something a
   // build deploys.
   const deployedIndices = state.deployable
-    .map((c) => rowOf(rows, c))
+    .map((c) => rowOf(rows, c.commit))
     .filter((i) => i >= 0);
   const firstDeployed =
     deployedIndices.length > 0 ? Math.min(...deployedIndices) : -1;
@@ -344,6 +358,7 @@ function ChainArm({
               }
               markers={carrierMarkers(
                 placed.get(idx) ?? [],
+                commit.sha,
                 state.target,
                 served,
                 // Rows run newest first, so a carrier's own row index IS the
