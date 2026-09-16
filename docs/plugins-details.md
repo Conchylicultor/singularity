@@ -2999,6 +2999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeStageContribution`
               - `PrototypeStageProps`
             - Exports (values):
+              - `OptionsPicker`
               - `prototypeDetailPane`
               - `prototypesGalleryPane`
               - `PrototypeStages`
@@ -3017,6 +3018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
             - Uses:
               - `apps-core/tabs.useSurfaceFocused`
+              - `apps/prototypes/gallery.OptionsPicker`
               - `apps/prototypes/gallery.prototypeDetailPane`
               - `apps/prototypes/gallery.ScaledIframe`
               - `apps/prototypes/gallery.usePrototypeSrc`

@@ -132,7 +132,8 @@ The Prototypes app's two panes:
     stage's bottom-right corner shows the current values and expands on hover
     into one row of chips per option. It is app DOM over the stage, never in
     the prototype's page — that is what keeps switchers out of the designs.
-<<<<<<< .merge_file_RxueK1
+    Exported, so the sibling `present` plugin draws the same picker over a
+    presentation.
     Chips, not a dropdown: a dropdown's portaled menu sits outside the hover box,
     so reaching for it would close the panel. Picks are `files`' ONE shared
     record per prototype (`prototypes.picks`, `_picks/<id>.json`): every tab
@@ -148,19 +149,6 @@ The Prototypes app's two panes:
     does not declare drop), so a palette picked on v3 carries to the live page
     wherever the live page still has it. The picker renders nothing until the
     picks are known.
-=======
-    Exported, so the sibling `present` plugin draws the same picker over a
-    presentation. Chips, not a dropdown: a dropdown's portaled menu sits outside the hover box,
-    so reaching for it would close the panel. Picks are remembered per
-    prototype on this device (`useDraft`, scoped by name, on the provider) —
-    living outside the frame is what makes them survive the reload every edit
-    causes. One memory per prototype, judged per document:
-    `usePrototypeOptions(meta)` is the declaration of the document on screen
-    (the shown version's, else the live page's) and `usePrototypePicks(meta)`
-    resolves the remembered picks against it (picks it does not declare
-    drop), so a palette picked on v3 carries to the live page wherever the
-    live page still has it.
->>>>>>> .merge_file_kLeqZd
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults
     (`pickedVariantLine` — a snapshot from launch time), a line pointing at
