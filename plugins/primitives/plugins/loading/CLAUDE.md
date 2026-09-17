@@ -136,6 +136,7 @@ which is what the `no-adhoc-loading-text` lint rule enforces.
     - `debug/queue-health`
     - `debug/read-set`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops/pane`
     - `debug/trace/pane`
     - `debug/worktree-cleanup`

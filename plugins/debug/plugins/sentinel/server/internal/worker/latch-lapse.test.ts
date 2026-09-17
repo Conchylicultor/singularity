@@ -15,6 +15,10 @@ import {
   LATCH_FILENAME,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import {
+  SentinelVitalsRecordSchema,
+  type SentinelVitalsRecord,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import {
   namespaceArgv,
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
@@ -80,6 +84,8 @@ function sample(overrides: Partial<ClusterSample> = {}): ClusterSample {
 }
 
 const hot = () => sample({ decompressionsPerSec: 300_000 });
+// Postgres unreadable this tick: the detector reads 0 locks, the file says unknown.
+const pgDown = () => sample({ pgLocksWaiting: null });
 const calm = () => sample();
 
 interface WorkerRig {
@@ -142,6 +148,24 @@ function spawnRig(dir: string): WorkerRig {
 // SINGULARITY_DIR — the path the worker's `duressLatchDir` resolves to.
 function latchPathIn(dir: string): string {
   return join(dir, "locks", "duress", LATCH_FILENAME);
+}
+
+// The vitals file under the worker's SINGULARITY_DIR — the status-file leaf's
+// declared data dir (`locks/sentinel`).
+function readVitalsIn(dir: string): SentinelVitalsRecord {
+  return SentinelVitalsRecordSchema.parse(
+    JSON.parse(
+      readFileSync(join(dir, "locks", "sentinel", "vitals.json"), "utf8"),
+    ),
+  );
+}
+
+/** Wait for a tick that STARTS after now — the tick before it has written its vitals. */
+async function nextTick(rig: WorkerRig): Promise<void> {
+  const seen = rig.frames.length;
+  await rig.waitFor(
+    (f) => f.type === "sample" && rig.frames.indexOf(f) >= seen,
+  );
 }
 
 function newTmpDir(): string {
@@ -212,10 +236,39 @@ describe("sentinel worker latch lifecycle", () => {
     // The lease held throughout (the isUnderDuress predicate).
     expect(wake - postBlockMtime).toBeLessThan(FRESHNESS_LEASE_MS);
 
+    // ── The vitals file: every tick wrote the readings the detector acted on,
+    // with the limits it held and its trip state.
+    const hotVitals = readVitalsIn(dir);
+    expect(hotVitals.pid).toBe(process.pid);
+    expect(hotVitals.cadenceMs).toBe(CADENCE_MS);
+    expect(hotVitals.tripped).toBe(true);
+    expect(hotVitals.elevated).toEqual(["decompressionsPerSec"]);
+    expect(hotVitals.signals.decompressionsPerSec).toEqual({
+      value: 300_000,
+      limit: THRESHOLDS.onDecompressionsPerSec,
+    });
+    expect(hotVitals.signals.loadRatio).toEqual({
+      value: 4 / 18,
+      limit: THRESHOLDS.onLoadRatio,
+    });
+    expect(hotVitals.signals.locksWaiting).toEqual({
+      value: 0,
+      limit: THRESHOLDS.onLocksWaiting,
+    });
+    expect(hotVitals.context).toEqual({
+      freeMemMb: 8_000,
+      inFlightBuilds: 0,
+      runningBackends: 3,
+    });
+
     // ── Clear: calm samples for offTicks → latch unlinked.
     rig.post({ type: "__sample", sample: calm() });
     await rig.waitFor((f) => f.type === "clear");
     expect(existsSync(latchPath)).toBe(false);
+    await nextTick(rig);
+    const calmVitals = readVitalsIn(dir);
+    expect(calmVitals.tripped).toBe(false);
+    expect(calmVitals.elevated).toEqual([]);
 
     // ── WS3: the clear frame carries the duress-episode report enrichment
     // (reason / elevated cause-signature / episodeSetAt / wall) that onset.ts
@@ -290,6 +343,30 @@ describe("sentinel worker latch lifecycle", () => {
       expect(clearFrame.elevated).toEqual([]);
       expect(clearFrame.episodeSetAt).toBe(setAt);
     }
+
+    rig.post({ type: "stop" });
+    await rig.waitFor((f) => f.type === "stopped");
+  }, 20_000);
+
+  test("a pg-unreadable tick writes its locks as unknown, not zero", async () => {
+    const dir = newTmpDir();
+    const rig = spawnRig(dir);
+    rig.post({
+      type: "init",
+      cadenceMs: CADENCE_MS,
+      thresholds: THRESHOLDS,
+      maxEpisodeHoldMs: 600_000,
+    });
+    rig.post({ type: "__sample", sample: pgDown() });
+    await rig.waitFor((f) => f.type === "ready");
+    await nextTick(rig);
+    await nextTick(rig);
+    const vitals = readVitalsIn(dir);
+    expect(vitals.signals.locksWaiting).toEqual({
+      value: null,
+      limit: THRESHOLDS.onLocksWaiting,
+    });
+    expect(vitals.tripped).toBe(false);
 
     rig.post({ type: "stop" });
     await rig.waitFor((f) => f.type === "stopped");

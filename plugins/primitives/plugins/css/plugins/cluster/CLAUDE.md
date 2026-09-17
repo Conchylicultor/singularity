@@ -69,6 +69,7 @@ defined in exactly one place. The distinct export buys two things:
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/timeline`
     - `debug/trace/boot`
     - `debug/trace/contention`

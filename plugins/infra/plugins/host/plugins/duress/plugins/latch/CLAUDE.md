@@ -8,6 +8,11 @@ the lease and the fleet self-recovers. Readers gate on the cheap synchronous
 `isUnderDuress()` (one `statSync` at most once per `MEMO_TTL_MS`); see the
 parent `duress` plugin's CLAUDE.md for the full lifecycle and lease contract.
 
+A reader that is woken BY a change to the latch file (a watcher serving the
+state to a UI — the sentinel's `sentinel.status` resource) reads
+`readFreshDuress()` instead: the same freshness rule, unmemoized, so it cannot
+answer from a memo taken just before the change it was woken for.
+
 This is a **leaf sub-plugin on purpose**: its module-eval depends only on
 `node:fs` and `infra/paths` — no config_v2, no DB, no runtime-namespace
 identity — so processes outside a backend (the CLI's build admission valve,
@@ -44,6 +49,7 @@ shed engine's test.
     - `LATCH_FILENAME`
     - `MEMO_TTL_MS`
     - `readDuress`
+    - `readFreshDuress`
     - `refreshDuress`
     - `setDuress`
 

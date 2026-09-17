@@ -14,3 +14,14 @@ export type {
 } from "./internal/status";
 export { duressGuard } from "./internal/duress-guard";
 export type { DuressGuard } from "./internal/duress-guard";
+export {
+  SentinelVitalsRecordSchema,
+  SIGNAL_KEYS,
+  SignalKeySchema,
+  SignalVitalSchema,
+} from "./internal/vitals";
+export type {
+  SentinelVitalsRecord,
+  SignalKey,
+  SignalVital,
+} from "./internal/vitals";

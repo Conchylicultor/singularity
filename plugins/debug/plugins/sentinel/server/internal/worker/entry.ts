@@ -12,12 +12,19 @@ import {
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
+  sentinelStatusDir,
+  writeSentinelVitals,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
+import type { SentinelVitalsRecord } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import {
   DURESS_EPISODES_CHANNEL,
   type ClusterSample,
   type DuressEpisodeEvent,
 } from "../../../core";
 import {
   createOnsetDetector,
+  signalsAt,
+  type DetectorEvent,
   type DetectorThresholds,
   type OnsetDetector,
 } from "../detector";
@@ -42,7 +49,8 @@ import type { MainToWorkerFrame, WorkerToMainFrame } from "./protocol";
 // mediated would be starved by the congestion it measures.
 //
 // Import closure is deliberately lean: the latch sub-plugin barrel (node:fs +
-// paths only), log-channels, the embedded-pg constants, sql-rows' `core` leaf
+// paths only), the sentinel status-file leaf (zod + node:fs + paths — the
+// per-tick vitals file), log-channels, the embedded-pg constants, sql-rows' `core` leaf
 // (zod + structural types, no pg/drizzle import of its own), and the pure
 // detector / gatherers. No config_v2 (thresholds arrive as frames — a worker
 // has no plugin runtime), no drizzle pool, no trace engine (main mirrors trips
@@ -131,6 +139,64 @@ function endEpisode(forced: boolean, wall: number): void {
   });
 }
 
+/**
+ * The vitals record for this tick: the readings through the detector's own
+ * `signalsAt`, the limits from the thresholds it used, and its trip state.
+ */
+function vitalsRecord(
+  sample: ClusterSample,
+  t: DetectorThresholds,
+  tripped: boolean,
+): SentinelVitalsRecord {
+  const { readings, elevated } = signalsAt(sample, t);
+  return {
+    pid: process.pid,
+    wall: sample.wall,
+    cadenceMs,
+    signals: {
+      loadRatio: { value: readings.loadRatio, limit: t.onLoadRatio },
+      decompressionsPerSec: {
+        value: readings.decompressionsPerSec,
+        limit: t.onDecompressionsPerSec,
+      },
+      // The detector reads a pg-unreadable tick as 0 locks (neither elevated
+      // nor calm-blocking); the row says it could not read them instead.
+      locksWaiting: {
+        value: sample.pgLocksWaiting === null ? null : readings.locksWaiting,
+        limit: t.onLocksWaiting,
+      },
+      blkReadDeltaMs: {
+        value: readings.blkReadDeltaMs,
+        limit: t.onBlkReadDeltaMs,
+      },
+      slowBackends: { value: readings.slowBackends, limit: t.onSlowBackends },
+    },
+    elevated,
+    tripped,
+    context: {
+      freeMemMb: sample.freeMemMb ?? null,
+      inFlightBuilds: sample.inFlightBuilds,
+      runningBackends: sample.runningBackends,
+    },
+  };
+}
+
+/**
+ * Publish this tick's reading to the host-global vitals file every backend
+ * serves. A failed write is logged and never fails the tick: the latch below
+ * is what this thread exists for, and the row shows a missing reading as stale.
+ */
+function writeVitals(sample: ClusterSample, t: DetectorThresholds): void {
+  try {
+    writeSentinelVitals(
+      sentinelStatusDir.path,
+      vitalsRecord(sample, t, detector?.tripped ?? false),
+    );
+  } catch (err) {
+    log(`vitals write failed: ${String(err)}`);
+  }
+}
+
 function processSample(sample: ClusterSample): void {
   if (!detector || !thresholds) return;
   // Best-effort mirror to main (ring + listeners). postMessage buffers while
@@ -138,8 +204,15 @@ function processSample(sample: ClusterSample): void {
   // harmless — and nothing below waits on main.
   emit({ type: "sample", sample });
 
-  const event = detector.feed(sample, thresholds, cadenceMs);
+  const t = thresholds;
+  applyDetector(detector.feed(sample, t, cadenceMs), sample);
+  // After the latch work, so the file's trip state is this tick's outcome.
+  writeVitals(sample, t);
+}
 
+/** The latch lifecycle for one detector outcome: set on trip, clear, or refresh. */
+function applyDetector(event: DetectorEvent, sample: ClusterSample): void {
+  if (!detector) return;
   if (event?.kind === "trip") {
     const reason = `cluster-onset: ${event.elevated.join(", ")}`;
     setDuress(reason);

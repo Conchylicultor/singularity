@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, utimesSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -12,6 +18,7 @@ import {
   LATCH_FILENAME,
   MEMO_TTL_MS,
   readDuress,
+  readFreshDuress,
   refreshDuress,
   setDuress,
 } from "./latch";
@@ -151,5 +158,25 @@ describe("memo TTL", () => {
     expect(isUnderDuress()).toBe(false); // memoizes false at t
     setDuress("fresh episode");
     expect(isUnderDuress()).toBe(true); // set cleared the memo — true immediately
+  });
+});
+
+describe("readFreshDuress", () => {
+  test("null with no latch, the payload while fresh, null once lapsed", () => {
+    expect(readFreshDuress()).toBeNull();
+    setDuress("load");
+    expect(readFreshDuress()?.reason).toBe("load");
+    backdateLatch(FRESHNESS_LEASE_MS + 1_000);
+    expect(readFreshDuress()).toBeNull();
+  });
+
+  test("sees a latch set after isUnderDuress memoized 'no'", () => {
+    expect(isUnderDuress()).toBe(false);
+    // Another process sets it: this process's memo is not invalidated.
+    writeFileSync(
+      latchFile(),
+      JSON.stringify({ setAt: Date.now(), reason: "elsewhere" }),
+    );
+    expect(readFreshDuress()?.reason).toBe("elsewhere");
   });
 });

@@ -68,6 +68,7 @@ attribute type carries.
     - `debug/memory`
     - `debug/profiling`
     - `debug/queue-health`
+    - `debug/sentinel`
     - `debug/timeline`
     - `page/annotations/todo/task-link`
     - `page/formatting/link`

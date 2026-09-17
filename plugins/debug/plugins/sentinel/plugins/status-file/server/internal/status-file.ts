@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   SentinelStatusRecordSchema,
@@ -6,6 +6,12 @@ import {
   type SentinelStatusRecord,
   type SentinelWatch,
 } from "../../core";
+import {
+  isErrno,
+  readJsonFile,
+  writeJsonAtomic,
+  type JsonFileRead,
+} from "./json-file";
 
 // The host-global status file: main's sentinel host writes it on every
 // supervision transition (a handful of writes a day); every backend reads it to
@@ -20,10 +26,6 @@ export function statusFilePath(dir: string): string {
   return join(dir, STATUS_FILENAME);
 }
 
-function isErrno(err: unknown, code: string): boolean {
-  return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
-}
-
 /** Whether a process with this pid exists. EPERM means it exists but is not ours. */
 export function isPidAlive(pid: number): boolean {
   try {
@@ -36,33 +38,8 @@ export function isPidAlive(pid: number): boolean {
   }
 }
 
-function readRecord(
-  dir: string,
-):
-  | { kind: "none" }
-  | { kind: "record"; record: SentinelStatusRecord }
-  | { kind: "unreadable"; reason: string } {
-  let raw: string;
-  try {
-    raw = readFileSync(statusFilePath(dir), "utf8");
-  } catch (err) {
-    if (isErrno(err, "ENOENT")) return { kind: "none" };
-    throw err;
-  }
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch (err) {
-    if (err instanceof SyntaxError) {
-      return { kind: "unreadable", reason: `not JSON: ${err.message}` };
-    }
-    throw err;
-  }
-  const parsed = SentinelStatusRecordSchema.safeParse(json);
-  if (!parsed.success) {
-    return { kind: "unreadable", reason: parsed.error.message };
-  }
-  return { kind: "record", record: parsed.data };
+function readRecord(dir: string): JsonFileRead<SentinelStatusRecord> {
+  return readJsonFile(statusFilePath(dir), SentinelStatusRecordSchema);
 }
 
 /** What a backend serves: the recorded status, and whether its writer is alive. */
@@ -108,9 +85,6 @@ export function createStatusWriter(
     claimed = true;
     mkdirSync(dir, { recursive: true });
     const record: SentinelStatusRecord = { status, pid };
-    // Write-then-rename, so a watching reader never sees half a file.
-    const tmp = join(dir, `${STATUS_FILENAME}.${String(pid)}.tmp`);
-    writeFileSync(tmp, JSON.stringify(record));
-    renameSync(tmp, statusFilePath(dir));
+    writeJsonAtomic(dir, STATUS_FILENAME, record, pid);
   };
 }

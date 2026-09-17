@@ -154,6 +154,27 @@ export function readDuress(): DuressLatch | null {
   return JSON.parse(raw) as DuressLatch;
 }
 
+/**
+ * The latch payload only while its lease is fresh — the value isUnderDuress()
+ * gates on, read now rather than from its memo. For a reader woken by a change
+ * to the latch file (a watcher serving the state to a UI): the memo may still
+ * hold the answer from before the change for up to MEMO_TTL_MS, and nothing
+ * would wake the reader again to correct it. `null` when there is no latch or
+ * its lease lapsed (the sentinel stopped refreshing it).
+ */
+export function readFreshDuress(): DuressLatch | null {
+  let mtimeMs: number;
+  try {
+    mtimeMs = statSync(latchPath()).mtimeMs;
+  } catch (err) {
+    if (isEnoent(err)) return null;
+    throw err;
+  }
+  if (now() - mtimeMs >= FRESHNESS_LEASE_MS) return null;
+  // Cleared between the stat and the read: no latch.
+  return readDuress();
+}
+
 /** Point the latch at a temp dir. Pass null to restore the declared dir. */
 export function _setLatchDirForTests(dir: string | null): void {
   latchDirOverride = dir;

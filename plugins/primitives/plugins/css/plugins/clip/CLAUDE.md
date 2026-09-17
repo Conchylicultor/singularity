@@ -62,6 +62,7 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `debug/profiling/build`
     - `debug/profiling/ops`
     - `debug/queue`
+    - `debug/sentinel`
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `fields/tags/inline`

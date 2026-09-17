@@ -115,6 +115,43 @@ with a reason when no status was ever recorded or the file is unreadable.
 Tests: `worker-host.test.ts` (a worker that throws at load → 5 deaths → `down`
 → one report + the status file; the real worker reaches `ready`).
 
+## What the watcher measures, on the row
+
+Plan: `research/2026-09-17-global-machine-watcher-row-stats.md` (approved mock
+proto-1789664064-nr56).
+
+- **The worker writes `locks/sentinel/vitals.json` every tick** (after the
+  latch work, write-then-rename; a failed write is a `log` frame, never a failed
+  tick): each signal that can trip duress as `{value, limit}` — the readings
+  through the detector's own exported `signalsAt`, the limits from the
+  thresholds the worker holds — plus `elevated` (the closed `SignalKey` enum),
+  `tripped`, `pid`, `wall`, `cadenceMs` and `{freeMemMb, inFlightBuilds,
+  runningBackends}`. The worker writes it, not main, so a wedged main cannot
+  make the row lie; a dead worker makes the file stop changing. Schema, reader
+  and writer live in the `status-file` leaf.
+- **Every backend serves it as `sentinel.vitals`** (push): `none` |
+  `unreadable` | `recorded {vitals, current}`, where `current` means the status
+  file names that pid as the live, running watcher. The one status watcher also
+  watches the duress latch dir and routes each event by file name: `status.json`
+  → both resources, `vitals.json` → vitals only (so the status is not re-pushed
+  every 5 s), `duress.latch` → status only.
+- **`sentinel.status` carries the latch**: its value is `{watch, duress}`, with
+  `duress: {since}` read by `readFreshDuress()` (unmemoized — a watcher woken by
+  a latch change must not answer from `isUnderDuress()`'s memo). Running +
+  duress turns the row `critical`: "Under duress since 6:02 PM · builds held
+  back". The summary never subscribes to the 5 s vitals.
+- **Web**: the row's `glance` (load per core · GB free · builds, plus a banner
+  naming what tripped it or saying the numbers are old) and `component` (one
+  line per signal with a bar and "X of LIMIT", amber from ⅔ of the limit, red at
+  it; then "N worktrees running · Updated 3s ago") read `sentinel.vitals`, so
+  only an open report receives it. A reading older than 3 ticks, or not
+  `current`, greys out. The view model is pure: `web/internal/vitals-view.ts`.
+- Tests: `status-file/server/internal/vitals-file.test.ts`,
+  `server/internal/status-resource.test.ts` (current + routing),
+  `web/__tests__/vitals-view.test.ts`, the duress branch in
+  `machine-watcher-health.test.ts`, and the vitals assertions in
+  `worker/latch-lapse.test.ts`.
+
 ## Each tick gathers
 
 - **Host**: loadavg / cpu count, plus a `health-host.jsonl` tail line (30 s
@@ -227,7 +264,7 @@ sample carries its own `wall` (Date.now) as the cross-backend anchor.
 ## Web
 
 Config registration, the `duress-episode` / `sentinel-down` report summaries,
-and the Machine watcher health row (above). The `cluster` section currently renders through the
+and the Machine watcher health row with its stats (above). The `cluster` section currently renders through the
 pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 (load-ratio/pg/builds sparklines) is a follow-up.
 
@@ -235,18 +272,29 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts, read from the sentinel.status push resource). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource, and a sentinel-down report when main gives up respawning it.
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the machine is under duress, attention while it restarts, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sentinel"
     - `Reports.KindView` → `DuressEpisodeSummary`
     - `Reports.KindView` → `SentinelDownSummary`
-    - `HealthReport.Row` "Machine watcher"
+    - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
   - Uses:
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.cn`
     - `primitives/live-state.useResource`
+    - `primitives/loading.Loading`
+    - `primitives/relative-time.useNow`
     - `reports.Reports`
     - `shell/health-report.HealthReport`
 - Server:
@@ -256,6 +304,7 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `report-kind` "duress-episode"
     - `report-kind` "sentinel-down"
     - `resource.declare` "sentinel.status"
+    - `resource.declare` "sentinel.vitals"
     - `ConfigV2.Register` "sentinel"
   - Uses:
     - `config_v2.ConfigV2`
@@ -265,15 +314,22 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `database/embedded.PG_SOCKET_DIR`
     - `database/embedded.PG_USER`
     - `debug/sentinel/status-file.createStatusWriter`
+    - `debug/sentinel/status-file.readSentinelVitals`
     - `debug/sentinel/status-file.readSentinelWatch`
     - `debug/sentinel/status-file.sentinelStatusDir`
+    - `debug/sentinel/status-file.STATUS_FILENAME`
+    - `debug/sentinel/status-file.VITALS_FILENAME`
+    - `debug/sentinel/status-file.writeSentinelVitals`
     - `debug/trace/engine.captureTrace`
     - `debug/trace/engine.defineTraceEventClass`
     - `infra/file-watcher.createFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/host/duress/latch.clearDuress`
+    - `infra/host/duress/latch.duressLatchDir`
     - `infra/host/duress/latch.isUnderDuress`
+    - `infra/host/duress/latch.LATCH_FILENAME`
     - `infra/host/duress/latch.readDuress`
+    - `infra/host/duress/latch.readFreshDuress`
     - `infra/host/duress/latch.refreshDuress`
     - `infra/host/duress/latch.setDuress`
     - `infra/paths.isHostSingleton`
@@ -283,12 +339,14 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `reports.recordReport`
     - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
-  - Resources: `sentinel.status` (push)
+  - Resources:
+    - `sentinel.status` (push)
+    - `sentinel.vitals` (push)
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `debug/sentinel/status-file.SentinelDownStatusSchema`
-    - `debug/sentinel/status-file.SentinelWatch`
+    - `debug/sentinel/status-file.SentinelVitalsRecordSchema`
     - `debug/sentinel/status-file.SentinelWatchSchema`
     - `fields/bool/config.boolField`
     - `fields/float/config.floatField`
@@ -300,6 +358,8 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `DuressEpisodeEvent`
     - `DuressEpisodeReportPayload`
     - `SentinelDownPayload`
+    - `SentinelStatusValue`
+    - `SentinelVitals`
   - Exports (values):
     - `ClusterSampleSchema`
     - `ClusterSectionSchema`
@@ -310,9 +370,12 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `sentinelConfig`
     - `SentinelDownPayloadSchema`
     - `sentinelStatusResource`
+    - `SentinelStatusValueSchema`
+    - `sentinelVitalsResource`
+    - `SentinelVitalsSchema`
 - Cross-plugin:
   - Imported by: `debug/timeline`
 - Sub-plugins:
-  - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
+  - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
 
 <!-- AUTOGENERATED:END -->

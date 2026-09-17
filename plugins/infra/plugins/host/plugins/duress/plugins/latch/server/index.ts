@@ -14,6 +14,7 @@ export {
   LATCH_FILENAME,
   MEMO_TTL_MS,
   readDuress,
+  readFreshDuress,
   refreshDuress,
   setDuress,
   _setClockForTests,

@@ -105,6 +105,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `debug/memory`
     - `debug/profiling`
     - `debug/queue-health`
+    - `debug/sentinel`
     - `debug/timeline`
     - `debug/worktree-cleanup`
     - `page/bookmark`

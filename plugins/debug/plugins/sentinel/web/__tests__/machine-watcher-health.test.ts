@@ -9,19 +9,24 @@ import type {
   SentinelStatus,
   SentinelWatch,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import type { SentinelStatusValue } from "../../core";
 import { machineWatcherVerdict } from "../internal/machine-watcher-health";
 
 const refetch = () => Promise.resolve();
 
-function settled(data: SentinelWatch): ResourceResult<SentinelWatch> {
-  return { pending: false, data, refetch };
+function settled(
+  watch: SentinelWatch,
+  duress: SentinelStatusValue["duress"] = null,
+): ResourceResult<SentinelStatusValue> {
+  return { pending: false, data: { watch, duress }, refetch };
 }
 
 function recorded(
   status: SentinelStatus,
   ownerAlive = true,
-): ResourceResult<SentinelWatch> {
-  return settled({ kind: "recorded", status, pid: 42, ownerAlive });
+  duress: SentinelStatusValue["duress"] = null,
+): ResourceResult<SentinelStatusValue> {
+  return settled({ kind: "recorded", status, pid: 42, ownerAlive }, duress);
 }
 
 describe("Machine watcher health row", () => {
@@ -49,6 +54,26 @@ describe("Machine watcher health row", () => {
       machineWatcherVerdict(recorded({ state: "running", since: Date.now() }))
         .state,
     ).toBe("ok");
+  });
+
+  it("is critical while running under duress, saying since when", () => {
+    const since = new Date(2026, 8, 17, 18, 2).getTime();
+    const verdict = machineWatcherVerdict(
+      recorded({ state: "running", since: since - 60_000 }, true, { since }),
+    );
+    expect(verdict.state).toBe("critical");
+    expect("summary" in verdict && verdict.summary).toMatch(
+      /^Under duress since .*02.* · builds held back$/,
+    );
+  });
+
+  it("does not claim duress when the watcher is not running", () => {
+    const verdict = machineWatcherVerdict(
+      recorded({ state: "stopped", since: Date.now() }, true, {
+        since: Date.now(),
+      }),
+    );
+    expect(verdict.state).toBe("attention");
   });
 
   it("is critical when down, carrying the last error", () => {

@@ -11,6 +11,7 @@ import { duressEpisodeKind } from "./internal/duress-episode-kind";
 import { sentinelDownKind } from "./internal/sentinel-down-kind";
 import {
   sentinelStatusServerResource,
+  sentinelVitalsServerResource,
   startStatusWatcher,
   stopStatusWatcher,
 } from "./internal/status-resource";
@@ -20,13 +21,14 @@ export { readDuressEpisodes } from "./internal/read-duress-episodes";
 
 export default {
   description:
-    "Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource, and a sentinel-down report when main gives up respawning it.",
+    "Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.",
   contributions: [
     clusterClass.contribution,
     fleetFlightsClass.contribution,
     duressEpisodeKind,
     sentinelDownKind,
     Resource.Declare(sentinelStatusServerResource),
+    Resource.Declare(sentinelVitalsServerResource),
     ConfigV2.Register({ descriptor: sentinelConfig }),
   ],
   // The status watcher runs on EVERY backend (each serves the Machine watcher

@@ -16,5 +16,10 @@ export {
   SENTINEL_DOWN_KIND,
   SentinelDownPayloadSchema,
   sentinelStatusResource,
+  SentinelStatusValueSchema,
+  sentinelVitalsResource,
+  SentinelVitalsSchema,
   type SentinelDownPayload,
+  type SentinelStatusValue,
+  type SentinelVitals,
 } from "./status";

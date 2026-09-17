@@ -1,6 +1,6 @@
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import type { SentinelWatch } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import type { SentinelStatusValue } from "../../core";
 
 /** What a dead or missing watcher costs, said once so every critical row agrees. */
 const CONSEQUENCE = "builds are not held back when memory runs out";
@@ -19,7 +19,7 @@ function withError(summary: string, lastError: string | null): string {
     : `${summary} — last error: ${clampOneLine(lastError)}`;
 }
 
-function clockTime(at: number): string {
+export function clockTime(at: number): string {
   return new Date(at).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -34,10 +34,11 @@ function clockTime(at: number): string {
  * - turned off in config → `attention`;
  * - the process that wrote the status is gone → `critical`, whatever it said;
  * - `down` → `critical`; `starting` / `respawning` / `stopped` → `attention`,
- *   pulsing; `running` → `ok`.
+ *   pulsing; `running` → `ok`, or `critical` while the duress latch is up (the
+ *   watcher is doing its job, and the machine is in trouble).
  */
 export function machineWatcherVerdict(
-  result: ResourceResult<SentinelWatch>,
+  result: ResourceResult<SentinelStatusValue>,
 ): HealthStatus {
   if (result.pending) {
     return result.error === null
@@ -48,7 +49,7 @@ export function machineWatcherVerdict(
         };
   }
 
-  const watch = result.data;
+  const { watch, duress } = result.data;
   switch (watch.kind) {
     case "none":
       return {
@@ -79,6 +80,12 @@ export function machineWatcherVerdict(
   }
   switch (status.state) {
     case "running":
+      if (duress !== null) {
+        return {
+          state: "critical",
+          summary: `Under duress since ${clockTime(duress.since)} · builds held back`,
+        };
+      }
       return {
         state: "ok",
         summary: `Running since ${clockTime(status.since)}`,

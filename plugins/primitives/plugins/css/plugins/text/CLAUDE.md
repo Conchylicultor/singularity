@@ -351,6 +351,7 @@ fixed raw size escapes per-site via
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/timeline`

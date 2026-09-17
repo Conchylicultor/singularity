@@ -1,3 +1,4 @@
+import type { SignalKey } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { ClusterSample } from "../../core";
 
 // Pure onset state machine — dual-threshold, dual-dwell hysteresis. Fed one
@@ -30,14 +31,24 @@ export interface SignalReadings {
 }
 
 export type DetectorEvent =
-  | { kind: "trip"; runUpMs: number; signals: SignalReadings; elevated: string[] }
+  | {
+      kind: "trip";
+      runUpMs: number;
+      signals: SignalReadings;
+      elevated: SignalKey[];
+    }
   | { kind: "clear" }
   | null;
 
-function signalsAt(
+/**
+ * One tick's readings and which signals sit at or above their trip limit — the
+ * exact math the trip decision uses. Exported so the worker's vitals file shows
+ * the same numbers the detector acted on.
+ */
+export function signalsAt(
   sample: ClusterSample,
   t: DetectorThresholds,
-): { readings: SignalReadings; elevated: string[]; allCalm: boolean } {
+): { readings: SignalReadings; elevated: SignalKey[]; allCalm: boolean } {
   const readings: SignalReadings = {
     loadRatio: sample.cpuCount > 0 ? sample.loadAvg1 / sample.cpuCount : 0,
     // A pg-unreadable tick reads 0 locks: neither elevated nor calm-blocking.
@@ -49,10 +60,13 @@ function signalsAt(
     // Missing/stale host line — the null-blk-read convention applies.
     decompressionsPerSec: sample.decompressionsPerSec ?? null,
   };
-  const elevated: string[] = [];
+  const elevated: SignalKey[] = [];
   if (readings.loadRatio >= t.onLoadRatio) elevated.push("loadRatio");
   if (readings.locksWaiting >= t.onLocksWaiting) elevated.push("locksWaiting");
-  if (readings.blkReadDeltaMs !== null && readings.blkReadDeltaMs >= t.onBlkReadDeltaMs)
+  if (
+    readings.blkReadDeltaMs !== null &&
+    readings.blkReadDeltaMs >= t.onBlkReadDeltaMs
+  )
     elevated.push("blkReadDeltaMs");
   if (readings.slowBackends >= t.onSlowBackends) elevated.push("slowBackends");
   if (
@@ -65,7 +79,8 @@ function signalsAt(
   const allCalm =
     readings.loadRatio < off(t.onLoadRatio) &&
     readings.locksWaiting < off(t.onLocksWaiting) &&
-    (readings.blkReadDeltaMs === null || readings.blkReadDeltaMs < off(t.onBlkReadDeltaMs)) &&
+    (readings.blkReadDeltaMs === null ||
+      readings.blkReadDeltaMs < off(t.onBlkReadDeltaMs)) &&
     readings.slowBackends < off(t.onSlowBackends) &&
     (readings.decompressionsPerSec === null ||
       readings.decompressionsPerSec < off(t.onDecompressionsPerSec));
@@ -75,7 +90,11 @@ function signalsAt(
 
 export interface OnsetDetector {
   /** Feed one tick's sample; returns the transition event, if any. */
-  feed(sample: ClusterSample, thresholds: DetectorThresholds, cadenceMs: number): DetectorEvent;
+  feed(
+    sample: ClusterSample,
+    thresholds: DetectorThresholds,
+    cadenceMs: number,
+  ): DetectorEvent;
   readonly tripped: boolean;
 }
 
@@ -84,7 +103,9 @@ export interface OnsetDetector {
  * respawned sentinel worker adopting a fresh existing latch (it must keep
  * refreshing the lease it did not set, and eventually emit the clear).
  */
-export function createOnsetDetector(seed?: { tripped?: boolean }): OnsetDetector {
+export function createOnsetDetector(seed?: {
+  tripped?: boolean;
+}): OnsetDetector {
   let elevatedTicks = 0;
   let calmTicks = 0;
   let tripped = seed?.tripped ?? false;

@@ -579,6 +579,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `debug/queue-health`
     - `debug/render-profiler`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `debug/trace/pane`

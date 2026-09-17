@@ -41,6 +41,7 @@
     - `debug/health-monitor`
     - `debug/live-state-health`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/trace/pane`

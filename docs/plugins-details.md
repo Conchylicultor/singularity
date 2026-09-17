@@ -13446,18 +13446,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
-    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts, read from the sentinel.status push resource). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource, and a sentinel-down report when main gives up respawning it.
+    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the machine is under duress, attention while it restarts, read from the sentinel.status push resource), with its stats — load per core, free memory and builds at a glance, and each signal that can trip duress against its limit when expanded — read from the sentinel.vitals push resource. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sentinel"
           - `Reports.KindView` → `DuressEpisodeSummary`
           - `Reports.KindView` → `SentinelDownSummary`
-          - `HealthReport.Row` "Machine watcher"
+          - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
         - Uses:
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
+          - `primitives/css/clip.Clip`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
+          - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
           - `primitives/live-state.useResource`
+          - `primitives/loading.Loading`
+          - `primitives/relative-time.useNow`
           - `reports.Reports`
           - `shell/health-report.HealthReport`
       - Server:
@@ -13467,6 +13478,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `report-kind` "duress-episode"
           - `report-kind` "sentinel-down"
           - `resource.declare` "sentinel.status"
+          - `resource.declare` "sentinel.vitals"
           - `ConfigV2.Register` "sentinel"
         - Uses:
           - `config_v2.ConfigV2`
@@ -13476,15 +13488,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/embedded.PG_SOCKET_DIR`
           - `database/embedded.PG_USER`
           - `debug/sentinel/status-file.createStatusWriter`
+          - `debug/sentinel/status-file.readSentinelVitals`
           - `debug/sentinel/status-file.readSentinelWatch`
           - `debug/sentinel/status-file.sentinelStatusDir`
+          - `debug/sentinel/status-file.STATUS_FILENAME`
+          - `debug/sentinel/status-file.VITALS_FILENAME`
+          - `debug/sentinel/status-file.writeSentinelVitals`
           - `debug/trace/engine.captureTrace`
           - `debug/trace/engine.defineTraceEventClass`
           - `infra/file-watcher.createFileWatcher`
           - `infra/file-watcher.FileWatcher`
           - `infra/host/duress/latch.clearDuress`
+          - `infra/host/duress/latch.duressLatchDir`
           - `infra/host/duress/latch.isUnderDuress`
+          - `infra/host/duress/latch.LATCH_FILENAME`
           - `infra/host/duress/latch.readDuress`
+          - `infra/host/duress/latch.readFreshDuress`
           - `infra/host/duress/latch.refreshDuress`
           - `infra/host/duress/latch.setDuress`
           - `infra/paths.isHostSingleton`
@@ -13494,12 +13513,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `reports.recordReport`
           - `reports.ReportKind`
         - Exports (values): `readDuressEpisodes`
-        - Resources: `sentinel.status` (push)
+        - Resources:
+          - `sentinel.status` (push)
+          - `sentinel.vitals` (push)
       - Core:
         - Uses:
           - `config_v2.defineConfig`
           - `debug/sentinel/status-file.SentinelDownStatusSchema`
-          - `debug/sentinel/status-file.SentinelWatch`
+          - `debug/sentinel/status-file.SentinelVitalsRecordSchema`
           - `debug/sentinel/status-file.SentinelWatchSchema`
           - `fields/bool/config.boolField`
           - `fields/float/config.floatField`
@@ -13511,6 +13532,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DuressEpisodeEvent`
           - `DuressEpisodeReportPayload`
           - `SentinelDownPayload`
+          - `SentinelStatusValue`
+          - `SentinelVitals`
         - Exports (values):
           - `ClusterSampleSchema`
           - `ClusterSectionSchema`
@@ -13521,32 +13544,47 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `sentinelConfig`
           - `SentinelDownPayloadSchema`
           - `sentinelStatusResource`
+          - `SentinelStatusValueSchema`
+          - `sentinelVitalsResource`
+          - `SentinelVitalsSchema`
       - Cross-plugin:
         - Imported by: `debug/timeline`
       - Plugins:
-        - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
+        - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the per-tick vitals file the watcher's worker writes (the latest reading, limits and trip state), the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
           - Cross-plugin:
             - Imported by: `debug/sentinel`
           - Server:
+            - Exports (types): `SentinelVitalsRead`
             - Exports (values):
               - `createStatusWriter`
               - `isPidAlive`
+              - `readSentinelVitals`
               - `readSentinelWatch`
               - `sentinelStatusDir`
               - `STATUS_FILENAME`
               - `statusFilePath`
+              - `VITALS_FILENAME`
+              - `vitalsFilePath`
+              - `writeSentinelVitals`
           - Core:
             - Exports (types):
               - `DuressGuard`
               - `SentinelStatus`
               - `SentinelStatusRecord`
+              - `SentinelVitalsRecord`
               - `SentinelWatch`
+              - `SignalKey`
+              - `SignalVital`
             - Exports (values):
               - `duressGuard`
               - `SentinelDownStatusSchema`
               - `SentinelStatusRecordSchema`
               - `SentinelStatusSchema`
+              - `SentinelVitalsRecordSchema`
               - `SentinelWatchSchema`
+              - `SIGNAL_KEYS`
+              - `SignalKeySchema`
+              - `SignalVitalSchema`
     - **`session-divergence`** — Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
       - Web:
         - Contributes:
@@ -17918,6 +17956,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `LATCH_FILENAME`
                   - `MEMO_TTL_MS`
                   - `readDuress`
+                  - `readFreshDuress`
                   - `refreshDuress`
                   - `setDuress`
         - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
@@ -23333,6 +23372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling/build`
               - `debug/profiling/ops`
               - `debug/queue`
+              - `debug/sentinel`
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `fields/tags/inline`
@@ -23390,6 +23430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/reports`
+              - `debug/sentinel`
               - `debug/timeline`
               - `debug/trace/boot`
               - `debug/trace/contention`
@@ -23662,6 +23703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/profiling`
               - `debug/queue`
               - `debug/queue-health`
+              - `debug/sentinel`
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `debug/trace/pane`
@@ -23989,6 +24031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/memory`
               - `debug/profiling`
               - `debug/queue-health`
+              - `debug/sentinel`
               - `debug/timeline`
               - `page/annotations/todo/task-link`
               - `page/formatting/link`
@@ -24321,6 +24364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/memory`
               - `debug/profiling`
               - `debug/queue-health`
+              - `debug/sentinel`
               - `debug/timeline`
               - `debug/worktree-cleanup`
               - `page/bookmark`
@@ -24751,6 +24795,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/reports`
+              - `debug/sentinel`
               - `debug/slow-ops/cluster`
               - `debug/slow-ops/pane`
               - `debug/timeline`
@@ -25256,6 +25301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/read-set`
               - `debug/render-profiler`
               - `debug/reports`
+              - `debug/sentinel`
               - `debug/slow-ops/cluster`
               - `debug/slow-ops/pane`
               - `debug/timeline`
@@ -25738,6 +25784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/queue-health`
               - `debug/render-profiler`
               - `debug/reports`
+              - `debug/sentinel`
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `debug/trace/pane`
@@ -28051,6 +28098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/queue-health`
           - `debug/read-set`
           - `debug/reports`
+          - `debug/sentinel`
           - `debug/slow-ops/pane`
           - `debug/trace/pane`
           - `debug/worktree-cleanup`
@@ -29274,6 +29322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/health-monitor`
           - `debug/live-state-health`
           - `debug/reports`
+          - `debug/sentinel`
           - `debug/slow-ops/cluster`
           - `debug/slow-ops/pane`
           - `debug/trace/pane`

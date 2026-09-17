@@ -258,6 +258,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `debug/read-set`
     - `debug/render-profiler`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops/cluster`
     - `debug/slow-ops/pane`
     - `debug/timeline`
