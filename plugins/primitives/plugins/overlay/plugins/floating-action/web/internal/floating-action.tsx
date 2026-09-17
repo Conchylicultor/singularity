@@ -11,6 +11,7 @@ import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/c
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { type ComponentProps, type ReactNode, useRef } from "react";
+import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
 export type FloatingAnchor =
@@ -92,7 +93,22 @@ export interface FloatingActionProps extends Omit<
   label?: string;
 }
 
-export function FloatingAction({
+/**
+ * A popup opened from inside the panel (the options picker's version list)
+ * holds the panel open: it is drawn outside the panel's box, so reaching for
+ * it would otherwise read as leaving the control. Popups report to their
+ * NEAREST scope, so this scope takes over from any enclosing one.
+ */
+export function FloatingAction(props: FloatingActionProps) {
+  return (
+    <PopupOpenScope>
+      {(popupOpen) => <FloatingActionPanel {...props} held={popupOpen} />}
+    </PopupOpenScope>
+  );
+}
+
+function FloatingActionPanel({
+  held,
   className,
   panelClassName,
   direction = "row",
@@ -107,7 +123,7 @@ export function FloatingAction({
   label,
   children,
   ...props
-}: FloatingActionProps) {
+}: FloatingActionProps & { held: boolean }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -117,7 +133,7 @@ export function FloatingAction({
   // closed — the one moment it is guaranteed to be at rest (nothing has opened
   // it yet, so no morph can be in flight).
   const chromeRef = useRef<{ width: number; height: number } | null>(null);
-  const { open, rootProps } = useDisclosureIntent(wrapperRef, closeDelay);
+  const { open, rootProps } = useDisclosureIntent(wrapperRef, closeDelay, held);
 
   // The morphing panel is `position: absolute`, so it contributes no intrinsic
   // size to the wrapper. Pin the wrapper to the panel's *collapsed* footprint so

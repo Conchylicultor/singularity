@@ -16,6 +16,7 @@ import {
   type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md";
+import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 
 // Kept generic over base-ui's own `<Value, Multiple>` params: this was a bare
 // `const Select = SelectPrimitive.Root` alias, and a non-generic wrapper would
@@ -142,8 +143,11 @@ function SelectContent({
     header?: React.ReactNode;
   }) {
   const forwarded = usePortalForwardedAttrs();
+  // Inside a PortalHost (a fullscreen region), draw there: under `body` the
+  // popup would be invisible.
+  const container = usePortalContainer();
   return (
-    <SelectPrimitive.Portal>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Positioner
         {...forwarded}
         side={side}

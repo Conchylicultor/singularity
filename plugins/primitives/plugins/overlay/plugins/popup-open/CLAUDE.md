@@ -15,7 +15,9 @@ through `useReportPopupOpen`.
 ```
 
 First consumer: `row-actions`, whose hover-revealed cluster must stay revealed
-while its own dropdown is open — the trigger is the open menu's anchor.
+while its own dropdown is open — the trigger is the open menu's anchor. Second:
+`floating-action`, whose hover panel stays open while a popup opened from its
+content is open.
 
 ## Why a signal, not a CSS `:has()` rule
 
@@ -56,6 +58,7 @@ edges). Same precedent as `overlay-boundary`.
   - Imported by:
     - `primitives/adaptive-bar`
     - `primitives/css/ui-kit`
+    - `primitives/overlay/floating-action`
     - `primitives/row-actions`
 - Web:
   - Exports (values):

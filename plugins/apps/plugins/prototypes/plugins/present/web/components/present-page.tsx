@@ -10,7 +10,10 @@ import {
   prototypeHistoryResource,
   type PrototypeVersion,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { PrototypeDetailProvider } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import {
+  PrototypeDetailProvider,
+  VersionStepShortcuts,
+} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 import { prototypePresentPane } from "../panes";
 import { PresentStage } from "./present-stage";
 
@@ -65,6 +68,8 @@ function PresentPageBody({
       stageId={undefined}
       onStageChange={noStageChange}
     >
+      {/* No pane header here to hold the version stepper's `[` / `]`. */}
+      <VersionStepShortcuts />
       <div className={cn("relative size-full bg-background", hoverRevealGroup)}>
         <PresentStage name={name} />
       </div>

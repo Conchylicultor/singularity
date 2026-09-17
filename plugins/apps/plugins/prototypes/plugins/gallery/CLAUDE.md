@@ -150,8 +150,7 @@ The Prototypes app's two panes:
     the prototype's page — that is what keeps switchers out of the designs.
     Exported, so the sibling `present` plugin draws the same picker over a
     presentation.
-    Chips, not a dropdown: a dropdown's portaled menu sits outside the hover box,
-    so reaching for it would close the panel. Picks are `files`' ONE shared
+    Chips, so every value is visible and one click away. Picks are `files`' ONE shared
     record per prototype (`prototypes.picks`, `_picks/<id>.json`): every tab
     and every deploy shows the same variant and follows a pick live, and
     agents read it with `./singularity prototype options <id>`. The provider
@@ -175,9 +174,14 @@ The Prototypes app's two panes:
     could not leave the version it opened on. It moves the same
     `shownVersion` as the header stepper, through the same
     `useVersionStepping` (`internal/use-version-stepping.ts`), so the two
-    cannot disagree. Arrows only: the version list is a popover, which would
-    close the hover panel and be invisible under the Fullscreen API. The pane
-    itself does not ask for the row — its header already has the stepper.
+    cannot disagree — and it draws the header's own arrows and label
+    (`VersionArrows`), so its label opens the same version list. That popover
+    works inside the picker because `FloatingAction` stays open while a popup
+    opened from inside it is open, and inside a fullscreen presentation because
+    the presentation is a `PortalHost`. `[` / `]` are registered apart from the
+    arrows (`VersionShortcuts`), once per surface: by the header stepper, or by
+    `VersionStepShortcuts` on the new-tab page. The pane itself does not ask for
+    the row — its header already has the stepper.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults
     (`pickedVariantLine` — a snapshot from launch time), a line pointing at
@@ -329,6 +333,7 @@ honest — the prototype does exist — and it self-corrects.
     - `usePrototypeDocumentSrc`
     - `usePrototypePicks`
     - `usePrototypeSrc`
+    - `VersionStepShortcuts`
 - Cross-plugin:
   - Imported by:
     - `active-data/prototype`

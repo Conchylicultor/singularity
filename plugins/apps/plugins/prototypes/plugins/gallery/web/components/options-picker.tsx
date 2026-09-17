@@ -39,8 +39,7 @@ import { VersionRow, VersionSummary } from "./version-row";
  *
  * At rest it is a small pill naming what you are looking at ("Azure · Soft
  * tray"). Hover, focus or a tap expands it into one row of chips per option —
- * chips, not a dropdown, because a dropdown's menu renders in a portal outside
- * the hover box and moving the pointer into it would close the panel under it.
+ * chips, so every value is visible and one click away.
  * A pick is written to the prototype's one shared record of picks (every
  * surface showing it follows, live); the frame's `src` carries them, so the
  * frame reloads on the new variant.

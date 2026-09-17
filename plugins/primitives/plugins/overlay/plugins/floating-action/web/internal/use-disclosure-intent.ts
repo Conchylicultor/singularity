@@ -29,7 +29,7 @@ export interface DisclosureIntent {
 /**
  * Disclosure-intent state machine for a hover-revealed control.
  *
- * Three independent open sources, OR-ed together, so no single source can
+ * Four independent open sources, OR-ed together, so no single source can
  * suppress another:
  *   - hover    — opens on pointer-enter, closes on pointer-leave after a grace
  *                delay. Re-entry ALWAYS cancels the pending close, so returning
@@ -42,6 +42,13 @@ export interface DisclosureIntent {
  *                Presses while already open are left to bubble to the content,
  *                so tapping an item inside never toggles the panel shut.
  *
+ *   - held     — a popup opened from inside the panel (a popover, menu, select)
+ *                is still open. That popup is drawn outside the panel's box,
+ *                so reaching for it reads as a pointer-leave and a blur; `held`
+ *                keeps the panel open under it. While held, Escape and presses
+ *                belong to the popup: the panel ignores them, so closing the
+ *                popup does not take the panel with it.
+ *
  * Flicker (rapid open/close as the morphing panel's geometry shifts under the
  * cursor) is handled structurally by the caller pinning a stable hover hitbox,
  * plus the grace delay here — never by ignoring input.
@@ -49,13 +56,14 @@ export interface DisclosureIntent {
 export function useDisclosureIntent(
   rootRef: RefObject<HTMLElement | null>,
   closeDelay = DEFAULT_CLOSE_DELAY,
+  held = false,
 ): DisclosureIntent {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [latched, setLatched] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const open = hovered || focused || latched;
+  const open = hovered || focused || latched || held;
 
   const onPointerEnter = useCallback(() => {
     clearTimeout(closeTimer.current);
@@ -87,27 +95,31 @@ export function useDisclosureIntent(
 
   const onKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) {
+      // A popup opened from inside handles its own Escape; React bubbles the
+      // key to us through its portal, and it must close only the popup.
+      if (e.key === "Escape" && open && !held) {
         e.stopPropagation();
         clearTimeout(closeTimer.current);
         setHovered(false);
         setLatched(false);
       }
     },
-    [open],
+    [open, held],
   );
 
   // An outside press dismisses a latched (touch / click) open. Hover and focus
   // opens dismiss themselves via pointer-leave / blur.
+  // A press inside a popup opened from the panel is not outside it: the popup is
+  // drawn elsewhere in the DOM, but it is the panel's own content.
   useEffect(() => {
-    if (!latched) return;
+    if (!latched || held) return;
     const onDocPointerDown = (e: PointerEvent) => {
       if (rootRef.current?.contains(e.target as Node)) return;
       setLatched(false);
     };
     document.addEventListener("pointerdown", onDocPointerDown);
     return () => document.removeEventListener("pointerdown", onDocPointerDown);
-  }, [latched, rootRef]);
+  }, [latched, held, rootRef]);
 
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 

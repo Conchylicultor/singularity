@@ -313,6 +313,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/latest-ref.useLatestRef`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popup-open.useReportPopupOpen`
+    - `primitives/overlay/portal-host.usePortalContainer`
     - `primitives/select-scope.ContentScope`
     - `primitives/select-scope.scopeSelectAllKeyDown`
     - `primitives/shortcuts.ShortcutDescriptor`

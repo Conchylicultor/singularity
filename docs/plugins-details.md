@@ -3299,6 +3299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `usePrototypeDocumentSrc`
               - `usePrototypePicks`
               - `usePrototypeSrc`
+              - `VersionStepShortcuts`
           - Cross-plugin:
             - Imported by:
               - `active-data/prototype`
@@ -3321,6 +3322,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/prototypes/gallery.useFrameSizeState`
               - `apps/prototypes/gallery.usePrototypeDetail`
               - `apps/prototypes/gallery.usePrototypeSrc`
+              - `apps/prototypes/gallery.VersionStepShortcuts`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
@@ -3339,6 +3341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/live-state.useCombinedResources`
               - `primitives/live-state.useResource`
               - `primitives/loading.Loading`
+              - `primitives/overlay/portal-host.PortalHost`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
               - `primitives/pane.defineRoute`
               - `primitives/pane.Pane`
@@ -25209,6 +25212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/latest-ref.useLatestRef`
               - `primitives/overlay/overlay-boundary.OverlayBoundary`
               - `primitives/overlay/popup-open.useReportPopupOpen`
+              - `primitives/overlay/portal-host.usePortalContainer`
               - `primitives/select-scope.ContentScope`
               - `primitives/select-scope.scopeSelectAllKeyDown`
               - `primitives/shortcuts.ShortcutDescriptor`
@@ -28113,7 +28117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `primitives/outline/rail`
-    - **`overlay`** — What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), and the signal saying a popup is open beneath you (popup-open).
+    - **`overlay`** — What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), the signal saying a popup is open beneath you (popup-open), and where popups opened inside a region are drawn (portal-host).
       - Plugins:
         - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
           - Web:
@@ -28137,6 +28141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/spacing.StackDirection`
               - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/overlay/popup-open.PopupOpenScope`
             - Exports (types):
               - `FloatingActionFadeInProps`
               - `FloatingActionProps`
@@ -28357,11 +28362,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by:
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
+              - `primitives/overlay/floating-action`
               - `primitives/row-actions`
           - Web:
             - Exports (values):
               - `PopupOpenScope`
               - `useReportPopupOpen`
+        - **`portal-host`** — Where a popup opened inside a region is drawn: PortalHost makes every ui-kit popup (popover, menu, select, tooltip, dialog, sheet) opened inside it render into the region instead of document.body — required under the Fullscreen API, which paints only the fullscreen element's subtree, and over overlays stacked above the popup layer. ui-kit's portal wrappers read usePortalContainer. Imports only react, so ui-kit can consume it without a cycle.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/present`
+              - `primitives/css/ui-kit`
+          - Web:
+            - Exports (values):
+              - `PortalHost`
+              - `usePortalContainer`
         - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
           - Web:
             - Uses:

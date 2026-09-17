@@ -33,15 +33,21 @@ options picker), so they cannot drift. The new-tab page supplies the
 
 **The options picker comes along** (the gallery's `OptionsPicker`, bottom-right,
 hover-revealed like the ×), so a theme or variant can be switched while
-presenting. It must stay inline DOM inside the stage box — anything portaled to
-`body` is invisible under the Fullscreen API.
+presenting. It is inline DOM inside the stage box.
 
 **So does the version.** The stage asks the picker for its Version row
-(`withVersion`): `‹ v3 of 7 ›` and Back to latest, with the pill naming the
-version on screen. There is no pane header while presenting, so this is the
-only way to change version there — fullscreen included. `[` / `]` keep working
-in the in-app overlays (the pane's header stepper is still mounted under them);
-the new-tab page has only the row.
+(`withVersion`): `‹ v3 of 7 ›` — whose label opens the version list, as in the
+header — and Back to latest, with the pill naming the version on screen. There
+is no pane header while presenting, so this is the only way to change version
+there — fullscreen included. `[` / `]` work everywhere: in the in-app overlays
+the pane's header stepper is still mounted under them, and the new-tab page
+registers them itself (`VersionStepShortcuts`).
+
+**The overlay's stage box is a `PortalHost`** (`primitives/overlay/portal-host`):
+every popup opened inside the presentation — the version list, a tooltip — is
+drawn inside the box instead of under `body`. Under the Fullscreen API only the
+fullscreened subtree is painted, and a viewport presentation sits above the
+popup layer, so without it those popups would be invisible.
 
 **Presenting opens at Full size**: the frame fills the presentation at scale 1,
 so the page's own responsive layout shows instead of a fixed canvas scaled up.
@@ -82,6 +88,7 @@ another way to view a prototype is a sibling plugin, not an edit here.
     - `apps/prototypes/gallery.useFrameSizeState`
     - `apps/prototypes/gallery.usePrototypeDetail`
     - `apps/prototypes/gallery.usePrototypeSrc`
+    - `apps/prototypes/gallery.VersionStepShortcuts`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -100,6 +107,7 @@ another way to view a prototype is a sibling plugin, not an edit here.
     - `primitives/live-state.useCombinedResources`
     - `primitives/live-state.useResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/portal-host.PortalHost`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

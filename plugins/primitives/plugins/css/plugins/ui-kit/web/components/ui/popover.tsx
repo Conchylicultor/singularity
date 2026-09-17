@@ -9,6 +9,7 @@ import type {
   PopoverPadding,
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
+import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 
 function Popover({
   open,
@@ -81,8 +82,11 @@ function PopoverContent({
   // crosses portals) so the popup adopts the launching window's scoped theme
   // instead of the global :root chrome theme. Undefined → no attribute → default.
   const forwarded = usePortalForwardedAttrs();
+  // Inside a PortalHost (a fullscreen region), draw there: under `body` the
+  // popup would be invisible.
+  const container = usePortalContainer();
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         {...forwarded}
         className="isolate z-popover outline-none"

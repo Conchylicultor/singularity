@@ -49,17 +49,40 @@ export function VersionStepper() {
   const { name } = usePrototypeDetail();
   const history = useResource(prototypeHistoryResource, { name });
   return matchResource(history, {
-    pending: () => <PendingStepper />,
+    pending: () => <PendingVersionArrows />,
     error: (err) => (
       <Text variant="caption" tone="destructive" title={err.message}>
         Version history unavailable
       </Text>
     ),
-    ready: (h) => <ReadyStepper history={h} />,
+    ready: (h) => (
+      <>
+        <VersionShortcuts history={h} />
+        <VersionArrows history={h} />
+      </>
+    ),
   });
 }
 
-function PendingStepper() {
+/**
+ * `[` / `]` step back / forward, on a surface with no header stepper — the
+ * new-tab presentation page. Registers nothing until the history is known.
+ */
+export function VersionStepShortcuts() {
+  const { name } = usePrototypeDetail();
+  const history = useResource(prototypeHistoryResource, { name });
+  return matchResource(history, {
+    pending: () => null,
+    error: () => null,
+    ready: (h) => <VersionShortcuts history={h} />,
+  });
+}
+
+/**
+ * The arrows while the history is not known: disabled, over a loading label in
+ * the label's own box, so they sit where they will once it loads.
+ */
+export function PendingVersionArrows() {
   return (
     <Stack direction="row" gap="2xs" align="center">
       <IconButton icon={MdChevronLeft} label="Previous version" disabled />
@@ -72,11 +95,13 @@ function PendingStepper() {
   );
 }
 
-function ReadyStepper({ history }: { history: PrototypeHistory }) {
-  const [listOpen, setListOpen] = useState(false);
-  const { model, current, prev, next, go, stepBack, stepForward } =
-    useVersionStepping(history);
-
+/**
+ * Registers `[` / `]`. Its own component, apart from the arrows, because a
+ * surface registers them ONCE while it may draw the arrows twice (the header,
+ * and the options picker of a presentation over the pane).
+ */
+function VersionShortcuts({ history }: { history: PrototypeHistory }) {
+  const { stepBack, stepForward } = useVersionStepping(history);
   // Scoped to this surface, and — being plain keys — silent while a text field
   // has focus, so `[` still types. Stable identity (the handlers read the
   // latest model through `useEventCallback`), so they register once.
@@ -100,6 +125,20 @@ function ReadyStepper({ history }: { history: PrototypeHistory }) {
     [stepBack, stepForward],
   );
   useSurfaceShortcuts(shortcuts);
+  return null;
+}
+
+/**
+ * `‹ v3 of 7 ›`: the arrows, and the label that opens the version list. Shared
+ * by the header stepper and the options picker's Version row, so the list is
+ * the same everywhere. The list is a popover: inside a presentation it is drawn
+ * into the presentation (its `PortalHost`), and it holds the picker's hover
+ * panel open while it is open.
+ */
+export function VersionArrows({ history }: { history: PrototypeHistory }) {
+  const [listOpen, setListOpen] = useState(false);
+  const { model, current, prev, next, go, stepBack, stepForward } =
+    useVersionStepping(history);
 
   return (
     <Stack direction="row" gap="2xs" align="center">

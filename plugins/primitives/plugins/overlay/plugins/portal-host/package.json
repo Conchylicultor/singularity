@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-overlay-portal-host",
+  "description": "Where a popup opened inside a region is drawn: PortalHost + usePortalContainer.",
+  "private": true,
+  "version": "0.0.1"
+}

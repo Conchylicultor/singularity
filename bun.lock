@@ -4443,6 +4443,10 @@
       "name": "@singularity/plugin-primitives-overlay-popup-open",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/overlay/plugins/portal-host": {
+      "name": "@singularity/plugin-primitives-overlay-portal-host",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/overlay/plugins/surface-overlay": {
       "name": "@singularity/plugin-primitives-overlay-surface-overlay",
       "version": "0.0.1",
@@ -8105,6 +8109,8 @@
     "@singularity/plugin-primitives-overlay-popover": ["@singularity/plugin-primitives-overlay-popover@workspace:plugins/primitives/plugins/overlay/plugins/popover"],
 
     "@singularity/plugin-primitives-overlay-popup-open": ["@singularity/plugin-primitives-overlay-popup-open@workspace:plugins/primitives/plugins/overlay/plugins/popup-open"],
+
+    "@singularity/plugin-primitives-overlay-portal-host": ["@singularity/plugin-primitives-overlay-portal-host@workspace:plugins/primitives/plugins/overlay/plugins/portal-host"],
 
     "@singularity/plugin-primitives-overlay-surface-overlay": ["@singularity/plugin-primitives-overlay-surface-overlay@workspace:plugins/primitives/plugins/overlay/plugins/surface-overlay"],
 

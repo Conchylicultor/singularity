@@ -179,6 +179,33 @@ await withBrowser(async (h) => {
   const versionRow = dialog.getByRole("group", { name: "Version" });
   await versionRow.waitFor({ state: "visible", timeout: 5000 });
   r.ok("the picker offers the Version row while fullscreen", true);
+  // The label opens the version list: drawn inside the fullscreened
+  // presentation (its portal host), with the picker held open under it.
+  await versionRow.getByRole("button", { name: /^(v\d+|Live|Unknown)/ }).click();
+  const list = dialog
+    .locator("[data-portal-host]")
+    .getByText(/^\d+ versions?$/);
+  const listShown = await list
+    .waitFor({ state: "visible", timeout: 5000 })
+    .then(
+      () => true,
+      () => false,
+    );
+  r.ok("the version list opens inside the fullscreen presentation", listShown);
+  await page.mouse.move(5, 5);
+  await page.waitForTimeout(500);
+  r.ok(
+    "the picker stays open while its version list is open",
+    await versionRow.isVisible(),
+  );
+  await snap(page, out, "fullscreen-version-list");
+  await page.keyboard.press("Escape");
+  await list.waitFor({ state: "hidden", timeout: 5000 });
+  r.ok(
+    "Escape closes the list without leaving fullscreen",
+    await page.evaluate(() => document.fullscreenElement !== null),
+  );
+  await dialog.getByLabel("Prototype options").hover();
   const previous = versionRow.getByRole("button", { name: "Previous version" });
   if (await previous.isEnabled()) {
     await previous.click();

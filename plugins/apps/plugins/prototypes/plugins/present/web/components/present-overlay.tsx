@@ -9,6 +9,7 @@ import {
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { PortalHost } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
 import { PresentStage } from "./present-stage";
 
@@ -83,8 +84,13 @@ export function PresentOverlay({
       ref={rootRef}
       className={cn("relative size-full bg-background", hoverRevealGroup)}
     >
-      <PresentStage name={name} />
-      {/* Hidden until the pointer moves over the stage: a presentation shows
+      {/* Every popup opened in the presentation (the version list, a
+          tooltip) is drawn inside this box: under the Fullscreen API only this
+          subtree is painted, and a viewport presentation sits above the popup
+          layer. */}
+      <PortalHost>
+        <PresentStage name={name} />
+        {/* Hidden until the pointer moves over the stage: a presentation shows
           the design, not our chrome. No `mask` — the app's scrim color bleeds
           a dark patch across a light prototype, and the solid `secondary`
           button already carries its own background, so nothing interleaves.
@@ -95,18 +101,19 @@ export function PresentOverlay({
           corner would have something land on the exit button. Covering the
           viewport puts that chrome underneath us, so the top-right corner is
           free again, and that is where an exit belongs. */}
-      <Pin
-        to={placement === "surface" ? "top-left" : "top-right"}
-        offset="md"
-        className={hoverRevealTarget}
-      >
-        <IconButton
-          icon={MdClose}
-          label="Exit presentation (Esc)"
-          variant="secondary"
-          onClick={onClose}
-        />
-      </Pin>
+        <Pin
+          to={placement === "surface" ? "top-left" : "top-right"}
+          offset="md"
+          className={hoverRevealTarget}
+        >
+          <IconButton
+            icon={MdClose}
+            label="Exit presentation (Esc)"
+            variant="secondary"
+            onClick={onClose}
+          />
+        </Pin>
+      </PortalHost>
     </div>
   );
 

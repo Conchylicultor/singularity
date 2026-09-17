@@ -5,7 +5,7 @@ as the user is doing one thing, and then it goes away. A menu, a tooltip, a moda
 panel that grows out of a button. Everything here answers **what floats above the page,
 and what does it anchor to?**
 
-The ten members overlap enough that the choice is easy to get wrong, so pick by the
+The eleven members overlap enough that the choice is easy to get wrong, so pick by the
 anchor and the focus behaviour, not by the word in the name.
 
 Reach for:
@@ -23,6 +23,7 @@ Reach for:
 | A **hover label**, or a keyboard-shortcut badge | `tooltip` |
 | An image that opens **full-window** to zoom and pan, stepping through its neighbours | `image-viewer` |
 | To know a **popup is open underneath you**, so hover-revealed chrome stays revealed | `popup-open` |
+| Popups opened inside a region to be **drawn inside it** (a fullscreened element) | `portal-host` |
 
 `popover` and `floating-surface` are siblings, not one wrapping the other. They render the
 same panel; what differs is focus. A trigger popover should move focus into its panel. A
@@ -30,9 +31,9 @@ caret menu must not — the caret stays live in the text the user is typing, and
 drives the highlighted row. `cursor-menu` is the third anchor: neither an element nor a
 caret, just an (x, y) point.
 
-`overlay-boundary` and `popup-open` are the two members that sit **below** `css/ui-kit` in
+`overlay-boundary`, `popup-open` and `portal-host` are the three members that sit **below** `css/ui-kit` in
 the import layering, and that is deliberate. `ui-kit` wraps `OverlayBoundary` around every
-`*Content` it ships and publishes the open-popup boolean itself, so both must import
+`*Content` it ships, publishes the open-popup boolean itself and reads the portal host, so all three must import
 nothing but `react` — anything more would close an import cycle back into `ui-kit`, which
 the boundary checker rejects. Moving them under this umbrella changes none of that: an
 umbrella is a pure folder with no barrel of its own, so it adds no import edge, and each
@@ -49,7 +50,7 @@ read.
 
 ## Plugin reference
 
-- Description: What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), and the signal saying a popup is open beneath you (popup-open).
+- Description: What floats above the page, and what does it anchor to? — the panel hung off a trigger (popover), the menu at the click point or at the caret (cursor-menu / floating-surface), the control that expands on hover (floating-action), the modal opened from a callback (imperative-dialog), the box that fills the app tab (surface-overlay), the crash containment wrapped around every overlay's content (overlay-boundary), the hover label (tooltip), the full-window image viewer (image-viewer), the signal saying a popup is open beneath you (popup-open), and where popups opened inside a region are drawn (portal-host).
 - Sub-plugins:
   - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
   - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
@@ -59,6 +60,7 @@ read.
   - **`overlay-boundary`** — React-only leaf error boundary for transient overlay content (popover/dialog/dropdown/select/tooltip/floating): OverlayBoundary catches a crash inside overlay content and renders a fallback injected via registerOverlayFallback, so the crash stays contained to the overlay instead of taking down the launching chrome. Sits below ui-kit so it can be wrapped around every *Content without closing the ui-kit → error-boundary cycle.
   - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
   - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
+  - **`portal-host`** — Where a popup opened inside a region is drawn: PortalHost makes every ui-kit popup (popover, menu, select, tooltip, dialog, sheet) opened inside it render into the region instead of document.body — required under the Fullscreen API, which paints only the fullscreen element's subtree, and over overlays stacked above the popup layer. ui-kit's portal wrappers read usePortalContainer. Imports only react, so ui-kit can consume it without a cycle.
   - **`surface-overlay`** — Surface-filling overlay primitive: <SurfaceOverlay> portals into the nearest <SurfaceOverlayHost> so its absolute inset-0 box fills the app tab's surface — escaping the pane layout in between without escaping to the viewport, so the tab bar and app rail stay visible. A missing host throws.
   - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
 

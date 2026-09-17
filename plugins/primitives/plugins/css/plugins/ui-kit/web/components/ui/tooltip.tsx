@@ -5,6 +5,7 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils";
 import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
 import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/overlay-boundary/web";
+import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 
 function TooltipProvider({
   delay = 0,
@@ -41,8 +42,11 @@ function TooltipContent({
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
   const forwarded = usePortalForwardedAttrs();
+  // Inside a PortalHost (a fullscreen region), draw there: under `body` the
+  // popup would be invisible.
+  const container = usePortalContainer();
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Positioner
         {...forwarded}
         align={align}

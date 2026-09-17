@@ -11,6 +11,7 @@ import type {
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 import { MdChevronRight, MdCheck } from "react-icons/md";
+import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 
 function DropdownMenu({
   open,
@@ -38,7 +39,14 @@ function DropdownMenu({
 }
 
 function DropdownMenuPortal({ ...props }: MenuPrimitive.Portal.Props) {
-  return <MenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
+  const container = usePortalContainer();
+  return (
+    <MenuPrimitive.Portal
+      data-slot="dropdown-menu-portal"
+      container={container}
+      {...props}
+    />
+  );
 }
 
 function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
@@ -83,8 +91,11 @@ function DropdownMenuContent({
     header?: React.ReactNode;
   }) {
   const forwarded = usePortalForwardedAttrs();
+  // Inside a PortalHost (a fullscreen region), draw there: under `body` the
+  // popup would be invisible.
+  const container = usePortalContainer();
   return (
-    <MenuPrimitive.Portal>
+    <MenuPrimitive.Portal container={container}>
       <MenuPrimitive.Positioner
         {...forwarded}
         className="isolate z-popover outline-none"
