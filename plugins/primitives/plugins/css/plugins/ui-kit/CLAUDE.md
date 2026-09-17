@@ -35,7 +35,11 @@ The global UI kit — one cohesive design-system unit. It owns:
   element declares a rounded end: `pill-ends` (Button/Badge `shape="pill"`,
   both sides) or `pill-start` / `pill-end` (a `ButtonGroup shape="pill"`'s outer
   segments). The extra is 0 by default; an icon-only segment has no
-  `px-control-*`, so it stays square. `ControlSize` must sit beside `Button` here (not in the
+  `px-control-*`, so it stays square. The fields `Input` and `SelectTrigger` read the
+  same ambient density through `fieldSizeClassFor(density)` — the button's
+  `control-*` height, spacing-ramp padding (`px-sm`, `px-xs` at `xs`) and their
+  own text rung (`caption` at `sm`, else `body`) — and have no `size` prop
+  either, so a form row's fields and buttons resize together. `ControlSize` must sit beside `Button` here (not in the
   `control-size` primitive, which only owns the CSS scale + lint rule).
   This module is also the home of the **single density→text policy**:
   `textStepFor(density): 0 | 1` is THE threshold (1 only at `xs`, the compact

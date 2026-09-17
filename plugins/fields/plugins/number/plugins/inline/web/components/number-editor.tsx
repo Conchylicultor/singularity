@@ -4,7 +4,9 @@ import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web"
 
 /** Compact inline numeric editor: commits on Enter/blur, cancels on Esc. */
 export function NumberEditor(props: CellEditorProps): ReactNode {
-  const [local, setLocal] = useState(props.value == null ? "" : String(props.value));
+  const [local, setLocal] = useState(
+    props.value == null ? "" : String(props.value),
+  );
   const committed = useRef(false);
 
   function commit() {
@@ -24,7 +26,7 @@ export function NumberEditor(props: CellEditorProps): ReactNode {
     <Input
       type="number"
       autoFocus
-      className="h-6 px-xs py-none tabular-nums"
+      className="tabular-nums"
       value={local}
       onChange={(e) => setLocal(e.target.value)}
       onBlur={commit}

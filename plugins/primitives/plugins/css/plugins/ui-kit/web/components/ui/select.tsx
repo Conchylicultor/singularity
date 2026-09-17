@@ -10,6 +10,11 @@ import type {
   PopoverPadding,
   PopoverMaxHeight,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
+import {
+  fieldSizeClassFor,
+  useControlSize,
+  type DensityControlled,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size";
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md";
 
 // Kept generic over base-ui's own `<Value, Multiple>` params: this was a bare
@@ -62,19 +67,23 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 
 function SelectTrigger({
   className,
-  size = "default",
   children,
   ...props
-}: SelectPrimitive.Trigger.Props & {
-  size?: "sm" | "default";
-}) {
+}: SelectPrimitive.Trigger.Props & DensityControlled) {
+  // The same ambient field bundle as `Input` (`fieldSizeClassFor`): height,
+  // inline padding, gap and text follow the control density, so a select sits
+  // level with the buttons and inputs in its row. The compact sizes clamp their
+  // corner like `Button`'s xs/sm do.
+  const density = useControlSize();
+  const compact = density === "xs" || density === "sm";
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
-      data-size={size}
-      // eslint-disable-next-line radius/no-adhoc-radius -- intentional min() clamp pins the sm-size corner so it never exceeds 10px regardless of Shape preset
+      // eslint-disable-next-line radius/no-adhoc-radius -- intentional min() clamp pins the compact corner so it never exceeds 10px regardless of Shape preset
       className={cn(
-        "focus-ring flex w-fit items-center justify-between gap-xs rounded-lg border border-input bg-transparent py-sm pr-sm pl-sm text-body whitespace-nowrap transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-xs dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus-ring flex w-fit items-center justify-between rounded-lg border border-input bg-transparent whitespace-nowrap transition-colors select-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-inherit dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        fieldSizeClassFor(density),
+        compact && "rounded-[min(var(--radius-md),10px)]",
         className,
       )}
       {...props}

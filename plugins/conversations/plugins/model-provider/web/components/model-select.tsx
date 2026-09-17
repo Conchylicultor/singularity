@@ -1,4 +1,11 @@
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   MODEL_REGISTRY,
   normalizeModel,
@@ -42,7 +49,10 @@ export function ModelSelect({
   const items: Record<string, string> = {
     [OFF]: offLabel,
     ...Object.fromEntries(
-      (Object.keys(MODEL_REGISTRY) as ConversationModel[]).map((m) => [m, MODEL_REGISTRY[m].label]),
+      (Object.keys(MODEL_REGISTRY) as ConversationModel[]).map((m) => [
+        m,
+        MODEL_REGISTRY[m].label,
+      ]),
     ),
   };
 
@@ -56,7 +66,7 @@ export function ModelSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-32 text-caption", className)}>
+      <SelectTrigger aria-label={ariaLabel} className={cn("w-32", className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

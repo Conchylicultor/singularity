@@ -1,4 +1,11 @@
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   EFFORT_REGISTRY,
   SELECTABLE_EFFORTS,
@@ -37,7 +44,9 @@ export function EffortSelect({
   // base-ui resolves the collapsed trigger label from `items`, not the option list.
   const items: Record<string, string> = {
     [OFF]: defaultLabel,
-    ...Object.fromEntries(SELECTABLE_EFFORTS.map((e) => [e, EFFORT_REGISTRY[e].label])),
+    ...Object.fromEntries(
+      SELECTABLE_EFFORTS.map((e) => [e, EFFORT_REGISTRY[e].label]),
+    ),
   };
 
   return (
@@ -50,7 +59,7 @@ export function EffortSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-32 text-caption", className)}>
+      <SelectTrigger aria-label={ariaLabel} className={cn("w-32", className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

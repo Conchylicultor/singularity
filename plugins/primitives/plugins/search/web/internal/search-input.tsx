@@ -1,5 +1,10 @@
 import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+  Input,
+  type DensityControlled,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -18,12 +23,20 @@ import { MdClose, MdSearch } from "react-icons/md";
  */
 export type SearchInputAppearance = "field" | "bare";
 
-export interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  wrapperClassName?: ClassName;
-  appearance?: SearchInputAppearance;
-  /** The `<input>` element — lets a host focus the field (e.g. on `/`). */
-  ref?: React.Ref<HTMLInputElement>;
-}
+// The `field` appearance is a compact field by construction: it declares the
+// `sm` control size itself (as `Bar` does), so its height still follows the
+// density preset's `control-sm` token while staying quieter than the content it
+// filters. `bare` fills its host cell instead.
+export type SearchInputProps = Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  "size"
+> &
+  DensityControlled & {
+    wrapperClassName?: ClassName;
+    appearance?: SearchInputAppearance;
+    /** The `<input>` element — lets a host focus the field (e.g. on `/`). */
+    ref?: React.Ref<HTMLInputElement>;
+  };
 
 export function SearchInput({
   className,
@@ -96,10 +109,12 @@ export function SearchInput({
       >
         <MdSearch className="size-3.5" />
       </Pin>
-      <Input
-        className={cn("h-7 pl-xl text-caption", hasValue && "pr-xl", className)}
-        {...props}
-      />
+      <ControlSizeProvider size="sm">
+        <Input
+          className={cn("pl-xl", hasValue && "pr-xl", className)}
+          {...props}
+        />
+      </ControlSizeProvider>
       {hasValue && (
         // off-ramp inset: right-1.5 (0.375rem) is not on the semantic spacing ramp
         <Pin to="right" style={{ right: "0.375rem" }}>

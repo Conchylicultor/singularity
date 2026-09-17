@@ -88,7 +88,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
-    - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectContent`
     - `primitives/css/ui-kit.SelectItem`

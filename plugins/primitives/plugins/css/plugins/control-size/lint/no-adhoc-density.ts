@@ -9,7 +9,7 @@ const createRule = ESLintUtils.RuleCreator(
  * Density-control guardrail.
  *
  * The density-participating control primitives (`Button`, `IconButton`,
- * `Badge`, `ToggleChip`, `Avatar`, …) derive their size from the ambient
+ * `Badge`, `ToggleChip`, `Avatar`, `Input`, `SelectTrigger`, …) derive their size from the ambient
  * `ControlSize` context (`useControlSize()`), set ONCE on a region via
  * `<ControlSizeProvider size>` or a size-owning slot's `controlSize`. They have
  * NO per-instance density: there is no `size` prop, and there's no hand-written
@@ -51,6 +51,12 @@ const DENSITY_PRIMITIVES = new Set([
   "Avatar",
   "StatusDot",
   "BouncingDots",
+  // Fields: the same height/padding/gap bundle as `Button` (`fieldSizeClassFor`).
+  "Input",
+  "SelectTrigger",
+  "SidebarInput",
+  "SearchInput",
+  "FilterValueInput",
 ]);
 
 // Per-instance height/density markers (base-class-stripped). A per-instance

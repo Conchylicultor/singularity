@@ -3,6 +3,7 @@ import { describe, it, expect } from "bun:test";
 import {
   textStepFor,
   buttonTextClassFor,
+  fieldSizeClassFor,
   type ControlSize,
 } from "./control-size";
 
@@ -30,6 +31,20 @@ describe("buttonTextClassFor — Button's text rungs driven by the shared step",
     };
     for (const d of ALL) {
       expect(buttonTextClassFor(d)).toBe(expected[d]);
+    }
+  });
+});
+
+describe("fieldSizeClassFor — a field's height is the button's size token", () => {
+  it("maps each tier to its control height, the spacing-ramp padding and the field's text rung", () => {
+    const expected: Record<ControlSize, string> = {
+      xs: "control-xs px-xs gap-xs text-body",
+      sm: "control-sm px-sm gap-xs text-caption",
+      md: "control-md px-sm gap-xs text-body",
+      lg: "control-lg px-sm gap-xs text-body",
+    };
+    for (const d of ALL) {
+      expect(fieldSizeClassFor(d)).toBe(expected[d]);
     }
   });
 });

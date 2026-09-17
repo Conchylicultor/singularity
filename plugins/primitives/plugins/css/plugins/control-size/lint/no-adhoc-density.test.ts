@@ -6,8 +6,8 @@
  * Covers both per-instance density escapes: a `size=` prop and a fixed
  * `h-*`/`size-*`/`control-*` class on a density-participating primitive
  * (the registry gate), plus the false-negative carve-outs (non-registry tags,
- * non-numeric `size-full`, width/margin/text classes, the `Row`/`SelectTrigger`/
- * `LaunchControl` controls whose `size` prop is legitimate).
+ * non-numeric `size-full`, width/margin/text classes, the `Row`/`LaunchControl`
+ * controls whose `size` prop is legitimate).
  */
 
 import { RuleTester } from "eslint";
@@ -49,8 +49,8 @@ ruleTester.run(
       { code: `const C = () => <Badge className="size-full">x</Badge>;` },
       // `Row` is NOT in the density registry — its `size` prop is legitimate.
       { code: `const C = () => <Row size="sm">x</Row>;` },
-      // `SelectTrigger` is NOT a density primitive — its `size` prop is legitimate.
-      { code: `const C = () => <SelectTrigger size="sm" />;` },
+      // An icon-room inset on a field is not a size — it stays legal.
+      { code: `const C = () => <Input className="pl-xl" />;` },
       // `LaunchControl` is NOT a density primitive — its `size` prop is legitimate.
       { code: `const C = () => <LaunchControl size="icon" />;` },
       // A plain `<div>` is not a registry tag — a fixed height class is fine.
@@ -81,6 +81,15 @@ ruleTester.run(
       },
       {
         code: `const C = () => <StatusDot className="size-2" />;`,
+        errors: [{ messageId: "densitySizeClass" }],
+      },
+      // Fields are density primitives too: no `size`, no hand-written height.
+      {
+        code: `const C = () => <SelectTrigger size="sm" />;`,
+        errors: [{ messageId: "densitySizeProp" }],
+      },
+      {
+        code: `const C = () => <Input className="h-7" />;`,
         errors: [{ messageId: "densitySizeClass" }],
       },
       // A class parked in a same-file object-literal MAP indexed in a class

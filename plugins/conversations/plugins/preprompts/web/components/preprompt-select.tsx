@@ -1,4 +1,10 @@
-import { cn, Select, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Select,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { ConfigSelectContent } from "@plugins/config_v2/plugins/config-link/web";
 import { prepromptsConfig } from "../../shared/config";
@@ -55,14 +61,17 @@ export function PrepromptSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-40 text-caption", className)}>
+      <SelectTrigger aria-label={ariaLabel} className={cn("w-40", className)}>
         <SelectValue>
           {(v: string | null) => {
             if (v == null || v === OFF) return offLabel;
             const p = preprompts.find((item) => item.id === v);
             return (
               <>
-                <PrepromptGlyph icon={p?.icon} className="text-muted-foreground" />
+                <PrepromptGlyph
+                  icon={p?.icon}
+                  className="text-muted-foreground"
+                />
                 <span className="truncate">{p?.title || "Untitled"}</span>
               </>
             );

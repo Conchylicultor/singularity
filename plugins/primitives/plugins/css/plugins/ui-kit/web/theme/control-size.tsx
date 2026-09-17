@@ -94,3 +94,27 @@ export function textStepFor(density: ControlSize): 0 | 1 {
 export function buttonTextClassFor(density: ControlSize): string {
   return textStepFor(density) ? "text-control-compact" : "text-control";
 }
+
+/**
+ * A FIELD's size bundle (`Input`, `SelectTrigger`) at a density. The height is
+ * the same `control-*` token as `Button`, so a density preset resizes a form
+ * row's fields and buttons together. Padding and gap come from the density
+ * group's spacing ramp (`px-sm` / `gap-xs`, `px-xs` at `xs`), which presets
+ * scale too — a field's text sits closer to its edge than a button label does.
+ * The text is the field's own rung, not `textStepFor`'s: a small field is
+ * quieter (`caption`), while `xs` keeps `body` so an inline cell editor reads
+ * like the cell it replaces. No block padding: the height is fixed and the
+ * content centred.
+ */
+export function fieldSizeClassFor(density: ControlSize): string {
+  switch (density) {
+    case "xs":
+      return "control-xs px-xs gap-xs text-body";
+    case "sm":
+      return "control-sm px-sm gap-xs text-caption";
+    case "md":
+      return "control-md px-sm gap-xs text-body";
+    case "lg":
+      return "control-lg px-sm gap-xs text-body";
+  }
+}

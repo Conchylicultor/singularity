@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { MdExpandMore, MdHelpOutline } from "react-icons/md";
 import {
   Button,
+  ControlSizeProvider,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
@@ -102,13 +103,14 @@ export function ChipSelectFilterInput(
     >
       <Stack gap="sm">
         {choices.length > 6 && (
-          <Input
-            autoFocus
-            className="h-6 px-xs py-none"
-            placeholder="Search…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
+          <ControlSizeProvider size="xs">
+            <Input
+              autoFocus
+              placeholder="Search…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </ControlSizeProvider>
         )}
         {visible.length > 0 ? (
           <Stack direction="row" gap="xs" wrap>

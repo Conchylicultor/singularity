@@ -12,6 +12,8 @@
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.DensityControlled`
     - `primitives/css/ui-kit.Input`
     - `primitives/overlay/tooltip.Kbd`
   - Exports (types):

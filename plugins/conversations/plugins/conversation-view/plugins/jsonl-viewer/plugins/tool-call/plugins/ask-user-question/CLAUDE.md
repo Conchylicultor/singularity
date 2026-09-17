@@ -57,6 +57,7 @@ Selection is signalled on exactly **two** channels: the radio/checkbox indicator
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.Input`
     - `primitives/live-state.useResource`
     - `primitives/persistent-draft.useDraft`

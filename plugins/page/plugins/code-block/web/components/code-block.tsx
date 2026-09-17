@@ -1,4 +1,5 @@
 import {
+  ControlSizeProvider,
   cn,
   Select,
   SelectContent,
@@ -160,57 +161,58 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             align="center"
             className={hoverRevealTarget}
           >
-            <Select
-              items={langItems}
-              value={language ?? AUTO}
-              onValueChange={onLanguageChange}
-            >
-              <SelectTrigger
-                size="sm"
-                aria-label="Code language"
-                className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
+            <ControlSizeProvider size="xs">
+              <Select
+                items={langItems}
+                value={language ?? AUTO}
+                onValueChange={onLanguageChange}
               >
-                {language === undefined ? (
-                  <Stack
-                    as="span"
-                    direction="row"
-                    align="center"
-                    gap="xs"
-                    className={fillClasses("x")}
-                  >
-                    <MdAutoAwesome
-                      className={cn(rigidClass(), "text-muted-foreground")}
-                    />
+                <SelectTrigger
+                  aria-label="Code language"
+                  className="w-36 bg-background/80 px-sm text-caption backdrop-blur"
+                >
+                  {language === undefined ? (
+                    <Stack
+                      as="span"
+                      direction="row"
+                      align="center"
+                      gap="xs"
+                      className={fillClasses("x")}
+                    >
+                      <MdAutoAwesome
+                        className={cn(rigidClass(), "text-muted-foreground")}
+                      />
+                      <span className="truncate">
+                        Auto
+                        {detected ? (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {detected}
+                          </span>
+                        ) : null}
+                      </span>
+                    </Stack>
+                  ) : (
                     <span className="truncate">
-                      Auto
-                      {detected ? (
-                        <span className="text-muted-foreground">
-                          {" "}
-                          · {detected}
-                        </span>
-                      ) : null}
+                      {language === PLAIN ? "Plain text" : language}
                     </span>
-                  </Stack>
-                ) : (
-                  <span className="truncate">
-                    {language === PLAIN ? "Plain text" : language}
-                  </span>
-                )}
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value={AUTO}>
-                  <MdAutoAwesome />
-                  Auto
-                </SelectItem>
-                <SelectItem value={PLAIN}>Plain text</SelectItem>
-                <SelectSeparator />
-                {SHIKI_LANGS.map((lang) => (
-                  <SelectItem key={lang} value={lang}>
-                    {lang}
+                  )}
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value={AUTO}>
+                    <MdAutoAwesome />
+                    Auto
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <SelectItem value={PLAIN}>Plain text</SelectItem>
+                  <SelectSeparator />
+                  {SHIKI_LANGS.map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {lang}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </ControlSizeProvider>
             <CopyButton
               text={code}
               title="Copy code"

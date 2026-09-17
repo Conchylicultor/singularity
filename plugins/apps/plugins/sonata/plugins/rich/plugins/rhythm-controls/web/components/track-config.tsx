@@ -8,7 +8,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import { figurationsForHand } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import {
-  cn,
+  ControlSizeProvider,
   Select,
   SelectContent,
   SelectItem,
@@ -56,8 +56,11 @@ export function TrackConfig({
   onFigurationChange,
 }: TrackConfigProps) {
   const preset = pattern.presetId ? findRhythm(pattern.presetId) : null;
-  const adapted = preset != null && pattern.subdivisions !== preset.subdivisions;
-  const provenance = preset ? `${preset.label}${adapted ? " (adapted)" : ""}` : "Custom";
+  const adapted =
+    preset != null && pattern.subdivisions !== preset.subdivisions;
+  const provenance = preset
+    ? `${preset.label}${adapted ? " (adapted)" : ""}`
+    : "Custom";
 
   // base-ui resolves the collapsed trigger label from `items`, not the option list.
   const items: Record<string, string> = Object.fromEntries(
@@ -84,48 +87,52 @@ export function TrackConfig({
         <Text as="div" variant="caption" tone="muted">
           Pattern
         </Text>
-        <Select
-          items={figurationItems}
-          value={figurationId}
-          onValueChange={(v: string | null) => {
-            if (v) onFigurationChange(v);
-          }}
-        >
-          <SelectTrigger aria-label={`${label} pattern`} className={cn("h-7 w-full text-caption")}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {figurations.map((f) => (
-              <SelectItem key={f.id} value={f.id}>
-                {f.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ControlSizeProvider size="sm">
+          <Select
+            items={figurationItems}
+            value={figurationId}
+            onValueChange={(v: string | null) => {
+              if (v) onFigurationChange(v);
+            }}
+          >
+            <SelectTrigger aria-label={`${label} pattern`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {figurations.map((f) => (
+                <SelectItem key={f.id} value={f.id}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </ControlSizeProvider>
       </Stack>
 
       <Stack gap="xs">
         <Text as="div" variant="caption" tone="muted">
           Preset
         </Text>
-        <Select
-          items={items}
-          value={pattern.presetId ?? ""}
-          onValueChange={(v: string | null) => {
-            if (v) onChange(patternFromPreset(v));
-          }}
-        >
-          <SelectTrigger aria-label={`${label} preset`} className={cn("h-7 w-full text-caption")}>
-            <SelectValue placeholder="Custom" />
-          </SelectTrigger>
-          <SelectContent>
-            {RHYTHMS.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                {r.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ControlSizeProvider size="sm">
+          <Select
+            items={items}
+            value={pattern.presetId ?? ""}
+            onValueChange={(v: string | null) => {
+              if (v) onChange(patternFromPreset(v));
+            }}
+          >
+            <SelectTrigger aria-label={`${label} preset`} className="w-full">
+              <SelectValue placeholder="Custom" />
+            </SelectTrigger>
+            <SelectContent>
+              {RHYTHMS.map((r) => (
+                <SelectItem key={r.id} value={r.id}>
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </ControlSizeProvider>
       </Stack>
 
       <Stack direction="row" gap="sm" justify="between" align="center">
@@ -159,7 +166,12 @@ export function TrackConfig({
             label="Fewer subdivisions"
             disabled={pattern.subdivisions <= MIN_SUBDIVISIONS}
             onClick={() =>
-              onChange(resample(pattern, Math.max(MIN_SUBDIVISIONS, pattern.subdivisions - 1)))
+              onChange(
+                resample(
+                  pattern,
+                  Math.max(MIN_SUBDIVISIONS, pattern.subdivisions - 1),
+                ),
+              )
             }
           />
           <Text as="span" variant="body" className="tabular-nums">
@@ -170,7 +182,12 @@ export function TrackConfig({
             label="More subdivisions"
             disabled={pattern.subdivisions >= MAX_SUBDIVISIONS}
             onClick={() =>
-              onChange(resample(pattern, Math.min(MAX_SUBDIVISIONS, pattern.subdivisions + 1)))
+              onChange(
+                resample(
+                  pattern,
+                  Math.min(MAX_SUBDIVISIONS, pattern.subdivisions + 1),
+                ),
+              )
             }
           />
         </Stack>

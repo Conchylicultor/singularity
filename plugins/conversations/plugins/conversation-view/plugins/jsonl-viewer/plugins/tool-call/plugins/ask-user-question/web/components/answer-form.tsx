@@ -1,4 +1,8 @@
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  ControlSizeProvider,
+  Input,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -91,7 +95,11 @@ export function AnswerForm({
   const [answers, setAnswers, clearDraft] = useDraft<QuestionAnswer[]>(
     "ask-user-question:answer",
     () =>
-      questions.map(() => ({ selected: [], otherText: "", otherActive: false })),
+      questions.map(() => ({
+        selected: [],
+        otherText: "",
+        otherActive: false,
+      })),
     { scope: `${convId}:${toolUseId}` },
   );
 
@@ -205,15 +213,17 @@ export function AnswerForm({
                 multi={q.multiSelect}
                 align="center"
               >
-                <Input
-                  value={answer.otherText}
-                  onChange={(e) =>
-                    setOtherText(qi, e.target.value, q.multiSelect)
-                  }
-                  onFocus={() => focusOther(qi, q.multiSelect)}
-                  placeholder="Other…"
-                  className="text-caption h-7 w-full"
-                />
+                <ControlSizeProvider size="sm">
+                  <Input
+                    value={answer.otherText}
+                    onChange={(e) =>
+                      setOtherText(qi, e.target.value, q.multiSelect)
+                    }
+                    onFocus={() => focusOther(qi, q.multiSelect)}
+                    placeholder="Other…"
+                    className="w-full"
+                  />
+                </ControlSizeProvider>
               </OptionRow>
             </Stack>
           </div>

@@ -89,7 +89,6 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
       <Stack gap="sm">
         <Input
           autoFocus
-          className="h-6 px-xs py-none"
           placeholder="Add tag…"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}

@@ -1,5 +1,6 @@
 import {
   Button,
+  ControlSizeProvider,
   cn,
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -441,12 +442,14 @@ export function RestoreButton({
             >
               <MdSearch className="size-3.5" />
             </Pin>
-            <Input
-              placeholder="Search..."
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
-              className="h-7 pl-7 text-caption"
-              disabled
-            />
+            <ControlSizeProvider size="sm">
+              <Input
+                placeholder="Search..."
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
+                className="pl-7"
+                disabled
+              />
+            </ControlSizeProvider>
           </div>
           <Text
             as="p"

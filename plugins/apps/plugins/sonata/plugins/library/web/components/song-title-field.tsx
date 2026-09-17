@@ -12,10 +12,10 @@ import { updateSong, type Song } from "../../core";
 import { useCurrentSong } from "../use-current-song";
 
 /**
- * `Input` hardcodes `h-8` (it is not a density-participating primitive), so the
- * ambient toolbar density is applied as an explicit `control-*` override —
- * spelled out per density because Tailwind only emits class names it can see as
- * literals (a `control-${size}` template would compile to nothing).
+ * The title shimmer's height at the ambient toolbar density, so the placeholder
+ * is exactly as tall as the `Input` that replaces it (which reads the density
+ * itself). Spelled out per density because Tailwind only emits class names it
+ * can see as literals (a `control-${size}` template would compile to nothing).
  */
 const CONTROL_HEIGHT: Record<ControlSize, string> = {
   xs: "control-xs",
@@ -51,7 +51,6 @@ export function SongTitle() {
 }
 
 function SongTitleInner({ song }: { song: Song }) {
-  const size = useControlSize();
   const { mutateAsync } = useEndpointMutation(updateSong);
 
   const title = useEditableField({
@@ -77,10 +76,7 @@ function SongTitleInner({ song }: { song: Song }) {
       onBlur={title.onBlur}
       placeholder="Untitled"
       aria-label="Song title"
-      className={cn(
-        CONTROL_HEIGHT[size],
-        "w-56 border-transparent bg-transparent font-semibold hover:border-border focus:border-primary",
-      )}
+      className="w-56 border-transparent bg-transparent font-semibold hover:border-border focus:border-primary"
     />
   );
 }

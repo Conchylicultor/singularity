@@ -147,7 +147,8 @@ it with a `px-*` class on one button.
 - `Input` and `SelectTrigger` also hardcode their size metrics. Their heights
   are `h-8` / `h-7`, not `control-*`, and their padding comes from the spacing
   ramp. They should read the same per-size tokens. That is a separate change,
-  because their vertical metrics would move too.
+  because their vertical metrics would move too. *Done: see
+  `2026-09-16-global-field-control-density.md`.*
 - Extra padding for pill-shaped buttons, if the header check in §5 shows it is
   needed. *Done: the shape group's `pillPadExtra` — see
   `2026-09-15-global-pill-button-padding.md`.*
