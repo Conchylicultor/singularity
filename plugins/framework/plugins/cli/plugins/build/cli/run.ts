@@ -39,6 +39,7 @@ import { formatChangedSources } from "@plugins/framework/plugins/tooling/plugins
 import {
   buildProfilerStart,
   checkBroadcasts,
+  checkValveGuard,
   createValveDeps,
   emitVerdict,
   finishBuildProgress,
@@ -1290,6 +1291,11 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       profiler.waitEnd();
     },
   };
+
+  // A gated build whose machine watcher is not running cannot be held, so it
+  // says so now and again in its OK headline — the line an agent reads.
+  const guardNote = checkValveGuard({ gated }, valveDeps);
+  if (guardNote !== null) softNotes.push(guardNote);
 
   // The transcript, the step roster and the profile are ONE per invocation,
   // so `stepResults` is refreshed by whichever target is currently in stage

@@ -3,9 +3,11 @@ import {
   createFileWatcher,
   type FileWatcher,
 } from "@plugins/infra/plugins/file-watcher/server";
-import { sentinelStatusDir } from "../../data-dirs";
 import { sentinelStatusResource as descriptor } from "../../core";
-import { readSentinelWatch } from "./status-file";
+import {
+  readSentinelWatch,
+  sentinelStatusDir,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 
 // `sentinel.status` on EVERY backend, not just main: the watcher runs only in
 // main, but an agent mostly looks at its own worktree's health report. Every

@@ -8,6 +8,14 @@ import {
   MEMO_TTL_MS,
   readDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import {
+  duressGuard,
+  type DuressGuard,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import {
+  readSentinelWatch,
+  sentinelStatusDir,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 import type { Lane } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { buildProfilerStart } from "./profiler";
 
@@ -33,6 +41,12 @@ import { buildProfilerStart } from "./profiler";
 // FRESHNESS_LEASE_MS (the lease guarantees a stale latch self-clears, so the
 // deadline is a real wake condition). Every wake re-checks; a refresh
 // advances the next deadline.
+//
+// The latch can only go up while the machine-trouble watcher is running. When
+// it is not, the valve never holds, so a gated build first says so
+// (`checkValveGuard`), read from the watcher's host-global status file. It
+// never holds on that: a dead watcher must not stop every deploy. See
+// research/2026-09-17-global-admission-valve-says-when-unguarded.md.
 
 /**
  * Max time the valve may hold one build before proceeding anyway (fail-open).
@@ -76,6 +90,8 @@ export type HoldOutcome = "cleared" | "fail-open";
  */
 export interface ValveDeps {
   isUnderDuress(): boolean;
+  /** Whether the machine watcher is running to raise the latch at all. */
+  duressGuard(): DuressGuard;
   /** Latch trip cause for the hold line, null when unreadable/absent. */
   duressReason(): string | null;
   /**
@@ -118,6 +134,29 @@ export async function holdThroughValve(
 }
 
 /**
+ * Say when a gated build is unprotected: the machine watcher is not running, so
+ * the latch cannot go up and the valve will never hold this build. Prints one
+ * line and returns a short note for the build's verdict; `null` when the build
+ * is not gated or the guard is on. Never holds.
+ *
+ * Ungated builds are skipped: they are never held anyway, and main's detached
+ * auto-build runs exactly while main restarts — when the watcher is stopped on
+ * purpose.
+ */
+export function checkValveGuard(
+  opts: { gated: boolean },
+  deps: Pick<ValveDeps, "duressGuard">,
+): string | null {
+  if (!opts.gated) return null;
+  const guard = deps.duressGuard();
+  if (guard.kind === "on") return null;
+  console.log(
+    `build admission: duress guard OFF (${guard.why}) — this build will not be held if the machine runs out of memory`,
+  );
+  return `duress guard off: ${guard.why}`;
+}
+
+/**
  * The post-acquire re-check decision (gap (a)): having acquired the host grant,
  * should the holder release it and re-hold at the valve rather than start its
  * heavy section?
@@ -144,6 +183,7 @@ export function createValveDeps(): ValveDeps {
   let endHoldSpan: (() => void) | undefined;
   return {
     isUnderDuress,
+    duressGuard: () => duressGuard(readSentinelWatch(sentinelStatusDir.path)),
     duressReason: () => readDuress()?.reason ?? null,
     waitForWake: waitForLatchWake,
     now: Date.now,

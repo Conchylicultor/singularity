@@ -86,6 +86,7 @@ export type { BuildProgressRecord, BuildRunProgress } from "./build-progress";
 
 export {
   MAX_VALVE_HOLD_MS,
+  checkValveGuard,
   createValveDeps,
   holdThroughValve,
   shouldRequeue,

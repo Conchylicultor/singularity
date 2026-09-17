@@ -65,6 +65,7 @@ through `SINGULARITY_BUILD_DETACHED` instead.
     - `framework/cli/op-runtime.BuildReceipt`
     - `framework/cli/op-runtime.BuildReceiptStatus`
     - `framework/cli/op-runtime.checkBroadcasts`
+    - `framework/cli/op-runtime.checkValveGuard`
     - `framework/cli/op-runtime.createValveDeps`
     - `framework/cli/op-runtime.emitVerdict`
     - `framework/cli/op-runtime.FatalSignal`

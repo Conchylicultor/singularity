@@ -2056,6 +2056,10 @@
       "name": "@singularity/plugin-debug-sentinel",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/sentinel/plugins/status-file": {
+      "name": "@singularity/plugin-debug-sentinel-status-file",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/session-divergence": {
       "name": "@singularity/plugin-debug-session-divergence",
       "version": "0.0.1",
@@ -6978,6 +6982,8 @@
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 
     "@singularity/plugin-debug-sentinel": ["@singularity/plugin-debug-sentinel@workspace:plugins/debug/plugins/sentinel"],
+
+    "@singularity/plugin-debug-sentinel-status-file": ["@singularity/plugin-debug-sentinel-status-file@workspace:plugins/debug/plugins/sentinel/plugins/status-file"],
 
     "@singularity/plugin-debug-session-divergence": ["@singularity/plugin-debug-session-divergence@workspace:plugins/debug/plugins/session-divergence"],
 

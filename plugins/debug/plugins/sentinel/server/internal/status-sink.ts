@@ -1,5 +1,5 @@
-import type { SentinelStatus } from "../../core";
-import { createStatusWriter } from "./status-file";
+import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
+import { createStatusWriter } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 
 export type DownStatus = Extract<SentinelStatus, { state: "down" }>;
 

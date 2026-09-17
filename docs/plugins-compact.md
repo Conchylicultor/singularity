@@ -91,7 +91,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
         - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.
 
-- **`debug`** [54 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [55 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [92 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 

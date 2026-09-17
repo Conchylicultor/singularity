@@ -144,6 +144,7 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
   - Exports (values):
     - `buildProfilerStart`
     - `checkBroadcasts`
+    - `checkValveGuard`
     - `createValveDeps`
     - `emitVerdict`
     - `FATAL_SIGNAL_EXITS`

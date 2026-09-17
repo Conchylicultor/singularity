@@ -41,33 +41,11 @@ const workerClosureLeanCheck: Check = {
   description:
     "the sentinel worker's static import closure reaches no config_v2/server, jobs/server, database/server or server-core module — the worker thread has no plugin runtime to evaluate them in",
   async run() {
-    const root = await getWorktreeRoot();
-    const closure = await importClosure(root, WORKER_ENTRY, {
-      dynamicImports: "cut",
-    });
-
-    const findings: string[] = [];
-    for (const prefix of FORBIDDEN_PREFIXES) {
-      const offenders = [...closure.modules].filter((m) =>
-        m.startsWith(prefix),
-      );
-      if (offenders.length === 0) continue;
-      const shortest = offenders
-        .map((m) => closure.importChain(m))
-        .reduce((a, b) => (b.length < a.length ? b : a));
-      findings.push(
-        `${prefix} — ${offenders.length} module(s), shortest chain:\n        ` +
-          shortest.join("\n      → "),
-      );
-    }
-
-    if (findings.length === 0) return { ok: true };
-
+    const found = await findForbiddenModules(WORKER_ENTRY, FORBIDDEN_PREFIXES);
+    if (found === null) return { ok: true };
     return {
       ok: false,
-      message:
-        `${WORKER_ENTRY} statically loads ${closure.modules.size} modules, including forbidden ones:\n    ` +
-        findings.join("\n    "),
+      message: found,
       hint:
         "Import what the worker needs from a leaf `core` barrel instead of a `server` barrel (move the " +
         "value into the owning plugin's core/ if it only lives in server/ or shared/). A server barrel " +
@@ -77,4 +55,88 @@ const workerClosureLeanCheck: Check = {
   },
 };
 
-export default [workerClosureLeanCheck];
+const STATUS_FILE_ENTRIES = [
+  "plugins/debug/plugins/sentinel/plugins/status-file/core/index.ts",
+  "plugins/debug/plugins/sentinel/plugins/status-file/server/index.ts",
+];
+
+/**
+ * What the status-file leaf may never load. The build CLI's admission valve
+ * imports it, and a CLI process has no backend runtime: config_v2 and
+ * live-state belong to a backend, and the parent sentinel's own barrels drag
+ * both (its core holds the sentinel config and the live resource).
+ */
+const STATUS_FILE_FORBIDDEN_PREFIXES = [
+  "plugins/config_v2/",
+  "plugins/primitives/plugins/live-state/",
+  "plugins/infra/plugins/jobs/",
+  "plugins/database/",
+  "plugins/debug/plugins/sentinel/core/",
+  "plugins/debug/plugins/sentinel/server/",
+];
+
+/**
+ * The machine watcher's status-file leaf (`plugins/status-file`) is read by the
+ * build CLI's admission valve to say when the duress guard is off. That only
+ * works while the leaf stays loadable outside a backend — the same promise the
+ * duress latch makes, measured here instead of written down.
+ */
+const statusFileLeanCheck: Check = {
+  id: "sentinel:status-file-lean",
+  description:
+    "the sentinel status-file leaf's core and server barrels load no config_v2, live-state, jobs, database or parent-sentinel module — the build CLI imports them",
+  async run() {
+    const failures: string[] = [];
+    for (const entry of STATUS_FILE_ENTRIES) {
+      const found = await findForbiddenModules(
+        entry,
+        STATUS_FILE_FORBIDDEN_PREFIXES,
+      );
+      if (found !== null) failures.push(found);
+    }
+    if (failures.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: failures.join("\n  "),
+      hint:
+        "Keep the status-file leaf to zod, node:* and infra/paths. Anything a backend needs from the " +
+        "file (the live resource, the down report) belongs in the parent sentinel plugin, which " +
+        "imports the leaf — never the other way round.",
+    };
+  },
+};
+
+/**
+ * Measure `entry`'s static closure: `null` when it reaches no forbidden subtree,
+ * else a message naming the shortest import chain into each one it reaches.
+ */
+async function findForbiddenModules(
+  entry: string,
+  forbidden: readonly string[],
+): Promise<string | null> {
+  const root = await getWorktreeRoot();
+  const closure = await importClosure(root, entry, {
+    dynamicImports: "cut",
+  });
+
+  const findings: string[] = [];
+  for (const prefix of forbidden) {
+    const offenders = [...closure.modules].filter((m) => m.startsWith(prefix));
+    if (offenders.length === 0) continue;
+    const shortest = offenders
+      .map((m) => closure.importChain(m))
+      .reduce((a, b) => (b.length < a.length ? b : a));
+    findings.push(
+      `${prefix} — ${offenders.length} module(s), shortest chain:\n        ` +
+        shortest.join("\n      → "),
+    );
+  }
+
+  if (findings.length === 0) return null;
+  return (
+    `${entry} statically loads ${closure.modules.size} modules, including forbidden ones:\n    ` +
+    findings.join("\n    ")
+  );
+}
+
+export default [workerClosureLeanCheck, statusFileLeanCheck];

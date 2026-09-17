@@ -5,7 +5,10 @@
 
 import { describe, expect, it } from "vitest";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import type { SentinelStatus, SentinelWatch } from "../../core";
+import type {
+  SentinelStatus,
+  SentinelWatch,
+} from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import { machineWatcherVerdict } from "../internal/machine-watcher-health";
 
 const refetch = () => Promise.resolve();

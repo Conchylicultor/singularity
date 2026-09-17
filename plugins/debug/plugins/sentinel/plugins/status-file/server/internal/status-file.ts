@@ -8,8 +8,9 @@ import {
 } from "../../core";
 
 // The host-global status file: main's sentinel host writes it on every
-// supervision transition (a handful of writes a day), and every backend reads it
-// to serve `sentinel.status`. A file rather than a DB row or a message, so a
+// supervision transition (a handful of writes a day); every backend reads it to
+// serve `sentinel.status`, and the build CLI's admission valve reads it to say
+// when the duress guard is off. A file rather than a DB row or a message, so a
 // worktree backend learns main's watcher is dead without asking main — which may
 // be the thing that is not answering.
 

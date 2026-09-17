@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { SentinelStatus } from "../../core";
+import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type { DetectorThresholds } from "./detector";
-import { readSentinelWatch } from "./status-file";
+import { readSentinelWatch } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 import { createStatusSink, type DownStatus } from "./status-sink";
 import {
   MAX_RAPID_FAILURES,

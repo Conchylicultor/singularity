@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  checkValveGuard,
   holdThroughValve,
   MAX_VALVE_HOLD_MS,
   shouldRequeue,
@@ -29,6 +30,7 @@ function makeHarness(script: Script) {
     holdEnds: [] as HoldOutcome[],
   };
   const deps: ValveDeps = {
+    duressGuard: () => ({ kind: "on" }),
     isUnderDuress: () => {
       calls.duressChecks++;
       const next = duress.shift();
@@ -58,6 +60,37 @@ describe("valveGates", () => {
     expect(valveGates("background", { SINGULARITY_BUILD_DETACHED: "1" })).toBe(
       false,
     );
+  });
+});
+
+describe("checkValveGuard", () => {
+  const off = () => ({
+    kind: "off" as const,
+    why: "the machine watcher is down",
+  });
+
+  test("a gated build with the guard off gets a verdict note", () => {
+    expect(checkValveGuard({ gated: true }, { duressGuard: off })).toBe(
+      "duress guard off: the machine watcher is down",
+    );
+  });
+
+  test("the guard on: no note", () => {
+    expect(
+      checkValveGuard({ gated: true }, { duressGuard: () => ({ kind: "on" }) }),
+    ).toBeNull();
+  });
+
+  test("an ungated build never reads the status file", () => {
+    let reads = 0;
+    const counting = () => {
+      reads++;
+      return off();
+    };
+    expect(
+      checkValveGuard({ gated: false }, { duressGuard: counting }),
+    ).toBeNull();
+    expect(reads).toBe(0);
   });
 });
 

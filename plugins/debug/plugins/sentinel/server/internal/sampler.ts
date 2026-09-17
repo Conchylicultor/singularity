@@ -9,7 +9,7 @@ import { clusterClass } from "./cluster-class";
 import { sentinelLog } from "./log-sink";
 import { handleClearFrame, handleTripFrame } from "./onset";
 import type { DetectorThresholds } from "./detector";
-import { sentinelStatusDir } from "../../data-dirs";
+import { sentinelStatusDir } from "@plugins/debug/plugins/sentinel/plugins/status-file/server";
 import { reportSentinelDown } from "./sentinel-down-kind";
 import { createStatusSink } from "./status-sink";
 import {

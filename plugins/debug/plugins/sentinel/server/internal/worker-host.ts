@@ -1,6 +1,6 @@
 import { namespaceArgv } from "@plugins/infra/plugins/runtime-identity/core";
 import { pathToFileURL } from "node:url";
-import type { SentinelStatus } from "../../core";
+import type { SentinelStatus } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 import type {
   MainToWorkerFrame,
   WorkerInitFrame,

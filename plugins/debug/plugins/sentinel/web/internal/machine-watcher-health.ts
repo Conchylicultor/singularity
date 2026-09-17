@@ -1,6 +1,6 @@
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import type { SentinelWatch } from "../../core";
+import type { SentinelWatch } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
 
 /** What a dead or missing watcher costs, said once so every critical row agrees. */
 const CONSEQUENCE = "builds are not held back when memory runs out";

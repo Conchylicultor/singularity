@@ -13277,6 +13277,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/embedded.PG_PORT`
           - `database/embedded.PG_SOCKET_DIR`
           - `database/embedded.PG_USER`
+          - `debug/sentinel/status-file.createStatusWriter`
+          - `debug/sentinel/status-file.readSentinelWatch`
+          - `debug/sentinel/status-file.sentinelStatusDir`
           - `debug/trace/engine.captureTrace`
           - `debug/trace/engine.defineTraceEventClass`
           - `infra/file-watcher.createFileWatcher`
@@ -13297,6 +13300,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses:
           - `config_v2.defineConfig`
+          - `debug/sentinel/status-file.SentinelDownStatusSchema`
+          - `debug/sentinel/status-file.SentinelWatch`
+          - `debug/sentinel/status-file.SentinelWatchSchema`
           - `fields/bool/config.boolField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
@@ -13307,9 +13313,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DuressEpisodeEvent`
           - `DuressEpisodeReportPayload`
           - `SentinelDownPayload`
-          - `SentinelStatus`
-          - `SentinelStatusRecord`
-          - `SentinelWatch`
         - Exports (values):
           - `ClusterSampleSchema`
           - `ClusterSectionSchema`
@@ -13319,12 +13322,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SENTINEL_DOWN_KIND`
           - `sentinelConfig`
           - `SentinelDownPayloadSchema`
-          - `SentinelStatusRecordSchema`
           - `sentinelStatusResource`
-          - `SentinelStatusSchema`
-          - `SentinelWatchSchema`
       - Cross-plugin:
         - Imported by: `debug/timeline`
+      - Plugins:
+        - **`status-file`** — The machine watcher's (cluster sentinel's) host-global status file: its schemas, the one writer main's watcher host uses, the reader every backend and the build CLI use, and duressGuard — whether the duress latch can go up right now. A leaf on purpose: module-eval depends only on zod, node:fs and infra/paths, so the CLI's build admission valve can import it.
+          - Cross-plugin:
+            - Imported by: `debug/sentinel`
+          - Server:
+            - Exports (values):
+              - `createStatusWriter`
+              - `isPidAlive`
+              - `readSentinelWatch`
+              - `sentinelStatusDir`
+              - `STATUS_FILENAME`
+              - `statusFilePath`
+          - Core:
+            - Exports (types):
+              - `DuressGuard`
+              - `SentinelStatus`
+              - `SentinelStatusRecord`
+              - `SentinelWatch`
+            - Exports (values):
+              - `duressGuard`
+              - `SentinelDownStatusSchema`
+              - `SentinelStatusRecordSchema`
+              - `SentinelStatusSchema`
+              - `SentinelWatchSchema`
     - **`session-divergence`** — Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
       - Web:
         - Contributes:
@@ -15450,6 +15474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/op-runtime.BuildReceipt`
               - `framework/cli/op-runtime.BuildReceiptStatus`
               - `framework/cli/op-runtime.checkBroadcasts`
+              - `framework/cli/op-runtime.checkValveGuard`
               - `framework/cli/op-runtime.createValveDeps`
               - `framework/cli/op-runtime.emitVerdict`
               - `framework/cli/op-runtime.FatalSignal`
@@ -15579,6 +15604,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `buildProfilerStart`
               - `checkBroadcasts`
+              - `checkValveGuard`
               - `createValveDeps`
               - `emitVerdict`
               - `FATAL_SIGNAL_EXITS`
