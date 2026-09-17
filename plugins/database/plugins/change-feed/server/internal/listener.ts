@@ -1,6 +1,9 @@
-import { Client } from "pg";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import {
+  createDbClient,
+  type DbClient,
+} from "@plugins/database/plugins/connection/server";
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
 import { routeChange } from "./route-change";
@@ -45,35 +48,59 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   const setIntervalFn = opts.setIntervalFn ?? globalThis.setInterval;
   const clearIntervalFn = opts.clearIntervalFn ?? globalThis.clearInterval;
 
-  let client: Client | null = null;
+  let client: DbClient | null = null;
   let livenessTimer: ReturnType<typeof setInterval> | null = null;
   let started = false;
   let connecting = false;
   let firstConnect = true;
   let reconnectDelay = reconnectMinMs;
 
-  // A single raw pg Client on the DIRECT socket (connectionString() bypasses
-  // pgbouncer, which breaks LISTEN — the same path graphile-worker uses). Drizzle's
-  // pgbouncer-fronted pool can't carry a session-bound LISTEN, so this is its own
-  // dedicated connection.
+  // A single dedicated pg client on the DIRECT socket (connectionString()
+  // bypasses pgbouncer, which breaks LISTEN — the same path graphile-worker
+  // uses). Drizzle's pgbouncer-fronted pool can't carry a session-bound LISTEN,
+  // so this is its own dedicated connection.
+  //
+  // Built by `createDbClient` (`change-feed`): opening the connection and the
+  // `LISTEN` statement each carry the connection plugin's deadline. A connect or
+  // LISTEN that gets no reply rejects with `QueryDeadlineExceededError` into the
+  // catch below — the same reconnect path as any other connect failure — instead
+  // of leaving `connecting` true forever, which also silenced the liveness
+  // watchdog. The client it happened on is LOST: abandoned, never closed, and its
+  // `end()` is a no-op. An ESTABLISHED LISTEN with no call pending has nothing
+  // waiting for a reply, so no deadline sees that socket go silent; that needs a
+  // heartbeat.
   async function connect(): Promise<void> {
     if (connecting || client) return;
     connecting = true;
+    let attempt: DbClient | null = null;
     try {
-      const c = new Client({ connectionString: opts.connectionString() });
+      const c = createDbClient({
+        name: "change-feed",
+        connectionString: opts.connectionString(),
+      });
+      attempt = c;
 
-      // The two failure paths: a connection-level `error` (socket dropped, PG
-      // restarted) and a clean `end`. Both schedule a reconnect. The handlers are
-      // attached before connect() so a failure during connect is also caught.
+      // The two failure paths of an ESTABLISHED listener: a connection-level
+      // `error` (socket dropped, PG restarted) and a clean `end`. Both retire the
+      // client and schedule a reconnect.
+      //
+      // Both act only while `c` IS the current client. An attempt that never got
+      // there reaches the reconnect path through the catch below, once — and what
+      // its socket does afterwards (a late `end`; an `error` on a connection
+      // abandoned after a missed deadline and held open) must not tear down the
+      // healthy client that replaced it, nor schedule a second reconnect.
+      //
+      // The listeners stay attached for the client's whole life: pg emits `error`
+      // on its socket, and an `error` with no listener is an uncaught exception.
       c.on("error", (err) => {
         log.publish(
           `[change-feed] LISTEN client error: ${String(err)}`,
           "stderr",
         );
-        scheduleReconnect();
+        retire(c);
       });
       c.on("end", () => {
-        if (started) scheduleReconnect();
+        retire(c);
       });
 
       c.on("notification", (n) => {
@@ -120,14 +147,36 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
       log.publish("[change-feed] LISTEN live_state established");
     } catch (err) {
-      log.publish(
-        `[change-feed] connect failed: ${String(err)}`,
-        "stderr",
-      );
+      log.publish(`[change-feed] connect failed: ${String(err)}`, "stderr");
+      // Close the failed attempt, so a connection whose LISTEN was refused does
+      // not linger open. A no-op on a client lost to a missed deadline.
+      if (attempt) endQuietly(attempt);
       scheduleReconnect();
     } finally {
       connecting = false;
     }
+  }
+
+  // Drop `c` and reconnect — only if `c` is still the current client. Events
+  // from any other client (a failed attempt, an already-retired one) are
+  // ignored.
+  function retire(c: DbClient): void {
+    if (client !== c) return;
+    client = null;
+    endQuietly(c);
+    scheduleReconnect();
+  }
+
+  // Not awaited: a socket that already died may never report its `end`.
+  function endQuietly(c: DbClient): void {
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of an already-dead socket
+    void c.end().catch((err: unknown) => {
+      // Already-dead socket; surface rather than swallow.
+      log.publish(
+        `[change-feed] error ending dead client: ${String(err)}`,
+        "stderr",
+      );
+    });
   }
 
   function fullSweep(): void {
@@ -140,19 +189,8 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
   function scheduleReconnect(): void {
     if (!started) return;
-    // Tear down the dead client so the next connect() starts clean.
-    const dead = client;
-    client = null;
-    if (dead) {
-      // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of an already-dead socket
-      void dead.end().catch((err) => {
-        // Already-dead socket; surface rather than swallow.
-        log.publish(
-          `[change-feed] error ending dead client: ${String(err)}`,
-          "stderr",
-        );
-      });
-    }
+    // The caller has already dropped the client it reconnects from (`retire`),
+    // or never had one (a failed attempt), so the next connect() starts clean.
     const delay = reconnectDelay;
     reconnectDelay = Math.min(reconnectDelay * 2, reconnectMaxMs);
     setTimeoutFn(() => {

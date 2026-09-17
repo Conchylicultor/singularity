@@ -2,7 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { getAdminPool, libpqSubprocessEnv } from "./pool";
+import { libpqSubprocessEnv } from "./pool";
+import { runDatabaseDdl } from "./database-ddl";
 import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
 import { forkTempName } from "./temp-name";
@@ -101,7 +102,12 @@ export async function forkDatabase(
   // retries (runAttempts: 5) each mint a fresh temp, so up to ~5 orphan
   // `f_*__forking` DBs can accumulate between the 15-min sweeps — disk cost, not
   // correctness; the sweep's zero-active-connections gate reclaims them.
-  await getAdminPool().query(`CREATE DATABASE "${temp}"`);
+  // Whole-database DDL (copies the template): the database-DDL bound, not the
+  // 60 s default — see ./database-ddl.
+  await runDatabaseDdl(
+    `fork ${source} → ${target}: CREATE DATABASE ${temp} copies the template database`,
+    `CREATE DATABASE "${temp}"`,
+  );
   const subprocessEnv = {
     ...process.env,
     ...libpqSubprocessEnv(),
@@ -209,7 +215,10 @@ export async function forkDatabase(
   // drop our temp and return; the target is already published. Anything else is
   // a genuine failure (e.g. temp still has live connections) → rethrow loudly.
   try {
-    await getAdminPool().query(
+    // Waits on the database-object lock (e.g. behind the temp sweep dropping
+    // the same temp): the database-DDL bound — see ./database-ddl.
+    await runDatabaseDdl(
+      `fork ${source} → ${target}: ALTER DATABASE ${temp} RENAME waits on the database lock`,
       `ALTER DATABASE "${temp}" RENAME TO "${target}"`,
     );
   } catch (err) {

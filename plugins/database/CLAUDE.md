@@ -44,54 +44,48 @@ the recorder's ambient context, so N+1 patterns point straight at the caller.
 `awaitDbReady`'s `SELECT 1` and `warmPool`) — they go through a checked-out
 client, not `pool.query`, so their durations are not recorded.
 
-## Query deadline (a lost query fails; its connection is abandoned)
+## Query deadline (a call with no reply fails; its connection is abandoned)
 
-Every query through the app pool has a client-side deadline — **60 s** by default
-(`QUERY_DEADLINE_MS`, `server/internal/query-deadline.ts`) — on BOTH paths: the
-wrapped `pool.query`, and every query on a client leased from the wrapped
-`pool.connect` (the `db.transaction()` path, plus `awaitDbReady` / `warmPool`).
-Only the app pool behind `db`: the admin pool, graphile-worker's pool, `lockPool`
-and the change-feed LISTEN client are out of scope.
+Every database call on **every backend connection** has a client-side deadline —
+**60 s** by default — on both phases: **opening a connection** and **each query**.
+It lives in `plugins/database/plugins/connection` (read its `CLAUDE.md`): every
+pool and standalone client is built by `createDbPool` / `createDbClient`, whose
+`pg.Client` subclass bounds `connect()` and `query()` on the connection itself.
+Each connection is named from a closed list (`app`, `jobs-runner`,
+`jobs-enqueue`, `jobs-schema`, `job-lock`, `admin`, `admin-short-lived`,
+`change-feed`, `events-test`), and every expiry names its pool and phase. The
+connection plugin's `CLAUDE.md` lists which code builds each one. Whole-database
+DDL on the admin pool (`CREATE` / `DROP` / `RENAME DATABASE`) runs under a 10 min
+bound (`database/admin`'s `runDatabaseDdl`).
 
-Why: on 2026-09-11 a pooled socket was closed underneath a running query, `pg` got
-no event, and with no deadline the query — and the one-at-a-time live-state flush
-awaiting it — waited forever; no DB change reached any tab for 25+ minutes
-(`research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`, plan
-`research/2026-09-11-global-query-deadline-and-stall-health.md`).
+Why: on 2026-09-11 a pooled socket was closed underneath a running query and the
+live-state flush awaiting it waited forever
+(`research/2026-09-11-global-live-updates-frozen-by-stray-fd-close.md`); on
+2026-09-15 a job waited 2.5 h on a call no deadline covered
+(`research/2026-09-16-global-db-call-deadline-every-connection.md`).
 
-- **One clock per call, retries included.** On `pool.query` it is armed when the
-  first attempt holds a connection (acquisition has its own gates) and keeps
-  running across the 40P01/40001 retry loop — a retry never buys a fresh 60 s. It
-  sits inside the background gate, so an expiry frees the gate slot too.
-- **On expiry** the caller rejects with `QueryDeadlineExceededError` (`sql` label,
-  `elapsedMs`, `deadlineMs`, `origin` = innermost profiler entry label, `leased`,
-  `reason`). It has **no `.code`**, so the deadlock retry never re-runs a lost
-  statement. A `<sql>[deadline]` `db` span and a `[deadline]` line in `db.jsonl`
-  are recorded, and the event is emitted on **`queryDeadlineSink`**
-  (`primitives/report-sink`): `database` cannot file reports (`reports` depends on
-  it), so a sub-plugin that imports both registers the handler.
-- **The connection is ABANDONED, never closed** (`abandonClient`). When the
-  deadline fires, the lost socket's fd number is probably already reused by
-  something else; `client.end()` / `release(err)` (pg-pool's `_remove` always ends)
-  would close THAT resource — a new victim per incident. Instead: permanent no-op
-  `error`/`end` listeners first (a detached client with no `error` listener crashes
-  the process on its next socket error), then removal from pg-pool's `_clients` /
-  `_idle` + a queue pulse so a replacement is built on demand, then a strong
-  reference in a hold capped at 32 (past the cap: detached but not held, and an
-  `abandon-cap` event). This reaches into pg-pool 3.13 internals — asserted at pool
-  build (`assertPgPoolInternals`) and pinned by `query-deadline.test.ts`. Cost for
-  a query that was merely slow: one leaked pgbouncer client connection; its late
-  reply resolves a promise nobody awaits.
-- **Leases.** A lease that loses a query is poisoned: the client is abandoned and
-  the `backgroundTxGate` slot freed at expiry (drizzle calls no `release()` when its
-  `begin` is what hung), later queries on it reject at once with the same error
-  (drizzle's `ROLLBACK` would otherwise wait out another deadline), and the
-  holder's `release()` is a no-op. A lease wraps `client.query` as an own property
-  and restores the prototype method at release.
+On expiry the caller gets `QueryDeadlineExceededError` (no `.code`, so the
+deadlock retry never re-runs it), the connection is **abandoned, never closed**
+(its fd may already be someone else's), later calls on it fail at once, its
+`release()` / `end()` do nothing, and the event goes to `queryDeadlineSink`
+(reported by `database/query-deadline`).
+
+What the app pool (`server/internal/client.ts`) adds on top:
+
+- **The pool is `createDbPool({ name: "app" })`.** `installQueryWrapper` keeps
+  only what the app pool has: lane gates, the deadlock retry, `[acquire]` spans
+  and read-set capture. It has no clock of its own.
+- **One clock per attempt.** A 40P01/40001 retry re-runs the statement on a
+  checked-out client, and that statement gets its own bound. A retry only follows
+  a *reply* (the victim's error), so a hang still costs one bound, not five.
+  Waiting for a connection and the retry backoff are not bounded.
+- **The background-transaction lease frees its gate slot when its client is
+  lost** (`onClientLost`), not only at `release()`: drizzle calls no `release()`
+  when its `BEGIN` is what hung.
 - **`withQueryDeadline({ ms, reason }, fn)`** widens (or narrows) the bound for
-  every app-pool query `fn` awaits — an `AsyncLocalStorage` local to this plugin.
-  Boot DDL uses `BOOT_DDL_QUERY_DEADLINE_MS` (15 min; it can wait on the previous
-  backend's locks during a hot-swap): migrations, derived-tables and derived-views
+  every call `fn` awaits, on any connection. Boot DDL uses
+  `BOOT_DDL_QUERY_DEADLINE_MS` (15 min; it can wait on the previous backend's
+  locks during a hot-swap): migrations, derived-tables and derived-views
   rebuilds in this plugin's `onReadyBlocking`, and change-feed's trigger rebuild.
   The wraps sit at those call sites, not in the runners, which take `db` as a
   parameter precisely so they never import this barrel.
@@ -231,22 +225,22 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Load-bearing: yes
 - Server:
   - Uses:
+    - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
+    - `database/connection.createDbPool`
+    - `database/connection.onClientLost`
+    - `database/connection.queryText`
+    - `database/connection.withQueryDeadline`
     - `database/derived-tables.rebuildDerivedTables`
     - `database/derived-views.rebuildDerivedViews`
     - `database/migrations.runMigrations`
     - `primitives/log-channels.defineLogSink`
-  - Exports (types):
-    - `DbExecutor`
-    - `QueryDeadlineEvent`
+  - Exports (types): `DbExecutor`
   - Exports (values):
     - `awaitDbReady`
-    - `BOOT_DDL_QUERY_DEADLINE_MS`
     - `currentTxId`
     - `db`
+    - `dbLog`
     - `isTransientDbError`
-    - `QueryDeadlineExceededError`
-    - `queryDeadlineSink`
-    - `withQueryDeadline`
 - Cross-plugin:
   - Imported by:
     - `active-data`
@@ -356,6 +350,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
+  - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
   - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
   - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
   - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
@@ -365,7 +360,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.
   - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
-  - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per query label) when a query got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+  - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and query label) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
   - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
   - **`sql-projection`** — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no longer declare a type nothing produces.
   - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.

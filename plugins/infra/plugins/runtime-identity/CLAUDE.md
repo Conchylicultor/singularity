@@ -102,6 +102,7 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
     - `infra/namespace.Namespace`
   - Exports (values):
     - `declareRuntimeNamespace`
+    - `hasRuntimeNamespace`
     - `isMain`
     - `readServingSocket`
     - `resetRuntimeNamespaceForTest`

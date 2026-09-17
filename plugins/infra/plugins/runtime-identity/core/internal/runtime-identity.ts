@@ -71,6 +71,19 @@ export function runtimeNamespace(): Namespace {
 }
 
 /**
+ * True when this process declared a runtime namespace — a backend, an exec
+ * child, a test — and false for a CLI acting on a checkout, which has none.
+ *
+ * A predicate for code that runs in both kinds of process and must choose where
+ * something goes before it asks `runtimeNamespace()` (which throws in a CLI):
+ * a missed database deadline's log line goes to stderr in a CLI, for one
+ * (`database/connection`).
+ */
+export function hasRuntimeNamespace(): boolean {
+  return declared !== undefined;
+}
+
+/**
  * True when this process is MAIN's backend.
  *
  * A predicate, not a lookup: a process that declared no namespace — a CLI, a

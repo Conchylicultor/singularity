@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool, type PoolClient } from "pg";
+import type { Pool, PoolClient } from "pg";
 import {
   retryUntil,
   exponential,
@@ -10,25 +10,21 @@ import {
   recordSpan,
   chargeWait,
   currentCallerKind,
-  currentEntryLabel,
   currentOriginClass,
   recordReadTables,
   registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   readDatabaseConfig,
   buildConnectionString,
 } from "@plugins/database/core";
 import {
-  QUERY_DEADLINE_MS,
-  QueryDeadlineExceededError,
-  abandonClient,
-  assertPgPoolInternals,
-  currentQueryDeadline,
-  queryDeadlineSink,
-} from "./query-deadline";
+  createDbPool,
+  onClientLost,
+  queryText,
+} from "@plugins/database/plugins/connection/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
 // genuinely needs, and it is this process's RUNTIME namespace (`--namespace`
@@ -187,14 +183,15 @@ const queryRetryDelay = withJitter(exponential({ initial: 10, max: 250 }));
 // lock-order bug — surfaces here as a steady stream of lines even while it keeps
 // succeeding within the cap, instead of vanishing. Grep `db.jsonl` for
 // `[deadlock-retry]`; a rising rate is the signal to fix the source, not the cap.
-// Durable "db" retry log. `defineLogSink` registers the channel env-free and
-// defers the file-sink (its per-worktree path resolution) to first publish, so
-// importing @plugins/database/server stays import-safe (never resolves this
-// process's namespace at module eval; see database/CLAUDE.md).
-const dbLog = defineLogSink({
+// Durable "db" log. `defineLogSink` registers the channel env-free and defers
+// the file-sink (its per-worktree path resolution) to first publish, so
+// importing @plugins/database/server stays import-safe. It also carries every
+// connection's `[deadline]` lines, written by `database/query-deadline`'s sink
+// handler — the connection plugin stays below log-channels.
+export const dbLog = defineLogSink({
   id: "db",
   description:
-    "Database client retry log: transient-contention SQL retries ([deadlock-retry]), read via db.jsonl.",
+    "Database log: the app pool's transient-contention SQL retries ([deadlock-retry]) and, on every backend connection, calls that got no reply within their deadline ([deadline]); read via db.jsonl.",
 });
 
 function retryableSqlState(err: unknown): string | null {
@@ -203,197 +200,23 @@ function retryableSqlState(err: unknown): string | null {
   return RETRYABLE_SQLSTATES.has(code) ? code : null;
 }
 
-// ---------------------------------------------------------------------------
-// The query deadline (see ./query-deadline for the error, the sink, the scope
-// and why a lost connection is abandoned rather than closed).
-//
-// One clock per CALLER-visible call. On the `pool.query` path it is armed when
-// the first attempt's connection is acquired — acquisition already has its own
-// gates — and it keeps running across the 40P01/40001 retries, so a retry never
-// buys a fresh 60 s. On a leased client (`db.transaction()`) each query has its
-// own clock, armed at the call. When the clock expires:
-//   1. the caller's promise rejects with `QueryDeadlineExceededError`, wherever
-//      the work is (mid-query, mid-backoff, mid-acquire);
-//   2. `onExpire` poisons the connection the call was running on (abandon it);
-//   3. a `<sql>[deadline]` `db` span is recorded and the event is emitted.
-// ---------------------------------------------------------------------------
-
-// The runtime-profiler caps span labels at 500 chars (recorder MAX_LABEL_LEN):
-// `sql` is cut to the same length, so it equals the label the `<sql>` span
-// records, and the `[deadline]` span keeps its suffix instead of losing it to
-// the recorder's cut.
-const SQL_LABEL_MAX = 500;
-const DEADLINE_SPAN_SUFFIX = "[deadline]";
-
-function sqlLabel(text: string): string {
-  return text.length > SQL_LABEL_MAX ? text.slice(0, SQL_LABEL_MAX) : text;
-}
-
-function queryText(first: unknown): string {
-  if (typeof first === "string") return first;
-  if (first && typeof first === "object" && "text" in first) {
-    const text = (first as { text?: unknown }).text;
-    if (typeof text === "string") return text;
-  }
-  return "?";
-}
-
-/** What a call's deadline knows, captured synchronously at the call site. */
-interface DeadlineCall {
-  sql: string;
-  leased: boolean;
-  deadlineMs: number;
-  reason: string | null;
-  origin: string | null;
-}
-
-function captureDeadlineCall(
-  text: string,
-  leased: boolean,
-  defaultMs: number,
-): DeadlineCall {
-  return {
-    sql: sqlLabel(text),
-    leased,
-    ...currentQueryDeadline(defaultMs),
-    origin: currentEntryLabel() ?? null,
-  };
-}
-
-interface DeadlineClock {
-  /** Start the clock; later calls are no-ops (a retry never restarts it). */
-  arm(): void;
-  /**
-   * The error, once the deadline fired: every later step of the call must stop.
-   * A method, not a property — it changes across awaits, so no read of it may
-   * be narrowed by an earlier one.
-   */
-  expired(): QueryDeadlineExceededError | null;
-  /** Aborted at expiry — stops the retry loop at its next iteration. */
-  readonly signal: AbortSignal;
-}
-
-function runUnderDeadline<T>(
-  call: DeadlineCall,
-  opts: {
-    armNow: boolean;
-    onExpire: (err: QueryDeadlineExceededError) => void;
-  },
-  body: (clock: DeadlineClock) => Promise<T>,
-): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    let settled = false;
-    let armedAt: number | null = null;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let expired: QueryDeadlineExceededError | null = null;
-    const abort = new AbortController();
-
-    const expire = () => {
-      timer = null;
-      if (settled) return;
-      settled = true;
-      const elapsedMs = Math.round(performance.now() - armedAt!);
-      expired = new QueryDeadlineExceededError({
-        sql: call.sql,
-        elapsedMs,
-        deadlineMs: call.deadlineMs,
-        origin: call.origin,
-        leased: call.leased,
-        reason: call.reason,
-      });
-      abort.abort(expired);
-      // Poison first, so nothing after this point can hand the connection out.
-      opts.onExpire(expired);
-      recordSpan(
-        "db",
-        `${call.sql.slice(0, SQL_LABEL_MAX - DEADLINE_SPAN_SUFFIX.length)}${DEADLINE_SPAN_SUFFIX}`,
-        elapsedMs,
-      );
-      dbLog.publish(
-        `[deadline] no reply in ${elapsedMs}ms (bound ${call.deadlineMs}ms${call.reason ? `, ${call.reason}` : ""}) ` +
-          `leased=${call.leased} origin=${call.origin ?? "-"} sql=${call.sql.slice(0, 160)} — connection abandoned`,
-        "stderr",
-      );
-      queryDeadlineSink.emit({
-        kind: "deadline",
-        at: Date.now(),
-        sql: call.sql,
-        elapsedMs,
-        deadlineMs: call.deadlineMs,
-        origin: call.origin,
-        leased: call.leased,
-        reason: call.reason,
-      });
-      reject(expired);
-    };
-
-    const clock: DeadlineClock = {
-      arm() {
-        if (armedAt !== null || settled) return;
-        armedAt = performance.now();
-        timer = setTimeout(expire, call.deadlineMs);
-      },
-      expired: () => expired,
-      signal: abort.signal,
-    };
-    if (opts.armNow) clock.arm();
-
-    // After expiry the body may still settle (a slow-but-alive reply, or the
-    // retry loop noticing the abort): the caller has its answer, so that late
-    // outcome is dropped here — the rejection is handled, never unhandled.
-    body(clock).then(
-      (value) => {
-        if (settled) return;
-        settled = true;
-        if (timer) clearTimeout(timer);
-        resolve(value);
-      },
-      (err: unknown) => {
-        if (settled) return;
-        settled = true;
-        if (timer) clearTimeout(timer);
-        reject(err);
-      },
-    );
-  });
-}
-
-// pg's `client.query` forms the deadline cannot wrap: the callback form (result
-// goes to the callback, not a promise) and a Submittable (pg-cursor /
-// pg-query-stream — the object IS the result). Both pass straight through, as
-// the callback form of `pool.query` always has.
-function isUnwrappableQuery(args: readonly unknown[]): boolean {
-  if (typeof args[args.length - 1] === "function") return true;
-  const first = args[0];
-  return (
-    !!first &&
-    typeof first === "object" &&
-    typeof (first as { submit?: unknown }).submit === "function"
-  );
-}
-
-function throwOnDoubleRelease(): never {
-  // pg-pool's own message, so a double release reads the same either way.
-  throw new Error(
-    "Release called on client which has already been released to the pool.",
-  );
-}
+// The deadline is not this wrapper's: every client of the app pool is a
+// `DbClient` (`createDbPool`, @plugins/database/plugins/connection), which bounds
+// each `connect()` and `query()` on the connection itself and abandons a lost
+// one. What only the app pool has stays here — lane gates, deadlock retry,
+// `[acquire]` spans, read-set capture — plus the one piece of lease bookkeeping
+// that must end with a lost connection: the background-transaction gate slot.
 
 // Install the timing/gating wrapper onto a freshly-built pool's `query` and
 // `connect`. Called exactly once, from `pool()`, so the wrapper is bound to the
 // same pool instance `db` and `awaitDbReady`/`warmPool` use. See the block
 // comment on each concern. Exported for co-located unit testing: the invariants
 // it enforces (lane partition, tx lease accounting) are testable against a fake
-// `pg.Pool`-shaped object, with no database; the deadline against a real pool
-// behind a black-hole proxy, with a short `deadlineMs`. Production takes the
-// default (`QUERY_DEADLINE_MS`).
-export function installQueryWrapper(
-  pool: Pool,
-  options: { deadlineMs?: number } = {},
-): void {
+// `pg.Pool`-shaped object, with no database; the lost-connection path against a
+// real `DbClient` with a short `deadlineMs`.
+export function installQueryWrapper(pool: Pool): void {
   const origQuery = pool.query.bind(pool);
   const origConnect = pool.connect.bind(pool);
-  const defaultDeadlineMs = options.deadlineMs ?? QUERY_DEADLINE_MS;
 
   // Time every query that flows through pool.query (all drizzle ORM queries).
   // The promise form is reimplemented to split the two phases that node-postgres
@@ -425,14 +248,8 @@ export function installQueryWrapper(
     if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
     const text = queryText(a[0]);
-    // Captured now, synchronously, while the caller's ambient scopes are active.
-    const deadlineCall = captureDeadlineCall(text, false, defaultDeadlineMs);
-    // The connection the live attempt is running its statement on. Owned by
-    // exactly one side: `runOnce` hands it back on completion, or the deadline
-    // takes it (clears the ref) and abandons it.
-    const live: { client: PoolClient | null } = { client: null };
 
-    const runOnce = async (clock: DeadlineClock) => {
+    const runOnce = async () => {
       const acq0 = performance.now();
       const client = await origConnect(); // unwrapped: avoids double-recording
       const acqMs = performance.now() - acq0;
@@ -442,42 +259,31 @@ export function installQueryWrapper(
       // connect-wait hiding inside a label-shared leaf bucket.
       recordSpan("db", "[acquire]", acqMs);
       chargeWait("db-acquire", acqMs);
-      const expiredWhileAcquiring = clock.expired();
-      if (expiredWhileAcquiring) {
-        // The deadline fired while a retry was acquiring: this connection never
-        // ran our statement and is healthy — hand it straight back.
-        client.release();
-        throw expiredWhileAcquiring;
-      }
-      clock.arm();
-      live.client = client;
       try {
         const exec0 = performance.now();
+        // The statement's deadline is the client's own (armed at this call).
         // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
         const res = await (client.query as any)(...a);
-        if (!clock.expired()) recordSpan("db", text, performance.now() - exec0);
+        recordSpan("db", text, performance.now() - exec0);
         return res;
       } finally {
-        // Completion (success or error) while the connection is still ours:
-        // return it. If the deadline took it, pg-pool must never see it again —
-        // a release would put an abandoned client back in the idle list.
-        if (live.client === client) {
-          live.client = null;
-          client.release();
-        }
+        // Success or error, the connection goes back — unless the deadline lost
+        // it, where the client's own `release()` is a no-op (it was abandoned).
+        client.release();
       }
     };
 
     // Re-run the statement (fresh connection each attempt) on a deadlock/
     // serialization victim; non-retryable errors propagate immediately, and the
     // attempt cap re-throws a persistent conflict so it never loops forever.
-    // `QueryDeadlineExceededError` has no `.code`, so it is never retried; the
-    // clock's abort signal also stops the loop at its next iteration.
-    const runRetrying = (clock: DeadlineClock) =>
+    // `QueryDeadlineExceededError` has no `.code`, so a lost statement is never
+    // retried. Each attempt's statement has its own clock: a retry only follows
+    // a REPLY (the victim's error), so a hang still costs one bound.
+    const runRetrying = () =>
       retryUntil(
         async (attempt) => {
           try {
-            return await runOnce(clock);
+            return await runOnce();
           } catch (err) {
             const sqlstate = retryableSqlState(err);
             // Non-retryable errors, and a retryable one that has exhausted the cap,
@@ -490,26 +296,7 @@ export function installQueryWrapper(
             return null; // retryable victim — back off and retry
           }
         },
-        { delay: queryRetryDelay, signal: clock.signal },
-      );
-
-    // The clock wraps the whole retry loop, and sits INSIDE the background gate:
-    // an expiry settles the gated call, so the gate slot is freed with it rather
-    // than held forever by a statement that will never answer.
-    const runTimed = () =>
-      runUnderDeadline(
-        deadlineCall,
-        {
-          armNow: false, // armed by the first attempt, once it holds a connection
-          onExpire: () => {
-            const client = live.client;
-            live.client = null;
-            if (client) abandonClient(pool, client);
-            // No live client: the deadline fired between attempts. The next
-            // attempt sees `clock.expired()` and hands its connection back.
-          },
-        },
-        runRetrying,
+        { delay: queryRetryDelay },
       );
 
     // Read-set capture is keyed on the CALLER kind and is orthogonal to the lane:
@@ -541,11 +328,11 @@ export function installQueryWrapper(
     // Context-less work (boot, migrations, `warmPool`, the change-feed listener)
     // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
     if (currentOriginClass() === "background") {
-      return backgroundQueryGate.run(runTimed, (waitMs) =>
+      return backgroundQueryGate.run(runRetrying, (waitMs) =>
         chargeWait("background-acquire", waitMs),
       );
     }
-    return runTimed();
+    return runRetrying();
   }) as typeof pool.query;
 
   // Gate background TRANSACTIONS. `pool.connect()` hands out a raw pooled client
@@ -564,8 +351,8 @@ export function installQueryWrapper(
   // this override, and `runOnce` calls it — so a query-path checkout is charged to
   // the query gate only and is never double-gated here.
   //
-  // Every promise-form checkout — whatever its lane — is also a deadline LEASE
-  // (`armLease`): its queries are bounded, and a lost one abandons the client.
+  // Every query on the checked-out client is bounded by the client itself; a lost
+  // one abandons it, and the lease's slot is freed with it (`armLease`).
   // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded connect signature.
   pool.connect = ((...a: Parameters<typeof origConnect>): any => {
     // Callback form — untouched, exactly like `pool.query`'s. Nothing in the repo
@@ -577,11 +364,7 @@ export function installQueryWrapper(
     // context-less ones (`awaitDbReady`, `warmPool`) take no gate: the former are
     // allowed the reserved floor, and the latter must never be able to wait on a
     // gate at boot.
-    if (currentOriginClass() !== "background") {
-      return origConnect().then((client) =>
-        armLease(pool, client, null, defaultDeadlineMs),
-      );
-    }
+    if (currentOriginClass() !== "background") return origConnect();
 
     return (async (): Promise<PoolClient> => {
       const releaseSlot = await backgroundTxGate.acquire((waitMs) =>
@@ -597,91 +380,41 @@ export function installQueryWrapper(
         releaseSlot();
         throw err;
       }
-      return armLease(pool, client, releaseSlot, defaultDeadlineMs);
+      return armLease(client, releaseSlot);
     })();
   }) as typeof pool.connect;
 }
 
-// Turn one checkout into a lease: bound each query the holder issues on it, and
-// own the end of the lease — the caller's `release()`, or the deadline.
-//
-// `release` is patched per checkout (pg assigns it per checkout as an own
-// property, so this affects only this lease). `query` is a prototype method, so
-// the own-property wrapper installed here is REMOVED at release — otherwise it
-// would outlive the lease and wrap the next holder's queries too.
-//
-// The lease ends exactly once, one of two ways:
-//   - the caller releases: `query` is restored, pg's release runs with `err`
-//     forwarded unchanged (pg's `release(err)` destroys rather than returns the
-//     connection when `err` is truthy, and swallowing it would quietly return a
-//     poisoned connection to the pool), and the gate slot is freed.
-//   - a query misses its deadline first: the client is POISONED — abandoned on
-//     the spot (see ./query-deadline) and the gate slot freed with it, since the
-//     connection no longer counts against the pool. The holder's further queries
-//     reject at once with the same error (drizzle's `rollback` would otherwise
-//     queue behind the lost statement for another full deadline), and its
-//     `release()` is then a no-op: pg-pool must never see the client again. The
-//     slot is freed at expiry rather than at that release because drizzle calls
-//     no release at all when its `begin` is the statement that hung.
-// A second caller `release()` stays loud either way (pg's double-release error),
-// and never frees a slot this lease no longer holds.
-function armLease(
-  pool: Pool,
-  client: PoolClient,
-  releaseSlot: (() => void) | null,
-  defaultDeadlineMs: number,
-): PoolClient {
+// Turn one background checkout into a gate lease: the slot is held from checkout
+// until the lease ends, exactly once, one of two ways:
+//   - the caller releases: pg's release runs with `err` forwarded unchanged
+//     (pg's `release(err)` destroys rather than returns the connection when
+//     `err` is truthy, and swallowing it would quietly return a poisoned
+//     connection to the pool), and the slot is freed;
+//   - a call on the client misses its deadline first: the client is lost and
+//     abandoned by the connection plugin, and the slot is freed right then —
+//     drizzle calls no `release()` at all when its `BEGIN` is the statement that
+//     hung. The holder's later `release()` reaches the client's own, which is a
+//     no-op on a lost client.
+// `release` is patched per checkout (pg-pool assigns it per checkout, so this
+// affects only this lease). A second caller `release()` stays loud (pg's
+// double-release error) and never frees a slot this lease no longer holds.
+function armLease(client: PoolClient, releaseSlot: () => void): PoolClient {
   const pgRelease = client.release.bind(client);
-  const hadOwnQuery = Object.prototype.hasOwnProperty.call(client, "query");
-  const pgQuery = client.query;
   let callerReleased = false;
   let slotFreed = false;
-  let poisoned: QueryDeadlineExceededError | null = null;
 
   const freeSlot = () => {
-    if (slotFreed || !releaseSlot) return;
+    if (slotFreed) return;
     slotFreed = true;
     releaseSlot();
   };
-
-  const restoreQuery = () => {
-    if (hadOwnQuery) client.query = pgQuery;
-    else delete (client as { query?: unknown }).query;
-  };
-
-  const poison = (err: QueryDeadlineExceededError) => {
-    // The holder already ended the lease while this query was in flight (a
-    // caller bug): the client is the pool's again, possibly another holder's,
-    // so it is not this lease's to abandon. The caller still gets its error.
-    if (callerReleased || poisoned) return;
-    poisoned = err;
-    abandonClient(pool, client);
-    freeSlot();
-  };
-
-  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
-  client.query = ((...a: unknown[]): any => {
-    // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
-    const run = () => (pgQuery as any).apply(client, a);
-    if (isUnwrappableQuery(a)) return run();
-    if (poisoned) return Promise.reject(poisoned);
-    return runUnderDeadline(
-      captureDeadlineCall(queryText(a[0]), true, defaultDeadlineMs),
-      { armNow: true, onExpire: poison },
-      async () => run(),
-    );
-  }) as typeof client.query;
+  const unsubscribe = onClientLost(client, freeSlot);
 
   client.release = (err?: Error | boolean): void => {
-    if (callerReleased) {
-      // A caller bug. Still reach pg so its double-release error stays loud —
-      // unless the client is abandoned, where pg's release would put it back.
-      if (poisoned) throwOnDoubleRelease();
-      return pgRelease(err);
-    }
+    if (callerReleased) return pgRelease(err); // a caller bug: pg stays loud
     callerReleased = true;
-    if (poisoned) return; // abandoned at expiry, slot already freed
-    restoreQuery();
+    unsubscribe();
     try {
       return pgRelease(err);
     } finally {
@@ -700,14 +433,12 @@ let poolSingleton: Pool | null = null;
 
 function pool(): Pool {
   if (poolSingleton) return poolSingleton;
-  const p = new Pool({
+  const p = createDbPool({
+    name: "app",
     connectionString: buildConnectionString(conn, runtimeNamespace()),
     max: POOL_MAX,
     idleTimeoutMillis: 20_000,
   });
-  // Fail the first query loudly if a pg-pool upgrade moved the internals a lost
-  // connection's abandon relies on — not later, inside a deadline timer.
-  assertPgPoolInternals(p);
   installQueryWrapper(p);
   poolSingleton = p;
   return p;

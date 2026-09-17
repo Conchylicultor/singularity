@@ -1,9 +1,33 @@
 # query-deadline
 
-Makes a lost database query visible. When a query on the app pool gets no answer
-before its deadline, the database plugin fails the caller and abandons the
-connection; this plugin turns that into a report (Debug → Reports + the bell) and
-into the health report's **Database** row.
+Makes a lost database call visible. When a call on any backend connection gets
+no answer before its deadline — opening the connection, or a query on it — the
+connection plugin fails the caller and abandons the connection; this plugin
+turns that into a report (Debug → Reports + the bell) and into the health
+report's **Database** row.
+
+Every backend connection is built by `database/connection` and names itself
+with one of the closed set of pool names (`DB_POOL_NAMES` in its `core`). Every
+report, ring hit and row message carries that name:
+
+| pool | what it is | reaches Postgres through | log to read |
+| --- | --- | --- | --- |
+| `app` | the pool behind `db` | pgbouncer | `PGBOUNCER_LOG_FILE` |
+| `jobs-runner` | graphile-worker's job-running pool | the direct socket | `PG_LOG_FILE` |
+| `jobs-enqueue` | graphile-worker's `WorkerUtils` pool (`addJob`) | the direct socket | `PG_LOG_FILE` |
+| `jobs-schema` | the boot-time job-queue schema installer | the direct socket | `PG_LOG_FILE` |
+| `job-lock` | the advisory-lock pool behind `withJobLock` | the direct socket | `PG_LOG_FILE` |
+| `admin` | the admin pool (maintenance database) | the direct socket | `PG_LOG_FILE` |
+| `admin-short-lived` | one-off admin clients around a single operation | the direct socket | `PG_LOG_FILE` |
+| `change-feed` | the change-feed LISTEN client | the direct socket | `PG_LOG_FILE` |
+
+The investigation task points at the log in the last column: a stray close
+shows up at the other end of the socket, and only the app pool's other end is
+pgbouncer. Both paths are imported as constants (`database/pgbouncer`,
+`database/embedded`), never spelled.
+
+Each call is in one of two phases: `connect` (opening the connection; its label
+is `[connect]`, there is no SQL) or `query`.
 
 Background: [`research/2026-09-11-global-query-deadline-and-stall-health.md`](../../../../research/2026-09-11-global-query-deadline-and-stall-health.md)
 (Part 2) and the incident it answers,
@@ -16,7 +40,7 @@ cannot file reports without a cycle. The database plugin owns the mechanism —
 the deadline, `abandonClient`, and the `queryDeadlineSink` seam it emits to — and
 this plugin owns the interpretation. Same split, same reason, as
 `infra/jobs` → `infra/jobs/deadline-audit`. The child imports the parent
-(`queryDeadlineSink`, `QueryDeadlineEvent` from `@plugins/database/server`); the
+(`queryDeadlineSink`, `QueryDeadlineEvent` from `@plugins/database/plugins/connection/server`); the
 parent never imports the child.
 
 The seam is a fire-and-forget `defineReportSink`, registered in `onReady` and
@@ -31,8 +55,22 @@ caught in-process, not a monitor's finding.
 
 | kind | one row per | fires when |
 | --- | --- | --- |
-| `db-query-deadline` | query label (per worktree) | a query got no answer before its deadline; its connection was abandoned |
-| `db-abandon-cap` | worktree (fixed fingerprint) | the process abandoned more connections than the database plugin's hold set is sized for |
+| `db-query-deadline` | pool + phase + query label (per worktree) | a call got no answer before its deadline; its connection was abandoned |
+| `db-abandon-cap` | worktree (fixed fingerprint) | the process abandoned more connections than the connection plugin's hold set is sized for |
+
+**Fingerprints.** `db-query-deadline:${pool}:${phase}:${sql}`. The pool is in it
+because the same label on two pools is two different sockets with two different
+logs, and every connect shares the label `[connect]` — without the pool, the
+app pool and a jobs pool failing to connect would merge into one row. The
+`db-abandon-cap` fingerprint stays fixed: the hold set and its cap are
+process-wide, shared by every pool, so crossing it is one fact about the
+process. Its payload's `pool` is the latest abandon's, shown as "latest"; the
+per-pool breakdown is the `db-query-deadline` rows.
+
+**Old rows still parse.** Rows filed before every connection had a deadline
+have no `pool` / `phase` (and may carry a since-removed `leased` flag). The
+payload schemas default them to `app` / `query` — which is what they all were —
+and strip `leased`.
 
 Two kinds, not one kind with two fingerprints: they are different facts with
 different shapes (one lost query vs. what the lost queries add up to), and one
@@ -54,17 +92,19 @@ edit to the default silently rewrite past reports.
 
 ## The ring and the `db-query-deadlines` resource
 
-The server keeps the last 20 deadline hits (`{ at, sql, elapsedMs }`, oldest
-first) in memory and serves them as a push-mode **external** resource — its
+The server keeps the last 20 deadline hits (`{ at, pool, phase, sql, origin,
+elapsedMs }`, oldest first, from every pool) in memory and serves them as a push-mode **external** resource — its
 truth is process memory, which the change-feed cannot observe, so it keeps a
 hand `notify()`. The bound is part of the contract: `QueryDeadlinesSchema`
 refuses a longer list, which makes the resource a schema-bounded scalar under
 the bounded working-set rule. It resets when the backend restarts; the durable
 record is the report.
 
-On a hit the handler pushes the ring **before** it starts the report write. The
-row must turn even when the report write is the query that cannot reach the
-database.
+On a hit the handler first appends the durable `[deadline] pool=… phase=…` line
+to `db.jsonl` (`dbLog` from `database/server`; the connection plugin cannot
+import log-channels), then pushes the ring, and only then starts the report
+write. The line and the row must land even when the report write is the query
+that cannot reach the database.
 
 The push rides the same live-state flush that a lost query can freeze. That is
 safe: the deadline is what unfreezes the flush, and the hit's notify is queued
@@ -83,12 +123,24 @@ special-cased.
 Connection (10). States:
 
 - resource not loaded yet → `unknown` (pulsing, "Checking…"); failed to load →
-  `unknown` "Couldn't load the lost-query history". Never `ok` before the data
-  is read.
-- a hit in the last 10 min → `attention`: "2 database queries lost in the last
-  10 min — last at 12:01" (singular: "1 database query lost in the last 10 min —
-  at 12:01").
-- otherwise → `ok`: "No lost queries in the last 10 min".
+  `unknown` "Couldn't load recent database call failures". Never `ok` before the
+  data is read.
+- a hit on any pool in the last 10 min → `attention`, counting them and naming
+  the latest: "2 database calls got no reply in the last 10 min — last:
+  jobs-enqueue, issued by tasks.maybe-launch, at 10:21" (singular: "1 database
+  call got no reply in the last 10 min — jobs-enqueue, issued by …, at 10:21").
+  A connect reads "opening a jobs-enqueue connection"; an unknown caller is
+  left out.
+- otherwise → `ok`: "No unanswered database calls in the last 10 min".
+
+## The Reports list
+
+A `db-query-deadline` row reads `[pool] [phase] [sql] no answer for 60s —
+abandoned · issued by <origin>`: the pool as a muted mono chip, the phase as a
+chip (`connect` in warning colour), the query label as a destructive mono chip
+(left out for a connect, which has none), and the caller muted at the end. A
+`db-abandon-cap` row reads "33 abandoned database connections — over the cap of
+32 · latest [pool]".
 
 Time moves the verdict by itself, so the hook keeps `now` as state and schedules
 **one** `setTimeout` to the next instant the verdict changes — the moment the
@@ -101,7 +153,7 @@ effect with no timer to fire again.
 
 ## Plugin reference
 
-- Description: Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per query label) when a query got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+- Description: Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and query label) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
 - Web:
   - Contributes:
     - `Reports.KindView` → `QueryDeadlineSummary`
@@ -119,7 +171,11 @@ effect with no timer to fire again.
     - `report-kind` "db-abandon-cap"
     - `resource.declare` "db-query-deadlines"
   - Uses:
-    - `database.queryDeadlineSink`
+    - `database.dbLog`
+    - `database/connection.formatDeadlineLogLine`
+    - `database/connection.QueryDeadlineEvent`
+    - `database/connection.queryDeadlineSink`
+    - `database/embedded.PG_LOG_FILE`
     - `database/pgbouncer.PGBOUNCER_LOG_FILE`
     - `reports.recordReport`
     - `reports.ReportKind`
@@ -129,7 +185,10 @@ effect with no timer to fire again.
     - `queryDeadlineKind`
   - Resources: `db-query-deadlines` (push)
 - Core:
-  - Uses: `primitives/live-state.resourceDescriptor`
+  - Uses:
+    - `database/connection.DB_CALL_PHASES`
+    - `database/connection.DB_POOL_NAMES`
+    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `DbAbandonCapPayload`
     - `DbQueryDeadlinePayload`

@@ -4,11 +4,11 @@ import {
   scopedResourceIdentities,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
+import { db } from "@plugins/database/server";
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
-  db,
   withQueryDeadline,
-} from "@plugins/database/server";
+} from "@plugins/database/plugins/connection/server";
 import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";

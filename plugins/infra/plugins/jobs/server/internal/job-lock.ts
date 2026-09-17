@@ -1,6 +1,7 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { createDbPool } from "@plugins/database/plugins/connection/server";
 import { queryOne } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { TOTAL_JOB_SLOTS } from "../../core/hold";
@@ -58,11 +59,18 @@ import { TOTAL_JOB_SLOTS } from "../../core/hold";
 // with no symptom, since graphile sees the slots as busy and the DB sees no
 // query. Reading the sum from `core/hold` is what keeps the two undriftable:
 // adding a runner raises this automatically.
+//
+// Built by `createDbPool` (`job-lock`): opening a connection and each lock /
+// unlock statement carry the connection plugin's deadline. The handler body runs
+// on OTHER connections while this one sits idle holding the lock, and an idle
+// connection has no call pending — so no deadline ever bounds how long a job
+// holds its lock. Only the two short statements around it are bounded.
 let pool: Pool | null = null;
 
 function lockPool(): Pool {
   if (!pool) {
-    pool = new Pool({
+    pool = createDbPool({
+      name: "job-lock",
       connectionString: connectionString(),
       max: TOTAL_JOB_SLOTS,
       // Only ever reaps connections sitting IDLE in the pool; a checked-out
@@ -108,6 +116,18 @@ export async function withJobLock<T>(
   // what makes "a lock can never be leaked back into the pool" true by
   // construction — the alternative (a reused client silently still holding an
   // advisory lock) would permanently block that job id with no visible symptom.
+  //
+  // ONE path where "destroy" does not happen: the lock or unlock statement got no
+  // reply within its deadline. That rejects with `QueryDeadlineExceededError`,
+  // which lands on the same uncertain path below (`destroyOnRelease = true`), but
+  // the client is then LOST: already detached from the pool and abandoned, never
+  // closed (its fd may belong to something else by now), so `release(true)` is a
+  // no-op. The invariant still holds — a lost client can never go back into the
+  // pool, so no reused session carries the lock. What differs is when the lock
+  // goes: if Postgres did grant it, the abandoned session keeps it until this
+  // backend process exits. That fails safe — a re-dispatch of the job sees
+  // `LOCK_HELD` and is reported, never double-run — and the deadline report names
+  // the `job-lock` pool.
   let destroyOnRelease = false;
   const onClientError = (err: unknown) => {
     // An error surfaced on the client itself means the session is gone, and with
@@ -136,7 +156,9 @@ export async function withJobLock<T>(
   } finally {
     // Skipped when the client already errored or the handler threw: in both cases
     // the connection is about to be destroyed, and teardown releases the lock more
-    // reliably than a statement on a session we no longer trust.
+    // reliably than a statement on a session we no longer trust. (A handler that
+    // threw leaves this client healthy — its body ran on other connections — so
+    // `release(true)` really does destroy it.)
     if (acquired && !destroyOnRelease) {
       try {
         const { unlocked } = await queryOne(client, {
@@ -168,6 +190,8 @@ export async function withJobLock<T>(
     // Detach before release: the client goes back into the pool and is reused by
     // the next job, so leaving this listener attached would accumulate one stale
     // `onLost` per dispatch on the same connection and fire the wrong job's report.
+    // A client lost to a missed deadline is not reused either way: its release is
+    // a no-op and the pool already dropped it.
     client.off("error", onClientError);
     client.release(destroyOnRelease);
   }

@@ -2,6 +2,12 @@ import { beforeEach, describe, it, expect } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Pool, PoolClient } from "pg";
 import {
+  QueryDeadlineExceededError,
+  createDbClient,
+  queryDeadlineSink,
+  type DbClient,
+} from "@plugins/database/plugins/connection/server";
+import {
   getReadSetIndex,
   installBackgroundLaneRuntime,
   installSpanContextRuntime,
@@ -97,6 +103,19 @@ function deferred(): Deferred {
 }
 
 /**
+ * A never-connected `DbClient` — the class every app-pool client is — so the
+ * lease can subscribe to its lost signal. With no connection, a query issued
+ * through its own `query` waits forever, and its deadline (`deadlineMs`) fires.
+ */
+function unconnectedClient(deadlineMs = 60_000): DbClient {
+  return createDbClient({
+    name: "app",
+    connectionString: "postgres://nobody@127.0.0.1:1/never",
+    deadlineMs,
+  });
+}
+
+/**
  * A `pg.Pool`-shaped object whose queries block until the test releases them.
  * `installQueryWrapper` binds `query`/`connect` off this object *before*
  * overriding them, so the wrapper's internal `origConnect` reaches the fake the
@@ -115,19 +134,19 @@ function createFakePool() {
       throw new Error("promise-form pool.query must not reach origQuery");
     },
     connect: (): Promise<PoolClient> => {
-      const client = {
-        query: async () => {
-          queriesInFlight++;
-          peakQueriesInFlight = Math.max(peakQueriesInFlight, queriesInFlight);
-          const gate = deferred();
-          blocked.push(gate);
-          await gate.promise;
-          queriesInFlight--;
-          return { rows: [] };
-        },
-        release: () => {
-          clientReleases++;
-        },
+      const client = unconnectedClient();
+      client.query = async () => {
+        queriesInFlight++;
+        peakQueriesInFlight = Math.max(peakQueriesInFlight, queriesInFlight);
+        const gate = deferred();
+        blocked.push(gate);
+        await gate.promise;
+        queriesInFlight--;
+        return { rows: [] };
+      };
+      // pg-pool assigns `release` per checkout; so does this fake.
+      client.release = () => {
+        clientReleases++;
       };
       return Promise.resolve(client as unknown as PoolClient);
     },
@@ -226,7 +245,9 @@ describe("pool.query lane partition", () => {
   it("gates a bare job entry (Gap C)", async () => {
     const fake = createFakePool();
     const queries = Array.from({ length: BACKGROUND_QUERY_MAX * 2 }, () =>
-      recordEntrySpan("job", "mail.sync-tick", () => fake.pool.query("select 1")),
+      recordEntrySpan("job", "mail.sync-tick", () =>
+        fake.pool.query("select 1"),
+      ),
     );
 
     await settle();
@@ -239,7 +260,9 @@ describe("pool.query lane partition", () => {
   it("gates a flush entry's own direct queries", async () => {
     const fake = createFakePool();
     const queries = Array.from({ length: BACKGROUND_QUERY_MAX * 2 }, () =>
-      recordEntrySpan("flush", "flushNotifies", () => fake.pool.query("select 1")),
+      recordEntrySpan("flush", "flushNotifies", () =>
+        fake.pool.query("select 1"),
+      ),
     );
 
     await settle();
@@ -273,7 +296,9 @@ describe("pool.query lane partition", () => {
   it("never gates context-less queries (boot / migrations / warmPool)", async () => {
     const fake = createFakePool();
     const n = BACKGROUND_QUERY_MAX * 3;
-    const queries = Array.from({ length: n }, () => fake.pool.query("select 1"));
+    const queries = Array.from({ length: n }, () =>
+      fake.pool.query("select 1"),
+    );
 
     await settle();
     expect(fake.peakQueriesInFlight()).toBe(n);
@@ -318,7 +343,10 @@ describe("pool.query lane partition", () => {
     await Promise.all([interactive, background]);
 
     const index = getReadSetIndex();
-    expect([...(index["resource"] ?? [])].sort()).toEqual(["attempts", "tasks"]);
+    expect([...(index["resource"] ?? [])].sort()).toEqual([
+      "attempts",
+      "tasks",
+    ]);
     expect([...(index["bg-resource"] ?? [])]).toEqual(["pushes"]);
   });
 });
@@ -328,7 +356,9 @@ describe("pool.connect transaction lease (Gap B)", () => {
     const fake = createFakePool();
     expect(txGauge().active).toBe(0);
 
-    const client = await recordEntrySpan("job", "some.job", () => fake.pool.connect());
+    const client = await recordEntrySpan("job", "some.job", () =>
+      fake.pool.connect(),
+    );
     expect(txGauge().active).toBe(1);
 
     client.release();
@@ -416,6 +446,43 @@ describe("pool.connect transaction lease (Gap B)", () => {
     fake.releaseAll();
     await query;
     expect(txGauge().active).toBe(0);
+  });
+
+  it("frees the tx slot when the leased client is lost to a deadline, and release() is then a no-op", async () => {
+    queryDeadlineSink.register(() => {});
+    let releases = 0;
+    const lostClient = unconnectedClient(50);
+    lostClient.release = () => {
+      releases++;
+    };
+    const fake = {
+      query: () => {
+        throw new Error("unused");
+      },
+      connect: () => Promise.resolve(lostClient as unknown as PoolClient),
+    } as unknown as Pool;
+    installQueryWrapper(fake);
+
+    const client = await recordEntrySpan("job", "j", () => fake.connect());
+    expect(txGauge().active).toBe(1);
+
+    // drizzle's `BEGIN` hanging: no `release()` ever comes from the holder, so
+    // the slot must come back at expiry.
+    let caught: unknown;
+    try {
+      await client.query("BEGIN");
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(QueryDeadlineExceededError);
+    expect(txGauge().active).toBe(0);
+
+    // A holder that does release later neither reaches pg-pool (the client is
+    // abandoned) nor frees a second slot.
+    client.release();
+    expect(releases).toBe(0);
+    expect(txGauge().active).toBe(0);
+    queryDeadlineSink.register(null);
   });
 
   it("returns the tx slot when connect() itself throws", async () => {

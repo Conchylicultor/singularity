@@ -42,6 +42,7 @@ export function createSentinelPg(
   let client: Client | null = null;
 
   async function connect(): Promise<Client> {
+    // eslint-disable-next-line db-connection/no-raw-pg-connection -- runs in the sentinel's own worker thread, outside the backend's report path: nothing there drains queryDeadlineSink, and the sentinel must watch the cluster independently of the connections it watches
     const c = new Client({
       host: PG_SOCKET_DIR,
       port: PG_PORT,

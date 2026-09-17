@@ -19,6 +19,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card", id: "conversations.conversation-view.jsonl-viewer.collapsible-card", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/lint"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/pending-turn", id: "conversations.conversation-view.pending-turn", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/pending-turn/lint"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/lint"), dependsOn: [] },
+  { pluginPath: "database/plugins/connection", id: "database.connection", loader: () => import("@plugins/database/plugins/connection/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-column", id: "database.sql-column", loader: () => import("@plugins/database/plugins/sql-column/lint"), dependsOn: [] },
   { pluginPath: "database/plugins/sql-projection", id: "database.sql-projection", loader: () => import("@plugins/database/plugins/sql-projection/lint"), dependsOn: [] },

@@ -1,6 +1,7 @@
 export {
   declareRuntimeNamespace,
   runtimeNamespace,
+  hasRuntimeNamespace,
   isMain,
   resetRuntimeNamespaceForTest,
 } from "./internal/runtime-identity";

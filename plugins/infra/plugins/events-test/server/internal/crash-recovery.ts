@@ -1,8 +1,8 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { Client } from "pg";
 import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { createDbClient } from "@plugins/database/plugins/connection/server";
 import {
   UNSAFE_sweepStuckLocks,
   queryRunningJobs,
@@ -109,7 +109,14 @@ export async function handleCrashRecovery(): Promise<Response> {
   // what `connectionString()` returns, the same string graphile-worker itself
   // dials). Going through pgbouncer's transaction pooling would hand the lock to
   // a shared backend and let it silently outlive, or vanish under, this test.
-  const holder = new Client({ connectionString: connectionString() });
+  //
+  // Built by `createDbClient` (`events-test`) like every backend connection, so
+  // its connect and lock statement carry the deadline. Killing its socket below
+  // is the scenario, not a lost call: nothing is pending on it at that moment.
+  const holder = createDbClient({
+    name: "events-test",
+    connectionString: connectionString(),
+  });
   let connected = false;
   let killed = false;
   const preKillErrors: unknown[] = [];

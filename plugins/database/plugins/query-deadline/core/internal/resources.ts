@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import {
+  DB_CALL_PHASES,
+  DB_POOL_NAMES,
+} from "@plugins/database/plugins/connection/core";
 
 /**
  * How many recent deadline hits the server keeps and the resource carries.
@@ -10,12 +14,23 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
  */
 export const QUERY_DEADLINE_RING_CAPACITY = 20;
 
-/** One lost query, as the Database health row needs it. */
+/**
+ * One database call that got no reply, as the Database health row needs it.
+ *
+ * No defaults: the ring is process memory and is never persisted, so every hit
+ * the resource ever carries was built by the current server with every field.
+ */
 export const QueryDeadlineHitSchema = z.object({
   /** Epoch ms at which the deadline fired. */
   at: z.number(),
-  /** The query's label (the report's fingerprint). */
+  /** The connection the call ran on. */
+  pool: z.enum(DB_POOL_NAMES),
+  /** `connect` (opening the connection) or `query`. */
+  phase: z.enum(DB_CALL_PHASES),
+  /** The query's label; `[connect]` for the connect phase. */
   sql: z.string(),
+  /** The runtime-profiler entry the call ran under, when known. */
+  origin: z.string().nullable(),
   /** How long the caller waited before it was given up on. */
   elapsedMs: z.number(),
 });

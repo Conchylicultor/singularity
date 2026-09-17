@@ -11316,22 +11316,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
     - Uses:
+      - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
+      - `database/connection.createDbPool`
+      - `database/connection.onClientLost`
+      - `database/connection.queryText`
+      - `database/connection.withQueryDeadline`
       - `database/derived-tables.rebuildDerivedTables`
       - `database/derived-views.rebuildDerivedViews`
       - `database/migrations.runMigrations`
       - `primitives/log-channels.defineLogSink`
-    - Exports (types):
-      - `DbExecutor`
-      - `QueryDeadlineEvent`
+    - Exports (types): `DbExecutor`
     - Exports (values):
       - `awaitDbReady`
-      - `BOOT_DDL_QUERY_DEADLINE_MS`
       - `currentTxId`
       - `db`
+      - `dbLog`
       - `isTransientDbError`
-      - `QueryDeadlineExceededError`
-      - `queryDeadlineSink`
-      - `withQueryDeadline`
   - Cross-plugin:
     - Imported by:
       - `active-data`
@@ -11441,7 +11441,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
-        - Uses: `infra/host/host-admission.defineHostPool`
+        - Uses:
+          - `database/connection.createDbPool`
+          - `database/connection.withQueryDeadline`
+          - `infra/host/host-admission.defineHostPool`
         - Exports (types):
           - `BackupInfo`
           - `ForkExclusions`
@@ -11503,11 +11506,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
-          - `database.BOOT_DDL_QUERY_DEADLINE_MS`
           - `database.db`
-          - `database.withQueryDeadline`
           - `database/admin.connectionString`
           - `database/admin.ExcludeFromFork`
+          - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
+          - `database/connection.createDbClient`
+          - `database/connection.DbClient`
+          - `database/connection.withQueryDeadline`
           - `database/derived-tables.feedExemptTables`
           - `database/derived-views.relationIdentityBase`
           - `primitives/log-channels.defineLogSink`
@@ -11526,6 +11531,46 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/slow-ops`
           - `debug/trace/engine`
           - `reports`
+    - **`connection`** — Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
+      - Cross-plugin:
+        - Imported by:
+          - `database`
+          - `database/admin`
+          - `database/change-feed`
+          - `database/query-deadline`
+          - `infra/events-test`
+          - `infra/jobs`
+      - Server:
+        - Exports (types):
+          - `BlackHoleProxy`
+          - `CreateDbClientOptions`
+          - `CreateDbPoolOptions`
+          - `DbClient`
+          - `QueryDeadlineEvent`
+        - Exports (values):
+          - `ABANDON_HOLD_CAP`
+          - `abandonClient`
+          - `AbandonedClientHold`
+          - `assertPgPoolInternals`
+          - `BOOT_DDL_QUERY_DEADLINE_MS`
+          - `createDbClient`
+          - `createDbPool`
+          - `currentQueryDeadline`
+          - `formatDeadlineLogLine`
+          - `onClientLost`
+          - `QUERY_DEADLINE_MS`
+          - `QueryDeadlineExceededError`
+          - `queryDeadlineSink`
+          - `queryText`
+          - `startBlackHoleProxy`
+          - `withQueryDeadline`
+      - Core:
+        - Exports (types):
+          - `DbCallPhase`
+          - `DbPoolName`
+        - Exports (values):
+          - `DB_CALL_PHASES`
+          - `DB_POOL_NAMES`
     - **`db-test-fixture`** — Shared throwaway-database fixture for DB-backed test suites.
       - Server:
         - Uses:
@@ -11617,6 +11662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by:
+          - `database/query-deadline`
           - `debug/sentinel`
           - `infra/launcher`
       - Server:
@@ -11744,7 +11790,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/mcp.Mcp`
           - `tasks/tasks-core.getConversation`
         - Register: `mcpTool('query_db')`
-    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per query label) when a query got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
+    - **`query-deadline`** — Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds. Query-deadline audit: registers a handler on the database plugin's query-deadline seam and turns each announcement into a report — db-query-deadline (error, one row per pool, phase and query label) when a call on any backend connection — opening it or a query on it — got no answer before its deadline and its connection was abandoned, db-abandon-cap (error, one rolling row) when the abandoned connections exceed the cap — and keeps the last 20 hits in memory as the db-query-deadlines push resource behind the health report's Database row.
       - Web:
         - Contributes:
           - `Reports.KindView` → `QueryDeadlineSummary`
@@ -11762,7 +11808,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `report-kind` "db-abandon-cap"
           - `resource.declare` "db-query-deadlines"
         - Uses:
-          - `database.queryDeadlineSink`
+          - `database.dbLog`
+          - `database/connection.formatDeadlineLogLine`
+          - `database/connection.QueryDeadlineEvent`
+          - `database/connection.queryDeadlineSink`
+          - `database/embedded.PG_LOG_FILE`
           - `database/pgbouncer.PGBOUNCER_LOG_FILE`
           - `reports.recordReport`
           - `reports.ReportKind`
@@ -11772,7 +11822,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `queryDeadlineKind`
         - Resources: `db-query-deadlines` (push)
       - Core:
-        - Uses: `primitives/live-state.resourceDescriptor`
+        - Uses:
+          - `database/connection.DB_CALL_PHASES`
+          - `database/connection.DB_POOL_NAMES`
+          - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `DbAbandonCapPayload`
           - `DbQueryDeadlinePayload`
@@ -17277,6 +17330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `database.db`
           - `database/admin.connectionString`
+          - `database/connection.createDbClient`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `infra/events.defineTriggerEvent`
@@ -17630,6 +17684,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database.db`
           - `database/admin.connectionString`
           - `database/admin.ExcludeSchemaDataFromFork`
+          - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
+          - `database/connection.createDbPool`
+          - `database/connection.withQueryDeadline`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `infra/endpoints.HttpError`
@@ -18372,6 +18429,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/namespace.Namespace`
         - Exports (values):
           - `declareRuntimeNamespace`
+          - `hasRuntimeNamespace`
           - `isMain`
           - `readServingSocket`
           - `resetRuntimeNamespaceForTest`

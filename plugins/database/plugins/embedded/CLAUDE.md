@@ -49,6 +49,7 @@ Worktree backends read connection params from `~/.singularity/state/db-config/da
 - Load-bearing: yes
 - Cross-plugin:
   - Imported by:
+    - `database/query-deadline`
     - `debug/sentinel`
     - `infra/launcher`
 - Server:

@@ -42,7 +42,7 @@ export const queryDeadlineKind = ReportKind({
   duressExempt: true,
   meta: {
     tag: "[db]",
-    notif: "A database query got no answer and was abandoned",
+    notif: "A database call got no answer and was abandoned",
     variant: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },

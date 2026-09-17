@@ -25,7 +25,15 @@ const SELF = "plugins/infra/plugins/jobs/check/index.ts";
 const CRON_DEDUP_HARNESS =
   "plugins/infra/plugins/events-test/server/internal/cron-dedup.ts";
 
-const ALLOWED = [REGISTRY, SELF, CRON_DEDUP_HARNESS];
+// The enqueue-deadline suite. Not an enqueue path either: it proves graphile's
+// insert, run through a `jobs-enqueue` pool whose connection stops answering,
+// rejects with the connection deadline. `job.enqueue` cannot drive that — it
+// reaches the process's own enqueue pool, which no test proxy sits in front of —
+// and the insert's bytes are dropped on a throwaway database, so no row lands.
+const ENQUEUE_DEADLINE_SUITE =
+  "plugins/infra/plugins/jobs/server/internal/enqueue-deadline.test.ts";
+
+const ALLOWED = [REGISTRY, SELF, CRON_DEDUP_HARNESS, ENQUEUE_DEADLINE_SUITE];
 
 // The second half of the check: who may SPELL the legacy task identifier.
 // `core/hold.ts` declares it (`LEGACY_JOB_TASK`); everyone else imports that.

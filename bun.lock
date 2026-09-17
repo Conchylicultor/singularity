@@ -1805,6 +1805,10 @@
       "name": "@singularity/plugin-database-change-feed",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/connection": {
+      "name": "@singularity/plugin-database-connection",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/db-test-fixture": {
       "name": "@singularity/plugin-database-db-test-fixture",
       "version": "0.0.1",
@@ -6852,6 +6856,8 @@
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
 
     "@singularity/plugin-database-change-feed": ["@singularity/plugin-database-change-feed@workspace:plugins/database/plugins/change-feed"],
+
+    "@singularity/plugin-database-connection": ["@singularity/plugin-database-connection@workspace:plugins/database/plugins/connection"],
 
     "@singularity/plugin-database-db-test-fixture": ["@singularity/plugin-database-db-test-fixture@workspace:plugins/database/plugins/db-test-fixture"],
 

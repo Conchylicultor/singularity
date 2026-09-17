@@ -12,11 +12,12 @@ import {
   type WorkerEvents,
   type WorkerUtils,
 } from "graphile-worker";
-import { Pool } from "pg";
+import type { Pool } from "pg";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { createDbPool } from "@plugins/database/plugins/connection/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import {
   recordEntrySpan,
@@ -69,11 +70,17 @@ let ledgerDetaches: (() => void)[] = [];
 // NOTE `pgPool` and `connectionString` are mutually exclusive in graphile's own
 // assertion (`dist/lib.js:182-186`), so the runner options below pass neither
 // `connectionString` nor `maxPoolSize`.
+//
+// Built by `createDbPool` (`jobs-runner`): every connect and every statement a
+// runner issues — job fetch, completion, its LISTEN client's connect — carries
+// the connection plugin's deadline, and a call that gets no reply rejects with
+// `QueryDeadlineExceededError` naming this pool instead of pinning a slot.
 let runnerPool: Pool | null = null;
 
 function getRunnerPool(): Pool {
   if (!runnerPool) {
-    runnerPool = new Pool({
+    runnerPool = createDbPool({
+      name: "jobs-runner",
       connectionString: connectionString(),
       max: TOTAL_JOB_SLOTS + RUNNERS.length,
     });
@@ -81,17 +88,49 @@ function getRunnerPool(): Pool {
   return runnerPool;
 }
 
+// The pool behind `WorkerUtils` (`addJob` and friends). Built here and handed to
+// graphile as `pgPool` rather than letting graphile build one from a
+// `connectionString`, so every enqueue carries the deadline (`jobs-enqueue`).
+// graphile's own default was `maxPoolSize` 10; kept. Handing it over has the
+// same ownership consequence as the runner pool: `utils.release()` does NOT end
+// a caller-supplied pool, so `stopWorkers()` ends it after the release.
+const ENQUEUE_POOL_MAX = 10;
+let enqueuePool: Pool | null = null;
+
+function getEnqueuePool(): Pool {
+  if (!enqueuePool) {
+    enqueuePool = createDbPool({
+      name: "jobs-enqueue",
+      connectionString: connectionString(),
+      max: ENQUEUE_POOL_MAX,
+    });
+  }
+  return enqueuePool;
+}
+
 // Lazy singleton. The first `enqueue()` call (which may land before
 // `startWorkers()` in the onReady cycle) initializes this; `makeWorkerUtils`
 // runs Graphile's own migrations, which are idempotent and safe to race with
 // the runner's init.
+//
+// A rejected build is not cached: its error reaches every caller that awaited
+// it, and the next call builds again. Now that its migration check can fail on a
+// missed deadline (a transient, lost connection), caching the rejection would
+// turn one lost connection into an enqueue path broken until restart.
 let workerUtilsPromise: Promise<WorkerUtils> | null = null;
 
 export function getWorkerUtils(): Promise<WorkerUtils> {
   if (!workerUtilsPromise) {
-    workerUtilsPromise = makeWorkerUtils({
-      connectionString: connectionString(),
-    });
+    const building: Promise<WorkerUtils> = makeWorkerUtils({
+      pgPool: getEnqueuePool(),
+    }).then(
+      (utils) => utils,
+      (err: unknown) => {
+        if (workerUtilsPromise === building) workerUtilsPromise = null;
+        throw err;
+      },
+    );
+    workerUtilsPromise = building;
   }
   return workerUtilsPromise;
 }
@@ -377,6 +416,13 @@ export async function stopWorkers(): Promise<void> {
     const utils = await workerUtilsPromise;
     await utils.release();
     workerUtilsPromise = null;
+  }
+  if (enqueuePool) {
+    // Ours to create, ours to end — `utils.release()` never ends a pool it was
+    // handed (graphile `dist/lib.js` `assertPool`: the `pgPool.end()` releaser
+    // exists only in the branches that build the pool themselves).
+    await enqueuePool.end();
+    enqueuePool = null;
   }
   if (runnerPool) {
     // Ours to create, ours to end — graphile never ends a caller-supplied pool.

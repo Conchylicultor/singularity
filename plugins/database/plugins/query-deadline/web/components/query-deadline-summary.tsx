@@ -5,10 +5,11 @@ import { DbQueryDeadlinePayloadSchema } from "../../core";
 import { formatDurationMs } from "../../shared/format-duration";
 
 // One-line summary for the Debug → Reports list, e.g.
-// "[select count(*) from conversations_v] no answer for 60s — abandoned
-//  · in a transaction". The query label is a mono chip (it truncates, the
-// sentence does not), the wait trails, and a leased connection is called out
-// because it means a transaction was cut short, not just one read.
+//   [jobs-enqueue] [query] [select … from jobs] no answer for 60s — abandoned · issued by tasks.maybe-launch
+//   [app] [connect] no answer for 60s — abandoned · issued by push tasks
+// The pool and phase lead as muted chips (they say which connection and what it
+// was doing), the query label is a destructive mono chip that truncates, and
+// the caller trails, muted. A connect has no query to show.
 export function QueryDeadlineSummary({ report }: { report: Report }) {
   const parsed = DbQueryDeadlinePayloadSchema.safeParse(report.data);
   if (!parsed.success) return <>{report.message}</>;
@@ -16,13 +17,28 @@ export function QueryDeadlineSummary({ report }: { report: Report }) {
 
   return (
     <Inline gap="xs">
-      <Badge variant="destructive" mono title={d.sql}>
-        {d.sql}
+      <Badge mono title={`Connection pool: ${d.pool}`}>
+        {d.pool}
       </Badge>
+      <Badge
+        variant={d.phase === "connect" ? "warning" : "muted"}
+        title={
+          d.phase === "connect"
+            ? "Opening the connection got no reply"
+            : "A query on an open connection got no reply"
+        }
+      >
+        {d.phase === "connect" ? "connect" : "query"}
+      </Badge>
+      {d.phase === "query" && (
+        <Badge variant="destructive" mono title={d.sql}>
+          {d.sql}
+        </Badge>
+      )}
       <span>no answer for {formatDurationMs(d.elapsedMs)} — abandoned</span>
-      {d.leased ? (
-        <span className="text-muted-foreground">· in a transaction</span>
-      ) : null}
+      {d.origin !== null && (
+        <span className="text-muted-foreground">· issued by {d.origin}</span>
+      )}
     </Inline>
   );
 }

@@ -58,6 +58,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
   - Uses:
     - `database.db`
     - `database/admin.connectionString`
+    - `database/connection.createDbClient`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/events.defineTriggerEvent`

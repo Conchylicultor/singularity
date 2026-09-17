@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { Pool } from "pg";
+import type { Pool } from "pg";
+import { createDbPool } from "@plugins/database/plugins/connection/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
@@ -73,11 +74,17 @@ export function connectionString(): string {
   return buildConnString(getConn(), runtimeNamespace());
 }
 
+// Both pools below are built by `createDbPool`, so opening a connection and
+// every statement on them carry the connection plugin's deadline (60 s by
+// default). Whole-database DDL — `CREATE DATABASE`, `DROP DATABASE … WITH
+// (FORCE)`, `ALTER DATABASE … RENAME` — can legitimately run longer, and runs
+// through `runDatabaseDdl` (./database-ddl) under its own bound and reason.
 let adminPool: Pool | null = null;
 
 export function getAdminPool(): Pool {
   if (!adminPool) {
-    adminPool = new Pool({
+    adminPool = createDbPool({
+      name: "admin",
       connectionString: buildConnString(getConn(), "postgres"),
       max: 1,
       idleTimeoutMillis: 20_000,
@@ -107,7 +114,8 @@ export async function closeAdminPool(): Promise<void> {
 }
 
 export function openShortLivedClient(dbName: string): Pool {
-  const pool = new Pool({
+  const pool = createDbPool({
+    name: "admin-short-lived",
     connectionString: buildConnString(getConn(), dbName),
     max: 1,
     idleTimeoutMillis: 1_000,

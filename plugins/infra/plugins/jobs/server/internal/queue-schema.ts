@@ -1,5 +1,9 @@
 import { runMigrations as runGraphileMigrations } from "graphile-worker";
-import { Pool } from "pg";
+import {
+  BOOT_DDL_QUERY_DEADLINE_MS,
+  createDbPool,
+  withQueryDeadline,
+} from "@plugins/database/plugins/connection/server";
 import { installSupersededTrigger } from "./superseded-trigger";
 
 // ── Who installs the queue schema, and who merely asserts it ─────────────────
@@ -67,20 +71,40 @@ export async function installQueueSchema(
   // lingering connection cannot be `ALTER DATABASE … RENAME`d, which is exactly
   // what the fork path does after provisioning. Owning the pool means our
   // `await pool.end()` below is the real, awaited close.
-  const pool = new Pool({ connectionString, max: 1 });
+  //
+  // Built by `createDbPool` (`jobs-schema`), so connecting and every statement
+  // carry a deadline. The one exception to the awaited close: a connection lost
+  // to a missed deadline is abandoned, never closed (its fd may already be
+  // someone else's), so `pool.end()` resolves without closing it — and the
+  // install rejects with `QueryDeadlineExceededError` first, so no caller goes
+  // on to rename that database believing it idle.
+  const pool = createDbPool({ name: "jobs-schema", connectionString, max: 1 });
   try {
-    await runGraphileMigrations({ pgPool: pool });
-    // Ours, not graphile's, and installed HERE because this is the one place
-    // every database gets its queue schema — main's boot, a graphile version
-    // bump, and every `createTestDb` throwaway. It has to follow the
-    // migrations, which create the table it hangs off. A no-op (catalog read
-    // only, no table lock) once installed; see `superseded-trigger.ts`.
-    const client = await pool.connect();
-    try {
-      await installSupersededTrigger(client);
-    } finally {
-      client.release();
-    }
+    // graphile's migrations and the trigger install are boot DDL: on a graphile
+    // version bump they take ACCESS EXCLUSIVE locks on the queue tables and can
+    // legitimately wait minutes behind the previous backend's workers during a
+    // hot-swap. They get the boot-DDL bound, not the 60 s default.
+    await withQueryDeadline(
+      {
+        ms: BOOT_DDL_QUERY_DEADLINE_MS,
+        reason:
+          "job-queue schema install (graphile migrations + superseded trigger) may wait on the previous backend's queue locks",
+      },
+      async () => {
+        await runGraphileMigrations({ pgPool: pool });
+        // Ours, not graphile's, and installed HERE because this is the one place
+        // every database gets its queue schema — main's boot, a graphile version
+        // bump, and every `createTestDb` throwaway. It has to follow the
+        // migrations, which create the table it hangs off. A no-op (catalog read
+        // only, no table lock) once installed; see `superseded-trigger.ts`.
+        const client = await pool.connect();
+        try {
+          await installSupersededTrigger(client);
+        } finally {
+          client.release();
+        }
+      },
+    );
   } finally {
     await pool.end();
   }

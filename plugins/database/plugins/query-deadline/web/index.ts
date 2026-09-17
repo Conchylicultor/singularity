@@ -8,7 +8,7 @@ import { useDatabaseHealth } from "./internal/use-database-health";
 
 export default {
   description:
-    "Query-deadline presence: the health report's Database row (attention while a database query was lost in the last 10 minutes, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries for the db-query-deadline and db-abandon-cap kinds.",
+    "Query-deadline presence: the health report's Database row (attention while a database call on any pool got no reply in the last 10 minutes, naming the latest's pool and caller, read from the db-query-deadlines push resource) and the one-line Debug → Reports summaries (pool, phase, query, caller) for the db-query-deadline and db-abandon-cap kinds.",
   contributions: [
     Reports.KindView({
       match: DB_QUERY_DEADLINE_KIND,

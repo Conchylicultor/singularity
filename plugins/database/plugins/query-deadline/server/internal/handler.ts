@@ -1,4 +1,7 @@
-import type { QueryDeadlineEvent } from "@plugins/database/server";
+import {
+  formatDeadlineLogLine,
+  type QueryDeadlineEvent,
+} from "@plugins/database/plugins/connection/server";
 import type { recordReport } from "@plugins/reports/server";
 import {
   DB_ABANDON_CAP_KIND,
@@ -21,6 +24,8 @@ export interface QueryDeadlineHandlerDeps {
   ring: HitRing;
   /** Push the ring to every subscribed tab. */
   notify: () => void;
+  /** Append one line to the durable `db` log (`db.jsonl`): `dbLog.publish` in the app. */
+  log: (line: string) => void;
 }
 
 /**
@@ -43,6 +48,7 @@ export function createQueryDeadlineHandler(
   return (event) => {
     if (event.kind === "abandon-cap") {
       const data: DbAbandonCapPayload = {
+        pool: event.pool,
         abandoned: event.abandoned,
         cap: event.cap,
       };
@@ -55,9 +61,15 @@ export function createQueryDeadlineHandler(
       return;
     }
 
+    // The durable line first: it needs no database, so it lands even when the
+    // report write below is the call that cannot reach one.
+    deps.log(formatDeadlineLogLine(event));
     deps.ring.push({
       at: event.at,
+      pool: event.pool,
+      phase: event.phase,
       sql: event.sql,
+      origin: event.origin,
       elapsedMs: event.elapsedMs,
     });
     deps.notify();
@@ -67,7 +79,8 @@ export function createQueryDeadlineHandler(
       elapsedMs: event.elapsedMs,
       deadlineMs: event.deadlineMs,
       origin: event.origin,
-      leased: event.leased,
+      pool: event.pool,
+      phase: event.phase,
       reason: event.reason,
     };
     void deps.recordReport({

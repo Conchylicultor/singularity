@@ -1,8 +1,8 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { Client } from "pg";
 import { z } from "zod";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { createDbClient } from "@plugins/database/plugins/connection/server";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
@@ -141,7 +141,14 @@ export async function handleSuperseded(): Promise<Response> {
   // The stand-in worker. One `pg.Client` is one Postgres session, which is what
   // an advisory lock is scoped to — and it must be DIRECT Postgres (5433, what
   // `connectionString()` returns), never pgbouncer's transaction pooling.
-  const holder = new Client({ connectionString: connectionString() });
+  //
+  // Built by `createDbClient` (`events-test`) like every backend connection, so
+  // its connect and lock statement carry the deadline. Killing its socket below
+  // is the scenario, not a lost call: nothing is pending on it at that moment.
+  const holder = createDbClient({
+    name: "events-test",
+    connectionString: connectionString(),
+  });
   let connected = false;
   let killed = false;
   const preKillErrors: unknown[] = [];

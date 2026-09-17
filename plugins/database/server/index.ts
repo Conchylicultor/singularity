@@ -3,24 +3,13 @@ import { awaitDbReady, warmPool, db } from "./internal/client";
 import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   withQueryDeadline,
-} from "./internal/query-deadline";
+} from "@plugins/database/plugins/connection/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
 
-export { db, awaitDbReady, isTransientDbError } from "./internal/client";
+export { db, dbLog, awaitDbReady, isTransientDbError } from "./internal/client";
 export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
-// The app pool's query deadline: a query with no reply rejects with
-// `QueryDeadlineExceededError` and its connection is abandoned; every expiry is
-// emitted on `queryDeadlineSink` for a consumer to report. `withQueryDeadline`
-// widens the bound for a scope (boot DDL: `BOOT_DDL_QUERY_DEADLINE_MS`).
-export {
-  BOOT_DDL_QUERY_DEADLINE_MS,
-  QueryDeadlineExceededError,
-  queryDeadlineSink,
-  withQueryDeadline,
-  type QueryDeadlineEvent,
-} from "./internal/query-deadline";
 
 export default {
   description:

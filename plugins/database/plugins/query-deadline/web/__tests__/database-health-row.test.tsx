@@ -1,8 +1,9 @@
 /**
  * The health report's Database row, driven through its real hook with the
- * live-state read stubbed: not known yet → unknown (never green), a recent lost
- * query → attention with a count and a clock time, and back to ok once the last
- * hit is 10 minutes old — by ONE scheduled timer, no polling.
+ * live-state read stubbed: not known yet → unknown (never green), a recent call
+ * with no reply on any pool → attention with a count, the latest's pool, caller
+ * and clock time, and back to ok once the last hit is 10 minutes old — by ONE
+ * scheduled timer, no polling.
  */
 
 import { act, cleanup, renderHook } from "@testing-library/react";
@@ -26,9 +27,22 @@ function settled(hits: QueryDeadlineHit[]): ResourceResult<QueryDeadlines> {
   return { pending: false, data: { hits }, refetch };
 }
 
-function hit(at: number): QueryDeadlineHit {
-  return { at, sql: "select count(*) from conversations_v", elapsedMs: 60_000 };
+function hit(
+  at: number,
+  over: Partial<QueryDeadlineHit> = {},
+): QueryDeadlineHit {
+  return {
+    at,
+    pool: "app",
+    phase: "query",
+    sql: "select count(*) from conversations_v",
+    origin: "push conversations-gone-stats",
+    elapsedMs: 60_000,
+    ...over,
+  };
 }
+
+const OK = "No unanswered database calls in the last 10 min";
 
 function clock(at: number): string {
   return new Date(at).toLocaleTimeString([], {
@@ -61,16 +75,16 @@ describe("Database health row", () => {
     const { result } = renderHook(() => useDatabaseHealth());
     expect(result.current).toEqual({
       state: "unknown",
-      summary: "Couldn't load the lost-query history",
+      summary: "Couldn't load recent database call failures",
     });
   });
 
-  it("is ok with no lost queries", () => {
+  it("is ok with no unanswered calls", () => {
     resourceValue = settled([]);
     const { result } = renderHook(() => useDatabaseHealth());
     expect(result.current).toEqual({
       state: "ok",
-      summary: "No lost queries in the last 10 min",
+      summary: OK,
     });
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -83,11 +97,14 @@ describe("Database health row", () => {
     // Two queries lost: one 3 min ago, one 1 min ago (pushed together).
     const first = START - 3 * MIN;
     const last = START - 1 * MIN;
-    resourceValue = settled([hit(first), hit(last)]);
+    resourceValue = settled([
+      hit(first),
+      hit(last, { pool: "jobs-enqueue", origin: "tasks.maybe-launch" }),
+    ]);
     rerender();
     expect(result.current).toEqual({
       state: "attention",
-      summary: `2 database queries lost in the last 10 min — last at ${clock(last)}`,
+      summary: `2 database calls got no reply in the last 10 min — last: jobs-enqueue, issued by tasks.maybe-launch, at ${clock(last)}`,
     });
     // One timer, aimed at the next expiry — not an interval.
     expect(vi.getTimerCount()).toBe(1);
@@ -98,7 +115,7 @@ describe("Database health row", () => {
     });
     expect(result.current).toEqual({
       state: "attention",
-      summary: `1 database query lost in the last 10 min — at ${clock(last)}`,
+      summary: `1 database call got no reply in the last 10 min — jobs-enqueue, issued by tasks.maybe-launch, at ${clock(last)}`,
     });
     expect(vi.getTimerCount()).toBe(1);
 
@@ -108,9 +125,29 @@ describe("Database health row", () => {
     });
     expect(result.current).toEqual({
       state: "ok",
-      summary: "No lost queries in the last 10 min",
+      summary: OK,
     });
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("says a connect was opening a connection, and leaves out an unknown caller", () => {
+    resourceValue = settled([
+      hit(START - 2 * MIN, {
+        pool: "jobs-runner",
+        origin: "tasks.maybe-launch",
+      }),
+      hit(START - 1 * MIN, {
+        pool: "admin",
+        phase: "connect",
+        sql: "[connect]",
+        origin: null,
+      }),
+    ]);
+    const { result } = renderHook(() => useDatabaseHealth());
+    expect(result.current).toEqual({
+      state: "attention",
+      summary: `2 database calls got no reply in the last 10 min — last: opening an admin connection, at ${clock(START - 1 * MIN)}`,
+    });
   });
 
   it("stays green for a hit that had already aged out when it was read", () => {
@@ -139,7 +176,7 @@ describe("Database health row", () => {
     rerender();
     expect(result.current).toEqual({
       state: "attention",
-      summary: `1 database query lost in the last 10 min — at ${clock(later)}`,
+      summary: `1 database call got no reply in the last 10 min — app, issued by push conversations-gone-stats, at ${clock(later)}`,
     });
 
     act(() => {

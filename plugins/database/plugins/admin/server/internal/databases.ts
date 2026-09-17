@@ -2,6 +2,7 @@ import { queryOne, queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { NAMESPACE_RE } from "@plugins/infra/plugins/namespace/core";
 import { z } from "zod";
 import { getAdminPool } from "./pool";
+import { runDatabaseDdl } from "./database-ddl";
 
 /**
  * Scratch databases the cluster mints for itself, as opposed to an app's.
@@ -66,7 +67,12 @@ export async function databaseExists(name: string): Promise<boolean> {
 
 export async function dropDatabase(name: string): Promise<void> {
   assertSafeName(name);
-  await getAdminPool().query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
+  // Terminates the database's sessions, waits for them to exit, then removes
+  // all of its files: the database-DDL bound, not the 60 s default.
+  await runDatabaseDdl(
+    `DROP DATABASE ${name} WITH (FORCE): terminates its sessions and removes its files`,
+    `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`,
+  );
 }
 
 // Create `name` if it does not already exist. `CREATE DATABASE` cannot run in a
@@ -78,7 +84,12 @@ export async function ensureDatabase(name: string): Promise<void> {
   assertSafeName(name);
   if (await databaseExists(name)) return;
   try {
-    await getAdminPool().query(`CREATE DATABASE "${name}"`);
+    // Copies the template database and waits on the database-object lock: the
+    // database-DDL bound, not the 60 s default.
+    await runDatabaseDdl(
+      `CREATE DATABASE ${name}: copies the template database`,
+      `CREATE DATABASE "${name}"`,
+    );
   } catch (err) {
     if (
       err instanceof Error &&

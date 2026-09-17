@@ -1,5 +1,6 @@
-import { queryDeadlineSink } from "@plugins/database/server";
+import { queryDeadlineSink } from "@plugins/database/plugins/connection/server";
 import { recordReport } from "@plugins/reports/server";
+import { dbLog } from "@plugins/database/server";
 import { createQueryDeadlineHandler } from "./handler";
 import { dbQueryDeadlinesServerResource, deadlineHitRing } from "./resource";
 
@@ -18,6 +19,7 @@ export function registerQueryDeadlineReports(): void {
       recordReport,
       ring: deadlineHitRing,
       notify: () => dbQueryDeadlinesServerResource.notify(),
+      log: (line) => dbLog.publish(line, "stderr"),
     }),
   );
 }
