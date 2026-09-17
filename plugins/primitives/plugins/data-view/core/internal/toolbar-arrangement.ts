@@ -63,4 +63,11 @@ export interface ToolbarArrangement {
   id: string;
   forms: ToolbarPartForms;
   component: ComponentType<ToolbarParts>;
+  /**
+   * Empty space between the toolbar band and the view below it, as a CSS
+   * length; absent → none (the view starts flush under the band). It sits
+   * OUTSIDE the sticky band, so the pinned band never grows by it. Only the
+   * wide layout wears it: the compact fold keeps a narrow pane's tight rhythm.
+   */
+  spaceBelow?: string;
 }

@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ToolbarPartForms } from "../../../core";
+import { ROUND_AT_REST } from "./round-form";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
@@ -36,8 +38,8 @@ export function ControlTrigger({
   control: DataViewControl;
   /**
    * The trigger's shape — the arrangement's `forms.controls`. `round` is the
-   * same icon button drawn as a circle (a pill with no label); nothing else
-   * about the trigger changes.
+   * same icon button drawn as a circle (a pill with no label), whose glyph
+   * rests in the faint text tier and lifts to the text colour on hover.
    */
   form?: ToolbarPartForms["controls"];
 }): ReactNode {
@@ -69,6 +71,7 @@ export function ControlTrigger({
           tooltip={tooltip}
           variant={summary ? "secondary" : "ghost"}
           shape={form === "round" ? "pill" : "default"}
+          className={cn(form === "round" && !summary && ROUND_AT_REST)}
         />
       }
     >

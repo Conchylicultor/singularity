@@ -113,6 +113,31 @@ describe("DataViewToolbar arrangements", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("puts an arrangement's spaceBelow after the sticky band, never inside it", () => {
+    const { container } = renderToolbar({
+      arrangement: { ...recordingArrangement, spaceBelow: "50px" },
+    });
+
+    const spacer = container.querySelector<HTMLElement>(
+      '[aria-hidden="true"][style*="height: 50px"]',
+    );
+    expect(spacer).not.toBeNull();
+    // A sibling of the band that holds the arrangement — so the pinned band
+    // (and its measured header offset) never grows by it.
+    const band = spacer!.previousElementSibling!;
+    expect(band.contains(screen.getByTestId("arrangement"))).toBe(true);
+    expect(band.contains(spacer)).toBe(false);
+  });
+
+  it("drops spaceBelow in the compact fold", () => {
+    const { container } = renderToolbar({
+      arrangement: { ...recordingArrangement, spaceBelow: "50px" },
+      density: "compact",
+    });
+
+    expect(container.querySelector('[style*="height: 50px"]')).toBeNull();
+  });
+
   it("folds to the compact bar under density=compact, whatever the arrangement", () => {
     renderToolbar({ arrangement: recordingArrangement, density: "compact" });
 

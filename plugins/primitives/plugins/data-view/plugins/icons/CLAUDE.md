@@ -6,10 +6,11 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
 ## What it renders
 
 - **A centred grid of fixed-width cells** — `Grid cellWidth`, never stretched.
-  116px cells with 72px tiles; under 760px of *view* width (a container query
+  116px cells with 72px tiles, `lg` column / `2xl` row gaps; under 760px of *view* width (a container query
   on the view root, not the viewport) 92px cells with 60px tiles. The geometry
   classes sit on each grid, not the root, because a container query styles the
-  container's descendants only.
+  container's descendants only. The grid starts flush: space above the first
+  row is the toolbar arrangement's `spaceBelow`, never the view's own padding.
 - **The tile** is the schema's leading field (`FieldDef.leading`) rendered
   through `leadingSlot` inside `<AvatarPresentationProvider value="tile">`, so an
   avatar cell fills the tile box with a flat colour. A schema with **no** leading

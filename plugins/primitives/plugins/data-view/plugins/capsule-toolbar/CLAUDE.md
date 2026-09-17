@@ -23,6 +23,14 @@ Below 560px of capsule width (a container query on the capsule, not the
 viewport) the divider and circles are hidden and `foldedControls` — every control
 behind one circle — shows instead, so filter and sort stay reachable.
 
+The circles' glyphs rest in the faint text tier (`text-faint-foreground`) and
+lift to the text colour on hover; the search icon and placeholder are faint too,
+the chip's view icon muted and its chevron faint.
+
+The arrangement declares `spaceBelow: "50px"`: with the band's own 8px and the
+icons view's 12px tile padding, the first row sits ~70px under the pill, as in
+the approved launcher mock.
+
 The surface `title` is not drawn: a page using the capsule states its own
 heading above it. The compact fold (`density="compact"` or a toolbar under
 360px) is the host's, and replaces the capsule entirely.

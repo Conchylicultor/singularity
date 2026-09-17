@@ -663,6 +663,7 @@ interface ToolbarArrangement {
   id: string;
   forms: { search: "field" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
   component: ComponentType<ToolbarParts>;
+  spaceBelow?: string; // CSS length between the band and the view; wide layout only
 }
 interface ToolbarParts {
   title; switcher: { strip; chip }; search; focusSearch(): void; query;
@@ -690,6 +691,11 @@ interface ToolbarParts {
   under `COMPACT_BREAKPOINT` renders the fold whatever arrangement was passed. An
   arrangement only chooses the wide layout, so none can break a narrow pane. The
   arrangement owns its own row box and inset (`rail-follow`).
+- **`spaceBelow`** is the room an arrangement wants between itself and the view
+  (the capsule floats apart from its content; the bar sits flush). The host
+  renders it as a sibling AFTER the `<Sticky>` band, so it scrolls away with the
+  content rather than growing the pinned band, and drops it in the compact fold.
+  Views start flush — a view never pads its own top to make room for a toolbar.
 
 ## Toolbar controls
 

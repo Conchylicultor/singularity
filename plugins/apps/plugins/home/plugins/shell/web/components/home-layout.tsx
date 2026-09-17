@@ -8,8 +8,8 @@ import { Home } from "../slots";
 
 /**
  * The launcher page: a centred title block, then the sections (the app grid
- * with its capsule toolbar), in one column `min(920px, 100% − 40px)` wide —
- * seven 116px icon cells and their gaps — centred in the tab.
+ * with its capsule toolbar), in one column `min(932px, 100% − 40px)` wide —
+ * seven 116px icon cells and their 16px gaps — centred in the tab.
  */
 export function HomeLayout() {
   return (
@@ -24,13 +24,13 @@ export function HomeLayout() {
           // the viewport's, so a narrow floating window gets the tighter margin.
           <Center axis="horizontal" className="@container/home">
             <Stack
-              gap="lg"
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- the launcher's page margin (64px, 40px under 760px) and its column measure (seven 116px cells + gaps, 20px gutters) are page geometry above the spacing ramp's largest step
-              className="w-[min(920px,calc(100%-40px))] py-[64px] @max-[760px]/home:py-[40px]"
+              gap="xl"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- the launcher's page margin (64px, 40px under 760px) and its column measure (seven 116px cells + 16px gaps + 24px, 20px gutters) are page geometry above the spacing ramp's largest step
+              className="w-[min(932px,calc(100%-40px))] py-[64px] @max-[760px]/home:py-[40px]"
             >
               <Stack
                 as="header"
-                gap="xs"
+                gap="sm"
                 align="center"
                 className="text-center"
               >
@@ -39,7 +39,7 @@ export function HomeLayout() {
                 <Text as="h1" variant="display" className="font-semibold">
                   Apps
                 </Text>
-                <Text as="p" variant="body" tone="muted">
+                <Text as="p" variant="body" tone="faint">
                   Open an app to get started.
                 </Text>
               </Stack>

@@ -69,9 +69,9 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
               shape="pill"
               aria-label={`View: ${active.instance.name}`}
             >
-              <ActiveIcon />
+              <ActiveIcon className="text-muted-foreground" />
               {active.instance.name}
-              <MdExpandMore />
+              <MdExpandMore className="text-faint-foreground" />
             </Button>
           }
         />

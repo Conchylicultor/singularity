@@ -19,7 +19,8 @@ import { MdClose, MdSearch } from "react-icons/md";
  *   standalone search field of a toolbar or panel.
  * - `bare` — no box of its own: it fills the cell it is placed in (a pill that
  *   already draws the border) with a leading icon, a borderless input and a
- *   trailing `/` key hint. Escape clears the query and leaves the field.
+ *   trailing `/` key hint, its icon and placeholder in the faint text tier.
+ *   Escape clears the query and leaves the field.
  */
 export type SearchInputAppearance = "field" | "bare";
 
@@ -57,7 +58,7 @@ export function SearchInput({
     return (
       <Line
         className={cn(
-          "h-full gap-sm px-sm text-muted-foreground",
+          "h-full gap-sm px-sm text-faint-foreground",
           wrapperClassName,
         )}
       >
@@ -65,7 +66,7 @@ export function SearchInput({
         <Fill>
           <Input
             className={cn(
-              "h-full rounded-none border-0 bg-transparent px-none text-body text-foreground shadow-none focus-visible:ring-0 dark:bg-transparent",
+              "h-full rounded-none border-0 bg-transparent px-none text-body text-foreground shadow-none placeholder:text-faint-foreground focus-visible:ring-0 dark:bg-transparent",
               className,
             )}
             {...inputProps}

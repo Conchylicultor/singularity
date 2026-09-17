@@ -26,7 +26,7 @@ runtime vars. Picking a typography preset re-themes every variant together.
 | `eyebrow`    | 0.75rem   | 1rem        | 400    | wide     | `text-xs uppercase …`     |
 | `code`       | 0.75rem   | 1.25rem     | 400    | 0        | `font-mono text-xs leading-5` |
 
-`tone` layers a foreground color (`default | muted | primary | destructive`);
+`tone` layers a foreground color (`default | muted | faint | primary | destructive`; `faint` is the dimmer tier below muted, from the palette's `faintForeground`);
 `as` swaps the host element (default `span`). `cn(variant, tone, className)` —
 caller `className` wins last, so layout margins/truncation compose on top.
 

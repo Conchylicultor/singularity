@@ -41,12 +41,14 @@ const VIRTUALIZE_THRESHOLD = 120;
 /**
  * The grid's geometry, on every grid (and the probe) rather than the view root:
  * a container query styles the container's DESCENDANTS, never the container.
- * Wide: 116px columns, 72px tiles, 14px-ish column gap (`md`). Under 760px of
- * view width: 92px columns, 60px tiles, `sm` column gap. The row gap is the
- * grid's own `gap` (`xl`); `gap-x-*` refines only the column axis.
+ * Wide: 116px columns, 72px tiles, `lg` column gap. Under 760px of view
+ * width: 92px columns, 60px tiles, `sm` column gap. The row gap is the grid's
+ * own `gap` (`2xl`); `gap-x-*` refines only the column axis. The view starts
+ * flush: space above the first row belongs to whatever sits there (a toolbar
+ * arrangement's `spaceBelow`).
  */
 const GRID_GEOMETRY = cn(
-  "gap-x-md [--icons-cell:116px] [--icons-tile:72px]",
+  "gap-x-lg [--icons-cell:116px] [--icons-tile:72px]",
   "@max-[760px]/icons:gap-x-sm @max-[760px]/icons:[--icons-cell:92px] @max-[760px]/icons:[--icons-tile:60px]",
 );
 const CELL_WIDTH = "var(--icons-cell)";
@@ -209,7 +211,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         }
         data-row-key={key}
         className={cn(
-          "group/icon focus-ring rounded-xl px-xs pt-sm pb-sm",
+          "group/icon focus-ring rounded-xl px-xs pt-md pb-sm",
           activate && "cursor-pointer",
         )}
       >
@@ -276,8 +278,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       return (
         <Grid
           cellWidth={CELL_WIDTH}
-          gap="xl"
-          className={cn(GRID_GEOMETRY, "rail-follow pt-2xl pb-sm")}
+          gap="2xl"
+          className={cn(GRID_GEOMETRY, "rail-follow pb-sm")}
         >
           {entries.map((entry) => renderEntry(entry, group))}
         </Grid>
@@ -292,26 +294,26 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       ? lanes.find((lane) => lane.some((e) => e.key === activeId))
       : undefined;
     return (
-      <div className="rail-follow pt-2xl pb-sm">
+      <div className="rail-follow pb-sm">
         <Grid
           ref={probeRef}
           aria-hidden
           cellWidth={CELL_WIDTH}
-          gap="xl"
+          gap="2xl"
           className={cn(GRID_GEOMETRY, "h-0")}
         />
         {columns > 0 ? (
           <VirtualRows<DataViewRowEntry<unknown>[]>
             items={lanes}
-            estimateSize={124}
+            estimateSize={152}
             getKey={laneKey}
             keepMounted={activeLane ? [laneKey(activeLane)] : undefined}
           >
             {(lane) => (
               <Grid
                 cellWidth={CELL_WIDTH}
-                gap="xl"
-                className={cn(GRID_GEOMETRY, "pb-xl")}
+                gap="2xl"
+                className={cn(GRID_GEOMETRY, "pb-2xl")}
               >
                 {lane.map((entry) => renderEntry(entry, group))}
               </Grid>

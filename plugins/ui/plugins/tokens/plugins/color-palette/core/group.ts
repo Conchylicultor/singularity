@@ -61,6 +61,13 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
     darkDefault: "oklch(0.62 0 0)",
     label: "Muted text",
   },
+  // The second, dimmer text tier below `mutedForeground`: hints, placeholders,
+  // at-rest glyphs that should recede until pointed at.
+  faintForeground: {
+    default: "oklch(0.7 0 0)",
+    darkDefault: "oklch(0.48 0 0)",
+    label: "Faint text",
+  },
   accent: {
     default: "oklch(0.97 0 0)",
     darkDefault: "oklch(0.269 0 0)",

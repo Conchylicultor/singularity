@@ -86,4 +86,9 @@ export const capsuleToolbar: ToolbarArrangement = {
   id: "capsule",
   forms: { search: "bare", controls: "round", creators: "round" },
   component: CapsuleToolbar,
+  // The pill floats apart from what it filters. The mock puts its first tile's
+  // top edge ~70px below the pill: this band's own 8px bottom (`py-sm`) + 50px
+  // + the icons view's 12px tile padding. Above the spacing ramp's top step, so
+  // a length rather than a step.
+  spaceBelow: "50px",
 };

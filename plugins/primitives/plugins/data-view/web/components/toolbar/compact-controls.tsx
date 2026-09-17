@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { MdTune } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   ControlPanel,
   ControlPanelPopover,
@@ -12,6 +12,7 @@ import type { ToolbarPartForms } from "../../../core";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
+import { ROUND_AT_REST } from "./round-form";
 
 /**
  * The narrow-toolbar fold. One `MdTune` trigger (ghost, or `secondary` + count
@@ -141,7 +142,7 @@ export function CompactControls({
             label="View options"
             variant="ghost"
             shape={shape}
-            className={revealClass}
+            className={cn(revealClass, form === "round" && ROUND_AT_REST)}
           />
         )
       }

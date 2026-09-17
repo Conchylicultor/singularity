@@ -23,7 +23,7 @@ const GROUPS: GroupDef[] = [
   { label: "Base", keys: ["background", "foreground"] },
   { label: "Card", keys: ["card", "cardForeground"] },
   { label: "Popover", keys: ["popover", "popoverForeground"] },
-  { label: "Muted", keys: ["muted", "mutedForeground"] },
+  { label: "Muted", keys: ["muted", "mutedForeground", "faintForeground"] },
   { label: "Destructive", keys: ["destructive", "destructiveForeground"] },
   { label: "Success", keys: ["success", "successForeground"] },
   { label: "Warning", keys: ["warning", "warningForeground"] },

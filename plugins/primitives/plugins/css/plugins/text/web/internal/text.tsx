@@ -25,7 +25,8 @@ export type TextVariant =
   | "code";
 
 /** Foreground tone applied on top of the variant. `default` inherits the surface. */
-export type TextTone = "default" | "muted" | "primary" | "destructive";
+export type TextTone =
+  "default" | "muted" | "faint" | "primary" | "destructive";
 
 /** Which edge keeps its text when single-line. `end` ellipsizes the tail; `start` ellipsizes the lead. */
 export type TruncateSide = "end" | "start";
@@ -75,6 +76,7 @@ const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
 const TONE_CLASS: Record<TextTone, string> = {
   default: "",
   muted: "text-muted-foreground",
+  faint: "text-faint-foreground",
   primary: "text-primary",
   destructive: "text-destructive",
 };

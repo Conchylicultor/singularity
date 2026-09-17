@@ -138,7 +138,7 @@ export function DataViewToolbar({
   // Built once and relocated into whichever branch renders — the toolbar's
   // "each control element is built once" discipline. The compact fold has forms
   // of its own; the wide layout builds each part in the arrangement's forms.
-  const { forms, component: Arrangement } = arrangement;
+  const { forms, component: Arrangement, spaceBelow } = arrangement;
   const creatorsControl = (
     <CreatorsControl
       creators={creators}
@@ -184,72 +184,80 @@ export function DataViewToolbar({
     // a positional directive rebinds if a `cn()` call reflows underneath it.
     // Pure CSS (`group-hover`), so hovering costs zero re-renders; the state
     // hook would re-render every windowed row on each pointer enter/leave.
-    <Sticky
-      edge="top"
-      mask
-      layer="nav"
-      ref={bandRef}
-      className={hoverRevealGroup}
-    >
-      {compact ? (
-        <div
-          // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
-          //
-          // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
-          // but the switcher behind the single options trigger, and the switcher
-          // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
-          // in the shrinkable scroll lane below, so the trailing controls can never
-          // be pushed past the container's edge and clipped.
-          // eslint-disable-next-line layout/no-adhoc-layout
-          className="flex items-center gap-sm py-sm rail-follow"
-        >
-          {/* The one shrinkable cell of the bar. The switcher's chips hug their
+    <>
+      <Sticky
+        edge="top"
+        mask
+        layer="nav"
+        ref={bandRef}
+        className={hoverRevealGroup}
+      >
+        {compact ? (
+          <div
+            // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
+            //
+            // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
+            // but the switcher behind the single options trigger, and the switcher
+            // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
+            // in the shrinkable scroll lane below, so the trailing controls can never
+            // be pushed past the container's edge and clipped.
+            // eslint-disable-next-line layout/no-adhoc-layout
+            className="flex items-center gap-sm py-sm rail-follow"
+          >
+            {/* The one shrinkable cell of the bar. The switcher's chips hug their
                 content and never shrink, so when more views exist than fit, this
                 lane scrolls horizontally rather than pushing the trailing controls
                 out of reach. Scrollbar hidden — it is an overflow escape hatch, not
                 a permanent affordance. */}
-          <Scroll axis="x" fill hideScrollbar>
-            <Stack direction="row" align="center" gap="sm">
-              {titleNode}
-              {switcherCount > 1 ? switcher.strip : null}
-            </Stack>
-          </Scroll>
-          {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-          {actions}
-          {creatorsControl}
-          {/* Search folds in here with every control — a non-empty query
+            <Scroll axis="x" fill hideScrollbar>
+              <Stack direction="row" align="center" gap="sm">
+                {titleNode}
+                {switcherCount > 1 ? switcher.strip : null}
+              </Stack>
+            </Scroll>
+            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
+            {actions}
+            {creatorsControl}
+            {/* Search folds in here with every control — a non-empty query
                 counts toward the trigger's badge so a folded-away search is still
                 visible from the closed bar. */}
-          <CompactControls
-            search={searchInput}
-            controls={controls}
-            activeCount={activeCount}
-            searching={query.length > 0}
-          />
-        </div>
-      ) : (
-        <Arrangement
-          title={titleNode}
-          switcher={switcher}
-          search={searchInput}
-          focusSearch={focusSearch}
-          query={query}
-          controls={controls.map((c) => (
-            <ControlTrigger key={c.id} control={c} form={forms.controls} />
-          ))}
-          foldedControls={
             <CompactControls
+              search={searchInput}
               controls={controls}
-              activeCount={activeCount - (query.length > 0 ? 1 : 0)}
-              searching={false}
-              revealOnHover={false}
-              form={forms.controls}
+              activeCount={activeCount}
+              searching={query.length > 0}
             />
-          }
-          actions={actions}
-          creators={creatorsControl}
-        />
-      )}
-    </Sticky>
+          </div>
+        ) : (
+          <Arrangement
+            title={titleNode}
+            switcher={switcher}
+            search={searchInput}
+            focusSearch={focusSearch}
+            query={query}
+            controls={controls.map((c) => (
+              <ControlTrigger key={c.id} control={c} form={forms.controls} />
+            ))}
+            foldedControls={
+              <CompactControls
+                controls={controls}
+                activeCount={activeCount - (query.length > 0 ? 1 : 0)}
+                searching={false}
+                revealOnHover={false}
+                form={forms.controls}
+              />
+            }
+            actions={actions}
+            creators={creatorsControl}
+          />
+        )}
+      </Sticky>
+      {/* The arrangement's space below the band: a sibling of the `<Sticky>`, not
+        padding inside it, so it scrolls away with the content instead of
+        growing the pinned band (and the measured header offset). */}
+      {!compact && spaceBelow ? (
+        <div aria-hidden style={{ height: spaceBelow }} />
+      ) : null}
+    </>
   );
 }
