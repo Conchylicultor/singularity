@@ -20,6 +20,12 @@ import {
   usePrototypeOptions,
   usePrototypePicks,
 } from "../context";
+import {
+  FRAME_SIZE_LABELS,
+  FRAME_SIZES,
+  useFrameSizeChoice,
+  type FrameSizeChoice,
+} from "../frame-size";
 
 /**
  * The picker for a prototype's declared options (`<meta name="prototype-option">`).
@@ -41,7 +47,15 @@ import {
  * The chips are the options of the document ON SCREEN
  * (`usePrototypeOptions`): on a recorded version, the ones that version
  * declared — so a variant the live page has since dropped is still there to
- * pick. Renders nothing when that document declares none, and nothing while
+ * pick.
+ *
+ * Under the declared options sits one row the app owns rather than the page:
+ * **Size** — fixed (the declared viewport), mobile, or full (the frame fills
+ * the stage and the page's own responsive layout shows). It is offered only
+ * where a frame renders through the nearest frame-size scope
+ * (`useFrameSizeChoice`), and the pill's summary ends with it.
+ *
+ * Renders nothing when there is neither an option nor a Size row, and nothing while
  * the picks are unknown — the stage under it is still loading then, and a pill
  * naming the defaults would claim a choice the user may not have made.
  */
@@ -49,11 +63,15 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
   const { setPick, resetPicks } = usePrototypeDetail();
   const options = usePrototypeOptions(meta);
   const read = usePrototypePicks(meta);
-  if (options.length === 0 || read.pending) return null;
+  const frameSize = useFrameSizeChoice();
+  if ((options.length === 0 && frameSize === null) || read.pending) {
+    return null;
+  }
   const picks = read.data;
-  const summary = options
-    .map((o) => humanizeToken(pickedValue(o, picks)))
-    .join(" · ");
+  const summary = [
+    ...options.map((o) => humanizeToken(pickedValue(o, picks))),
+    ...(frameSize ? [FRAME_SIZE_LABELS[frameSize.size]] : []),
+  ].join(" · ");
 
   return (
     <FloatingAction
@@ -93,6 +111,7 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
                 }}
               />
             ))}
+            {frameSize ? <SizeRow choice={frameSize} /> : null}
             {Object.keys(picks).length > 0 ? (
               <Button variant="ghost" onClick={resetPicks}>
                 Reset to defaults
@@ -129,6 +148,32 @@ function OptionRow({
             onClick={() => onPick(v)}
           >
             {humanizeToken(v)}
+          </ToggleChip>
+        ))}
+      </Cluster>
+    </Stack>
+  );
+}
+
+/**
+ * The frame size: app state, not one of the page's options — it changes the
+ * box the page renders in, not the page, so it is never written to the picks
+ * record or the frame's URL.
+ */
+function SizeRow({ choice }: { choice: FrameSizeChoice }) {
+  return (
+    <Stack direction="col" gap="2xs">
+      <Text variant="label">Size</Text>
+      <Cluster gap="xs" role="radiogroup" aria-label="Size">
+        {FRAME_SIZES.map((size) => (
+          <ToggleChip
+            key={size}
+            role="radio"
+            aria-checked={size === choice.size}
+            active={size === choice.size}
+            onClick={() => choice.setSize(size)}
+          >
+            {FRAME_SIZE_LABELS[size]}
           </ToggleChip>
         ))}
       </Cluster>

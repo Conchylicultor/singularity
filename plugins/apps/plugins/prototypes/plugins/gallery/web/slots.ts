@@ -42,6 +42,13 @@ export interface PrototypeStageContribution {
   label: string;
   /** Ascending; ties keep registration order. Defaults to 0. */
   order?: number;
+  /**
+   * The stage renders the prototype through the pane's frame size
+   * (`useFrameSize()` — fixed / mobile / full). Only then does the options
+   * picker offer its Size row: a stage that sizes its frames some other way
+   * (Compare's shared width) would otherwise show a control that does nothing.
+   */
+  usesFrameSize?: boolean;
   component: ComponentType<PrototypeStageProps>;
 }
 

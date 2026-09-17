@@ -23,8 +23,10 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
+  FrameSizeProvider,
   OptionsPicker,
   ScaledIframe,
+  useFrameSizeState,
   usePrototypeSrc,
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
 
@@ -176,6 +178,12 @@ export function PresentOverlay({
  * so it stays inside the fullscreened subtree. Revealed on hover like the exit
  * button: at rest the presentation shows only the design. It draws nothing
  * while the picks are unknown, which is the same wait the frame is in.
+ *
+ * **Presenting opens at Full size**: the frame fills the presentation and the
+ * page's own responsive layout shows, rather than a fixed canvas scaled up.
+ * The size is the presentation's own (a nested frame-size scope), so the
+ * picker's Size row can still switch to Fixed or Mobile here without changing
+ * the size the pane was left on.
  */
 function PresentedFrame({
   meta,
@@ -185,18 +193,21 @@ function PresentedFrame({
   version: number;
 }) {
   const src = usePrototypeSrc(meta, version);
+  const frameSize = useFrameSizeState("full");
   return (
-    <>
+    <FrameSizeProvider value={frameSize}>
       {/* No `error` arm: a picks record that cannot be read stays broken until
           someone fixes it, so it renders as the default error placeholder (its
           message) rather than as a spinner that never ends. */}
       {matchResource(src, {
         pending: () => <Loading variant="block" />,
-        ready: (url) => <ScaledIframe meta={meta} src={url} upscale />,
+        ready: (url) => (
+          <ScaledIframe meta={meta} src={url} size={frameSize.size} upscale />
+        ),
       })}
       <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
         <OptionsPicker meta={meta} />
       </Pin>
-    </>
+    </FrameSizeProvider>
   );
 }

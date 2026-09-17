@@ -23,6 +23,7 @@ import {
   type PrototypeStage,
 } from "../context";
 import { PrototypeStages } from "../slots";
+import { FrameSizeProvider } from "../frame-size";
 import { OptionsPicker } from "./options-picker";
 import { PastVersionPill } from "./past-version-pill";
 
@@ -165,31 +166,41 @@ function ReadyStage({
   version: number;
   stage: PrototypeStage;
 }) {
+  const { frameSize } = usePrototypeDetail();
   // No `error` arm: a picks record that cannot be read (a malformed
   // `_picks/<id>.json`) stays broken until someone fixes it, so it renders as
   // the default error placeholder naming the problem — never as a spinner
   // that never ends.
   return matchResource(usePrototypeSrc(meta, version), {
     pending: () => <Loading variant="block" />,
-    ready: (src) => (
-      // The positioning context the picker pins to.
-      <div className="relative h-full">
-        {renderIsolated(
-          PrototypeStages.Stage,
-          stage as unknown as Contribution,
-          { meta, gallery, src },
-        )}
-        {/* One corner, stacked: the options picker, and under it — on a
+    ready: (src) => {
+      const body = (
+        // The positioning context the picker pins to.
+        <div className="relative h-full">
+          {renderIsolated(
+            PrototypeStages.Stage,
+            stage as unknown as Contribution,
+            { meta, gallery, src },
+          )}
+          {/* One corner, stacked: the options picker, and under it — on a
             recorded version — what that version is, with Restore and Back to
             latest. The picker opens upward, so it never covers the pill. Each
             renders nothing when it has nothing to say. */}
-        <Pin to="bottom-right" offset="md">
-          <Stack direction="col" gap="sm" align="end">
-            <OptionsPicker meta={meta} />
-            <PastVersionPill />
-          </Stack>
-        </Pin>
-      </div>
-    ),
+          <Pin to="bottom-right" offset="md">
+            <Stack direction="col" gap="sm" align="end">
+              <OptionsPicker meta={meta} />
+              <PastVersionPill />
+            </Stack>
+          </Pin>
+        </div>
+      );
+      // The frame size reaches only a stage that renders through it — so the
+      // picker's Size row, which reads the same scope, shows only there.
+      return stage.usesFrameSize ? (
+        <FrameSizeProvider value={frameSize}>{body}</FrameSizeProvider>
+      ) : (
+        body
+      );
+    },
   });
 }

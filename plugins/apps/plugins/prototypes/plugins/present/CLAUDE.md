@@ -29,6 +29,13 @@ hover-revealed like the ×), so a theme or variant can be switched while
 presenting. It must stay inline DOM inside the stage box — anything portaled to
 `body` is invisible under the Fullscreen API.
 
+**Presenting opens at Full size**: the frame fills the presentation at scale 1,
+so the page's own responsive layout shows instead of a fixed canvas scaled up.
+`PresentedFrame` holds its own frame-size scope (starting at `full`), so the
+picker's Size row can still switch to Fixed or Mobile while presenting without
+changing the size the pane was left on. The new browser tab needs nothing: it
+opens the raw document, which is already full size.
+
 The overlay is rendered with `key={placement}`, so switching destination is an
 explicit remount rather than a portal-container swap React would reconcile into
 a half-move.
@@ -50,9 +57,11 @@ another way to view a prototype is a sibling plugin, not an edit here.
   - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
   - Uses:
     - `apps-core/tabs.useSurfaceFocused`
+    - `apps/prototypes/gallery.FrameSizeProvider`
     - `apps/prototypes/gallery.OptionsPicker`
     - `apps/prototypes/gallery.prototypeDetailPane`
     - `apps/prototypes/gallery.ScaledIframe`
+    - `apps/prototypes/gallery.useFrameSizeState`
     - `apps/prototypes/gallery.usePrototypeSrc`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`

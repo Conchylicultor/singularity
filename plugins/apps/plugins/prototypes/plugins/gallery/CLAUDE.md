@@ -56,7 +56,14 @@ The Prototypes app's two panes:
     scaled to fit the pane (`ScaledIframe`: a ResizeObserver-driven
     `transform: scale()`, never upscaling past 1; the container owns the scaling
     box, the iframe is a rigid leaf), under a banner listing what is wrong with
-    its folder. A new `src` (an edit's reload, a step of the version stepper)
+    its folder. **Frame size**: the canvas is the declared viewport (`fixed`,
+    the default), a phone (`mobile`, 390×844) or none at all (`full` — the
+    frame fills the stage at scale 1, so the page's own responsive layout
+    shows). The choice is pane state on the provider (`frameSize`, survives
+    stage switches, not remembered across visits) and reaches a stage through
+    a `FrameSizeProvider` scope (`frame-size.tsx`) — only a stage that declares
+    `usesFrameSize` gets one, so Compare (which sizes frames with its own width
+    control) shows no Size row. A new `src` (an edit's reload, a step of the version stepper)
     loads in a second, hidden frame on top of the one on screen and replaces it
     on `load` — a prototype renders client-side, so a frame navigating in place
     would be blank until its JSX had run. The frames are keyed by `src` with
@@ -158,7 +165,10 @@ The Prototypes app's two panes:
     `usePrototypePicks(meta)` resolves the stored picks against it (picks it
     does not declare drop), so a palette picked on v3 carries to the live page
     wherever the live page still has it. The picker renders nothing until the
-    picks are known.
+    picks are known. Below the declared options it adds one app-owned row,
+    **Size** (Fixed / Mobile / Full), whenever it sits inside a frame-size
+    scope — never written to the picks record or the frame URL, since it
+    changes the box the page renders in, not the page.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults
     (`pickedVariantLine` — a snapshot from launch time), a line pointing at
@@ -287,12 +297,15 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/slot-render.renderIsolated`
     - `shell/notifications.toast`
   - Exports (types):
+    - `FrameSize`
+    - `FrameSizeChoice`
     - `PicksRead`
     - `PrototypeDetailContextValue`
     - `PrototypeStage`
     - `PrototypeStageContribution`
     - `PrototypeStageProps`
   - Exports (values):
+    - `FrameSizeProvider`
     - `OptionsPicker`
     - `prototypeDetailPane`
     - `PrototypeDetailScope`
@@ -301,6 +314,7 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeVersionActions`
     - `ScaledIframe`
     - `useCloseVersionList`
+    - `useFrameSizeState`
     - `usePrototypeDetail`
     - `usePrototypeDocumentSrc`
     - `usePrototypePicks`

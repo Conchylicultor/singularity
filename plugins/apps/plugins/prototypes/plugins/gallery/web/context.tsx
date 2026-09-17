@@ -23,6 +23,7 @@ import {
   type PrototypeVersion,
   type StoredPicks,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { useFrameSizeState, type FrameSizeChoice } from "./frame-size";
 import {
   PrototypeDetailScope,
   PrototypeStages,
@@ -75,6 +76,12 @@ export interface PrototypeDetailContextValue {
   shownVersion: PrototypeVersion | null;
   /** Show a recorded version, or the live folder (`null`). */
   showVersion: (version: PrototypeVersion | null) => void;
+  /**
+   * The frame size the pane's stages render at (fixed / mobile / full). Held
+   * here, not in a stage, so it survives switching stage. Not remembered
+   * across visits: every prototype opens at its own declared size.
+   */
+  frameSize: FrameSizeChoice;
 }
 
 const PrototypeDetailContext =
@@ -180,6 +187,8 @@ export function PrototypeDetailProvider({
     [name],
   );
 
+  const frameSize = useFrameSizeState("fixed");
+
   const value = useMemo<PrototypeDetailContextValue>(
     () => ({
       name,
@@ -191,6 +200,7 @@ export function PrototypeDetailProvider({
       resetPicks,
       shownVersion,
       showVersion,
+      frameSize,
     }),
     [
       name,
@@ -202,6 +212,7 @@ export function PrototypeDetailProvider({
       resetPicks,
       shownVersion,
       showVersion,
+      frameSize,
     ],
   );
   return (

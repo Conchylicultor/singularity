@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { layerClasses } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { MOBILE_VIEWPORT, type FrameSize } from "../frame-size";
 
 /**
  * A prototype mounted in a sandboxed iframe, scaled to fit its container.
@@ -24,6 +25,10 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
  * shrunk via `transform: scale()` (the old `Stage`). The inner wrapper reserves
  * the scaled-down layout box so the iframe sits flush at the top-left.
  *
+ * `size` picks the canvas: the declared `viewport` (`fixed`), a phone
+ * (`mobile`), or no canvas at all (`full`) — the frame then simply fills the
+ * container at scale 1, so the prototype's own responsive layout is what shows.
+ *
  * `src` is the prototype document URL from `usePrototypeSrc` — never built
  * here. It carries the edit cache-bust (a file edit → watcher → version bump →
  * new `src` → the iframe reloads) and the picked options.
@@ -31,12 +36,15 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 export function ScaledIframe({
   meta,
   src,
+  size,
   title,
   upscale = false,
 }: {
   meta: PrototypeMeta;
   /** The prototype's document URL, from `usePrototypeSrc`. */
   src: string;
+  /** Which canvas the frame renders at (see {@link FrameSize}). */
+  size: FrameSize;
   /**
    * The frame's accessible name. Defaults to the prototype's own `<title>` —
    * never `meta.name`, which is a minted id and would read out as
@@ -55,11 +63,21 @@ export function ScaledIframe({
   // mount (a ResizeObserver timing race) left the frame permanently absent. The
   // observer only ever refines the scale down to fit; overflow-hidden clips the
   // at-most-one-frame overshoot before it settles.
+  // The canvas the frame is laid out at — `null` for `full`, which has none.
+  const canvas =
+    size === "fixed"
+      ? meta.viewport
+      : size === "mobile"
+        ? MOBILE_VIEWPORT
+        : null;
+  const canvasW = canvas?.w;
+  const canvasH = canvas?.h;
   const scale = useMemo(() => {
+    if (canvasW === undefined || canvasH === undefined) return 1;
     if (!width || !height) return 1;
-    const fit = Math.min(width / meta.viewport.w, height / meta.viewport.h);
+    const fit = Math.min(width / canvasW, height / canvasH);
     return upscale ? fit : Math.min(fit, 1);
-  }, [width, height, meta.viewport.w, meta.viewport.h, upscale]);
+  }, [width, height, canvasW, canvasH, upscale]);
 
   return (
     <div
@@ -77,8 +95,8 @@ export function ScaledIframe({
         // The positioning context the incoming frame's layer covers.
         className="relative"
         style={{
-          width: meta.viewport.w * scale,
-          height: meta.viewport.h * scale,
+          width: canvas ? canvas.w * scale : "100%",
+          height: canvas ? canvas.h * scale : "100%",
           overflow: "hidden",
         }}
       >
@@ -96,8 +114,8 @@ export function ScaledIframe({
               // Safe here: prototypes are first-party files, authored on this
               // machine and served from the user's own ~/.singularity/apps/prototypes/.
               sandbox="allow-scripts allow-same-origin"
-              width={meta.viewport.w}
-              height={meta.viewport.h}
+              width={canvas ? canvas.w : "100%"}
+              height={canvas ? canvas.h : "100%"}
               // The incoming frame is invisible and out of the accessibility
               // tree until it has loaded; `load` then makes it the one shown.
               aria-hidden={loading || undefined}
@@ -110,7 +128,7 @@ export function ScaledIframe({
               className={loading ? layerClasses() : undefined}
               style={{
                 border: "0",
-                transform: `scale(${scale})`,
+                transform: canvas ? `scale(${scale})` : undefined,
                 transformOrigin: "top left",
                 display: "block",
                 visibility: loading ? "hidden" : "visible",

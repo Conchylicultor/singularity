@@ -8,18 +8,20 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { PrototypeStageProps } from "../slots";
+import { useFrameSize } from "../frame-size";
 import { ScaledIframe } from "./scaled-iframe";
 
 /**
  * The Focus stage: the open prototype alone, in a sandboxed iframe scaled to fit
- * the pane, under whatever is wrong with its folder.
+ * the pane at the picked frame size, under whatever is wrong with its folder.
  */
 export function FocusStage({ meta, src }: PrototypeStageProps) {
+  const size = useFrameSize();
   return (
     <Column
       className="h-full"
       header={<ProblemBanner meta={meta} />}
-      body={<ScaledIframe meta={meta} src={src} />}
+      body={<ScaledIframe meta={meta} src={src} size={size} />}
       scrollBody={false}
     />
   );

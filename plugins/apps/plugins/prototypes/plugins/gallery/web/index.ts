@@ -14,6 +14,8 @@ import { OpenVersionConversation } from "./components/version-list";
 export { prototypesGalleryPane, prototypeDetailPane } from "./panes";
 export { ScaledIframe } from "./components/scaled-iframe";
 export { OptionsPicker } from "./components/options-picker";
+export { FrameSizeProvider, useFrameSizeState } from "./frame-size";
+export type { FrameSize, FrameSizeChoice } from "./frame-size";
 export {
   usePrototypeDetail,
   usePrototypePicks,
@@ -57,6 +59,7 @@ export default {
       id: "focus",
       label: "Focus",
       order: 10,
+      usesFrameSize: true,
       component: FocusStage,
     }),
     PrototypeVersionActions({

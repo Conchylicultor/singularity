@@ -3276,12 +3276,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/slot-render.renderIsolated`
               - `shell/notifications.toast`
             - Exports (types):
+              - `FrameSize`
+              - `FrameSizeChoice`
               - `PicksRead`
               - `PrototypeDetailContextValue`
               - `PrototypeStage`
               - `PrototypeStageContribution`
               - `PrototypeStageProps`
             - Exports (values):
+              - `FrameSizeProvider`
               - `OptionsPicker`
               - `prototypeDetailPane`
               - `PrototypeDetailScope`
@@ -3290,6 +3293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PrototypeVersionActions`
               - `ScaledIframe`
               - `useCloseVersionList`
+              - `useFrameSizeState`
               - `usePrototypeDetail`
               - `usePrototypeDocumentSrc`
               - `usePrototypePicks`
@@ -3305,9 +3309,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `prototypeDetailPane.Actions` "present" → `PresentMenu`
             - Uses:
               - `apps-core/tabs.useSurfaceFocused`
+              - `apps/prototypes/gallery.FrameSizeProvider`
               - `apps/prototypes/gallery.OptionsPicker`
               - `apps/prototypes/gallery.prototypeDetailPane`
               - `apps/prototypes/gallery.ScaledIframe`
+              - `apps/prototypes/gallery.useFrameSizeState`
               - `apps/prototypes/gallery.usePrototypeSrc`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
