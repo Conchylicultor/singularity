@@ -406,3 +406,39 @@ describe("startSupervisedRun: which side of the spawn a failure happened on", ()
     }
   });
 });
+
+describe("startSupervisedRun: output is published while the run is live", () => {
+  test("a line reaches the channel before the child exits", async () => {
+    // The 2026-09-16 shape: the child holds its transcript descriptor open for
+    // the whole run, and macOS FSEvents reports that file changed only when the
+    // descriptor closes. The watcher fired once, at exit, so a live run
+    // published nothing until it ended. The child here sleeps far past the
+    // wait below, so only a per-write event can get the line out in time. It
+    // also waits a second before writing, so the write lands after the watcher
+    // is up and after the spawner closed its own copy of the descriptor (that
+    // close is itself an FSEvents event, which would mask the bug).
+    const runId = uniqueRunId("live");
+    trackArtifacts(runId);
+    const { pid } = await startSupervisedRun(spawnKind, {
+      runId,
+      argv: ["/bin/sh", "-c", "sleep 1; echo live-line-1; sleep 45"],
+    });
+    try {
+      await waitUntil(() => published.includes("live-line-1"));
+      expect(
+        existsSync(
+          worktreeArtifacts.runTerminal(worktree, "suptestspawn", runId),
+        ),
+      ).toBe(false);
+    } finally {
+      // Take out the whole group, so `afterEach`'s reconcile finds it gone and
+      // settles the run, which is what tears the watcher down.
+      try {
+        process.kill(-pid, "SIGKILL");
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+      }
+      await waitUntil(() => groupGone(pid));
+    }
+  });
+});

@@ -348,6 +348,14 @@ Change detection is `file-watcher` (the repo bans polling). ONE subscription
 serves every live run of every kind, which is why `runs/` is its own directory
 rather than files beside the build artifacts.
 
+**The subscription needs `writesWhileOpen: true`.** The child holds its
+transcript descriptor open for the whole run, and macOS FSEvents reports a
+file's content change only when the writer closes it — so on the default backend
+the tail was pumped once, at exit, and every line landed at the end with one
+timestamp. The option switches to kqueue on darwin (one event per write), at one
+descriptor per entry in `runs/` — bounded by the artifact prune, and held only
+while a run is live.
+
 **stdout and stderr merge** (same fd). Interleaving order survives, the
 per-line classification does not — two files with two tailers would invert that
 trade, which is worse for a transcript read top to bottom. Cost: log viewers

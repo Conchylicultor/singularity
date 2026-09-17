@@ -1,5 +1,6 @@
 import type * as parcel from "@parcel/watcher";
-import { basename, extname } from "node:path";
+import { readdirSync } from "node:fs";
+import { basename, extname, join } from "node:path";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 // Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
 // functions that close over a `binding` passed in at call time. Safe to import
@@ -25,9 +26,28 @@ import { createWrapper } from "@parcel/watcher/wrapper";
 // parcel's own `createWrapper`, yielding the identical public API. This single
 // loader is the only sanctioned entry point for `@parcel/watcher`; all consumers
 // must route through it so the release vendoring path is honored.
-let parcelWatcherPromise: Promise<typeof import("@parcel/watcher")> | null =
-  null;
-export function getParcelWatcher(): Promise<typeof import("@parcel/watcher")> {
+/**
+ * parcel's options as its binding really accepts them. The published
+ * `BackendType` leaves out `"kqueue"`, but the darwin binding compiles that
+ * backend in and `subscribe` honours it (measured: one event per append to a
+ * file held open, where `fs-events` reports only the close). Corrected here, at
+ * the one sanctioned loader, rather than cast at a call site.
+ */
+type ParcelOptions = Omit<parcel.Options, "backend"> & {
+  backend?: parcel.BackendType | "kqueue";
+};
+
+/** The `@parcel/watcher` API with {@link ParcelOptions} on `subscribe`. */
+export type ParcelWatcherApi = Omit<typeof parcel, "subscribe"> & {
+  subscribe(
+    dir: string,
+    fn: parcel.SubscribeCallback,
+    opts?: ParcelOptions,
+  ): Promise<parcel.AsyncSubscription>;
+};
+
+let parcelWatcherPromise: Promise<ParcelWatcherApi> | null = null;
+export function getParcelWatcher(): Promise<ParcelWatcherApi> {
   parcelWatcherPromise ??= (async () => {
     const nodePath = process.env.SINGULARITY_PARCEL_WATCHER_NODE;
     if (nodePath) {
@@ -51,6 +71,23 @@ interface FileWatcherBaseOptions {
   ceilingMs?: number;
   extensions?: string[];
   ignore?: string[];
+  /**
+   * Report every write to a file that another process still holds open — not
+   * only the moment it closes it.
+   *
+   * macOS FSEvents, parcel's default backend there, reports a content change
+   * when the writer CLOSES its descriptor, not on each `write(2)`. A long-lived
+   * writer (a detached child whose stdout is a file) therefore produces one
+   * event at open and one at exit, and nothing in between. `true` selects
+   * parcel's kqueue backend on darwin, whose `EVFILT_VNODE` fires per write;
+   * inotify (Linux) already reports every write, so elsewhere it changes nothing.
+   *
+   * The cost is why this is opt-in: kqueue holds one descriptor per file under
+   * each watched dir, for as long as the watcher lives. Only point it at a small
+   * directory with a known bound — {@link WRITES_WHILE_OPEN_MAX_ENTRIES} is
+   * enforced at subscribe time.
+   */
+  writesWhileOpen?: boolean;
   /**
    * Label for the `bg` span each dispatch (`onChange` / `onReconcile`) runs
    * under, so a watcher callback's synchronous main-thread cost is attributed to
@@ -87,6 +124,38 @@ type FileWatcherReconcileOptions =
 export type FileWatcherOptions = FileWatcherBaseOptions &
   FileWatcherReconcileOptions;
 
+/**
+ * The most entries a `writesWhileOpen` dir may hold when the watcher starts.
+ * kqueue costs one descriptor per entry, so a watcher pointed at a real tree
+ * must fail at the call site rather than exhaust the process's descriptors.
+ */
+export const WRITES_WHILE_OPEN_MAX_ENTRIES = 5_000;
+
+/**
+ * Throw if `dir` holds more than {@link WRITES_WHILE_OPEN_MAX_ENTRIES} entries,
+ * counted recursively. Stops walking at the first entry past the ceiling, so a
+ * huge tree costs no more than the ceiling to reject.
+ */
+function assertKqueueSized(dir: string): void {
+  let count = 0;
+  const stack = [dir];
+  while (stack.length > 0) {
+    const current = stack.pop() as string;
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      count += 1;
+      if (count > WRITES_WHILE_OPEN_MAX_ENTRIES) {
+        throw new Error(
+          `[file-watcher] writesWhileOpen on ${dir}: more than ` +
+            `${WRITES_WHILE_OPEN_MAX_ENTRIES} entries. The kqueue backend holds ` +
+            `one descriptor per file, so this option is only for small, bounded ` +
+            `directories.`,
+        );
+      }
+      if (entry.isDirectory()) stack.push(join(current, entry.name));
+    }
+  }
+}
+
 export interface FileWatcher {
   stop(): Promise<void>;
 }
@@ -103,6 +172,7 @@ export async function createFileWatcher(
     reconcileMs = 30_000,
     extensions,
     ignore,
+    writesWhileOpen = false,
     name = basename(dirs[0] ?? "file-watcher"),
   } = opts;
 
@@ -154,11 +224,19 @@ export async function createFileWatcher(
     }
   }
 
-  const parcelOptions = ignore ? { ignore } : undefined;
+  const useKqueue = writesWhileOpen && process.platform === "darwin";
+  const parcelOptions: ParcelOptions | undefined =
+    ignore || useKqueue
+      ? {
+          ...(ignore ? { ignore } : {}),
+          ...(useKqueue ? { backend: "kqueue" as const } : {}),
+        }
+      : undefined;
 
   const parcelWatcher = await getParcelWatcher();
 
   for (const dir of dirs) {
+    if (useKqueue) assertKqueueSized(dir);
     try {
       const sub = await parcelWatcher.subscribe(
         dir,

@@ -352,6 +352,14 @@ async function syncWatcher(): Promise<void> {
       // build's thousands of writes into a bounded number of pumps. Each pump
       // then reads everything that accumulated, so nothing is lost by waiting.
       extensions: [RUN_TRANSCRIPT_SUFFIX, RUN_TERMINAL_SUFFIX],
+      // The child writes its transcript through ONE descriptor it holds open
+      // for the whole run. macOS FSEvents reports that file's changes only when
+      // the descriptor closes — at exit — so without this the tail was pumped
+      // once, at the end, and a live run published nothing until it finished.
+      // Its cost (one descriptor per entry, kqueue on darwin) is bounded here:
+      // the runs dir is flat and capped by `pruneWorktreeRunArtifacts`, and the
+      // watcher exists only while a run is live.
+      writesWhileOpen: true,
       reconcileMs: RECONCILE_MS,
       onChange: (events) => {
         void runTracked("watch:supervised-run", () => onArtifactEvents(events));

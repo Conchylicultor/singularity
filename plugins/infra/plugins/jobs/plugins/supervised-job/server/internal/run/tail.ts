@@ -66,8 +66,11 @@ export interface TranscriptTail {
  * subscribes to nothing. The supervisor owns one `@parcel/watcher`
  * subscription over the run-artifact directory and calls `pump()`; the repo
  * bans polling, and one watcher for every live run of every kind is the shape
- * that keeps it banned. The cost is the watcher's ~100 ms debounce, which is
- * imperceptible against a build log.
+ * that keeps it banned. That watcher must report writes to a file the child
+ * still holds open (`writesWhileOpen`): macOS FSEvents otherwise reports them
+ * only at close, which is the child's exit. The cost is the watcher's debounce
+ * — at most about a second under continuous output — which is imperceptible
+ * against a build log.
  */
 export function createTranscriptTail(opts: {
   path: string;
