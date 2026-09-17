@@ -357,13 +357,16 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `CheckCache`
     - `CheckRunProgress`
     - `CodeMatch`
+    - `ContentHashMemo`
     - `DirFact`
     - `FileFact`
     - `FileSystemView`
+    - `GitFactResult`
     - `GlobFact`
     - `ImportMatch`
     - `ListCandidateSourcesOptions`
     - `OutstandingCheck`
+    - `ProgramFileList`
     - `ProgressRecord`
     - `QueryFact`
     - `ReadSet`
@@ -372,6 +375,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `TscTarget`
     - `ValidateOptions`
     - `ValidateResult`
+    - `WarmBaseGitFacts`
+    - `WarmBaseOutcome`
+    - `WarmBasePublish`
   - Exports (values):
     - `checkCollectedDir`
     - `computeCheckSourceHash`
@@ -382,6 +388,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `gitGrepList`
     - `grepCode`
     - `grepImports`
+    - `hashFileBytes`
+    - `hashFileCached`
     - `isBuildInProgress`
     - `isBuildProcess`
     - `listAllChecks`
@@ -393,6 +401,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `openCheckCache`
     - `publishWarmBase`
     - `readCheckProgress`
+    - `readProgramFileList`
+    - `realGitFacts`
     - `requestedJobs`
     - `runChecks`
     - `scopeOf`

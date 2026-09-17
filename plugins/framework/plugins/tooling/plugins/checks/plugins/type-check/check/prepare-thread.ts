@@ -27,15 +27,19 @@ export type PrepareRequest =
 /** Thread → runner: one reply per request. */
 export type PrepareReply =
   | { type: "plan"; plan: Plan }
-  | { type: "finalized" }
+  /** `lines` are the transcript lines the record phase produced (the warm-base publish summary). */
+  | { type: "finalized"; lines: string[] }
   /** The request threw on the thread; `stack` is the thread's own. */
   | { type: "error"; message: string; stack: string | undefined };
 
 export interface PrepareThread {
   /** Run the prepare phase on the thread; the session stays there. */
   prepare(input: PrepareInput): Promise<Plan>;
-  /** Run the record phase of the session `prepare` opened. */
-  finalize(outcomes: TargetOutcome[]): Promise<void>;
+  /**
+   * Run the record phase of the session `prepare` opened, and hand back the
+   * lines it wants logged.
+   */
+  finalize(outcomes: TargetOutcome[]): Promise<string[]>;
   /** Terminate the thread. Idempotent; a call still pending is rejected. */
   close(): void;
 }
@@ -144,6 +148,7 @@ export function openPrepareThread(): PrepareThread {
           `type-check prepare thread answered "finalize" with "${reply.type}"`,
         );
       }
+      return reply.lines;
     },
     close() {
       die(new Error("type-check prepare thread was closed"));

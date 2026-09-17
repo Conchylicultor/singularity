@@ -20,23 +20,14 @@ import { dirname, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
 import { buildLintConfig } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-
-interface Job {
-  root: string;
-  name: string;
-  tsconfigPath: string;
-  buildInfoPath: string;
-  /** Absolute paths assigned to THIS target's program (closure-cache-filtered). */
-  lintFiles: string[];
-}
-
-interface Result {
-  name: string;
-  tscErrors: string;
-  lintViolations: string;
-  /** Absolute paths whose lint produced an error-level (or fatal) message. */
-  failedLintFiles: string[];
-}
+// The job/result shapes live in this plugin's `core/` barrel: two spawners (the
+// check's fan-out and the build's fast path) name them, and only one worker
+// implements them. Through the barrel, not the file: a deep import into the
+// plugin's own `core/` is what the browser build cannot inline.
+import type {
+  TypeCheckWorkerJob as Job,
+  TypeCheckWorkerResult as Result,
+} from "../core";
 
 function rel(root: string, abs: string): string {
   return relative(root, abs).split("\\").join("/");

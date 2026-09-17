@@ -35,8 +35,11 @@ import {
   tsBuildInfoPath,
   materializeWarmBase,
   publishWarmBase,
+  realGitFacts,
+  type ContentHashMemo,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { tsconfigPathOf } from "../core";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints, type TreeListing } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
@@ -90,6 +93,8 @@ export type Plan =
       skipped: string[];
       /** `<target>: <why>` for every target that could not be keyed. */
       unkeyed: string[];
+      /** One transcript line per target saying which incremental base it starts from. */
+      warmBase: string[];
       /** What computing the program keys cost, rounded. */
       keysMs: number;
     };
@@ -111,18 +116,17 @@ export type Preparation =
   | { plan: Extract<Plan, { kind: "uncovered" }> }
   | {
       plan: Extract<Plan, { kind: "run" }>;
-      /** The record phase, in the order it always ran. Call once, with every outcome. */
-      finalize(outcomes: TargetOutcome[]): void;
+      /**
+       * The record phase, in the order it always ran. Call once, with every
+       * outcome. Returns the transcript lines the run should log — today the
+       * warm-base publish summary, which is the only record step whose result
+       * the caller cannot see from anywhere else.
+       */
+      finalize(outcomes: TargetOutcome[]): Promise<string[]>;
     };
 
 const toRel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
-
-/** Absolute path to a target's tsconfig (the `-p <file>` arg, else tsconfig.json). */
-function tsconfigPathOf(t: TscTarget): string {
-  const i = t.args.indexOf("-p");
-  return join(t.dir, i >= 0 ? t.args[i + 1]! : "tsconfig.json");
-}
 
 /**
  * Each target's tsconfig include-expansion — the ROOTS of its program — parsed
@@ -233,12 +237,19 @@ export function openPreparation({
     bucket.push(join(root, rel));
   }
 
-  // Warm any target that has NO local base yet from the host-global pool.
-  // That is the fresh-worktree case, which used to be seeded from main's
-  // `.cache/tsbuildinfo` — and main's copy goes stale precisely because its
-  // auto-build keeps hitting the check-result cache, so the check never runs
-  // and never rewrites it. A target that already has a local base keeps it.
-  for (const t of targets) materializeWarmBase(root, t.name);
+  // Pick each target's incremental base: the pooled entry whose recorded file
+  // contents best match this tree, or the local base when nothing beats it.
+  // That is what makes a FRESH worktree warm — its tree is a main commit's
+  // tree, and the base that fits it is the one the last-merged agent published,
+  // which "newest wins" evicted within minutes. See `checks/core/warm-base.ts`.
+  //
+  // ONE memo for the whole run, created here: the scoring hashes most of the
+  // files the program keys are about to hash, so sharing it both halves the
+  // reads and guarantees the two steps saw the same tree.
+  const contentHash: ContentHashMemo = new Map();
+  const warmBase = targets.map((t) =>
+    materializeWarmBase(root, t.name, contentHash),
+  );
 
   // PER-TARGET SKIP. An outer-cache MISS used to rebuild all seven programs
   // even when the edit could not possibly reach five of them; the same file
@@ -260,7 +271,7 @@ export function openPreparation({
   // run wants every program rebuilt, and the pass it produces is still a
   // perfectly good fact to keep.
   const keyStart = performance.now();
-  const keyCtx = openProgramKeyContext(listing);
+  const keyCtx = openProgramKeyContext(listing, contentHash);
   const passes = openProgramPasses();
   const keyByTarget = new Map<string, string>();
   const skipped = new Set<string>();
@@ -305,17 +316,46 @@ export function openPreparation({
     lintByTarget: Object.fromEntries(lintByTarget),
     skipped: [...skipped].sort(),
     unkeyed,
+    warmBase: warmBase.map((o) => o.line),
     keysMs,
   };
 
-  function finalize(outcomes: TargetOutcome[]): void {
+  async function finalize(outcomes: TargetOutcome[]): Promise<string[]> {
     // Publish each worker's buildinfo as a warm base for whoever runs next.
     // Publish even when the check FAILED with diagnostics: the buildinfo records
     // program STATE, which is valid regardless of the verdict — a run that found
     // type errors is still a perfectly good incremental base. `outcomes` holds
     // only workers that returned, so a crashed target is already excluded
     // here, which is what we want: a crashed worker may have left torn state.
-    for (const o of outcomes) publishWarmBase(root, o.name);
+    //
+    // HEAD is read ONCE, not once per target: it is the same answer eight times
+    // over, and it is the label that lets the pool's prune recognise these
+    // entries later as commits that reached `main` — the property that decides
+    // which base survives for the next fresh worktree. An unavailable HEAD
+    // publishes legacy unlabelled entries and SAYS so in the summary line,
+    // rather than dropping the fact on the floor.
+    const head = await realGitFacts.headSha(root);
+    const published = await Promise.all(
+      outcomes.map(async (o) => ({
+        name: o.name,
+        ...(await publishWarmBase(
+          root,
+          o.name,
+          head.ok ? head.value : undefined,
+        )),
+      })),
+    );
+    const live = published.filter((p) => p.published);
+    const protectedDetail = live
+      .filter((p) => p.protectedOnMain > 0)
+      .map((p) => `${p.name}: kept ${p.kept}, ${p.protectedOnMain} on main`);
+    const lines = [
+      `type-check: published ${live.length} warm bases ` +
+        (head.ok
+          ? `labelled ${head.value.slice(0, 12)}`
+          : `UNLABELLED (git: ${head.reason})`) +
+        (protectedDetail.length > 0 ? ` (${protectedDetail.join("; ")})` : ""),
+    ];
 
     // Record per-file lint PASSes for every file we sent that did NOT fail.
     // (Conservative: a crashed worker records nothing — re-lints next time.)
@@ -365,6 +405,8 @@ export function openPreparation({
       const key = keyByTarget.get(name);
       if (key !== undefined) passes.record(name, key);
     }
+
+    return lines;
   }
 
   return { plan, finalize };

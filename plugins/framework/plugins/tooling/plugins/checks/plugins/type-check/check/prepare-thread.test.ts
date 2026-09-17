@@ -131,6 +131,9 @@ test(
         },
         skipped: [],
         unkeyed: [`${TARGET}: no buildinfo yet`],
+        // The fixture's target name is unique to this suite, so its pool
+        // partition is empty and the cold branch is the only one reachable.
+        warmBase: [`type-check: warm base ${TARGET}: cold, pool empty`],
         keysMs: 0,
       });
     } finally {

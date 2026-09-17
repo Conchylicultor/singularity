@@ -161,6 +161,62 @@ the zero is what separates a cold tree from a broken key.
 It does NOT disarm the RECORD — the passes that run produces are still good
 facts. The per-file lint closure cache is unaffected either way.
 
+## Which base a fresh worktree starts from
+
+Every run picks an incremental `.tsbuildinfo` to start each target from, out of
+a host-global pool every worktree publishes into
+(`checks/core/warm-base.ts`). That choice is worth about 2 GB and 30 s against
+7 GB and 240 s per target, and nothing downstream catches a bad one — a
+mismatched base is not wrong, only slow.
+
+The pool used to hand out its NEWEST entry, which is always some sibling
+branch: measured, seeding from it cost the same as starting cold, and 75 % of
+`web-core` runs host-wide were near-cold. So a base is now chosen by **content
+overlap**. Each candidate records a `version` per file (tsc's sha256 of the
+file's text); the run hashes the files on disk and counts how many still match.
+The highest count wins, ties go to the newer entry, and a local base already
+present is replaced only by a strictly better one — so a worktree iterating in
+place always keeps its own, while a just-rebased one picks up the pool's newer
+main base.
+
+Counts, not ratios: the score is "files tsc will not re-check", so a small
+program matching perfectly must not beat a large one matching 99 % of ten times
+as many files.
+
+Two things make that work, and both are easy to get wrong:
+
+- **A candidate is scored as if it already sat at this worktree's
+  `.cache/tsbuildinfo/`.** A buildinfo's paths are relative to its own
+  directory, so resolving a pooled entry against the pool directory gives paths
+  that exist nowhere — every candidate scores zero and the pool silently looks
+  empty. `readProgramFileList` takes the destination base explicitly for this.
+- **The entry worth picking has to still be there.** A published base is
+  labelled with its worktree's `HEAD` sha (`<ms>-<pid>-<sha12>.tsbuildinfo`),
+  and the prune keeps the newest three plus up to six further entries whose sha
+  is an ancestor of `main`. A fresh worktree's tree IS a main commit's tree, and
+  the agent whose branch tip became that commit published exactly that base —
+  which pure recency evicted within minutes. `main` is only fast-forwarded, so
+  "is on main" never flips back.
+
+`HEAD` is read once per run, in `finalize`, not once per target. When it is
+unavailable the run publishes legacy unlabelled entries — still usable as
+bases, never protectable — and says so on its summary line rather than
+swallowing it.
+
+The file hashes this needs are the ones the program keys need anyway: `prepare.ts`
+creates one `ContentHashMemo` before the selection and hands the same memo to
+`openProgramKeyContext`, so each file is read once and both steps necessarily
+saw the same tree.
+
+The pool has exactly ONE producer of a buildinfo: `shared/worker.ts`, spawned
+through `core/spawnTypeCheckWorker`. The build's `--skip-checks` fast path
+(`cli/plugins/build/cli/internal/app-artifacts.ts`) used to run its own
+`tsc --noEmit` and publish the result into the same pool — a base whose every
+signature is a placeholder, which makes a body-only hub edit re-check its whole
+importer closure for whoever picks it up. It now spawns the same worker with no
+lint files, so the compiler options and the declaration emit live in one place
+and the two producers cannot drift.
+
 ## One reading of the tree, passed around
 
 `readTreeListing(root)` takes one git-backed reading of the repo per run, and everything that asks
@@ -192,8 +248,8 @@ during the build, `skipped 7 of 7` on the very next standalone check.
 
 ## Reading the transcript
 
-`~/.singularity/worktrees/<wt>/check-<runId>.log` carries three greppable lines
-per run, and they are the instrument every claim about this check is made on:
+`~/.singularity/worktrees/<wt>/check-<runId>.log` carries a handful of greppable
+lines per run, and they are the instrument every claim about this check is made on:
 
 - `type-check: skipped N of M targets, program unchanged since last pass: …
 (program keys <ms>ms)` — the per-target hit rate, and what the keys cost.
@@ -203,6 +259,17 @@ per run, and they are the instrument every claim about this check is made on:
   when the grant is narrower than the fleet.
 - `type-check worker <target>: cpu 86.6s, maxRSS 2.4 GB` — one per worker that
   RAN (a skipped target has no line, by construction).
+- `type-check: warm base <target>: …` — one per target, every run, saying
+  which incremental base it started from and how much of it still matches:
+  `seeded 6701/6858 from pool <entry>` (cold worktree, took a pooled base),
+  `pool <entry> matched 6701/6858 files (local 5120, replaced)` (a pooled base
+  beat the local one), `kept local 6799/6858 (best pool 6701)` (the local base
+  won), or `cold, pool empty`. A `seeded`/`kept` count far below the
+  denominator is the signal that the pool holds nothing that fits.
+- `type-check: published 7 warm bases labelled <sha12> (web-core: kept 5, 2 on
+  main)` — once per run, after the fan-out. `UNLABELLED (git: <reason>)`
+  instead when `HEAD` could not be read; the parenthetical lists only targets
+  whose pool kept an entry for being on main.
 - `type-check: prepared off-thread in 71.3s (finalize 2.1s)` — once per run:
   the preparation thread's cost before and after the fan-out (the work that
   used to freeze the runner; most of it is `parseTargetRoots`' include
@@ -244,5 +311,14 @@ parallel check pass measures the queue, so any per-check cost claim needs
 
 ## Plugin reference
 
+- Core:
+  - Uses: `infra/spawn.spawnCaptured`
+  - Exports (types):
+    - `TypeCheckWorkerJob`
+    - `TypeCheckWorkerResult`
+    - `TypeCheckWorkerRun`
+  - Exports (values):
+    - `spawnTypeCheckWorker`
+    - `tsconfigPathOf`
 
 <!-- AUTOGENERATED:END -->

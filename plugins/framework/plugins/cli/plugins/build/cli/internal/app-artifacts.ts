@@ -13,8 +13,14 @@ import {
   discoverTscTargets,
   materializeWarmBase,
   publishWarmBase,
+  realGitFacts,
   tsBuildInfoPath,
+  type ContentHashMemo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  spawnTypeCheckWorker,
+  tsconfigPathOf,
+} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core";
 import {
   holdThroughValve,
   PROGRESS_FILE,
@@ -38,7 +44,6 @@ import {
   manifestItemToManifest,
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { withHostGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
@@ -218,13 +223,6 @@ export interface StepResult {
   success: boolean;
 }
 
-interface StepOutput {
-  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
-  exitCode: number;
-  /** Peak RSS of the child (bytes), when the runtime reported rusage. */
-  maxRssBytes: number | undefined;
-}
-
 /**
  * Returned from inside the host grant when the post-acquire duress re-check
  * fires: the heavy section did NOT run, and `withHostGrant`'s `finally` releases
@@ -232,42 +230,6 @@ interface StepOutput {
  * again. A `unique symbol` so it can never collide with a real `StepResult[]`.
  */
 const REQUEUE = Symbol("requeue");
-
-// Lines are rebuilt AFTER exit as stdout-lines then stderr-lines. The old piped
-// version interleaved the two streams in arrival order, but that order was a
-// nondeterministic pipe race anyway — grouping per stream is the honest framing.
-async function execBuffered(
-  cmd: string[],
-  cwd: string,
-  env?: Record<string, string>,
-  background = false,
-): Promise<StepOutput> {
-  const result = await spawnCaptured(cmd, {
-    cwd,
-    env: env ? { ...process.env, ...env } : undefined,
-    background,
-    // These are the build's own steps — `bun install`, the vite frontend build,
-    // the server bundle. A cold one runs for minutes by design, and on a box
-    // running several agent fleets (where `background` has demoted it to the
-    // E-cores on purpose) longer still, by an amount nothing here can predict.
-    // There is no shorter deadline to borrow from, and a wrongly-sized number
-    // would kill a healthy build.
-    unbounded:
-      "a build step (bun install / vite / server bundle) legitimately runs for minutes, demoted to background QoS, and the CLI run it belongs to owns no shorter deadline",
-  });
-  const lines: StepOutput["lines"] = [];
-  for (const line of result.stdout.split("\n")) {
-    if (line) lines.push({ text: line, stream: "stdout" });
-  }
-  for (const line of result.stderr.split("\n")) {
-    if (line) lines.push({ text: line, stream: "stderr" });
-  }
-  return {
-    lines,
-    exitCode: result.exitCode,
-    maxRssBytes: result.resourceUsage.maxRssBytes,
-  };
-}
 
 // One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
 // (console + build.log). The calibration input for host-admission's per-holder
@@ -686,9 +648,25 @@ export async function fastValidationJobs(opts: {
     };
   });
 
-  for (const target of discoverTscTargets(root).filter(
-    (t) => t.hasEntrypoint,
-  )) {
+  const tscTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
+
+  // Read ONCE for the whole fan-out, not once per target.
+  //
+  // The memo is the file-content hashes the warm-base scoring compares against a
+  // candidate base's recorded versions; the same bytes answer for every target,
+  // so one map across the fan-out reads each file at most once. The sha labels
+  // every entry this build publishes, and it names the tree the build answered
+  // for — one commit, not one per target. Unavailable (detached, no git) means
+  // the entries publish unlabelled, which only makes them unprotectable at prune
+  // time; it is never a failure of the build.
+  const hashMemo: ContentHashMemo = new Map();
+  let headSha: string | undefined;
+  if (tscTargets.length > 0) {
+    const head = await realGitFacts.headSha(root);
+    headSha = head.ok ? head.value : undefined;
+  }
+
+  for (const target of tscTargets) {
     jobs.push(async (grant) => {
       const end = hooks.span(
         `tsc:${target.name}`,
@@ -696,47 +674,63 @@ export async function fastValidationJobs(opts: {
         `tsc ${target.name}`,
       );
       const start = performance.now();
-      // Identical flags to the `typescript` check so both share one
-      // `.tsbuildinfo` per target without options-hash churn.
       const buildInfo = tsBuildInfoPath(root, target.name);
       // Feed and read the same host-global warm-base pool the
       // `type-check` check uses, so the fast path is not a second,
       // divergent incremental lineage.
-      materializeWarmBase(root, target.name);
-      // Spend a grant unit per runtime tsc — a heavy child like a
-      // type-check worker — so the fast-path (--skip-checks) fan-out
-      // is bounded by the same grant as everything else.
-      const output = await grant.run(() =>
-        execBuffered(
-          [
-            process.execPath,
-            "x",
-            "tsc",
-            "--noEmit",
-            ...target.args,
-            "--incremental",
-            "--tsBuildInfoFile",
-            buildInfo,
-          ],
-          target.dir,
-          undefined,
+      const warm = materializeWarmBase(root, target.name, hashMemo);
+      const lines: StepResult["lines"] = [
+        { text: warm.line, stream: "stdout" },
+      ];
+      // The SAME worker the `type-check` check runs — not a `tsc --noEmit` of
+      // our own. A buildinfo has exactly one producer, so the compiler options
+      // and the declaration emit that gives every file in it a real signature
+      // (the hash of its public shape) are written down in one place and the two
+      // producers cannot drift. That emit is the whole point: a `--noEmit` base
+      // stores a placeholder signature per file, so a body-only edit to a hub
+      // re-checks its entire importer closure — and publishing such a base into
+      // the shared pool inflicts that on whoever picks it up next.
+      //
+      // Spend a grant unit per worker — a heavy child — so the fast-path
+      // (--skip-checks) fan-out is bounded by the same grant as everything else.
+      const run = await grant.run(() =>
+        spawnTypeCheckWorker({
+          root,
+          name: target.name,
+          tsconfigPath: tsconfigPathOf(target),
+          buildInfoPath: buildInfo,
+          // Type-checking only: linting belongs to the check pass this path is
+          // skipping, and an empty list is what the worker reads as "none".
+          lintFiles: [],
           background,
-        ),
+        }),
       );
-      end({ maxRssBytes: output.maxRssBytes });
-      // Only a clean exit is a trustworthy base here: unlike the
-      // check's workers, a nonzero tsc exit covers crashes and bad
-      // invocations as well as plain diagnostics, so we cannot tell a
-      // valid program state from a torn one.
-      if (output.exitCode === 0) publishWarmBase(root, target.name);
-      const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
-      if (rss) output.lines.push({ text: rss, stream: "stdout" });
+      end({ maxRssBytes: run.maxRssBytes });
+      for (const line of run.result.tscErrors.split("\n")) {
+        if (line) lines.push({ text: line, stream: "stdout" });
+      }
+      // A worker that CRASHED threw out of `grant.run` above and takes this step
+      // down with it, so reaching here means the program built: diagnostics or
+      // not, its state is a usable base. Published only when clean, matching the
+      // pool's other producer's caution about state it cannot vouch for.
+      const success = run.result.tscErrors === "";
+      if (success) {
+        const p = await publishWarmBase(root, target.name, headSha);
+        lines.push({
+          text: p.published
+            ? `type-check: warm base ${target.name}: published ${p.labelled ? "labelled" : "unlabelled"}, pool keeps ${p.kept} (${p.protectedOnMain} on main)`
+            : `type-check: warm base ${target.name}: nothing to publish (no local buildinfo)`,
+          stream: "stdout",
+        });
+      }
+      const rss = maxRssLine(`tsc ${target.name}`, run.maxRssBytes);
+      if (rss) lines.push({ text: rss, stream: "stdout" });
       return {
         id: `tsc:${target.name}`,
         label: `tsc ${target.name}`,
-        lines: output.lines,
+        lines,
         durationMs: Math.round(performance.now() - start),
-        success: output.exitCode === 0,
+        success,
       };
     });
   }

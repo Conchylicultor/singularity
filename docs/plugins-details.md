@@ -15973,13 +15973,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `CheckCache`
               - `CheckRunProgress`
               - `CodeMatch`
+              - `ContentHashMemo`
               - `DirFact`
               - `FileFact`
               - `FileSystemView`
+              - `GitFactResult`
               - `GlobFact`
               - `ImportMatch`
               - `ListCandidateSourcesOptions`
               - `OutstandingCheck`
+              - `ProgramFileList`
               - `ProgressRecord`
               - `QueryFact`
               - `ReadSet`
@@ -15988,6 +15991,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `TscTarget`
               - `ValidateOptions`
               - `ValidateResult`
+              - `WarmBaseGitFacts`
+              - `WarmBaseOutcome`
+              - `WarmBasePublish`
             - Exports (values):
               - `checkCollectedDir`
               - `computeCheckSourceHash`
@@ -15998,6 +16004,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `gitGrepList`
               - `grepCode`
               - `grepImports`
+              - `hashFileBytes`
+              - `hashFileCached`
               - `isBuildInProgress`
               - `isBuildProcess`
               - `listAllChecks`
@@ -16009,6 +16017,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `openCheckCache`
               - `publishWarmBase`
               - `readCheckProgress`
+              - `readProgramFileList`
+              - `realGitFacts`
               - `requestedJobs`
               - `runChecks`
               - `scopeOf`
@@ -16068,6 +16078,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`**
+              - Core:
+                - Uses: `infra/spawn.spawnCaptured`
+                - Exports (types):
+                  - `TypeCheckWorkerJob`
+                  - `TypeCheckWorkerResult`
+                  - `TypeCheckWorkerRun`
+                - Exports (values):
+                  - `spawnTypeCheckWorker`
+                  - `tsconfigPathOf`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses:
@@ -18754,6 +18773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
+          - `framework/tooling/checks/type-check`
           - `framework/tooling/format`
           - `infra/paths`
           - `reports/outbox`

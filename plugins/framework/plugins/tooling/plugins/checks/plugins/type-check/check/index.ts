@@ -20,10 +20,6 @@
  * the verdict. Everything else — 70–130 s of synchronous work — runs on the
  * preparation thread (`./prepare-thread`, `./prepare`).
  */
-import { writeFileSync } from "fs";
-import os from "os";
-import { fileURLToPath } from "url";
-import { join } from "path";
 import {
   tsBuildInfoPath,
   currentScanView,
@@ -32,6 +28,7 @@ import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
+import { spawnTypeCheckWorker, type TypeCheckWorkerResult } from "../core";
 import type {
   Check,
   CheckContext,
@@ -41,31 +38,11 @@ import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
 import type { PlannedTarget, TargetOutcome } from "./prepare";
 
-/** The worker's JSON stdout contract (see `../shared/worker.ts`). */
-interface WorkerOutput {
-  name: string;
-  tscErrors: string;
-  lintViolations: string;
-  failedLintFiles: string[];
-}
-
-interface WorkerResult extends WorkerOutput {
-  /**
-   * Peak RSS of the worker PROCESS (bytes), measured by the parent after exit.
-   * `undefined` when the runtime reported no rusage — an unavailable
-   * measurement, not a failure: the footprint line is simply omitted.
-   */
+/** A worker's output plus what the parent measured about its process. */
+interface WorkerResult extends TypeCheckWorkerResult {
   maxRssBytes: number | undefined;
-  /**
-   * User + system CPU the worker burned, in microseconds. THE cost unit for
-   * this fleet: wall clock on this host varies 2.5x with load for the identical
-   * program build, so a before/after comparison taken in wall clock measures
-   * whoever else was running. Same availability caveat as `maxRssBytes`.
-   */
   cpuTimeMicros: number | undefined;
 }
-
-const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
 // Priority isolation at the spawn site: workers for a non-main branch run
 // darwinbg (E-cores + background IO tier) so N concurrent agent fleets can't
@@ -80,8 +57,9 @@ async function workerBackground(): Promise<boolean> {
   const result = await spawnCaptured(
     ["git", "rev-parse", "--abbrev-ref", "HEAD"],
     // Wedge-breaker for a metadata-only git read, far above any real duration.
-    // The worker spawn below is the one that legitimately runs for minutes; this
-    // one only decides whether to demote it.
+    // The worker spawn this gates (`spawnTypeCheckWorker`, in `../core`) is the
+    // one that legitimately runs for minutes; this one only decides whether to
+    // demote it.
     { timeoutMs: 60_000 },
   );
   return result.stdout.trim() !== "main";
@@ -115,43 +93,18 @@ async function runWorker(
   lintFiles: string[],
   background: boolean,
 ): Promise<WorkerResult> {
-  const jobPath = join(
-    os.tmpdir(),
-    `type-check-${target.name}-${process.pid}.json`,
-  );
-  writeFileSync(
-    jobPath,
-    JSON.stringify({
-      root,
-      name: target.name,
-      tsconfigPath: target.tsconfigPath,
-      buildInfoPath: tsBuildInfoPath(root, target.name),
-      lintFiles,
-    }),
-  );
-  const result = await spawnCaptured([process.execPath, WORKER, jobPath], {
-    cwd: root,
+  const run = await spawnTypeCheckWorker({
+    root,
+    name: target.name,
+    tsconfigPath: target.tsconfigPath,
+    buildInfoPath: tsBuildInfoPath(root, target.name),
+    lintFiles,
     background,
-    // A type-check worker builds a whole TypeScript program; on a cold target
-    // that is minutes of unavoidable CPU, and on a saturated box (N agent
-    // fleets, all demoted to background QoS) it is longer still by an amount
-    // nothing here can predict. There is no shorter deadline to borrow: the
-    // human running `./singularity check` IS the deadline, and killing a worker
-    // that was making progress would just make the check unusable.
-    unbounded:
-      "a cold type-check worker legitimately runs for minutes of TS program construction, and the CLI run it belongs to owns no shorter deadline",
   });
-  if (result.exitCode !== 0) {
-    throw new Error(
-      `type-check worker for "${target.name}" exited ${result.exitCode}:\n${result.stderr.trim() || result.stdout.trim()}`,
-    );
-  }
-  // rusage is only final once the child is reaped, and it is a free read (no
-  // sampling loop) — getrusage reports the TRUE peak of the run.
   return {
-    ...(JSON.parse(result.stdout) as WorkerOutput),
-    maxRssBytes: result.resourceUsage.maxRssBytes,
-    cpuTimeMicros: result.resourceUsage.cpuTimeMicros,
+    ...run.result,
+    maxRssBytes: run.maxRssBytes,
+    cpuTimeMicros: run.cpuTimeMicros,
   };
 }
 
@@ -284,6 +237,11 @@ const check: Check = {
           ` (program keys ${plan.keysMs}ms)`,
         "stderr",
       );
+      // One line per target naming the incremental base this run starts from,
+      // and how much of it still matches the tree. Without it "why was this run
+      // cold?" had no answer anywhere in the transcript — and a pool that hands
+      // out a base matching nothing looks exactly like a pool that works.
+      for (const line of plan.warmBase) ctx.log?.(line, "stderr");
       // Named, not just counted: "5 of 7 skipped" with no explanation of the
       // other two is the shape of a report that hides a broken key. A cold
       // worktree legitimately lists every target here on its first run.
@@ -357,7 +315,10 @@ const check: Check = {
         failedLintFiles: r.failedLintFiles,
       }));
       const finalizeStart = performance.now();
-      await thread.finalize(outcomes);
+      const finalizeLines = await thread.finalize(outcomes);
+      // What the record phase published back into the warm-base pool, and
+      // whether those entries carry the sha that lets the prune protect them.
+      for (const line of finalizeLines) ctx.log?.(line, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
       // instrument for making the preparation itself cheaper.
       ctx.log?.(

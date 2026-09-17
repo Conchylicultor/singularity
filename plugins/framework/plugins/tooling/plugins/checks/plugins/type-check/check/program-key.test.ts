@@ -19,12 +19,9 @@ import { test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
+import { readProgramFileList } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { readTreeListing } from "./fingerprint";
-import {
-  openProgramKeyContext,
-  programKey,
-  readProgramFileList,
-} from "./program-key";
+import { openProgramKeyContext, programKey } from "./program-key";
 
 let root = "";
 
@@ -204,6 +201,7 @@ test("readProgramFileList resolves against the buildinfo's own directory", () =>
   expect(readProgramFileList(path)).toEqual({
     kind: "files",
     files: [join(root, "a.ts")],
+    versions: [undefined],
   });
 });
 
@@ -225,5 +223,6 @@ test("readProgramFileList reads the nested `program.fileNames` shape too", () =>
   expect(readProgramFileList(TARGET.buildInfoPath)).toEqual({
     kind: "files",
     files: [join(root, "a.ts")],
+    versions: [undefined],
   });
 });

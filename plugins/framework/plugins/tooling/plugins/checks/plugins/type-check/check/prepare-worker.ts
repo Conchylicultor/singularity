@@ -15,7 +15,7 @@ declare var self: Worker;
 
 let session: Preparation | null = null;
 
-function handle(request: PrepareRequest): PrepareReply {
+async function handle(request: PrepareRequest): Promise<PrepareReply> {
   switch (request.type) {
     case "prepare":
       // One run, one session: a second prepare would silently drop the state
@@ -23,6 +23,9 @@ function handle(request: PrepareRequest): PrepareReply {
       if (session) {
         throw new Error("type-check prepare thread: prepare called twice");
       }
+      // Still SYNCHRONOUS work — `openPreparation` has no awaits. `handle` is
+      // async only because `finalize` now spawns git to label and prune the
+      // warm-base pool.
       session = openPreparation(request.input);
       return { type: "plan", plan: session.plan };
     case "finalize":
@@ -31,15 +34,24 @@ function handle(request: PrepareRequest): PrepareReply {
           "type-check prepare thread: finalize with no run plan to record for",
         );
       }
-      session.finalize(request.outcomes);
-      return { type: "finalized" };
+      return {
+        type: "finalized",
+        lines: await session.finalize(request.outcomes),
+      };
   }
 }
 
 self.onmessage = (event: MessageEvent) => {
+  // A message handler cannot itself be async (its return value is ignored), so
+  // the one reply-per-request contract is kept by an explicit fire-and-forget:
+  // `respond` never rejects — it turns every throw into an `error` reply.
+  void respond(event.data as PrepareRequest);
+};
+
+async function respond(request: PrepareRequest): Promise<void> {
   let reply: PrepareReply;
   try {
-    reply = handle(event.data as PrepareRequest);
+    reply = await handle(request);
   } catch (err) {
     // Not swallowed: handed to the runner, which rejects the pending call with
     // it and so fails the check.
@@ -49,4 +61,4 @@ self.onmessage = (event: MessageEvent) => {
         : { type: "error", message: String(err), stack: undefined };
   }
   self.postMessage(reply);
-};
+}
