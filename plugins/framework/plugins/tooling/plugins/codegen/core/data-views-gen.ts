@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { readFile } from "fs/promises";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
 import {
@@ -7,11 +7,11 @@ import {
   maskSource,
   parseStaticCallId,
   unresolvableCallIdMessage,
-  walkFiles,
-  readIfExists,
+  walkFilesAsync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 
 /**
  * Generates the data-views manifest consumed by the data-view primitive: the
@@ -122,15 +122,15 @@ export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
   const bundle = mainBundle(tree, root);
   const definingPath = new Map<string, string>();
 
+  // A check pass runs this on the thread its ~100 checks share: walk and read
+  // without blocking, and pause every ~10 ms of scanning.
+  const slice = createTimeSlicer();
   for (const node of tree.byDir.values()) {
     if (!bundle.has(node.id)) continue;
-    const webDir = join(node.dir, "web");
-    if (!existsSync(webDir)) continue;
-    const files: string[] = [];
-    walkFiles(webDir, files);
-    for (const file of files) {
-      const src = readIfExists(file);
-      if (!src || !src.includes(DATA_VIEW_MARKER)) continue;
+    for (const file of await walkFilesAsync(join(node.dir, "web"))) {
+      const src = await readFile(file, "utf8");
+      if (!src.includes(DATA_VIEW_MARKER)) continue;
+      await slice();
       for (const id of scanDataViewIds(src, relative(root, file))) {
         if (!definingPath.has(id)) definingPath.set(id, node.id);
       }

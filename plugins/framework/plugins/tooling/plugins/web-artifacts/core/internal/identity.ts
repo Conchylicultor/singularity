@@ -6,6 +6,7 @@
 
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { findViteContributions } from "@plugins/framework/plugins/web-core/core";
 import { BUILDER_VERSION, INLINE_PACKAGES } from "../constants";
@@ -92,15 +93,12 @@ export async function computeBuilderIdentity(opts: {
   for (const pkg of INLINE_PACKAGES) {
     record[`inline:${pkg}`] = packageVersion(pkg, opts.repoRoot);
   }
-  // `findViteContributions` (web-core, a different plugin) still walks the
-  // tree with a sync `readdirSync` — out of this change's scope; see the
-  // MISC agent's report.
-  for (const file of findViteContributions(opts.pluginsRoot)) {
+  for (const file of await findViteContributions(opts.pluginsRoot)) {
     const rel = file.slice(opts.pluginsRoot.length + 1);
-    let digest = sha256Hex(readFileSync(file));
+    let digest = sha256Hex(await readFile(file));
     const pkgJson = join(file, "..", "..", "package.json");
     try {
-      digest = sha256Hex(digest + readFileSync(pkgJson, "utf8"));
+      digest = sha256Hex(digest + (await readFile(pkgJson, "utf8")));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     }

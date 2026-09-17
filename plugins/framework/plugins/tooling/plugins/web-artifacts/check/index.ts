@@ -43,7 +43,9 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {
   Check,
   CheckResult,
@@ -77,14 +79,6 @@ import {
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT =
   "Run `./singularity build` to recompose the dist from the current tree.";
-
-function rootSync(): string {
-  const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return new TextDecoder().decode(proc.stdout).trim();
-}
 
 /**
  * Which dist this checkout deploys, or the fact that it deploys none.
@@ -185,11 +179,13 @@ const mapInSync: Check = {
   description:
     "the deployed dist's import map matches the composition the current tree produces",
   scope: "deploy",
-  cacheSignature(): string | null {
+  async cacheSignature(): Promise<string | null> {
     // Never cache the build-time skip: a cached "pass" recorded while the check
     // didn't actually look would mask a stale dist on the next run that does.
     if (isBuildInProgress()) return null;
-    const dist = deployedDist(rootSync());
+    // The memoized async root, not a `spawnSync` of git: a blocking spawn here
+    // held the check runner's shared thread for ~1 s under load.
+    const dist = deployedDist(await getWorktreeRoot());
     // No deploy ⇒ a real failure below, and for the same reason as a missing
     // marker: the fix is a build, which registers a namespace without moving the
     // tree hash the runner keys on, so a cached verdict would outlive it.
@@ -360,10 +356,14 @@ function saveScanCache(cache: VendoredScanCache): void {
   renameSync(tmp, SCAN_CACHE_FILE);
 }
 
-/** Scan one store artifact's sourcemap for inlined node_modules packages. */
-function scanArtifact(dirName: string): string[] {
+/**
+ * Scan one store artifact's sourcemap for inlined node_modules packages. The
+ * map is read without blocking: a build that rebuilt many artifacts leaves
+ * many multi-MB maps to scan in one pass, on the check runner's shared thread.
+ */
+async function scanArtifact(dirName: string): Promise<string[]> {
   const mapFile = join(artifactStorePath(dirName), "index.js.map");
-  const raw = readIfExists(mapFile);
+  const raw = await readMapIfPresent(mapFile);
   if (raw === null) {
     // The builder emits sourcemaps unconditionally — a missing map means the
     // scan has no signal, which must be loud, not a silent pass.
@@ -376,6 +376,16 @@ function scanArtifact(dirName: string): string[] {
   if (!raw.includes("node_modules/")) return [];
   const parsed = JSON.parse(raw) as { sources?: string[] };
   return packagesInSourcemapSources(parsed.sources ?? []);
+}
+
+/** A sourcemap's text, or null when the artifact has none. */
+async function readMapIfPresent(file: string): Promise<string | null> {
+  try {
+    return await readFile(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
 }
 
 const noVendoredStateInlined: Check = {
@@ -415,10 +425,14 @@ const noVendoredStateInlined: Check = {
     const cache = loadScanCache();
     let scanned = 0;
     const offenders: string[] = [];
+    // Each uncached map is a `JSON.parse` of up to several MB: pause between
+    // artifacts so a freshly rebuilt fleet is not scanned as one block.
+    const slice = createTimeSlicer();
     for (const t of present) {
       let inlined = cache.inlined[t.dirName];
       if (inlined === undefined) {
-        inlined = scanArtifact(t.dirName);
+        await slice();
+        inlined = await scanArtifact(t.dirName);
         cache.inlined[t.dirName] = inlined;
         scanned++;
       }

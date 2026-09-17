@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from "fs";
+import { existsSync } from "fs";
+import { readFile } from "fs/promises";
 import {
   buildEnrichedTree,
   mainComposition,
@@ -11,9 +12,20 @@ import {
   formatGenerated,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
+
+/** A file's text, or null when it does not exist. */
+async function readIfPresent(file: string): Promise<string | null> {
+  try {
+    return await readFile(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+}
 
 const check: Check = {
   id: "plugins-doc-in-sync",
@@ -40,7 +52,7 @@ const check: Check = {
     }
 
     if (
-      readFileSync(compactFile, "utf8") !==
+      (await readFile(compactFile, "utf8")) !==
       (await formatGenerated({
         file: compactFile,
         content: await renderCompactDoc({ root }),
@@ -53,7 +65,7 @@ const check: Check = {
       };
     }
     if (
-      readFileSync(detailsFile, "utf8") !==
+      (await readFile(detailsFile, "utf8")) !==
       (await formatGenerated({
         file: detailsFile,
         content: await renderDetailsDoc({ root }),
@@ -73,9 +85,14 @@ const check: Check = {
     // any other way would disagree with the generator it exists to check.
     const tree = await buildEnrichedTree(root);
     const main = mainComposition(tree, root);
+    // One CLAUDE.md per plugin (~800): read each without blocking, and pause
+    // every ~10 ms of rendering, so the loop never holds the check runner's
+    // shared thread for the whole set.
+    const slice = createTimeSlicer();
     for (const info of tree.byDir.values()) {
+      await slice();
       const file = pluginClaudeMdPath(info);
-      const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
+      const existing = await readIfPresent(file);
       const expected = await formatGenerated({
         file,
         content: renderPluginClaudeMd(info, existing, root, tree.facets, main),

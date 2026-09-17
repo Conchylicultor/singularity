@@ -1,5 +1,6 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/launcher/core` alias
 // would name this plugin from inside itself.
@@ -41,7 +42,8 @@ function isTestFile(path: string): boolean {
 //
 // The question only means something for code that reads or sets a variable,
 // so that is all this scans. Comments are dropped first (a comment describing
-// a retired variable reads nothing), and so are lint rules (a rule that names
+// a retired variable reads nothing, and in TypeScript neither does a regex
+// literal), and so are lint rules (a rule that names
 // a variable to ban it neither reads nor sets it). What is left: TypeScript
 // under plugins/, the gateway's Go, the git hooks, and the desktop shell's
 // Rust (it sets variables for the release launcher it starts).
@@ -103,8 +105,12 @@ const runtimeEnvDeclaredCheck: Check = {
     // name → every place it is spelled, so one undeclared name is one entry.
     const undeclared = new Map<string, string[]>();
     const used = new Set<string>();
+    // The check runner's thread is shared by every check in the pass: pause
+    // every ~10 ms of scanning rather than holding it for the whole file set.
+    const slice = createTimeSlicer();
     for (const { rel, src } of sources) {
       if (!isScanned(rel)) continue;
+      await slice();
       const lines = stripComments(rel, src).split("\n");
       for (let i = 0; i < lines.length; i++) {
         for (const match of lines[i]!.matchAll(NAME_RE)) {
@@ -256,6 +262,7 @@ const perProcessEnvOnArgvCheck: Check = {
     const names = Object.keys(PER_PROCESS_ENV);
     const offenders: string[] = [];
     const named = new Set<string>();
+    const slice = createTimeSlicer();
     for (const name of names) {
       const sources = await listCandidateSources({
         root,
@@ -267,6 +274,7 @@ const perProcessEnvOnArgvCheck: Check = {
       const allowed = PER_PROCESS_ENV[name]!.transitionSites;
       for (const { rel, src } of sources) {
         if (isTestFile(rel) || rel === THIS_FILE) continue;
+        await slice();
         const lines = stripComments(rel, src).split("\n");
         for (let i = 0; i < lines.length; i++) {
           if (!re.test(lines[i]!)) continue;

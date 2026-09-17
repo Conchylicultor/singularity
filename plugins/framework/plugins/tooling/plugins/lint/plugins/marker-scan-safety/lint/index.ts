@@ -32,6 +32,12 @@ export default {
       // documents the pair in prose that quotes the same glob, and matching that
       // prose would keep the check passing after the live directive was deleted.
       "plugins/framework/plugins/tooling/plugins/test-layout/check/index.ts",
+      // Token-in-string: the launcher checks look for SINGULARITY_* variable
+      // names, which code spells inside strings (`env: { "SINGULARITY_X": … }`,
+      // `process.env["SINGULARITY_X"]`) with no enclosing marker call — a full
+      // mask would erase the names. It only needs comments (and regex literals)
+      // blanked.
+      "plugins/infra/plugins/launcher/check/internal/strip-comments.ts",
       // Unit tests of maskSource's `{ strings: false }` behavior itself.
       "plugins/plugin-meta/plugins/parse-utils/core/mask-source.test.ts",
       // Test fixtures exercising find-marker-calls / mask behavior.

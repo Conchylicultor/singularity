@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "fs";
+import { open, readdir } from "fs/promises";
 import { join, resolve } from "path";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -13,14 +13,49 @@ interface Snapshot {
   prevId: string;
 }
 
-function readSnapshots(metaDir: string): Snapshot[] {
-  return readdirSync(metaDir)
+/**
+ * How much of a snapshot's start is read. drizzle-kit writes `id` then `prevId`
+ * as the first two keys, so both fit well inside this.
+ */
+const HEAD_BYTES = 1024;
+
+/** The first two keys of a snapshot, anchored at the start of the file. */
+const HEAD_RE = /^\{\s*"id":\s*"([^"]+)",\s*"prevId":\s*"([^"]+)"/;
+
+/**
+ * The chain only needs each snapshot's `id` and `prevId`, but a snapshot is the
+ * whole schema (~250 KB, and there are hundreds). Reading and parsing every one
+ * in full held the check runner's shared thread for 1–2 s, so only the start of
+ * each file is read. A file whose start is not `{ "id": …, "prevId": … }` throws,
+ * naming it: a changed snapshot layout must fail here, not pass unchecked.
+ */
+async function readHead(path: string): Promise<{ id: string; prevId: string }> {
+  const handle = await open(path, "r");
+  try {
+    const buf = Buffer.alloc(HEAD_BYTES);
+    const { bytesRead } = await handle.read(buf, 0, HEAD_BYTES, 0);
+    const match = HEAD_RE.exec(buf.toString("utf8", 0, bytesRead));
+    if (!match) {
+      throw new Error(
+        `snapshot-chain-intact: ${path} does not start with "id" then "prevId" — the drizzle snapshot layout changed; update readHead`,
+      );
+    }
+    return { id: match[1]!, prevId: match[2]! };
+  } finally {
+    await handle.close();
+  }
+}
+
+async function readSnapshots(metaDir: string): Promise<Snapshot[]> {
+  const files = (await readdir(metaDir))
     .filter((f) => f.endsWith("_snapshot.json"))
-    .sort()
-    .map((file) => {
-      const raw = JSON.parse(readFileSync(join(metaDir, file), "utf8"));
-      return { file, id: raw.id, prevId: raw.prevId };
-    });
+    .sort();
+  return Promise.all(
+    files.map(async (file) => ({
+      file,
+      ...(await readHead(join(metaDir, file))),
+    })),
+  );
 }
 
 const check: Check = {
@@ -28,9 +63,12 @@ const check: Check = {
   description: "drizzle migration snapshots form a single linear chain",
   async run() {
     const root = await getWorktreeRoot();
-    const metaDir = resolve(root, "plugins/database/plugins/migrations/data/meta");
+    const metaDir = resolve(
+      root,
+      "plugins/database/plugins/migrations/data/meta",
+    );
 
-    const snapshots = readSnapshots(metaDir);
+    const snapshots = await readSnapshots(metaDir);
     if (snapshots.length === 0) return { ok: true };
 
     const byId = new Map<string, Snapshot>();
@@ -38,8 +76,7 @@ const check: Check = {
       if (byId.has(s.id)) {
         return {
           ok: false,
-          message:
-            `duplicate snapshot id ${s.id}:\n  ${byId.get(s.id)!.file}\n  ${s.file}`,
+          message: `duplicate snapshot id ${s.id}:\n  ${byId.get(s.id)!.file}\n  ${s.file}`,
           hint: "Regenerate one of the snapshots via `./singularity build`.",
         };
       }
@@ -88,8 +125,7 @@ const check: Check = {
       if (!byId.has(s.prevId)) {
         return {
           ok: false,
-          message:
-            `snapshot ${s.file} references missing parent ${s.prevId}.`,
+          message: `snapshot ${s.file} references missing parent ${s.prevId}.`,
           hint: "A parent snapshot was deleted or the chain was hand-edited. Restore from git or regenerate.",
         };
       }

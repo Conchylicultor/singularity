@@ -12,7 +12,8 @@ import {
   formatDirectiveDisplacementReport,
   type DirectiveDisplacement,
 } from "./directive-displacement";
-import { formatSource } from "./prettier";
+import { formatOffThread } from "./format-thread";
+import { formatSource, type SourceBytes } from "./prettier";
 
 /**
  * Read → format → compare. NEVER writes. Returns the subset of `files` (paths
@@ -26,20 +27,28 @@ export async function findUnformatted(
   root: string,
   files: string[],
 ): Promise<string[]> {
-  // `formatSource` awaits, but prettier's parse + print of one file is a single
-  // synchronous run, and its promise settles as a microtask — so without a
-  // macrotask yield every file of the changed set chains into one block on the
-  // check runner's shared thread.
-  const slice = createTimeSlicer();
-  const unformatted: string[] = [];
-  for (const rel of files) {
-    await slice();
-    const content = await readFile(join(root, rel), "utf8");
-    if ((await formatSource({ file: rel, content })) !== content) {
-      unformatted.push(rel);
-    }
+  // Formatted on the format thread (`./format-thread`): prettier's load and its
+  // parse + print of one file are each one synchronous run that no yield can
+  // split, and this runs inside a check pass whose checks share one thread.
+  const sources = await readSources(root, files);
+  const formatted = await formatOffThread(sources);
+  return sources
+    .filter((source, i) => formatted[i] !== source.content)
+    .map((source) => source.file);
+}
+
+/** Each of `files` (relative to `root`) with its current bytes. */
+async function readSources(
+  root: string,
+  files: string[],
+): Promise<SourceBytes[]> {
+  // One at a time: a branch's first build can change hundreds of files, and a
+  // raw `readFile` per file all at once would open them all together.
+  const sources: SourceBytes[] = [];
+  for (const file of files) {
+    sources.push({ file, content: await readFile(join(root, file), "utf8") });
   }
-  return unformatted;
+  return sources;
 }
 
 /**
@@ -59,18 +68,20 @@ export async function findDisplacedDirectives(
   root: string,
   files: string[],
 ): Promise<DirectiveDisplacement[]> {
-  // Same shared-thread slicing as `findUnformatted`.
+  // Formatting runs on the format thread, as in `findUnformatted` (and shares
+  // its remembered results, so a pass formats each file once). Comparing the
+  // directive targets stays here, pausing between files.
+  const sources = await readSources(root, files);
+  const formatted = await formatOffThread(sources);
   const slice = createTimeSlicer();
   const displaced: DirectiveDisplacement[] = [];
-  for (const rel of files) {
+  for (const [i, source] of sources.entries()) {
     await slice();
-    const content = await readFile(join(root, rel), "utf8");
-    const next = await formatSource({ file: rel, content });
     displaced.push(
       ...(await findDirectiveDisplacements({
-        file: rel,
-        before: content,
-        after: next,
+        file: source.file,
+        before: source.content,
+        after: formatted[i]!,
       })),
     );
   }

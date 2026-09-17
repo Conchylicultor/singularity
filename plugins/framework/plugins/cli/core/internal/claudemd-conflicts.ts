@@ -1,5 +1,15 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+
+/**
+ * The part of the tooling plugin's `RepoFiles` this reads, spelled structurally
+ * so this barrel does not depend on the tooling plugin.
+ */
+export interface ClaudeMdRepo {
+  root: string;
+  under(dir: string): readonly string[];
+  /** Null when the path is not in the set. */
+  read(path: string): Promise<string | null>;
+}
 
 const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7}) /m;
 
@@ -11,37 +21,23 @@ const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7}) /m;
  * result: normalize then rewrites the autogen block (erasing any conflict that
  * was confined to it). Whatever markers SURVIVE that rewrite are in prose — a
  * real conflict a human must resolve, never something regeneration can fix.
+ *
+ * Takes the repo's file set rather than walking `plugins/` itself: inside a
+ * check pass that is the run's shared `ctx.repo()`, and a blocking walk that
+ * stat-ed every file in the tree held the check runner's one thread for 1.5–2.5 s.
+ * Outside a check, pass `loadRepoFiles(root)`. Returns absolute paths.
  */
-export function findClaudeMdConflicts(root: string): string[] {
-  const offenders: string[] = [];
-  const walk = (dir: string) => {
-    let entries: string[];
-    try {
-      entries = readdirSync(dir);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "EACCES") throw err;
-      return;
-    }
-    for (const entry of entries) {
-      // A workspace's own node_modules holds symlinked copies of the whole
-      // plugin tree; walking it would re-scan every CLAUDE.md once per plugin.
-      if (entry === "node_modules") continue;
-      const full = join(dir, entry);
-      let st;
-      try {
-        st = statSync(full);
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        continue;
-      }
-      if (st.isDirectory()) {
-        walk(full);
-      } else if (entry === "CLAUDE.md") {
-        if (CONFLICT_MARKER_RE.test(readFileSync(full, "utf8"))) offenders.push(full);
-      }
-    }
-  };
-  walk(join(root, "plugins"));
-  return offenders;
+export async function findClaudeMdConflicts(
+  repo: ClaudeMdRepo,
+): Promise<string[]> {
+  const files = repo
+    .under("plugins")
+    .filter((rel) => rel.endsWith("/CLAUDE.md"));
+  const hits = await Promise.all(
+    files.map(async (rel) => {
+      const src = await repo.read(rel);
+      return src !== null && CONFLICT_MARKER_RE.test(src) ? [rel] : [];
+    }),
+  );
+  return hits.flat().map((rel) => join(repo.root, rel));
 }

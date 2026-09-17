@@ -15458,6 +15458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
+          - `ClaudeMdRepo`
           - `CliAction`
           - `CliArgumentSpec`
           - `CliCommand`
@@ -16124,6 +16125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/tooling/format.SourceBytes`
               - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
               - `infra/namespace.MAIN_COMPOSITION_ID`
+              - `packages/macrotask-yield.createTimeSlicer`
               - `packages/macrotask-yield.yieldMacrotask`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/barrel-import.AUTO_STUB_CSS`
@@ -16153,9 +16155,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.maskSource`
               - `plugin-meta/parse-utils.parseBoolField`
               - `plugin-meta/parse-utils.parseStaticCallId`
-              - `plugin-meta/parse-utils.readIfExists`
               - `plugin-meta/parse-utils.unresolvableCallIdMessage`
-              - `plugin-meta/parse-utils.walkFiles`
+              - `plugin-meta/parse-utils.walkFilesAsync`
               - `plugin-meta/plugin-tree.buildPluginTree`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
               - `plugin-meta/plugin-tree.PluginNode`
@@ -22006,6 +22007,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `stripTypes`
           - `unresolvableCallIdMessage`
           - `walkFiles`
+          - `walkFilesAsync`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "Health" → `HealthSection`

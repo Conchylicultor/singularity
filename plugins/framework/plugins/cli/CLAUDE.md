@@ -411,6 +411,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
+    - `ClaudeMdRepo`
     - `CliAction`
     - `CliArgumentSpec`
     - `CliCommand`

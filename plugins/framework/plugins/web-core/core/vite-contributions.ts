@@ -9,7 +9,7 @@
 // Imported through the `@plugins/framework/plugins/web-core/core` barrel.
 
 import path from "node:path";
-import { existsSync, readdirSync } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
 import type react from "@vitejs/plugin-react";
 
 // Each `vite/index.ts` contribution returns a Babel plugin. We derive the exact
@@ -60,16 +60,21 @@ function isOrderedContribution(
  * a `vite/` folder == presence of its transform: drop the contributing plugin
  * and the walk finds nothing. Returned paths are sorted for determinism.
  *
- * Plain `readdirSync` walk (the same pattern as `plugin-registry-gen.ts`) rather
- * than `fs/promises.glob` to avoid that API's Node-version floor.
+ * A plain `readdir` walk rather than `fs/promises.glob`, to avoid that API's
+ * Node-version floor. Async, one directory at a time (a concurrent walk would
+ * hold a directory handle per folder in the tree at once): the web-artifacts
+ * builder identity runs this inside a check pass, where a blocking walk of the
+ * whole plugin tree held the check runner's shared thread for 2–5 s.
  */
-export function findViteContributions(pluginsRoot: string): string[] {
+export async function findViteContributions(
+  pluginsRoot: string,
+): Promise<string[]> {
   const out: string[] = [];
-  function walk(dir: string, depth: number): void {
+  async function walk(dir: string, depth: number): Promise<void> {
     if (depth > 12) return;
     let entries;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      entries = await readdir(dir, { withFileTypes: true });
     } catch (err) {
       const code = (err as NodeJS.ErrnoException).code;
       if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR")
@@ -87,15 +92,26 @@ export function findViteContributions(pluginsRoot: string): string[] {
       }
       if (e.name === "vite") {
         const index = path.join(dir, e.name, "index.ts");
-        if (existsSync(index)) out.push(index);
+        if (await isFile(index)) out.push(index);
         continue;
       }
-      walk(path.join(dir, e.name), depth + 1);
+      await walk(path.join(dir, e.name), depth + 1);
     }
   }
-  walk(pluginsRoot, 0);
+  await walk(pluginsRoot, 0);
   out.sort();
   return out;
+}
+
+/** Whether `file` exists (the sync walk's `existsSync`, without blocking). */
+async function isFile(file: string): Promise<boolean> {
+  try {
+    await stat(file);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
 }
 
 /**
@@ -113,7 +129,7 @@ export async function loadBabelContributions(opts: {
   repoRoot: string;
 }): Promise<BabelPluginItem[]> {
   const ordered: { order: number; plugin: BabelPluginItem }[] = [];
-  for (const file of findViteContributions(opts.pluginsRoot)) {
+  for (const file of await findViteContributions(opts.pluginsRoot)) {
     const mod = (await import(file)) as {
       default: (o: { repoRoot: string }) => ViteContributionReturn;
     };

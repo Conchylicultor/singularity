@@ -49,7 +49,9 @@ export default createFacet<RoutesData>({
       const masked = maskSource(src);
       for (const span of markerCallSpans(masked, "defineEndpoint")) {
         // `export const <name> = ` immediately before the call identifier.
-        const decl = /export\s+const\s+(\w+)\s*=\s*$/.exec(masked.slice(0, span.identifier));
+        const decl = /export\s+const\s+(\w+)\s*=\s*$/.exec(
+          masked.slice(0, span.identifier),
+        );
         if (!decl) continue;
         const body = src.slice(span.open + 1, span.close);
         const routeMatch = /route\s*:\s*"([^"]+)"/.exec(body);
@@ -76,7 +78,13 @@ export default createFacet<RoutesData>({
           let km: RegExpExecArray | null;
           while ((km = computedRe.exec(block))) {
             const routeStr = endpointRoutes.get(km[1]!);
-            if (routeStr) routes.push({ route: routeStr, type: "http", runtime, name: km[1]! });
+            if (routeStr)
+              routes.push({
+                route: routeStr,
+                type: "http",
+                runtime,
+                name: km[1]!,
+              });
           }
 
           const literalRe = /"([^"]+)"\s*:/g;
@@ -102,7 +110,11 @@ export default createFacet<RoutesData>({
       }
     }
 
-    return { routes, endpointCallers: [] };
+    return {
+      routes,
+      endpointCallers: [],
+      apiPrefixesUsed: apiPrefixesUsedIn(ctx.dir),
+    };
   },
 
   relate(rawCtx) {
@@ -121,37 +133,10 @@ export default createFacet<RoutesData>({
       }
     }
 
-    if (apiPrefixToOwner.size === 0) return;
-
-    const prefixes = [...apiPrefixToOwner.keys()];
-    const escaped = prefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-    const re = new RegExp(`\\/api\\/(${escaped.join("|")})(?![A-Za-z0-9_-])`, "g");
-
     for (const caller of tree.byDir.values()) {
-      const files: string[] = [];
-      for (const sub of ["web", "server", "central"]) {
-        walkFiles(join(caller.dir, sub), files);
-      }
-      const hit = new Set<string>();
-      for (const f of files) {
-        // Skip test/fixture files: an `/api/<prefix>` inside a fixture string is
-        // not a real caller, and (unlike a marker-value scan) full masking can't
-        // exclude it since the URL genuinely lives in a string — so drop the
-        // fixture leg of the false positive by path.
-        if (/\.test\.tsx?$/.test(f) || f.includes("/__tests__/")) continue;
-        const raw = readIfExists(f);
-        if (!raw) continue;
-        // Sanctioned token-in-string scan: the `/api/<prefix>` URL lives inside
-        // caller string literals (passed to fetch) with NO enclosing marker
-        // call, so masking fully would erase it. We mask comments/regex but KEEP
-        // strings so a commented or documented `/api/<prefix>` doesn't register a
-        // phantom caller. Allowlisted in `no-adhoc-marker-scan`.
-        const src = maskSource(raw, { strings: false });
-        re.lastIndex = 0;
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(src))) hit.add(m[1]!);
-      }
-      for (const prefix of hit) {
+      const callerData = getFacet(caller, routesFacetDef);
+      if (!callerData?.apiPrefixesUsed) continue;
+      for (const prefix of callerData.apiPrefixesUsed) {
         const owner = apiPrefixToOwner.get(prefix);
         if (!owner || owner === caller) continue;
         const ownerData = getFacet(owner, routesFacetDef);
@@ -162,26 +147,82 @@ export default createFacet<RoutesData>({
     }
     for (const info of tree.byDir.values()) {
       const data = getFacet(info, routesFacetDef);
-      if (data) data.endpointCallers.sort();
+      if (!data) continue;
+      data.endpointCallers.sort();
+      // Clear the transient join input so it doesn't leak into stored facet data.
+      data.apiPrefixesUsed = undefined;
     }
   },
 
   renderDoc(data) {
-    if (data.routes.length === 0 && data.endpointCallers.length === 0) return [];
+    if (data.routes.length === 0 && data.endpointCallers.length === 0)
+      return [];
     const facts: DocFact[] = [];
     for (const runtime of ["server", "central"] as const) {
-      const httpRoutes = data.routes.filter((r) => r.runtime === runtime && r.type === "http");
-      const wsRoutes = data.routes.filter((r) => r.runtime === runtime && r.type === "ws");
+      const httpRoutes = data.routes.filter(
+        (r) => r.runtime === runtime && r.type === "http",
+      );
+      const wsRoutes = data.routes.filter(
+        (r) => r.runtime === runtime && r.type === "ws",
+      );
       if (httpRoutes.length > 0 || wsRoutes.length > 0) {
-        facts.push({ folder: runtime, key: "Routes", values: [
-          ...httpRoutes.map((r) => `\`${r.route}\``),
-          ...wsRoutes.map((r) => `\`${r.route} (WS)\``),
-        ] });
+        facts.push({
+          folder: runtime,
+          key: "Routes",
+          values: [
+            ...httpRoutes.map((r) => `\`${r.route}\``),
+            ...wsRoutes.map((r) => `\`${r.route} (WS)\``),
+          ],
+        });
       }
     }
     if (data.endpointCallers.length > 0) {
-      facts.push({ folder: "cross-plugin", key: "Endpoint callers", values: data.endpointCallers.map((n) => `\`${n}\``) });
+      facts.push({
+        folder: "cross-plugin",
+        key: "Endpoint callers",
+        values: data.endpointCallers.map((n) => `\`${n}\``),
+      });
     }
     return facts;
   },
 });
+
+/**
+ * `/api/<prefix>` followed by the end of the segment. An unknown prefix is
+ * recorded too and simply finds no owner in relate(): matching the maximal
+ * segment here is what the old per-owner alternation matched, since that
+ * required the prefix to end the segment.
+ */
+const API_PREFIX_RE = /\/api\/([A-Za-z0-9_-]+)/g;
+
+/**
+ * Every `/api/<prefix>` named in the plugin's own web/server/central source,
+ * deduped and sorted. This is the per-file half of the endpoint-caller join,
+ * done in extract() so it runs inside the tree builder's time-sliced extract
+ * loop: in relate() it was one ~2 s block over every file of every plugin.
+ */
+function apiPrefixesUsedIn(dir: string): string[] {
+  const files: string[] = [];
+  for (const sub of ["web", "server", "central"]) {
+    walkFiles(join(dir, sub), files);
+  }
+  const hit = new Set<string>();
+  for (const f of files) {
+    // Skip test/fixture files: an `/api/<prefix>` inside a fixture string is
+    // not a real caller, and (unlike a marker-value scan) full masking can't
+    // exclude it since the URL genuinely lives in a string — so drop the
+    // fixture leg of the false positive by path.
+    if (/\.test\.tsx?$/.test(f) || f.includes("/__tests__/")) continue;
+    const raw = readIfExists(f);
+    // Most files name no endpoint; skip masking them.
+    if (!raw?.includes("/api/")) continue;
+    // Sanctioned token-in-string scan: the `/api/<prefix>` URL lives inside
+    // caller string literals (passed to fetch) with NO enclosing marker
+    // call, so masking fully would erase it. We mask comments/regex but KEEP
+    // strings so a commented or documented `/api/<prefix>` doesn't register a
+    // phantom caller. Allowlisted in `no-adhoc-marker-scan`.
+    const src = maskSource(raw, { strings: false });
+    for (const m of src.matchAll(API_PREFIX_RE)) hit.add(m[1]!);
+  }
+  return [...hit].sort();
+}

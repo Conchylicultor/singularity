@@ -13,6 +13,7 @@ export {
   stripTypes,
   unresolvableCallIdMessage,
   walkFiles,
+  walkFilesAsync,
 } from "./helpers";
 export type {
   BarrelExport,

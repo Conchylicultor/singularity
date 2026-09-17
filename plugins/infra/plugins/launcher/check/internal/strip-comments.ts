@@ -1,4 +1,4 @@
-import ts from "typescript";
+import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 // Blank out the comments of a source file, so a scan over what is left sees
 // only code: identifiers, string literals and template text survive, prose
@@ -19,51 +19,20 @@ function blank(out: string[], start: number, end: number): void {
 }
 
 /**
- * TypeScript: the comments come from the PARSED file, not from a bare
- * `ts.createScanner` loop. A scanner has no parser context, so it reads a regex
- * literal as a division and desyncs, after which a `//` inside a string reads
- * as a comment (the format plugin's directive-displacement.ts hit exactly
- * that).
+ * TypeScript: the repo's shared masker, keeping strings. It blanks comments and
+ * regex literals in one pass over character codes, and its regex-vs-division
+ * reading is what every text scan in the repo already relies on.
  *
- * Every comment sits in the trivia before some leaf token, so visiting every
- * leaf covers them all, including a comment in an empty block (trivia of `}`)
- * and one at end of file (trivia of the end-of-file token). Each trivia run is
- * read twice: `getTrailingCommentRanges` stops at the run's first line break
- * and `getLeadingCommentRanges` starts after it, so a comment on the same line
- * as the token before it is only in the trailing half.
+ * A regex literal therefore counts as not-code, like a comment: a pattern that
+ * spells a variable name (a check banning `process.env.SINGULARITY_DIR`) neither
+ * reads nor sets it — the same reason lint rules are not scanned.
+ *
+ * This used to parse each file into a TypeScript syntax tree and visit every
+ * node. Over the whole repo that took ~20 s of the check runner's one shared
+ * thread against ~0.5 s here, and found the same names outside regex literals.
  */
-function stripTypeScript(path: string, src: string): string {
-  const sf = ts.createSourceFile(
-    path,
-    src,
-    ts.ScriptTarget.Latest,
-    true,
-    path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-  const out = src.split("");
-  const visit = (node: ts.Node): void => {
-    // A JSDoc block is attached to the declaration after it as child nodes,
-    // with tokens INSIDE the comment. Blank it whole instead of descending, so
-    // no trivia scan ever starts from a position inside a comment.
-    if (ts.isJSDoc(node)) {
-      blank(out, node.getStart(sf), node.getEnd());
-      return;
-    }
-    const children = node.getChildren(sf);
-    if (children.length > 0) {
-      for (const child of children) visit(child);
-      return;
-    }
-    const pos = node.getFullStart();
-    for (const range of [
-      ...(ts.getTrailingCommentRanges(src, pos) ?? []),
-      ...(ts.getLeadingCommentRanges(src, pos) ?? []),
-    ]) {
-      blank(out, range.pos, range.end);
-    }
-  };
-  visit(sf);
-  return out.join("");
+function stripTypeScript(src: string): string {
+  return maskSource(src, { strings: false });
 }
 
 // A Go rune or Rust char literal: `'x'`, `'\''`, `'\u{1F600}'`. Anything else
@@ -230,7 +199,7 @@ function stripShell(src: string): string {
  */
 export function stripComments(path: string, src: string): string {
   if (path.endsWith(".ts") || path.endsWith(".tsx")) {
-    return stripTypeScript(path, src);
+    return stripTypeScript(src);
   }
   if (path.endsWith(".go")) return stripGo(src);
   if (path.endsWith(".rs")) return stripRust(src);

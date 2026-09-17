@@ -1,6 +1,12 @@
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { findClaudeMdConflicts, readMergeMarkers } from "@plugins/framework/plugins/cli/core";
-import type { Check } from "@plugins/framework/plugins/tooling/core";
+import {
+  findClaudeMdConflicts,
+  readMergeMarkers,
+} from "@plugins/framework/plugins/cli/core";
+import type {
+  Check,
+  CheckContext,
+} from "@plugins/framework/plugins/tooling/core";
 
 /**
  * The loud backstop for the generated-artifact merge contract.
@@ -26,7 +32,7 @@ const check: Check = {
   // Reads git-dir state (the marker dir), which is outside the working-tree
   // hash. Never cache: a cached pass would survive the very rebase that breaks it.
   cacheSignature: () => null,
-  async run() {
+  async run(ctx: CheckContext) {
     const root = await getWorktreeRoot();
 
     const markers = readMergeMarkers(root);
@@ -46,7 +52,7 @@ const check: Check = {
       };
     }
 
-    const conflicted = findClaudeMdConflicts(root);
+    const conflicted = await findClaudeMdConflicts(await ctx.repo());
     if (conflicted.length > 0) {
       return {
         ok: false,

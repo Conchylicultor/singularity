@@ -7,6 +7,7 @@ import {
   findClaudeMdConflicts,
   readMergeMarkers,
 } from "@plugins/framework/plugins/cli/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
 // magnitude above what any of them take, so only a wedged child trips it. A CLI
@@ -137,7 +138,7 @@ export async function normalizeGeneratedArtifacts(
   clearMergeMarkers(root);
 
   if (regenGenerated) {
-    const conflicted = findClaudeMdConflicts(root);
+    const conflicted = await findClaudeMdConflicts(await loadRepoFiles(root));
     if (conflicted.length) {
       console.error(
         [

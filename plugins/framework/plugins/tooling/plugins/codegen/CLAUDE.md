@@ -31,6 +31,7 @@
     - `framework/tooling/format.SourceBytes`
     - `framework/tooling/resource-vocabulary.resourceDescriptorFactories`
     - `infra/namespace.MAIN_COMPOSITION_ID`
+    - `packages/macrotask-yield.createTimeSlicer`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/barrel-import.AUTO_STUB_CSS`
@@ -60,9 +61,8 @@
     - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStaticCallId`
-    - `plugin-meta/parse-utils.readIfExists`
     - `plugin-meta/parse-utils.unresolvableCallIdMessage`
-    - `plugin-meta/parse-utils.walkFiles`
+    - `plugin-meta/parse-utils.walkFilesAsync`
     - `plugin-meta/plugin-tree.buildPluginTree`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
     - `plugin-meta/plugin-tree.PluginNode`

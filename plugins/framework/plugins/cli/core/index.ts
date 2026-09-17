@@ -25,6 +25,7 @@ export {
 } from "./internal/merge-markers";
 export type { MergeMarkerKind } from "./internal/merge-markers";
 export { findClaudeMdConflicts } from "./internal/claudemd-conflicts";
+export type { ClaudeMdRepo } from "./internal/claudemd-conflicts";
 
 export { defineCliCommand, isCliCommand } from "./internal/command";
 export type {

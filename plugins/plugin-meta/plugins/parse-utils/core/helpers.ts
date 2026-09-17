@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
+import { readdir } from "fs/promises";
 import { dirname, join } from "path";
 import { maskSource } from "./mask-source";
 import { markerCallSpans, type MarkerCallSpan } from "./find-marker-calls";
@@ -627,4 +628,35 @@ export function walkFiles(dir: string, out: string[]): void {
       out.push(p);
     }
   }
+}
+
+/**
+ * {@link walkFiles} without blocking: the same source files (same skipped
+ * directories, same test-file exclusion), read one directory at a time with
+ * `fs/promises`, and always from disk. For a scan that runs on a shared thread —
+ * a check pass — and so must not hold it for a whole-tree `readdirSync` walk.
+ * A missing `dir` yields no files, as in `walkFiles`.
+ */
+export async function walkFilesAsync(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  const walk = async (current: string): Promise<void> => {
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code == null) throw err;
+      return;
+    }
+    for (const e of entries) {
+      const p = join(current, e.name);
+      if (e.isDirectory()) {
+        if (isSkippedWalkDir(e.name)) continue;
+        await walk(p);
+      } else if (e.isFile() && isSourceFile(e.name)) {
+        out.push(p);
+      }
+    }
+  };
+  await walk(dir);
+  return out;
 }
