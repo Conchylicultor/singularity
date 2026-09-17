@@ -360,6 +360,7 @@ run everywhere.
     - `primitives/terminal`
     - `release`
     - `release/bundles`
+    - `release/source-checkout`
     - `reports/outbox`
     - `review/plugin-changes`
     - `stats/commits`

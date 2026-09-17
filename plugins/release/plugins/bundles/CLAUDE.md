@@ -84,8 +84,8 @@ answer, and consumer copy must say so rather than soften it.
 
 ## Retention
 
-`pruneReleaseRunDirs(namespace, comp, target, keep = 3)` keeps the newest `keep`
-run dirs plus every run some pointer names. `~/.singularity/state/releases/` had no
+`pruneReleaseRunDirs(compDir, keep = 3)` keeps the newest `keep` run dirs of one
+`<comp>-<target>` dir plus every run some pointer names. `~/.singularity/state/releases/` had no
 retention at all, and a run dir is a whole staged app — this is the only thing that
 bounds it. A release's *logs* are bounded separately and far more cheaply, by the
 shared per-kind supervised-run transcript prune.

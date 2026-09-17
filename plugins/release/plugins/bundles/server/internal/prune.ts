@@ -1,6 +1,5 @@
 import { existsSync, readdirSync, realpathSync, rmSync } from "node:fs";
 import { basename, join } from "node:path";
-import { compositionReleaseDir } from "./out-dir";
 import { isPointerName } from "./pointer";
 
 /**
@@ -23,8 +22,14 @@ function runIdMs(runId: string): number {
 }
 
 /**
- * Keep the `keep` newest run dirs of `<composition>-<target>` and delete the
- * rest, never touching a run some `latest-<platform>` pointer names.
+ * Keep the `keep` newest run dirs in `compDir` — one `<composition>-<target>`
+ * dir, as `compositionReleaseDir` names it — and delete the rest, never
+ * touching a run some `latest-<platform>` pointer names.
+ *
+ * Takes the directory rather than `(namespace, composition, target)` because
+ * its caller holds the run's own `out` dir and prunes its parent: a pinned
+ * release runs inside a private checkout whose name is not the namespace the
+ * run was filed under, so re-deriving the namespace there names the wrong dir.
  *
  * `~/.singularity/state/releases/` had no retention policy at all, and a run dir
  * is a whole staged app — hundreds of megabytes. This is the only thing that
@@ -40,13 +45,7 @@ function runIdMs(runId: string): number {
  * import it. With `keep = 3` a preview would have to be running against the 4th
  * newest run of the same composition to be hit.
  */
-export function pruneReleaseRunDirs(
-  namespace: string,
-  composition: string,
-  target: string,
-  keep = 3,
-): PruneResult {
-  const compDir = compositionReleaseDir(namespace, composition, target);
+export function pruneReleaseRunDirs(compDir: string, keep = 3): PruneResult {
   if (!existsSync(compDir)) return { removed: [], kept: [] };
 
   const entries = readdirSync(compDir);

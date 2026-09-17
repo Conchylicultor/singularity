@@ -116,6 +116,7 @@ for the single chromium installer and `e2e/` for the shared Playwright harness.
     - `framework/cli/build`
     - `framework/cli/check`
     - `framework/cli/push`
+    - `framework/cli/release`
     - `framework/cli/run`
     - `framework/cli/test`
 - Cli:

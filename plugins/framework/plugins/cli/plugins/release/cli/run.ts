@@ -17,6 +17,7 @@ import { Resvg } from "@resvg/resvg-js";
 import {
   REPO_ROOT,
   checkoutNamespace,
+  checkoutRef,
   checkoutWorktreeName,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
@@ -42,6 +43,7 @@ import {
   propagateConfigToUser,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { FATAL_SIGNAL_EXITS } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import {
   PLATFORM_TAGS,
   bunCompileTarget,
@@ -57,7 +59,13 @@ import {
   pruneReleaseRunDirs,
   readGitProvenance,
   releaseOutDir,
+  type GitProvenance,
 } from "@plugins/release/plugins/bundles/server";
+import {
+  acquireReleaseCheckout,
+  isReleaseCheckout,
+  releaseCargoTargetDir,
+} from "@plugins/release/plugins/source-checkout/server";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -712,6 +720,128 @@ interface ReleaseOptions {
   platform?: string;
 }
 
+/**
+ * Where this invocation's source tree comes from. See "How a release gets its
+ * source tree" in `plugins/release/CLAUDE.md`.
+ *
+ * - `inner`    — this process runs INSIDE a private release checkout (the
+ *                pinned mode's child): build right here.
+ * - `pinned`   — committed code: create a private detached checkout of the
+ *                commit and re-run the release inside it, so nothing that moves
+ *                this checkout (a push fast-forwarding main, a `git checkout`)
+ *                can change the tree mid-build.
+ * - `in-place` — a non-main worktree with uncommitted changes: build this tree
+ *                as it is, uncommitted changes included, not isolated.
+ */
+type ReleaseSourceMode = "inner" | "pinned" | "in-place";
+
+async function releaseSourceMode(
+  root: string,
+  provenance: GitProvenance,
+): Promise<ReleaseSourceMode> {
+  if (isReleaseCheckout(root)) return "inner";
+  // Main ALWAYS pins, even when `git status` reads dirty: a status read taken
+  // while a push is writing files looks dirty, and building in place there is
+  // exactly the torn-tree race pinning exists to close. Main never holds work
+  // that is meant to ship.
+  if ((await checkoutRef(root)).kind === "main") return "pinned";
+  return provenance.commitDirty ? "in-place" : "pinned";
+}
+
+/**
+ * The pinned mode's outer process: create the private checkout, run the release
+ * inside it with this invocation's flags (and always this invocation's `out`, so
+ * the bundle lands in THIS checkout's namespace), then remove the checkout.
+ * Returns the exit code the release should end with.
+ *
+ * The child is launched with the CHECKOUT's own `bin/index.ts`, not this one:
+ * `REPO_ROOT` comes from `import.meta.dir`, so a child started from this
+ * checkout's CLI would build this checkout's tree again.
+ *
+ * A catchable fatal signal is forwarded to the child and the checkout is still
+ * disposed once the child is gone; a second signal exits at once. A SIGKILL (or
+ * the orphan guard's exit) skips the dispose — the checkout's kernel flock dies
+ * with this process, and the next release's sweep removes it.
+ */
+async function runPinnedRelease(args: {
+  root: string;
+  sha: string;
+  out: string;
+  opts: ReleaseOptions;
+}): Promise<number> {
+  const { root, sha, out, opts } = args;
+  const checkout = await acquireReleaseCheckout({
+    sourceRoot: root,
+    sha,
+    name: basename(out),
+  });
+  const { swept } = checkout;
+  if (swept.removed.length > 0) {
+    console.log(
+      `  Removed ${swept.removed.length} leaked release checkout(s): ${swept.removed.join(", ")}`,
+    );
+  }
+  for (const f of swept.failed) {
+    console.warn(
+      `  Could not remove leaked release checkout ${f.name} (the next release retries): ${f.error}`,
+    );
+  }
+  console.log(`\nBuilding ${sha} from a private checkout: ${checkout.root}`);
+
+  const argv = [
+    "bun",
+    join(checkout.root, "plugins/framework/plugins/cli/bin/index.ts"),
+    "release",
+    "--composition",
+    opts.composition,
+    "--target",
+    opts.target,
+    "--port",
+    opts.port,
+    "--out",
+    out,
+    ...(opts.platform !== undefined ? ["--platform", opts.platform] : []),
+    ...(opts.dev ? ["--dev"] : []),
+  ];
+
+  let kill: ((signal: NodeJS.Signals) => void) | null = null;
+  let signalled: { exitCode: number } | null = null;
+  const listeners = FATAL_SIGNAL_EXITS.map(([signal, exitCode]) => {
+    const onSignal = () => {
+      if (signalled !== null) process.exit(exitCode);
+      signalled = { exitCode };
+      console.error(
+        `\nrelease: ${signal} — stopping the build, then removing ${checkout.root} (send it again to exit now)`,
+      );
+      kill?.(signal);
+    };
+    process.on(signal, onSignal);
+    return [signal, onSignal] as const;
+  });
+
+  try {
+    const started = Date.now();
+    const child = await spawnPassthrough(argv, {
+      cwd: checkout.root,
+      onSpawn: (proc) => {
+        kill = proc.kill;
+      },
+    });
+    console.log(
+      `\nPrivate-checkout release exited ${child.exitCode}${child.signalCode ? ` (${child.signalCode})` : ""} after ${Math.round((Date.now() - started) / 1000)} s`,
+    );
+    if (signalled !== null) return (signalled as { exitCode: number }).exitCode;
+    return child.exitCode;
+  } finally {
+    const disposeStarted = Date.now();
+    await checkout.dispose();
+    console.log(
+      `Removed private checkout ${checkout.root} (${Math.round((Date.now() - disposeStarted) / 1000)} s)`,
+    );
+    for (const [signal, onSignal] of listeners) process.off(signal, onSignal);
+  }
+}
+
 const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   const root = REPO_ROOT;
 
@@ -777,6 +907,25 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   console.log(
     `  Commit: ${provenance.commitSha}${provenance.commitDirty ? " (dirty worktree)" : ""}`,
   );
+
+  // ── 0.5. Which tree to build ─────────────────────────────────────────
+  const mode = await releaseSourceMode(root, provenance);
+  if (mode === "pinned") {
+    if (provenance.commitDirty) {
+      console.log(
+        "  main's tree reads dirty; releasing its HEAD commit anyway — uncommitted files on main are never part of a release",
+      );
+    }
+    process.exit(
+      await runPinnedRelease({ root, sha: provenance.commitSha, out, opts }),
+    );
+  }
+  if (mode === "in-place") {
+    console.log(
+      "  Building this checkout in place: its uncommitted changes are included, and the tree is not isolated — " +
+        "anything that edits it during the release changes what gets built. Commit to build from a pinned private checkout.",
+    );
+  }
 
   // ── 1. Composition artifact phase (hermetic) ─────────────────────────
   // `build --hermetic` is the ARTIFACT posture of `./singularity build`:
@@ -867,6 +1016,10 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   // is spawned with `cwd: root`, so its `basename(getWorktreeRoot())`
   // resolves to this same name and the two processes agree by
   // construction rather than by coincidence.
+  //
+  // In a pinned release that name is the private checkout's (the run id), not
+  // the invoking checkout's. Deliberately left so: producer and consumer agree,
+  // and disposing the checkout removes that scratch namespace dir with it.
   const releaseDist = worktreeArtifacts.releaseWebDist(
     checkoutWorktreeName(root),
     opts.composition,
@@ -1096,6 +1249,12 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
       composition: opts.composition,
       dev: !!opts.dev,
       port,
+      // A private checkout is fresh, so its own `target/` would compile the
+      // Rust shell cold on every release: share one cargo target dir instead.
+      cargoTargetDir:
+        mode === "inner"
+          ? releaseCargoTargetDir.ensure()
+          : join(root, "tauri", "src-tauri", "target"),
     });
     return;
   }
@@ -1133,14 +1292,11 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
 
   // A run dir is a whole staged app; `~/.singularity/state/releases/` has no
   // other retention. Runs a pointer names are never swept.
-  // `checkoutWorktreeName(root)`, for the same reason as line ~861: this is a
-  // hand-run CLI, which declares no runtime namespace, and the run dirs it is
-  // pruning are keyed by the checkout that produced them.
-  const pruned = pruneReleaseRunDirs(
-    checkoutWorktreeName(root),
-    opts.composition,
-    opts.target,
-  );
+  // The dir `out` sits in, never re-derived from `root`: in a pinned release
+  // this process runs inside a private checkout whose name is the run id, while
+  // the run dirs being pruned are filed under the INVOKING checkout's namespace
+  // — which only `out` still carries.
+  const pruned = pruneReleaseRunDirs(compDir);
   if (pruned.removed.length > 0) {
     console.log(
       `\n[prune] Removed ${pruned.removed.length} old run dir(s): ${pruned.removed.join(", ")}`,
@@ -1172,8 +1328,11 @@ async function wrapTauri(opts: {
   composition: string;
   dev: boolean;
   port: number;
+  /** Cargo's `target/` dir, passed to every cargo-driving step as CARGO_TARGET_DIR. */
+  cargoTargetDir: string;
 }): Promise<void> {
-  const { stagedDir, root, composition, dev } = opts;
+  const { stagedDir, root, composition, dev, cargoTargetDir } = opts;
+  const cargoEnv = { CARGO_TARGET_DIR: cargoTargetDir };
   const tauriDir = join(root, "tauri");
   const srcTauri = join(tauriDir, "src-tauri");
   const bundleDir = join(srcTauri, "resources", "bundle");
@@ -1237,7 +1396,7 @@ async function wrapTauri(opts: {
     console.log("\n[tauri] Running tauri dev (host platform)...");
     await run(
       ["bun", "x", "@tauri-apps/cli@2", "dev", "--config", overridePath],
-      { cwd: tauriDir },
+      { cwd: tauriDir, env: cargoEnv },
     );
     return;
   }
@@ -1261,17 +1420,21 @@ async function wrapTauri(opts: {
         "--bundles",
         "app",
       ],
-      { cwd: tauriDir },
+      { cwd: tauriDir, env: cargoEnv },
     );
 
-    const dmgPath = await packageMacDmg({ srcTauri, productName });
+    const dmgPath = await packageMacDmg({
+      srcTauri,
+      cargoTargetDir,
+      productName,
+    });
 
     // Copy the shippable .app + .dmg INTO <out>/bundle/ so the run dir is the
     // single self-contained home for the artifact (cargo emits them under
     // target/release/bundle, outside <out> otherwise).
     const appSrc = join(
-      srcTauri,
-      "target/release/bundle/macos",
+      cargoTargetDir,
+      "release/bundle/macos",
       `${productName}.app`,
     );
     const bundleOut = join(stagedDir, "bundle");
@@ -1292,12 +1455,13 @@ async function wrapTauri(opts: {
     ["bun", "x", "@tauri-apps/cli@2", "build", "--config", overridePath],
     {
       cwd: tauriDir,
+      env: cargoEnv,
     },
   );
 
   // Copy the produced bundle tree INTO <out>/bundle/ so the run dir holds the
   // shippable artifact (cargo emits it under target/release/bundle otherwise).
-  const bundleSrc = join(srcTauri, "target", "release", "bundle");
+  const bundleSrc = join(cargoTargetDir, "release", "bundle");
   const bundleOut = join(stagedDir, "bundle");
   mkdirSync(bundleOut, { recursive: true });
   cpSync(bundleSrc, bundleOut, { recursive: true });
@@ -1316,17 +1480,18 @@ async function wrapTauri(opts: {
  */
 async function packageMacDmg(opts: {
   srcTauri: string;
+  cargoTargetDir: string;
   productName: string;
 }): Promise<string> {
-  const { srcTauri, productName } = opts;
+  const { srcTauri, cargoTargetDir, productName } = opts;
 
   const appPath = join(
-    srcTauri,
-    "target/release/bundle/macos",
+    cargoTargetDir,
+    "release/bundle/macos",
     `${productName}.app`,
   );
   const icnsPath = join(srcTauri, "icons/icon.icns");
-  const dmgDir = join(srcTauri, "target/release/bundle/dmg");
+  const dmgDir = join(cargoTargetDir, "release/bundle/dmg");
   const dmgOut = join(dmgDir, `${productName}.dmg`);
   mkdirSync(dmgDir, { recursive: true });
 

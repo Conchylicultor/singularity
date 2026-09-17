@@ -15614,6 +15614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/build`
               - `framework/cli/check`
               - `framework/cli/push`
+              - `framework/cli/release`
               - `framework/cli/run`
               - `framework/cli/test`
           - Cli:
@@ -15693,6 +15694,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `framework/cli/migrations.listTrackedMigrationBasenames`
               - `framework/cli/migrations.resolveMainRef`
         - **`release`** — `./singularity release` — stage a composition into a portable, self-contained artifact (compiled binaries + vendored native PG/PgBouncer/gateway/parcel-watcher) and pack it as a single-file web binary or a Tauri desktop bundle.
+          - Cli:
+            - Uses: `framework/cli/op-runtime.FATAL_SIGNAL_EXITS`
         - **`run`** — `./singularity run <script.ts> [args…]` — run a repo script against THIS worktree's own dependencies; the correct spelling of `bun <file>`, which silently resolves another checkout's installed tree.
           - Cli:
             - Uses: `framework/cli/op-runtime.withDirectOp`
@@ -18366,6 +18369,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/terminal`
           - `release`
           - `release/bundles`
+          - `release/source-checkout`
           - `reports/outbox`
           - `review/plugin-changes`
           - `stats/commits`
@@ -18954,6 +18958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/worktree/reclaim`
           - `infra/worktree/removal-audit`
           - `plugin-meta/plugin-health`
+          - `release/source-checkout`
           - `stats/commits`
           - `stats/cost`
           - `tasks`
@@ -30164,6 +30169,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `RELEASE_RUN_KIND`
           - `releaseRunArmFields`
+    - **`source-checkout`** — The private, detached git checkout a release of committed code builds from: acquire one pinned to a commit (held by a kernel flock for the owning process's life), dispose of it, and sweep the checkouts whose owner died. DB-free so the release CLI can import it.
+      - Server:
+        - Uses:
+          - `infra/paths.GIT`
+          - `infra/paths.worktreeDataDir`
+          - `infra/worktree.withWorktreeMutateSlot`
+          - `infra/worktree.WorktreeGitTimeoutError`
+        - Exports (types):
+          - `ReleaseCheckout`
+          - `SweepResult`
+        - Exports (values):
+          - `acquireReleaseCheckout`
+          - `isReleaseCheckout`
+          - `releaseCargoTargetDir`
+          - `sweepLeakedReleaseCheckouts`
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:

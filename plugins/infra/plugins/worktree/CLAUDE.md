@@ -114,6 +114,7 @@ the shape that would absorb it into "the setup succeeded".
     - `infra/worktree/reclaim`
     - `infra/worktree/removal-audit`
     - `plugin-meta/plugin-health`
+    - `release/source-checkout`
     - `stats/commits`
     - `stats/cost`
     - `tasks`
