@@ -160,6 +160,7 @@ silent socket is still not detected; that needs a heartbeat.
     - `routeChange`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/deploy/analytics/collect`
     - `database/live-state-snapshot`
     - `debug/slow-ops`

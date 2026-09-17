@@ -1,0 +1,6 @@
+// @hash 3bd99eecf0f6
+{
+  // Which sections the chord app loads from its snapshot of the Hooktheory dump. Auto loads every section on main and on a release, and a fixed ~5 % sample in a worktree. A change reloads the index the next time the app is opened or the server restarts.
+  // Allowed values: "auto", "full", "sample"
+  "scope": "auto"
+}

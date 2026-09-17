@@ -269,6 +269,7 @@ hand-written jsonb columns, where the rule closes).
 - Description: Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/deploy/analytics/collect`
     - `backup`
     - `conversations/conversation-category`

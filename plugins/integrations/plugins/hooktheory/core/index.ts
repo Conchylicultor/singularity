@@ -26,7 +26,13 @@ export type {
   TheorytabYoutube,
   TheorytabSection,
 } from "./internal/schemas";
-export { HookpadDocSchema, sectionFromHookpadDoc } from "./internal/section";
+export {
+  HookpadDocSchema,
+  HookpadHarmonyDocSchema,
+  sectionFromHookpadDoc,
+} from "./internal/section";
+export { hookpadKeyAt } from "./internal/key-at";
+export type { HookpadKeyAtResult } from "./internal/key-at";
 export { youtubeVideoId } from "./internal/youtube";
 export {
   HOOKPAD_MODE_OFFSETS,

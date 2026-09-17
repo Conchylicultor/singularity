@@ -168,6 +168,7 @@ count accumulates across drops.
     - `MAX_EMIT_LINES`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/deploy/deployments`
     - `apps/deploy/remote-deploy`
     - `apps/events/refresh`

@@ -693,6 +693,7 @@ construction, and the job and the body it spawns cannot drift apart.
   - Uses: `framework/server-core.runExec`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/deploy/deployments`
     - `backup`
     - `build`

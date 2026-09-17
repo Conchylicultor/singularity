@@ -246,6 +246,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `active-data`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
+    - `apps/chord/song-index`
     - `apps/deploy/analytics/collect`
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/deployments`

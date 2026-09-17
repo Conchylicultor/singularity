@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { LET_IT_BE_VERSE } from "./fixtures";
-import { sectionFromHookpadDoc } from "./section";
+import { HookpadHarmonyDocSchema, sectionFromHookpadDoc } from "./section";
 
 const ID = "_NgbRXeYgQA";
 
@@ -132,5 +132,26 @@ describe("sectionFromHookpadDoc — a malformed document throws, never a partial
       delete d.youtube;
     });
     expect(() => parse(doc)).toThrow(/youtube: Required/);
+  });
+});
+
+describe("HookpadHarmonyDocSchema — a reader that never looks at the melody", () => {
+  // The shape of dump document pJkmZPEjxqn: notes on a null beat, a tempo with no bpm.
+  const broken = withDoc((doc) => {
+    doc.notes = [
+      { sd: "", octave: null, beat: null, duration: 1, isRest: false },
+    ];
+    doc.tempos = [{ beat: 1, bpm: null, swingFactor: 0, swingBeat: 0.5 }];
+  });
+
+  it("reads the harmony of a document whose melody is broken", () => {
+    const parsed = HookpadHarmonyDocSchema.parse(broken);
+    expect(parsed.chords).toHaveLength(12);
+    expect(parsed.tempos[0]?.bpm).toBeNull();
+    expect("notes" in parsed).toBe(false);
+  });
+
+  it("while the whole-document reader still refuses it, naming the melody", () => {
+    expect(() => parse(broken)).toThrow(/notes/);
   });
 });

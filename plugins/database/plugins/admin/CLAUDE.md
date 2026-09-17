@@ -229,6 +229,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `planForkExclusions`
 - Cross-plugin:
   - Imported by:
+    - `apps/chord/song-index`
     - `apps/mail/mail-core`
     - `backup/sources/databases`
     - `build/run-ledger`

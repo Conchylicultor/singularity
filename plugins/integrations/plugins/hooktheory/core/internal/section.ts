@@ -4,14 +4,14 @@ import { parseOrThrow } from "./parse";
 import { youtubeVideoId } from "./youtube";
 
 /**
- * The Hookpad document as stored: the section's own fields, with YouTube as
- * Hookpad keeps it (`id` is whatever the transcriber pasted). zod strips the
- * editor state around them. The live API serves it as `jsonData`; the Sheet
- * Sage raw dump holds it as each entry's `json`.
+ * The harmony half of a Hookpad document: everything but the melody. zod strips
+ * the editor state and `notes` around it. A reader that never looks at the
+ * melody parses with this one, so a melody it does not read cannot refuse a
+ * section — the one dump document with notes on a `null` beat (`pJkmZPEjxqn`)
+ * reads here, while `HookpadDocSchema` refuses it.
  */
-export const HookpadDocSchema = TheorytabSectionSchema.pick({
+export const HookpadHarmonyDocSchema = TheorytabSectionSchema.pick({
   chords: true,
-  notes: true,
   keys: true,
   tempos: true,
   meters: true,
@@ -22,6 +22,16 @@ export const HookpadDocSchema = TheorytabSectionSchema.pick({
     syncStart: z.number(),
     syncEnd: z.number(),
   }),
+});
+
+/**
+ * The Hookpad document as stored: the section's own fields, with YouTube as
+ * Hookpad keeps it (`id` is whatever the transcriber pasted). zod strips the
+ * editor state around them. The live API serves it as `jsonData`; the Sheet
+ * Sage raw dump holds it as each entry's `json`.
+ */
+export const HookpadDocSchema = HookpadHarmonyDocSchema.extend({
+  notes: TheorytabSectionSchema.shape.notes,
 });
 
 /**

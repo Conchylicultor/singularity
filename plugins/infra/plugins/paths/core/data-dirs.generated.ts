@@ -14,6 +14,8 @@ export interface CollectedEntry {
 
 export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "apps-core", id: "apps-core", loader: () => import("@plugins/apps-core/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/chord", id: "apps.chord", loader: () => import("@plugins/apps/plugins/chord/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/chord/plugins/song-index", id: "apps.chord.song-index", loader: () => import("@plugins/apps/plugins/chord/plugins/song-index/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/deploy/plugins/analytics/plugins/ip-country", id: "apps.deploy.analytics.ip-country", loader: () => import("@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes", id: "apps.prototypes", loader: () => import("@plugins/apps/plugins/prototypes/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/thumbnails", id: "apps.prototypes.thumbnails", loader: () => import("@plugins/apps/plugins/prototypes/plugins/thumbnails/data-dirs"), dependsOn: [] },

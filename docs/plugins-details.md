@@ -554,6 +554,157 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
               - `primitives/icon-button.IconButton`
+    - **`chord`** — Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked. Today: its identity, its data dir, and the song index (sections, loop windows, the load on first use, the loop queries); no UI yet.
+      - Plugins:
+        - **`shell`** — The Chord app's identity (defineApp: id, name, base path, icon). No pane or rail entry yet.
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports (values): `chordApp`
+        - **`song-index`** — Settings registration for the song index's load scope. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the loop queries, and the snapshot's backup source.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "config"
+              - `resource.declare` "chord.index-status"
+              - `backup.source` "Chord song index snapshot"
+              - `fork-data-exclusion` "chord_sections"
+              - `fork-data-exclusion` "chord_loop_windows"
+              - `fork-data-exclusion` "chord_index_state"
+              - `backup-data-exclusion` "chord_sections"
+              - `backup-data-exclusion` "chord_loop_windows"
+              - `backup-data-exclusion` "chord_index_state"
+              - `change-feed-exclusion` "chord_sections"
+              - `change-feed-exclusion` "chord_loop_windows"
+            - Uses:
+              - `backup.BackupSource`
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+              - `database.db`
+              - `database/admin.ExcludeFromBackup`
+              - `database/admin.ExcludeFromFork`
+              - `database/change-feed.ExcludeFromChangeFeed`
+              - `database/sql-column.parsedJson`
+              - `database/sql-column.parsedText`
+              - `infra/endpoints.implement`
+              - `infra/jobs/supervised-job.defineSupervisedJob`
+              - `primitives/log-channels.defineLogSink`
+            - DB schema: `plugins/apps/plugins/chord/plugins/song-index/server/internal/tables.ts`
+            - Register: `defineSupervisedJob('chord.song-index.load')`
+            - Resources: `chord.index-status` (push)
+            - Routes:
+              - `POST /api/chord/index/ensure`
+              - `POST /api/chord/loops/find`
+              - `POST /api/chord/loops/next-chords`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `integrations/hooktheory.HookpadChord`
+              - `integrations/hooktheory.HookpadChordRule`
+              - `integrations/hooktheory.HookpadChordSchema`
+              - `integrations/hooktheory.hookpadChordSound`
+              - `integrations/hooktheory.HookpadHarmonyDocSchema`
+              - `integrations/hooktheory.HookpadKey`
+              - `integrations/hooktheory.hookpadKeyAt`
+              - `integrations/hooktheory.HookpadMeter`
+              - `integrations/hooktheory.HookpadMode`
+              - `integrations/hooktheory.HookpadModeSchema`
+              - `integrations/hooktheory.hookpadTonicPc`
+              - `integrations/hooktheory.TheorytabSectionIdSchema`
+              - `primitives/live-state.resourceDescriptor`
+            - Exports (types):
+              - `Alignment`
+              - `BeatTimesAlignment`
+              - `ChordFeature`
+              - `ChordToken`
+              - `ChordTokenParts`
+              - `DerivedSection`
+              - `DeriveSectionInput`
+              - `FindLoopsBody`
+              - `IndexedChord`
+              - `IndexLoadPhase`
+              - `IndexPhase`
+              - `IndexScopeSetting`
+              - `IndexStatus`
+              - `LoadScope`
+              - `LoopCandidate`
+              - `LoopSectionInput`
+              - `LoopShape`
+              - `LoopShapeId`
+              - `LoopWindow`
+              - `NextChordCount`
+              - `NextChordsBody`
+              - `SectionLoops`
+              - `SectionSkipReason`
+              - `SectionUnloopableReason`
+              - `SheetSageAlignment`
+              - `SkipSummary`
+              - `SkipSummaryEntry`
+              - `SnapshotLine`
+              - `SnapshotSection`
+              - `SnapshotSkip`
+              - `SnapshotSkipReason`
+              - `StoredChord`
+              - `TokenizedChord`
+              - `VideoFractionAlignment`
+            - Exports (values):
+              - `alignmentFromSheetSage`
+              - `AlignmentSchema`
+              - `beatTimesAlignment`
+              - `beatToSeconds`
+              - `CHORD_FEATURES`
+              - `chordFeatures`
+              - `chordIndexStatusResource`
+              - `chordOverlapsWindow`
+              - `chordToken`
+              - `chordTokenFromParts`
+              - `ChordTokenSchema`
+              - `compactChord`
+              - `deriveSection`
+              - `ensureChordIndexEndpoint`
+              - `expandChord`
+              - `FIND_LOOPS_MAX_LIMIT`
+              - `FindLoopsBodySchema`
+              - `findLoopsEndpoint`
+              - `fnv1a32`
+              - `INDEX_DERIVATION_VERSION`
+              - `INDEX_LOAD_PHASES`
+              - `INDEX_SCOPE_SETTINGS`
+              - `IndexLoadPhaseSchema`
+              - `IndexPhaseSchema`
+              - `IndexStatusSchema`
+              - `isInLoadScope`
+              - `isInSample`
+              - `LoadScopeSchema`
+              - `LOOP_SHAPE_IDS`
+              - `LOOP_SHAPES`
+              - `LoopCandidateSchema`
+              - `LoopWindowFieldsSchema`
+              - `NEXT_CHORDS_MAX_LIMIT`
+              - `NextChordCountSchema`
+              - `NextChordsBodySchema`
+              - `nextChordsEndpoint`
+              - `parseChordToken`
+              - `resolveLoadScope`
+              - `resolveVideoFraction`
+              - `SAMPLE_BUCKETS`
+              - `SAMPLE_PINNED_SECTIONS`
+              - `sampleBucket`
+              - `SheetSageAlignmentSchema`
+              - `SheetSageBeatTimesSchema`
+              - `SKIP_EXAMPLES_PER_REASON`
+              - `SkipSummaryEntrySchema`
+              - `SkipSummarySchema`
+              - `SkipTally`
+              - `SNAPSHOT_FORMAT_VERSION`
+              - `SNAPSHOT_SKIP_REASONS`
+              - `SnapshotLineSchema`
+              - `SnapshotSectionSchema`
+              - `SnapshotSkipReasonSchema`
+              - `SnapshotSkipSchema`
+              - `StoredChordSchema`
+              - `TokenizedChordSchema`
     - **`debug`** — Debug app.
       - Plugins:
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
@@ -6747,6 +6898,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `backupRunRoute`
   - Cross-plugin:
     - Imported by:
+      - `apps/chord/song-index`
       - `backup/runs-arm`
       - `backup/sources/attachments`
       - `backup/sources/claude-settings`
@@ -7582,7 +7734,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
+    - Slots: `ConfigV2.WebRegister` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `apps-core.surface.floating.wallpaper`, `apps.chord.song-index`, `apps.sonata.audio.metronome`, `apps.sonata.look`, `apps.sonata.notation`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.pitch-layout`, `apps.sonata.rich.chord-label`, `apps.sonata.sources.midi.folders`, `apps.sonata.voicing`, `auth.apple-signing`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.cost-history`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.prototypes`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.boot-budget`, `debug.boot-monitor`, `debug.boot-watchdog`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.paging-probe`, `debug.queue-health`, `debug.read-set-shrink`, `debug.sentinel`, `debug.session-divergence`, `debug.slow-ops`, `debug.stall-monitor`, `debug.trace.engine`, `infra.host.duress`, `integrations.gmail`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `reports`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar`, `ui.theme-engine`, `ui.tree-disclosure`
     - Contributes: `Core.Boot`
     - Uses:
       - `infra/endpoints.fetchEndpoint`
@@ -7733,6 +7885,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Imported by:
       - `apps-core/surface/floating`
       - `apps-core/surface/floating/wallpaper`
+      - `apps/chord/song-index`
       - `apps/deploy/deployments`
       - `apps/sonata/audio/metronome`
       - `apps/sonata/look`
@@ -11383,6 +11536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `active-data`
       - `apps/browser/bookmarks`
       - `apps/browser/history`
+      - `apps/chord/song-index`
       - `apps/deploy/analytics/collect`
       - `apps/deploy/analytics/dashboard`
       - `apps/deploy/deployments`
@@ -11533,6 +11687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `planForkExclusions`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/song-index`
           - `apps/mail/mail-core`
           - `backup/sources/databases`
           - `build/run-ledger`
@@ -11584,6 +11739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `routeChange`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/song-index`
           - `apps/deploy/analytics/collect`
           - `database/live-state-snapshot`
           - `debug/slow-ops`
@@ -11900,6 +12056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies.
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/song-index`
           - `apps/deploy/analytics/collect`
           - `backup`
           - `conversations/conversation-category`
@@ -16310,6 +16467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps-core/tabs`
               - `apps/agent-manager/pages-nav`
+              - `apps/chord/song-index`
               - `apps/deploy/deploy-history/investigate-failure`
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
@@ -17043,6 +17201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps-core/surface/floating/wallpaper/openverse`
           - `apps/browser/bookmarks`
           - `apps/browser/history`
+          - `apps/chord/song-index`
           - `apps/deploy/analytics/collect`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/deploy-history`
@@ -18132,6 +18291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/server-core.runExec`
           - Cross-plugin:
             - Imported by:
+              - `apps/chord/song-index`
               - `apps/deploy/deployments`
               - `backup`
               - `build`
@@ -19143,6 +19303,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HookpadChordRule`
           - `HookpadChordSound`
           - `HookpadKey`
+          - `HookpadKeyAtResult`
           - `HookpadMeter`
           - `HookpadMode`
           - `HookpadNote`
@@ -19157,6 +19318,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HookpadChordSchema`
           - `hookpadChordSound`
           - `HookpadDocSchema`
+          - `HookpadHarmonyDocSchema`
+          - `hookpadKeyAt`
           - `HookpadKeySchema`
           - `HookpadMeterSchema`
           - `HookpadModeSchema`
@@ -19179,6 +19342,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TrendSongSchema`
           - `trendSongsEndpoint`
           - `youtubeVideoId`
+      - Cross-plugin:
+        - Imported by: `apps/chord/song-index`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -27630,6 +27795,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/browser/bookmarks`
           - `apps/browser/history`
           - `apps/browser/start-page`
+          - `apps/chord/song-index`
           - `apps/deploy/analytics/dashboard`
           - `apps/deploy/composition`
           - `apps/deploy/deploy-history`
@@ -27998,6 +28164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MAX_EMIT_LINES`
       - Cross-plugin:
         - Imported by:
+          - `apps/chord/song-index`
           - `apps/deploy/deployments`
           - `apps/deploy/remote-deploy`
           - `apps/events/refresh`
@@ -28765,6 +28932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/agent-manager/shell`
           - `apps/agent-manager/welcome`
           - `apps/browser/shell`
+          - `apps/chord/shell`
           - `apps/debug/shell`
           - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`

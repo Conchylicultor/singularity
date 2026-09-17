@@ -45,6 +45,7 @@ import type {
   TheorytabSection,
 } from "../core/internal/schemas";
 import { sectionFromHookpadDoc } from "../core/internal/section";
+import { hookpadKeyAt } from "../core/internal/key-at";
 import { encodeFixture } from "../core/internal/hookpad-sound.fixture-format";
 
 /** `github.com/chrisdonahue/sheetsage-data`, commit 06113c04b109a2f27517b0399ff47550099f2466, `hooktheory/`. */
@@ -54,8 +55,6 @@ const PINNED_SHA256 = {
 };
 
 const EXAMPLES_PER_CLASS = 3;
-/** Sheet Sage's tolerance for "the key in force at this beat". */
-const KEY_EPS = 1e-3;
 const BEAT_EPS = 1e-6;
 
 // ─── args ────────────────────────────────────────────────────────────────────
@@ -177,10 +176,12 @@ const fixtures = new Map<string, string>();
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-/** Sheet Sage's `theorytab_find_applicable`: the last key, in document order, starting at or before `beat`. */
-function keyAt(keys: HookpadKey[], beat: number): HookpadKey | null {
-  const candidates = keys.filter((k) => beat - k.beat > -KEY_EPS);
-  return candidates.at(-1) ?? null;
+/** The key in force at `beat` (the shared rule, `hookpadKeyAt`); a chord before every key is a broken assumption here. */
+function keyAt(id: string, keys: HookpadKey[], beat: number): HookpadKey {
+  const found = hookpadKeyAt(keys, beat);
+  if (found.kind === "before-first-key")
+    throw new Error(`section ${id}: no key in force at beat ${beat}`);
+  return found.key;
 }
 
 /** Sheet Sage's `will_sound`. */
@@ -331,10 +332,7 @@ function compareSection(id: string, entry: z.infer<typeof RawEntrySchema>) {
   counts.processedChords += harmony.length;
   const sounding = section.chords.filter(willSound);
   const readings: HookpadChordReading[] = section.chords.map((c) => {
-    const key = keyAt(section.keys, c.beat);
-    if (key === null)
-      throw new Error(`section ${id}: no key in force at beat ${c.beat}`);
-    return hookpadChordSound(c, key);
+    return hookpadChordSound(c, keyAt(id, section.keys, c.beat));
   });
   const firstUnreadable = readings.find((r) => r.kind === "unreadable");
   const overrun = sounding.find(
@@ -395,8 +393,8 @@ function compareSection(id: string, entry: z.infer<typeof RawEntrySchema>) {
     if (!willSound(chord)) return;
     const their = harmony[h++];
     const reading = readings[i];
-    const key = keyAt(section.keys, chord.beat);
-    if (their === undefined || reading === undefined || key === null)
+    const key = keyAt(id, section.keys, chord.beat);
+    if (their === undefined || reading === undefined)
       throw new Error("unreachable: counts were checked");
     counts.paired++;
     const onset = chord.beat - 1;

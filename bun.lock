@@ -234,6 +234,21 @@
       "name": "@singularity/plugin-apps-browser-webview",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/chord": {
+      "name": "@singularity/plugin-apps-chord",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/chord/plugins/shell": {
+      "name": "@singularity/plugin-apps-chord-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/chord/plugins/song-index": {
+      "name": "@singularity/plugin-apps-chord-song-index",
+      "version": "0.0.1",
+      "dependencies": {
+        "@streamparser/json": "^0.0.26",
+      },
+    },
     "plugins/apps/plugins/debug": {
       "name": "@singularity/plugin-apps-debug",
       "version": "0.0.1",
@@ -6081,6 +6096,12 @@
     "@singularity/plugin-apps-browser-tabs": ["@singularity/plugin-apps-browser-tabs@workspace:plugins/apps/plugins/browser/plugins/tabs"],
 
     "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
+
+    "@singularity/plugin-apps-chord": ["@singularity/plugin-apps-chord@workspace:plugins/apps/plugins/chord"],
+
+    "@singularity/plugin-apps-chord-shell": ["@singularity/plugin-apps-chord-shell@workspace:plugins/apps/plugins/chord/plugins/shell"],
+
+    "@singularity/plugin-apps-chord-song-index": ["@singularity/plugin-apps-chord-song-index@workspace:plugins/apps/plugins/chord/plugins/song-index"],
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 

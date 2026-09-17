@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-apps-chord",
+  "description": "Chord — a chord ear trainer that plays loops of real songs whose chords you have unlocked. Today: its identity, its data dir, and the song index (sections, loop windows, the load on first use, the loop queries); no UI yet.",
+  "private": true,
+  "version": "0.0.1",
+  "singularity": {
+    "collapsed": true
+  }
+}

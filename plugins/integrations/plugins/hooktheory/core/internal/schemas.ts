@@ -160,7 +160,12 @@ export type HookpadKey = z.infer<typeof HookpadKeySchema>;
 /** A tempo (change) from `beat` on. */
 export const HookpadTempoSchema = z.object({
   beat: z.number(),
-  bpm: z.number(),
+  /**
+   * Beats per minute. `null` in one dump document (`pJkmZPEjxqn`, whose melody
+   * is broken too): nothing here reads the tempo to place a chord, so a missing
+   * one must not refuse the section's harmony.
+   */
+  bpm: z.number().nullable(),
   swingFactor: z.number(),
   swingBeat: z.number(),
 });

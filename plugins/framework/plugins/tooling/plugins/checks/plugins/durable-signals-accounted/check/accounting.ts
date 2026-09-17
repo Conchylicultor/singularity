@@ -126,6 +126,10 @@ export const ACCOUNTING: Record<string, SinkAccounting> = {
     consumer: "internal",
     note: "Detached database.fork child transcript (database/fork); failures surface via the DB-fork-failed notification and the job dead-letter.",
   },
+  "chord-song-index": {
+    consumer: "internal",
+    note: "Detached chord.song-index.load child transcript (apps/chord/song-index): download, snapshot build and section load timings. Failures surface as the index status `failed` (its state row) and the job dead-letter.",
+  },
   "slow-ops": {
     consumer: "internal",
     note: "One line per client slow-op batch that arrived with a non-zero browser-side drop count (the beacon queue hit its 1000-item cap). Accounting for signals that never reached the recorder, so the loss is not silent; the durable slow-op SIGNAL itself is the slow-op report filed by the recorder.",
