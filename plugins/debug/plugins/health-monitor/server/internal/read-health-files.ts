@@ -9,7 +9,7 @@ import {
   type HealthSample,
   type HealthSeries,
   type HostSample,
-} from "../../shared/schema";
+} from "../../core";
 
 // Cap on lines read per worktree file (newest kept). At 10s/sample, 1500 lines
 // is ~4h of history — comfortably above the default 2h read window.

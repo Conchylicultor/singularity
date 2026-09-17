@@ -426,6 +426,8 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `mergeMarkerDir`
     - `readMergeMarkers`
     - `resolveGitDir`
+- Cross-plugin:
+  - Imported by: `framework/tooling/import-closure`
 - Sub-plugins:
   - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
   - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { GetHealthDataResponseSchema } from "./schema";
+import { GetHealthDataResponseSchema } from "../core";
 
 // Served by the MAIN backend. It reads every worktree's health JSONL straight
 // from disk, so it answers even when a worktree backend is wedged — unlike

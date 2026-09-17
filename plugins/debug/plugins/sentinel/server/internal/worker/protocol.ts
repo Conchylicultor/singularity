@@ -18,10 +18,11 @@ export interface WorkerThresholdsFrame {
   maxEpisodeHoldMs: number;
 }
 
+// No namespace field: the worker is spawned with `--namespace` on its argv and
+// declares it before any module loads (worker/declare-namespace.ts). A second
+// copy here could only disagree with the first.
 export interface WorkerInitFrame {
   type: "init";
-  /** Worktree name == embedded-cluster DB name for the dedicated pg client. */
-  worktree: string;
   /** Read once, like the main sampler always did (restart to change). */
   cadenceMs: number;
   thresholds: DetectorThresholds;

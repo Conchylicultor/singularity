@@ -5,12 +5,12 @@ import { cpus, loadavg } from "node:os";
 import {
   listWorktreeDirs,
   worktreesDir,
-} from "@plugins/infra/plugins/paths/server";
+} from "@plugins/infra/plugins/paths/core";
 import {
   HealthSampleSchema,
   HostSampleSchema,
   type HealthSample,
-} from "@plugins/debug/plugins/health-monitor/server";
+} from "@plugins/debug/plugins/health-monitor/core";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { ClusterSample } from "../../../core";

@@ -10,8 +10,8 @@ import { getHealthData } from "../shared/endpoints";
 
 // The health JSONL line shapes, for server-side consumers that scan the same
 // per-worktree files this plugin writes (debug/timeline's health heat lanes).
-export { HealthSampleSchema, HostSampleSchema } from "../shared/schema";
-export type { HealthSample, HostSample } from "../shared/schema";
+export { HealthSampleSchema, HostSampleSchema } from "../core";
+export type { HealthSample, HostSample } from "../core";
 
 export default {
   description:

@@ -1,5 +1,7 @@
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import {
+  declareRuntimeNamespace,
+  readNamespaceArgv,
+} from "@plugins/infra/plugins/runtime-identity/core";
 
 // ── The FIRST thing a backend does: say which namespace it is ────────────────
 //
@@ -17,29 +19,13 @@ import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity
 //
 // Design: research/2026-09-15-global-retire-ambient-worktree-env-runtime-identity.md
 
-const FLAG = "--namespace";
-
-function argvNamespace(): string | undefined {
-  const i = process.argv.indexOf(FLAG);
-  if (i === -1) return undefined;
-  const value = process.argv[i + 1];
-  if (value === undefined || value.startsWith("-")) {
-    throw new Error(
-      `[boot] ${FLAG} was given with no value. It names the namespace this ` +
-        `backend serves — its database, config dir and log tree — so booting ` +
-        `without one would pick an app at random.`,
-    );
-  }
-  return value;
-}
-
-const fromArgv = argvNamespace();
+const fromArgv = readNamespaceArgv(process.argv);
 if (fromArgv === undefined) {
   throw new Error(
-    `[boot] this backend was spawned without ${FLAG} <ns>. The gateway passes ` +
+    `[boot] this backend was spawned without --namespace <ns>. The gateway passes ` +
       `it (gateway/worktree.go); a hand-run backend has to pass it itself. It ` +
       `names the namespace this process serves — its database, its config dir ` +
       `and its log tree.`,
   );
 }
-declareRuntimeNamespace(asNamespace(fromArgv));
+declareRuntimeNamespace(fromArgv);

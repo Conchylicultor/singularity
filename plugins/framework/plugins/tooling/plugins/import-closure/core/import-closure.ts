@@ -3,7 +3,7 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import type TS from "typescript";
-import { defineCliCommand } from "../core";
+import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 const TSCONFIG_BASE = "tsconfig.base.json";
 

@@ -153,10 +153,20 @@ measured overhead on a real worktree workload is still an open task.
     - `HealthSampleSchema`
     - `HostSampleSchema`
   - Routes: `GET /api/debug/health-monitor`
+- Core:
+  - Uses: `debug/slow-ops.SlowOpMarkerSchema`
+  - Exports (types):
+    - `GetHealthDataResponse`
+    - `HealthSample`
+    - `HealthSeries`
+    - `HostSample`
+  - Exports (values):
+    - `GetHealthDataResponseSchema`
+    - `HealthSampleSchema`
+    - `HealthSeriesSchema`
+    - `HostSampleSchema`
 - Cross-plugin:
-  - Imported by:
-    - `debug/sentinel`
-    - `debug/timeline`
+  - Imported by: `debug/timeline`
 - Shared:
   - Exports (types):
     - `GetHealthDataResponse`

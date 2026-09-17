@@ -23,6 +23,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/zero/plugins/cache-service", id: "database.zero.cache-service", loader: () => import("@plugins/database/plugins/zero/plugins/cache-service/data-dirs"), dependsOn: [] },
   { pluginPath: "debug", id: "debug", loader: () => import("@plugins/debug/data-dirs"), dependsOn: [] },
   { pluginPath: "debug/plugins/profiling/plugins/op-log", id: "debug.profiling.op-log", loader: () => import("@plugins/debug/plugins/profiling/plugins/op-log/data-dirs"), dependsOn: [] },
+  { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks", id: "framework.tooling.checks", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/data-dirs"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/data-dirs"), dependsOn: [] },

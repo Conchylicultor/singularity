@@ -39,7 +39,14 @@ silently is worse than refusing.
   spawner passes `--namespace <ns>` on the argv (`supervised-exec` declares the
   option as REQUIRED).
 - **A worker thread** shares no module state with the thread that made it, so it
-  is told over its init message and declares its own (the sentinel worker).
+  is spawned the same way a backend is: `new Worker(url, { argv: namespaceArgv() })`,
+  and its entry's literal first import reads it with `readNamespaceArgv` and
+  declares it (the sentinel worker, `sentinel/server/internal/worker/declare-namespace.ts`).
+  Not over a message: a message arrives after the worker's whole import graph has
+  run, and any module that resolves a path at eval has already thrown.
+
+`namespaceArgv()` (spawner side) and `readNamespaceArgv(argv)` (entry side) are
+the one spelling of the `--namespace` flag and its "given with no value" error.
 - **`bun test`** declares the checkout it runs from, once, in
   `test/bun-preload.ts`.
 
@@ -98,12 +105,15 @@ worktrees in a single process (`log-channels`' `handle-emit.test.ts`).
 - Description: What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws.
 - Core:
   - Uses:
+    - `infra/namespace.asNamespace`
     - `infra/namespace.MAIN_WORKTREE_NAME`
     - `infra/namespace.Namespace`
   - Exports (values):
     - `declareRuntimeNamespace`
     - `hasRuntimeNamespace`
     - `isMain`
+    - `namespaceArgv`
+    - `readNamespaceArgv`
     - `readServingSocket`
     - `resetRuntimeNamespaceForTest`
     - `runtimeNamespace`

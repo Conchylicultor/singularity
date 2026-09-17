@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -8,9 +9,15 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { FRESHNESS_LEASE_MS } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { dirname, join } from "node:path";
+import {
+  FRESHNESS_LEASE_MS,
+  LATCH_FILENAME,
+} from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
+import {
+  namespaceArgv,
+  runtimeNamespace,
+} from "@plugins/infra/plugins/runtime-identity/core";
 import {
   DuressEpisodeEventSchema,
   type ClusterSample,
@@ -93,6 +100,8 @@ function spawnRig(dir: string): WorkerRig {
   const waiters: (() => void)[] = [];
   const worker = new Worker(new URL("./entry.ts", import.meta.url), {
     env: { ...process.env, SINGULARITY_DIR: dir },
+    // Spawned exactly as worker-host spawns it: the namespace rides argv.
+    argv: namespaceArgv(),
   });
   worker.onmessage = (event: MessageEvent) => {
     frames.push(event.data as WorkerToMainFrame);
@@ -129,6 +138,12 @@ function spawnRig(dir: string): WorkerRig {
   return rig;
 }
 
+// The latch's declared data dir (`locks/duress`) under the worker's
+// SINGULARITY_DIR — the path the worker's `duressLatchDir` resolves to.
+function latchPathIn(dir: string): string {
+  return join(dir, "locks", "duress", LATCH_FILENAME);
+}
+
 function newTmpDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "sentinel-latch-"));
   tmpDirs.push(dir);
@@ -161,12 +176,11 @@ afterAll(() => {
 describe("sentinel worker latch lifecycle", () => {
   test("trips, renews the lease while the parent thread is blocked, clears", async () => {
     const dir = newTmpDir();
-    const latchPath = join(dir, "duress.latch");
+    const latchPath = latchPathIn(dir);
     const rig = spawnRig(dir);
 
     rig.post({
       type: "init",
-      worktree: WORKTREE,
       cadenceMs: CADENCE_MS,
       thresholds: THRESHOLDS,
       maxEpisodeHoldMs: 600_000,
@@ -238,10 +252,11 @@ describe("sentinel worker latch lifecycle", () => {
 
   test("a respawned worker adopts a fresh existing latch and owns its clear", async () => {
     const dir = newTmpDir();
-    const latchPath = join(dir, "duress.latch");
+    const latchPath = latchPathIn(dir);
     // A previous worker tripped, then died (crash / main restart): the
     // latch exists with a fresh mtime, and the trip line is already on disk.
     const setAt = Date.now() - 5_000;
+    mkdirSync(dirname(latchPath), { recursive: true });
     writeFileSync(
       latchPath,
       JSON.stringify({ setAt, reason: "cluster-onset: loadRatio" }),
@@ -250,7 +265,6 @@ describe("sentinel worker latch lifecycle", () => {
     const rig = spawnRig(dir);
     rig.post({
       type: "init",
-      worktree: WORKTREE,
       cadenceMs: CADENCE_MS,
       thresholds: THRESHOLDS,
       maxEpisodeHoldMs: 600_000,

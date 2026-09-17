@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { scanCommandRuns } from "./import-closure";
+import { scanCommandRuns } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { callsFunction, measureManifestFreeze } from "./manifest-freeze";
 
 /**

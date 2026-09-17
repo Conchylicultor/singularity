@@ -1,4 +1,4 @@
-import { getConfig } from "@plugins/config_v2/server";
+import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import {
   runInBackgroundLane,
   runWithoutProfiling,
@@ -8,7 +8,15 @@ import type { ClusterSample } from "../../core";
 import { clusterClass } from "./cluster-class";
 import { sentinelLog } from "./log-sink";
 import { handleClearFrame, handleTripFrame } from "./onset";
-import { startSentinelWorker, stopSentinelWorker } from "./worker-host";
+import type { DetectorThresholds } from "./detector";
+import { sentinelStatusDir } from "../../data-dirs";
+import { reportSentinelDown } from "./sentinel-down-kind";
+import { createStatusSink } from "./status-sink";
+import {
+  pushSentinelThresholds,
+  startSentinelWorker,
+  stopSentinelWorker,
+} from "./worker-host";
 
 // The cluster congestion sentinel — main-only, always-on.
 //
@@ -31,6 +39,23 @@ import { startSentinelWorker, stopSentinelWorker } from "./worker-host";
 // (the recorded exception to the no-polling rule).
 
 let running = false;
+let configWatch: { dispose(): void } | null = null;
+
+// The config values satisfy DetectorThresholds structurally; this strips the
+// extra config fields (enabled, cadenceMs, …) off the wire frame.
+function pickThresholds(cfg: DetectorThresholds): DetectorThresholds {
+  return {
+    onLoadRatio: cfg.onLoadRatio,
+    onLocksWaiting: cfg.onLocksWaiting,
+    onBlkReadDeltaMs: cfg.onBlkReadDeltaMs,
+    onBackendP99Ms: cfg.onBackendP99Ms,
+    onSlowBackends: cfg.onSlowBackends,
+    onDecompressionsPerSec: cfg.onDecompressionsPerSec,
+    onTicks: cfg.onTicks,
+    offRatio: cfg.offRatio,
+    offTicks: cfg.offTicks,
+  };
+}
 
 // The onset detector consumed this registry when it lived on main; it now
 // feeds any main-side consumer of the per-tick samples. Kept so the sample
@@ -45,29 +70,61 @@ export function onSentinelSample(listener: SampleListener): () => void {
 export function startSentinelSampler(): void {
   if (running) return;
   const cfg = getConfig(sentinelConfig);
-  if (!cfg.enabled) return;
+  // Every supervision transition goes to the host-global status file (the
+  // health report's Machine watcher row on every backend) and, on a give-up,
+  // to the sentinel-down report.
+  const onStatus = createStatusSink({
+    dir: sentinelStatusDir.path,
+    reportDown: reportSentinelDown,
+  });
+  if (!cfg.enabled) {
+    // Recorded, so the row says "turned off" rather than a stale status from
+    // the last run — or "never ran".
+    onStatus({ state: "disabled", since: Date.now() });
+    return;
+  }
   running = true;
   startSentinelWorker({
-    // Re-emits run under the background lane with profiling suppressed, like
-    // the old in-loop tick: the sentinel's own mirroring must never feed the
-    // profiler or ride the interactive lane.
-    onSample: (frame) => {
-      runInBackgroundLane(() =>
-        runWithoutProfiling(() => {
-          clusterClass.emit({ tMs: performance.now(), data: frame.sample });
-          for (const listener of listeners) listener(frame.sample);
-        }),
-      );
+    settings: {
+      cadenceMs: cfg.cadenceMs,
+      thresholds: pickThresholds(cfg),
+      maxEpisodeHoldMs: cfg.maxEpisodeHoldMs,
     },
-    onTrip: (frame) => {
-      runInBackgroundLane(() => runWithoutProfiling(() => handleTripFrame(frame)));
+    handlers: {
+      // Re-emits run under the background lane with profiling suppressed, like
+      // the old in-loop tick: the sentinel's own mirroring must never feed the
+      // profiler or ride the interactive lane.
+      onSample: (frame) => {
+        runInBackgroundLane(() =>
+          runWithoutProfiling(() => {
+            clusterClass.emit({ tMs: performance.now(), data: frame.sample });
+            for (const listener of listeners) listener(frame.sample);
+          }),
+        );
+      },
+      onTrip: (frame) => {
+        runInBackgroundLane(() =>
+          runWithoutProfiling(() => handleTripFrame(frame)),
+        );
+      },
+      onClear: (frame) => {
+        runInBackgroundLane(() =>
+          runWithoutProfiling(() => handleClearFrame(frame)),
+        );
+      },
+      onLog: (line, stream) => {
+        sentinelLog.publish(line, stream);
+      },
+      onStatus,
     },
-    onClear: (frame) => {
-      runInBackgroundLane(() => runWithoutProfiling(() => handleClearFrame(frame)));
-    },
-    onLog: (line, stream) => {
-      sentinelLog.publish(line, stream);
-    },
+  });
+  // Live threshold tuning: the watcher fires immediately with current values
+  // and on every change; the host forwards them to the worker.
+  configWatch = watchConfig(sentinelConfig, (values) => {
+    pushSentinelThresholds({
+      thresholds: pickThresholds(values),
+      maxEpisodeHoldMs: values.maxEpisodeHoldMs,
+    });
   });
 }
 
@@ -75,5 +132,7 @@ export function stopSentinelSampler(): Promise<void> {
   if (!running) return Promise.resolve();
   running = false;
   listeners.clear();
+  configWatch?.dispose();
+  configWatch = null;
   return stopSentinelWorker();
 }

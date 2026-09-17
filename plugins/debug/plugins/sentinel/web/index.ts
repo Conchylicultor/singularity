@@ -1,18 +1,38 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Reports } from "@plugins/reports/web";
-import { sentinelConfig } from "../core";
+import { HealthReport } from "@plugins/shell/plugins/health-report/web";
+import { SENTINEL_DOWN_KIND, sentinelConfig } from "../core";
 import { DuressEpisodeSummary } from "./components/duress-episode-summary";
+import { SentinelDownSummary } from "./components/sentinel-down-summary";
+import { useMachineWatcherHealth } from "./internal/use-machine-watcher-health";
 
-// Web presence: registers the sentinel config for Settings → Config and the
-// duress-episode report summary for Debug → Reports. The "cluster" trace section
-// renders through the pane's GenericEventLane fallback for now; a dedicated
-// Trace.Lane (load/pg/builds sparklines) is a follow-up.
+// Web presence: registers the sentinel config for Settings → Config, the
+// duress-episode and sentinel-down report summaries for Debug → Reports, and the
+// health report's Machine watcher row. The "cluster" trace section renders
+// through the pane's GenericEventLane fallback for now; a dedicated Trace.Lane
+// (load/pg/builds sparklines) is a follow-up.
 export default {
   description:
-    "Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports.",
+    "Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts, read from the sentinel.status push resource).",
   contributions: [
     ConfigV2.WebRegister({ descriptor: sentinelConfig }),
-    Reports.KindView({ match: "duress-episode", component: DuressEpisodeSummary }),
+    Reports.KindView({
+      match: "duress-episode",
+      component: DuressEpisodeSummary,
+    }),
+    Reports.KindView({
+      match: SENTINEL_DOWN_KIND,
+      component: SentinelDownSummary,
+    }),
+    HealthReport.Row({
+      kind: "status",
+      id: "machine-watcher",
+      title: "Machine watcher",
+      // After Connection (10) and the server's own Database / Job queue (20):
+      // this one is about the whole machine, not the server you are on.
+      order: 30,
+      useStatus: useMachineWatcherHealth,
+    }),
   ],
 } satisfies PluginDefinition;

@@ -40,7 +40,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import { getHealthData } from "../../shared/endpoints";
-import type { HealthSeries, HostSample } from "../../shared/schema";
+import type { HealthSeries, HostSample } from "../../core";
 
 const WINDOW_MS = 2 * 60 * 60 * 1000; // 2h (v1 fixed window)
 const POLL_MS = 10_000;

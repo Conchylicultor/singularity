@@ -1,3 +1,7 @@
+// FIRST, before any other import: declare this thread's runtime namespace from
+// its argv. Modules below resolve paths from it as they load. See
+// `./declare-namespace`.
+import "./declare-namespace";
 import {
   clearDuress,
   isUnderDuress,
@@ -6,8 +10,7 @@ import {
   setDuress,
 } from "@plugins/infra/plugins/host/plugins/duress/plugins/latch/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
-import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   DURESS_EPISODES_CHANNEL,
   type ClusterSample,
@@ -193,16 +196,12 @@ async function tick(): Promise<void> {
 
 function handleInit(frame: Extract<MainToWorkerFrame, { type: "init" }>): void {
   if (interval) return;
-  // A worker thread evaluates its own module graph and shares no module state
-  // with the thread that spawned it, so it has to be TOLD which namespace it
-  // serves — which is exactly what `init` already carries. Declared before the
-  // first tick, because the duress-episodes sink resolves this worker's logs
-  // directory from it on first publish. Idempotent, so a re-init is fine.
-  declareRuntimeNamespace(asNamespace(frame.worktree));
   cadenceMs = frame.cadenceMs;
   thresholds = frame.thresholds;
   maxEpisodeHoldMs = frame.maxEpisodeHoldMs;
-  pg = createSentinelPg(frame.worktree, log);
+  // The namespace was declared from argv before any import ran
+  // (`./declare-namespace`); it names the embedded-cluster database too.
+  pg = createSentinelPg(runtimeNamespace(), log);
   gatherer = createSampleGatherer(pg, log);
 
   // Adopt a fresh existing latch (this is a respawn mid-episode): seed the

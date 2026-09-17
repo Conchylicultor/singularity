@@ -14,7 +14,7 @@ import { procMemory } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
-import type { HealthSample } from "../../shared/schema";
+import type { HealthSample } from "../../core";
 import {
   startStallProfiler,
   stopStallProfiler,

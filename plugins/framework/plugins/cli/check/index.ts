@@ -8,7 +8,7 @@ import {
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { isCliCommand, type CliCommand } from "../core";
-import { importClosure } from "./import-closure";
+import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { measureManifestFreeze, type FreezeFinding } from "./manifest-freeze";
 
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";

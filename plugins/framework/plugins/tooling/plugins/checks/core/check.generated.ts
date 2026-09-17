@@ -20,6 +20,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/check"), dependsOn: [] },
+  { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", id: "framework.tooling.boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync", id: "framework.tooling.checks.app-css-utilities-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check"), dependsOn: [] },

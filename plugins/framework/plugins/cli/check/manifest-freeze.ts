@@ -5,7 +5,7 @@ import {
   importClosure,
   loadTypescript,
   type ImportClosure,
-} from "./import-closure";
+} from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 
 export interface ManifestFreezeInput {
   root: string;

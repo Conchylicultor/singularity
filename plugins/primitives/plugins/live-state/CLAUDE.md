@@ -764,6 +764,7 @@ This narrows re-renders, not the WS subscription: N callers of the same
     - `debug/queue`
     - `debug/queue-health`
     - `debug/reports`
+    - `debug/sentinel`
     - `debug/slow-ops`
     - `debug/slow-ops/pane`
     - `debug/zero-test`

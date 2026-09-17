@@ -3,11 +3,11 @@ export {
   HostSampleSchema,
   HealthSeriesSchema,
   GetHealthDataResponseSchema,
-} from "./schema";
+} from "../core";
 export type {
   HealthSample,
   HostSample,
   HealthSeries,
   GetHealthDataResponse,
-} from "./schema";
+} from "../core";
 export { getHealthData } from "./endpoints";

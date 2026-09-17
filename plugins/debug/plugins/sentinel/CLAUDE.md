@@ -20,9 +20,11 @@ latch owner** — no `setDuress/refreshDuress/clearDuress` call exists on main.
 
 - `worker/entry.ts` — the worker: `setInterval(cadenceMs)` tick, the pure
   detector, latch set/refresh/clear, duress-episode lines, max-episode-hold.
-  Lean closure: the `duress/plugins/latch` leaf barrel, log-channels, the
-  embedded-pg constants, sql-rows' `core` leaf, pure detector/gatherers. No
-  config_v2 (thresholds arrive as frames — a worker has no plugin runtime).
+  Lean closure, enforced by `sentinel:worker-closure-lean` (`check/`): a worker
+  has no plugin runtime, so its static closure may reach no `config_v2/server`,
+  `jobs/server`, `database/server` or `server-core` module (thresholds arrive
+  as frames). Import schemas and helpers from `core` barrels, never a `server`
+  barrel that happens to re-export them.
 - `worker/pg.ts` — ONE dedicated raw `pg` client on the embedded cluster's
   direct Unix socket (no drizzle pool, no PgBouncer): sharing main's pool
   would re-couple the sentinel to the contention it measures. The read goes
@@ -34,11 +36,14 @@ latch owner** — no `setDuress/refreshDuress/clearDuress` call exists on main.
   health.jsonl p99 rollup, health-host.jsonl compressor tail). Per-signal
   degradation: every sub-read fails into null fields + a log line, never the
   tick.
-- `worker-host.ts` (main) — spawns/supervises the worker: respawn with capped
+- `worker-host.ts` (main) — spawns/supervises the worker: spawn with
+  `argv: namespaceArgv()` (see "Worker identity" below), respawn with capped
   backoff (a respawned worker **adopts a fresh existing latch** at init and
-  keeps refreshing), a rapid-failure give-up (5 immediate deaths → one loud
-  line, no respawn loop), live `watchConfig` threshold push, graceful stop
-  (worker clears the latch, acks, then terminate).
+  keeps refreshing), a rapid-failure give-up (5 immediate deaths → status
+  `down`, no respawn loop), a supervision status on every transition (see "When
+  the watcher dies" below), live threshold push (`sampler.ts` watches config
+  and calls `pushSentinelThresholds`), graceful stop (worker clears the latch,
+  acks, then terminate). Config-free, so a test drives it with any worker.
 - `sampler.ts` / `onset.ts` (main) — **best-effort re-emitters only**: sample
   frames → `cluster` trace ring + `onSentinelSample` listeners; trip frames →
   `captureTrace({kind:"cluster-onset", critical: true})`; log frames → the
@@ -60,6 +65,55 @@ start-gate also admits releases: a release's single backend runs under the
 composition name (so `isMain()` is false), so `sentinel/server/index.ts` starts
 on `isHostSingleton()` (`isMain() || isRelease()`) — a release runs exactly one
 backend, so it stays the host singleton. See `research/sentinel-worker-in-compiled-release.md`.
+
+## Worker identity: declared from argv, before any import
+
+A worker thread shares no module state with the backend that spawned it, so it
+starts with no runtime namespace — and modules in its import graph resolve paths
+from `runtimeNamespace()` as they load. So the namespace cannot arrive over the
+`init` message (that lands after the whole graph ran): from 2026-09-15 to
+2026-09-16 it did, and the worker threw at load on every spawn.
+
+`worker-host.ts` spawns `new Worker(url, { argv: namespaceArgv() })`, and
+`worker/entry.ts`'s literal first import is `./declare-namespace`, which reads
+`process.argv` through `readNamespaceArgv` (`infra/runtime-identity`) and
+declares it — the same shape as a backend's `server-core/bin/declare-namespace.ts`.
+Bun exposes the Worker `argv` option as the thread's `process.argv` before the
+first module evaluates (verified on Bun 1.4.2), and the vendored release bundle
+keeps import order, so dev and release spawn identically. The `init` frame
+carries no namespace; the worker reads `runtimeNamespace()` (also its pg
+database name).
+
+## When the watcher dies
+
+`worker-host.ts` reports every supervision transition through `onStatus`:
+`starting` → `running` (on `ready`) → `respawning {deaths, lastError}` →
+`down {deaths, lastError}` (on give-up), and `stopped` on shutdown; `sampler.ts`
+records `disabled` when `sentinel.enabled` is off. `lastError` is the latest
+worker `error` event's message (also logged to the `sentinel` channel).
+
+`sampler.ts` routes each one through `createStatusSink` (`status-sink.ts`):
+
+- **`down` files a `sentinel-down` report** (`sentinel-down-kind.ts`: variant
+  `error`, `duressExempt`, one fixed fingerprint) — bell, Debug → Reports and the
+  Timeline. Filed before the file write, so a failing write cannot swallow it.
+- **Every status is written to the host-global status file**
+  `locks/sentinel/status.json` (declared in `data-dirs/`, beside the duress
+  latch) as `{status, pid}`, write-then-rename. A host's first write claims the
+  file; its later writes land only while the file still names its pid — a hot
+  restart's old backend writes `stopped` after the new one wrote `starting`.
+- **Every backend** (not just main) serves that file as the `sentinel.status`
+  push resource (`status-resource.ts`), re-read on each change via the
+  `infra/file-watcher` primitive. The read adds `ownerAlive` (is the recorded
+  pid alive), so a main that died without writing `stopped` reads as not
+  running.
+
+The web half is the health report's **Machine watcher** row: `critical` when
+`down` or the owner process is gone, `attention` (pulsing) while starting,
+restarting or stopping, `attention` when disabled, `ok` while running, `unknown`
+with a reason when no status was ever recorded or the file is unreadable.
+Tests: `worker-host.test.ts` (a worker that throws at load → 5 deaths → `down`
+→ one report + the status file; the real worker reaches `ready`).
 
 ## Each tick gathers
 
@@ -172,7 +226,8 @@ sample carries its own `wall` (Date.now) as the cross-backend anchor.
 
 ## Web
 
-Config registration only. The `cluster` section currently renders through the
+Config registration, the `duress-episode` / `sentinel-down` report summaries,
+and the Machine watcher health row (above). The `cluster` section currently renders through the
 pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 (load-ratio/pg/builds sparklines) is a follow-up.
 
@@ -180,21 +235,27 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts, read from the sentinel.status push resource). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource, and a sentinel-down report when main gives up respawning it.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sentinel"
     - `Reports.KindView` → `DuressEpisodeSummary`
+    - `Reports.KindView` → `SentinelDownSummary`
+    - `HealthReport.Row` "Machine watcher"
   - Uses:
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/live-state.useResource`
     - `reports.Reports`
+    - `shell/health-report.HealthReport`
 - Server:
   - Contributes:
     - `trace-event-class` "cluster"
     - `trace-event-class` "fleet-flights"
     - `report-kind` "duress-episode"
+    - `report-kind` "sentinel-down"
+    - `resource.declare` "sentinel.status"
     - `ConfigV2.Register` "sentinel"
   - Uses:
     - `config_v2.ConfigV2`
@@ -203,43 +264,52 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `database/embedded.PG_PORT`
     - `database/embedded.PG_SOCKET_DIR`
     - `database/embedded.PG_USER`
-    - `debug/health-monitor.HealthSample`
-    - `debug/health-monitor.HealthSampleSchema`
-    - `debug/health-monitor.HostSampleSchema`
     - `debug/trace/engine.captureTrace`
     - `debug/trace/engine.defineTraceEventClass`
+    - `infra/file-watcher.createFileWatcher`
+    - `infra/file-watcher.FileWatcher`
     - `infra/host/duress/latch.clearDuress`
     - `infra/host/duress/latch.isUnderDuress`
     - `infra/host/duress/latch.readDuress`
     - `infra/host/duress/latch.refreshDuress`
     - `infra/host/duress/latch.setDuress`
     - `infra/paths.isHostSingleton`
-    - `infra/paths.listWorktreeDirs`
-    - `infra/paths.worktreesDir`
     - `primitives/log-channels.defineLogSink`
     - `primitives/log-channels.readChannelEntries`
     - `primitives/log-channels.readChannelJson`
     - `reports.recordReport`
     - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
+  - Resources: `sentinel.status` (push)
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `fields/bool/config.boolField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
+    - `primitives/live-state.resourceDescriptor`
   - Exports (types):
     - `ClusterSample`
     - `ClusterSection`
     - `DuressEpisodeEvent`
     - `DuressEpisodeReportPayload`
+    - `SentinelDownPayload`
+    - `SentinelStatus`
+    - `SentinelStatusRecord`
+    - `SentinelWatch`
   - Exports (values):
     - `ClusterSampleSchema`
     - `ClusterSectionSchema`
     - `DURESS_EPISODES_CHANNEL`
     - `DuressEpisodeEventSchema`
     - `DuressEpisodeReportPayloadSchema`
+    - `SENTINEL_DOWN_KIND`
     - `sentinelConfig`
+    - `SentinelDownPayloadSchema`
+    - `SentinelStatusRecordSchema`
+    - `sentinelStatusResource`
+    - `SentinelStatusSchema`
+    - `SentinelWatchSchema`
 - Cross-plugin:
   - Imported by: `debug/timeline`
 

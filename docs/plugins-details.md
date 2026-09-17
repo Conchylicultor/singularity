@@ -12303,10 +12303,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `HealthSampleSchema`
           - `HostSampleSchema`
         - Routes: `GET /api/debug/health-monitor`
+      - Core:
+        - Uses: `debug/slow-ops.SlowOpMarkerSchema`
+        - Exports (types):
+          - `GetHealthDataResponse`
+          - `HealthSample`
+          - `HealthSeries`
+          - `HostSample`
+        - Exports (values):
+          - `GetHealthDataResponseSchema`
+          - `HealthSampleSchema`
+          - `HealthSeriesSchema`
+          - `HostSampleSchema`
       - Cross-plugin:
-        - Imported by:
-          - `debug/sentinel`
-          - `debug/timeline`
+        - Imported by: `debug/timeline`
       - Shared:
         - Exports (types):
           - `GetHealthDataResponse`
@@ -13219,21 +13229,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values):
           - `reportDetailPane`
           - `reportsPane`
-    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, plus the one-line duress-episode report summary for Debug → Reports. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
+    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone, attention while it restarts, read from the sentinel.status push resource). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource, and a sentinel-down report when main gives up respawning it.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sentinel"
           - `Reports.KindView` → `DuressEpisodeSummary`
+          - `Reports.KindView` → `SentinelDownSummary`
+          - `HealthReport.Row` "Machine watcher"
         - Uses:
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/live-state.useResource`
           - `reports.Reports`
+          - `shell/health-report.HealthReport`
       - Server:
         - Contributes:
           - `trace-event-class` "cluster"
           - `trace-event-class` "fleet-flights"
           - `report-kind` "duress-episode"
+          - `report-kind` "sentinel-down"
+          - `resource.declare` "sentinel.status"
           - `ConfigV2.Register` "sentinel"
         - Uses:
           - `config_v2.ConfigV2`
@@ -13242,43 +13258,52 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/embedded.PG_PORT`
           - `database/embedded.PG_SOCKET_DIR`
           - `database/embedded.PG_USER`
-          - `debug/health-monitor.HealthSample`
-          - `debug/health-monitor.HealthSampleSchema`
-          - `debug/health-monitor.HostSampleSchema`
           - `debug/trace/engine.captureTrace`
           - `debug/trace/engine.defineTraceEventClass`
+          - `infra/file-watcher.createFileWatcher`
+          - `infra/file-watcher.FileWatcher`
           - `infra/host/duress/latch.clearDuress`
           - `infra/host/duress/latch.isUnderDuress`
           - `infra/host/duress/latch.readDuress`
           - `infra/host/duress/latch.refreshDuress`
           - `infra/host/duress/latch.setDuress`
           - `infra/paths.isHostSingleton`
-          - `infra/paths.listWorktreeDirs`
-          - `infra/paths.worktreesDir`
           - `primitives/log-channels.defineLogSink`
           - `primitives/log-channels.readChannelEntries`
           - `primitives/log-channels.readChannelJson`
           - `reports.recordReport`
           - `reports.ReportKind`
         - Exports (values): `readDuressEpisodes`
+        - Resources: `sentinel.status` (push)
       - Core:
         - Uses:
           - `config_v2.defineConfig`
           - `fields/bool/config.boolField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
+          - `primitives/live-state.resourceDescriptor`
         - Exports (types):
           - `ClusterSample`
           - `ClusterSection`
           - `DuressEpisodeEvent`
           - `DuressEpisodeReportPayload`
+          - `SentinelDownPayload`
+          - `SentinelStatus`
+          - `SentinelStatusRecord`
+          - `SentinelWatch`
         - Exports (values):
           - `ClusterSampleSchema`
           - `ClusterSectionSchema`
           - `DURESS_EPISODES_CHANNEL`
           - `DuressEpisodeEventSchema`
           - `DuressEpisodeReportPayloadSchema`
+          - `SENTINEL_DOWN_KIND`
           - `sentinelConfig`
+          - `SentinelDownPayloadSchema`
+          - `SentinelStatusRecordSchema`
+          - `sentinelStatusResource`
+          - `SentinelStatusSchema`
+          - `SentinelWatchSchema`
       - Cross-plugin:
         - Imported by: `debug/timeline`
     - **`session-divergence`** — Session-divergence report renderer: a one-line Debug → Reports summary for the conversation-session-divergence kind, plus the enabled/grace config registration. Session-divergence monitor: a per-worktree scheduled job that takes one process-table snapshot (sharing runtime-tmux's own captureProcessTree), reads every Claude session id reachable from each live conversation pane — its process subtree plus the parked-background-job pointers out of it — and files one deduped conversation-session-divergence report per conversation whose live session is absent from the recorded session chain while its transcript leads the chain tail's by more than the grace window — i.e. the agent is talking where the UI cannot see.
@@ -15366,6 +15391,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `mergeMarkerDir`
           - `readMergeMarkers`
           - `resolveGitDir`
+      - Cross-plugin:
+        - Imported by: `framework/tooling/import-closure`
       - Plugins:
         - **`apply-migrations`** — `./singularity apply-migrations` — apply pending SQL migrations to one namespace's database (--namespace, defaulting to the namespace this checkout owns). The fresh-clone bootstrap's way to seed the base 'singularity' DB before the first build; the server applies them itself on boot.
         - **`bootstrap`** — CLI bootstrap — the npm-free half that must run with node_modules absent: ensureDeps, the post-install re-exec, the orphan guard, the build lock.
@@ -16323,6 +16350,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `WINDOW_SIZE`
           - Cross-plugin:
             - Imported by: `framework/tooling/e2e-harness`
+        - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
+          - Core:
+            - Uses: `framework/cli.defineCliCommand`
+            - Exports (types):
+              - `CommandRunEdge`
+              - `DynamicImportPolicy`
+              - `ImportClosure`
+            - Exports (values):
+              - `importClosure`
+              - `loadTypescript`
+              - `scanCommandRuns`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Exports (types):
@@ -17439,6 +17477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/code`
           - `conversations/conversation-view/op-status`
           - `conversations/transcript-watcher`
+          - `debug/sentinel`
           - `infra/corpus-index`
           - `infra/git/git-watcher`
           - `infra/jobs/supervised-job`
@@ -18429,12 +18468,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`runtime-identity`** — What the spawner hands a PROCESS at its entry point, declared once there and read everywhere else: the namespace it runs as (`--namespace`, from the gateway or an exec child's spawner) and, for a serving backend, the Unix socket it serves on (`--socket`). Asking for one that was never declared throws.
       - Core:
         - Uses:
+          - `infra/namespace.asNamespace`
           - `infra/namespace.MAIN_WORKTREE_NAME`
           - `infra/namespace.Namespace`
         - Exports (values):
           - `declareRuntimeNamespace`
           - `hasRuntimeNamespace`
           - `isMain`
+          - `namespaceArgv`
+          - `readNamespaceArgv`
           - `readServingSocket`
           - `resetRuntimeNamespaceForTest`
           - `runtimeNamespace`
@@ -27454,6 +27496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `debug/queue`
           - `debug/queue-health`
           - `debug/reports`
+          - `debug/sentinel`
           - `debug/slow-ops`
           - `debug/slow-ops/pane`
           - `debug/zero-test`
@@ -31075,7 +31118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
     - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
-        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `infra.health`, `tasks.worktree-identity`
+        - Slots: `HealthReport.Row` ← `database.query-deadline`, `debug.queue-health`, `debug.sentinel`, `infra.health`, `tasks.worktree-identity`
         - Uses:
           - `primitives/collapsible.Collapsible`
           - `primitives/collapsible.CollapsibleChevron`
@@ -31112,6 +31155,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `database/query-deadline`
           - `debug/queue-health`
+          - `debug/sentinel`
           - `infra/health`
           - `shell/global-action-bar`
           - `tasks/worktree-identity`

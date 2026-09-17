@@ -36,6 +36,7 @@ moved (see `apps/prototypes/files`).
     - `conversations/conversation-view/code`
     - `conversations/conversation-view/op-status`
     - `conversations/transcript-watcher`
+    - `debug/sentinel`
     - `infra/corpus-index`
     - `infra/git/git-watcher`
     - `infra/jobs/supervised-job`
