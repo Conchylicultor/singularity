@@ -1,7 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
-import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import {
+  ExcludeFromBackup,
+  ExcludeFromFork,
+} from "@plugins/database/plugins/admin/server";
 import { traceConfig } from "../core";
 import { listTraces, getTrace, testTrigger } from "../shared/endpoints";
 import { handleListTraces, handleGetTrace } from "./internal/handlers";
@@ -43,6 +46,14 @@ export default {
       table: _traces,
       reason:
         "Host-local 7-day debugging evidence; nothing in a fresh worktree points at main's traces, and it is the bulk of the fork's bytes.",
+    }),
+    // And out of the nightly backup: the rows expire within a week, so a
+    // restore would find them gone anyway. An empty `traces` after a restore is
+    // just an empty Slow Events list.
+    ExcludeFromBackup({
+      table: _traces,
+      reason:
+        "7-day debugging evidence, swept nightly; a restore a week later would find it expired anyway.",
     }),
   ],
   httpRoutes: {

@@ -2,13 +2,17 @@ import {
   Resource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
+import {
+  ExcludeFromBackup,
+  ExcludeFromFork,
+} from "@plugins/database/plugins/admin/server";
 import { mailLabelsServerResource } from "./internal/labels-resource";
 import {
   _mailMessages,
   _mailThreads,
   _mailMessageLabels,
   _mailAttachments,
+  _mailSyncState,
 } from "./internal/tables";
 
 // Re-export the physical tables, the attachment-link handle, and the token
@@ -62,6 +66,42 @@ export default {
       table: _mailAttachments,
       reason:
         "Gmail corpus; sync is main-only, so a worktree never reads or re-populates it.",
+    }),
+    // Out of backups too — a separate decision from the fork (see
+    // `database/admin`'s ExcludeFromBackup). The corpus is a mirror of Gmail
+    // that sync refetches, so a restore losing it costs nothing but a backfill.
+    //
+    // `mail_sync_state` MUST go with it. It is the history watermark, and
+    // bootstrap never resets a row that already has one — so a restored
+    // watermark over empty corpus tables would leave the mailbox empty forever.
+    // Without the row, the next `mail.sync-tick` bootstraps the account again.
+    //
+    // Kept: accounts, labels, drafts (+ their attachments) and the outbox —
+    // local state Gmail cannot give back.
+    ExcludeFromBackup({
+      table: _mailMessages,
+      reason:
+        "Gmail mirror; the next sync refetches it (the sync state is left out with it, so the account is re-bootstrapped and the window backfilled again).",
+    }),
+    ExcludeFromBackup({
+      table: _mailThreads,
+      reason:
+        "Gmail mirror; the next sync refetches it (the sync state is left out with it, so the account is re-bootstrapped and the window backfilled again).",
+    }),
+    ExcludeFromBackup({
+      table: _mailMessageLabels,
+      reason:
+        "Gmail mirror; the next sync refetches it (the sync state is left out with it, so the account is re-bootstrapped and the window backfilled again).",
+    }),
+    ExcludeFromBackup({
+      table: _mailAttachments,
+      reason:
+        "Gmail mirror; the next sync refetches it (the sync state is left out with it, so the account is re-bootstrapped and the window backfilled again).",
+    }),
+    ExcludeFromBackup({
+      table: _mailSyncState,
+      reason:
+        "History watermark of the Gmail mirror, left out with the corpus it describes: a restored watermark over empty tables would never backfill, while no row makes the next sync tick bootstrap and backfill again.",
     }),
   ],
 } satisfies ServerPluginDefinition;

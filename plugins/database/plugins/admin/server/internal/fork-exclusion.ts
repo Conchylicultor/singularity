@@ -1,6 +1,6 @@
-import { getTableName } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
+import { tableLabel } from "./table-label";
 
 // A plugin opts ITS OWN table's ROWS out of the worktree DB fork by adding
 // `ExcludeFromFork({ table, reason })` to its server `contributions`. The table
@@ -18,6 +18,9 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 //     debug pane and at worst a phantom (main's undismissed notifications
 //     appearing in a fresh worktree's bell). They are also, by volume, most of
 //     the fork — `traces` alone is 949 MB of a 2057 MB source database.
+//     (Leaving rows out of the nightly BACKUP is a separate decision with its
+//     own token — `ExcludeFromBackup` in ./backup-exclusion. `traces` declares
+//     both.)
 //   - **Derived state rebuilt on boot.** The live-state snapshot + changelog are
 //     a cold-boot accelerator; `boot-init.ts` degrades to a full recompute when
 //     they are absent.
@@ -90,21 +93,12 @@ export const ExcludeSchemaDataFromFork = defineServerContribution<{
   reason: string;
 }>("fork-schema-data-exclusion", { docLabel: (c) => c.schema });
 
-// A drizzle table object is preferred over a magic string so a rename is
-// refactor-safe and a typo is a tsc error; we derive the pg name here. A string
-// is accepted for the tables created imperatively with `CREATE TABLE IF NOT
-// EXISTS` rather than by a migration (the live-state snapshot + changelog),
-// which have no table object to pass — the same reason `derived-tables`'
-// contribution takes a string.
-//
-// That tsc-checked spelling is also why the two contributions above stay two,
-// now that both only ever empty tables: `ExcludeFromFork` can take a table
-// OBJECT because the table is ours, and `ExcludeSchemaDataFromFork` cannot,
-// because a foreign runtime's schema has none. Merging them would mean giving up
-// the checked form for the twelve declarations that have it.
-function tableLabel(table: PgTable | string): string {
-  return typeof table === "string" ? table : getTableName(table);
-}
+// `ExcludeFromFork` can take a table OBJECT (see ./table-label) because the
+// table is ours, and `ExcludeSchemaDataFromFork` cannot, because a foreign
+// runtime's schema has none. That tsc-checked spelling is why the two
+// contributions above stay two, now that both only ever empty tables: merging
+// them would mean giving up the checked form for the twelve declarations that
+// have it.
 
 /** One schema-level declaration, as pure data. */
 export interface ForkSchemaExclusion {

@@ -20,7 +20,7 @@
  * `"{_private_jobs,…}"` and the planner iterated it one character at a time.
  * Every emitted pattern matched nothing, `pg_dump` said nothing, and the fork
  * copied the whole `graphile_worker` schema. It took a real fork to find. The
- * `::text` casts and the `CatalogRowSchema` parse in `fork-plan.ts` are the
+ * `::text` casts and the `CatalogRowSchema` parse in `catalog-plan.ts` are the
  * standing answer; verification of that half is a real fork, not this file.
  *
  * Run: `./singularity test plugins/database/plugins/admin`
@@ -29,9 +29,11 @@
 import { describe, test, expect } from "bun:test";
 import {
   describeUndeclaredSchema,
+  ForkPlanError,
   planForkExclusions,
   type SchemaCatalog,
 } from "./fork-plan";
+import type { CatalogForeignKey } from "./catalog-plan";
 
 function schema(
   name: string,
@@ -40,12 +42,14 @@ function schema(
     bytes?: number;
     fromExtension?: boolean;
     partitions?: Record<string, string[]>;
+    foreignKeys?: CatalogForeignKey[];
   } = {},
 ) {
   return {
     name,
     tables,
     partitions: extra.partitions ?? {},
+    foreignKeys: extra.foreignKeys ?? [],
     bytes: extra.bytes ?? 1_000_000,
     fromExtension: extra.fromExtension ?? false,
   };
@@ -189,6 +193,61 @@ describe("planForkExclusions — what it refuses", () => {
     // by main's database growing a schema this checkout has not heard of —
     // that case is reported instead, below.
     expect(() => planForkExclusions(CATALOG, DECLARED)).not.toThrow();
+  });
+});
+
+describe("planForkExclusions — a kept table linking to a left-out one", () => {
+  function fk(table: string, references: string): CatalogForeignKey {
+    return { table, constraint: `${table}_${references}_fk`, references };
+  }
+  function withLinks(
+    foreignKeys: CatalogForeignKey[],
+    partitions: Record<string, string[]> = {},
+  ): SchemaCatalog {
+    return {
+      schemas: [
+        schema(
+          "public",
+          [
+            "tasks",
+            "traces",
+            "traces_2026_09",
+            "mail_messages",
+            "mail_threads",
+            "mail_drafts",
+          ],
+          { foreignKeys, partitions },
+        ),
+      ],
+    };
+  }
+  const MAIL = { tables: ["mail_messages", "mail_threads"], schemas: [] };
+
+  test("is fatal, naming the source table, constraint and target", () => {
+    const catalog = withLinks([fk("mail_drafts", "mail_threads")]);
+    expect(() => planForkExclusions(catalog, MAIL)).toThrow(ForkPlanError);
+    expect(() => planForkExclusions(catalog, MAIL)).toThrow(
+      /table "mail_drafts" links to "mail_threads" through constraint "mail_drafts_mail_threads_fk"/,
+    );
+  });
+
+  test("left out → left out, left out → kept and self-references are allowed", () => {
+    const catalog = withLinks([
+      fk("mail_messages", "mail_threads"),
+      fk("mail_threads", "tasks"),
+      fk("tasks", "tasks"),
+      fk("mail_threads", "mail_threads"),
+    ]);
+    expect(() => planForkExclusions(catalog, MAIL)).not.toThrow();
+  });
+
+  test("a partition leaf of a left-out table counts as left out", () => {
+    const catalog = withLinks([fk("tasks", "traces_2026_09")], {
+      traces: ["traces_2026_09"],
+    });
+    expect(() =>
+      planForkExclusions(catalog, { tables: ["traces"], schemas: [] }),
+    ).toThrow(/"tasks" links to "traces_2026_09"/);
   });
 });
 

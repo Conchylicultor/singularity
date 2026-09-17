@@ -1,7 +1,17 @@
-import { queryRows } from "@plugins/database/plugins/sql-rows/core";
-import { z } from "zod";
-import { openShortLivedClient } from "./pool";
 import type { ForkExclusions } from "./fork-exclusion";
+import {
+  APP_SCHEMA,
+  describeKeptLinks,
+  planTableExclusions,
+  quotePatternPart,
+  readSchemaCatalog,
+  tablePattern,
+  type SchemaCatalog,
+} from "./catalog-plan";
+
+// The catalog shape is shared with backups (./catalog-plan); re-exported so the
+// fork's own suite keeps naming it from the file whose rules it tests.
+export type { SchemaCatalog } from "./catalog-plan";
 
 // Turning the DECLARED exclusion set into the `pg_dump` flags a fork runs with,
 // by reading the source database's own catalog.
@@ -25,52 +35,11 @@ import type { ForkExclusions } from "./fork-exclusion";
 // ── Pure core, thin edge ─────────────────────────────────────────────────────
 //
 // `planForkExclusions` is pure and holds every rule; `readSchemaCatalog` is the
-// one SQL statement. That split is not decoration: it is what lets the rules be
-// tested with no database at all, which matters because `admin` cannot import
-// `db-test-fixture` (the fixture imports `admin`, so a test edge back would
-// close an R6 cycle).
-
-/** One schema of the source database, as the plan needs to see it. */
-export interface CatalogSchema {
-  readonly name: string;
-  /**
-   * The relations `--exclude-table-data` can empty: ordinary and partitioned
-   * tables, plus materialized views (whose "data" is the restore's
-   * `REFRESH MATERIALIZED VIEW`, so excluding one leaves it unpopulated —
-   * exactly the DDL-kept/rows-dropped shape).
-   *
-   * Sequences are deliberately absent. Their data component is a `setval`, and
-   * suppressing it would restart a fork's sequences at their declared start
-   * rather than continuing from the source's high-water mark — harmless either
-   * way, and not worth enumerating.
-   */
-  readonly tables: readonly string[];
-  /**
-   * Partitioned parent → every descendant leaf of it in this schema.
-   *
-   * `--exclude-table-data` does NOT cascade to partitions (which is why
-   * Postgres 16 grew a separate `…-and-children` flag), and a partition's rows
-   * are dumped under the LEAF's own name. So a declaration naming a partitioned
-   * parent has to be expanded here or it silently excludes nothing at all.
-   * Nothing in this repo is partitioned yet; `traces` at 949 MB is the obvious
-   * first candidate, and it is already named by an `ExcludeFromFork`.
-   */
-  readonly partitions: Readonly<Record<string, readonly string[]>>;
-  /** Total on-disk size, only ever used to make a warning concrete. */
-  readonly bytes: number;
-  /** Owned by an installed extension (`pg_extension.extnamespace`). */
-  readonly fromExtension: boolean;
-}
-
-/**
- * The source database's non-system schemas. `pg_*` and `information_schema` are
- * already filtered out here — they are Postgres's own and never a decision
- * anyone makes. Everything that IS a decision is left for
- * {@link planForkExclusions}.
- */
-export interface SchemaCatalog {
-  readonly schemas: readonly CatalogSchema[];
-}
+// one SQL statement (it lives in ./catalog-plan with the pattern quoting and the
+// table-level rule, which backups share). That split is not decoration: it is
+// what lets the rules be tested with no database at all, which matters because
+// `admin` cannot import `db-test-fixture` (the fixture imports `admin`, so a
+// test edge back would close an R6 cycle).
 
 /**
  * The declared exclusion set no longer describes the source database, in a way
@@ -145,35 +114,7 @@ export interface ForkPlan {
  * would mean the app grew a second schema of its own, which is a decision worth
  * making here rather than defaulting into.
  */
-const APP_SCHEMA = "public";
 const COPIED_SCHEMAS: readonly string[] = [APP_SCHEMA];
-
-/**
- * Quote one identifier as a `pg_dump` PATTERN part.
- *
- * `pg_dump` parses `--exclude-table-data` with psql's identifier rules, not as a
- * literal string: an unquoted portion is case-folded to lower case and `*`/`?`
- * are wildcards. Zero's tables are mixed-case (`changeLog`, `publishedSchema`)
- * and its schemas contain a slash (`zero_0/cdc`), so an unquoted
- * `zero_0.changeLog` folds to `zero_0.changelog` and matches nothing at all —
- * the exact silent-miss this file exists to make impossible.
- *
- * Inside double quotes every character is literal (wildcards included) and only
- * `"` needs escaping, by doubling.
- *
- * `change-feed` has a byte-identical private twin (`quoteIdent` in its
- * `triggers.ts`) and the duplication is forced: `change-feed` imports `admin`,
- * so importing it back would close a cycle. If a third copy ever appears, that
- * is the moment to give quoting its own leaf plugin rather than a fourth.
- */
-function quotePatternPart(name: string): string {
-  return `"${name.replaceAll('"', '""')}"`;
-}
-
-/** A `pg_dump` pattern naming exactly one relation. */
-function tablePattern(schema: string, table: string): string {
-  return `${quotePatternPart(schema)}.${quotePatternPart(table)}`;
-}
 
 /**
  * A `pg_dump` pattern naming every relation in one schema, expanded by
@@ -231,7 +172,7 @@ export function describeUndeclaredSchema(s: UndeclaredSchema): string {
 /**
  * Decide what the fork must not copy.
  *
- * THROWS {@link ForkPlanError} for the two states no fork can be correct under,
+ * THROWS {@link ForkPlanError} for the three states no fork can be correct under,
  * and that only an edit to THIS repo can cause — so refusing here can never be
  * triggered by the source database drifting ahead of the forking checkout:
  *
@@ -243,6 +184,11 @@ export function describeUndeclaredSchema(s: UndeclaredSchema): string {
  *      `graphile_worker`'s `migrations` that means every fork is born with a
  *      queue schema graphile believes is unmigrated, which breaks its boot —
  *      strictly worse, and far less legible, than refusing here.
+ *   3. **A kept table with a foreign key to a left-out table.** `pg_restore`
+ *      re-adds the constraint after loading the data, so a kept row pointing at
+ *      a left-out row fails the restore (see `KeptLinkToLeftOut` in
+ *      ./catalog-plan). Both tables are in the catalog, and the link is this
+ *      repo's own drizzle schema — so this too is an edit here, not drift.
  *
  * Everything else the catalog reveals is REPORTED — see {@link ForkPlan}'s
  * `unmatched` and `undeclaredSchemas` for why neither may stop a fork.
@@ -347,148 +293,17 @@ export function planForkExclusions(
 
   // Table-level declarations name this repo's own drizzle tables, which all live
   // in the one copied schema. A table elsewhere is covered by its schema's
-  // declaration instead.
-  const appSchema = catalog.schemas.find((s) => s.name === APP_SCHEMA);
-  for (const table of exclusions.tables) {
-    if (!appSchema?.tables.includes(table)) {
-      unmatched.push(
-        `table "${APP_SCHEMA}.${table}" does not exist in the source database`,
-      );
-      continue;
-    }
-    // The parent AND every partition under it: a partition's rows are dumped
-    // under the leaf's own name, so excluding only the parent excludes nothing.
-    for (const name of [table, ...(appSchema.partitions[table] ?? [])]) {
-      excludeTableData.push(tablePattern(APP_SCHEMA, name));
-    }
+  // declaration instead. The rule (exists in `public`, expand partitions) is
+  // shared with backups — see ./catalog-plan.
+  const tables = planTableExclusions(catalog, exclusions.tables);
+  // (3) A kept → left-out foreign key.
+  if (tables.keptLinks.length > 0) {
+    throw new ForkPlanError(describeKeptLinks("fork", tables.keptLinks));
   }
+  excludeTableData.push(...tables.excludeTableData);
+  unmatched.push(...tables.unmatched);
 
   return { excludeTableData, unmatched, undeclaredSchemas };
-}
-
-/**
- * Read the source database's schemas, their data-bearing relations, their
- * partition trees, their size and whether an extension owns them.
- *
- * `pg_*` (which covers `pg_toast`, `pg_temp_*` and `pg_toast_temp_*`) and
- * `information_schema` are filtered here rather than in the plan: they are
- * Postgres's own bookkeeping and never something a plugin author decides about.
- * Extension ownership IS carried through, because "an extension's schema is the
- * extension's business" is a policy of this design and belongs beside the other
- * policies.
- */
-/**
- * The shape of one catalog row, PARSED rather than asserted.
- *
- * This is not ceremony. `pg` decodes a result column using the parser
- * registered for its type OID, and there is none for `name[]` (OID 1003) — the
- * type `array_agg(relname)` produces, since `pg_class.relname` is `name`, not
- * `text`. So an uncast `array_agg` arrives as the RAW literal
- * `"{_private_jobs,migrations,…}"`: a string, which every array operation below
- * accepts and silently misreads. `for (const t of tables)` walks it one
- * character at a time and emits `"graphile_worker"."_"`, `…"."p"`, …; every one
- * of those matches nothing, `pg_dump` says nothing, and the fork copies the
- * whole schema. That is the exact class of silent miss this file exists to
- * remove, reintroduced one layer lower — and it survived a real fork, which is
- * how it was found.
- *
- * The `::text` casts below are the fix; the parse is what makes the fix
- * enforced rather than remembered — and it is no longer a habit local to this
- * file. The read goes through `queryRows`, the one door every raw-SQL row read
- * in the repo now takes, so this schema is checked by the same code that checks
- * every other one, and a column that disagrees with it names itself and its pg
- * type OID. A boundary between untyped SQL and typed code gets a parser, not a
- * type assertion.
- */
-const CatalogRowSchema = z.object({
-  name: z.string(),
-  tables: z.array(z.string()),
-  partitions: z.record(z.string(), z.array(z.string())).nullable(),
-  bytes: z.string(),
-  from_extension: z.boolean(),
-});
-
-/**
- * Read the source database's schemas, their data-bearing relations, their
- * partition trees, their size and whether an extension owns them.
- *
- * `pg_*` (which covers `pg_toast`, `pg_temp_*` and `pg_toast_temp_*`) and
- * `information_schema` are filtered here rather than in the plan: they are
- * Postgres's own bookkeeping and never something a plugin author decides about.
- * Extension ownership IS carried through, because "an extension's schema is the
- * extension's business" is a policy of this design and belongs beside the other
- * policies.
- */
-export async function readSchemaCatalog(
-  source: string,
-): Promise<SchemaCatalog> {
-  const pool = openShortLivedClient(source);
-  try {
-    // Every `relname` is cast to `text`. `relname` is `name`, and `pg` cannot
-    // decode `name[]` — see CatalogRowSchema for what that silently produced.
-    const rows = await queryRows(pool, {
-      sql: `
-      WITH RECURSIVE
-        -- Every (top-level partitioned root, descendant) pair, so a multi-level
-        -- partition tree collapses onto the relation a declaration would name.
-        tree AS (
-          SELECT i.inhparent AS root, i.inhrelid AS member
-            FROM pg_inherits i
-           WHERE NOT EXISTS (SELECT 1 FROM pg_inherits up
-                              WHERE up.inhrelid = i.inhparent)
-          UNION ALL
-          SELECT t.root, i.inhrelid
-            FROM tree t JOIN pg_inherits i ON i.inhparent = t.member
-        ),
-        rel AS (
-          SELECT c.oid, c.relname::text AS relname, c.relnamespace,
-                 pg_total_relation_size(c.oid) AS bytes
-            FROM pg_class c
-           WHERE c.relkind IN ('r', 'p', 'm')
-        )
-      SELECT n.nspname::text                         AS name,
-             coalesce(r.tables, ARRAY[]::text[])     AS tables,
-             coalesce(r.bytes, 0)::text              AS bytes,
-             p.partitions                            AS partitions,
-             EXISTS (SELECT 1 FROM pg_extension e
-                      WHERE e.extnamespace = n.oid)  AS from_extension
-        FROM pg_namespace n
-        LEFT JOIN LATERAL (
-               SELECT array_agg(rel.relname ORDER BY rel.relname) AS tables,
-                      sum(rel.bytes)                              AS bytes
-                 FROM rel WHERE rel.relnamespace = n.oid
-             ) r ON true
-        LEFT JOIN LATERAL (
-               SELECT jsonb_object_agg(x.root, x.members) AS partitions
-                 FROM (
-                       SELECT root.relname AS root,
-                              array_agg(member.relname ORDER BY member.relname) AS members
-                         FROM tree
-                         JOIN rel root   ON root.oid = tree.root
-                         JOIN rel member ON member.oid = tree.member
-                        WHERE root.relnamespace = n.oid
-                          AND member.relnamespace = n.oid
-                        GROUP BY root.relname
-                      ) x
-             ) p ON true
-       WHERE n.nspname NOT LIKE 'pg\\_%'
-         AND n.nspname <> 'information_schema'
-       ORDER BY n.nspname
-    `,
-      row: CatalogRowSchema,
-    });
-    return {
-      schemas: rows.map((r) => ({
-        name: r.name,
-        tables: r.tables,
-        partitions: r.partitions ?? {},
-        bytes: Number(r.bytes),
-        fromExtension: r.from_extension,
-      })),
-    };
-  } finally {
-    await pool.end();
-  }
 }
 
 /** {@link readSchemaCatalog} then {@link planForkExclusions}. */

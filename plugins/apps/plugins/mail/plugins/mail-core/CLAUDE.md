@@ -66,8 +66,17 @@ A local mirror of a Gmail mailbox, one FK cluster rooted at `mail_accounts`:
 - `mail_outbox` — durable pending-mutation queue replayed against Gmail.
 
 Every owned FK uses `ON DELETE CASCADE` from its account/thread/message parent
-(except `mail_labels.parent_id` and `mail_drafts.thread_id`, which are
-`ON DELETE SET NULL`). Web-safe field records + derived types live in
+(except `mail_labels.parent_id`, which is `ON DELETE SET NULL`).
+`mail_drafts.thread_id` is a plain Gmail thread id with **no** FK: the corpus
+tables are left out of forks and backups, and `database/admin` refuses a kept
+table linking to a left-out one (pg_restore would fail re-adding it).
+
+**Backups.** `mail_threads`, `mail_messages`, `mail_message_labels`,
+`mail_attachments` and `mail_sync_state` are `ExcludeFromBackup`: the corpus is
+refetched by sync, and the watermark goes with it — a restored account with no
+sync-state row is re-bootstrapped by the next `mail.sync-tick`, which backfills
+the window again. Accounts, labels, drafts (+ their attachments) and the outbox
+stay in backups. Web-safe field records + derived types live in
 `core/internal/{fields,types}.ts`; closed-list enums in
 `core/internal/enums.ts` (fed into `enumTextField` for the union-branded `text`
 columns: `type`, `op_type`, the two `status` columns).
@@ -96,8 +105,14 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `fork-data-exclusion` "mail_threads"
     - `fork-data-exclusion` "mail_message_labels"
     - `fork-data-exclusion` "mail_attachments"
+    - `backup-data-exclusion` "mail_messages"
+    - `backup-data-exclusion` "mail_threads"
+    - `backup-data-exclusion` "mail_message_labels"
+    - `backup-data-exclusion` "mail_attachments"
+    - `backup-data-exclusion` "mail_sync_state"
   - Uses:
     - `database.db`
+    - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
     - `infra/attachments.Attachments`
     - `infra/entities.defaultNow`

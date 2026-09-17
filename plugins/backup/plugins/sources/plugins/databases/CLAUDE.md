@@ -17,6 +17,7 @@
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database/admin.backupDatabase`
+    - `database/admin.backupExclusions`
     - `database/admin.inspectBackup`
     - `database/admin.listDatabases`
 

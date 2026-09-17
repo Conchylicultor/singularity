@@ -8,6 +8,7 @@ import {
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { eq } from "drizzle-orm";
 import { ensureAccount } from "./bootstrap";
+import { planSyncTick } from "./tick-plan";
 import { deltaJob } from "./delta";
 import { recordSyncError } from "./record-error";
 import { mailSyncLog } from "./sink";
@@ -19,9 +20,10 @@ import { mailSyncLog } from "./sink";
 // (main-only — perWorktree left unset, since sync hits shared external state and
 // the canonical mailbox lives in main's DB), NOT an in-process setInterval.
 //
-// Each tick: auto-connect once Gmail is toggled on, then enqueue a delta for
-// every account in a pull-ready state. Backfilling accounts self-continue via
-// their own re-enqueue chain; errored accounts are left alone.
+// Each tick: auto-connect once Gmail is toggled on (or re-arm an account with
+// no sync-state row), then enqueue a delta for every account in a pull-ready
+// state. Backfilling accounts self-continue via their own re-enqueue chain;
+// errored accounts are left alone.
 export const syncTickJob = defineJob({
   name: "mail.sync-tick",
   // instant, and it looks slow twice over. The body only selects accounts and
@@ -37,44 +39,44 @@ export const syncTickJob = defineJob({
   run: async () => {
     if (!isGmailEnabled()) return;
 
+    // Every account with its sync-state status (`null` when it has no row).
     const accounts = await db
-      .select({ id: _mailAccounts.id })
-      .from(_mailAccounts);
+      .select({ id: _mailAccounts.id, status: _mailSyncState.status })
+      .from(_mailAccounts)
+      .leftJoin(_mailSyncState, eq(_mailSyncState.accountId, _mailAccounts.id));
+    const plan = planSyncTick(accounts);
 
-    // Auto-connect on first toggle-on. `ensureAccount` records any failure onto
-    // the account's sync_state row (→ surfaced live on the sync-status banner)
-    // when it can attribute it. Swallow here — consistent with the per-account
-    // "record and move on" handling below — so a terminal connection error
-    // (api_disabled/auth) doesn't dead-letter the scheduled tick every minute;
-    // the next cron tick retries. Logged to the `mail-sync` channel so it stays
-    // observable in Debug → Logs.
-    if (accounts.length === 0) {
+    // Auto-connect on first toggle-on, and re-arm an account whose sync-state
+    // row is missing (a restore from backup: the row is left out together with
+    // the corpus it watermarks — see ./tick-plan). `ensureAccount` records any
+    // failure onto the account's sync_state row (→ surfaced live on the
+    // sync-status banner) when it can attribute it. Swallow here — consistent
+    // with the per-account "record and move on" handling below — so a terminal
+    // connection error (api_disabled/auth) doesn't dead-letter the scheduled
+    // tick every minute; the next cron tick retries. Logged to the `mail-sync`
+    // channel so it stays observable in Debug → Logs.
+    if (plan.bootstrap) {
       try {
         await ensureAccount();
       } catch (err) {
+        const what =
+          accounts.length === 0
+            ? "first-connect bootstrap"
+            : "bootstrap of an account with no sync state";
         mailSyncLog.publish(
-          `first-connect bootstrap failed: ${err instanceof Error ? err.message : String(err)}`,
+          `${what} failed: ${err instanceof Error ? err.message : String(err)}`,
           "stderr",
         );
       }
-      return;
     }
 
-    for (const account of accounts) {
+    for (const accountId of plan.delta) {
       // One account's failure must not abort the whole tick — record it on that
-      // account's row and move on (errored/backfilling accounts are skipped).
+      // account's row and move on.
       try {
-        const [state] = await db
-          .select({ status: _mailSyncState.status })
-          .from(_mailSyncState)
-          .where(eq(_mailSyncState.accountId, account.id))
-          .limit(1);
-        if (state && (state.status === "delta" || state.status === "idle")) {
-          await deltaJob.enqueue({ accountId: account.id });
-        }
+        await deltaJob.enqueue({ accountId });
       } catch (err) {
-        await recordSyncError(account.id, err);
-        continue;
+        await recordSyncError(accountId, err);
       }
     }
   },

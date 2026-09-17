@@ -215,10 +215,12 @@ expandable JSON.
     - `ConfigV2.Register` "trace"
     - `change-feed-exclusion` "traces"
     - `fork-data-exclusion` "traces"
+    - `backup-data-exclusion` "traces"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database.db`
+    - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `infra/endpoints.HttpError`

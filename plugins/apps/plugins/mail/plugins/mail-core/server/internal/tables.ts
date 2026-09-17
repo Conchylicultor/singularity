@@ -138,16 +138,17 @@ const mailMessageLabels = defineEntity(
     primaryKey: ["messageId", "labelId"],
     columns: {
       messageId: {
-        references: { column: () => mailMessages.table.id, onDelete: "cascade" },
+        references: {
+          column: () => mailMessages.table.id,
+          onDelete: "cascade",
+        },
       },
       labelId: {
         references: { column: () => mailLabels.table.id, onDelete: "cascade" },
       },
       createdAt: { default: defaultNow() },
     },
-    indexes: (t) => [
-      index("mail_message_labels_label_id_idx").on(t.labelId),
-    ],
+    indexes: (t) => [index("mail_message_labels_label_id_idx").on(t.labelId)],
   },
 );
 
@@ -174,9 +175,12 @@ const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
     accountId: {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
     },
-    threadId: {
-      references: { column: () => mailThreads.table.id, onDelete: "set null" },
-    },
+    // `threadId` is Gmail's own thread id, deliberately NOT a foreign key to
+    // `mail_threads`. That table is a rebuildable mirror left out of forks and
+    // backups, so a link here would make a restore fail when pg_restore re-adds
+    // the constraint (and `database/admin` refuses a kept → left-out link). A
+    // resync brings the same thread id back, so a draft may briefly name a
+    // thread that is not mirrored yet.
     to: { name: "to_addrs", default: [] },
     cc: { name: "cc_addrs", default: [] },
     bcc: { name: "bcc_addrs", default: [] },
