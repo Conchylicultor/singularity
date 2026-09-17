@@ -91,7 +91,7 @@ function PresentedFrame({
         ),
       })}
       <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
-        <OptionsPicker meta={meta} />
+        <OptionsPicker meta={meta} withVersion />
       </Pin>
     </FrameSizeProvider>
   );

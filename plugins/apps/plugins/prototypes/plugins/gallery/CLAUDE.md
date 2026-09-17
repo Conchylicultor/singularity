@@ -168,6 +168,16 @@ The Prototypes app's two panes:
     **Size** (Fixed / Mobile / Full), whenever it sits inside a frame-size
     scope — never written to the picks record or the frame URL, since it
     changes the box the page renders in, not the page.
+    A presentation asks for one more app-owned row, first: **Version**
+    (`withVersion`, `version-row.tsx`) — `‹ v3 of 7 ›` plus Back to latest,
+    with the pill's summary starting with the version on screen. A
+    presentation has no pane header, so without it a fullscreen presentation
+    could not leave the version it opened on. It moves the same
+    `shownVersion` as the header stepper, through the same
+    `useVersionStepping` (`internal/use-version-stepping.ts`), so the two
+    cannot disagree. Arrows only: the version list is a popover, which would
+    close the hover panel and be invisible under the Fullscreen API. The pane
+    itself does not ask for the row — its header already has the stepper.
   - An "Improve" button opens a `LaunchAgentPopover` seeding `improveText(name)`,
     plus a line naming the picked options when any differ from the defaults
     (`pickedVariantLine` — a snapshot from launch time), a line pointing at

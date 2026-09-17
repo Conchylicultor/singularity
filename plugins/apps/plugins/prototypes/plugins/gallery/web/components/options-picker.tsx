@@ -26,6 +26,7 @@ import {
   useFrameSizeChoice,
   type FrameSizeChoice,
 } from "../frame-size";
+import { VersionRow, VersionSummary } from "./version-row";
 
 /**
  * The picker for a prototype's declared options (`<meta name="prototype-option">`).
@@ -55,16 +56,35 @@ import {
  * where a frame renders through the nearest frame-size scope
  * (`useFrameSizeChoice`), and the pill's summary ends with it.
  *
- * Renders nothing when there is neither an option nor a Size row, and nothing while
+ * A presentation also asks for a **Version** row (`withVersion`): it has no
+ * pane header, so without it a fullscreen presentation could not leave the
+ * version it opened on. It sits first, as the choice the others depend on (a
+ * version declares its own options), and the pill's summary starts with it.
+ *
+ * Renders nothing when there is no option, no Size row and no Version row, and nothing while
  * the picks are unknown — the stage under it is still loading then, and a pill
  * naming the defaults would claim a choice the user may not have made.
  */
-export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
+export function OptionsPicker({
+  meta,
+  withVersion = false,
+}: {
+  meta: PrototypeMeta;
+  /**
+   * Also offer the Version row (and name the version in the pill) — for a
+   * surface with no pane header holding the version stepper, i.e. a
+   * presentation. Off in the pane, where the header already has it.
+   */
+  withVersion?: boolean;
+}) {
   const { setPick, resetPicks } = usePrototypeDetail();
   const options = usePrototypeOptions(meta);
   const read = usePrototypePicks(meta);
   const frameSize = useFrameSizeChoice();
-  if ((options.length === 0 && frameSize === null) || read.pending) {
+  if (
+    (options.length === 0 && frameSize === null && !withVersion) ||
+    read.pending
+  ) {
     return null;
   }
   const picks = read.data;
@@ -87,7 +107,13 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
       trigger={
         <Stack direction="row" gap="xs" align="center">
           <MdTune className="size-4 text-muted-foreground" />
-          <Text variant="caption">{summary}</Text>
+          {withVersion ? <VersionSummary /> : null}
+          {withVersion && summary ? (
+            <Text variant="caption" tone="muted">
+              ·
+            </Text>
+          ) : null}
+          {summary ? <Text variant="caption">{summary}</Text> : null}
         </Stack>
       }
     >
@@ -97,6 +123,7 @@ export function OptionsPicker({ meta }: { meta: PrototypeMeta }) {
             stretching the panel across the stage. */}
         <Clip className="max-h-0 max-w-0 transition-[max-width,max-height] duration-200 group-data-open/fa:max-h-[40rem] group-data-open/fa:max-w-[28rem]">
           <Stack direction="col" gap="md">
+            {withVersion ? <VersionRow /> : null}
             {options.map((option) => (
               <OptionRow
                 key={option.name}

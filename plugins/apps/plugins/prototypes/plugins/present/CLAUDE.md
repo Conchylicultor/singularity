@@ -36,6 +36,13 @@ hover-revealed like the ×), so a theme or variant can be switched while
 presenting. It must stay inline DOM inside the stage box — anything portaled to
 `body` is invisible under the Fullscreen API.
 
+**So does the version.** The stage asks the picker for its Version row
+(`withVersion`): `‹ v3 of 7 ›` and Back to latest, with the pill naming the
+version on screen. There is no pane header while presenting, so this is the
+only way to change version there — fullscreen included. `[` / `]` keep working
+in the in-app overlays (the pane's header stepper is still mounted under them);
+the new-tab page has only the row.
+
 **Presenting opens at Full size**: the frame fills the presentation at scale 1,
 so the page's own responsive layout shows instead of a fixed canvas scaled up.
 `PresentedFrame` holds its own frame-size scope (starting at `full`), so the

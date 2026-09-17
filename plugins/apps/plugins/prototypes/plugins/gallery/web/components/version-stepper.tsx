@@ -8,7 +8,6 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   matchResource,
   useResource,
@@ -18,13 +17,8 @@ import {
   type PrototypeHistory,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { usePrototypeDetail } from "../context";
-import {
-  versionForStep,
-  stepBy,
-  stepLabel,
-  versionSteps,
-  type VersionStep,
-} from "../internal/version-steps";
+import { stepLabel, type VersionStep } from "../internal/version-steps";
+import { useVersionStepping } from "../internal/use-version-stepping";
 import { VersionList } from "./version-list";
 
 /**
@@ -79,19 +73,9 @@ function PendingStepper() {
 }
 
 function ReadyStepper({ history }: { history: PrototypeHistory }) {
-  const { shownVersion, showVersion } = usePrototypeDetail();
   const [listOpen, setListOpen] = useState(false);
-
-  const model = versionSteps(history, shownVersion?.sha ?? null);
-  const current = model.current === null ? null : model.steps[model.current]!;
-  const prev = stepBy(model, -1);
-  const next = stepBy(model, 1);
-
-  const go = (step: VersionStep | null) => {
-    if (step) showVersion(versionForStep(step));
-  };
-  const stepBack = useEventCallback(() => go(prev));
-  const stepForward = useEventCallback(() => go(next));
+  const { model, current, prev, next, go, stepBack, stepForward } =
+    useVersionStepping(history);
 
   // Scoped to this surface, and — being plain keys — silent while a text field
   // has focus, so `[` still types. Stable identity (the handlers read the

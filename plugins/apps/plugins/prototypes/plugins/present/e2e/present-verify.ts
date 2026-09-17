@@ -1,6 +1,7 @@
 // Verifies the Present menu on a prototype's detail pane: each of the four
 // destinations actually takes the prototype somewhere, the options picker comes
-// along (and still switches the variant while fullscreen), and Escape brings it
+// along (and still switches the variant and the version while fullscreen), and
+// Escape brings it
 // back. Manual only — nothing runs this automatically.
 //
 // Usage:
@@ -172,6 +173,41 @@ await withBrowser(async (h) => {
     );
     await page.mouse.move(5, 5);
   }
+  // The version comes along too: with no pane header, the picker's Version
+  // row is the only way off the version the presentation opened on.
+  await dialog.getByLabel("Prototype options").hover();
+  const versionRow = dialog.getByRole("group", { name: "Version" });
+  await versionRow.waitFor({ state: "visible", timeout: 5000 });
+  r.ok("the picker offers the Version row while fullscreen", true);
+  const previous = versionRow.getByRole("button", { name: "Previous version" });
+  if (await previous.isEnabled()) {
+    await previous.click();
+    const stepped = await waitFor(
+      () =>
+        Promise.resolve(
+          page
+            .frames()
+            .find((f) => f.url().includes(`/api/prototypes/${name}/versions/`))
+            ?.url(),
+        ),
+      (url) => url !== undefined,
+      { timeoutMs: 15_000 },
+    );
+    r.ok(
+      "Previous version shows a recorded version while fullscreen",
+      stepped.ok,
+      stepped.value,
+    );
+    await snap(page, out, "fullscreen-version");
+    await versionRow.getByRole("button", { name: "Back to latest" }).click();
+    const back = await waitFor(
+      () => Promise.resolve(frameUrl(page)),
+      (url) => url !== undefined,
+      { timeoutMs: 15_000 },
+    );
+    r.ok("Back to latest returns to the live folder", back.ok, back.value);
+  }
+  await page.mouse.move(5, 5);
   await snap(page, out, "fullscreen");
   await page.evaluate(async () => {
     if (document.fullscreenElement) await document.exitFullscreen();
