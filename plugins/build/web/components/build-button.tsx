@@ -57,15 +57,17 @@ function BuildButtonInner({
   // (whether it needs a reload), so a plugin that failed to load mid-build still
   // shows the red Reload beside "Building".
   //
-  // Priority: a stale tab (new frontend already served) needs a reload regardless
-  // of build state; otherwise reflect the active build, then the last outcome.
+  // Priority: an active build wins the label, since the Reload segment already
+  // says the tab is stale — so a stale tab mid-build shows the spinner AND the
+  // Reload segment side by side. With no build running, a stale tab reads
+  // "Server updated"; otherwise the last outcome.
   const status: "idle" | "building" | "restarting" | "updated" | "failed" =
-    staleTab
-      ? "updated"
-      : building && wsStatus !== "open"
-        ? "restarting"
-        : building
-          ? "building"
+    building && wsStatus !== "open"
+      ? "restarting"
+      : building
+        ? "building"
+        : staleTab
+          ? "updated"
           : failed
             ? "failed"
             : "idle";
