@@ -22,9 +22,10 @@ vi.mock("../components/trend-chart", () => ({
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import type { DeploymentAnalyticsResult } from "../../core";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
-import { report } from "./fixtures";
+import { report, row } from "./fixtures";
 
 afterEach(cleanup);
 
@@ -145,6 +146,25 @@ describe("AnalyticsDashboard states", () => {
     expect(screen.getByTestId("trend-chart")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Search/ })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows the Countries tab's rows and data credit, not a 'not collected yet' state", () => {
+    settled({
+      kind: "report",
+      report: report({
+        rows: {
+          country: [row("FR", { visitors: 5 })],
+        } as Partial<AnalyticsReport["rows"]> as AnalyticsReport["rows"],
+      }),
+    });
+    renderDashboard();
+    expect(
+      screen.getByRole("button", {
+        name: (name) => name.startsWith("France (FR)"),
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "DB-IP" })).toBeTruthy();
+    expect(screen.queryByText("Not collected yet.")).toBeNull();
   });
 
   it("refreshes only when asked", () => {

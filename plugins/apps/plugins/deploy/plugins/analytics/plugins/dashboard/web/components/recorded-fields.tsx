@@ -3,7 +3,6 @@ import {
   NEVER_RECORDED,
   RECORDED_FIELDS,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -34,12 +33,9 @@ export function RecordedFields(): ReactNode {
           <Stack gap="sm" as="dl">
             {RECORDED_FIELDS.map((field) => (
               <Stack key={field.name} gap="none">
-                <Inline gap="xs" as="dt">
-                  <Text variant="code">{field.name}</Text>
-                  {"notCollectedYet" in field && field.notCollectedYet && (
-                    <Badge variant="muted">not collected yet</Badge>
-                  )}
-                </Inline>
+                <Text as="dt" variant="code">
+                  {field.name}
+                </Text>
                 <Text as="dd" variant="caption" tone="muted">
                   {field.description}
                 </Text>

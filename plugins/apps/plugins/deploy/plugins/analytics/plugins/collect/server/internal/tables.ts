@@ -71,7 +71,6 @@ export const analyticsVisits = pgTable(
     utmSource: text("utm_source"),
     utmMedium: text("utm_medium"),
     utmCampaign: text("utm_campaign"),
-    /** Always null for now: IP-to-country lookup is a follow-up. */
     country: text("country"),
     language: text("language"),
     device: parsedText("device", DeviceFamilySchema).notNull(),

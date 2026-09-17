@@ -18,12 +18,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { clickRow, isFilterOn } from "../internal/filters";
-import { formatCount } from "../internal/format";
-import {
-  isNotCollectedYet,
-  type PanelDef,
-  type PanelTab,
-} from "../internal/panels";
+import { dimensionValueLabel, formatCount } from "../internal/format";
+import type { DataCredit, PanelDef, PanelTab } from "../internal/panels";
 
 const NUMBER_CELL = "w-24 text-right tabular-nums";
 
@@ -73,13 +69,34 @@ export function RankedPanel({
           filters={filters}
           onRowClick={onRowClick}
         />
-        {tab.note && (
+        {(tab.note || tab.credit) && (
           <Text as="p" variant="caption" tone="muted">
             {tab.note}
+            {tab.note && tab.credit && " "}
+            {tab.credit && <Credit credit={tab.credit} />}
           </Text>
         )}
       </Stack>
     </Card>
+  );
+}
+
+/** "IP geolocation by DB-IP (db-ip.com), CC BY 4.0." — the source name links to it. */
+function Credit({ credit }: { credit: DataCredit }): ReactNode {
+  const { what, source } = credit;
+  return (
+    <>
+      {what} by{" "}
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="underline hover:text-foreground"
+      >
+        {source.name}
+      </a>{" "}
+      ({new URL(source.url).host}), {source.license}.
+    </>
   );
 }
 
@@ -96,9 +113,6 @@ function RankedList({
   filters: readonly AnalyticsFilter[];
   onRowClick: (dimension: Dimension, value: string) => void;
 }): ReactNode {
-  if (isNotCollectedYet(tab.dimension)) {
-    return <Placeholder>Not collected yet.</Placeholder>;
-  }
   const rows = report.rows[tab.dimension];
   if (rows.length === 0) {
     return <Placeholder>Nothing recorded in this period.</Placeholder>;
@@ -123,6 +137,7 @@ function RankedList({
       {rows.map((row) => {
         const selected = isFilterOn(filters, tab.dimension, row.value);
         const click = clickRow(filters, source, tab.dimension, row.value);
+        const label = dimensionValueLabel(tab.dimension, row.value);
         return (
           <Row
             key={row.value}
@@ -134,7 +149,7 @@ function RankedList({
                 ? click.reason
                 : selected
                   ? "Remove this filter"
-                  : `Filter by ${row.value}`
+                  : `Filter by ${label}`
             }
             onClick={() => onRowClick(tab.dimension, row.value)}
             className="relative"
@@ -148,7 +163,7 @@ function RankedList({
             />
             {/* `relative`: positioned after the bar, so the text paints over it. */}
             <Fill className="relative">
-              <Text>{row.value}</Text>
+              <Text>{label}</Text>
             </Fill>
             <Text className={`relative ${NUMBER_CELL}`}>
               {formatCount(tab.primary.value(row))}

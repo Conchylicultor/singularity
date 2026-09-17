@@ -5,12 +5,23 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import type { AnalyticsFilter } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import {
+  NONE_VALUE,
+  type AnalyticsFilter,
+  type AnalyticsReport,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { IP_COUNTRY_SOURCE } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/core";
 import { STACKED_FILTERS_NOTE, clickRow } from "../internal/filters";
 import { PANELS } from "../internal/panels";
 import { RankedPanel } from "../components/ranked-panel";
 import { FilterBar } from "../components/filter-bar";
-import { report } from "./fixtures";
+import { report, row } from "./fixtures";
+
+/** jsdom's navigator.language is en-US. */
+const FRANCE = "France (FR)";
+
+/** A row's accessible name is its label followed by its numbers. */
+const startsWith = (label: string) => (name: string) => name.startsWith(label);
 
 afterEach(cleanup);
 
@@ -105,20 +116,45 @@ describe("RankedPanel", () => {
     expect((direct as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("says a dimension is not collected yet instead of showing no rows", () => {
+  it("names a country next to its code, and filters on the code", () => {
+    const onRowClick = vi.fn();
     const panel = PANELS.find((p) => p.id === "locations")!;
     render(
       <RankedPanel
         panel={panel}
         tabId="countries"
         onTab={() => {}}
-        report={report()}
+        report={report({
+          rows: {
+            country: [
+              row("FR", { visitors: 5 }),
+              row("XX", { visitors: 2 }),
+              row(NONE_VALUE, { visitors: 1 }),
+            ],
+          } as Partial<AnalyticsReport["rows"]> as AnalyticsReport["rows"],
+        })}
         source="raw"
         filters={[]}
-        onRowClick={() => {}}
+        onRowClick={onRowClick}
       />,
     );
-    expect(screen.getByText("Not collected yet.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: startsWith(FRANCE) }));
+    expect(onRowClick).toHaveBeenCalledWith("country", "FR");
+    // A code the platform cannot name, and the no-country value, read as stored.
+    expect(screen.getByRole("button", { name: startsWith("XX") })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: startsWith(NONE_VALUE) }),
+    ).toBeTruthy();
+  });
+
+  it("credits the IP geolocation source under the Countries tab, with a link", () => {
+    renderPanel("locations", [], "raw");
+    const note = screen.getByText(/Looked up from the visitor's IP/);
+    expect(note.textContent).toBe(
+      "Looked up from the visitor's IP, which is not stored. IP geolocation by DB-IP (db-ip.com), CC BY 4.0.",
+    );
+    const link = screen.getByRole("link", { name: IP_COUNTRY_SOURCE.name });
+    expect(link.getAttribute("href")).toBe(IP_COUNTRY_SOURCE.url);
   });
 });
 
@@ -165,5 +201,21 @@ describe("FilterBar", () => {
       />,
     );
     expect(screen.getByText(STACKED_FILTERS_NOTE)).toBeTruthy();
+  });
+
+  it("names a country filter the way its row does", () => {
+    render(
+      <FilterBar
+        filters={[{ dimension: "country", value: "FR" }]}
+        source="raw"
+        onRemove={() => {}}
+        onClear={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole("button", {
+        name: `Remove filter Country is ${FRANCE}`,
+      }),
+    ).toBeTruthy();
   });
 });

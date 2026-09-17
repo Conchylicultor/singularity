@@ -1,14 +1,13 @@
 import {
-  RECORDED_FIELDS,
   averageTimeOnPageMs,
   bounceRate,
   conversionRate,
   visitorShare,
   type AnalyticsReport,
   type Dimension,
-  type RecordedColumn,
   type ReportRow,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import { IP_COUNTRY_SOURCE } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/core";
 import { formatDurationMs, formatPercent, orDash } from "./format";
 
 /** One numeric column of a ranked list. */
@@ -26,6 +25,15 @@ export interface PanelTab {
   primary: { label: string; value: (row: ReportRow) => number };
   secondary: PanelColumn;
   note?: string;
+  /** Who the tab's data comes from, credited (with a link) after the note. */
+  credit?: DataCredit;
+}
+
+/** "IP geolocation by DB-IP (db-ip.com), CC BY 4.0." */
+export interface DataCredit {
+  /** What the source provides: "IP geolocation". */
+  what: string;
+  source: { name: string; url: string; license: string };
 }
 
 export interface PanelDef {
@@ -136,6 +144,8 @@ export const PANELS: readonly PanelDef[] = [
         dimension: "country",
         primary: visitors,
         secondary: share,
+        note: "Looked up from the visitor's IP, which is not stored.",
+        credit: { what: "IP geolocation", source: IP_COUNTRY_SOURCE },
       },
       {
         id: "languages",
@@ -193,23 +203,3 @@ export const PANELS: readonly PanelDef[] = [
     ],
   },
 ];
-
-/**
- * Dimensions whose storage exists but nothing fills yet, read off the recorded
- * field list — so a panel says "not collected yet" exactly while the field
- * does, and starts showing rows the day the field loses the mark.
- */
-const DIMENSION_COLUMN: Partial<Record<Dimension, RecordedColumn>> = {
-  country: "country",
-};
-
-export function isNotCollectedYet(dimension: Dimension): boolean {
-  const column = DIMENSION_COLUMN[dimension];
-  if (!column) return false;
-  return RECORDED_FIELDS.some(
-    (f) =>
-      "notCollectedYet" in f &&
-      f.notCollectedYet &&
-      (f.columns as readonly RecordedColumn[]).includes(column),
-  );
-}

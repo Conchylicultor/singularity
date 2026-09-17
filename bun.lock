@@ -265,6 +265,10 @@
       "name": "@singularity/plugin-apps-deploy-analytics-host-only",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country": {
+      "name": "@singularity/plugin-apps-deploy-analytics-ip-country",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/composition": {
       "name": "@singularity/plugin-apps-deploy-composition",
       "version": "0.0.1",
@@ -6108,6 +6112,8 @@
     "@singularity/plugin-apps-deploy-analytics-dashboard": ["@singularity/plugin-apps-deploy-analytics-dashboard@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard"],
 
     "@singularity/plugin-apps-deploy-analytics-host-only": ["@singularity/plugin-apps-deploy-analytics-host-only@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only"],
+
+    "@singularity/plugin-apps-deploy-analytics-ip-country": ["@singularity/plugin-apps-deploy-analytics-ip-country@workspace:plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country"],
 
     "@singularity/plugin-apps-deploy-composition": ["@singularity/plugin-apps-deploy-composition@workspace:plugins/apps/plugins/deploy/plugins/composition"],
 

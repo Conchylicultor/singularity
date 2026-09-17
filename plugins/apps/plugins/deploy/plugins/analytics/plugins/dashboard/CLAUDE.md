@@ -50,16 +50,23 @@ an error with "keep only the first filter".
 Panels are ranked top-N readouts of one fetched report, rendered as `Row`s with
 a named `no-adhoc-row-list` disable: the order is the server's ranking and each
 row is a filter toggle. "What one visit records" renders collect's
-`RECORDED_FIELDS` / `NEVER_RECORDED`, and a panel whose field is marked
-`notCollectedYet` says so instead of showing rows.
+`RECORDED_FIELDS` / `NEVER_RECORDED`.
+
+A row and its filter chip show a value through `dimensionValueLabel`
+(`web/internal/format.ts`): a per-dimension label map, identity by default —
+countries read "France (FR)" via `Intl.DisplayNames` in `navigator.language`. The stored value is still
+what is filtered on. A tab can carry a `credit` (its data source, linked),
+rendered after its note; Countries credits `IP_COUNTRY_SOURCE`.
 
 ## Tests
 
 - `server/internal/query-over-ssh.test.ts` — argv, result mapping, no session
   when the deployment does not resolve.
 - `web/internal/collect-plugin-id.test.ts` — the id names the collect folder.
-- `web/__tests__/filter-rules.test.tsx` — the chip rules, as rule and as UI.
-- `web/__tests__/dashboard-states.test.tsx` — loading and every error state.
+- `web/__tests__/filter-rules.test.tsx` — the chip rules, as rule and as UI;
+  country labels and the Countries credit.
+- `web/__tests__/dashboard-states.test.tsx` — loading, every error state, and a
+  report's panels (Countries rows + credit).
 
 Run with `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard`.
 

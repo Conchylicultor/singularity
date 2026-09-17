@@ -1,7 +1,8 @@
-import type {
-  AnalyticsRange,
-  Dimension,
-  Granularity,
+import {
+  NONE_VALUE,
+  type AnalyticsRange,
+  type Dimension,
+  type Granularity,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 
 const countFormatter = new Intl.NumberFormat(undefined, {
@@ -82,3 +83,50 @@ export const DIMENSION_LABEL: Record<Dimension, string> = {
   os: "OS",
   event: "Event",
 };
+
+/*
+ * The browser's language, named explicitly rather than left to the runtime
+ * default: a runtime with no locale ("und") names no region at all, so every
+ * country would silently read as its bare code.
+ *
+ * Built on first use, not at module load: build-time tooling imports this
+ * barrel outside a browser, where `navigator.language` is not set.
+ */
+let regionNames: Intl.DisplayNames | undefined;
+function getRegionNames(): Intl.DisplayNames {
+  regionNames ??= new Intl.DisplayNames([navigator.language], {
+    type: "region",
+  });
+  return regionNames;
+}
+
+/** "France (FR)"; a code the platform cannot name reads as the code itself. */
+function countryLabel(code: string): string {
+  if (code === NONE_VALUE) return code;
+  let name: string | undefined;
+  try {
+    name = getRegionNames().of(code);
+  } catch (err) {
+    // A string that is not a region code at all: show it as stored.
+    if (err instanceof RangeError) return code;
+    throw err;
+  }
+  return name === undefined || name === code ? code : `${name} (${code})`;
+}
+
+/**
+ * How a dimension's stored value is shown — in a ranked row and in its filter
+ * chip alike. Dimensions not listed show the value as stored. The value that
+ * is filtered on is always the stored one; only its display changes.
+ */
+const VALUE_LABEL: Partial<Record<Dimension, (value: string) => string>> = {
+  country: countryLabel,
+};
+
+export function dimensionValueLabel(
+  dimension: Dimension,
+  value: string,
+): string {
+  const label = VALUE_LABEL[dimension];
+  return label ? label(value) : value;
+}

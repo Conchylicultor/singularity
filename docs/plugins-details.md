@@ -609,6 +609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses:
                   - `apps/deploy/analytics/host-only.hostOnly`
                   - `apps/deploy/analytics/host-only.requestClientIp`
+                  - `apps/deploy/analytics/ip-country.lookupCountry`
                   - `database.db`
                   - `database/change-feed.ExcludeFromChangeFeed`
                   - `database/sql-column.parsedJson`
@@ -818,6 +819,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - `requestClientIp`
               - Core:
                 - Exports (values): `HOST_ONLY_PREFIX`
+            - **`ip-country`** — IP-to-country lookup from a local copy of DB-IP IP-to-Country Lite: lookupCountry(ip) answers found / unlisted / unavailable by binary search over an in-memory snapshot read lazily from the machine-wide cache, and the weekly ip-country.refresh job (also enqueued at boot when the snapshot is missing or stale) downloads the CSV, builds the compact binary snapshot and swaps it in. The IP never leaves the process.
+              - Server:
+                - Uses: `infra/jobs.defineJob`
+                - Exports (types):
+                  - `IpCountryLookup`
+                  - `IpCountryResult`
+                - Exports (values):
+                  - `buildSnapshot`
+                  - `createIpCountryLookup`
+                  - `ipCountryRefreshJob`
+                  - `lookupCountry`
+                  - `reloadIpCountry`
+                - Register: `defineJob('ip-country.refresh')`
+              - Cross-plugin:
+                - Imported by: `apps/deploy/analytics/collect`
+              - Core:
+                - Exports (values): `IP_COUNTRY_SOURCE`
         - **`composition`** — Composition section of the deployment pane: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -17869,6 +17887,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/analytics/collect`
+          - `apps/deploy/analytics/ip-country`
           - `apps/deploy/deployments`
           - `apps/events/reanchor`
           - `apps/events/refresh`

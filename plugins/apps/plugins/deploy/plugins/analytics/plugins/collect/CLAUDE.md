@@ -43,6 +43,14 @@ totals equals the same report from raw rows — pinned by the parity test in
 - `RECORDED_FIELDS` (core) is what "What one visit records" renders.
   `server/internal/recorded-columns.ts` fails to compile if the stored columns and
   that list disagree.
+- **Country.** `openVisit` looks the client IP up with `lookupCountry`
+  ([`apps/deploy/analytics/ip-country`](../ip-country/CLAUDE.md)), an
+  in-memory binary search over a local DB-IP snapshot, and stores only the
+  resulting code. The IP is used for that lookup and the daily hash, then
+  dropped; it is never stored and never sent anywhere. Only a new visit looks
+  up; a hit joining a live visit keeps its country. `(none)` in the report
+  counts unlisted addresses (private, reserved) **and** visits recorded before
+  the machine's first snapshot download finished.
 - The tracker sends `host` (the page's `location.host`) because the gateway
   rewrites the `Host` header before the backend sees it.
 
@@ -58,6 +66,7 @@ totals equals the same report from raw rows — pinned by the parity test in
   - Uses:
     - `apps/deploy/analytics/host-only.hostOnly`
     - `apps/deploy/analytics/host-only.requestClientIp`
+    - `apps/deploy/analytics/ip-country.lookupCountry`
     - `database.db`
     - `database/change-feed.ExcludeFromChangeFeed`
     - `database/sql-column.parsedJson`

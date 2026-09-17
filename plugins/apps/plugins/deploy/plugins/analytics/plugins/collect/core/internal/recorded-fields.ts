@@ -54,8 +54,6 @@ export interface RecordedField {
   description: string;
   /** Storage columns holding it. */
   columns: readonly RecordedColumn[];
-  /** True when the column exists but nothing fills it yet. */
-  notCollectedYet?: true;
 }
 
 export const RECORDED_FIELDS = [
@@ -105,9 +103,9 @@ export const RECORDED_FIELDS = [
   },
   {
     name: "country",
-    description: "Not collected yet",
+    description:
+      "Country of the visitor's network, looked up on the server in a local copy of DB-IP; the IP address itself is not kept",
     columns: ["country"],
-    notCollectedYet: true,
   },
   {
     name: "language",

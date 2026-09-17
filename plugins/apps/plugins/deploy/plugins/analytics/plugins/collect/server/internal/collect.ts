@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { IpCountryResult } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
 import {
   channelOf,
   utcDay,
@@ -28,6 +29,22 @@ export interface CollectContext {
 }
 
 /**
+ * Which country an IP is in. The route passes the machine's DB-IP lookup
+ * (`lookupCountry`); a test passes one over its own snapshot fixture.
+ */
+export type CountryLookup = (ip: string) => IpCountryResult;
+
+/**
+ * The stored country for a new visit: the code when the lookup found one,
+ * otherwise null — an unlisted address and "no snapshot downloaded yet" both
+ * read as `(none)` in the report.
+ */
+function countryOf(lookupCountry: CountryLookup, ip: string): string | null {
+  const result = lookupCountry(ip);
+  return result.kind === "found" ? result.country : null;
+}
+
+/**
  * Record one collect body. Bots are ignored before anything touches the DB.
  * Pageviews and events find or open the visitor's visit under a per-hash
  * advisory lock, so two hits racing from one page load land in ONE visit.
@@ -36,15 +53,16 @@ export async function recordCollect(
   dbx: AnalyticsDb,
   body: CollectBody,
   ctx: CollectContext,
+  lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
   if (isBotUserAgent(ctx.userAgent)) {
     return { outcome: "ignored", reason: "bot" };
   }
   switch (body.kind) {
     case "pageview":
-      return recordPageview(dbx, body, ctx);
+      return recordPageview(dbx, body, ctx, lookupCountry);
     case "event":
-      return recordEvent(dbx, body, ctx);
+      return recordEvent(dbx, body, ctx, lookupCountry);
     case "engagement":
       return recordEngagement(dbx, body, ctx.now);
   }
@@ -124,6 +142,7 @@ async function openVisit(
     referrer: string | undefined;
     utm: PageviewBody["utm"];
     ctx: CollectContext;
+    lookupCountry: CountryLookup;
   },
 ): Promise<string> {
   const { ctx } = opts;
@@ -145,7 +164,9 @@ async function openVisit(
       utmSource: opts.utm?.source ?? null,
       utmMedium: opts.utm?.medium ?? null,
       utmCampaign: opts.utm?.campaign ?? null,
-      country: null,
+      // Looked up once, when the visit opens: a hit joining a live visit keeps
+      // its country, like device and entry page. The IP itself is not stored.
+      country: countryOf(opts.lookupCountry, ctx.ip),
       language: primaryLanguage(ctx.acceptLanguage),
       ...parseUserAgent(ctx.userAgent),
     })
@@ -169,6 +190,7 @@ async function recordPageview(
   dbx: AnalyticsDb,
   body: PageviewBody,
   ctx: CollectContext,
+  lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
   const hash = await hashFor(dbx, body.host, ctx);
   return withVisitorLock(dbx, hash, async (tx) => {
@@ -181,6 +203,7 @@ async function recordPageview(
         referrer: body.referrer,
         utm: body.utm,
         ctx,
+        lookupCountry,
       }));
     const [hit] = await tx
       .insert(analyticsHits)
@@ -211,6 +234,7 @@ async function recordEvent(
   dbx: AnalyticsDb,
   body: EventBody,
   ctx: CollectContext,
+  lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
   const hash = await hashFor(dbx, body.host, ctx);
   return withVisitorLock(dbx, hash, async (tx) => {
@@ -223,6 +247,7 @@ async function recordEvent(
         referrer: undefined,
         utm: undefined,
         ctx,
+        lookupCountry,
       }));
     await tx.insert(analyticsHits).values({
       visitId,

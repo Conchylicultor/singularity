@@ -10,6 +10,9 @@
  * report read totals while a 30-day report reads raw rows and still agree.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -18,6 +21,11 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/server";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  buildSnapshot,
+  createIpCountryLookup,
+  type IpCountryLookup,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
 import {
   DimensionSchema,
   UNFILTERED_LEVEL,
@@ -51,6 +59,8 @@ const UA = {
 };
 
 let t: TestDb;
+let countries: IpCountryLookup;
+const snapshotDir = mkdtempSync(join(tmpdir(), "analytics-ip-country-"));
 
 async function hit(
   body: z.input<typeof CollectBodySchema>,
@@ -59,12 +69,17 @@ async function hit(
 ): Promise<CollectResponse> {
   // Decode exactly as the route does, so the schema's server-side guards
   // (query-string stripping included) are part of what is under test.
-  return recordCollect(t.db, CollectBodySchema.parse(body), {
-    ip: who.ip,
-    userAgent: who.ua,
-    acceptLanguage: who.lang ?? "en-US,en;q=0.9",
-    now,
-  });
+  return recordCollect(
+    t.db,
+    CollectBodySchema.parse(body),
+    {
+      ip: who.ip,
+      userAgent: who.ua,
+      acceptLanguage: who.lang ?? "en-US,en;q=0.9",
+      now,
+    },
+    (ip) => countries.lookup(ip),
+  );
 }
 
 function pageviewId(res: CollectResponse): string {
@@ -79,6 +94,18 @@ const C = { ip: "203.0.113.3", ua: UA.firefoxLinux };
 const host = "equin.dev";
 
 beforeAll(async () => {
+  // A DB-IP snapshot fixture: A's address is in France, B's is reserved (ZZ),
+  // C's is in no range at all.
+  const snapshotPath = join(snapshotDir, "ip-country.bin");
+  writeFileSync(
+    snapshotPath,
+    await buildSnapshot(
+      "203.0.113.1,203.0.113.1,FR\n203.0.113.2,203.0.113.2,ZZ\n",
+      202609,
+    ),
+  );
+  countries = createIpCountryLookup(() => snapshotPath);
+
   t = await createTestDb({ prefix: "analytics_test" });
   await runMigrations(t.db);
 
@@ -165,6 +192,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  rmSync(snapshotDir, { recursive: true, force: true });
   await t.drop();
 });
 
@@ -212,7 +240,7 @@ describe("collect", () => {
       language: "en",
       engagedMs: 60_000,
       exitEngagedMs: 60_000,
-      country: null,
+      country: "FR",
     });
     expect(a2).toMatchObject({ pageviews: 1, channel: "Direct" });
     expect(a1!.visitorHash).toBe(a2!.visitorHash);
@@ -223,11 +251,13 @@ describe("collect", () => {
       os: "iOS",
       language: "fr",
       exitEngagedMs: 5_000,
+      country: null,
     });
     expect(c).toMatchObject({
       channel: "Search",
       referrerHost: "google.com",
       events: 2,
+      country: null,
     });
   });
 

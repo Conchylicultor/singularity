@@ -1,6 +1,7 @@
 import { db } from "@plugins/database/server";
 import type { HttpHandler } from "@plugins/framework/plugins/server-core/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { lookupCountry } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
 import {
   hostOnly,
   requestClientIp,
@@ -38,12 +39,17 @@ function capBodySize(maxBytes: number, handler: HttpHandler): HttpHandler {
 export const handleCollect = capBodySize(
   MAX_COLLECT_BODY_BYTES,
   implement(collectEndpoint, ({ body, req }) =>
-    recordCollect(db, body, {
-      ip: requestClientIp(req),
-      userAgent: req.headers.get("user-agent") ?? "",
-      acceptLanguage: req.headers.get("accept-language"),
-      now: new Date(),
-    }),
+    recordCollect(
+      db,
+      body,
+      {
+        ip: requestClientIp(req),
+        userAgent: req.headers.get("user-agent") ?? "",
+        acceptLanguage: req.headers.get("accept-language"),
+        now: new Date(),
+      },
+      lookupCountry,
+    ),
   ),
 );
 
