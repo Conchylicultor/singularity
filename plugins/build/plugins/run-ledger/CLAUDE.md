@@ -90,7 +90,7 @@ primary-key collision is never read as "in flight"), and retry the INSERT once
 when it returns `true`. The rule is the supervised reconciler's:
 
 ```
-terminal = build-logs-<id>.json ?? (isPidAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
+terminal = build-logs-<id>.json ?? (isRunAlive(pid) ? still running : HARD_KILL_EXIT_CODE)
 ```
 
 `build-logs-<buildId>.json` is the build's terminal record. `writeBuildLogs`
@@ -109,7 +109,7 @@ LIVE build holds the slot.
 
 This leaf's whole import graph is intentionally minimal: drizzle,
 `database/admin/server`, `namespace/core`, and — for the settle —
-`jobs/supervised-job/core` (`isPidAlive`, `HARD_KILL_EXIT_CODE`) and `paths/core`
+`jobs/supervised-job/core` (`isRunAlive`, `HARD_KILL_EXIT_CODE`) and `paths/core`
 (`worktreeArtifacts.buildLogs`). Both of those are db-free and queue-free by
 their own barrels' rules. **Never add a `config_v2`,
 `shell/notifications`, env-bound `database/server`, `jobs`, or `events` import

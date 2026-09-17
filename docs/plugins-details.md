@@ -18079,13 +18079,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/paths.worktreeArtifacts`
               - `infra/runtime-identity.runtimeNamespace`
             - Exports (types):
+              - `RunObservation`
               - `RunTerminal`
               - `SupervisedTaskInvocation`
             - Exports (values):
               - `assertRunId`
               - `assertRunKindId`
               - `HARD_KILL_EXIT_CODE`
-              - `isPidAlive`
+              - `isRunAlive`
+              - `observeRun`
               - `readRunTerminal`
               - `RUN_TERMINAL_ENV`
               - `RunMarkerError`

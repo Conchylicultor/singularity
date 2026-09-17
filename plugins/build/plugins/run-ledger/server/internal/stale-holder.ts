@@ -4,7 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
 import {
   HARD_KILL_EXIT_CODE,
-  isPidAlive,
+  isRunAlive,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
@@ -25,7 +25,13 @@ import { _buildRuns } from "./tables";
 // The fix is that WHOEVER LOSES THE CLAIM decides whether the holder is dead,
 // with the same rule the supervised reconciler applies (`settleRun`):
 //
-//   terminal = build's own terminal record ?? (pid alive ? STILL RUNNING : hard kill -1)
+//   terminal = build's own terminal record ?? (run alive ? STILL RUNNING : hard kill -1)
+//
+// "Run alive" is `isRunAlive`: the holder pid OR its process group. A build the
+// backend started is a supervised run whose row pid is the shim — the leader of
+// the group the real `./singularity build` lives in — so a shim killed alone
+// must not read as a dead holder. A plain CLI build's pid is covered by the
+// pid half of the same probe.
 //
 // Race-safety: this runs only AFTER an insert lost to the index, and closes only
 // a row whose build provably ended — a dead process does not come back. Two
@@ -123,7 +129,7 @@ export async function settleDeadInflightRun(
   let terminal: BuildTerminal;
   if (recorded !== null) {
     terminal = recorded;
-  } else if (isPidAlive(holder.pid)) {
+  } else if (isRunAlive(holder.pid)) {
     return false;
   } else {
     // No record and no process: a SIGKILL, which runs no handler.

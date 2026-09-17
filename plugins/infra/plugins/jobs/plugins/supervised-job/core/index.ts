@@ -3,7 +3,8 @@
 // process — which cannot reach a `server/` barrel — can read the same exit
 // marker the backend reads, rather than re-deriving the format. It must NEVER
 // be imported from `web/`, and it deliberately touches no `db` and no jobs
-// queue: what is here is the file format and the process probe, nothing else.
+// queue: what is here is the file format, the process probe and the close rule
+// built from the two, nothing else.
 //
 // The `supervised-exec` verb's name and the shape of one child invocation live
 // here too, because the CLI declaration (`cli/`) spells the name and `server/`
@@ -12,11 +13,12 @@
 
 export {
   HARD_KILL_EXIT_CODE,
-  isPidAlive,
+  isRunAlive,
+  observeRun,
   readRunTerminal,
   RunMarkerError,
 } from "./internal/terminal";
-export type { RunTerminal } from "./internal/terminal";
+export type { RunObservation, RunTerminal } from "./internal/terminal";
 export { supervisedArgv, RUN_TERMINAL_ENV } from "./internal/shim";
 export { assertRunKindId, assertRunId } from "./internal/ids";
 export { SUPERVISED_EXEC_COMMAND } from "./internal/exec-command";

@@ -2,7 +2,7 @@
  * The build's step-view fallback — what is left of `run-build.test.ts` after the
  * migration, and the one thing in it that is still build's own.
  *
- * That suite covered `readBuildTerminal`, `isPidAlive` and the `close?`
+ * That suite covered `readBuildTerminal`, the pid probe (now `isRunAlive`) and the `close?`
  * composition. All three now belong to the supervised-run primitive and are
  * tested there (`supervised-job/core/internal/terminal.test.ts`), against the
  * same real files and real pids — so keeping a second copy here would be two

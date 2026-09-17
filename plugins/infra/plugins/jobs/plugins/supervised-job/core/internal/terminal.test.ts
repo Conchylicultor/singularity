@@ -5,15 +5,17 @@
  * through the module-level `db` singleton, so — exactly like the
  * `run-build.test.ts` suite this mirrors, and the page/editor `parent-liveness`
  * one before it — it cannot be pointed at a fixture DB. But its per-row close
- * DECISION is fully determined by two pure, db-free functions:
+ * DECISION is `observeRun`, which is fully determined by two pure, db-free
+ * functions:
  *
- *   close?  =  !(readRunTerminal(kind, id) == null && isPidAlive(pid))
+ *   close?  =  !(readRunTerminal(kind, id) == null && isRunAlive(pid))
  *   value   =  readRunTerminal(kind, id) ?? { exitCode: -1, finishedAt: now }
  *
  * So covering `readRunTerminal` (against real marker files at the real resolved
- * path) and `isPidAlive` (against real processes) exercises the whole rule,
- * and the composition block at the bottom restates it verbatim so the three
- * scenarios are asserted end-to-end without a fixture DB:
+ * path) and `isRunAlive` (against real processes and real process groups)
+ * exercises the whole rule, and the composition block at the bottom drives the
+ * real `observeRun` so the three scenarios are asserted end-to-end without a
+ * fixture DB (`observe.test.ts` covers it against live children too):
  *
  *   - marker present, pid alive ⇒ terminal != null ⇒ CLOSE at the recorded code
  *     and the marker's mtime.
@@ -32,7 +34,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
-import { isPidAlive, readRunTerminal, RunMarkerError } from "./terminal";
+import {
+  isRunAlive,
+  observeRun,
+  readRunTerminal,
+  RunMarkerError,
+} from "./terminal";
 
 const KIND = "testkind";
 const name = runtimeNamespace();
@@ -165,55 +172,130 @@ describe("readRunTerminal", () => {
   });
 });
 
-describe("isPidAlive", () => {
-  test("null pid ⇒ dead", () => {
-    expect(isPidAlive(null)).toBe(false);
+/**
+ * A detached `sh` whose own child outlives it — the shape of a supervised run
+ * (shim + worker in one fresh process group, pgid == the shim's pid).
+ */
+const groups: Bun.Subprocess[] = [];
+
+function spawnGroup(): Bun.Subprocess {
+  const proc = Bun.spawn(["/bin/sh", "-c", "sleep 30 & wait"], {
+    stdin: "ignore",
+    stdout: "ignore",
+    stderr: "ignore",
+    detached: true,
+  });
+  groups.push(proc);
+  return proc;
+}
+
+/** Kill every process of `pgid`'s group, ignoring a group already gone. */
+function killGroup(pgid: number): void {
+  try {
+    process.kill(-pgid, "SIGKILL");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+  }
+}
+
+/**
+ * Wait (bounded) until the kernel reports `pgid`'s group empty (ESRCH). An
+ * orphaned member is re-parented to init, which reaps it asynchronously, and on
+ * macOS a member still tearing down answers the group probe with EPERM for a
+ * few milliseconds — so both "ok" and EPERM mean "not yet".
+ */
+async function awaitGroupGone(pgid: number): Promise<void> {
+  for (let i = 0; i < 100; i++) {
+    try {
+      process.kill(-pgid, 0);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ESRCH") return;
+      if (code !== "EPERM") throw err;
+    }
+    await Bun.sleep(20);
+  }
+  throw new Error(`process group ${pgid} still alive after 2s`);
+}
+
+/** Wait (bounded) until the group's sh has started its `sleep` child. */
+async function awaitGroupMembers(pgid: number, count: number): Promise<void> {
+  for (let i = 0; i < 100; i++) {
+    const ps = Bun.spawnSync(["ps", "-o", "pid=", "-g", String(pgid)]);
+    const members = ps.stdout.toString().trim().split(/\s+/).filter(Boolean);
+    if (members.length >= count) return;
+    await Bun.sleep(20);
+  }
+  throw new Error(`process group ${pgid} never reached ${count} members`);
+}
+
+describe("isRunAlive", () => {
+  afterEach(async () => {
+    for (const proc of groups.splice(0)) {
+      killGroup(proc.pid);
+      await proc.exited;
+      await awaitGroupGone(proc.pid);
+    }
   });
 
-  test("own pid ⇒ alive", () => {
-    expect(isPidAlive(process.pid)).toBe(true);
+  test("null pid ⇒ dead", () => {
+    expect(isRunAlive(null)).toBe(false);
+  });
+
+  test("own pid ⇒ alive, whether or not this process leads a group", () => {
+    // Rows are seeded with `process.pid` at claim time — the reason the pid
+    // half of the probe exists.
+    expect(isRunAlive(process.pid)).toBe(true);
   });
 
   test("a reaped child pid ⇒ dead", async () => {
-    const proc = Bun.spawn(["true"]);
+    const proc = Bun.spawn(["true"], { detached: true });
     const childPid = proc.pid;
     await proc.exited; // reaped ⇒ ESRCH on the subsequent probe
-    expect(isPidAlive(childPid)).toBe(false);
+    expect(isRunAlive(childPid)).toBe(false);
+  });
+
+  test("the group leader killed ALONE, its worker still running ⇒ alive", async () => {
+    // The 2026-09-16 shape: `kill -9 <row pid>` took the shim and left the
+    // worker running, re-parented, in the same group. A pid-only probe read
+    // this as dead and closed the run under a live worker.
+    const proc = spawnGroup();
+    await awaitGroupMembers(proc.pid, 2);
+    process.kill(proc.pid, "SIGKILL");
+    await proc.exited; // the shim is reaped: `kill(pid, 0)` alone is ESRCH now
+    expect(isRunAlive(proc.pid)).toBe(true);
+
+    killGroup(proc.pid);
+    await awaitGroupGone(proc.pid);
+    expect(isRunAlive(proc.pid)).toBe(false);
   });
 });
 
 describe("close condition (composition)", () => {
-  // Mirrors the exact per-row rule in `settleRun`, driven by the real
-  // readRunTerminal / isPidAlive outputs.
+  // The real per-row rule `settleRun` and `awaitSupervisedRun` both call.
   const now = new Date();
-  function decide(
-    runId: string,
-    pid: number | null,
-  ):
-    | { exitCode: number; signalCode: string | null; finishedAt: Date }
-    | "leave-open" {
-    const terminal = readRunTerminal(KIND, runId);
-    if (terminal === null && isPidAlive(pid)) return "leave-open";
-    return terminal ?? { exitCode: -1, signalCode: null, finishedAt: now };
-  }
 
   test("marker present but pid still alive ⇒ closes from the marker", () => {
     // The shim writes the marker BEFORE it exits, so this shape is the normal
     // one for the few milliseconds before the pid reaps — not an anomaly.
     const runId = uniqueRunId("closealive");
     writeMarker(runId, "0 -\n");
-    expect(decide(runId, process.pid)).toMatchObject({ exitCode: 0 });
+    expect(observeRun(KIND, runId, process.pid, now)).toMatchObject({
+      state: "ended",
+      terminal: { exitCode: 0 },
+    });
   });
 
   test("no marker + pid dead ⇒ closes with the -1/now sentinel", () => {
-    expect(decide(uniqueRunId("closedead"), null)).toEqual({
-      exitCode: -1,
-      signalCode: null,
-      finishedAt: now,
+    expect(observeRun(KIND, uniqueRunId("closedead"), null, now)).toEqual({
+      state: "ended",
+      terminal: { exitCode: -1, signalCode: null, finishedAt: now },
     });
   });
 
   test("running run (no marker, pid alive) ⇒ left open", () => {
-    expect(decide(uniqueRunId("running"), process.pid)).toBe("leave-open");
+    expect(observeRun(KIND, uniqueRunId("running"), process.pid, now)).toEqual({
+      state: "running",
+    });
   });
 });

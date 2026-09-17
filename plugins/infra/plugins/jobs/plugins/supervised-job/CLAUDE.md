@@ -142,9 +142,9 @@ exists to enforce, made unspellable rather than documented:
 - The event can arrive **late, twice, or for a row already closed**. `finish` is
   called once per run per PROCESS, and a restart makes a second process.
 
-So every wake re-reads the marker file and decides from scratch (`observeRun`):
-present ⇒ ended; absent with a live pid ⇒ keep waiting; absent with a dead pid ⇒
-hard kill, `exitCode: -1`, `signalCode: null`. **Never re-derive killed-ness from
+So every wake re-reads the marker file and decides from scratch (`observeRun`,
+exported from `core/`): present ⇒ ended; absent with a live process group ⇒ keep
+waiting; absent with an empty group ⇒ hard kill, `exitCode: -1`, `signalCode: null`. **Never re-derive killed-ness from
 `exitCode > 128`** — `kill -TERM` and a program calling `exit(143)` are the same
 number, and guessing between them is what once recorded a deploy that never
 exited as "Exited with code 143".
@@ -303,7 +303,7 @@ recorded. Abort it and the handler never returns: no stamp, no terminal work, an
 the kind's in-flight index then refuses every future run of that kind.
 
 Every cancellation path closes itself. A SIGTERM leaves a marker and wakes
-immediately; a hard SIGKILL leaves none, and the next bounded wake sees a dead pid
+immediately; a hard SIGKILL leaves none, and the next bounded wake sees an empty group
 and records the hard-kill outcome.
 
 ## Residuals
@@ -321,9 +321,9 @@ and records the hard-kill outcome.
   by an unrelated process never satisfies "dead pid, no marker", so its workflow
   waits one interval forever. `supervised-run`'s reconciler has the same
   property; the fix, if it ever matters, belongs there.
-- **The close rule is written twice** — here in `observeRun`, and in
-  `supervised-run`'s `settleRun`. They must agree. The intended end state is one
-  exported rule in this plugin's `core/` that both call.
+- **The close rule is written once** — `observeRun` in `core/`, called by both
+  `awaitSupervisedRun` and the reconciler's `settleRun`, so the two cannot
+  disagree about whether a run ended.
 
 ## The supervisor: detach, transcript, exit marker, reconciler
 
@@ -437,9 +437,12 @@ case stays legible without claiming one.
 ### The close rule (build's, verbatim)
 
 ```
-close?  =  !(terminal == null && isPidAlive(pid))
+close?  =  !(terminal == null && isRunAlive(pid))
 value   =  terminal ?? { exitCode: -1, finishedAt: now }
 ```
+
+Stated once, as `observeRun` in `core/`; `settleRun` and `awaitSupervisedRun`
+both call it.
 
 A marker present closes the run even while the pid is alive — the shim writes it
 _before_ exiting. Callers claim their ledger row **before** spawning, seeded
@@ -480,6 +483,26 @@ signalling it alone kills the supervisor and leaves the work running,
 reparented. The group exists because the spawn is `detached: true` — itself
 load-bearing: the gateway hot-restarts a backend by signalling its whole process
 group, which is what killed a running deploy 0.9 s after spawn on 2026-08-28.
+
+### Liveness is the process GROUP
+
+`isRunAlive(pid)` is alive while `kill(pid, 0)` OR `kill(-pid, 0)` succeeds
+(EPERM counts as alive). It must agree with kill: the row pid is the shim's, and
+the real work is another process in the shim's group. When the shim alone is
+SIGKILLed (a stray `kill -9 <row pid>`), the worker is re-parented to init but
+keeps its group, so:
+
+- the run stays **open and running** while the worker lives — the tail keeps
+  publishing and the in-flight lock stays held, so no retry attempt can start
+  alongside it (probing the pid alone closed the row as `-1` here, and attempt 2
+  ran concurrently with attempt 1);
+- once the group is empty it closes with `-1` / `signalCode: null`, because only
+  the shim could `wait` for the worker's status and nobody witnessed the end.
+  `-1` stays retryable, so a retry may run **after** it — never concurrently.
+
+The `pid` half stays because a freshly-claimed row is seeded with `process.pid`,
+and the backend is not guaranteed to lead a group. There is no exported
+single-pid probe: every supervised-run liveness decision goes through this one.
 
 ### A ledger's verbs
 
@@ -644,13 +667,15 @@ construction, and the job and the body it spawns cannot drift apart.
     - `infra/paths.worktreeArtifacts`
     - `infra/runtime-identity.runtimeNamespace`
   - Exports (types):
+    - `RunObservation`
     - `RunTerminal`
     - `SupervisedTaskInvocation`
   - Exports (values):
     - `assertRunId`
     - `assertRunKindId`
     - `HARD_KILL_EXIT_CODE`
-    - `isPidAlive`
+    - `isRunAlive`
+    - `observeRun`
     - `readRunTerminal`
     - `RUN_TERMINAL_ENV`
     - `RunMarkerError`

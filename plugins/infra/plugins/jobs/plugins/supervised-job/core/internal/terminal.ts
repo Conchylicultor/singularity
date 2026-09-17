@@ -109,18 +109,53 @@ export interface RunTerminal {
 export const HARD_KILL_EXIT_CODE = -1;
 
 /**
- * Whether OS process `pid` is currently alive. `process.kill(pid, 0)` sends no
- * signal; it throws ESRCH when the process is gone. EPERM means the process
- * exists but is owned by another user — still alive.
+ * Whether a supervised run's processes are still alive — **judged by its process
+ * GROUP, not by one pid**.
  *
- * THE one copy. It was hand-rolled in `run-build.ts` and again in
- * `run-release.ts`, and the two agreed only by luck — the EPERM arm is the easy
- * one to forget, and forgetting it reads a live foreign-owned child as dead.
+ * `pid` is what a ledger row stores: the pid of the shim `startSupervisedRun`
+ * spawned `detached`, which makes the shim the leader of a fresh process group
+ * whose id is that same number. The real work (`bun … supervised-exec …`,
+ * `./singularity build`) lives inside that group. Kill already treats the pid
+ * as a group (`killSupervisedRun` signals `-pid`); liveness has to agree with
+ * it, or a lone `kill -9 <shim>` reads as "no marker, pid dead" and closes the
+ * row as a hard kill while the worker — re-parented to init, still in the group
+ * — keeps running. That close released the kind's in-flight lock under a live
+ * child (the retry ladder then ran attempt 2 CONCURRENTLY with attempt 1) and
+ * stopped the transcript tail one worker short of the end.
+ *
+ * So the run is alive while EITHER probe succeeds:
+ *
+ * - `kill(-pid, 0)` — any process of the group remains. An orphaned worker keeps
+ *   its pgid after re-parenting, so the run stays open until the work really
+ *   ends.
+ * - `kill(pid, 0)` — still needed, because a freshly-claimed row is seeded with
+ *   `process.pid` (the backend's own) before its child exists, and a backend is
+ *   not guaranteed to lead a group: the group probe alone could answer ESRCH for
+ *   a live seed.
+ *
+ * Neither probe sends a signal. ESRCH means gone; EPERM means the process (or a
+ * member of the group) exists but belongs to another user — still alive. On
+ * macOS a group member still tearing down after a SIGKILL also answers EPERM,
+ * for a few milliseconds; reading that as alive only defers the close to the
+ * next reconcile or wake, which decides again from scratch. The
+ * recycled-pid blind spot does not widen: while a group is non-empty its id
+ * cannot be handed out as a new pid.
+ *
+ * THE one copy. The single-pid form was hand-rolled in `run-build.ts` and again
+ * in `run-release.ts`, and the two agreed only by luck — the EPERM arm is the
+ * easy one to forget, and forgetting it reads a live foreign-owned child as dead.
+ * There is deliberately no exported single-pid probe any more: every
+ * supervised-run liveness decision goes through this one.
  */
-export function isPidAlive(pid: number | null): boolean {
+export function isRunAlive(pid: number | null): boolean {
   if (pid == null) return false;
+  return signalProbe(pid) || signalProbe(-pid);
+}
+
+/** `process.kill(target, 0)`: `true` on success or EPERM, `false` on ESRCH. */
+function signalProbe(target: number): boolean {
   try {
-    process.kill(pid, 0);
+    process.kill(target, 0);
     return true;
   } catch (err) {
     return (err as NodeJS.ErrnoException).code === "EPERM";
@@ -139,12 +174,12 @@ export function isPidAlive(pid: number | null): boolean {
  * alive for the moment before it reaps.
  *
  * `null` means one of two things, and they are deliberately not distinguished
- * here — the caller composes this with {@link isPidAlive}, and the pair says
- * which:
+ * here — {@link observeRun} composes this with {@link isRunAlive}, and the pair
+ * says which:
  *
- * - the run is still going (no marker yet, pid alive), or
- * - the child was **hard**-killed: SIGKILL runs no shell, so nothing ever wrote
- *   the marker and nothing ever will (no marker, pid dead) ⇒ the `-1` sentinel,
+ * - the run is still going (no marker yet, group alive), or
+ * - the run was **hard**-killed: SIGKILL runs no shell, so nothing ever wrote
+ *   the marker and nothing ever will (no marker, group empty) ⇒ the `-1` sentinel,
  *   exactly as build does today.
  *
  * ENOENT is therefore an ordinary answer, not an error. A marker that EXISTS
@@ -184,5 +219,80 @@ export function readRunTerminal(
     // name its trap clause carried.
     signalCode: signal === NO_SIGNAL ? null : (signal ?? null),
     finishedAt: mtime,
+  };
+}
+
+/**
+ * Where a supervised run stands, right now, according to the two things that
+ * cannot lie: the exit marker on disk and the process table.
+ *
+ * A discriminated union rather than `RunTerminal | null`, because `null` here
+ * would mean "still going" — a legitimate state — and the next reader along
+ * would eventually absorb it into "ended with nothing to report".
+ */
+export type RunObservation =
+  | { readonly state: "running" }
+  | { readonly state: "ended"; readonly terminal: RunTerminal };
+
+/**
+ * Apply THE close rule to one run.
+ *
+ * ```
+ * ended?  =  !(terminal == null && isRunAlive(pid))
+ * value   =  terminal ?? { exitCode: -1, signalCode: null, finishedAt: now }
+ * ```
+ *
+ * **This is the whole correctness argument of a supervised run, so read it
+ * before changing anything here.** Stated once, and called by both deciders:
+ * the reconciler's `settleRun` (the runs a live backend is tailing) and the job
+ * workflow's `awaitSupervisedRun` (the run one workflow is waiting on). They
+ * used to state it separately and had to be kept in agreement by hand.
+ *
+ * The `supervisedRun.ended` event is only a wake-up: it can be lost (the backend
+ * dying between the shim writing the marker and the emit landing), it can arrive
+ * for a run whose ledger row was stamped minutes earlier by the caller's own
+ * CLI, and it carries no outcome to trust even if it does arrive. The marker
+ * file is the authority — written once, atomically, by the shim wrapping the
+ * child, after `wait` returned and before the shim exited — so every wake
+ * re-reads it and decides from scratch.
+ *
+ * The three arms, and why each is what it is:
+ *
+ * - **Marker present ⇒ ended, even while the group is still alive.** The shim
+ *   writes the marker BEFORE it exits, so the file is a terminal signal in its
+ *   own right; waiting for the processes would only add latency.
+ * - **No marker, group alive ⇒ running.** The only shape a genuinely-running run
+ *   has, and the only one that keeps waiting. Includes a run whose shim alone was
+ *   SIGKILLed while its worker lives on — see {@link isRunAlive}.
+ * - **No marker, group empty ⇒ hard kill.** SIGKILL runs no handler, so nothing
+ *   was ever there to write a marker and nothing ever will be. {@link
+ *   HARD_KILL_EXIT_CODE} (`-1`) is a status no child can produce, which keeps
+ *   the case legible, and `signalCode` stays `null` because nobody OBSERVED a
+ *   signal — **never re-derive killed-ness from `exitCode > 128`**, here or in
+ *   a consumer: `kill -TERM` and a program calling `exit(143)` are the same
+ *   number, and guessing between them is what recorded a deploy that never
+ *   exited as "Exited with code 143". The same `-1` closes a run whose shim was
+ *   killed alone, once its worker has also gone: only the shim could `wait` for
+ *   the worker's status, so nobody witnessed how it ended.
+ *
+ * `now` is the instant stamped on that last arm only; a marker always carries
+ * its own mtime.
+ */
+export function observeRun(
+  kindId: string,
+  runId: string,
+  pid: number | null,
+  now: Date,
+): RunObservation {
+  const terminal = readRunTerminal(kindId, runId);
+  if (terminal !== null) return { state: "ended", terminal };
+  if (isRunAlive(pid)) return { state: "running" };
+  return {
+    state: "ended",
+    terminal: {
+      exitCode: HARD_KILL_EXIT_CODE,
+      signalCode: null,
+      finishedAt: now,
+    },
   };
 }

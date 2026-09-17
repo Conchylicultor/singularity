@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import {
   HARD_KILL_EXIT_CODE,
-  isPidAlive,
+  isRunAlive,
   type RunTerminal,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 import { _backupRuns } from "./tables";
@@ -78,18 +78,19 @@ export async function listUnfinishedBackups(): Promise<
 
 /**
  * Is a backup of this namespace genuinely running right now — an open row whose
- * process is alive?
+ * process group is alive?
  *
  * The question `reconcileBackups` has to answer before it deletes anything, and
  * the honest form of it. An open ROW is not a running backup: after a hard kill
  * the row stays open until the supervised-run reconciler closes it, and if the
  * filesystem sweep waited for that it would skip exactly the wreckage it exists
- * to clear. A live PID is a running backup, and its staging directory is
- * mid-write.
+ * to clear. A live process group is a running backup, and its staging directory
+ * is mid-write — including one whose supervising shim alone was killed, which is
+ * why the probe is `isRunAlive` (the group) and not the row's pid by itself.
  */
 export async function hasLiveBackup(): Promise<boolean> {
   const rows = await listUnfinishedBackups();
-  return rows.some((row) => isPidAlive(row.pid));
+  return rows.some((row) => isRunAlive(row.pid));
 }
 
 /** Record the pid of the detached child now serving this run. */

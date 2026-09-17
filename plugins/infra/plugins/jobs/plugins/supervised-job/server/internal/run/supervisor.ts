@@ -15,11 +15,9 @@ import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   assertRunId,
-  HARD_KILL_EXIT_CODE,
-  isPidAlive,
+  observeRun,
   readRunTerminal,
   supervisedArgv,
-  type RunTerminal,
 } from "../../../core";
 import {
   assertRegistered,
@@ -56,6 +54,11 @@ interface LiveRun {
    * alive?" is exactly the question left to ask about it (see
    * `reconcileSupervisedRuns`). Null when the run was claimed but never got a
    * pid — which reads as dead, the same as everywhere else.
+   *
+   * Once the spawn has happened this is the shim's pid, which is also the id of
+   * the run's process group; liveness asks about the whole group
+   * (`isRunAlive`), so a shim killed alone does not end a run whose worker is
+   * still going.
    */
   pid: number | null;
 }
@@ -151,26 +154,22 @@ function untrack(run: LiveRun): void {
 }
 
 /**
- * Apply the terminal decision to one run, and close it when it has reached one.
+ * Apply the close rule to one run, and close it when it has reached a terminal.
  *
- * The rule is build's, verbatim, because build's is the one that is right:
+ * The rule itself is {@link observeRun} in this plugin's `core/` — the one
+ * statement of it, shared with the job workflow's `awaitSupervisedRun`, so the
+ * reconciler and a waiting workflow cannot disagree about whether a run ended:
  *
  * ```
- * close?  =  !(terminal == null && isPidAlive(pid))
- * value   =  terminal ?? { exitCode: -1, finishedAt: now }
+ * close?  =  !(terminal == null && isRunAlive(pid))
+ * value   =  terminal ?? { exitCode: -1, signalCode: null, finishedAt: now }
  * ```
  *
- * Both halves matter. A marker present while the pid is still alive still
- * closes — the marker is written before the shim exits, so it is a terminal
- * signal in its own right and waiting for the pid would just add latency. And a
- * pid alive with no marker is the only shape a genuinely-running run has, so it
- * is the only one left open.
- *
- * `-1` is reserved for the one case that produces no record at all: a SIGKILL,
- * which runs no shell. It carries `signalCode: null` — not `"KILL"` — because
- * nothing observed the signal; the absence of a marker is the only evidence,
- * and `-1` is a status no child can produce, so the case stays legible without
- * anyone having to claim a signal name they did not see.
+ * Liveness is the run's process GROUP, not the shim's pid (see `isRunAlive`): a
+ * shim SIGKILLed alone leaves its worker running in the group, and closing the
+ * run then would stop this tail one worker short of the end and release the
+ * kind's in-flight lock under a live child. The run stays tracked until the
+ * group is empty, and only then closes with the `-1` nobody witnessed.
  *
  * **The order of the last two statements is load-bearing: drain, then finish.**
  * `untrack` pumps the tail one final time, so every line the child wrote before
@@ -185,18 +184,13 @@ async function settleRun(
   pid: number | null,
   now: Date,
 ): Promise<boolean> {
-  const terminal = readRunTerminal(kind.id, runId);
-  if (terminal === null && isPidAlive(pid)) return false;
-  const outcome: RunTerminal = terminal ?? {
-    exitCode: HARD_KILL_EXIT_CODE,
-    signalCode: null,
-    finishedAt: now,
-  };
+  const observation = observeRun(kind.id, runId, pid, now);
+  if (observation.state === "running") return false;
   const run = live.get(liveKey(kind.id, runId));
   // Drain BEFORE the row closes: a UI that stops following a finished run must
   // not stop one pump short of the line that says why it failed.
   if (run !== undefined) untrack(run);
-  await kind.spec.finish(runId, outcome);
+  await kind.spec.finish(runId, observation.terminal);
   return true;
 }
 
@@ -280,12 +274,13 @@ export async function reconcileSupervisedRuns(): Promise<void> {
       //
       // So the condition is the run having ENDED, not its row having been
       // stamped: `settleRun` keeps it tracked while no marker exists and the
-      // pid is alive, and closes it the moment either changes. **The set is
+      // group is alive, and closes it the moment either changes. **The set is
       // still bounded by exactly the argument it was before** — every child
       // either writes a marker (every death but SIGKILL runs the shim's trap)
-      // or its pid dies, and this pass re-checks on the same timer. All that
-      // moved is WHEN a run leaves: at the first tick after its child really
-      // ended, rather than at the first tick after someone wrote to a table.
+      // or its process group empties, and this pass re-checks on the same
+      // timer. All that moved is WHEN a run leaves: at the first tick after its
+      // child really ended, rather than at the first tick after someone wrote
+      // to a table.
       const stillOpen = new Set(unfinished.map((r) => r.runId));
       for (const run of [...live.values()]) {
         if (run.kind.id !== kind.id || stillOpen.has(run.runId)) continue;
@@ -457,7 +452,9 @@ export function isSupervisedSpawnError(
 export interface StartedRun {
   /**
    * The pid of the supervising shim, which is also the process-group id — the
-   * child is inside it, so this is the handle {@link killSupervisedRun} signals.
+   * child is inside it, so this is the handle {@link killSupervisedRun} signals,
+   * and the group `isRunAlive` probes: the run is alive while ANY process of the
+   * group is, not merely while the shim is.
    */
   pid: number;
 }

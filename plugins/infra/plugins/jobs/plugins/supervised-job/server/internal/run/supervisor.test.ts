@@ -15,7 +15,7 @@
  *
  * Driven through the real `reconcileSupervisedRuns` with a fake ledger and real
  * child processes, because the bug is in how the loop COMPOSES: the per-row
- * decision (`readRunTerminal` + `isPidAlive`) was already right and is already
+ * decision (`observeRun`: `readRunTerminal` + `isRunAlive`) was already right and is already
  * covered in `core/internal/terminal.test.ts`. What broke was a second loop that
  * bypassed it.
  *
@@ -49,8 +49,15 @@ const KIND_ID = "suptest";
 
 /** What the fake ledger currently answers, rewritten per step of a test. */
 let ledger: UnfinishedRun[] = [];
-/** Every `finish` this kind received, in order. */
-let finished: { runId: string; terminal: RunTerminal }[] = [];
+/**
+ * Every `finish` this kind received, in order, with the lines the channel had
+ * received by that moment — so "drained before finish" is asserted, not assumed.
+ */
+let finished: {
+  runId: string;
+  terminal: RunTerminal;
+  publishedBefore: string[];
+}[] = [];
 /** Every line the tail published into the channel. */
 let published: string[] = [];
 
@@ -68,7 +75,7 @@ const kind = defineSupervisedRunKind({
   listUnfinished: () => Promise.resolve(ledger),
   setPid: () => Promise.resolve(),
   finish: (runId, terminal) => {
-    finished.push({ runId, terminal });
+    finished.push({ runId, terminal, publishedBefore: [...published] });
     return Promise.resolve();
   },
 });
@@ -97,7 +104,7 @@ function writeMarker(runId: string, body: string): void {
   appendFileSync(path, body);
 }
 
-/** A real, long-lived child, so `isPidAlive` answers about a real process. */
+/** A real, long-lived child, so `isRunAlive` answers about a real process. */
 function spawnLiveChild(): Bun.Subprocess {
   const proc = Bun.spawn(["sleep", "30"], {
     stdout: "ignore",
@@ -114,7 +121,7 @@ function uniqueRunId(tag: string): string {
 afterEach(async () => {
   // Kill and REAP every child, then reconcile against an empty ledger, so the
   // supervisor's own watcher is torn down rather than outliving the test file.
-  // Awaiting `exited` is what reaps: `isPidAlive` succeeds on a zombie, so an
+  // Awaiting `exited` is what reaps: `isRunAlive` succeeds on a zombie, so an
   // unreaped child would read as alive and leave a run tracked forever.
   ledger = [];
   for (const proc of children.splice(0)) {
@@ -211,6 +218,102 @@ describe("reconcileSupervisedRuns: a run the ledger stopped listing", () => {
     await reconcileSupervisedRuns();
     await reconcileSupervisedRuns();
     expect(finished).toHaveLength(1);
+  });
+});
+
+/** How many processes are in group `pgid` right now (0 once it is empty). */
+function groupSize(pgid: number): number {
+  const ps = Bun.spawnSync(["ps", "-o", "pid=", "-g", String(pgid)]);
+  return ps.stdout.toString().trim().split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Whether the kernel reports group `pgid` gone (ESRCH). Not `groupSize() === 0`:
+ * `ps` can already list nothing while a member still tearing down answers the
+ * group probe with EPERM for a few milliseconds.
+ */
+function groupGone(pgid: number): boolean {
+  try {
+    process.kill(-pgid, 0);
+    return false;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ESRCH") return true;
+    if (code === "EPERM") return false;
+    throw err;
+  }
+}
+
+/** Poll `cond` for up to 5 s — a test-only bound, not production polling. */
+async function waitUntil(cond: () => boolean): Promise<void> {
+  for (let i = 0; i < 250; i++) {
+    if (cond()) return;
+    await Bun.sleep(20);
+  }
+  throw new Error("condition not reached within 5s");
+}
+
+describe("reconcileSupervisedRuns: a run whose shim alone was SIGKILLed", () => {
+  test("stays open while its worker lives, then closes -1 with the worker's late output drained first", async () => {
+    // The 2026-09-16 shape: `kill -9 <row pid>` took the shim — the leader of
+    // the run's process group — and left the worker running, re-parented, in
+    // that group. Probing the pid alone closed the row as a hard kill at once,
+    // which stopped the tail and released the in-flight lock under a live
+    // worker.
+    const runId = uniqueRunId("loneshim");
+    appendTranscript(runId, "worker started\n");
+    const transcript = worktreeArtifacts.runTranscript(
+      worktree,
+      KIND_ID,
+      runId,
+    );
+    const shim = Bun.spawn(
+      ["/bin/sh", "-c", '(sleep 1; echo "worker done" >> "$T") & wait'],
+      {
+        stdin: "ignore",
+        stdout: "ignore",
+        stderr: "ignore",
+        detached: true,
+        env: { ...process.env, T: transcript },
+      },
+    );
+    try {
+      ledger = [{ runId, pid: shim.pid }];
+      await reconcileSupervisedRuns();
+
+      // Let `sh` fork its worker, then take out the shim alone and reap it.
+      await waitUntil(() => groupSize(shim.pid) >= 2);
+      shim.kill("SIGKILL");
+      await shim.exited;
+
+      // No marker, shim dead, worker alive ⇒ NOT finished, still tracked.
+      await reconcileSupervisedRuns();
+      expect(finished.filter((f) => f.runId === runId)).toEqual([]);
+
+      // The worker writes its last line and exits; nobody writes a marker.
+      await waitUntil(() => groupGone(shim.pid));
+      await reconcileSupervisedRuns();
+
+      const own = finished.filter((f) => f.runId === runId);
+      expect(own).toHaveLength(1);
+      // Only the shim could have witnessed the worker's status.
+      expect(own[0]?.terminal.exitCode).toBe(-1);
+      expect(own[0]?.terminal.signalCode).toBeNull();
+      // The tail survived the shim's death: the line written after it reached
+      // the channel, and before `finish` ran.
+      expect(own[0]?.publishedBefore).toEqual([
+        "worker started",
+        "worker done",
+      ]);
+    } finally {
+      ledger = [];
+      try {
+        process.kill(-shim.pid, "SIGKILL");
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+      }
+      await shim.exited;
+    }
   });
 });
 

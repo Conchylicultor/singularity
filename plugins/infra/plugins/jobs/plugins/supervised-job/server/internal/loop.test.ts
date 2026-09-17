@@ -61,7 +61,7 @@ function writeMarker(runId: string, body: string): void {
   writeFileSync(path, body);
 }
 
-/** A real, long-lived child, so `isPidAlive` answers about a real process. */
+/** A real, long-lived child, so `isRunAlive` answers about a real process. */
 function spawnLiveChild(): Bun.Subprocess {
   const proc = Bun.spawn(["sleep", "30"], {
     stdout: "ignore",
