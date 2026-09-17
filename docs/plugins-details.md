@@ -2257,8 +2257,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fork-data-exclusion` "mail_threads"
               - `fork-data-exclusion` "mail_message_labels"
               - `fork-data-exclusion` "mail_attachments"
+              - `backup-data-exclusion` "mail_messages"
+              - `backup-data-exclusion` "mail_threads"
+              - `backup-data-exclusion` "mail_message_labels"
+              - `backup-data-exclusion` "mail_attachments"
+              - `backup-data-exclusion` "mail_sync_state"
             - Uses:
               - `database.db`
+              - `database/admin.ExcludeFromBackup`
               - `database/admin.ExcludeFromFork`
               - `infra/attachments.Attachments`
               - `infra/entities.defaultNow`
@@ -6838,6 +6844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `database/admin.backupDatabase`
+              - `database/admin.backupExclusions`
               - `database/admin.inspectBackup`
               - `database/admin.listDatabases`
         - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
@@ -11464,16 +11471,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
           - `infra/host/host-admission.defineHostPool`
+        - DB schema: `plugins/database/plugins/admin/server/internal/table-label.ts`
         - Exports (types):
+          - `BackupExclusions`
           - `BackupInfo`
+          - `BackupPlan`
+          - `CatalogForeignKey`
           - `ForkExclusions`
           - `ForkOutcome`
           - `ForkPlan`
           - `ForkSchemaExclusion`
+          - `SchemaCatalog`
           - `TableStat`
           - `UndeclaredSchema`
         - Exports (values):
           - `backupDatabase`
+          - `backupExclusions`
+          - `BackupPlanError`
           - `closeAdminPool`
           - `connectionString`
           - `countActiveConnections`
@@ -11482,6 +11496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `describeUndeclaredSchema`
           - `dropDatabase`
           - `ensureDatabase`
+          - `ExcludeFromBackup`
           - `ExcludeFromFork`
           - `ExcludeSchemaDataFromFork`
           - `forkDatabase`
@@ -11492,6 +11507,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `inspectBackup`
           - `listDatabases`
           - `openShortLivedClient`
+          - `planBackupExclusions`
+          - `planForkExclusions`
       - Cross-plugin:
         - Imported by:
           - `apps/mail/mail-core`
@@ -13755,10 +13772,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ConfigV2.Register` "trace"
               - `change-feed-exclusion` "traces"
               - `fork-data-exclusion` "traces"
+              - `backup-data-exclusion` "traces"
             - Uses:
               - `config_v2.ConfigV2`
               - `config_v2.getConfig`
               - `database.db`
+              - `database/admin.ExcludeFromBackup`
               - `database/admin.ExcludeFromFork`
               - `database/change-feed.ExcludeFromChangeFeed`
               - `infra/endpoints.HttpError`
