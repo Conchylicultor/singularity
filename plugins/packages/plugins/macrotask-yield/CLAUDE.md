@@ -43,8 +43,12 @@ runtime-neutral `core`.
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `framework/tooling/format`
+    - `plugin-meta/barrel-import`
+    - `plugin-meta/plugin-tree`
 - Core:
   - Exports (values):
+    - `createTimeSlicer`
     - `createTurnQueue`
     - `yieldMacrotask`
 

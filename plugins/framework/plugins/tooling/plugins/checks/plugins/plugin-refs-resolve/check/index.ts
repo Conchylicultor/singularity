@@ -1,5 +1,5 @@
 import { join } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
@@ -91,9 +91,7 @@ const check: Check = {
     "plugin path/id string literals (resolveFrom, lint/check allowlists, reorder overrides) resolve to a real plugin",
   async run(): Promise<CheckResult> {
     const root = await getWorktreeRoot();
-    const tree = await buildPluginTree(join(root, "plugins"), {
-      skipBarrelImport: true,
-    });
+    const tree = await buildStructureTreeOnce(join(root, "plugins"));
     const pathSet = new Set(tree.byPath.keys());
     const idSet = new Set([...tree.byDir.values()].map((n) => n.id as string));
     const violations: Violation[] = [];

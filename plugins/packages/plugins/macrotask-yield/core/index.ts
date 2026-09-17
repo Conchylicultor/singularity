@@ -1,1 +1,5 @@
-export { createTurnQueue, yieldMacrotask } from "./internal/yield";
+export {
+  createTimeSlicer,
+  createTurnQueue,
+  yieldMacrotask,
+} from "./internal/yield";

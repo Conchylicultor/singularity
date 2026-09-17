@@ -269,7 +269,6 @@ only agreement that matters.
     - `drizzleGenerateArgv`
     - `MIGRATIONS_PLUGIN_DIR`
     - `schemaGlobFiles`
-    - `schemaGlobFilesAsync`
 - Structure:
   - Non-standard folders: `data/`
   - Loose top-level files: `drizzle.config.ts`

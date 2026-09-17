@@ -10,6 +10,34 @@ the throttled post-boot drain instead. Worktree backends keep the lazy cold path
 on purpose: their Studio surfaces are rarely opened, and N×-worktree boots would
 multiply the CPU burn exactly when the host is busiest.
 
+## One structure tree per check pass (`core/internal/structure-tree-once.ts`)
+
+A check pass runs ~100 checks on one JS thread, and six of them used to call
+`buildPluginTree(root, { skipBarrelImport: true })` themselves — six full walks
+back to back, all of it time the other checks waited on. Check code now reads
+`buildStructureTreeOnce(pluginsRoot)`: built once per root for the life of the
+process and handed to every caller as the same value. The facet-carrying twins
+are codegen's `buildBarrelFreeTree` / `buildEnrichedTree`.
+
+- **Frozen, because shared.** Nodes, their records and arrays are frozen, and the
+  `byDir` / `byPath` mutators throw — one check re-sorting `roots` would otherwise
+  change what every later check reads, depending on scheduling.
+- **Never for a long-lived server.** The memo never invalidates; a backend reads
+  `getStructureTreeCached` from the `server` barrel, which rebuilds on a watcher.
+- **Enforced** by this plugin's `no-uncached-tree-in-checks` lint rule: a file
+  under a plugin's `check/` folder, or the runner's `checks/core/`, may not import
+  `buildPluginTree` as a value. It sees paths, not call graphs — a helper a check
+  calls from elsewhere (`tooling/boundaries/core/check.ts`) is not covered and
+  was moved by hand.
+
+## Facet extraction yields by time
+
+The extract loop (step 4b) and the relate loop (4c) share their thread with
+everything else in the process. Extract yields a macrotask after ~10 ms of work
+(`createTimeSlicer`), checked after every facet of every node, not after a fixed
+node count — one node's facets can cost far more than another's. Relate still
+runs each facet's `relate` whole and yields between facets.
+
 ## Barrel metadata (`core/internal/barrel-meta.ts`)
 
 `collectCoreFields` reads each runtime barrel's `description` / `loadBearing` /
@@ -50,6 +78,8 @@ dynamic value.
     - `framework/plugin-id.PluginId`
     - `framework/slot-declaration.declaredSlotSources`
     - `framework/slot-declaration.declarePluginSlots`
+    - `packages/macrotask-yield.createTimeSlicer`
+    - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/barrel-import.importBarrel`
     - `plugin-meta/barrel-import.registerBarrelStubs`
     - `plugin-meta/facets.Facet`
@@ -65,6 +95,7 @@ dynamic value.
     - `Runtime`
   - Exports (values):
     - `buildPluginTree`
+    - `buildStructureTreeOnce`
     - `resolvePluginSpecifier`
 - Cross-plugin:
   - Imported by:

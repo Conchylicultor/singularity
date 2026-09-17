@@ -5,6 +5,7 @@
 
 import { readFile, writeFile } from "fs/promises";
 import { join } from "path";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import { listChangedFormattableFiles } from "./changed-files";
 import {
   findDirectiveDisplacements,
@@ -25,8 +26,14 @@ export async function findUnformatted(
   root: string,
   files: string[],
 ): Promise<string[]> {
+  // `formatSource` awaits, but prettier's parse + print of one file is a single
+  // synchronous run, and its promise settles as a microtask — so without a
+  // macrotask yield every file of the changed set chains into one block on the
+  // check runner's shared thread.
+  const slice = createTimeSlicer();
   const unformatted: string[] = [];
   for (const rel of files) {
+    await slice();
     const content = await readFile(join(root, rel), "utf8");
     if ((await formatSource({ file: rel, content })) !== content) {
       unformatted.push(rel);
@@ -52,8 +59,11 @@ export async function findDisplacedDirectives(
   root: string,
   files: string[],
 ): Promise<DirectiveDisplacement[]> {
+  // Same shared-thread slicing as `findUnformatted`.
+  const slice = createTimeSlicer();
   const displaced: DirectiveDisplacement[] = [];
   for (const rel of files) {
+    await slice();
     const content = await readFile(join(root, rel), "utf8");
     const next = await formatSource({ file: rel, content });
     displaced.push(

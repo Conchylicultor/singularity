@@ -151,6 +151,33 @@ describe("ownerOf", () => {
       leaf: "readFileSync [native]",
     });
   });
+
+  const IMPORTING = {
+    name: "barrel import",
+    detail: "plugins/apps/plugins/mail/web/index.ts",
+  };
+
+  test("native frames only, taken during an activity → named by the activity", () => {
+    const frames = [
+      native("(anonymous)", "Unknown Executable"),
+      native("processTicksAndRejections"),
+    ];
+    expect(ownerOf(frames, ROOTS, IMPORTING)).toEqual({
+      kind: "activity",
+      name: "barrel import",
+      detail: "plugins/apps/plugins/mail/web/index.ts",
+    });
+  });
+
+  test("a frame that names its owner wins over an activity, which says when, not who", () => {
+    expect(ownerOf([js("spin", CHECK, 9)], ROOTS, IMPORTING)).toEqual({
+      kind: "check",
+      module: "database/migrations",
+    });
+    expect(ownerOf([js("spin", TREE, 40)], ROOTS, IMPORTING).kind).toBe(
+      "shared",
+    );
+  });
 });
 
 describe("repoRoots", () => {
@@ -172,6 +199,12 @@ describe("ownerLabel", () => {
     expect(ownerLabel({ kind: "import", plugin: "a" })).toBe("import");
     expect(ownerLabel({ kind: "import", plugin: "b" })).toBe("import");
     expect(ownerLabel({ kind: "check", module: "x" })).toBe("check x");
+  });
+
+  test("an activity's instance is detail too", () => {
+    expect(
+      ownerLabel({ kind: "activity", name: "barrel import", detail: "a" }),
+    ).toBe("native during barrel import");
   });
 });
 
@@ -211,6 +244,24 @@ describe("createOwnerTally", () => {
       { name: "pages", samples: 1 },
     ]);
     expect(tally.top(1)).toHaveLength(1);
+  });
+
+  test("pools an activity's instances as detail under one owner", () => {
+    const tally = createOwnerTally(ROOTS);
+    const frames = [native("(anonymous)", "Unknown Executable")];
+    for (const detail of [
+      "a/web/index.ts",
+      "a/web/index.ts",
+      "b/web/index.ts",
+    ]) {
+      tally.add({ kind: "activity", name: "barrel import", detail }, frames);
+    }
+    const [share] = tally.top(10);
+    expect(share?.owner).toBe("native during barrel import");
+    expect(share?.detail).toEqual([
+      { name: "a/web/index.ts", samples: 2 },
+      { name: "b/web/index.ts", samples: 1 },
+    ]);
   });
 });
 

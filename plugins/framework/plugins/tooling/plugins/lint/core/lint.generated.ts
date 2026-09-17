@@ -60,6 +60,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
   { pluginPath: "packages/plugins/zod-parser", id: "packages.zod-parser", loader: () => import("@plugins/packages/plugins/zod-parser/lint"), dependsOn: [] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/lint"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/plugin-tree", id: "plugin-meta.plugin-tree", loader: () => import("@plugins/plugin-meta/plugins/plugin-tree/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/bar", id: "primitives.bar", loader: () => import("@plugins/primitives/plugins/bar/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/badge", id: "primitives.css.badge", loader: () => import("@plugins/primitives/plugins/css/plugins/badge/lint"), dependsOn: [] },

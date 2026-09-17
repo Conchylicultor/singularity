@@ -11758,7 +11758,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `drizzleGenerateArgv`
           - `MIGRATIONS_PLUGIN_DIR`
           - `schemaGlobFiles`
-          - `schemaGlobFilesAsync`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`
@@ -15807,7 +15806,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
               - `plugin-meta/parse-utils.findImports`
-              - `plugin-meta/plugin-tree.buildPluginTree`
+              - `plugin-meta/plugin-tree.buildStructureTreeOnce`
             - Exports (types):
               - `AllowEdge`
               - `BoundaryConfig`
@@ -15846,12 +15845,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `infra/stack-sampler.frameKey`
               - `infra/stack-sampler.StackFrame`
               - `infra/stack-sampler.StackSampler`
+              - `infra/stack-sampler.ThreadActivity`
+              - `packages/macrotask-yield.createTimeSlicer`
               - `packages/macrotask-yield.createTurnQueue`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/parse-utils.findImports`
               - `plugin-meta/parse-utils.lineAt`
               - `plugin-meta/parse-utils.maskSource`
-              - `plugin-meta/plugin-tree.buildPluginTree`
+              - `plugin-meta/plugin-tree.buildStructureTreeOnce`
               - `reports/check-thread-stall.CHECK_THREAD_STALL_KIND`
               - `reports/check-thread-stall.checkThreadStallMessage`
               - `reports/check-thread-stall.CheckThreadStallOwner`
@@ -16021,6 +16022,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/parse-utils.unresolvableCallIdMessage`
               - `plugin-meta/parse-utils.walkFiles`
               - `plugin-meta/plugin-tree.buildPluginTree`
+              - `plugin-meta/plugin-tree.buildStructureTreeOnce`
               - `plugin-meta/plugin-tree.PluginNode`
               - `plugin-meta/plugin-tree.PluginTree`
             - Exports (types):
@@ -16259,7 +16261,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ui/theme-toggle`
         - **`format`** — The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
           - Core:
-            - Uses: `infra/spawn.spawnCaptured`
+            - Uses:
+              - `infra/spawn.spawnCaptured`
+              - `packages/macrotask-yield.createTimeSlicer`
             - Exports (types):
               - `DirectiveDisplacement`
               - `DirectiveTarget`
@@ -18648,16 +18652,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `SshFailureKindSchema`
     - **`stack-sampler`** — The one owner of bun:jsc's JSC sampling profiler: claimStackSampler(owner) arms it once per process and hands a single reader drain() → normalized stacks (innermost → outermost, JSC's no-line sentinel as null), refusing a second owner because every read empties the shared buffer. Bun-only leaf in core, so a CLI process and a server can both import it; frameKey is the one spelling of a frame's identity.
       - Cross-plugin:
-        - Imported by: `framework/tooling/checks`
+        - Imported by:
+          - `framework/tooling/checks`
+          - `plugin-meta/barrel-import`
       - Core:
         - Exports (types):
           - `StackFrame`
           - `StackSample`
           - `StackSampler`
+          - `ThreadActivity`
         - Exports (values):
           - `claimStackSampler`
           - `frameKey`
           - `normalizeTraces`
+          - `withThreadActivity`
     - **`trash`** — Web seam of the trash primitive: useUndoableTrash() runs a trashing mutation and records ONE entry on the tab's undo stack (undo = restore the minted trash entry, redo = re-trash and re-capture the new entry id), so every trash source gets Cmd+Z restore without hand-rolling it. Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
       - Server:
         - Contributes: `resource.declare` "trash-entries"
@@ -19122,8 +19130,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/format`
+          - `plugin-meta/barrel-import`
+          - `plugin-meta/plugin-tree`
       - Core:
         - Exports (values):
+          - `createTimeSlicer`
           - `createTurnQueue`
           - `yieldMacrotask`
     - **`retry`**
@@ -21227,6 +21239,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses:
           - `infra/namespace.asNamespace`
           - `infra/runtime-identity.declareRuntimeNamespace`
+          - `infra/stack-sampler.withThreadActivity`
+          - `packages/macrotask-yield.yieldMacrotask`
           - `packages/semaphore.createSemaphore`
         - Exports (types): `AutoStubEntry`
         - Exports (values):
@@ -21901,6 +21915,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `framework/plugin-id.PluginId`
           - `framework/slot-declaration.declaredSlotSources`
           - `framework/slot-declaration.declarePluginSlots`
+          - `packages/macrotask-yield.createTimeSlicer`
+          - `packages/macrotask-yield.yieldMacrotask`
           - `plugin-meta/barrel-import.importBarrel`
           - `plugin-meta/barrel-import.registerBarrelStubs`
           - `plugin-meta/facets.Facet`
@@ -21916,6 +21932,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `Runtime`
         - Exports (values):
           - `buildPluginTree`
+          - `buildStructureTreeOnce`
           - `resolvePluginSpecifier`
       - Cross-plugin:
         - Imported by:

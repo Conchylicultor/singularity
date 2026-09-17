@@ -19,6 +19,10 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  createTimeSlicer,
+  yieldMacrotask,
+} from "@plugins/packages/plugins/macrotask-yield/core";
 import { buildFsSnapshot } from "./fs-snapshot";
 import { parsePluginBarrel, type BarrelMeta } from "./barrel-meta";
 
@@ -439,11 +443,16 @@ export async function buildPluginTree(
       }),
       "source",
     );
-    let extracted = 0;
+    // The extract loop shares its thread with whoever else is running (a check
+    // pass runs ~100 checks on it), so it yields a macrotask after ~10 ms of work
+    // rather than per node count: one node's facets can cost far more than
+    // another's, and a fixed count let a heavy stretch hold the thread for
+    // seconds. The reads are in-memory, so this bounds CPU, not I/O.
+    const slice = createTimeSlicer();
     for (const node of byDir.values()) {
       const nodeModules = importedModules.get(node.dir) ?? [];
-      runWithFsSnapshot(fsSnapshot, () => {
-        for (const facet of facets) {
+      for (const facet of facets) {
+        runWithFsSnapshot(fsSnapshot, () => {
           const data = facet.extract({
             dir: node.dir,
             pluginId: node.id,
@@ -454,13 +463,9 @@ export async function buildPluginTree(
             fs: fsSnapshot,
           });
           setFacet(node, facet.def, data);
-        }
-      });
-      // CPU safety belt: yield to the event loop every 16 nodes so even a
-      // pathological facet can't monopolize the loop. The reads are now in-memory,
-      // so this is the residual cost, not the primary mechanism.
-      if ((++extracted & 15) === 0)
-        await new Promise<void>((resolve) => setImmediate(resolve));
+        });
+        await slice();
+      }
     }
 
     // Step 4c: facet relate. `relate` (e.g. routes/cross-refs) also walks every
@@ -469,7 +474,7 @@ export async function buildPluginTree(
     for (const facet of facets) {
       if (!facet.relate) continue;
       runWithFsSnapshot(fsSnapshot, () => facet.relate!({ tree }));
-      await new Promise<void>((resolve) => setImmediate(resolve));
+      await yieldMacrotask();
     }
   }
 

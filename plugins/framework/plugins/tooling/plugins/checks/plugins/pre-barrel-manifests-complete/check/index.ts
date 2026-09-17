@@ -12,7 +12,7 @@ import {
   postWebManifests,
   preBarrelManifests,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
 const RUNTIMES = ["web", "server", "central"] as const;
 
@@ -54,9 +54,7 @@ async function buildAllowSet(repo: RepoFiles): Promise<Set<string>> {
 async function enumerateBarrels(
   repo: RepoFiles,
 ): Promise<{ web: string[]; rest: string[] }> {
-  const tree = await buildPluginTree(join(repo.root, "plugins"), {
-    skipBarrelImport: true,
-  });
+  const tree = await buildStructureTreeOnce(join(repo.root, "plugins"));
   const web: string[] = [];
   const rest: string[] = [];
 

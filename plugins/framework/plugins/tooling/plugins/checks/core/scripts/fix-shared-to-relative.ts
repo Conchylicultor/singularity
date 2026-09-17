@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "fs";
 import { dirname, join, relative, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
@@ -59,7 +59,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 const dryRun = process.argv.includes("--dry-run");
 const root = await getWorktreeRoot();
 const pluginsRoot = join(root, "plugins");
-const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+const tree = await buildStructureTreeOnce(pluginsRoot);
 const pluginSet = new Set(Array.from(tree.byDir.values()).map((n) => n.path));
 
 const files: string[] = [];

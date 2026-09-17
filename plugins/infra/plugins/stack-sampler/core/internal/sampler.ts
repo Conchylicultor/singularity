@@ -1,4 +1,10 @@
 import { samplingProfilerStackTraces, startSamplingProfiler } from "bun:jsc";
+import {
+  createActivityLog,
+  processActivityLog,
+  type ActivityLog,
+  type ThreadActivity,
+} from "./activity";
 
 // The ONE owner of bun:jsc's sampling profiler. Everything a caller would
 // otherwise re-learn about the API lives here, once:
@@ -63,9 +69,19 @@ export interface StackFrame {
  * requestImportModule` with no importer. `timestamp` is JSC's own clock
  * (seconds, monotonic) — not `Date.now()`.
  */
-export interface StackSample {
+export interface JscSample {
   timestamp: number;
   frames: StackFrame[];
+}
+
+/** A drained sample: JSC's own, plus the activity running when it was taken. */
+export interface StackSample extends JscSample {
+  /**
+   * The `withThreadActivity` interval this sample fell in (innermost when they
+   * nest), or null — none was running, or the sample's time could not be placed
+   * on `performance.now()` (see `createSampleClock`).
+   */
+  activity: ThreadActivity | null;
 }
 
 export interface StackSampler {
@@ -83,9 +99,71 @@ interface SamplerBackend {
   read(): unknown;
 }
 
+/**
+ * Places a sample's JSC `timestamp` on `performance.now()`.
+ *
+ * The two are different clocks (measured, Bun 1.4 on macOS): JSC stamps samples
+ * in seconds of the system's monotonic time, `performance.now()` counts ms from
+ * process start, and no JS API reads the former. Both advance together, so they
+ * differ by one constant offset — which each drain BRACKETS without a probe: a
+ * sample in a batch was taken after the previous drain and before this one, so
+ * `T − drain ≤ offset ≤ T − previousDrain` for every sample `T`. The bounds from
+ * every batch are intersected; while the thread is busy across a drain (which is
+ * exactly when naming samples matters) they close to about one sample period.
+ *
+ * If the bounds ever cross — the clocks did not advance together after all — the
+ * estimate restarts from the current batch alone rather than trusting a stale
+ * one, and a batch whose own bounds cross places nothing (`toMs` → null).
+ */
+export function createSampleClock(): {
+  observe(
+    previousDrainMs: number,
+    drainMs: number,
+    samples: readonly JscSample[],
+  ): void;
+  toMs(timestampSeconds: number): number | null;
+} {
+  let lower = -Infinity;
+  let upper = Infinity;
+  let valid = false;
+  return {
+    observe(previousDrainMs, drainMs, samples) {
+      if (samples.length === 0) return;
+      let batchLower = -Infinity;
+      let batchUpper = Infinity;
+      for (const sample of samples) {
+        const ms = sample.timestamp * 1000;
+        batchLower = Math.max(batchLower, ms - drainMs);
+        batchUpper = Math.min(batchUpper, ms - previousDrainMs);
+      }
+      if (batchLower > batchUpper) {
+        valid = false;
+        return;
+      }
+      const nextLower = Math.max(lower, batchLower);
+      const nextUpper = Math.min(upper, batchUpper);
+      if (nextLower > nextUpper) {
+        lower = batchLower;
+        upper = batchUpper;
+      } else {
+        lower = nextLower;
+        upper = nextUpper;
+      }
+      valid = true;
+    },
+    toMs(timestampSeconds) {
+      if (!valid) return null;
+      return timestampSeconds * 1000 - (lower + upper) / 2;
+    },
+  };
+}
+
 export function createStackSamplerClaim(
   backend: SamplerBackend,
+  options: { now?: () => number; activities?: ActivityLog } = {},
 ): (owner: string) => StackSampler {
+  const now = options.now ?? (() => performance.now());
+  const activities = options.activities ?? createActivityLog();
   let claimed: { owner: string; sampler: StackSampler } | null = null;
   return (owner) => {
     if (claimed) {
@@ -98,18 +176,45 @@ export function createStackSamplerClaim(
       );
     }
     backend.start();
+    activities.arm();
+    const clock = createSampleClock();
+    let previousDrainMs = now();
     const sampler: StackSampler = {
-      drain: () => normalizeTraces(backend.read()),
+      drain: () => {
+        const raw = normalizeTraces(backend.read());
+        const drainMs = now();
+        clock.observe(previousDrainMs, drainMs, raw);
+        const samples = raw.map((sample): StackSample => {
+          const ms = clock.toMs(sample.timestamp);
+          return {
+            ...sample,
+            activity:
+              ms === null
+                ? null
+                : activities.at(
+                    Math.min(drainMs, Math.max(previousDrainMs, ms)),
+                  ),
+          };
+        });
+        // Every later sample is taken after this drain, so an activity that
+        // ended before it can never match again.
+        activities.prune(drainMs);
+        previousDrainMs = drainMs;
+        return samples;
+      },
     };
     claimed = { owner, sampler };
     return sampler;
   };
 }
 
-const claimProcessSampler = createStackSamplerClaim({
-  start: () => startSamplingProfiler(),
-  read: () => samplingProfilerStackTraces(),
-});
+const claimProcessSampler = createStackSamplerClaim(
+  {
+    start: () => startSamplingProfiler(),
+    read: () => samplingProfilerStackTraces(),
+  },
+  { activities: processActivityLog },
+);
 
 /**
  * Arm this thread's JSC sampling profiler (first call only — it cannot be
@@ -154,13 +259,13 @@ function normalizeFrame(raw: unknown): StackFrame {
  * for tests). A trace with no frames is dropped; a result that is not the shape
  * above throws, so a Bun API change is loud rather than an empty profile.
  */
-export function normalizeTraces(raw: unknown): StackSample[] {
+export function normalizeTraces(raw: unknown): JscSample[] {
   if (!isRecord(raw) || !Array.isArray(raw.traces)) {
     throw new TypeError(
       "stack-sampler: samplingProfilerStackTraces() returned no `traces` array",
     );
   }
-  const samples: StackSample[] = [];
+  const samples: JscSample[] = [];
   for (const trace of raw.traces) {
     if (!isRecord(trace))
       throw new TypeError(

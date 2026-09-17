@@ -60,3 +60,30 @@ export function createTurnQueue(): () => Promise<void> {
     return last;
   };
 }
+
+/**
+ * A time-sliced yield for a long synchronous loop on a shared thread: each call
+ * returns a promise that yields a macrotask (`yieldMacrotask`) only once
+ * `budgetMs` of wall time has passed since the last yield, and resolves at once
+ * otherwise — so a loop over thousands of cheap items pays for a yield about
+ * every `budgetMs`, not per item.
+ *
+ * ```ts
+ * const slice = createTimeSlicer();
+ * for (const file of files) {
+ *   await slice();
+ *   scan(file);
+ * }
+ * ```
+ *
+ * One slicer per loop (or per task): the budget is the caller's own run time
+ * since ITS last yield.
+ */
+export function createTimeSlicer(budgetMs = 10): () => Promise<void> {
+  let lastYield = performance.now();
+  return async () => {
+    if (performance.now() - lastYield <= budgetMs) return;
+    await yieldMacrotask();
+    lastYield = performance.now();
+  };
+}

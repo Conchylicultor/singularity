@@ -1,4 +1,5 @@
 import { join } from "path";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   findImports,
   lineAt,
@@ -65,8 +66,13 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
     ? opts.pattern.flags
     : opts.pattern.flags + "g";
 
+  // Each candidate is a synchronous mask + re-scan; over a wide candidate set
+  // that is seconds of work on the check runner's one shared thread, so yield a
+  // macrotask every few milliseconds of it.
+  const slice = createTimeSlicer();
   const matches: CodeMatch[] = [];
   for (const { rel, src } of candidates) {
+    await slice();
     const masked = maskSource(src, { strings: maskStrings });
     const maskedLines = masked.split("\n");
     const origLines = src.split("\n");
@@ -130,8 +136,11 @@ export async function grepImports(
     pathspecs,
   );
 
+  // Same shared-thread slicing as `grepCode`.
+  const slice = createTimeSlicer();
   const matches: ImportMatch[] = [];
   for (const { rel, src } of candidates) {
+    await slice();
     const origLines = src.split("\n");
     for (const imp of findImports(src)) {
       if (!opts.filter(imp.specifier)) continue;

@@ -3,12 +3,13 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import {
   frameKey,
   type StackFrame,
+  type ThreadActivity,
 } from "@plugins/infra/plugins/stack-sampler/core";
 
 /**
  * Who a stack sample's slice of thread time belongs to.
  *
- * Four kinds, because a JSC sample can only tell us so much. The probes (Bun
+ * Five kinds, because a JSC sample can only tell us so much. The probes (Bun
  * 1.3.13) found three stack shapes, and each needs its own rule:
  *
  * - sync code a check runs itself keeps the check's frame on the stack
@@ -18,8 +19,12 @@ import {
  * - module evaluation from `await import()` has no importer at all
  *   (`(module) ← evaluate ← moduleEvaluation ← requestImportModule`) — `import`.
  *
- * Anything with no source frame at all is `native`. A `shared` owner does not
- * say which check called it; the stall record's `running` list is that link.
+ * Anything with no source frame at all is `native` — unless a
+ * `withThreadActivity` interval was running when it was taken, in which case it
+ * is `activity`, named by that activity (the barrel-import lane marks each
+ * import, whose load and evaluation otherwise sample as a bare
+ * `(anonymous) [Unknown Executable]`). A `shared` owner does not say which check
+ * called it; the stall record's `running` list is that link.
  */
 export type ThreadOwner =
   | { kind: "check"; module: string }
@@ -31,6 +36,13 @@ export type ThreadOwner =
    */
   | { kind: "import"; plugin: string | null }
   | { kind: "shared"; site: string }
+  /**
+   * A native-only sample taken during an activity. `detail` (the barrel path)
+   * is kept out of the owner for the same reason an `import`'s plugin is.
+   * "during", not "caused by": the interval also covers whatever else ran while
+   * the marked work awaited.
+   */
+  | { kind: "activity"; name: string; detail: string }
   | { kind: "native"; leaf: string };
 
 /**
@@ -136,8 +148,8 @@ function moduleOwnerOf(path: string, roots: readonly string[]): string {
 }
 
 /**
- * Attribute one sample. PURE: the only input besides the frames is `roots`,
- * which `repoRoots()` computes once per run. Rules, in order:
+ * Attribute one sample. PURE: the only inputs besides the frames are `roots`,
+ * which `repoRoots()` computes once per run, and the sample's own `activity`. Rules, in order:
  *
  * 1. **A frame from a check module** (anywhere on the stack, innermost first)
  *    → `check`. Beneath a runner frame or a shared helper it still wins: sync
@@ -150,7 +162,10 @@ function moduleOwnerOf(path: string, roots: readonly string[]): string {
  *    callback (commander calling an action, an emitter calling a listener) the
  *    library is outermost but the callback is the work. With no repo frame, a
  *    `node_modules` frame collapses to its package name.
- * 4. **Native frames only** → `native`, named by the leaf.
+ * 4. **Native frames only** → `activity` when the sample was taken during one
+ *    (`activity`, stamped by the sampler at sample time), else `native`, named
+ *    by the leaf. Only here: a frame that names its owner always wins over an
+ *    activity, which says when, not who.
  *
  * One more frame the stack can lose (measured on Bun 1.3.13): JSC
  * implements PROPER TAIL CALLS, and ES modules are strict, so a SYNC function
@@ -163,6 +178,7 @@ function moduleOwnerOf(path: string, roots: readonly string[]): string {
 export function ownerOf(
   frames: readonly StackFrame[],
   roots: readonly string[],
+  activity: ThreadActivity | null = null,
 ): ThreadOwner {
   for (const frame of frames) {
     const source = sourceOf(frame);
@@ -210,6 +226,9 @@ export function ownerOf(
     };
   }
 
+  if (activity !== null) {
+    return { kind: "activity", name: activity.name, detail: activity.detail };
+  }
   const leaf = frames[0];
   return { kind: "native", leaf: leaf ? frameKey(leaf) : "(no frames)" };
 }
@@ -226,6 +245,8 @@ export function ownerLabel(owner: ThreadOwner): string {
       return "import";
     case "shared":
       return `shared ${owner.site}`;
+    case "activity":
+      return `native during ${owner.name}`;
     case "native":
       return `native ${owner.leaf}`;
   }
@@ -243,7 +264,8 @@ export interface OwnerShare {
   example: string[];
   /**
    * What an owner that pools many sources was made of (an `import` owner's
-   * evaluated plugins), busiest first. Empty for every other owner.
+   * evaluated plugins, an `activity` owner's instances), busiest first. Empty
+   * for every other owner.
    */
   detail: { name: string; samples: number }[];
 }
@@ -295,11 +317,14 @@ export function createOwnerTally(roots: readonly string[]): OwnerTally {
         buckets.set(key, bucket);
       }
       bucket.samples += 1;
-      if (owner.kind === "import" && owner.plugin !== null) {
-        bucket.detail.set(
-          owner.plugin,
-          (bucket.detail.get(owner.plugin) ?? 0) + 1,
-        );
+      const detail =
+        owner.kind === "import"
+          ? owner.plugin
+          : owner.kind === "activity"
+            ? owner.detail
+            : null;
+      if (detail !== null) {
+        bucket.detail.set(detail, (bucket.detail.get(detail) ?? 0) + 1);
       }
     },
     top(n) {

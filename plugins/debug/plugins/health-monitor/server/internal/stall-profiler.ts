@@ -105,7 +105,9 @@ interface StackBucket {
   frames: string[];
 }
 
-export function aggregateTraces(traces: StackSample[]): {
+export function aggregateTraces(
+  traces: readonly Pick<StackSample, "timestamp" | "frames">[],
+): {
   topLeaves: StallLeaf[];
   topStacks: StallStack[];
 } {

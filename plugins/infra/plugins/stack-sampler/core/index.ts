@@ -10,3 +10,5 @@ export {
   frameKey,
   normalizeTraces,
 } from "./internal/sampler";
+export type { ThreadActivity } from "./internal/activity";
+export { withThreadActivity } from "./internal/activity";

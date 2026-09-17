@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { pluginClaudeMdPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -9,10 +9,11 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const check: Check = {
   id: "plugins-have-claudemd",
-  description: "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
+  description:
+    "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
   async run() {
     const root = await getWorktreeRoot();
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+    const tree = await buildStructureTreeOnce(join(root, "plugins"));
     const missing: string[] = [];
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);

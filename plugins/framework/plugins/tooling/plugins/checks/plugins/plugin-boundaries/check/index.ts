@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirsIn } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
   runtimeNames,
@@ -12,7 +12,7 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { currentScanView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import type {
   Check,
   CheckContext,
@@ -106,7 +106,7 @@ const check: Check = {
     const allFiles = repoFiles.all();
     const repo = repoTree(allFiles);
 
-    const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+    const tree = await buildStructureTreeOnce(pluginsRoot);
     const plugins: PluginDir[] = Array.from(tree.byDir.values()).map(
       (node) => ({
         relPath: node.path,
@@ -122,13 +122,7 @@ const check: Check = {
     // event loop every ~10ms of CPU (never a microtask — a macrotask boundary is
     // what actually admits queued timers/IO) so a whole-tree pass here cannot
     // stall the run the way the old readdirSync/readFileSync/existsSync calls did.
-    let lastYield = performance.now();
-    async function maybeYield(): Promise<void> {
-      if (performance.now() - lastYield > 10) {
-        await yieldMacrotask();
-        lastYield = performance.now();
-      }
-    }
+    const maybeYield = createTimeSlicer();
 
     // The set of standard plugin folder names is derived generically (collected-dir
     // registry + fixed structural conventions), not hardcoded here. R11 uses it.

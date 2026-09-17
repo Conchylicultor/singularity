@@ -29,7 +29,7 @@ hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
     - `plugin-meta/parse-utils.findImports`
-    - `plugin-meta/plugin-tree.buildPluginTree`
+    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
   - Exports (types):
     - `AllowEdge`
     - `BoundaryConfig`

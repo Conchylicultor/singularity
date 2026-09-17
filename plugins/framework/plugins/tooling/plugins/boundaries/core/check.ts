@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
@@ -82,7 +82,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const pluginsRoot = join(root, "plugins");
 
       const pluginTree = existsSync(pluginsRoot)
-        ? await buildPluginTree(pluginsRoot, { skipBarrelImport: true })
+        ? await buildStructureTreeOnce(pluginsRoot)
         : null;
       const zoneMap = buildZoneMap(
         root,

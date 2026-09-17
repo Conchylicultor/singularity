@@ -11,6 +11,11 @@
  * `stripComments` in the boundaries checker: every raw-text scanner in the repo
  * should route through this primitive so a marker in a comment/string/regex can
  * never be mistaken for code.
+ *
+ * It runs on every candidate file of every text-scanning check, on the check
+ * runner's one shared thread, so it is written for speed: one `charCodeAt` pass
+ * over UTF-16 code units, char classes from a lookup table, and the output built
+ * from whole untouched slices plus runs of spaces rather than per character.
  */
 
 /**
@@ -36,145 +41,225 @@ const REGEX_PRECEDING_KEYWORDS = new Set([
   "else",
 ]);
 
-/**
- * Whether a `/` at the current position begins a regex literal (vs division).
- *
- * Standard heuristic: a `/` starts a regex unless the previous significant token
- * produced a value — i.e. an identifier/number, `)`, `]`, `}`, or a preceding
- * string/regex literal. The exception is a small set of keywords that take an
- * expression on their right (`return`, `typeof`, …).
- *
- * `prevSig` is the previous significant token: the sentinel `"value"` after a
- * string/regex literal, a single character otherwise, or "" at the start of
- * input. `prevWord` is the identifier that ended at `prevSig` (or "").
- */
-function regexCanStart(prevSig: string, prevWord: string): boolean {
-  if (prevSig === "") return true;
-  if (prevSig === "value") return false;
-  if (prevSig === ")" || prevSig === "]" || prevSig === "}") return false;
-  // identifier char or digit → operand, unless it's an expression-leading keyword
-  if (/[A-Za-z0-9_$]/.test(prevSig)) return REGEX_PRECEDING_KEYWORDS.has(prevWord);
-  return true;
+/** Longest entry of {@link REGEX_PRECEDING_KEYWORDS} (`instanceof`). */
+const MAX_KEYWORD_LEN = 10;
+
+const NL = 0x0a;
+const DQUOTE = 0x22;
+const SQUOTE = 0x27;
+const RPAREN = 0x29;
+const STAR = 0x2a;
+const SLASH = 0x2f;
+const LBRACKET = 0x5b;
+const BACKSLASH = 0x5c;
+const RBRACKET = 0x5d;
+const BACKTICK = 0x60;
+const RBRACE = 0x7d;
+
+/** `prevSig` sentinels: start of input, and "a string/regex literal". */
+const SIG_NONE = -1;
+const SIG_VALUE = -2;
+
+/** ASCII class bits: `[A-Za-z0-9_$]` and `\s`. */
+const IDENT = 1;
+const SPACE = 2;
+
+const ASCII_CLASS = buildAsciiClass();
+
+function buildAsciiClass(): Uint8Array {
+  const table = new Uint8Array(128);
+  for (let c = 0; c < 128; c++) {
+    const ch = String.fromCharCode(c);
+    if (/[A-Za-z0-9_$]/.test(ch)) table[c] = IDENT;
+    else if (/\s/.test(ch)) table[c] = SPACE;
+  }
+  return table;
+}
+
+/** `/\s/` for a code unit ≥ 128: the Unicode spaces JS treats as whitespace. */
+function isNonAsciiSpace(c: number): boolean {
+  return (
+    c === 0xa0 ||
+    c === 0x1680 ||
+    (c >= 0x2000 && c <= 0x200a) ||
+    c === 0x2028 ||
+    c === 0x2029 ||
+    c === 0x202f ||
+    c === 0x205f ||
+    c === 0x3000 ||
+    c === 0xfeff
+  );
+}
+
+let spaceRun = " ".repeat(256);
+
+/** A string of `k` spaces. */
+function spaces(k: number): string {
+  if (k > spaceRun.length)
+    spaceRun = " ".repeat(Math.max(k, spaceRun.length * 2));
+  return spaceRun.slice(0, k);
 }
 
 export function maskSource(src: string, opts?: { strings?: boolean }): string {
   const maskStrings = opts?.strings ?? true;
   const n = src.length;
-  // Mutable char array seeded from the source; we overwrite masked spans in place
-  // so untouched characters (and all newlines) stay exactly where they were.
-  const out = src.split("");
 
-  const blank = (i: number) => {
-    if (src[i] !== "\n") out[i] = " ";
+  // The output is src[0, copied) verbatim, then each masked span as spaces with
+  // its newlines kept, then the rest verbatim. `nextNl` is a cursor on the next
+  // newline at or after the last span, so finding newlines is one pass overall.
+  let out = "";
+  let copied = 0;
+  let nextNl = src.indexOf("\n");
+
+  // Blank [from, to). `to` may be n + 1: a regex escape on the very last char
+  // blanks one position past the end, which appends a space (kept for parity
+  // with the original per-character implementation).
+  const blank = (from: number, to: number) => {
+    if (to <= from) return;
+    out += src.slice(copied, from);
+    if (nextNl >= 0 && nextNl < from) nextNl = src.indexOf("\n", from);
+    let p = from;
+    while (nextNl >= 0 && nextNl < to) {
+      out += spaces(nextNl - p) + "\n";
+      p = nextNl + 1;
+      nextNl = src.indexOf("\n", p);
+    }
+    out += spaces(to - p);
+    copied = to;
   };
 
   let i = 0;
-  // Last significant (non-whitespace, non-comment) char seen, for regex/divide.
-  let prevSig = "";
-  // The identifier word that just ended at `prevSig` (for keyword detection).
-  let prevWord = "";
+  // Last significant (non-whitespace, non-comment) char code seen, or a SIG_*
+  // sentinel — for regex vs division.
+  let prevSig = SIG_NONE;
+  // The identifier word that ended at `prevSig`, for keyword detection: its
+  // total length, and its first MAX_KEYWORD_LEN code units (a longer word can
+  // never be a keyword). Whitespace and comments do not end a word.
+  let wordLen = 0;
+  const word = new Uint16Array(MAX_KEYWORD_LEN);
+
+  /**
+   * Whether a `/` here begins a regex literal (vs division). Standard heuristic:
+   * a regex unless the previous significant token produced a value — an
+   * identifier/number, `)`, `]`, `}`, or a string/regex literal — except after a
+   * keyword that takes an expression on its right (`return`, `typeof`, …).
+   */
+  const regexCanStart = (): boolean => {
+    if (prevSig === SIG_NONE) return true;
+    if (prevSig === SIG_VALUE) return false;
+    if (prevSig === RPAREN || prevSig === RBRACKET || prevSig === RBRACE)
+      return false;
+    if (prevSig < 128 && ASCII_CLASS[prevSig] === IDENT) {
+      return (
+        wordLen <= MAX_KEYWORD_LEN &&
+        REGEX_PRECEDING_KEYWORDS.has(
+          String.fromCharCode(...word.subarray(0, wordLen)),
+        )
+      );
+    }
+    return true;
+  };
 
   while (i < n) {
-    const c = src[i]!;
-    const next = src[i + 1];
+    const c = src.charCodeAt(i);
 
-    // Line comment: blank `//` and everything up to (not including) the newline.
-    if (c === "/" && next === "/") {
-      while (i < n && src[i] !== "\n") {
-        blank(i);
+    if (c === SLASH) {
+      const next = src.charCodeAt(i + 1);
+
+      // Line comment: blank `//` and everything up to (not including) the newline.
+      if (next === SLASH) {
+        let end = src.indexOf("\n", i + 2);
+        if (end < 0) end = n;
+        blank(i, end);
+        i = end;
+        continue;
+      }
+
+      // Block comment: blank `/* … */` including delimiters; keep interior newlines.
+      if (next === STAR) {
+        const close = src.indexOf("*/", i + 2);
+        const end = close < 0 ? n : close + 2;
+        blank(i, end);
+        i = end;
+        continue;
+      }
+
+      // Regex literal: opaque, blank interior + delimiters. Honors escapes and
+      // character classes (a `/` inside `[ … ]` does not end the regex).
+      if (regexCanStart()) {
+        const start = i;
         i++;
-      }
-      continue;
-    }
-
-    // Block comment: blank `/* … */` including delimiters; keep interior newlines.
-    if (c === "/" && next === "*") {
-      blank(i);
-      blank(i + 1);
-      i += 2;
-      while (i < n && !(src[i] === "*" && src[i + 1] === "/")) {
-        blank(i);
-        i++;
-      }
-      if (i < n) {
-        blank(i); // '*'
-        blank(i + 1); // '/'
-        i += 2;
-      }
-      continue;
-    }
-
-    // Regex literal: opaque, blank interior + delimiters. Honors escapes and
-    // character classes (a `/` inside `[ … ]` does not end the regex).
-    if (c === "/" && regexCanStart(prevSig, prevWord)) {
-      blank(i); // opening '/'
-      i++;
-      let inClass = false;
-      while (i < n) {
-        const r = src[i]!;
-        if (r === "\n") {
+        let inClass = false;
+        while (i < n) {
+          const r = src.charCodeAt(i);
           // Unterminated regex (shouldn't happen in valid source) — stop here.
-          break;
-        }
-        if (r === "\\") {
-          blank(i);
-          blank(i + 1);
-          i += 2;
-          continue;
-        }
-        if (r === "[") inClass = true;
-        else if (r === "]") inClass = false;
-        else if (r === "/" && !inClass) {
-          blank(i); // closing '/'
+          if (r === NL) break;
+          if (r === BACKSLASH) {
+            i += 2;
+            continue;
+          }
+          if (r === LBRACKET) inClass = true;
+          else if (r === RBRACKET) inClass = false;
+          else if (r === SLASH && !inClass) {
+            i++; // closing '/'
+            break;
+          }
           i++;
-          break;
         }
-        blank(i);
-        i++;
+        // Flag characters (a-z) following the closing delimiter.
+        while (i < n) {
+          const f = src.charCodeAt(i);
+          if (f < 0x61 || f > 0x7a) break;
+          i++;
+        }
+        blank(start, i);
+        prevSig = SIG_VALUE; // a regex literal as a whole is a value
+        wordLen = 0;
+        continue;
       }
-      // Blank flag characters (a-z) following the closing delimiter.
-      while (i < n && /[a-z]/.test(src[i]!)) {
-        blank(i);
-        i++;
-      }
-      prevSig = "value"; // a regex literal as a whole is a value
-      prevWord = "";
+
+      // Division: an ordinary significant char.
+      prevSig = SLASH;
+      wordLen = 0;
+      i++;
       continue;
     }
 
-    // String / template literal.
-    if (c === '"' || c === "'" || c === "`") {
-      const quote = c;
-      // Keep the opening delimiter verbatim.
+    // String / template literal: delimiters kept verbatim, interior optionally blanked.
+    if (c === DQUOTE || c === SQUOTE || c === BACKTICK) {
       i++;
-      while (i < n && src[i] !== quote) {
-        if (src[i] === "\\" && i + 1 < n) {
-          if (maskStrings) {
-            blank(i);
-            blank(i + 1);
-          }
-          i += 2;
-          continue;
-        }
-        if (maskStrings) blank(i);
-        i++;
+      const start = i;
+      while (i < n) {
+        const s = src.charCodeAt(i);
+        if (s === c) break;
+        i += s === BACKSLASH && i + 1 < n ? 2 : 1;
       }
-      // Keep the closing delimiter verbatim (if present).
-      if (i < n) i++;
-      prevSig = "value"; // a string literal as a whole is a value
-      prevWord = "";
+      if (maskStrings) blank(start, i);
+      if (i < n) i++; // closing delimiter (if present)
+      prevSig = SIG_VALUE; // a string literal as a whole is a value
+      wordLen = 0;
       continue;
     }
 
     // Ordinary character.
-    if (!/\s/.test(c)) {
+    if (c < 128) {
+      const cls = ASCII_CLASS[c]!;
+      if (cls !== SPACE) {
+        prevSig = c;
+        if (cls === IDENT) {
+          if (wordLen < MAX_KEYWORD_LEN) word[wordLen] = c;
+          wordLen++;
+        } else {
+          wordLen = 0;
+        }
+      }
+    } else if (!isNonAsciiSpace(c)) {
       prevSig = c;
-      // Accumulate identifier words so `regexCanStart` can spot keywords like
-      // `return` / `typeof`; reset on any non-identifier char.
-      prevWord = /[A-Za-z0-9_$]/.test(c) ? prevWord + c : "";
+      wordLen = 0;
     }
     i++;
   }
 
-  return out.join("");
+  if (copied === 0) return src;
+  return copied < n ? out + src.slice(copied) : out;
 }

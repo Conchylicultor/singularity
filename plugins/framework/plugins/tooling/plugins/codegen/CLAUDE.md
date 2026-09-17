@@ -64,6 +64,7 @@
     - `plugin-meta/parse-utils.unresolvableCallIdMessage`
     - `plugin-meta/parse-utils.walkFiles`
     - `plugin-meta/plugin-tree.buildPluginTree`
+    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
     - `plugin-meta/plugin-tree.PluginNode`
     - `plugin-meta/plugin-tree.PluginTree`
   - Exports (types):

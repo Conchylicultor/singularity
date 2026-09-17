@@ -1,7 +1,7 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { existsSync } from "fs";
 import { join, relative } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { declareSlotsFromBarrels } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
@@ -50,7 +50,7 @@ const check: Check = {
     const facetIds = (await loadFacets()).map((f) => f.def.id).sort();
     const facetIdSet = new Set(facetIds);
 
-    const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+    const tree = await buildStructureTreeOnce(pluginsRoot);
     registerBarrelStubs(join(pluginsRoot, ".."));
 
     // This check imports web barrels ITSELF (the tree above is structure-only),

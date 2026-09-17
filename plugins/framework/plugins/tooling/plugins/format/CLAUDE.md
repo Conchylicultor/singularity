@@ -166,7 +166,9 @@ idempotent and per-file.
 
 - Description: The repo's byte-format authority: the prettier allowlist, the hardcoded options, and the merge-base changed-file set that build / format / format-clean all share.
 - Core:
-  - Uses: `infra/spawn.spawnCaptured`
+  - Uses:
+    - `infra/spawn.spawnCaptured`
+    - `packages/macrotask-yield.createTimeSlicer`
   - Exports (types):
     - `DirectiveDisplacement`
     - `DirectiveTarget`

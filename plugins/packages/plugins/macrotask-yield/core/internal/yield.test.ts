@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createTurnQueue, yieldMacrotask } from "./yield";
+import { createTimeSlicer, createTurnQueue, yieldMacrotask } from "./yield";
 
 /** Hold the thread, as a synchronous start-up or a blocking syscall does. */
 function blockThread(ms: number): void {
@@ -82,6 +82,32 @@ describe("createTurnQueue", () => {
       ran = true;
     });
     await turns();
+    expect(ran).toBe(true);
+  });
+});
+
+describe("createTimeSlicer", () => {
+  test("resolves without yielding while the budget has not elapsed", async () => {
+    const slice = createTimeSlicer(10_000);
+    let ran = false;
+    setImmediate(() => {
+      ran = true;
+    });
+    await slice();
+    expect(ran).toBe(false);
+  });
+
+  test("yields a macrotask once the budget has elapsed", async () => {
+    const slice = createTimeSlicer(0);
+    const start = performance.now();
+    while (performance.now() - start < 2) {
+      // burn past the budget
+    }
+    let ran = false;
+    setImmediate(() => {
+      ran = true;
+    });
+    await slice();
     expect(ran).toBe(true);
   });
 });

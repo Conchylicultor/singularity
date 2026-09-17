@@ -6,6 +6,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   findImports,
   lineAt,
@@ -77,37 +78,42 @@ const check: Check = {
     const crossBunTest: string[] = [];
     const fakeDom: string[] = [];
 
-    await Promise.all(
-      files.map(async (rel) => {
-        const src = await Bun.file(join(root, rel)).text();
-        const dom = isDomTestPath(rel);
-
-        // (e) A bun:test file installing a browser global onto `globalThis`.
-        if (isBunTestPath(rel)) {
-          for (const install of fakeDomInstalls(src)) {
-            fakeDom.push(
-              `${rel}:${lineAt(src, install.index)}  (installs \`${install.name}\`)`,
-            );
-          }
-        }
-
-        // A test file's runner is decided by WHERE it lives, so the banned
-        // specifier is whichever runner does not own this location.
-        const banned = dom ? "bun:test" : "vitest";
-        const lines = src.split("\n");
-        for (const ref of runnerImports(src)) {
-          if (
-            ref.specifier !== banned &&
-            !ref.specifier.startsWith(`${banned}/`)
-          )
-            continue;
-          const line = lineAt(src, ref.index);
-          const entry = `${rel}:${line}:${(lines[line - 1] ?? "").trim()}`;
-          if (dom) crossBunTest.push(entry);
-          else crossVitest.push(entry);
-        }
-      }),
+    // Read concurrently, then scan serially. Each scan is synchronous parsing;
+    // run inside the reads' callbacks, the scans of reads that settle together
+    // chained into one block on the check runner's shared thread. The slicer
+    // yields between files instead.
+    const sources = await Promise.all(
+      files.map((rel) => Bun.file(join(root, rel)).text()),
     );
+    const slice = createTimeSlicer();
+    for (let f = 0; f < files.length; f++) {
+      await slice();
+      const rel = files[f]!;
+      const src = sources[f]!;
+      const dom = isDomTestPath(rel);
+
+      // (e) A bun:test file installing a browser global onto `globalThis`.
+      if (isBunTestPath(rel)) {
+        for (const install of fakeDomInstalls(src)) {
+          fakeDom.push(
+            `${rel}:${lineAt(src, install.index)}  (installs \`${install.name}\`)`,
+          );
+        }
+      }
+
+      // A test file's runner is decided by WHERE it lives, so the banned
+      // specifier is whichever runner does not own this location.
+      const banned = dom ? "bun:test" : "vitest";
+      const lines = src.split("\n");
+      for (const ref of runnerImports(src)) {
+        if (ref.specifier !== banned && !ref.specifier.startsWith(`${banned}/`))
+          continue;
+        const line = lineAt(src, ref.index);
+        const entry = `${rel}:${line}:${(lines[line - 1] ?? "").trim()}`;
+        if (dom) crossBunTest.push(entry);
+        else crossVitest.push(entry);
+      }
+    }
 
     if (crossVitest.length > 0) {
       sections.push(

@@ -171,6 +171,81 @@ test("division after string is not a regex", () => {
   expect(out).toBe('const x = "  ".length / 2;');
 });
 
+test("division after closing brace is not a regex", () => {
+  const src = "x = {} / 2 / 3;";
+  expect(mask(src)).toBe(src);
+});
+
+test("regex after an open paren or comma is masked", () => {
+  expect(mask("f(/a/, /b/)")).toBe("f(   ,    )");
+});
+
+test("regex after each expression-leading keyword is masked", () => {
+  expect(mask("typeof /a/")).toBe("typeof    ");
+  expect(mask("case /a/:")).toBe("case    :");
+  expect(mask("yield /a/i")).toBe("yield     ");
+  expect(mask("f(x) instanceof /a/")).toBe("f(x) instanceof    ");
+});
+
+test("keyword detection spans whitespace and comments, not longer words", () => {
+  // `return` ended at `n`; the comment and newline do not end the word.
+  expect(mask("return /* c */\n/a/")).toBe("return        \n   ");
+  // `returned` / `xreturn` are operands, so the `/` is division.
+  expect(mask("returned / 2 / 3")).toBe("returned / 2 / 3");
+  expect(mask("xreturn / 2 / 3")).toBe("xreturn / 2 / 3");
+});
+
+test("regex flags stop at the first non-lowercase char", () => {
+  expect(mask("x = /a/gU;")).toBe("x =     U;");
+});
+
+// --- escapes, unterminated input, unicode ----------------------------------
+
+test("template literal with escaped backtick and interpolation", () => {
+  // `$` + `{c}` concatenated for no-template-curly-in-string, as above.
+  const src = "t = `a\\`b$" + "{c}`; d";
+  expect(mask(src)).toBe("t = `        `; d");
+  expect(mask(src, { strings: false })).toBe(src);
+});
+
+test("escaped newline inside a string keeps the newline", () => {
+  expect(mask('s = "a\\\nb";')).toBe('s = "  \n ";');
+});
+
+test("unterminated string blanks to end of input", () => {
+  expect(mask('s = "abc')).toBe('s = "   ');
+});
+
+test("unterminated block comment blanks to end of input", () => {
+  expect(mask("a /* x\ny")).toBe("a     \n ");
+});
+
+test("unterminated regex stops at the newline", () => {
+  expect(mask("x = /ab\ny / 2")).toBe("x =    \ny / 2");
+});
+
+test("unicode whitespace does not end a keyword", () => {
+  expect(mask("return /a/")).toBe("return    ");
+  expect(mask("return　/a/")).toBe("return　   ");
+  expect(mask("return﻿/a/")).toBe("return﻿   ");
+});
+
+test("a non-ASCII operand char lets a regex start", () => {
+  // `é` is neither whitespace nor an ASCII identifier char.
+  expect(mask("é / 2 /")).toBe("é      ");
+});
+
+test("CR is blanked inside a line comment; only LF is kept", () => {
+  expect(mask("a // c\r\nb")).toBe("a      \nb");
+});
+
+test("source with nothing to mask comes back unchanged", () => {
+  const src = "const x = a / b;\nexport { x };\n";
+  expect(maskSource(src)).toBe(src);
+  expect(maskSource(src, { strings: false })).toBe(src);
+  expect(maskSource("")).toBe("");
+});
+
 // --- the trigger: marker in comment/string/regex ---------------------------
 
 test("marker-shaped regex literal does not leak its name", () => {
@@ -186,13 +261,15 @@ test("findMarkerCalls finds a real call and reads original arg text", () => {
   const calls = findMarkerCalls(src, "defineX");
   expect(calls.length).toBe(1);
   expect(calls[0]!.argsText).toBe('"a"');
-  expect(src.slice(calls[0]!.index, calls[0]!.index + "defineX".length)).toBe("defineX");
+  expect(src.slice(calls[0]!.index, calls[0]!.index + "defineX".length)).toBe(
+    "defineX",
+  );
 });
 
 test("findMarkerCalls skips occurrences in comments and strings", () => {
   const src = [
     '// defineX("commented")',
-    'const s = "defineX(\'stringed\')";',
+    "const s = \"defineX('stringed')\";",
     'defineX("real");',
   ].join("\n");
   const calls = findMarkerCalls(src, "defineX");
@@ -201,7 +278,7 @@ test("findMarkerCalls skips occurrences in comments and strings", () => {
 });
 
 test("findMarkerCalls captures balanced args with nested parens", () => {
-  const src = 'defineX({ fn: () => bar(1) });';
+  const src = "defineX({ fn: () => bar(1) });";
   const calls = findMarkerCalls(src, "defineX");
   expect(calls.length).toBe(1);
   expect(calls[0]!.argsText).toBe("{ fn: () => bar(1) }");

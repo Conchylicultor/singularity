@@ -269,7 +269,7 @@ export function stepWatch(
   const batch = lateMs >= STALL_MS ? createOwnerTally(state.roots) : null;
   const kindBatch = lateMs >= STALL_MS ? createKindTally(state.roots) : null;
   for (const sample of samples) {
-    const owner = ownerOf(sample.frames, state.roots);
+    const owner = ownerOf(sample.frames, state.roots, sample.activity);
     state.run.add(owner, sample.frames);
     state.kinds.add(sample.frames);
     if (batch && kindBatch) {

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join, resolve } from "path";
 import { writeGenerated } from "./write-generated";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
@@ -74,9 +74,7 @@ function hasDefaultExport(file: string): boolean {
 export async function collectFieldEagerBarrels(
   root: string,
 ): Promise<string[]> {
-  const tree = await buildPluginTree(resolve(root, "plugins"), {
-    skipBarrelImport: true,
-  });
+  const tree = await buildStructureTreeOnce(resolve(root, "plugins"));
   const specifiers: string[] = [];
   for (const node of tree.byDir.values()) {
     if (!CAPABILITY_RE.test(node.path)) continue;

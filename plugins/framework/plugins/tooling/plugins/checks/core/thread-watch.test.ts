@@ -33,7 +33,11 @@ function native(name: string): StackFrame {
 }
 
 function samples(n: number, frames: StackFrame[]): StackSample[] {
-  return Array.from({ length: n }, (_, i) => ({ timestamp: i, frames }));
+  return Array.from({ length: n }, (_, i) => ({
+    timestamp: i,
+    frames,
+    activity: null,
+  }));
 }
 
 const IN_CHECK_X = [js("spin", "/repo/plugins/x/check/index.ts")];
@@ -57,6 +61,33 @@ const cpu = (userMs: number, systemMs: number): NodeJS.CpuUsage => ({
 const NO_CPU = cpu(0, 0);
 
 describe("stepWatch", () => {
+  test("a native-only sample carrying an activity is owned by that activity", () => {
+    const state = createWatchState(0, ROOTS, idle(), NO_CPU);
+    const during: StackSample = {
+      timestamp: 0,
+      frames: [native("(anonymous)")],
+      activity: {
+        name: "barrel import",
+        detail: "plugins/apps/plugins/mail/web/index.ts",
+      },
+    };
+    const stall = stepWatch(
+      state,
+      2_050,
+      [during, during, ...samples(1, BLOCKING)],
+      idle,
+      NO_CPU,
+    );
+    expect(stall?.owners.map((o) => [o.owner, o.samples, o.detail])).toEqual([
+      [
+        "native during barrel import",
+        2,
+        [{ name: "plugins/apps/plugins/mail/web/index.ts", samples: 2 }],
+      ],
+      ["native readdirSync [native]", 1, []],
+    ]);
+  });
+
   test("a late tick under STALL_MS records nothing, but is the longest late", () => {
     const state = createWatchState(0, ROOTS, idle(), NO_CPU);
     expect(stepWatch(state, TICK_MS, [], idle, NO_CPU)).toBeNull();

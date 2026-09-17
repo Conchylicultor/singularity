@@ -228,7 +228,11 @@ Where it lands:
 - `import`: module evaluation from `await import()`. The evaluated module's
   plugin is kept as detail ("of which: …"), so a long barrel-import chain reads
   as one owner rather than 800 slivers.
-- `native <leaf>`: no source frame at all.
+- `native during <activity>`: no source frame, but the sample was taken inside a
+  `withThreadActivity` interval (`infra/stack-sampler`) — today only
+  `barrel import`, with the barrel paths as detail. "During", not "caused by":
+  the interval also covers other work that ran while the import awaited.
+- `native <leaf>`: no source frame at all, and no activity running.
 
 **Reading a stall's kind split**: an owner says WHOSE code held the thread;
 `classifyLeaf` (`core/thread-attribution.ts`) says WHAT it was doing, sorting
@@ -331,12 +335,14 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/stack-sampler.frameKey`
     - `infra/stack-sampler.StackFrame`
     - `infra/stack-sampler.StackSampler`
+    - `infra/stack-sampler.ThreadActivity`
+    - `packages/macrotask-yield.createTimeSlicer`
     - `packages/macrotask-yield.createTurnQueue`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/parse-utils.findImports`
     - `plugin-meta/parse-utils.lineAt`
     - `plugin-meta/parse-utils.maskSource`
-    - `plugin-meta/plugin-tree.buildPluginTree`
+    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
     - `reports/check-thread-stall.CHECK_THREAD_STALL_KIND`
     - `reports/check-thread-stall.checkThreadStallMessage`
     - `reports/check-thread-stall.CheckThreadStallOwner`

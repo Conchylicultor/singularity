@@ -1,5 +1,5 @@
 import { join, relative, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
@@ -26,7 +26,7 @@ const check: Check = {
     const repo = await ctx.repo();
     if (repo.under("plugins").length === 0) return { ok: true };
 
-    const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+    const tree = await buildStructureTreeOnce(pluginsRoot);
     const missing: string[] = [];
     const reexported: string[] = [];
 

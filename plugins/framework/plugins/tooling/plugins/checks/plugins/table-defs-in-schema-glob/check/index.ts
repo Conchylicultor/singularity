@@ -1,5 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { schemaGlobFilesAsync } from "@plugins/database/plugins/migrations/core";
+import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
@@ -92,7 +92,7 @@ const check: Check = {
 
     // 1. Glob-matched file set — derived from drizzle.config.ts (single source),
     // enumerated by the shared migrations/core helper (fails loud if unparseable).
-    const globFiles = new Set(await schemaGlobFilesAsync(root));
+    const globFiles = new Set(await schemaGlobFiles(root));
 
     const offenders = new Map<string, string>(); // key `path:line` → formatted line
 

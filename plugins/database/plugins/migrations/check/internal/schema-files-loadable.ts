@@ -24,7 +24,7 @@ const schemaFilesLoadableCheck: Check = {
   alwaysRun: true,
   async run() {
     const root = await getWorktreeRoot();
-    const absFiles = schemaGlobFiles(root).map((f) => resolve(root, f));
+    const absFiles = (await schemaGlobFiles(root)).map((f) => resolve(root, f));
 
     // One subprocess replicating drizzle-kit's synchronous require() load, run
     // from the migrations plugin dir (matching drizzle-kit's module/tsconfig
