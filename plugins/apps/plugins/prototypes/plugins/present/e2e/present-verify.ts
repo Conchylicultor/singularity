@@ -181,7 +181,9 @@ await withBrowser(async (h) => {
   r.ok("the picker offers the Version row while fullscreen", true);
   // The label opens the version list: drawn inside the fullscreened
   // presentation (its portal host), with the picker held open under it.
-  await versionRow.getByRole("button", { name: /^(v\d+|Live|Unknown)/ }).click();
+  await versionRow
+    .getByRole("button", { name: /^(v\d+|Live|Unknown)/ })
+    .click();
   const list = dialog
     .locator("[data-portal-host]")
     .getByText(/^\d+ versions?$/);
