@@ -4,8 +4,6 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSection,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -24,6 +22,7 @@ import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
 import { ViewSettingsPopover } from "./view-settings-popover";
+import { AddViewMenuItems } from "./add-view-menu-items";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 
 /**
@@ -143,44 +142,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
               render={<IconButton icon={MdAdd} label="Add view" />}
             />
             <DropdownMenuContent align="start">
-              {actions.availableSources.length === 1 &&
-              !actions.availableSources[0]!.title
-                ? // Single implicit source → today's flat item list, unchanged.
-                  actions.availableSources[0]!.types.map((v) => {
-                    const Icon = v.icon;
-                    return (
-                      <DropdownMenuItem
-                        key={v.type}
-                        onClick={() => actions.addView(v.type)}
-                      >
-                        <Icon className="size-4" />
-                        {v.title}
-                      </DropdownMenuItem>
-                    );
-                  })
-                : // Multi-source → one labelled section per source (the composed
-                  // Group+GroupLabel primitive — a groupless label would crash).
-                  actions.availableSources.map((source) => (
-                    <DropdownMenuSection
-                      key={source.sourceId ?? ""}
-                      label={source.title ?? source.sourceId ?? "Views"}
-                    >
-                      {source.types.map((v) => {
-                        const Icon = v.icon;
-                        return (
-                          <DropdownMenuItem
-                            key={v.type}
-                            onClick={() =>
-                              actions.addView(v.type, source.sourceId)
-                            }
-                          >
-                            <Icon className="size-4" />
-                            {v.title}
-                          </DropdownMenuItem>
-                        );
-                      })}
-                    </DropdownMenuSection>
-                  ))}
+              <AddViewMenuItems actions={actions} />
             </DropdownMenuContent>
           </DropdownMenu>
         </span>

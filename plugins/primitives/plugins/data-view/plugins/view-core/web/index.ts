@@ -9,6 +9,8 @@ export type { ViewModelCore, ViewActionsCore } from "./internal/use-view-model";
 export { buildViewDescriptors } from "./internal/build-descriptors";
 export { buildViewConfigContributions } from "./internal/config-registrations";
 export { EditableViewSwitcher } from "./components/editable-view-switcher";
+export { CollapsedViewSwitcher } from "./components/collapsed-view-switcher";
+export { AddViewMenuItems } from "./components/add-view-menu-items";
 export { ViewSettingsPopover } from "./components/view-settings-popover";
 
 export default {

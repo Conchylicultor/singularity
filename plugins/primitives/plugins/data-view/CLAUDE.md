@@ -265,7 +265,8 @@ renders an inline editor (the same `onEdit` contract the table/gallery/list use)
 
 `FieldDef.leading: true` marks the row's **leading visual** (its avatar). list,
 gallery and tree render that field's cell in their leading slot — `Row.icon`,
-`DataCard.leading`, `RowChrome.icon` — and leave it out of the body: never the
+`DataCard.leading`, `RowChrome.icon` — and icons draws it as the whole tile
+(inside `AvatarPresentationProvider value="tile"`); all leave it out of the body: never the
 title / label pick, never a list subtitle or trailing term, a gallery property
 row, or a tree secondary chip. The gallery's **cover is untouched**; the cover
 stays media. The **table** has no leading slot, so there it is an ordinary
@@ -647,6 +648,48 @@ flag — each click `await`s `onSelect` in a `try/finally`, disabling the contro
 while pending, so no consumer hand-rolls a per-call-site `useState`. The creators
 are also threaded into `DataViewRenderProps.creators` so views can opt into their
 own create UI (the gallery's trailing "+" card + empty-state CTA).
+
+## Toolbar arrangements
+
+The toolbar's **parts** are the host's; their **layout** is an arrangement's.
+`DataViewProps.toolbar?: ToolbarArrangement` (core) is a value the surface
+imports and passes — absent, the host uses its own `barArrangement` (the inline
+row every DataView has always had). The host never names or looks up an
+arrangement, so adding one is a new plugin (e.g. `capsule-toolbar`) and no edit
+here.
+
+```ts
+interface ToolbarArrangement {
+  id: string;
+  forms: { search: "field" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
+  component: ComponentType<ToolbarParts>;
+}
+interface ToolbarParts {
+  title; switcher: { strip; chip }; search; focusSearch(): void; query;
+  controls; foldedControls; actions; creators;
+}
+```
+
+- **`forms` is data, so parts stay host-built.** The host builds each part once,
+  in the form the arrangement asked for (`SearchInput appearance`,
+  `ControlTrigger form`, `CreatorsControl form`); an arrangement places nodes and
+  never re-instantiates one.
+- **`switcher`** carries both forms — `EditableViewSwitcher` (`strip`) and
+  `CollapsedViewSwitcher` (`chip`), built by the shell. Render exactly one; both
+  are `null` on a pinned surface. It is the only way to add/rename/reorder views,
+  so every arrangement renders one.
+- **`search` is always rendered** — a non-empty query must stay visible.
+  `focusSearch` focuses it (the capsule binds `/`).
+  Its placeholder is the surface's (`DataViewProps.searchPlaceholder`, default
+  `"Search…"`), never the arrangement's.
+- **`foldedControls`** is every applicable control behind one always-visible
+  trigger (no search): for an arrangement that runs out of room itself.
+- **What the host keeps:** the `<Sticky>` band (`mask`, `layer="nav"`), its
+  measurement and `--dv-header-offset`, `hoverRevealGroup` on the band, control
+  applicability/order, and the **compact fold** — `density="compact"` or a band
+  under `COMPACT_BREAKPOINT` renders the fold whatever arrangement was passed. An
+  arrangement only chooses the wide layout, so none can break a narrow pane. The
+  arrangement owns its own row box and inset (`rail-follow`).
 
 ## Toolbar controls
 
@@ -1517,6 +1560,7 @@ it):
 |---|---|---|
 | **list** | 100 entries | Composes with manual-order drag via `keepMounted`. |
 | **gallery** | 60 cards | Lane-aware: each windowed row is one measured row of `columns` cards. |
+| **icons** | 120 tiles | Lane-aware like gallery; the lane count is the probe grid's resolved track count. |
 | **tree** | 100 *visible* (expanded) rows | Inside `primitives/tree`'s `TreeList`; below that the recursive render runs byte-for-byte unchanged. Uses `scrollToIndex` for selection reveal. |
 | **table** | 100 rows, **ungrouped only** | Grouped mode is never windowed — it targets bounded, sectioned lists — and uses grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. |
 
@@ -1530,7 +1574,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots:
-    - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
+    - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.icons`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
     - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
@@ -1586,6 +1630,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `primitives/cursor-pagination.useInfiniteScroll`
     - `primitives/data-view/view-core.buildViewConfigContributions`
     - `primitives/data-view/view-core.buildViewDescriptors`
+    - `primitives/data-view/view-core.CollapsedViewSwitcher`
     - `primitives/data-view/view-core.EditableViewSwitcher`
     - `primitives/data-view/view-core.ResolvedViewInstance`
     - `primitives/data-view/view-core.useViewModel`
@@ -1798,6 +1843,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `plugin-meta/plugin-view/file-tree`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/data-view/server-query`
     - `primitives/data-view/table`
@@ -1853,6 +1899,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `SortPreset`
     - `SortRule`
     - `TableCellProps`
+    - `ToolbarArrangement`
+    - `ToolbarPartForms`
+    - `ToolbarParts`
     - `ValueCodec`
     - `ViewState`
   - Exports (values):
@@ -1867,8 +1916,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md` and
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
 - Sub-plugins:
+  - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
+  - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
   - **`server-query`** — Generic FilterGroup → SQL compiler for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the filter compilation, not any field type. The field-agnostic keyset seek + cursor codec now live in primitives/keyset.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.

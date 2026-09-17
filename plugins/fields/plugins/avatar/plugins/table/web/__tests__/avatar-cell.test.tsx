@@ -63,8 +63,29 @@ describe("AvatarCell", () => {
     }
   });
 
+  it("passes the shape through: a squircle, or the default circle", () => {
+    const { container } = renderCell({
+      icon: null,
+      color: "sky",
+      svgNodes,
+      shape: "squircle",
+    });
+    expect(disc(container).classList).toContain("rounded-squircle");
+    cleanup();
+    const { container: round } = renderCell({
+      icon: null,
+      color: "sky",
+      svgNodes,
+    });
+    expect(disc(round).classList).toContain("rounded-full");
+  });
+
   it.each([
     ["undefined", undefined],
+    [
+      "an unknown shape",
+      { icon: null, color: null, svgNodes: null, shape: "hexagon" },
+    ],
     ["a string", "face"],
     ["an object missing keys", { icon: "face" }],
     ["a mistyped colour", { icon: "face", color: 3, svgNodes: null }],

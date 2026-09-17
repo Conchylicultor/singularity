@@ -15,7 +15,7 @@ export default {
   contributions: [
     Apps.App({
       app: settingsApp,
-      icon: mdAppIcon(MdSettings),
+      icon: mdAppIcon(MdSettings, { color: "slate" }),
       component: SettingsLayout,
       badge: SettingsRailBadge,
     }),

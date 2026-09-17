@@ -7,10 +7,15 @@
 - Description: Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
 - Web:
   - Uses:
+    - `primitives/css/fill.Fill`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.rigidClass`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Input`
+    - `primitives/overlay/tooltip.Kbd`
   - Exports (types):
+    - `SearchInputAppearance`
     - `SearchInputProps`
     - `TextFilterHandle`
     - `UseTextFilterOptions`

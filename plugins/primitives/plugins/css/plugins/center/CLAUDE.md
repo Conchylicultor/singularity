@@ -50,6 +50,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `apps/agent-manager/welcome`
     - `apps/browser/webview`
     - `apps/events/shell`
+    - `apps/home/shell`
     - `apps/mail/reading-pane`
     - `apps/mail/shell`
     - `apps/pages/page-tree`
@@ -105,7 +106,9 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `plugin-meta/plugin-view/sub-plugins`
     - `primitives/cursor-pagination`
     - `primitives/data-table`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/date-picker`

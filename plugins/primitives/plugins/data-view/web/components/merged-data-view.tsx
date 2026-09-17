@@ -3,7 +3,11 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { ViewSourceEntry } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { DataViewDensity, DataViewId } from "../../core";
+import type {
+  DataViewDensity,
+  DataViewId,
+  ToolbarArrangement,
+} from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
@@ -33,6 +37,10 @@ export interface MergedDataViewProps<THostProps> {
    *  `actions`. It is a property of the surface, so it applies whichever source
    *  the active view-instance binds to. */
   density?: DataViewDensity;
+  /** The surface's wide-toolbar arrangement, forwarded like `density`. */
+  toolbar?: ToolbarArrangement;
+  /** The search placeholder, forwarded like `toolbar`. */
+  searchPlaceholder?: string;
 }
 
 /** One dev-warn per (storageKey, source) — the mismatch is static, so once. */
@@ -59,6 +67,8 @@ export function MergedDataView<THostProps>(
     actions,
     defaultView,
     density,
+    toolbar,
+    searchPlaceholder,
   } = props;
   const contributions = DataViewSlots.View.useContributions();
   const rawSourceContribs = sources.useContributions();
@@ -96,6 +106,8 @@ export function MergedDataView<THostProps>(
       title={title}
       actions={actions}
       density={density}
+      toolbar={toolbar}
+      searchPlaceholder={searchPlaceholder}
     >
       {(activeInstance, chrome, readyModel) => {
         // Always found: a row whose `source` matches no contribution never

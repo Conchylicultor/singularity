@@ -9,11 +9,8 @@ import {
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import {
-  AVATAR_COLOR_KEYS,
-  AVATAR_COLORS,
-  type AvatarColor,
-} from "../internal/colors";
+import type { AvatarColor } from "../../core";
+import { AVATAR_COLOR_KEYS, AVATAR_COLORS } from "../internal/colors";
 
 export interface AvatarSpec {
   icon: string | null;

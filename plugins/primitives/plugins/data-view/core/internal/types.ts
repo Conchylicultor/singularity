@@ -6,6 +6,7 @@ import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ExpandChange } from "@plugins/primitives/plugins/tree/core";
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
+import type { ToolbarArrangement } from "./toolbar-arrangement";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -984,4 +985,15 @@ export interface DataViewProps<TRow> {
    * `"comfortable"`.
    */
   density?: DataViewDensity;
+  /**
+   * How the WIDE toolbar is laid out — pass an arrangement value (e.g. a
+   * plugin's exported arrangement). Absent → the default bar. The compact fold
+   * (`density="compact"` or a narrow toolbar) applies whatever is passed here.
+   */
+  toolbar?: ToolbarArrangement;
+  /**
+   * The search field's placeholder, naming what this surface searches
+   * ("Search apps"). Default `"Search…"`.
+   */
+  searchPlaceholder?: string;
 }

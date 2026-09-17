@@ -3,6 +3,12 @@ export type { DataViewId } from "./internal/define-data-view";
 
 export { DATA_VIEW_HEADER_OFFSET_VAR } from "./internal/header-offset";
 
+export type {
+  ToolbarArrangement,
+  ToolbarParts,
+  ToolbarPartForms,
+} from "./internal/toolbar-arrangement";
+
 export {
   FilterGroupSchema,
   FilterNodeSchema,

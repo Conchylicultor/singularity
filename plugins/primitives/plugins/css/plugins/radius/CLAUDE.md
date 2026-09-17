@@ -19,9 +19,15 @@ Two shapes bypass the token and freeze a corner at a literal value:
   under every preset. Use `rounded-md` (or the step that fits).
 - **arbitrary `rounded-[…]`** (e.g. `rounded-[2px]`) — a hand-pinned literal.
 
-`rounded-none`, `rounded-full`, and `rounded-checkbox` are intentional,
-shape-preserving corners (a hard corner, a pill/circle, a small square) and are
-always allowed.
+`rounded-none`, `rounded-full`, `rounded-checkbox` and `rounded-squircle` are
+intentional, shape-preserving corners (a hard corner, a pill/circle, a small
+square, a launcher-tile squircle) and are always allowed.
+
+`rounded-squircle` is `border-radius: 26%` — a PROPORTIONAL shape like
+`rounded-full`, so it reads the same at every size and deliberately ignores the
+`--radius` preset. It is the app-icon / launcher-tile outline; reach for it
+through `<Avatar shape="squircle">` (`primitives/avatar`). Owned as a custom
+`@utility` in ui-kit's `app.css`, beside `rounded-checkbox`.
 
 `rounded-checkbox` is the sanctioned square corner for checkbox-class indicators:
 `min(var(--radius), 3px)`. It **caps** the shape token at 3px rather than freezing

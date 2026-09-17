@@ -18,6 +18,12 @@ describe("gridTemplateColumns", () => {
     expect(gridTemplateColumns({ cols: 3 })).toBe("repeat(3, minmax(0, 1fr))");
   });
 
+  test("fixed cell path: exact-width auto-fill tracks, never stretched", () => {
+    expect(gridTemplateColumns({ cellWidth: "116px" })).toBe(
+      "repeat(auto-fill, 116px)",
+    );
+  });
+
   test("a rem minCellWidth is interpolated verbatim", () => {
     expect(gridTemplateColumns({ minCellWidth: "8.5rem", mode: "fill" })).toBe(
       "repeat(auto-fill, minmax(8.5rem, 1fr))",

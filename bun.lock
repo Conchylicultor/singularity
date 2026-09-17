@@ -4154,12 +4154,20 @@
       "name": "@singularity/plugin-primitives-data-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/data-view/plugins/capsule-toolbar": {
+      "name": "@singularity/plugin-primitives-data-view-capsule-toolbar",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/data-view/plugins/custom-columns": {
       "name": "@singularity/plugin-primitives-data-view-custom-columns",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/gallery": {
       "name": "@singularity/plugin-primitives-data-view-gallery",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/data-view/plugins/icons": {
+      "name": "@singularity/plugin-primitives-data-view-icons",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/list": {
@@ -7918,9 +7926,13 @@
 
     "@singularity/plugin-primitives-data-view": ["@singularity/plugin-primitives-data-view@workspace:plugins/primitives/plugins/data-view"],
 
+    "@singularity/plugin-primitives-data-view-capsule-toolbar": ["@singularity/plugin-primitives-data-view-capsule-toolbar@workspace:plugins/primitives/plugins/data-view/plugins/capsule-toolbar"],
+
     "@singularity/plugin-primitives-data-view-custom-columns": ["@singularity/plugin-primitives-data-view-custom-columns@workspace:plugins/primitives/plugins/data-view/plugins/custom-columns"],
 
     "@singularity/plugin-primitives-data-view-gallery": ["@singularity/plugin-primitives-data-view-gallery@workspace:plugins/primitives/plugins/data-view/plugins/gallery"],
+
+    "@singularity/plugin-primitives-data-view-icons": ["@singularity/plugin-primitives-data-view-icons@workspace:plugins/primitives/plugins/data-view/plugins/icons"],
 
     "@singularity/plugin-primitives-data-view-list": ["@singularity/plugin-primitives-data-view-list@workspace:plugins/primitives/plugins/data-view/plugins/list"],
 

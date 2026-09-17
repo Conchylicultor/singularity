@@ -51,6 +51,12 @@ export const categoricalGroup = defineTokenGroup("categorical", {
     darkDefault: "oklch(0.70 0.03 250)",
     label: "Categorical 10",
   },
+  // The glyph / text drawn ON a solid categorical fill (a launcher tile's icon).
+  "categorical-foreground": {
+    default: "oklch(1 0 0)",
+    darkDefault: "oklch(1 0 0)",
+    label: "Categorical foreground",
+  },
 });
 
 export type CategoricalTokenValues = {

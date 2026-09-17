@@ -49,6 +49,7 @@ interface ResponsiveGridProps extends GridBaseProps {
    *  them so present cells stretch to fill the row. Defaults to `fill`. */
   mode?: "fill" | "fit";
   cols?: never;
+  cellWidth?: never;
 }
 
 /** Fixed path: exactly `cols` equal `minmax(0, 1fr)` columns. Mutually exclusive
@@ -58,19 +59,36 @@ interface FixedGridProps extends GridBaseProps {
   cols: number;
   minCellWidth?: never;
   mode?: never;
+  cellWidth?: never;
 }
 
-/** `{cols}` xor `{minCellWidth, mode?}` — a fixed-column grid takes no
- *  `minCellWidth`, a responsive grid takes no `cols`; passing both is a type
- *  error, so a contradictory call is unrepresentable. */
-export type GridProps = ResponsiveGridProps | FixedGridProps;
+/** Fixed-cell path: as many exactly-`cellWidth` tracks as fit, the row centred
+ *  in the leftover — a launcher / home-screen grid whose cells never stretch.
+ *  Mutually exclusive with the other two paths. */
+interface FixedCellGridProps extends GridBaseProps {
+  /** The exact width of every track — drives
+   *  `repeat(auto-fill, <cellWidth>)` + `justify-content: center`. e.g. `"116px"`. */
+  cellWidth: string;
+  cols?: never;
+  minCellWidth?: never;
+  mode?: never;
+  /** The tracks are centred by the path itself; a fixed-cell grid takes no
+   *  `justify`. */
+  justify?: never;
+}
+
+/** `{cols}` xor `{minCellWidth, mode?}` xor `{cellWidth}` — each path takes none
+ *  of the others' props; passing two is a type error, so a contradictory call is
+ *  unrepresentable. */
+export type GridProps =
+  ResponsiveGridProps | FixedGridProps | FixedCellGridProps;
 
 /**
  * Build the `grid-template-columns` track list — the single source of truth for
  * Grid's column geometry, exported so the component and the pure test share one
  * definition.
  *
- * Two mutually-exclusive paths (a discriminated union — never both):
+ * Three mutually-exclusive paths (a discriminated union — never two):
  * - **Fixed** (`cols`) → `repeat(<cols>, minmax(0, 1fr))`: exactly N equal
  *   columns, each able to shrink to 0 (the `minmax(0,…)` min) so inner content
  *   never forces an overflow.
@@ -79,13 +97,23 @@ export type GridProps = ResponsiveGridProps | FixedGridProps;
  *   grows to `1fr` to share the leftover. `auto-fill` (mode `fill`) keeps empty
  *   trailing tracks so the column count is stable; `auto-fit` (mode `fit`)
  *   collapses them so the present cells stretch to fill the whole row.
+ * - **Fixed cell** (`cellWidth`) → `repeat(auto-fill, <cellWidth>)`: as many
+ *   exactly-`cellWidth` tracks as fit, never stretched — the component centres
+ *   the row (`justify-content: center`) so the leftover splits on both sides.
  */
 export function gridTemplateColumns(
   opts:
-    | { cols: number; minCellWidth?: never; mode?: never }
-    | { minCellWidth: string; mode: "fill" | "fit"; cols?: never },
+    | { cols: number; minCellWidth?: never; mode?: never; cellWidth?: never }
+    | {
+        minCellWidth: string;
+        mode: "fill" | "fit";
+        cols?: never;
+        cellWidth?: never;
+      }
+    | { cellWidth: string; cols?: never; minCellWidth?: never; mode?: never },
 ): string {
   if (opts.cols != null) return `repeat(${opts.cols}, minmax(0, 1fr))`;
+  if (opts.cellWidth != null) return `repeat(auto-fill, ${opts.cellWidth})`;
   return `repeat(${opts.mode === "fit" ? "auto-fit" : "auto-fill"}, minmax(${opts.minCellWidth}, 1fr))`;
 }
 
@@ -96,8 +124,9 @@ export function gridTemplateColumns(
  * uniform cells that reflows by available width.
  *
  * It is a CLOSED prop surface, NOT a raw `grid-template` passthrough — you say
- * how wide a cell wants to be (`minCellWidth`) or how many columns (`cols`) — the
- * two are an xor discriminated union — and the track function does the rest. An
+ * how wide a cell wants to be (`minCellWidth`), how many columns (`cols`), or the
+ * exact cell width (`cellWidth`) — an xor discriminated union — and the track
+ * function does the rest. An
  * arbitrary template string is exactly the raw CSS the layout standard bans; that
  * genuine long tail stays a per-site lint escape, never a prop here. The full
  * track logic lives in `gridTemplateColumns`.
@@ -106,6 +135,7 @@ export function gridTemplateColumns(
  */
 export function Grid({
   cols,
+  cellWidth,
   minCellWidth,
   mode = "fill",
   gap = "md",
@@ -118,14 +148,22 @@ export function Grid({
   children,
   ...rest
 }: GridProps) {
-  // `cols` and `minCellWidth` are xor by the union; destructuring from the union
-  // erases that correlation, so re-narrow on `cols` before delegating. The cast
-  // is the standard destructure-from-union TS limitation (minCellWidth is
-  // required whenever cols is absent).
+  // The three paths are xor by the union; destructuring from the union erases
+  // that correlation, so re-narrow on `cols` / `cellWidth` before delegating. The
+  // cast is the standard destructure-from-union TS limitation (minCellWidth is
+  // required whenever cols and cellWidth are both absent).
   const columns =
     cols != null
       ? gridTemplateColumns({ cols })
-      : gridTemplateColumns({ minCellWidth: minCellWidth as string, mode });
+      : cellWidth != null
+        ? gridTemplateColumns({ cellWidth })
+        : gridTemplateColumns({ minCellWidth: minCellWidth as string, mode });
+  // A fixed-cell row never stretches its tracks, so the path owns centring the
+  // leftover; the union bans `justify` on it.
+  const justifyClass =
+    cellWidth != null
+      ? JUSTIFY_CLASS.center
+      : justify && JUSTIFY_CLASS[justify];
 
   return (
     <As
@@ -134,7 +172,7 @@ export function Grid({
         "grid",
         rampClass("gap", gap),
         align && ALIGN_CLASS[align],
-        justify && JUSTIFY_CLASS[justify],
+        justifyClass,
         className,
       )}
       // The caller's `style` merges UNDER the track list. Grid owns its column

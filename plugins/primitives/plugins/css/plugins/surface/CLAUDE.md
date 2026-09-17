@@ -134,6 +134,7 @@ never be clobbered.
     - `page/read-only-view`
     - `primitives/collapsible-wrap`
     - `primitives/css/card`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/row-actions`
     - `stats`
 

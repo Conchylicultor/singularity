@@ -124,14 +124,17 @@ describe("pinnedView", () => {
     // The node itself, not merely a count of 1: the WIDE toolbar renders the
     // switcher unconditionally, so a non-null node would paint a live tab strip
     // whose clicks this host ignores.
-    expect(lastSwitcher).toBeNull();
+    expect(lastSwitcher).toEqual({ strip: null, chip: null });
   });
 
   it("keeps the first-instance fallback for an UNPINNED surface", () => {
     renderShell({ activeId: "gone" });
 
     expect(screen.getByTestId("body").textContent).toBe("rows of active");
-    expect(lastSwitcher).not.toBeNull();
+    expect(lastSwitcher).toMatchObject({
+      strip: expect.anything(),
+      chip: expect.anything(),
+    });
   });
 
   it("still says 'no views configured' for an unpinned surface with none", () => {

@@ -11,8 +11,10 @@ import {
   type DataViewDensity,
   type DataViewId,
   type DataViewProps,
+  type ToolbarArrangement,
 } from "../../core";
 import {
+  CollapsedViewSwitcher,
   EditableViewSwitcher,
   type ResolvedViewInstance,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
@@ -67,6 +69,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       actions={props.actions}
       creators={props.creators}
       density={props.density}
+      toolbar={props.toolbar}
+      searchPlaceholder={props.searchPlaceholder}
       pinnedView={props.pinnedView}
     >
       {(activeInstance, chrome, readyModel) => (
@@ -99,6 +103,8 @@ export function DataViewShellFrame(props: {
   actions?: ReactNode;
   creators?: CreateOption[];
   density?: DataViewDensity;
+  toolbar?: ToolbarArrangement;
+  searchPlaceholder?: string;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
   /** Renders the per-active-instance body. Receives the SETTLED model — the
@@ -117,6 +123,8 @@ export function DataViewShellFrame(props: {
     actions,
     creators,
     density,
+    toolbar,
+    searchPlaceholder,
     pinnedView,
     children,
   } = props;
@@ -199,27 +207,33 @@ export function DataViewShellFrame(props: {
     );
   }
 
-  // The switcher needs only model inputs, so the shell builds the node once per
-  // surface and the body renders it inside the toolbar as an opaque node.
+  // The switcher needs only model inputs, so the shell builds both of its forms
+  // once per surface and the toolbar places one of them as an opaque node.
+  const switcherInputs = {
+    instances,
+    activeId: activeViewId,
+    onSelect: viewModel.setActiveView,
+    actions: viewModel.actions,
+  };
   const chrome: DataViewShellChrome = {
-    // A pinned host paints NO switcher — the node itself, not just its count.
-    // `switcherCount` gates only the COMPACT toolbar (`switcherCount > 1`); the
-    // wide toolbar renders `{switcher}` unconditionally, so a count of 1 alone
-    // would leave a wide pinned surface showing the full tab strip, whose clicks
-    // write a shared selection this host then ignores — a dead switcher, which
-    // is worse than the shared-selection problem pinning solves.
-    switcher: pinned ? null : (
-      <EditableViewSwitcher
-        instances={instances}
-        activeId={activeViewId}
-        onSelect={viewModel.setActiveView}
-        actions={viewModel.actions}
-      />
-    ),
+    // A pinned host paints NO switcher — the nodes themselves, not just its
+    // count. `switcherCount` gates only the COMPACT toolbar (`switcherCount >
+    // 1`); a wide arrangement renders a switcher unconditionally, so a count of
+    // 1 alone would leave a wide pinned surface showing a live switcher, whose
+    // clicks write a shared selection this host then ignores — a dead switcher,
+    // which is worse than the shared-selection problem pinning solves.
+    switcher: pinned
+      ? { strip: null, chip: null }
+      : {
+          strip: <EditableViewSwitcher {...switcherInputs} />,
+          chip: <CollapsedViewSwitcher {...switcherInputs} />,
+        },
     switcherCount: pinned ? 1 : instances.length,
     title,
     actions,
     density,
+    toolbar,
+    searchPlaceholder,
     stickyRef: toolbarRef,
   };
 

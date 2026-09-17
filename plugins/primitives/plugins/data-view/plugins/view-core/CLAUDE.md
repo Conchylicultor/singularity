@@ -159,7 +159,13 @@ contributions each surface passes in, and per-entry plugin id
   `ViewsConfigHandle`, `useViewModel`, `ViewModelCore`, `ViewActionsCore`,
   `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
-  `EditableViewSwitcher`, `ViewSettingsPopover` — the last drawn in the
+  `EditableViewSwitcher`, `CollapsedViewSwitcher` (the same inputs folded
+  into one chip — active view icon + name + chevron — whose menu lists the other
+  views, an "Add view" submenu and "View settings…", which opens
+  `ViewSettingsPopover` anchored to the chip via `ControlPanelPopover`'s
+  `anchor` arm; no drag reorder), `AddViewMenuItems` (the add-menu rows both
+  switchers share: flat for one untitled source, one section per source
+  otherwise), `ViewSettingsPopover` — the last drawn in the
   `control-panel` vocabulary (a sibling primitive; view-core still imports NO
   data-view), so the switcher opens it through `ControlPanelPopover`.
   (The device-local active-id hook
@@ -182,11 +188,16 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/css/grow.growClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuContent`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuSection`
+    - `primitives/css/ui-kit.DropdownMenuSeparator`
+    - `primitives/css/ui-kit.DropdownMenuSub`
+    - `primitives/css/ui-kit.DropdownMenuSubContent`
+    - `primitives/css/ui-kit.DropdownMenuSubTrigger`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
     - `primitives/css/ui-kit.Input`
     - `primitives/hover-reveal.hoverRevealClass`
@@ -202,9 +213,11 @@ contributions each surface passes in, and per-entry plugin id
     - `ViewModelCore`
     - `ViewsConfigHandle`
   - Exports (values):
+    - `AddViewMenuItems`
     - `buildInstanceFromRow`
     - `buildViewConfigContributions`
     - `buildViewDescriptors`
+    - `CollapsedViewSwitcher`
     - `EditableViewSwitcher`
     - `useViewModel`
     - `useViewsConfig`

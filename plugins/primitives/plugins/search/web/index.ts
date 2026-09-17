@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { SearchInput } from "./internal/search-input";
-export type { SearchInputProps } from "./internal/search-input";
+export type {
+  SearchInputProps,
+  SearchInputAppearance,
+} from "./internal/search-input";
 export { useTextFilter } from "./internal/use-text-filter";
 export type {
   UseTextFilterOptions,

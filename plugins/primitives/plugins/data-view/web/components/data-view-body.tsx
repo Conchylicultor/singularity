@@ -425,6 +425,8 @@ function DataViewBodyInner<TRow>(props: DataViewBodyProps<TRow>): ReactNode {
                 actions={chrome.actions}
                 creators={creators}
                 density={chrome.density}
+                arrangement={chrome.toolbar}
+                searchPlaceholder={chrome.searchPlaceholder}
               />
             </DataViewControlsProvider>
             {/* One density for every view type, so a row's controls and decorations

@@ -82,11 +82,13 @@ attribute type carries.
     - `primitives/command-palette`
     - `primitives/commit-list`
     - `primitives/css/row`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/date-picker`
     - `primitives/error-boundary`
     - `primitives/log-channels`
     - `primitives/outline/rail`
     - `primitives/overlay/image-viewer`
+    - `primitives/search`
     - `reorder/node-types/header`
     - `reorder/node-types/overflow`
     - `review/code-review`

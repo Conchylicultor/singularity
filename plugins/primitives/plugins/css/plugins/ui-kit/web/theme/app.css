@@ -108,6 +108,20 @@
     --color-categorical-8: var(--categorical-8);
     --color-categorical-9: var(--categorical-9);
     --color-categorical-10: var(--categorical-10);
+    --color-categorical-foreground: var(--categorical-foreground);
+    /* The categorical slot lifted 0.13 in OKLCH lightness — a second shade per slot
+     * (launcher tiles). Derived here, once, so it follows whatever the theme sets
+     * the slot to. */
+    --color-categorical-1-lift: oklch(from var(--categorical-1) calc(l + 0.13) c h);
+    --color-categorical-2-lift: oklch(from var(--categorical-2) calc(l + 0.13) c h);
+    --color-categorical-3-lift: oklch(from var(--categorical-3) calc(l + 0.13) c h);
+    --color-categorical-4-lift: oklch(from var(--categorical-4) calc(l + 0.13) c h);
+    --color-categorical-5-lift: oklch(from var(--categorical-5) calc(l + 0.13) c h);
+    --color-categorical-6-lift: oklch(from var(--categorical-6) calc(l + 0.13) c h);
+    --color-categorical-7-lift: oklch(from var(--categorical-7) calc(l + 0.13) c h);
+    --color-categorical-8-lift: oklch(from var(--categorical-8) calc(l + 0.13) c h);
+    --color-categorical-9-lift: oklch(from var(--categorical-9) calc(l + 0.13) c h);
+    --color-categorical-10-lift: oklch(from var(--categorical-10) calc(l + 0.13) c h);
     --tracking-normal: var(--letter-spacing);
     --text-2xs: var(--font-size-2xs);
     --text-2xs--line-height: var(--line-height-2xs);
@@ -211,6 +225,13 @@
  * and make multi-select look like radios. The sanctioned checkbox corner — reach
  * for it instead of an arbitrary rounded-[…] literal. */
 @utility rounded-checkbox { border-radius: min(var(--radius), 3px); } /* twmerge: extend rounded */
+
+/* Squircle corner — the launcher-tile / app-icon outline, peer of rounded-full.
+ * A PROPORTIONAL shape (26% of the box), not a step on the --radius scale: like
+ * rounded-full it must read as the same shape at every size and under every
+ * Shape preset, so it deliberately ignores --radius. Reach for it through
+ * `<Avatar shape="squircle">` rather than directly. */
+@utility rounded-squircle { border-radius: 26%; } /* twmerge: extend rounded */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class

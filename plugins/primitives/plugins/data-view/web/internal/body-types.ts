@@ -1,6 +1,12 @@
-import type { ReactNode, Ref } from "react";
+import type { ReactNode } from "react";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { DataViewDensity, DataViewId, DataViewProps } from "../../core";
+import type {
+  DataViewDensity,
+  DataViewId,
+  DataViewProps,
+  ToolbarArrangement,
+  ToolbarParts,
+} from "../../core";
 import type { DataViewContribution } from "../slots";
 import type { ReadyViewModel } from "./use-data-view-model";
 
@@ -11,9 +17,10 @@ import type { ReadyViewModel } from "./use-data-view-model";
  * ref all belong to the surface — they must survive an active-instance switch.
  */
 export interface DataViewShellChrome {
-  /** The `EditableViewSwitcher` node — built by the shell (model inputs only)
-   *  and rendered by the body inside the toolbar as an opaque node. */
-  switcher: ReactNode;
+  /** The view switcher in both forms — `EditableViewSwitcher` (`strip`) and
+   *  `CollapsedViewSwitcher` (`chip`) — built by the shell (model inputs only)
+   *  and placed by the toolbar as opaque nodes. Both `null` when pinned. */
+  switcher: ToolbarParts["switcher"];
   /** Number of view instances — the compact toolbar hides a single-view switcher. */
   switcherCount: number;
   title?: ReactNode;
@@ -26,16 +33,22 @@ export interface DataViewShellChrome {
    * single place the body reads it from. Absent ⇒ `"comfortable"`.
    */
   density?: DataViewDensity;
+  /** The surface's wide-toolbar arrangement (`DataViewProps.toolbar`); absent
+   *  ⇒ the default bar. A surface property, carried like `density`. */
+  toolbar?: ToolbarArrangement;
+  /** The search placeholder (`DataViewProps.searchPlaceholder`), a surface
+   *  property carried like `toolbar`. Absent ⇒ `"Search…"`. */
+  searchPlaceholder?: string;
   /** The shell's toolbar-measurement ref. The body attaches it to the toolbar's
    *  `<Sticky>` so the shell can publish the measured height as
    *  `--dv-header-offset` on the shell root. */
-  stickyRef: Ref<HTMLElement>;
+  stickyRef: (node: HTMLElement | null) => void;
 }
 
 /**
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
- * `defaultView` / `views` / `density`).
+ * `defaultView` / `views` / `density` / `toolbar` / `searchPlaceholder`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
@@ -44,7 +57,14 @@ export interface DataViewShellChrome {
  */
 export type DataViewSourceBundle<TRow> = Omit<
   DataViewProps<TRow>,
-  "storageKey" | "title" | "actions" | "defaultView" | "views" | "density"
+  | "storageKey"
+  | "title"
+  | "actions"
+  | "defaultView"
+  | "views"
+  | "density"
+  | "toolbar"
+  | "searchPlaceholder"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`). */

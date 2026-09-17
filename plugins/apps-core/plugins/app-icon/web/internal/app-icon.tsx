@@ -1,13 +1,25 @@
 import type { ComponentType } from "react";
 import type { IconType } from "react-icons";
+import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
 import { MdWebAsset } from "react-icons/md";
 import { extractSvgNodes } from "@plugins/primitives/plugins/icon-picker/web";
 import type { AppIcon } from "../../core";
 import { AppIconView } from "../components/app-icon-view";
 
-/** Author an app's icon from a tree-shaken react-icons component: `icon: mdAppIcon(MdHome)`. */
-export function mdAppIcon(Icon: IconType): AppIcon {
-  return { kind: "md", svgNodes: extractSvgNodes(Icon) };
+/**
+ * Author an app's icon from a tree-shaken react-icons component:
+ * `icon: mdAppIcon(MdHome)`, or `mdAppIcon(MdSettings, { color: "slate" })` to
+ * declare the app's tile colour instead of deriving it from the app id.
+ */
+export function mdAppIcon(
+  Icon: IconType,
+  opts: { color?: AvatarColor } = {},
+): AppIcon {
+  return {
+    kind: "md",
+    svgNodes: extractSvgNodes(Icon),
+    ...(opts.color !== undefined && { color: opts.color }),
+  };
 }
 
 /** Fallback icon for tabs/windows whose owning app cannot be resolved. */
@@ -19,8 +31,13 @@ export const DEFAULT_APP_ICON: AppIcon = mdAppIcon(MdWebAsset);
  * `IconButton`). Memoized on the stable `AppIcon` object so the returned
  * component identity is stable (no per-render remount).
  */
-const componentCache = new WeakMap<AppIcon, ComponentType<{ className?: string }>>();
-export function appIconComponent(icon: AppIcon): ComponentType<{ className?: string }> {
+const componentCache = new WeakMap<
+  AppIcon,
+  ComponentType<{ className?: string }>
+>();
+export function appIconComponent(
+  icon: AppIcon,
+): ComponentType<{ className?: string }> {
   let Cached = componentCache.get(icon);
   if (!Cached) {
     Cached = function AppIconGlyph({ className }: { className?: string }) {

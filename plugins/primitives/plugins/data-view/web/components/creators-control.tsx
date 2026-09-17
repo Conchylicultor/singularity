@@ -10,7 +10,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { CreateOption } from "../../core";
+import type { CreateOption, ToolbarPartForms } from "../../core";
 
 /**
  * Host-internal toolbar render of `DataViewProps.creators`. NOT exported from
@@ -29,13 +29,26 @@ import type { CreateOption } from "../../core";
 export function CreatorsControl({
   creators,
   compact = false,
+  form = "labelled",
 }: {
   creators?: CreateOption[];
   compact?: boolean;
+  /**
+   * The wide form — the arrangement's `forms.creators`. `round` draws the `+`
+   * as a filled circle (one creator's label moves to its tooltip). Ignored when
+   * `compact`, which is the fold's own form.
+   */
+  form?: ToolbarPartForms["creators"];
 }): ReactNode {
   const [busy, setBusy] = useState(false);
 
   if (!creators || creators.length === 0) return null;
+  const round = !compact && form === "round";
+  // Spread only in the round form, so the other forms' props stay exactly what
+  // they were (a ghost `+`).
+  const roundProps = round
+    ? ({ variant: "default", shape: "pill" } as const)
+    : {};
 
   const run = async (c: CreateOption): Promise<void> => {
     setBusy(true);
@@ -51,13 +64,14 @@ export function CreatorsControl({
     // Compact: fold to an `MdAdd` IconButton (label → tooltip), matching the
     // N-creator trigger — `IconButton` takes an icon *component*, so the
     // creator's own `icon` ReactNode is not used here.
-    if (compact) {
+    if (compact || round) {
       return (
         <IconButton
           icon={MdAdd}
           label={c.label}
           disabled={busy}
           onClick={() => run(c)}
+          {...roundProps}
         />
       );
     }
@@ -72,7 +86,14 @@ export function CreatorsControl({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<IconButton icon={MdAdd} label="Create" disabled={busy} />}
+        render={
+          <IconButton
+            icon={MdAdd}
+            label="Create"
+            disabled={busy}
+            {...roundProps}
+          />
+        }
       />
       <DropdownMenuContent align="end">
         {creators.map((c) => (

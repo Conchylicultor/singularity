@@ -1,15 +1,23 @@
 import { Apps, type ActiveApp, useCurrentAppId } from "@plugins/apps-core/web";
-import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DataView,
   defineDataView,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
+import { capsuleToolbar } from "@plugins/primitives/plugins/data-view/plugins/capsule-toolbar/web";
+import { avatarFieldDef } from "@plugins/fields/plugins/avatar/plugins/table/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { MdAdd } from "react-icons/md";
 
 const HOME_APPS_VIEW = defineDataView("home.apps");
+
+/** No create-app flow exists yet — a stub until one is designed. Shared by the
+ *  capsule's New app button and the no-match empty state's "Build one?". */
+function newApp(): void {
+  /* TODO: open the create-app flow once it exists */
+}
 
 export function AppGrid() {
   const apps = Apps.App.useContributions();
@@ -26,9 +34,7 @@ export function AppGrid() {
       id: "new-app",
       label: "New app",
       icon: <MdAdd className="size-4" />,
-      onSelect: () => {
-        /* TODO: no create-app flow exists yet — stub until one is designed */
-      },
+      onSelect: newApp,
     },
   ];
 
@@ -37,10 +43,26 @@ export function AppGrid() {
       rows={launchable}
       rowKey={(a) => a.id}
       fields={[
+        // The app's icon is its tile: a squircle in the app's declared colour,
+        // or one derived from its id when it declares none.
+        avatarFieldDef<ActiveApp>({
+          id: "icon",
+          label: "Icon",
+          leading: true,
+          avatar: (a) => ({
+            icon: null,
+            svgNodes: a.icon.svgNodes,
+            color: a.icon.color ?? null,
+            shape: "squircle",
+            fallbackKey: a.id,
+          }),
+        }),
         { id: "name", label: "Name", type: "text", value: (a) => a.app.name },
       ]}
-      views={["gallery"]}
-      defaultView="gallery"
+      views={["icons"]}
+      defaultView="icons"
+      toolbar={capsuleToolbar}
+      searchPlaceholder="Search apps"
       storageKey={HOME_APPS_VIEW}
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
@@ -48,19 +70,16 @@ export function AppGrid() {
         a.onClick ? a.onClick() : replaceTabApp(ownTabId ?? focusedTabId, a.id)
       }
       creators={creators}
-      emptyState="No apps installed."
-      viewOptions={{
-        // Plain literal (the gallery view child is never imported) to respect
-        // data-view's collection-consumer separation. The icon cover renders
-        // the app glyph in the default card's tinted cover frame.
-        gallery: {
-          cover: (a: ActiveApp) => ({
-            kind: "icon",
-            icon: <AppIconView icon={a.icon} className="size-7" />,
-          }),
-          showCreateCard: true,
-        },
-      }}
+      // Every install has apps, so an empty grid is a search that matched
+      // nothing — which is when building the missing app is the useful offer.
+      emptyState={
+        <>
+          No app matches.{" "}
+          <Button variant="link" aspect="inline" onClick={newApp}>
+            Build one?
+          </Button>
+        </>
+      }
     />
   );
 }

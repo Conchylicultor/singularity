@@ -162,6 +162,7 @@ primitive exists to name.
     - `primitives/breadcrumb`
     - `primitives/command-palette`
     - `primitives/commit-list`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/list`
     - `primitives/date-picker`
     - `primitives/error-boundary`
@@ -173,6 +174,7 @@ primitive exists to name.
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/imperative-dialog/confirm`
     - `primitives/prompt-editor`
+    - `primitives/search`
     - `primitives/setup-steps`
     - `primitives/ui-context/element-picker`
     - `review/code-review`

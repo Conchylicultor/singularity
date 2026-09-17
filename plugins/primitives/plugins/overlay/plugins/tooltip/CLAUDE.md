@@ -48,6 +48,7 @@
     - `primitives/overlay/image-viewer`
     - `primitives/overlay/popover`
     - `primitives/pane`
+    - `primitives/search`
     - `primitives/sync-status`
     - `primitives/ui-context/element-picker`
     - `ui/segmented-progress-bar/dots`

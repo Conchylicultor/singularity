@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, type Ref } from "react";
+import { type ReactNode, useCallback, useRef } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -7,12 +7,18 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
-import type { CreateOption, DataViewDensity } from "../../../core";
+import type {
+  CreateOption,
+  DataViewDensity,
+  ToolbarArrangement,
+  ToolbarParts,
+} from "../../../core";
 import { DataViewSlots } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { CompactControls } from "./compact-controls";
 import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
+import { barArrangement } from "./bar-arrangement";
 
 /**
  * Below this container width the toolbar folds: search AND every control
@@ -35,7 +41,7 @@ export interface DataViewToolbarProps {
    * publish it as `--dv-header-offset` (grouped views stack their sticky group
    * headers below it).
    */
-  stickyRef?: Ref<HTMLElement>;
+  stickyRef?: (node: HTMLElement | null) => void;
   title?: ReactNode;
   query: string;
   onQueryChange: (next: string) => void;
@@ -47,8 +53,8 @@ export interface DataViewToolbarProps {
    * `compact` — a single creator folds to an icon `+` button when narrow.
    */
   creators?: CreateOption[];
-  /** The editable view switcher. */
-  switcher: ReactNode;
+  /** The view switcher, in both forms (strip / collapsed chip). */
+  switcher: ToolbarParts["switcher"];
   /** Number of view instances — the switcher is hidden when compact unless >1. */
   switcherCount: number;
   /**
@@ -57,6 +63,10 @@ export interface DataViewToolbarProps {
    * measurement alone.
    */
   density?: DataViewDensity;
+  /** The wide layout; absent → {@link barArrangement}, today's inline bar. */
+  arrangement?: ToolbarArrangement;
+  /** The search field's placeholder; default `"Search…"`. */
+  searchPlaceholder?: string;
 }
 
 /**
@@ -87,8 +97,22 @@ export function DataViewToolbar({
   switcher,
   switcherCount,
   density,
+  arrangement = barArrangement,
+  searchPlaceholder = "Search…",
 }: DataViewToolbarProps): ReactNode {
   const [measureRef, { width }] = useElementSize();
+  // The band is both the shell's measured sticky element and this toolbar's
+  // own width probe — one element, two refs — so the arrangement's layout box
+  // is its own and the measurement never depends on what an arrangement renders.
+  const bandRef = useCallback(
+    (node: HTMLElement | null) => {
+      measureRef(node);
+      stickyRef?.(node);
+    },
+    [measureRef, stickyRef],
+  );
+  const searchRef = useRef<HTMLInputElement>(null);
+  const focusSearch = useCallback(() => searchRef.current?.focus(), []);
   const compact =
     density === "compact" || (width > 0 && width < COMPACT_BREAKPOINT);
   const ctx = useDataViewControls();
@@ -112,18 +136,29 @@ export function DataViewToolbar({
     }, 0) + (query.length > 0 ? 1 : 0);
 
   // Built once and relocated into whichever branch renders — the toolbar's
-  // "each control element is built once" discipline. It folds on `compact`.
+  // "each control element is built once" discipline. The compact fold has forms
+  // of its own; the wide layout builds each part in the arrangement's forms.
+  const { forms, component: Arrangement } = arrangement;
   const creatorsControl = (
-    <CreatorsControl creators={creators} compact={compact} />
+    <CreatorsControl
+      creators={creators}
+      compact={compact}
+      form={forms.creators}
+    />
   );
   const searchInput = (
     <SearchInput
+      ref={searchRef}
       value={query}
       onChange={(e) => onQueryChange(e.target.value)}
-      placeholder="Search…"
-      // Wide: a fixed lane in the inline row. Compact: full width of the options
-      // popover (the wrapper's own block box) — hence no width class there.
-      wrapperClassName={compact ? undefined : cn("w-48")}
+      placeholder={searchPlaceholder}
+      appearance={compact ? "field" : forms.search}
+      // Wide field: a fixed lane in the inline row. Compact: full width of the
+      // options popover (the wrapper's own block box) — hence no width class
+      // there. Bare: fills whatever cell the arrangement gives it.
+      wrapperClassName={
+        !compact && forms.search === "field" ? cn("w-48") : undefined
+      }
     />
   );
 
@@ -153,65 +188,68 @@ export function DataViewToolbar({
       edge="top"
       mask
       layer="nav"
-      ref={stickyRef}
+      ref={bandRef}
       className={hoverRevealGroup}
     >
-      <div
-        ref={measureRef}
-        // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
-        //
-        // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
-        // but the switcher behind the single options trigger, and the switcher
-        // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
-        // in the shrinkable scroll lane below, so the trailing controls can never
-        // be pushed past the container's edge and clipped.
-        // eslint-disable-next-line layout/no-adhoc-layout
-        className="flex items-center gap-sm py-sm rail-follow"
-      >
-        {compact ? (
-          <>
-            {/* The one shrinkable cell of the bar. The switcher's chips hug their
+      {compact ? (
+        <div
+          // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
+          //
+          // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
+          // but the switcher behind the single options trigger, and the switcher
+          // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
+          // in the shrinkable scroll lane below, so the trailing controls can never
+          // be pushed past the container's edge and clipped.
+          // eslint-disable-next-line layout/no-adhoc-layout
+          className="flex items-center gap-sm py-sm rail-follow"
+        >
+          {/* The one shrinkable cell of the bar. The switcher's chips hug their
                 content and never shrink, so when more views exist than fit, this
                 lane scrolls horizontally rather than pushing the trailing controls
                 out of reach. Scrollbar hidden — it is an overflow escape hatch, not
                 a permanent affordance. */}
-            <Scroll axis="x" fill hideScrollbar>
-              <Stack direction="row" align="center" gap="sm">
-                {titleNode}
-                {switcherCount > 1 ? switcher : null}
-              </Stack>
-            </Scroll>
-            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-            {actions}
-            {creatorsControl}
-            {/* Search folds in here with every control — a non-empty query
+          <Scroll axis="x" fill hideScrollbar>
+            <Stack direction="row" align="center" gap="sm">
+              {titleNode}
+              {switcherCount > 1 ? switcher.strip : null}
+            </Stack>
+          </Scroll>
+          {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
+          {actions}
+          {creatorsControl}
+          {/* Search folds in here with every control — a non-empty query
                 counts toward the trigger's badge so a folded-away search is still
                 visible from the closed bar. */}
+          <CompactControls
+            search={searchInput}
+            controls={controls}
+            activeCount={activeCount}
+            searching={query.length > 0}
+          />
+        </div>
+      ) : (
+        <Arrangement
+          title={titleNode}
+          switcher={switcher}
+          search={searchInput}
+          focusSearch={focusSearch}
+          query={query}
+          controls={controls.map((c) => (
+            <ControlTrigger key={c.id} control={c} form={forms.controls} />
+          ))}
+          foldedControls={
             <CompactControls
-              search={searchInput}
               controls={controls}
-              activeCount={activeCount}
-              searching={query.length > 0}
+              activeCount={activeCount - (query.length > 0 ? 1 : 0)}
+              searching={false}
+              revealOnHover={false}
+              form={forms.controls}
             />
-          </>
-        ) : (
-          <>
-            {titleNode}
-            {/* The switcher grows (flex-1) to absorb the leading slack, so it
-                pushes search + trailing controls to the right — no `ml-auto` margin
-                needed (and an auto margin would steal the free space from the
-                switcher's flex-grow, collapsing its hover-reveal spacer). */}
-            {switcher}
-            {searchInput}
-            {controls.map((c) => (
-              <ControlTrigger key={c.id} control={c} />
-            ))}
-            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-            {actions}
-            {creatorsControl}
-          </>
-        )}
-      </div>
+          }
+          actions={actions}
+          creators={creatorsControl}
+        />
+      )}
     </Sticky>
   );
 }

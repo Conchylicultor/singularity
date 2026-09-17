@@ -19,9 +19,33 @@ type Positioning = Pick<
   "align" | "side"
 >;
 
-export interface ControlPanelPopoverProps extends Positioning {
-  /** The trigger element — open/close is merged in via base-ui's render prop. */
-  trigger: React.ReactElement;
+/**
+ * What the panel hangs off. Usually its own `trigger`, whose click opens and
+ * closes it. `anchor` is the other arm, for a panel opened from somewhere
+ * else — a menu row whose menu closes as the panel opens — and positioned
+ * against an element that is already another popup's trigger. One element
+ * cannot be the trigger of two popups without one click opening both, so the
+ * panel takes that element as a position only and the caller owns `open`.
+ */
+type Anchoring =
+  | {
+      /** The trigger element — open/close is merged in via base-ui's render prop. */
+      trigger: React.ReactElement;
+      anchor?: never;
+    }
+  | {
+      trigger?: never;
+      /** The element the panel is positioned against; nothing opens it by click. */
+      anchor: React.RefObject<Element | null>;
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+    };
+
+export type ControlPanelPopoverProps = Positioning &
+  Anchoring &
+  ControlPanelPopoverOwnProps;
+
+interface ControlPanelPopoverOwnProps {
   /**
    * `menu` for a list of choices, `builder` for a rule row, `picker` for a panel
    * whose body is a grid (swatches, icons, covers). There is no width, padding
@@ -77,6 +101,7 @@ export interface ControlPanelPopoverProps extends Positioning {
  */
 export function ControlPanelPopover({
   trigger,
+  anchor,
   size = "menu",
   maxHeight,
   label,
@@ -88,8 +113,9 @@ export function ControlPanelPopover({
 }: ControlPanelPopoverProps) {
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger render={trigger} />
+      {trigger ? <PopoverTrigger render={trigger} /> : null}
       <PopoverContent
+        anchor={anchor}
         align={align}
         side={side}
         width={size}

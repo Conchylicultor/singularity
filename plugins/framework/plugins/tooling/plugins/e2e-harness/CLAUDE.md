@@ -250,6 +250,7 @@ skipped for those scripts, leaking a Chromium process per run.
     - `apps/events/event-list`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
+    - `apps/home`
     - `apps/mail/threads`
     - `apps/pages/history`
     - `apps/pages/page-outline`

@@ -7,18 +7,22 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
 
 ## Plugin reference
 
-- Description: App shell for Home. Registers the /home app entry and defines the Home.Section slot.
+- Description: App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
 - Web:
   - Slots: `Home.Section` ← `apps.home.app-cards`
-  - Contributes: `Apps.App` "Home" → `HomeLayout`
+  - Contributes:
+    - `Apps.App` "Home" → `HomeLayout`
+    - `ThemeEngine.Theme` "Home"
   - Uses:
     - `apps-core.Apps`
     - `apps-core/app-icon.mdAppIcon`
     - `layouts/miller.PaneOverlayHost`
+    - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/slot-render.defineRenderSlot`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (values): `Home`
 - Core:
   - Uses: `primitives/pane.defineApp`

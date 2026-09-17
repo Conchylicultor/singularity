@@ -1906,25 +1906,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core.ActiveApp`
               - `apps-core.Apps`
               - `apps-core.useCurrentAppId`
-              - `apps-core/app-icon.AppIconView`
               - `apps-core/tabs.useTabs`
               - `apps/home/shell.Home`
+              - `fields/avatar/table.avatarFieldDef`
+              - `primitives/css/ui-kit.Button`
               - `primitives/data-view.CreateOption`
               - `primitives/data-view.DataView`
               - `primitives/data-view.defineDataView`
+              - `primitives/data-view/capsule-toolbar.capsuleToolbar`
               - `primitives/scope/surface-id.useSurfaceTabId`
-        - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
+        - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
-            - Contributes: `Apps.App` "Home" → `HomeLayout`
+            - Contributes:
+              - `Apps.App` "Home" → `HomeLayout`
+              - `ThemeEngine.Theme` "Home"
             - Uses:
               - `apps-core.Apps`
               - `apps-core/app-icon.mdAppIcon`
               - `layouts/miller.PaneOverlayHost`
+              - `primitives/css/center.Center`
               - `primitives/css/column.Column`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/slot-render.defineRenderSlot`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (values): `Home`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -5575,7 +5581,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/deploy/shell`
           - `apps/events/shell`
           - `apps/file-explorer/shell`
-          - `apps/home/app-cards`
           - `apps/home/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
@@ -13822,7 +13827,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `AvatarCellDataError`
               - `avatarFieldDef`
           - Cross-plugin:
-            - Imported by: `conversations/agents`
+            - Imported by:
+              - `apps/home/app-cards`
+              - `conversations/agents`
     - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "bool"
@@ -15882,6 +15889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/events/event-list`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
+              - `apps/home`
               - `apps/mail/threads`
               - `apps/pages/history`
               - `apps/pages/page-outline`
@@ -21975,8 +21983,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/icon-picker.IconPicker`
           - `primitives/icon-picker.SvgIcon`
         - Exports (types):
-          - `AvatarColor`
+          - `AvatarColorPick`
           - `AvatarPickerProps`
+          - `AvatarPresentation`
           - `AvatarProps`
           - `AvatarSpec`
         - Exports (values):
@@ -21984,8 +21993,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `AVATAR_COLOR_KEYS`
           - `AVATAR_COLORS`
           - `avatarColorClass`
+          - `avatarColorPick`
+          - `avatarFlatClass`
           - `AvatarPicker`
+          - `AvatarPresentationProvider`
+          - `avatarSoftClass`
           - `DEFAULT_AGENT_AVATAR`
+          - `useAvatarPresentation`
       - Server:
         - Uses: `primitives/icon-picker.resolveIconSvgNodes`
       - Cross-plugin:
@@ -21997,6 +22011,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `conversations/conversation-view/jsonl-viewer/teammate-message`
           - `fields/avatar/config`
           - `fields/avatar/table`
+          - `primitives/data-view/icons`
+      - Core:
+        - Exports (types):
+          - `AvatarColor`
+          - `AvatarShape`
+        - Exports (values): `AVATAR_COLOR_NAMES`
     - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
       - Web:
         - Uses:
@@ -22448,6 +22468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/agent-manager/welcome`
               - `apps/browser/webview`
               - `apps/events/shell`
+              - `apps/home/shell`
               - `apps/mail/reading-pane`
               - `apps/mail/shell`
               - `apps/pages/page-tree`
@@ -22503,7 +22524,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `plugin-meta/plugin-view/sub-plugins`
               - `primitives/cursor-pagination`
               - `primitives/data-table`
+              - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/date-picker`
@@ -22912,6 +22935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/breadcrumb`
               - `primitives/command-palette`
               - `primitives/commit-list`
+              - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/list`
               - `primitives/date-picker`
               - `primitives/error-boundary`
@@ -22923,6 +22947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/imperative-dialog/confirm`
               - `primitives/prompt-editor`
+              - `primitives/search`
               - `primitives/setup-steps`
               - `primitives/ui-context/element-picker`
               - `review/code-review`
@@ -22960,6 +22985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `debug/health-monitor`
               - `page/formatting/color`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/date-picker`
               - `primitives/icon-picker`
               - `primitives/loading`
@@ -23225,11 +23251,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/command-palette`
               - `primitives/commit-list`
               - `primitives/css/row`
+              - `primitives/data-view/capsule-toolbar`
               - `primitives/date-picker`
               - `primitives/error-boundary`
               - `primitives/log-channels`
               - `primitives/outline/rail`
               - `primitives/overlay/image-viewer`
+              - `primitives/search`
               - `reorder/node-types/header`
               - `reorder/node-types/overflow`
               - `review/code-review`
@@ -23356,6 +23384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/video`
               - `primitives/app-shell`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/folder-picker`
@@ -23557,6 +23586,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-view/list`
               - `primitives/graph-canvas`
               - `primitives/loading`
+              - `primitives/search`
               - `primitives/ui-context/element-picker`
               - `reorder/node-types/header`
               - `review/code-review`
@@ -24037,6 +24067,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
@@ -24246,6 +24277,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/read-only-view`
               - `primitives/collapsible-wrap`
               - `primitives/css/card`
+              - `primitives/data-view/capsule-toolbar`
               - `primitives/row-actions`
               - `stats`
         - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
@@ -24530,6 +24562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/data-view/list`
               - `primitives/data-view/table`
               - `primitives/date-picker`
@@ -24831,6 +24864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps/deploy/ssh-setup`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/schedule`
+              - `apps/home/app-cards`
               - `apps/mail/reading-pane`
               - `apps/mail/sync-status`
               - `apps/pages/page-author`
@@ -25041,8 +25075,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/cursor-pagination`
               - `primitives/data-table`
               - `primitives/data-view`
+              - `primitives/data-view/capsule-toolbar`
               - `primitives/data-view/custom-columns`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/data-view/list`
               - `primitives/data-view/tree`
               - `primitives/data-view/view-core`
@@ -25279,7 +25315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots:
-          - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
+          - `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.icons`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
           - `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`
@@ -25335,6 +25371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/cursor-pagination.useInfiniteScroll`
           - `primitives/data-view/view-core.buildViewConfigContributions`
           - `primitives/data-view/view-core.buildViewDescriptors`
+          - `primitives/data-view/view-core.CollapsedViewSwitcher`
           - `primitives/data-view/view-core.EditableViewSwitcher`
           - `primitives/data-view/view-core.ResolvedViewInstance`
           - `primitives/data-view/view-core.useViewModel`
@@ -25547,6 +25584,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `plugin-meta/plugin-view/file-tree`
           - `primitives/data-view/custom-columns`
           - `primitives/data-view/gallery`
+          - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/data-view/server-query`
           - `primitives/data-view/table`
@@ -25602,6 +25640,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SortPreset`
           - `SortRule`
           - `TableCellProps`
+          - `ToolbarArrangement`
+          - `ToolbarPartForms`
+          - `ToolbarParts`
           - `ValueCodec`
           - `ViewState`
         - Exports (values):
@@ -25616,6 +25657,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
       - Plugins:
+        - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.
+          - Web:
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/surface.Surface`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.Separator`
+              - `primitives/shortcuts.useSurfaceShortcuts`
+            - Exports (values): `capsuleToolbar`
+          - Cross-plugin:
+            - Imported by: `apps/home/app-cards`
         - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
           - Web:
             - Contributes:
@@ -25729,6 +25784,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (types):
               - `CoverContent`
               - `GalleryViewOptions`
+        - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
+          - Web:
+            - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
+            - Uses:
+              - `primitives/avatar.Avatar`
+              - `primitives/avatar.AvatarPresentationProvider`
+              - `primitives/css/center.Center`
+              - `primitives/css/grid.Grid`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DataViewRenderProps`
+              - `primitives/data-view.DataViewRowEntry`
+              - `primitives/data-view.DataViewSection`
+              - `primitives/data-view.DataViewSlots`
+              - `primitives/data-view.FieldCell`
+              - `primitives/data-view.FieldDef`
+              - `primitives/data-view.GroupedSections`
+              - `primitives/data-view.leadingSlot`
+              - `primitives/data-view.ManualOrderConfig`
+              - `primitives/data-view.pickLeadingField`
+              - `primitives/data-view.pickPrimaryField`
+              - `primitives/data-view.resolveBodyFields`
+              - `primitives/data-view.useDataViewSections`
+              - `primitives/data-view.useResolveCell`
+              - `primitives/data-view.useResolveCellEditor`
+              - `primitives/data-view.useResolveOperatorSet`
+              - `primitives/dom/element-size.useResizeObserver`
+              - `primitives/rank-reorder.RankReorderProvider`
+              - `primitives/rank-reorder.useRankReorderItem`
+              - `primitives/virtual-rows.VirtualRows`
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
@@ -25913,11 +26000,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/css/grow.growClass`
               - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.ControlSizeProvider`
               - `primitives/css/ui-kit.DropdownMenu`
               - `primitives/css/ui-kit.DropdownMenuContent`
               - `primitives/css/ui-kit.DropdownMenuItem`
               - `primitives/css/ui-kit.DropdownMenuSection`
+              - `primitives/css/ui-kit.DropdownMenuSeparator`
+              - `primitives/css/ui-kit.DropdownMenuSub`
+              - `primitives/css/ui-kit.DropdownMenuSubContent`
+              - `primitives/css/ui-kit.DropdownMenuSubTrigger`
               - `primitives/css/ui-kit.DropdownMenuTrigger`
               - `primitives/css/ui-kit.Input`
               - `primitives/hover-reveal.hoverRevealClass`
@@ -25933,9 +26025,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `ViewModelCore`
               - `ViewsConfigHandle`
             - Exports (values):
+              - `AddViewMenuItems`
               - `buildInstanceFromRow`
               - `buildViewConfigContributions`
               - `buildViewDescriptors`
+              - `CollapsedViewSwitcher`
               - `EditableViewSwitcher`
               - `useViewModel`
               - `useViewsConfig`
@@ -26225,6 +26319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/data-table`
               - `primitives/data-view`
               - `primitives/data-view/gallery`
+              - `primitives/data-view/icons`
               - `primitives/expandable`
               - `primitives/graph-canvas`
               - `primitives/outline/rail`
@@ -27823,6 +27918,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `primitives/overlay/image-viewer`
               - `primitives/overlay/popover`
               - `primitives/pane`
+              - `primitives/search`
               - `primitives/sync-status`
               - `primitives/ui-context/element-picker`
               - `ui/segmented-progress-bar/dots`
@@ -28349,6 +28445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `useRankReorderItem`
       - Cross-plugin:
         - Imported by:
+          - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/tree`
@@ -28540,10 +28637,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
         - Uses:
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Input`
+          - `primitives/overlay/tooltip.Kbd`
         - Exports (types):
+          - `SearchInputAppearance`
           - `SearchInputProps`
           - `TextFilterHandle`
           - `UseTextFilterOptions`
@@ -28661,6 +28763,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/progress/loop`
           - `primitives/action-presentation`
           - `primitives/css/ui-kit`
+          - `primitives/data-view/capsule-toolbar`
           - `primitives/icon-button`
           - `primitives/launch`
           - `primitives/overlay/image-viewer`
@@ -29393,6 +29496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `apps/sonata/notation`
           - `primitives/data-table`
           - `primitives/data-view/gallery`
+          - `primitives/data-view/icons`
           - `primitives/data-view/list`
           - `primitives/tree`
 
@@ -32534,7 +32638,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots:
           - `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `ui.breadcrumb-separator`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tree-disclosure`
           - `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
-          - `ThemeEngine.Theme` ← `apps.website.shell`, `ui.theme-engine`
+          - `ThemeEngine.Theme` ← `apps.home.shell`, `apps.website.shell`, `ui.theme-engine`
           - `ThemeEngine.SubTheme` ← `apps.website.shell`
           - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
           - `ThemeEngine.ThemeSource` ← `ui.theme-engine.saved-themes`, `ui.tweakcn.community-browser`
@@ -32634,6 +32738,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps-core/chrome-theme`
           - `apps-core/surface/floating`
+          - `apps/home/shell`
           - `apps/website/shell`
           - `reports/theme-resolution`
           - `ui/segmented-progress-bar`

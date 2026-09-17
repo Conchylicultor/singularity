@@ -1,14 +1,14 @@
-import type * as React from "react"
-import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
+import type * as React from "react";
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
-import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
-import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror"
-import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel"
+import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward";
+import { usePopupOpenMirror } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/popup-open-mirror";
+import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import type {
   PopoverWidth,
   PopoverPadding,
   PopoverMaxHeight,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width";
 
 function Popover({
   open,
@@ -18,7 +18,11 @@ function Popover({
 }: PopoverPrimitive.Root.Props) {
   // See `usePopupOpenMirror`: the enclosing PopupOpenScope reads this instead of
   // a CSS selector over base-ui's own open-state attribute.
-  const handleOpenChange = usePopupOpenMirror({ open, defaultOpen, onOpenChange })
+  const handleOpenChange = usePopupOpenMirror({
+    open,
+    defaultOpen,
+    onOpenChange,
+  });
   return (
     <PopoverPrimitive.Root
       open={open}
@@ -26,11 +30,11 @@ function Popover({
       onOpenChange={handleOpenChange}
       {...props}
     />
-  )
+  );
 }
 
 function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
+  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
 }
 
 function PopoverContent({
@@ -38,6 +42,7 @@ function PopoverContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  anchor,
   width = "content",
   padding = "md",
   maxHeight = "viewport",
@@ -48,7 +53,7 @@ function PopoverContent({
 }: Omit<PopoverPrimitive.Popup.Props, "render" | "className"> &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "side" | "sideOffset" | "anchor"
   > & {
     /**
      * Plain override class landing LAST on the panel. Narrower than base-ui's
@@ -57,25 +62,25 @@ function PopoverContent({
      * the state-driven variants are already expressed as `data-*` selectors in
      * the panel's own class bundle.
      */
-    className?: string
+    className?: string;
     /** Closed width role; default size-to-content. */
-    width?: PopoverWidth
+    width?: PopoverWidth;
     /** Padding role; default `md` (the previously baked-in padding). */
-    padding?: PopoverPadding
+    padding?: PopoverPadding;
     /**
      * Max-height COMFORT CAP on top of the unconditional viewport fit; default
      * `viewport` (fit the space Floating UI measured, and nothing tighter).
      */
-    maxHeight?: PopoverMaxHeight
+    maxHeight?: PopoverMaxHeight;
     /** Optional sticky header rendered above the content, full-bleed through the padding. */
-    header?: React.ReactNode
+    header?: React.ReactNode;
   }) {
   // Portaled content escapes the originating window's DOM subtree to
   // document.body, so it no longer matches that window's [data-theme-scope]
   // block. Re-stamp the scope here (flowing through React context, which
   // crosses portals) so the popup adopts the launching window's scoped theme
   // instead of the global :root chrome theme. Undefined → no attribute → default.
-  const forwarded = usePortalForwardedAttrs()
+  const forwarded = usePortalForwardedAttrs();
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
@@ -85,6 +90,7 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
       >
         {/* The popup IS the shared panel: base-ui owns the state machine, and
             `render` hands it `OverlayPanel` as the element to clone its merged
@@ -109,7 +115,7 @@ function PopoverContent({
         />
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
-  )
+  );
 }
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverContent };

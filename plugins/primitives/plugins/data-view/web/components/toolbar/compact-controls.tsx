@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import type { ToolbarPartForms } from "../../../core";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
@@ -46,6 +47,8 @@ export function CompactControls({
   activeCount,
   searching,
   search,
+  revealOnHover = true,
+  form = "ghost",
 }: {
   /** The applicable controls, in order — the same list the wide bar renders. */
   controls: DataViewControl[];
@@ -55,6 +58,14 @@ export function CompactControls({
   searching: boolean;
   /** The search field, rendered full-width at the top of the first page. */
   search?: ReactNode;
+  /**
+   * `false` keeps the trigger visible at rest. The compact fold hides it until
+   * the bar is pointed at (below); an arrangement that folds its controls to
+   * save room — not to quiet the bar — shows it like any other control.
+   */
+  revealOnHover?: boolean;
+  /** The trigger's shape — the arrangement's `forms.controls`. */
+  form?: ToolbarPartForms["controls"];
 }): ReactNode {
   const [open, setOpen] = useState(false);
   if (controls.length === 0 && !search) return null;
@@ -85,11 +96,12 @@ export function CompactControls({
   // trigger never hid at all.) The badge still counts them, which is a different
   // and correct statement: "N things configured" is worth reading once you have
   // pointed at the surface.
-  const alwaysVisible = open || searching;
+  const alwaysVisible = !revealOnHover || open || searching;
   // Applied to whichever form the trigger takes: the `secondary` + badge form is
   // hover-revealed too, since a badge reporting a config-authored filter or sort
   // is precisely the at-rest state this hides.
   const revealClass = alwaysVisible ? undefined : hoverRevealTarget;
+  const shape = form === "round" ? "pill" : "default";
 
   return (
     <ControlPanelPopover
@@ -117,6 +129,7 @@ export function CompactControls({
             variant="secondary"
             aspect="text"
             aria-label="View options"
+            shape={shape}
             className={revealClass}
           >
             <MdTune />
@@ -127,6 +140,7 @@ export function CompactControls({
             icon={MdTune}
             label="View options"
             variant="ghost"
+            shape={shape}
             className={revealClass}
           />
         )

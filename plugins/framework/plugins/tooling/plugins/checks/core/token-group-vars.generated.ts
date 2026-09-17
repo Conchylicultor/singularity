@@ -8,7 +8,7 @@
 // The `token-group-vars-in-sync` check fails on drift.
 
 export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {
-  "categorical": ["--categorical-1", "--categorical-10", "--categorical-2", "--categorical-3", "--categorical-4", "--categorical-5", "--categorical-6", "--categorical-7", "--categorical-8", "--categorical-9"],
+  "categorical": ["--categorical-1", "--categorical-10", "--categorical-2", "--categorical-3", "--categorical-4", "--categorical-5", "--categorical-6", "--categorical-7", "--categorical-8", "--categorical-9", "--categorical-foreground"],
   "chart": ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"],
   "color-palette": ["--accent", "--accent-foreground", "--background", "--border", "--card", "--card-foreground", "--destructive", "--destructive-foreground", "--foreground", "--info", "--info-foreground", "--input", "--muted", "--muted-foreground", "--popover", "--popover-foreground", "--primary", "--primary-foreground", "--ring", "--secondary", "--secondary-foreground", "--success", "--success-foreground", "--warning", "--warning-foreground"],
   "density": ["--chrome-bar-h", "--chrome-pad-x", "--chrome-pane-h", "--control-gap-lg", "--control-gap-md", "--control-gap-sm", "--control-gap-xs", "--control-height-lg", "--control-height-md", "--control-height-sm", "--control-height-xs", "--control-pad-lg", "--control-pad-md", "--control-pad-sm", "--control-pad-xs", "--pad-card", "--pad-chip-x", "--pad-chip-y", "--pad-row-x", "--pad-row-y", "--space-2xl", "--space-2xs", "--space-lg", "--space-md", "--space-sm", "--space-xl", "--space-xs"],

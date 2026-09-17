@@ -101,6 +101,7 @@ those depend on `rank-reorder`).
     - `useRankReorderItem`
 - Cross-plugin:
   - Imported by:
+    - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/tree`

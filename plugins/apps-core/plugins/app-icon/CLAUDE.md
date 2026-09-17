@@ -9,7 +9,7 @@ chrome, launcher).
 `AppIcon` (in `core/`) is a plain, JSON-serializable discriminated union:
 
 ```ts
-type AppIcon = { kind: "md"; svgNodes: SvgNode[] };
+type AppIcon = { kind: "md"; svgNodes: SvgNode[]; color?: AvatarColor };
 ```
 
 It carries the icon's extracted `SvgNode` tree, not a React component — so a
@@ -29,7 +29,9 @@ app-level descriptor and the author-time helper on top.
 
 - `mdAppIcon(Icon)` — build an `AppIcon` from a tree-shaken react-icons
   component: `icon: mdAppIcon(MdHome)`. Only the picked icon's SVG ships, never
-  the full react-icons bundle.
+  the full react-icons bundle. `mdAppIcon(Icon, { color })` also declares the
+  app's tile colour (an `AvatarColor` from `primitives/avatar/core`, e.g.
+  Settings is `slate`); omitted, a launcher derives the colour from the app id.
 - `DEFAULT_APP_ICON` — fallback glyph for tabs/windows whose owning app cannot
   be resolved.
 
@@ -73,7 +75,6 @@ app-level descriptor and the author-time helper on top.
     - `apps/deploy/shell`
     - `apps/events/shell`
     - `apps/file-explorer/shell`
-    - `apps/home/app-cards`
     - `apps/home/shell`
     - `apps/mail/shell`
     - `apps/pages/shell`

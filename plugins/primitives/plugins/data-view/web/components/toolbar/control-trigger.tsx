@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import type { ToolbarPartForms } from "../../../core";
 import type { DataViewControl } from "../../slots";
 import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
@@ -30,8 +31,15 @@ import { DataViewControlPanel } from "./control-panel-host";
  */
 export function ControlTrigger({
   control,
+  form = "ghost",
 }: {
   control: DataViewControl;
+  /**
+   * The trigger's shape — the arrangement's `forms.controls`. `round` is the
+   * same icon button drawn as a circle (a pill with no label); nothing else
+   * about the trigger changes.
+   */
+  form?: ToolbarPartForms["controls"];
 }): ReactNode {
   const ctx = useDataViewControls();
   const [open, setOpen] = useState(false);
@@ -60,6 +68,7 @@ export function ControlTrigger({
           label={label}
           tooltip={tooltip}
           variant={summary ? "secondary" : "ghost"}
+          shape={form === "round" ? "pill" : "default"}
         />
       }
     >

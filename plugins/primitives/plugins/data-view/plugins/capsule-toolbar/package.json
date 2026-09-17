@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-capsule-toolbar",
+  "description": "Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in one centred pill.",
+  "private": true,
+  "version": "0.0.1"
+}

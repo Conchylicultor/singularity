@@ -33,6 +33,7 @@
     - `apps/sonata/progress/loop`
     - `primitives/action-presentation`
     - `primitives/css/ui-kit`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/icon-button`
     - `primitives/launch`
     - `primitives/overlay/image-viewer`

@@ -460,6 +460,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `apps/deploy/ssh-setup`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/schedule`
+    - `apps/home/app-cards`
     - `apps/mail/reading-pane`
     - `apps/mail/sync-status`
     - `apps/pages/page-author`
@@ -670,8 +671,10 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/cursor-pagination`
     - `primitives/data-table`
     - `primitives/data-view`
+    - `primitives/data-view/capsule-toolbar`
     - `primitives/data-view/custom-columns`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/icons`
     - `primitives/data-view/list`
     - `primitives/data-view/tree`
     - `primitives/data-view/view-core`

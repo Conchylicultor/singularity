@@ -1,14 +1,20 @@
 import type { ReactNode } from "react";
 import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
+import type { AvatarShape } from "@plugins/primitives/plugins/avatar/core";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import type {
   FieldDef,
   TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
 
-/** An avatar cell's `data` payload. `fallbackKey` is render-time only: it seeds
- *  the derived colour when `color` is null, and is never persisted. */
-export type AvatarFieldData = AvatarSpec & { fallbackKey?: string };
+/** An avatar cell's `data` payload. `fallbackKey` and `shape` are render-time
+ *  only: `fallbackKey` seeds the derived colour when `color` is null, `shape`
+ *  picks the outline (an app icon is a squircle; people and agents stay
+ *  circles, so it is not part of the persisted {@link AvatarSpec}). */
+export type AvatarFieldData = AvatarSpec & {
+  fallbackKey?: string;
+  shape?: AvatarShape;
+};
 
 /** Thrown when an avatar cell's `data` is not an {@link AvatarFieldData}. */
 export class AvatarCellDataError extends Error {
@@ -28,13 +34,15 @@ function isAvatarFieldData(data: unknown): data is AvatarFieldData {
   if (typeof data !== "object" || data === null) return false;
   if (!("icon" in data && "color" in data && "svgNodes" in data)) return false;
   const isString = (v: unknown) => typeof v === "string";
+  const isShape = (v: unknown) => v === "circle" || v === "squircle";
   return (
     isNullOr(data.icon, isString) &&
     isNullOr(data.color, isString) &&
     isNullOr(data.svgNodes, Array.isArray) &&
     (!("fallbackKey" in data) ||
       data.fallbackKey === undefined ||
-      isString(data.fallbackKey))
+      isString(data.fallbackKey)) &&
+    (!("shape" in data) || data.shape === undefined || isShape(data.shape))
   );
 }
 
@@ -49,6 +57,7 @@ export function AvatarCell(props: TableCellProps): ReactNode {
       color={data.color}
       svgNodes={data.svgNodes}
       fallbackKey={data.fallbackKey}
+      shape={data.shape}
     />
   );
 }
