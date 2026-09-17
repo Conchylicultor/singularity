@@ -18,7 +18,18 @@ trainer) never import `@plugins/auth/*`. Design:
     `keys`, `tempos`, `meters`, `endBeat`, and `youtube` (`videoId` pulled out of
     whatever was pasted, plus `rawId` as stored). **Public** — no account.
 - **`core`** — the schemas and types (`TrendNode`, `TrendSong`,
-  `TheorytabSection`, `Hookpad*`), the error classes, and the endpoint contracts.
+  `TheorytabSection`, `Hookpad*`), the error classes, the endpoint contracts,
+  and three pure functions any runtime can call (no node imports):
+  - `sectionFromHookpadDoc(id, song, doc)` — one section from an already
+    JSON-parsed Hookpad document. The live API's `jsonData` (after the server
+    parses the string) and each Sheet Sage raw-dump entry's `json` are this
+    document. Throws naming the section and fields on a bad shape.
+  - `hookpadChordSound(chord, key)` — what a chord sounds like: `sound`
+    (`rootPc` 0–11, root-position `intervals`, `inversion` passed through),
+    `rest`, or `unreadable` with the `rule` it broke. See below.
+  - `hookpadTonicPc(tonic)` — a tonic spelling (`F#`, `Bb`, `E#`, `Abb`) to a
+    pitch class; throws on anything else. Plus `HOOKPAD_MODE_OFFSETS` (the
+    nine modes as offsets from the tonic) and `youtubeVideoId(raw)`.
 - **HTTP** (this worktree's backend): `GET /api/hooktheory/trends/nodes?cp=1,4`,
   `GET /api/hooktheory/trends/songs?cp=1,5,6,4&page=1`,
   `GET /api/hooktheory/sections/:id`.
@@ -55,11 +66,65 @@ shape has to fail there, with the field named, not deep in the trainer.
 The section schema models only what a chord trainer needs; zod strips the
 editor state (bands, lyrics, cursor, settings, mixer). Every modelled type was
 checked against 50 real sections from 8 songs (Hookpad document versions 1,
-2.24.3, 2.34.3) — which is why `borrowed` is `string | number[] | null` (a mode
-name, or a custom scale as semitone offsets). `pedal`, `alternate`,
-`substitutions` and `recordingEndBeat` are left out: they never held a value in
-that sample. `youtube.syncStart` / `syncEnd` were fractions of the video's
-length (0–1) in every sample, not seconds.
+2.24.3, 2.34.3), then against all 26k documents of the Sheet Sage dump. That
+is why `borrowed` is `string | number[] | null` (a mode name, a custom scale as
+semitone offsets, or an odd value like `"super:2"`), and why `youtube.id` (so
+`rawId`) can be `null` (216 dump sections). Key `scale` is the closed
+`HookpadMode` list of nine. `pedal` and `alternate` are modelled only so the
+chord converter can check them; `substitutions` and `recordingEndBeat` are left
+out. `youtube.syncStart` / `syncEnd` were fractions of the video's length (0–1)
+in every sample, not seconds. One dump document (`pJkmZPEjxqn`, notes with
+`beat: null`) is refused on purpose.
+
+## Chord sound: a port of Sheet Sage
+
+`hookpadChordSound` is not a new reading of Hookpad theory. It ports
+`TheorytabChord._check_values` and `as_chord` (called with
+`root_position=True`) from `sheetsage/theory/theorytab.py` in
+github.com/chrisdonahue/sheetsage at commit
+`bbdd7b7b6a5fb845828f82790acdceb03a197779`, rule for rule and in the same
+order. That code built Sheet Sage's published Hooktheory dataset, which is how
+the port is checked.
+
+- **Unreadable is data, not an error.** Some real chords break a rule of the
+  reference (`b9` on a triad, `alternate: "_"`, `root: 0` on a sounding chord,
+  `borrowed: "super:2"`, …). The reference drops the whole section when any
+  chord does, rests included. The result names the rule so a caller can group
+  its skips.
+- **The applied-7 quirk is kept on purpose.** In a chord applied to degree 7
+  (a vii/x), the 7th is lowered a semitone, so vii7/V reads as a fully
+  diminished 7th. The reference marks it "not sure if this is a bug in
+  Hookpad"; its dataset carries it, so the port does too.
+- Custom `borrowed` offsets are used exactly as given, even below 0 or at 12.
+  An applied chord moves the tonic to the scale step of `root`, then reads
+  `applied` as the root in major.
+- **Not in the converter, but the importer needs it:** the reference also
+  drops a section when a sounding chord ends after `endBeat`
+  (`beat + duration > endBeat`). The key in force at a chord is the last key,
+  in document order, whose `beat` is at or before the chord's (1e-3 tolerance).
+
+**Golden run (2026-09-17):** 421,290 chords paired with Sheet Sage's processed
+file, 100 % agreement on root, intervals and inversion; key maps agree in all
+26,174 sections. Every raw chord without a processed counterpart is accounted
+for, with one exception: a single zero-length chord that the code would reject
+but the published data just skipped. Full numbers and classes:
+[`research/2026-09-17-integrations-hookpad-chord-sound.md`](../../../../research/2026-09-17-integrations-hookpad-chord-sound.md) §Results.
+
+**To rerun it**, download the two pinned files from
+`github.com/chrisdonahue/sheetsage-data` (commit
+`06113c04b109a2f27517b0399ff47550099f2466`, folder `hooktheory/`) to a scratch
+directory, then:
+
+```bash
+./singularity run plugins/integrations/plugins/hooktheory/scripts/hookpad-sound-golden.ts \
+  --raw <dir>/Hooktheory_Raw.json.gz --processed <dir>/Hooktheory.json.gz [--emit-fixtures]
+```
+
+It checks both files' sha256 first and takes about 3½ minutes. `--emit-fixtures`
+rewrites `core/internal/hookpad-sound.fixtures.ts` (one chord per distinct
+combination of mode, applied, borrowed, type, inversion, adds, omits,
+alterations and suspensions), which `hookpad-sound.test.ts` replays on every
+test run.
 
 ## To confirm after the first sign-in
 
@@ -80,7 +145,7 @@ nothing calls it in a loop yet.
 
 ## Plugin reference
 
-- Description: Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers.
+- Description: Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
 - Server:
   - Uses:
     - `auth.getTokenFromCentral`
@@ -98,8 +163,13 @@ nothing calls it in a loop yet.
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `HookpadChord`
+    - `HookpadChordInput`
+    - `HookpadChordReading`
+    - `HookpadChordRule`
+    - `HookpadChordSound`
     - `HookpadKey`
     - `HookpadMeter`
+    - `HookpadMode`
     - `HookpadNote`
     - `HookpadTempo`
     - `TheorytabSection`
@@ -108,17 +178,23 @@ nothing calls it in a loop yet.
     - `TrendSong`
   - Exports (values):
     - `ChordIdSchema`
+    - `HOOKPAD_MODE_OFFSETS`
     - `HookpadChordSchema`
+    - `hookpadChordSound`
+    - `HookpadDocSchema`
     - `HookpadKeySchema`
     - `HookpadMeterSchema`
+    - `HookpadModeSchema`
     - `HookpadNoteSchema`
     - `HookpadTempoSchema`
+    - `hookpadTonicPc`
     - `HooktheoryApiError`
     - `HooktheoryNotSignedInError`
     - `HooktheoryProviderUnavailableError`
     - `HooktheorySectionNotFoundError`
     - `ProgressionParamSchema`
     - `ProgressionSchema`
+    - `sectionFromHookpadDoc`
     - `theorytabSectionEndpoint`
     - `TheorytabSectionIdSchema`
     - `TheorytabSectionSchema`
@@ -127,5 +203,6 @@ nothing calls it in a loop yet.
     - `trendNodesEndpoint`
     - `TrendSongSchema`
     - `trendSongsEndpoint`
+    - `youtubeVideoId`
 
 <!-- AUTOGENERATED:END -->

@@ -5,6 +5,7 @@ export {
   TrendNodeSchema,
   TrendSongSchema,
   TheorytabSectionIdSchema,
+  HookpadModeSchema,
   HookpadChordSchema,
   HookpadNoteSchema,
   HookpadKeySchema,
@@ -16,6 +17,7 @@ export {
 export type {
   TrendNode,
   TrendSong,
+  HookpadMode,
   HookpadChord,
   HookpadNote,
   HookpadKey,
@@ -24,6 +26,19 @@ export type {
   TheorytabYoutube,
   TheorytabSection,
 } from "./internal/schemas";
+export { HookpadDocSchema, sectionFromHookpadDoc } from "./internal/section";
+export { youtubeVideoId } from "./internal/youtube";
+export {
+  HOOKPAD_MODE_OFFSETS,
+  hookpadChordSound,
+  hookpadTonicPc,
+} from "./internal/hookpad-sound";
+export type {
+  HookpadChordInput,
+  HookpadChordReading,
+  HookpadChordRule,
+  HookpadChordSound,
+} from "./internal/hookpad-sound";
 export {
   HooktheoryApiError,
   HooktheorySectionNotFoundError,

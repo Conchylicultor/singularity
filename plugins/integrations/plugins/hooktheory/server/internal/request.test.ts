@@ -10,7 +10,7 @@ import {
   LET_IT_BE_VERSE,
   TRENDS_NODES_401_HTML,
   UNKNOWN_SECTION_400_JSON,
-} from "./fixtures";
+} from "../../core/internal/fixtures";
 import { hooktheoryErrorText } from "./request";
 
 describe("hooktheoryErrorText", () => {

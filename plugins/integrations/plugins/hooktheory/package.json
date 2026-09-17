@@ -1,6 +1,9 @@
 {
   "name": "@singularity/plugin-integrations-hooktheory",
-  "description": "Hooktheory (TheoryTab) API client: next-chord trends and songs-by-progression (signed in), and one TheoryTab section's chords, melody, key, tempo and YouTube sync (public). Consumers never import @plugins/auth.",
+  "description": "Hooktheory (TheoryTab) API client: next-chord trends and songs-by-progression (signed in), and one TheoryTab section's chords, melody, key, tempo and YouTube sync (public). Pure core readers turn a Hookpad document into a section and a chord into the notes it sounds (a port of Sheet Sage). Consumers never import @plugins/auth.",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "@streamparser/json": "^0.0.26"
+  }
 }

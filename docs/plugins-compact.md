@@ -200,7 +200,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`google-maps`** — Google Maps Platform access broker (web): reactive readiness state plus the 'set up Google Maps' affordance consumers render in place of routing the user to Settings. Google Maps Platform access broker (server): getMapsKey() reads the stored API key via the shared auth/central store, so consumers never import @plugins/auth.
       - Plugins:
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete and place details, mapped to the neutral PlaceSuggestion / PlaceSnapshot shapes. Takes the API key per call; never touches auth or storage.
-    - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers.
+    - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

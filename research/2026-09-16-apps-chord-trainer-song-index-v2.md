@@ -85,7 +85,7 @@ irreplaceable copy to 7 MB (see Backups).
 ### 2. Loading: at boot, on every instance, never on first use
 
 Each instance checks at boot (`onReady`) whether its index is loaded. The check
-reads the index tables themselves: a `chord_trainer_index_state` row holding
+reads the index tables themselves: a `chord_index_state` row holding
 the snapshot sha, the scope and the derivation version. That row is **in the
 same excluded set as the data**, so a restored or forked database with empty
 tables also has no row, and it reloads. (It follows the fork rule "exclude
@@ -97,7 +97,7 @@ If the row is missing or stale, the instance enqueues `song-index.load`
 1. Ensure the snapshot exists: download, check sha256, extract (step 1).
 2. Stream the snapshot. Keep only the sections in scope (below). Then call
    `upsertSection` in batches, which derives tokens, features and windows.
-3. Re-apply the sections from `chord_trainer_api_documents` (section 4), which
+3. Re-apply the sections from `chord_api_documents` (section 4), which
    take precedence over dump rows.
 4. Write the state row.
 
@@ -144,12 +144,12 @@ sample comes from the snapshot, not from main's rows.
 v1 mixed dump rows and API rows in one table. A table is copied or excluded as a
 whole, so the rows that cannot be recovered need their own table:
 
-**`chord_trainer_api_documents`**: section id, the Hookpad document as fetched
+**`chord_api_documents`**: section id, the Hookpad document as fetched
 (chords, keys, meters, tempos, endBeat, youtube; no melody or editor state),
 artist, song, section name, `fetchedAt`. It is small (a few KB per section),
 **copied to worktrees and backed up**.
 
-`chord_trainer_sections` becomes a pure cache built from two sources: the
+`chord_sections` becomes a pure cache built from two sources: the
 snapshot and this table. Its `source` column stays, for display and filtering.
 The later top-up job writes here first, then calls `upsertSection`.
 
@@ -187,9 +187,9 @@ does, ready for when `traces` gets partitioned.
 
 | Table / file | Backup |
 |---|---|
-| `chord_trainer_sections`, `_loop_windows`, `_index_state` | **Excluded** (`ExcludeFromBackup`): rebuilt from the snapshot |
-| `chord_trainer_api_documents` | Kept |
-| `chord_trainer_videos` | Kept (~13k small rows; saves an 11 h re-sweep; holds the player's reports) |
+| `chord_sections`, `_loop_windows`, `_index_state` | **Excluded** (`ExcludeFromBackup`): rebuilt from the snapshot |
+| `chord_api_documents` | Kept |
+| `chord_videos` | Kept (~13k small rows; saves an 11 h re-sweep; holds the player's reports) |
 | Future answers / progress tables | Kept |
 | The 7 MB snapshot file | **Kept**, through a small `backup.source` contribution from `song-index` (the prototypes source is the model) |
 

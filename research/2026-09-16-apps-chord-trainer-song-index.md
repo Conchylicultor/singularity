@@ -70,9 +70,9 @@ Numbers that shape the design:
 
 ### Where it lives
 
-A new top-level app, `plugins/apps/plugins/chord-trainer/`, following the
-`create-app` skill. "chord-trainer" is a working id; renaming before the app
-shell exists is cheap. Its root stays empty (plus `data-dirs/`). This step adds
+A new top-level app, `plugins/apps/plugins/chord/`, following the
+`create-app` skill. The app id is `chord` (decided 2026-09-17; it replaced the
+working id "chord-trainer" in this doc's paths, tables and endpoints). Its root stays empty (plus `data-dirs/`). This step adds
 two sub-plugins:
 
 - **`song-index`**: sections, loop windows, the import, and the query.
@@ -133,7 +133,7 @@ ChordToken = "<root semitones above tonic>:<stacked intervals>/<inversion>"
 Declared with `defineEntity` (`infra/entities`); JSON columns are decoded with
 `parsedJson` (`database/sql-column`).
 
-**`chord_trainer_sections`**: one row per Hooktheory section, from any source.
+**`chord_sections`**: one row per Hooktheory section, from any source.
 
 | Column | Notes |
 |---|---|
@@ -154,7 +154,7 @@ The melody (`notes`) is **not stored**. It is the largest part of each document
 in the cache folder, so importing it later is a re-run. Keeping this table to
 tens of MB matters because every worktree database is a copy of main's.
 
-**`chord_trainer_loop_windows`**: the loops the trainer can play. This is data
+**`chord_loop_windows`**: the loops the trainer can play. This is data
 derived from sections.
 
 | Column | Notes |
@@ -170,7 +170,7 @@ derived from sections.
 
 Unique on `(sectionId, shape, startBeat)`.
 
-**`chord_trainer_index_imports`**: one row per import run: the source, the dump
+**`chord_index_imports`**: one row per import run: the source, the dump
 sha256, start and end times, counts, and skipped sections with a reason ("no
 chords", "no timing", "unreadable video id", "document failed to parse: …").
 
@@ -207,7 +207,7 @@ one transaction.
 ### The query
 
 `song-index/server` exports `findLoopWindows` and wraps it in an endpoint,
-`POST /api/chord-trainer/loops/find`:
+`POST /api/chord/loops/find`:
 
 ```ts
 findLoopWindows({
@@ -243,7 +243,7 @@ Verification.
 
 ### Importing the dump
 
-- **Files**: a `cache`-kind data dir, `chord-trainer/sheetsage`, declared with
+- **Files**: a `cache`-kind data dir, `chord/sheetsage`, declared with
   `defineDataDir` (`infra/paths`). It is shared by every worktree, so the
   115 MB download happens once per machine. The URLs are pinned to the commit
   above, and each file is checked against its sha256 before use. A mismatch
@@ -265,7 +265,7 @@ Verification.
 
 ### Video availability
 
-**`chord_trainer_videos`** (video-availability): `videoId` PK, `status`
+**`chord_videos`** (video-availability): `videoId` PK, `status`
 (`unknown` \| `ok` \| `gone` \| `not-embeddable`), `evidence` (`oembed` \|
 `player`), `lastCode`, `checkedAt`, `durationSeconds` (from the dump; later
 reported by the player), `title` / `channel` (from oEmbed).
@@ -282,7 +282,7 @@ Two sources of evidence:
    CLAUDE.md).
 2. **Player reports.** oEmbed cannot see age limits, region blocks or
    "playback on other websites disabled" on some label videos. The player can.
-   `POST /api/chord-trainer/videos/:id/playback` records a YouTube IFrame API
+   `POST /api/chord/videos/:id/playback` records a YouTube IFrame API
    error (100 → `gone`; 101/150 → `not-embeddable`) or a successful play
    (→ `ok`, plus the duration). Player evidence overrides oEmbed. The web hook
    that sends these belongs to the training-loop step; this step only adds the
@@ -309,7 +309,7 @@ URL to section ids is unsolved. That stays on the track page as a later item.
    `youtubeVideoId` into core; add `hookpadChordSound` + its test against a
    small checked-in set of dump chords (every `applied` value, every `borrowed`
    form, every mode, every chord `type`, inversions, adds/omits/alterations/sus).
-2. App root `plugins/apps/plugins/chord-trainer/` (empty barrel, `data-dirs/`).
+2. App root `plugins/apps/plugins/chord/` (empty barrel, `data-dirs/`).
 3. `video-availability`: table, oEmbed sweep job, playback endpoint.
 4. `song-index/core`: token, features, `LOOP_SHAPES`, `enumerate`,
    `beatToSeconds`, `INDEX_DERIVATION_VERSION`, plus unit tests.
@@ -321,7 +321,7 @@ URL to section ids is unsolved. That stays on the track page as a later item.
 ## Verification
 
 1. `./singularity build` (background): migrations, boundaries, type-check, docs.
-2. `./singularity test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord-trainer`.
+2. `./singularity test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord`.
 3. **Converter golden run** (`./singularity run` script in `song-index/e2e/` or
    a scratch script): stream both dump files and compare `hookpadChordSound`
    with the processed harmony for all 424,859 chords. Expect 100% agreement, or

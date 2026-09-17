@@ -3324,6 +3324,9 @@
     "plugins/integrations/plugins/hooktheory": {
       "name": "@singularity/plugin-integrations-hooktheory",
       "version": "0.0.1",
+      "dependencies": {
+        "@streamparser/json": "^0.0.26",
+      },
     },
     "plugins/layouts": {
       "name": "@singularity/plugin-layouts",
@@ -8446,6 +8449,8 @@
     "@singularity/web": ["@singularity/web@workspace:plugins/framework/plugins/web-core"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
+
+    "@streamparser/json": ["@streamparser/json@0.0.26", "", {}, "sha512-46597LNFI+MFdUnzX2QJWwmdTRdq0XVD+vVNJTtGVzIrnCuhG9pFo1OAzbNBqci8UJgk/X5KJZ6LcV+y7PTuDQ=="],
 
     "@tailwindcss/node": ["@tailwindcss/node@4.2.2", "", { "dependencies": { "@jridgewell/remapping": "^2.3.5", "enhanced-resolve": "^5.19.0", "jiti": "^2.6.1", "lightningcss": "1.32.0", "magic-string": "^0.30.21", "source-map-js": "^1.2.1", "tailwindcss": "4.2.2" } }, "sha512-pXS+wJ2gZpVXqFaUEjojq7jzMpTGf8rU6ipJz5ovJV6PUGmlJ+jvIwGrzdHdQ80Sg+wmQxUFuoW1UAAwHNEdFA=="],
 

@@ -95,12 +95,26 @@ export const HookpadChordSchema = z.object({
   suspensions: z.array(z.number()),
   /**
    * Modal borrowing. `""` or `null` = not borrowed; a mode name ("minor",
-   * "mixolydian", "dorian", …); or a custom scale as semitone offsets from the
-   * tonic ([0, 2, 4, 5, 8, 9, 11]).
+   * "mixolydian", "dorian", … — a `HookpadMode`); or a custom scale as semitone
+   * offsets from the tonic ([0, 2, 4, 5, 8, 9, 11]). Left an open string on
+   * purpose: real documents hold odd values (`"super:2"`), and one odd chord
+   * must not make its whole section unreadable — `hookpadChordSound` reports it
+   * as unreadable instead.
    */
   borrowed: z.union([z.string(), z.array(z.number())]).nullable(),
   /** A rest: silence in the harmony track for `duration` beats. */
   isRest: z.boolean(),
+  /**
+   * A pedal tone. `null` in every chord seen (the whole Sheet Sage dump and the
+   * live sample); typed open so a set one reaches `hookpadChordSound`, which
+   * reports it as unreadable, rather than failing the section.
+   */
+  pedal: z.unknown(),
+  /**
+   * An alternate spelling. `""` almost always; 14 dump chords hold `"_"`, which
+   * `hookpadChordSound` reports as unreadable, as Sheet Sage does.
+   */
+  alternate: z.string(),
 });
 export type HookpadChord = z.infer<typeof HookpadChordSchema>;
 
@@ -115,11 +129,29 @@ export const HookpadNoteSchema = z.object({
 });
 export type HookpadNote = z.infer<typeof HookpadNoteSchema>;
 
+/**
+ * The nine modes Hookpad offers, spelled as its documents spell them. A closed
+ * list: every key in the Sheet Sage dump (26k sections) uses one of these, and
+ * Sheet Sage's converter knows exactly these. A tenth mode from the live API
+ * fails here, at the fetch boundary, naming the field.
+ */
+export const HookpadModeSchema = z.enum([
+  "major",
+  "minor",
+  "dorian",
+  "phrygian",
+  "lydian",
+  "mixolydian",
+  "locrian",
+  "harmonicMinor",
+  "phrygianDominant",
+]);
+export type HookpadMode = z.infer<typeof HookpadModeSchema>;
+
 /** A key (change) from `beat` on. */
 export const HookpadKeySchema = z.object({
   beat: z.number(),
-  /** Mode name: "major", "minor", "dorian", "mixolydian", … */
-  scale: z.string(),
+  scale: HookpadModeSchema,
   /** Tonic spelling: "C", "F#", "Bb", … */
   tonic: z.string(),
 });
@@ -146,13 +178,14 @@ export type HookpadMeter = z.infer<typeof HookpadMeterSchema>;
 export const TheorytabYoutubeSchema = z.object({
   /**
    * What the transcriber pasted into Hookpad, verbatim: a bare video id, or a
-   * full `youtube.com/watch?v=…` / `youtu.be/…` URL.
+   * full `youtube.com/watch?v=…` / `youtu.be/…` URL. `null` when nothing was
+   * ever pasted (216 of the 26k sections in the Sheet Sage dump).
    */
-  rawId: z.string(),
+  rawId: z.string().nullable(),
   /**
    * The 11-character video id pulled out of `rawId`, or `null` when `rawId` is
-   * neither a bare id nor a YouTube URL this client recognises — the section has
-   * no playable recording.
+   * `null` or neither a bare id nor a YouTube URL this client recognises — the
+   * section has no playable recording.
    */
   videoId: z.string().nullable(),
   /**

@@ -19109,7 +19109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `PlacesApiError`
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
-    - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers.
+    - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
       - Server:
         - Uses:
           - `auth.getTokenFromCentral`
@@ -19127,8 +19127,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `HookpadChord`
+          - `HookpadChordInput`
+          - `HookpadChordReading`
+          - `HookpadChordRule`
+          - `HookpadChordSound`
           - `HookpadKey`
           - `HookpadMeter`
+          - `HookpadMode`
           - `HookpadNote`
           - `HookpadTempo`
           - `TheorytabSection`
@@ -19137,17 +19142,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TrendSong`
         - Exports (values):
           - `ChordIdSchema`
+          - `HOOKPAD_MODE_OFFSETS`
           - `HookpadChordSchema`
+          - `hookpadChordSound`
+          - `HookpadDocSchema`
           - `HookpadKeySchema`
           - `HookpadMeterSchema`
+          - `HookpadModeSchema`
           - `HookpadNoteSchema`
           - `HookpadTempoSchema`
+          - `hookpadTonicPc`
           - `HooktheoryApiError`
           - `HooktheoryNotSignedInError`
           - `HooktheoryProviderUnavailableError`
           - `HooktheorySectionNotFoundError`
           - `ProgressionParamSchema`
           - `ProgressionSchema`
+          - `sectionFromHookpadDoc`
           - `theorytabSectionEndpoint`
           - `TheorytabSectionIdSchema`
           - `TheorytabSectionSchema`
@@ -19156,6 +19167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `trendNodesEndpoint`
           - `TrendSongSchema`
           - `trendSongsEndpoint`
+          - `youtubeVideoId`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

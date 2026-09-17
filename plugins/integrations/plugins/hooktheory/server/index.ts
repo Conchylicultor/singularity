@@ -18,7 +18,7 @@ export {
 
 export default {
   description:
-    "Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers.",
+    "Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).",
   httpRoutes: {
     [trendNodesEndpoint.route]: handleTrendNodes,
     [trendSongsEndpoint.route]: handleTrendSongs,
