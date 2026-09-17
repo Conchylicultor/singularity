@@ -79,8 +79,8 @@ The Prototypes app's two panes:
   - **One URL for the open prototype: `usePrototypeSrc(meta, version)`.** It
     carries the live `prototypesVersionResource` value as a cache-bust (an
     agent's edit → version bump → new `src` → the iframe reloads) and the picked
-    options. Stages get it as `src`, and Present's overlay and new-tab link call
-    the hook, so no frame can show a different variant — a stage never composes
+    options. Stages get it as `src`, and Present's stage (its overlays and its
+    new-tab page, which mounts its own `PrototypeDetailProvider`) calls the hook, so no frame can show a different variant — a stage never composes
     a frame URL itself. When a recorded version is shown (below) it returns
     that version's frozen document instead (`prototypeVersionUrl`), with the
     picks judged against THAT version's options and no cache-bust — which is
@@ -88,8 +88,7 @@ The Prototypes app's two panes:
     the stepper without knowing it exists. It returns a pending union
     (`PicksRead`) until the picks are known: a URL built without them would
     open the defaults and then swap to the user's variant, so every consumer
-    renders its loading state instead (the stage body's gate, Present's frame,
-    a disabled New-tab item).
+    renders its loading state instead (the stage body's gate, Present's frame).
   - **Version stepper** (`version-stepper.tsx`, the `version` header action) —
     `‹ v3 of 7 ›` over `files`' per-prototype `prototypes.history` resource.
     The pane's only version state is `shownVersion` on the provider: the
@@ -308,6 +307,7 @@ honest — the prototype does exist — and it self-corrects.
     - `FrameSizeProvider`
     - `OptionsPicker`
     - `prototypeDetailPane`
+    - `PrototypeDetailProvider`
     - `PrototypeDetailScope`
     - `prototypesGalleryPane`
     - `PrototypeStages`

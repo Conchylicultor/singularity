@@ -17,6 +17,7 @@ export { OptionsPicker } from "./components/options-picker";
 export { FrameSizeProvider, useFrameSizeState } from "./frame-size";
 export type { FrameSize, FrameSizeChoice } from "./frame-size";
 export {
+  PrototypeDetailProvider,
   usePrototypeDetail,
   usePrototypePicks,
   usePrototypeDocumentSrc,

@@ -15,20 +15,13 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  matchResource,
-  useCombinedResources,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import {
-  prototypesResource,
-  prototypesVersionResource,
-  type PrototypeMeta,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { embedUrl } from "@plugins/primitives/plugins/embed/web";
+import { prototypesApp } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
 import {
   prototypeDetailPane,
-  usePrototypeSrc,
+  usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { prototypePresentRoute } from "../panes";
 import { PresentOverlay, type PresentPlacement } from "./present-overlay";
 
 /**
@@ -99,16 +92,14 @@ function PresentItem({
   label,
   hint,
   onClick,
-  disabled,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
   hint: string;
   onClick?: () => void;
-  disabled?: boolean;
 }) {
   return (
-    <DropdownMenuItem onClick={onClick} disabled={disabled}>
+    <DropdownMenuItem onClick={onClick}>
       <Icon className="size-4 text-muted-foreground" />
       <Stack gap="none">
         <Text>{label}</Text>
@@ -121,59 +112,29 @@ function PresentItem({
 }
 
 /**
- * Opens the raw prototype document as its own browser tab. The URL is the pane's
- * own (`usePrototypeSrc`): the same `?v=` cache-bust the in-app iframes use, so
- * a new tab never opens a copy an agent has already edited past, and the picked
- * options, so it opens on the variant on screen — which makes it the link to
- * share for "this version". The item waits for both resources and the picks
- * rather than opening an un-busted, pick-less URL while they load.
+ * Opens the presentation as a page of its own in a new browser tab — the app's
+ * `present/<id>` page, chromeless (`?embed=1`), not the bare prototype document.
+ * The bare document has no app around it, so nothing could draw the options
+ * picker there; the page draws the same stage as the in-app presentations.
+ *
+ * It carries the recorded version on screen, if any; the picks need no
+ * carrying, since they are the one shared record every surface reads.
  */
 function NewTabItem({ name }: { name: string }) {
-  const loaded = useCombinedResources({
-    rows: useResource(prototypesResource),
-    version: useResource(prototypesVersionResource),
-  });
-  return matchResource(loaded, {
-    pending: () => <NewTabEntry src={null} />,
-    error: () => <NewTabEntry src={null} />,
-    ready: ({ rows, version }) => {
-      const meta = rows.find((p) => p.name === name);
-      return meta ? (
-        <NewTabReady meta={meta} version={version} />
-      ) : (
-        <NewTabEntry src={null} />
-      );
-    },
-  });
-}
-
-function NewTabReady({
-  meta,
-  version,
-}: {
-  meta: PrototypeMeta;
-  version: number;
-}) {
-  return matchResource(usePrototypeSrc(meta, version), {
-    pending: () => <NewTabEntry src={null} />,
-    error: () => <NewTabEntry src={null} />,
-    ready: (src) => <NewTabEntry src={src} />,
-  });
-}
-
-/** The item itself — disabled until there is a URL to open (`null`). */
-function NewTabEntry({ src }: { src: string | null }) {
+  const { shownVersion } = usePrototypeDetail();
+  const href = embedUrl(
+    prototypePresentRoute.link(prototypesApp, {
+      name,
+      ...(shownVersion === null ? {} : { sha: shownVersion.sha }),
+    }),
+    "chromeless",
+  );
   return (
     <PresentItem
       icon={MdOpenInNew}
       label="New browser tab"
       hint="Opens the prototype on its own"
-      disabled={src === null}
-      onClick={
-        src === null
-          ? undefined
-          : () => window.open(src, "_blank", "noopener,noreferrer")
-      }
+      onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
     />
   );
 }

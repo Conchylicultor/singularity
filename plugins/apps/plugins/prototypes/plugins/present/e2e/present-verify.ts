@@ -188,15 +188,65 @@ await withBrowser(async (h) => {
   await page.getByRole("menuitem", { name: "New browser tab" }).click();
   const tab = await opened;
   await tab.waitForLoadState("domcontentloaded");
+  const tabUrl = new URL(tab.url());
   r.ok(
-    "new tab opens the raw prototype document",
-    new URL(tab.url()).pathname === `/api/prototypes/${name}/index.html`,
+    "new tab opens the app's present page, chromeless",
+    tabUrl.pathname === `/prototypes/present/${name}` &&
+      tabUrl.searchParams.get("embed") === "1",
     tab.url(),
   );
+  await tab
+    .locator("iframe")
+    .first()
+    .waitFor({ state: "attached", timeout: 15_000 });
   r.ok(
-    "new tab carries the cache-bust",
-    new URL(tab.url()).searchParams.has("v"),
+    "the new tab shows the prototype",
+    (await tab.locator("iframe").count()) === 1,
   );
+  r.ok(
+    "the new tab draws no app tab bar",
+    (await tab.locator("[data-app-tab]").count()) === 0,
+  );
+  // The reason the new tab is an app page at all: the picker is there, and a
+  // chip still switches the variant.
+  if (option) {
+    const tabPicker = tab.getByLabel("Prototype options");
+    await tabPicker.waitFor({ state: "attached", timeout: 15_000 });
+    r.ok(
+      "the options picker is on the new-tab page",
+      (await tabPicker.count()) === 1,
+    );
+    await tab.locator("iframe").first().hover();
+    await tabPicker.hover();
+    const group = tab.getByRole("radiogroup", {
+      name: humanizeToken(option.name),
+    });
+    await group.waitFor({ state: "visible", timeout: 5000 });
+    await snap(tab, out, "new-tab");
+    // The fullscreen step above left `otherValue` picked: switch back.
+    await group
+      .getByRole("radio", { name: humanizeToken(option.default) })
+      .click();
+    const switched = await waitFor(
+      () =>
+        Promise.resolve(
+          tab
+            .frames()
+            .find((f) => f.url().includes(`/api/prototypes/${name}/`))
+            ?.url(),
+        ),
+      (url) =>
+        url !== undefined && !url.includes(`${option.name}=${otherValue}`),
+      { timeoutMs: 15_000 },
+    );
+    r.ok(
+      `a chip switches ${option.name} back to "${option.default}" in the new tab`,
+      switched.ok,
+      switched.value,
+    );
+  } else {
+    await snap(tab, out, "new-tab");
+  }
   await tab.close();
 
   r.ok(

@@ -1,12 +1,5 @@
 import { useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
-import {
-  matchResource,
-  useCombinedResources,
-  useResource,
-} from "@plugins/primitives/plugins/live-state/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -17,18 +10,7 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useSurfaceFocused } from "@plugins/apps-core/plugins/tabs/web";
-import {
-  prototypesResource,
-  prototypesVersionResource,
-  type PrototypeMeta,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import {
-  FrameSizeProvider,
-  OptionsPicker,
-  ScaledIframe,
-  useFrameSizeState,
-  usePrototypeSrc,
-} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import { PresentStage } from "./present-stage";
 
 /**
  * How much of the screen the presentation covers, smallest first:
@@ -59,10 +41,6 @@ export function PresentOverlay({
   /** Stable identity required — the fullscreen effect keys on it. */
   onClose: () => void;
 }) {
-  const stage = useCombinedResources({
-    rows: useResource(prototypesResource),
-    version: useResource(prototypesVersionResource),
-  });
   const rootRef = useRef<HTMLDivElement>(null);
   const surfaceFocused = useSurfaceFocused();
 
@@ -105,21 +83,7 @@ export function PresentOverlay({
       ref={rootRef}
       className={cn("relative size-full bg-background", hoverRevealGroup)}
     >
-      {matchResource(stage, {
-        pending: () => <Loading variant="block" />,
-        error: () => <Loading variant="block" />,
-        ready: ({ rows, version }) => {
-          const meta = rows.find((p) => p.name === name) ?? null;
-          if (!meta) {
-            return (
-              <Text as="div" variant="body" tone="muted">
-                Prototype not found.
-              </Text>
-            );
-          }
-          return <PresentedFrame meta={meta} version={version} />;
-        },
-      })}
+      <PresentStage name={name} />
       {/* Hidden until the pointer moves over the stage: a presentation shows
           the design, not our chrome. No `mask` — the app's scrim color bleeds
           a dark patch across a light prototype, and the solid `secondary`
@@ -163,51 +127,5 @@ export function PresentOverlay({
     >
       {stageBox}
     </ViewportOverlay>
-  );
-}
-
-/**
- * The presented prototype, on the variant the pane is showing: the same
- * `usePrototypeSrc` URL as Focus and Compare, so presenting never drops the
- * reader's picks — and, like them, it waits for the picks rather than opening
- * on the defaults.
- *
- * The pane's options picker comes along, in the corner it has in the pane, so
- * a theme or variant can still be switched while presenting — there is no pane
- * header to go back to in `viewport`/`screen`. It is inline DOM (no portal),
- * so it stays inside the fullscreened subtree. Revealed on hover like the exit
- * button: at rest the presentation shows only the design. It draws nothing
- * while the picks are unknown, which is the same wait the frame is in.
- *
- * **Presenting opens at Full size**: the frame fills the presentation and the
- * page's own responsive layout shows, rather than a fixed canvas scaled up.
- * The size is the presentation's own (a nested frame-size scope), so the
- * picker's Size row can still switch to Fixed or Mobile here without changing
- * the size the pane was left on.
- */
-function PresentedFrame({
-  meta,
-  version,
-}: {
-  meta: PrototypeMeta;
-  version: number;
-}) {
-  const src = usePrototypeSrc(meta, version);
-  const frameSize = useFrameSizeState("full");
-  return (
-    <FrameSizeProvider value={frameSize}>
-      {/* No `error` arm: a picks record that cannot be read stays broken until
-          someone fixes it, so it renders as the default error placeholder (its
-          message) rather than as a spinner that never ends. */}
-      {matchResource(src, {
-        pending: () => <Loading variant="block" />,
-        ready: (url) => (
-          <ScaledIframe meta={meta} src={url} size={frameSize.size} upscale />
-        ),
-      })}
-      <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
-        <OptionsPicker meta={meta} />
-      </Pin>
-    </FrameSizeProvider>
   );
 }

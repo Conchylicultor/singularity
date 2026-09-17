@@ -107,6 +107,7 @@ export function PrototypeDetailProvider({
   name,
   stageId,
   onStageChange,
+  initialVersion = null,
   children,
 }: {
   name: string;
@@ -114,6 +115,12 @@ export function PrototypeDetailProvider({
   stageId: string | undefined;
   /** Pick a stage — the pane writes it into its URL. */
   onStageChange: (id: string) => void;
+  /**
+   * The recorded version to open on — `null` (the default) for the live folder.
+   * For a surface whose URL names a version (Present's new-tab page); the
+   * detail pane always opens live.
+   */
+  initialVersion?: PrototypeVersion | null;
   children: ReactNode;
 }) {
   const contributed = PrototypeStages.Stage.useContributions();
@@ -179,7 +186,9 @@ export function PrototypeDetailProvider({
   const [shown, setShown] = useState<{
     name: string;
     version: PrototypeVersion;
-  } | null>(null);
+  } | null>(() =>
+    initialVersion === null ? null : { name, version: initialVersion },
+  );
   const shownVersion = shown?.name === name ? shown.version : null;
   const showVersion = useCallback(
     (version: PrototypeVersion | null) =>
