@@ -94,8 +94,7 @@ function TemplateChip({
 
 export function FloatingTemplateChips({
   insertText,
-  getContent,
-  clearContent,
+  takeDraftWith,
 }: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
@@ -137,14 +136,13 @@ export function FloatingTemplateChips({
   );
 
   // No in-flight state, no error toast: sendConversationTurn owns the echo
-  // card, the retry affordance and the delivery report. Clearing the editor
-  // synchronously mirrors the prompt input's own send.
+  // card, the retry affordance and the delivery report. The template goes in
+  // through the same insert as ✎ — at the caret — and the editor is emptied in
+  // the same step, mirroring the prompt input's own send.
   function sendTemplate(t: TemplateItem) {
     if (!canSend) return;
     recordUsage(USAGE_NAMESPACE, t.id);
-    const existing = getContent().trim();
-    const text = existing ? `${t.prompt}\n\n${existing}` : t.prompt;
-    clearContent();
+    const text = takeDraftWith(t.prompt).trim();
     sendConversationTurn(convId, { text });
   }
 

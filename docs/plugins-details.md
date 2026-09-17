@@ -28865,6 +28865,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor.useInsertMarkdown`
+          - `primitives/text-editor.useTakeMarkdownWith`
         - Exports (types): `PromptEditorActionProps`
         - Exports (values):
           - `PromptEditor`
@@ -29503,6 +29504,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `TextEditor`
           - `TextEditorSlots`
           - `useInsertMarkdown`
+          - `useTakeMarkdownWith`
       - Cross-plugin:
         - Imported by:
           - `active-data/task`

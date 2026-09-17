@@ -5,10 +5,10 @@ import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createParagraphNode, $getRoot } from "lexical";
 import {
   TextEditor,
   useInsertMarkdown,
+  useTakeMarkdownWith,
 } from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 
@@ -54,21 +54,9 @@ function ToolbarRow() {
   // breaks, tokens as their nodes, at the caret (or the end when there is none).
   const insertText = useInsertMarkdown();
 
-  const getContent = useCallback(() => {
-    let text = "";
-    editor.getEditorState().read(() => {
-      text = $getRoot().getTextContent();
-    });
-    return text;
-  }, [editor]);
-
-  const clearContent = useCallback(() => {
-    editor.update(() => {
-      const root = $getRoot();
-      root.clear();
-      root.append($createParagraphNode());
-    });
-  }, [editor]);
+  // Insert-then-send built on that same insert, so a sent snippet lands where
+  // the insert-only path would have put it.
+  const takeDraftWith = useTakeMarkdownWith();
 
   const focusEditor = useCallback(
     (e: React.MouseEvent) => {
@@ -85,11 +73,7 @@ function ToolbarRow() {
       const dimmed =
         !editable && !item.alwaysActive ? disabledPartCls : undefined;
       const action = (
-        <item.component
-          insertText={insertText}
-          getContent={getContent}
-          clearContent={clearContent}
-        />
+        <item.component insertText={insertText} takeDraftWith={takeDraftWith} />
       );
       // This box carries the disabled dimming, and it sits INSIDE the slot's own
       // per-contribution cell — so it is also where that cell's chain continues.
@@ -109,7 +93,7 @@ function ToolbarRow() {
         </GrowRelay>
       );
     },
-    [editable, insertText, getContent, clearContent],
+    [editable, insertText, takeDraftWith],
   );
 
   const hasAlwaysActive = !editable && items.some((i) => i.alwaysActive);

@@ -25,33 +25,41 @@ export function serializeEditorToMarkdown(
   editor: LexicalEditor,
   extensions: readonly NodeExtension[] = getNodeExtensions(),
 ): string {
+  return editor
+    .getEditorState()
+    .read(() => $serializeRootToMarkdown(extensions));
+}
+
+// The serializer body, for a caller already inside an `editor.update()` /
+// `read()` — it sees that update's pending state, not the last committed one.
+export function $serializeRootToMarkdown(
+  extensions: readonly NodeExtension[] = getNodeExtensions(),
+): string {
   const lines: string[] = [];
-  editor.getEditorState().read(() => {
-    const root = $getRoot();
-    for (const para of root.getChildren()) {
-      if (!$isElementNode(para)) continue;
-      let buf = "";
-      for (const child of para.getChildren()) {
-        if ($isLineBreakNode(child)) {
-          buf += "\n";
-        } else if ($isTextNode(child)) {
-          buf += child.getTextContent();
-        } else {
-          let handled = false;
-          for (const ext of extensions) {
-            const result = ext.serializeNode(child);
-            if (result !== null) {
-              buf += result;
-              handled = true;
-              break;
-            }
+  const root = $getRoot();
+  for (const para of root.getChildren()) {
+    if (!$isElementNode(para)) continue;
+    let buf = "";
+    for (const child of para.getChildren()) {
+      if ($isLineBreakNode(child)) {
+        buf += "\n";
+      } else if ($isTextNode(child)) {
+        buf += child.getTextContent();
+      } else {
+        let handled = false;
+        for (const ext of extensions) {
+          const result = ext.serializeNode(child);
+          if (result !== null) {
+            buf += result;
+            handled = true;
+            break;
           }
-          if (!handled) buf += child.getTextContent();
         }
+        if (!handled) buf += child.getTextContent();
       }
-      lines.push(buf);
     }
-  });
+    lines.push(buf);
+  }
   return lines.join("\n");
 }
 
