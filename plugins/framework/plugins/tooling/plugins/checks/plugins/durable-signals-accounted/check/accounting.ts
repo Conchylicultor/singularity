@@ -106,6 +106,10 @@ export const ACCOUNTING: Record<string, SinkAccounting> = {
     consumer: "internal",
     note: "Config-gated (OFF by default) twin-probe child stderr drain. The probe MEASUREMENTS go to paging-probe-<variant>.jsonl (read offline), not this channel.",
   },
+  "mcp-page-instructions": {
+    consumer: "internal",
+    note: "One line per MCP initialize with the length of the page-instructions section (page/annotations/agent-access), read by hand when checking whether a client truncates the global instructions. Not a failure signal.",
+  },
   notifications: {
     consumer: "internal",
     note: "Boot-time notifications read-set reconciliation diagnostics (shell/notifications). Not a failure signal.",

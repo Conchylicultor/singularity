@@ -19,6 +19,12 @@ import {
   type MarkdownContext,
 } from "@plugins/page/plugins/editor/core";
 import { recordAgentNotesAuthor } from "@plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship/server";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
+import {
+  assertInstructionsReceived,
+  deliverWithRead,
+  renderGlobalSection,
+} from "./instructions-gate";
 import {
   assertAgentAddressable,
   assertAgentAuthored,
@@ -272,6 +278,17 @@ along with everything inside them. So a gap in the prose may be a note you are
 not meant to see rather than something missing: do not "restore" it, and do not
 read this text as proof of what the author has or has not already written down.
 
+**Instructions may come first.** A page's author can leave instructions for
+agents working under a page — the way a CLAUDE.md file does for a folder. When
+the page you read is covered by instructions this conversation has not received
+yet (or that changed since), the output opens with a
+\`<received-instructions>\` block holding them, each tagged with its id and the
+page it covers; the page itself follows it. That block is not part of the page:
+never copy it into an edit. Instructions arrive once per conversation, and again
+only after they change. Global instructions arrived with this server's
+instructions when the conversation started. An instructions card the page shows
+in full (\`<instructions id="…">\`) is not repeated in the block.
+
 There is no offset/limit, deliberately — a line window can open a tag it never
 closes. To read less, pass the id of the block you care about; that is what the
 ids in the output are for.
@@ -288,17 +305,27 @@ and not inside a \`<human>\` or \`<todo>\` card within it.`,
         "The page's block id, or any block within it to scope the read to.",
       ),
   },
-  async handler({ block_id: blockId }) {
+  async handler({ block_id: blockId }, ctx) {
     // The scope is loaded here to decide ABOUT the block (rule 2) and again
     // inside the engine to serialize it. Two reads, deliberately: the policy
     // question is "may this id be addressed at all", which has to be answered
     // before the id is handed over as a root, and the engine's own read is what
     // keeps its walk and its rows one thing.
-    assertAgentAddressable(await loadBlockScope(blockId), blockId);
+    const scope = await loadBlockScope(blockId);
+    assertAgentAddressable(scope, blockId);
     const markdown = await readBlockAsMarkdown(blockId, {
       redact: redactHumanAudience,
     });
-    return { content: [{ type: "text" as const, text: markdown }] };
+    // The instructions covering this page that the conversation has not
+    // received yet go AHEAD of the page, and now count as received.
+    const preamble = await deliverWithRead({
+      conversationId: ctx.conversationId,
+      pageId: scope.pageId,
+      readRootId: blockId,
+      body: markdown,
+    });
+    const text = preamble === "" ? markdown : `${preamble}\n\n${markdown}`;
+    return { content: [{ type: "text" as const, text }] };
   },
 });
 
@@ -360,6 +387,13 @@ block the projection encoded and re-mints the blocks it fails to reproduce
 byte-for-byte. Prefer \`edit_page\` for a localized change — same machinery, far
 smaller chance of rewriting the whole block by accident.
 
+**A write can be refused because of instructions.** If the page is covered by
+instructions from its author that this conversation has not received yet (or
+that changed since), the write is refused with nothing written, and the refusal
+carries those instructions in full. They then count as received: read them, and
+retry if the write still follows them. Reading the page with \`read_page\` first
+delivers them the same way.
+
 The block records that THIS conversation wrote it, so a human reading the page
 can open the run that produced it. Returns what the write actually did
 (survived / created / deleted / moved).`,
@@ -377,7 +411,14 @@ can open the run that produced it. Returns what the write actually did
       ),
   },
   async handler({ block_id: blockId, content }, ctx) {
-    assertAgentAuthored(await loadBlockScope(blockId), blockId);
+    const scope = await loadBlockScope(blockId);
+    assertAgentAuthored(scope, blockId);
+    // Before anything is planned: a refusal here has written nothing.
+    await assertInstructionsReceived({
+      tool: "write_agent_note",
+      conversationId: ctx.conversationId,
+      pageId: scope.pageId,
+    });
     // The block set the acceptance predicate resolved, carried out of the hook.
     // `assertAcceptable` returns void by design — its only verdict is throwing —
     // so the answer it computes on the way rides out on a closure rather than
@@ -523,6 +564,14 @@ A worked round trip:
    Same for deleting it, moving it out, or leaving it out of a
    \`write_agent_note\` on block-77. Answer it in block-77, below the card.
 
+**A write can be refused because of instructions.** If the page is covered by
+instructions from its author that this conversation has not received yet (or
+that changed since), the edit is refused with nothing written, and the refusal
+carries those instructions in full. They then count as received: read them, and
+retry if the edit still follows them. Reading the page with \`read_page\` first
+delivers them the same way. An \`<instructions>\` card is the author's, like a
+\`<human>\` card: hand it back byte-identical.
+
 Contract, matching the \`Edit\` file tool:
 - \`old_string\` must appear at least once; zero matches is an error.
 - It must be UNIQUE unless \`replace_all\` is true; a non-unique match is an
@@ -576,6 +625,13 @@ the author's even when it sits in yours.`,
     // same reason `read_page` refuses it. What may be WRITTEN is judged on the
     // plan, below.
     assertAgentAddressable(scope, blockId);
+    // Before the edit is even matched: whatever it would write, it waits until
+    // the page's instructions have been received. A refusal writes nothing.
+    await assertInstructionsReceived({
+      tool: "edit_page",
+      conversationId: ctx.conversationId,
+      pageId: scope.pageId,
+    });
     const markdown = await readBlockAsMarkdown(blockId, {
       redact: redactHumanAudience,
     });
@@ -712,5 +768,33 @@ the author's even when it sits in yours.`,
       replaced: replaceAll ? matches : 1,
       ...(renamedTo === undefined ? {} : { renamed_to: renamedTo }),
     });
+  },
+});
+
+/**
+ * Where the length of every rendered page section goes. A client may truncate
+ * long server instructions, so the length is what tells whether the global
+ * instructions still fit.
+ */
+const instructionsLog = defineLogSink({
+  id: "mcp-page-instructions",
+  description:
+    "One line per MCP initialize: the conversation and the length of the page-instructions section of the server instructions (page/annotations/agent-access).",
+});
+
+/**
+ * The page section of the MCP server instructions — what page instructions are,
+ * and every global one. Lives beside the three tools because it describes them:
+ * the `instructions` plugin owns the data and the delivery record, and stays
+ * free of MCP.
+ */
+export const pageInstructionsSection = Mcp.instructions({
+  id: "page-instructions",
+  async render({ conversationId }) {
+    const section = await renderGlobalSection(conversationId);
+    instructionsLog.publish(
+      JSON.stringify({ conversationId, length: section.length }),
+    );
+    return section;
   },
 });

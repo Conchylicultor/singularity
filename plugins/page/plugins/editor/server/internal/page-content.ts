@@ -3,7 +3,12 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { PAGE_BLOCK_TYPE, pageData } from "../../core/schemas";
+import {
+  PAGE_BLOCK_TYPE,
+  pageData,
+  pageKindOf,
+  withPageKind,
+} from "../../core/schemas";
 import type { PageData } from "../../core/schemas";
 import type { BlockNode } from "../../core/block-ops";
 import { newBlockId } from "../../core/block-id";
@@ -131,8 +136,8 @@ export type BlockTextWriter = (
  *     version and what is live now ({@link planRestoreTarget}), then write it
  *     with the op handler's own shape, {@link writeForestTarget}. The page row's
  *     own `data` (title, icon, cover) is set from `snapshot.page` — all but its
- *     author, which stays the stored row's (a version never changes whose page
- *     it is; only `setPageAuthor` does).
+ *     kind (author, instructions, global), which stays the stored row's (a
+ *     version never changes what the page is to agents; only `setPageKind` does).
  *  3. **Text**: `io.writeTexts` edits every text-bearing surviving block's doc
  *     to the version's runs, then projects `data.text`. Required rather than
  *     returned for the caller to apply: forgetting it would restore structure
@@ -213,16 +218,13 @@ export async function restorePageContent(
       }
 
       // A version restores the page's content, title, icon and cover — never
-      // its KIND, the same way it never moves the page. The author is changed
-      // only by the header's toggle (`setPageAuthor`), so a version taken before
-      // a flip holds the other one; the stored row's author is carried onto the
-      // version's data instead. The result is still a REWRITE of the stored
-      // data and judged as one (`rewriteBlockData`), which it now passes by
-      // construction.
-      const next: Record<string, unknown> = { ...snapshot.page };
-      delete next.author;
-      const { author } = pageData(pageRow);
-      if (author !== undefined) next.author = author;
+      // its KIND, the same way it never moves the page. The kind (agent page,
+      // instructions page and its `global`) is changed only by the header's
+      // control (`setPageKind`), so a version taken before a change holds
+      // another one; the stored row's kind is carried onto the version's data
+      // instead. The result is still a REWRITE of the stored data and judged as
+      // one (`rewriteBlockData`), which it now passes by construction.
+      const next = withPageKind(snapshot.page, pageKindOf(pageData(pageRow)));
       const data = rewriteBlockData({
         type: PAGE_BLOCK_TYPE,
         before: { type: PAGE_BLOCK_TYPE, data: pageRow.data },

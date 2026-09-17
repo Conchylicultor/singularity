@@ -3,7 +3,12 @@ import { handleMcpRequest } from "./internal/handle-mcp";
 import { mcpRequest } from "../shared/endpoints";
 
 export { Mcp } from "./internal/mcp";
-export type { McpTool, McpToolContext, McpToolResult } from "./internal/mcp";
+export type {
+  McpInstructions,
+  McpTool,
+  McpToolContext,
+  McpToolResult,
+} from "./internal/mcp";
 
 export default {
   description:

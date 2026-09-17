@@ -65,8 +65,8 @@ export type NewBlockRow = typeof _blocks.$inferInsert;
  * `data` takes the {@link BlockDataRewrite} brand rather than an insert's plain
  * `BlockData`: rewriting an EXISTING row's payload must also prove it keeps the
  * row's author, and `rewriteBlockData` is the only thing that mints the proof —
- * save `reauthorPageData`, the one write whose whole content is a page's new
- * author (`setPageAuthor`).
+ * save `rekindPageData`, the one write whose whole content is a page's new
+ * kind (`setPageKind`).
  */
 export type BlockColumnChanges = Partial<
   Omit<NewBlockRow, "id" | "createdAt" | "data"> & { data: BlockDataRewrite }

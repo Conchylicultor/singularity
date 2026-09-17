@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, type DbExecutor } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   PAGE_BLOCK_TYPE,
@@ -62,8 +62,11 @@ export interface BlockScopePageRow {
  * itself** — a page's own `page_id` names the page it is DISPLAYED in, i.e. its
  * parent — which is what keeps `readBlockAsMarkdown(pageId)` a whole-page read.
  */
-export async function loadBlockScope(blockId: string): Promise<BlockScope> {
-  const [row] = await db
+export async function loadBlockScope(
+  blockId: string,
+  executor: DbExecutor = db,
+): Promise<BlockScope> {
+  const [row] = await executor
     .select({
       id: liveBlocks.id,
       type: liveBlocks.type,
@@ -86,7 +89,7 @@ export async function loadBlockScope(blockId: string): Promise<BlockScope> {
     );
   }
 
-  const snapshot = await serializePageContent(pageId);
+  const snapshot = await serializePageContent(pageId, executor);
   if (!snapshot) throw new HttpError(404, `page ${pageId} does not exist`);
   // A content block is in its own page's partition by construction — the query
   // that loaded these rows is keyed on the very column that named `pageId`.
@@ -160,6 +163,12 @@ export interface ReadBlockOptions {
    * whatever policy chose it lives with the caller.
    */
   redact?: (rows: StoredBlock[]) => StoredBlock[];
+  /**
+   * The database the rows are read from — the process's own by default. A
+   * DB-backed suite passes its throwaway here, as it does to the editor's
+   * `serializePageContent`.
+   */
+  executor?: DbExecutor;
 }
 
 /**
@@ -180,7 +189,7 @@ export async function readBlockAsMarkdown(
   blockId: string,
   opts?: ReadBlockOptions,
 ): Promise<string> {
-  const { pageId, title, rows } = await loadBlockScope(blockId);
+  const { pageId, title, rows } = await loadBlockScope(blockId, opts?.executor);
   const markdown = await serializeRoot(
     opts?.redact ? opts.redact(rows) : rows,
     blockId,

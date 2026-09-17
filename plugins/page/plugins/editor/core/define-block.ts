@@ -383,6 +383,22 @@ export interface BlockHandle<T> {
    */
   authorFromData?(data: Partial<T>): BlockAuthor | undefined;
   /**
+   * A cross-field invariant of this type's payload that its object schema cannot
+   * state: zod 3's `.refine` turns a `ZodObject` into a `ZodEffects`, which has
+   * no `.shape` and no `.strict()`, and both are read off `schema` (the text-
+   * bearing derivation, the write boundary's strict parse, the markdown
+   * spelling validation). So the object stays the schema and the invariant rides
+   * beside it.
+   *
+   * Applied by {@link parse} and {@link safeParse} (so a markdown parse refuses a
+   * payload that breaks it) and by the server's `parseBlockData` (so the write
+   * boundary 400s on one). The one declarer today is `page`, whose kinds —
+   * agent-authored page, instructions page — are mutually exclusive.
+   *
+   * Declared in METHOD syntax for the bivariance reason `text` gives.
+   */
+  refine?(data: T, ctx: z.RefinementCtx): void;
+  /**
    * Enter-split behavior. By default a block splits into a sibling of the same
    * type. A block with this set instead nests the split-off content as its FIRST
    * CHILD *when it is currently expanded* (a collapsed block still splits into a
@@ -451,9 +467,16 @@ export function defineBlock<
   wrapOnConvert?: true;
   splitChildWhenExpanded?: { childType: string };
   authorFromData?(data: Partial<z.infer<S>>): BlockAuthor | undefined;
+  refine?(data: z.infer<S>, ctx: z.RefinementCtx): void;
 }): BlockHandle<z.infer<S>> & TextLens<S> & { anchor: A } {
   // Computed once at definition: text-bearing-ness is a fact of the schema.
   const acceptsText = "text" in opts.schema.shape;
+  // The schema `parse`/`safeParse` run: the object plus its cross-field
+  // invariant, when the type declares one (see `BlockHandle.refine`).
+  const refine = opts.refine;
+  const checked = refine
+    ? opts.schema.superRefine((data, ctx) => refine(data, ctx))
+    : opts.schema;
   const handle: BlockHandle<z.infer<S>> = {
     type: opts.type,
     schema: opts.schema,
@@ -464,8 +487,11 @@ export function defineBlock<
       ? (data) => runsOf((data as { text?: unknown }).text)
       : undefined,
     markdown: opts.markdown,
-    parse: (data) => opts.schema.parse(data),
-    safeParse: (data) => opts.schema.safeParse(data),
+    parse: (data) => checked.parse(data) as z.infer<S>,
+    safeParse: (data) =>
+      checked.safeParse(data) as
+        | { success: true; data: z.infer<S> }
+        | { success: false; error: z.ZodError },
     label: opts.label,
     defaultText: opts.defaultText,
     icon: opts.icon,
@@ -493,6 +519,7 @@ export function defineBlock<
     wrapOnConvert: opts.wrapOnConvert,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
     authorFromData: opts.authorFromData,
+    refine: opts.refine,
   };
   // Neither intersection can be proved from the value, and each states a fact
   // already established above. `TextLens<S>`: the runtime `text` presence tracks

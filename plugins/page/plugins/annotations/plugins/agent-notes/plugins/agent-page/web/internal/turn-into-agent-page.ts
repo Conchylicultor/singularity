@@ -6,7 +6,7 @@ import { agentPageTitle } from "./title";
 /**
  * `/agent-page`: turn the caret's line into an agent-authored page, in place —
  * the same atomic server op as "Turn into → Page", with the page marked
- * `author: "agent"` at birth. The server's turn-into-page is the one place a
+ * `author: "agent"` at birth (`kind: agent-page`). The server's turn-into-page is the one place a
  * page's author is chosen; every later data write keeps it.
  *
  * The line's own words become the title, exactly as "Turn into → Page" makes a
@@ -30,7 +30,7 @@ export async function turnIntoAgentPage(
     {
       body: {
         title: agentPageTitle(text),
-        author: "agent",
+        kind: { kind: "agent-page" },
         seedChild: {
           type: textBlock.type,
           data: textBlock.schema.parse({ text: [] }),

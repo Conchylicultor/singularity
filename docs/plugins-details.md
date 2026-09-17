@@ -2747,12 +2747,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `defineHistorySource('pages')`
               - `defineJob('pages.history.snapshot')`
               - `defineJob('pages.history.schedule')`
-        - **`page-author`** — Agent-page toggle in the page-detail header: pressed and blue on an agent-authored page, it flips the open page between agent-authored (agents may write all of it) and an ordinary page.
+        - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
-            - Contributes: `PageDetail.HeaderActions` → `PageAuthorToggle`
+            - Contributes: `PageDetail.HeaderActions` → `PageKindControl`
             - Uses:
               - `apps/pages/page-tree.PageDetail`
               - `infra/endpoints.useEndpointMutation`
+              - `primitives/css/control-panel.ControlPanel`
+              - `primitives/css/control-panel.ControlPanelPopover`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSize`
               - `primitives/css/ui-kit.useControlSize`
@@ -11443,7 +11445,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - `infra/query-resource`
       - `infra/retention`
       - `infra/trash`
+      - `page/annotations/agent-access`
       - `page/annotations/agent-notes/authorship`
+      - `page/annotations/instructions`
       - `page/annotations/todo/task-link`
       - `page/attachment-block`
       - `page/block-text-write`
@@ -17182,6 +17186,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `integrations/hooktheory`
           - `page/annotations/agent-access`
           - `page/annotations/agent-notes/agent-page`
+          - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`
           - `page/bookmark`
           - `page/editor`
@@ -18205,6 +18210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `tasks`
       - Server:
         - Exports (types):
+          - `McpInstructions`
           - `McpTool`
           - `McpToolContext`
           - `McpToolResult`
@@ -18575,6 +18581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/jobs/supervised-job`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/instructions`
           - `page/annotations/todo/task-link`
           - `primitives/usage-rank`
           - `reports`
@@ -19386,7 +19393,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`page`** — Block-based page editor.
   - Plugins:
-    - **`annotations`** — Umbrella for the page editor's annotation containers — the party-scoped boxes that carry the human↔agent side-channel of a page: human notes, agent notes, private notes, TODO.
+    - **`annotations`** — The annotation family's server-side reading of its audience axis: humanAudienceTypes(), the block types withheld from agents, read off the Editor.BlockData registry at call time.
+      - Server:
+        - Uses: `page/editor.Editor`
+        - Exports (values): `humanAudienceTypes`
       - Core:
         - Uses:
           - `page/container.ContainerBlockOptions`
@@ -19398,17 +19408,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports (values): `defineAnnotationBlock`
       - Cross-plugin:
         - Imported by:
+          - `page/annotations/agent-access`
           - `page/annotations/agent-notes`
           - `page/annotations/human-notes`
+          - `page/annotations/instructions`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
       - Plugins:
         - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
           - Server:
             - Uses:
+              - `database.db`
+              - `database.DbExecutor`
               - `infra/endpoints.HttpError`
               - `infra/mcp.Mcp`
+              - `page/annotations.humanAudienceTypes`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
+              - `page/annotations/instructions.globalInstructions`
+              - `page/annotations/instructions.instructionsInScope`
+              - `page/annotations/instructions.markInstructionsDelivered`
+              - `page/annotations/instructions.RenderedInstructions`
+              - `page/annotations/instructions.renderForDelivery`
+              - `page/annotations/instructions.renderInstructions`
               - `page/editor.Editor`
               - `page/editor.renamePage`
               - `page/editor.StoredBlock`
@@ -19417,10 +19438,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `page/markdown-apply.loadBlockScope`
               - `page/markdown-apply.readBlockAsMarkdown`
               - `page/markdown-apply.serverMarkdownContext`
+              - `primitives/log-channels.defineLogSink`
             - Register:
               - `mcpTool('read_page')`
               - `mcpTool('write_agent_note')`
               - `mcpTool('edit_page')`
+              - `mcpInstructions('page-instructions')`
         - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -19514,6 +19537,62 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports (values):
               - `humanNotesBlock`
               - `humanNotesDataSchema`
+        - **`instructions`** — Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume.
+          - Web:
+            - Contributes:
+              - `Editor.Block` "instructions" → `ContainerNoRow`
+              - `Editor.BlockFrame` "instructions" → `InstructionsFrame`
+            - Uses:
+              - `page/container.ContainerBackdrop`
+              - `page/container.ContainerCornerLabel`
+              - `page/container.ContainerNoRow`
+              - `page/editor.Editor`
+              - `primitives/css/control-panel.ControlPanel`
+          - Server:
+            - Contributes: `page.block-data` "instructions"
+            - Uses:
+              - `database.db`
+              - `database.DbExecutor`
+              - `infra/retention.defineRetention`
+              - `page/annotations.humanAudienceTypes`
+              - `page/editor._blocks`
+              - `page/editor.Editor`
+              - `page/markdown-apply.readBlockAsMarkdown`
+            - DB schema: `plugins/page/plugins/annotations/plugins/instructions/server/internal/tables.ts`
+            - Exports (types):
+              - `InstructionsDelivery`
+              - `InstructionsRef`
+              - `RenderedInstructions`
+            - Exports (values):
+              - `_pageInstructionsDeliveries`
+              - `globalInstructions`
+              - `instructionsContentHash`
+              - `instructionsInScope`
+              - `markInstructionsDelivered`
+              - `renderForDelivery`
+              - `renderInstructions`
+            - Register: `defineJob('retention.page_instructions_deliveries')`
+          - Core:
+            - Uses: `page/annotations.defineAnnotationBlock`
+            - Exports (types): `InstructionsData`
+            - Exports (values):
+              - `instructionsBlock`
+              - `instructionsDataSchema`
+          - Cross-plugin:
+            - Imported by: `page/annotations/agent-access`
+          - Plugins:
+            - **`instructions-page`** — Instructions pages in the page editor: a sub-page whose data marks it `instructions: true` is tinted with the instructions card's wash wherever it is referenced (its row in the parent page, the Pages sidebar), carries a Global chip when it reaches every conversation, and can be made from the caret's line with `/instructions page`. Declares no block type — the page is an ordinary `page` row.
+              - Web:
+                - Contributes:
+                  - `PageReference.Decoration` → `InstructionsPageChip`
+                  - `Editor.InsertAction` "Instructions page"
+                - Uses:
+                  - `infra/endpoints.fetchEndpoint`
+                  - `page/editor.Editor`
+                  - `page/page-reference.PageReference`
+                  - `primitives/css/badge.Badge`
+                  - `primitives/live-state.useResource`
+                  - `primitives/loading.Loading`
         - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -19871,6 +19950,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations`
           - `page/annotations/agent-notes`
           - `page/annotations/human-notes`
+          - `page/annotations/instructions`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
           - `page/callout`
@@ -19900,11 +19980,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots:
-          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
-          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
+          - `Editor.Block` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.place`, `page.prompt.block`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`
+          - `Editor.BlockFrame` ← `page.annotations.agent-notes`, `page.annotations.human-notes`, `page.annotations.instructions`, `page.annotations.private-notes`, `page.annotations.todo`, `page.callout`, `page.quote`
           - `Editor.TurnInto` ← `page.turn-into-page`
           - `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-          - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.turn-into-page`
+          - `Editor.InsertAction` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`, `page.turn-into-page`
         - Uses:
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpoint`
@@ -20154,7 +20234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `DELETE /api/blocks/:id`
           - `POST /api/blocks/:id/move`
           - `POST /api/blocks/:id/turn-into-page`
-          - `POST /api/blocks/:id/page-author`
+          - `POST /api/blocks/:id/page-kind`
           - `POST /api/pages/:pageId/blocks/op`
           - `POST /api/pages/:pageId/blocks/patch`
       - Core:
@@ -20211,13 +20291,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `MoveBlockBody`
           - `PageCover`
           - `PageData`
+          - `PageKind`
           - `PageRow`
           - `PageSource`
           - `RichText`
           - `RowData`
           - `RunsXmlTextOptions`
           - `SerializedBlock`
-          - `SetPageAuthorBody`
+          - `SetPageKindBody`
           - `SoftBreaks`
           - `TextBearingSchema`
           - `TextData`
@@ -20282,6 +20363,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `PageCoverSchema`
           - `pageData`
           - `PageDataSchema`
+          - `pageKindOf`
+          - `PageKindSchema`
           - `PageRowSchema`
           - `PAGES_TRASH_SOURCE`
           - `pageSourcesOf`
@@ -20303,13 +20386,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `runsOfNode`
           - `runsToLexical`
           - `runsToXmlText`
+          - `samePageKind`
           - `semanticsAttrs`
           - `serializeBlockRuns`
           - `SerializedBlockSchema`
           - `serializeForestToMarkdown`
           - `serializeInlineMarkdown`
-          - `setPageAuthor`
-          - `SetPageAuthorBodySchema`
+          - `setPageKind`
+          - `SetPageKindBodySchema`
           - `sortMarks`
           - `splitRuns`
           - `SvgNodeSchema`
@@ -20327,6 +20411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `visibleChildRule`
           - `withContainersSelected`
           - `withMintedIds`
+          - `withPageKind`
           - `withPasteIds`
           - `withRuns`
           - `writtenIds`
@@ -20353,6 +20438,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `page/annotations/agent-notes/agent-page`
           - `page/annotations/agent-notes/authorship`
           - `page/annotations/human-notes`
+          - `page/annotations/instructions`
+          - `page/annotations/instructions/instructions-page`
           - `page/annotations/private-notes`
           - `page/annotations/todo`
           - `page/annotations/todo/task-link`
@@ -20802,6 +20889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses:
           - `database.db`
+          - `database.DbExecutor`
           - `infra/endpoints.HttpError`
           - `page/block-text-write.writeBlockTexts`
           - `page/editor.applyPageBlockPatch`
@@ -20878,6 +20966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by:
           - `page/annotations/agent-access`
+          - `page/annotations/instructions`
           - `page/annotations/todo/task-link`
     - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
       - Plugins:
@@ -20999,7 +21088,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots:
           - `PageReference.Actions` ← `page.page-reference.open-aside`
-          - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
+          - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`
         - Uses:
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/slot-render.renderIsolated`
@@ -21020,6 +21109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by:
           - `apps/pages/page-tree`
           - `page/annotations/agent-notes/agent-page`
+          - `page/annotations/instructions/instructions-page`
           - `page/inline-page-link`
           - `page/links`
           - `page/page-link`
@@ -22850,6 +22940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `fields/tags/inline`
               - `fields/tags/table`
               - `infra/events-test`
+              - `page/annotations/instructions/instructions-page`
               - `page/editor`
               - `page/place`
               - `plugin-meta/facets/exports/render-contributions`
@@ -23269,6 +23360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `apps-core/surface`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/settings`
+              - `apps/pages/page-author`
               - `apps/pages/page-tree`
               - `apps/sonata/audio/metronome`
               - `apps/sonata/piano-roll`
@@ -23278,6 +23370,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - `conversations/conversation-category`
               - `fields/date/filter`
               - `fullscreen`
+              - `page/annotations/instructions`
               - `page/callout`
               - `page/container`
               - `page/editor`
@@ -27642,6 +27735,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/query-resource`
           - `infra/trash`
           - `page/annotations/agent-notes/authorship`
+          - `page/annotations/instructions/instructions-page`
           - `page/annotations/todo/task-link`
           - `page/editor`
           - `page/editor-collab`
@@ -27799,6 +27893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `history/dialog`
           - `layouts/route-fallback`
           - `page/annotations/agent-notes/agent-page`
+          - `page/annotations/instructions/instructions-page`
           - `page/bookmark`
           - `page/editor`
           - `page/inline-page-link`
@@ -27935,6 +28030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - `infra/host/duress`
           - `infra/jobs`
           - `infra/worktree/removal-audit`
+          - `page/annotations/agent-access`
           - `primitives/live-state`
           - `release`
           - `reports/render-loop`

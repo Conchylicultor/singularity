@@ -87,7 +87,7 @@ carrying the same actions — a separate feature.
 - Web:
   - Slots:
     - `PageReference.Actions` ← `page.page-reference.open-aside`
-    - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`
+    - `PageReference.Decoration` ← `page.annotations.agent-notes.agent-page`, `page.annotations.instructions.instructions-page`
   - Uses:
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/slot-render.renderIsolated`
@@ -108,6 +108,7 @@ carrying the same actions — a separate feature.
   - Imported by:
     - `apps/pages/page-tree`
     - `page/annotations/agent-notes/agent-page`
+    - `page/annotations/instructions/instructions-page`
     - `page/inline-page-link`
     - `page/links`
     - `page/page-link`

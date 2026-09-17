@@ -345,6 +345,7 @@ they describe.
     - `page/annotations`
     - `page/annotations/agent-notes`
     - `page/annotations/human-notes`
+    - `page/annotations/instructions`
     - `page/annotations/private-notes`
     - `page/annotations/todo`
     - `page/callout`

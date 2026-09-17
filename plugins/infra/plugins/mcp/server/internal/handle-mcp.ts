@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { isInitializeBody, renderInstructions } from "./instructions";
 import { registry } from "./registry";
 
 export async function handleMcpRequest(
@@ -11,10 +12,19 @@ export async function handleMcpRequest(
     return new Response("Missing conversationId", { status: 400 });
   }
 
-  const server = new McpServer({
-    name: "singularity",
-    version: "0.0.1",
-  });
+  // Server instructions only ride the initialize result, so only initialize
+  // pays for rendering them. A throwing contribution fails initialize loudly.
+  const instructions = (await isInitializeBody(req))
+    ? await renderInstructions({ conversationId })
+    : undefined;
+
+  const server = new McpServer(
+    {
+      name: "singularity",
+      version: "0.0.1",
+    },
+    { instructions },
+  );
 
   for (const tool of registry.values()) {
     server.registerTool(

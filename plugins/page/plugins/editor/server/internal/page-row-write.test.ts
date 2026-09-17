@@ -1,6 +1,6 @@
 /**
  * Real-DB suite for the two page-row writes that are not the header's own
- * `PATCH` — `setPageAuthorOf` (the author toggle) and `renamePage` (an agent's
+ * `PATCH` — `setPageKindOf` (the kind control) and `renamePage` (an agent's
  * rename) — driven against a throwaway Postgres (db-test-fixture) with the REAL
  * migration chain, as `handle-patch-blocks.test.ts` is.
  *
@@ -38,7 +38,7 @@ import { _blocks } from "./tables";
 import { Editor } from "./block-registry";
 import { parseBlockData } from "./parse-block-data";
 import { deleteBlocksSubtree } from "./trash-blocks";
-import { setPageAuthorOf } from "./handle-set-page-author";
+import { setPageKindOf } from "./handle-set-page-kind";
 import { renamePage } from "./rename-page";
 
 // Stand-in for `page/text` (the concrete block plugin imports this one, so
@@ -78,6 +78,9 @@ beforeEach(async () => {
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+
+const PAGE = { kind: "page" } as const;
+const AGENT_PAGE = { kind: "agent-page" } as const;
 
 /** A cover, so "every other key is carried" is checked on a nested value too. */
 const COVER = { type: "gradient", preset: "sunset" } as const;
@@ -169,14 +172,14 @@ async function refusedWith(
   throw new Error(`expected an HTTP ${status}`);
 }
 
-// ── setPageAuthorOf ────────────────────────────────────────────────────────
+// ── setPageKindOf ──────────────────────────────────────────────────────────
 
-describe("setPageAuthorOf — the author toggle", () => {
+describe("setPageKindOf — the kind control", () => {
   test("human → agent writes the marker, carries every other key, and announces once", async () => {
     await seed();
     const before = await row("SUB");
 
-    const block = await setPageAuthorOf("SUB", "agent", t.db);
+    const block = await setPageKindOf("SUB", AGENT_PAGE, t.db);
 
     const expected = {
       title: "Notes",
@@ -201,7 +204,7 @@ describe("setPageAuthorOf — the author toggle", () => {
   test("agent → human removes the key, and announces once", async () => {
     await seed();
 
-    await setPageAuthorOf("AGENT", "human", t.db);
+    await setPageKindOf("AGENT", PAGE, t.db);
 
     const data = await storedData("AGENT");
     expect(data).toEqual({ title: "Findings", icon: null });
@@ -214,8 +217,8 @@ describe("setPageAuthorOf — the author toggle", () => {
     const agentBefore = await row("AGENT");
     const humanBefore = await row("SUB");
 
-    const agent = await setPageAuthorOf("AGENT", "agent", t.db);
-    const human = await setPageAuthorOf("SUB", "human", t.db);
+    const agent = await setPageKindOf("AGENT", AGENT_PAGE, t.db);
+    const human = await setPageKindOf("SUB", PAGE, t.db);
 
     // Byte-for-byte the same rows, `updated_at` included.
     expect(await row("AGENT")).toEqual(agentBefore);
@@ -227,8 +230,8 @@ describe("setPageAuthorOf — the author toggle", () => {
 
   test("a flip there and back is two writes, and lands where it started", async () => {
     await seed();
-    await setPageAuthorOf("SUB", "agent", t.db);
-    await setPageAuthorOf("SUB", "human", t.db);
+    await setPageKindOf("SUB", AGENT_PAGE, t.db);
+    await setPageKindOf("SUB", PAGE, t.db);
     expect(await storedData("SUB")).toEqual({
       title: "Notes",
       icon: "rocket",
@@ -238,7 +241,7 @@ describe("setPageAuthorOf — the author toggle", () => {
 
   test("a top-level page can be flipped too — its only announcement is its own id", async () => {
     await seed();
-    await setPageAuthorOf("P", "agent", t.db);
+    await setPageKindOf("P", AGENT_PAGE, t.db);
     expect(await storedData("P")).toEqual({
       title: "P",
       icon: null,
@@ -250,18 +253,71 @@ describe("setPageAuthorOf — the author toggle", () => {
 
   test("a non-page row is a 400; an unknown or trashed one a 404 — and nothing is written", async () => {
     await seed();
-    await refusedWith(setPageAuthorOf("c1", "agent", t.db), 400);
-    await refusedWith(setPageAuthorOf("nope", "agent", t.db), 404);
+    await refusedWith(setPageKindOf("c1", AGENT_PAGE, t.db), 400);
+    await refusedWith(setPageKindOf("nope", AGENT_PAGE, t.db), 404);
 
     await deleteBlocksSubtree(["SUB"], t.db);
     await t.db.execute(sql`DELETE FROM event_emissions`);
-    await refusedWith(setPageAuthorOf("SUB", "agent", t.db), 404);
+    await refusedWith(setPageKindOf("SUB", AGENT_PAGE, t.db), 404);
     expect(await storedData("SUB")).toEqual({
       title: "Notes",
       icon: "rocket",
       cover: COVER,
     });
     expect(await announced()).toEqual([]);
+  });
+});
+
+describe("setPageKindOf — instructions pages", () => {
+  test("page → instructions (global) writes both keys and keeps the rest", async () => {
+    await seed();
+    const block = await setPageKindOf(
+      "SUB",
+      { kind: "instructions", global: true },
+      t.db,
+    );
+    const expected = {
+      title: "Notes",
+      icon: "rocket",
+      cover: COVER,
+      instructions: true,
+      global: true,
+    };
+    expect(await storedData("SUB")).toEqual(expected);
+    expect(block.data).toEqual(expected);
+  });
+
+  test("agent page → instructions drops the author: the kinds are exclusive", async () => {
+    await seed();
+    await setPageKindOf("AGENT", { kind: "instructions", global: false }, t.db);
+    expect(await storedData("AGENT")).toEqual({
+      title: "Findings",
+      icon: null,
+      instructions: true,
+    });
+  });
+
+  test("toggling global is a write; the same kind again is a no-op", async () => {
+    await seed();
+    await setPageKindOf("SUB", { kind: "instructions", global: false }, t.db);
+    await setPageKindOf("SUB", { kind: "instructions", global: true }, t.db);
+    expect(await storedData("SUB")).toMatchObject({ global: true });
+    await t.db.execute(sql`DELETE FROM event_emissions`);
+    const before = await row("SUB");
+    await setPageKindOf("SUB", { kind: "instructions", global: true }, t.db);
+    expect(await row("SUB")).toEqual(before);
+    expect(await announced()).toEqual([]);
+  });
+
+  test("instructions → page removes every kind key", async () => {
+    await seed();
+    await setPageKindOf("SUB", { kind: "instructions", global: true }, t.db);
+    await setPageKindOf("SUB", PAGE, t.db);
+    expect(await storedData("SUB")).toEqual({
+      title: "Notes",
+      icon: "rocket",
+      cover: COVER,
+    });
   });
 });
 
@@ -322,7 +378,7 @@ describe("renamePage — an agent's rename", () => {
     await seed();
     // The tool decided "agent page, so this is a rename"; the human flips it
     // before the rename's write.
-    await setPageAuthorOf("AGENT", "human", t.db);
+    await setPageKindOf("AGENT", PAGE, t.db);
     await refusedWith(
       renamePage("AGENT", "Too late", { requireAuthor: "agent" }, t.db),
       409,

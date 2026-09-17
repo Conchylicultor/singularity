@@ -7,7 +7,7 @@ import { pageBlockHandle } from "../../core/schemas";
 import { Editor, resolveBlockHandle } from "./block-registry";
 import {
   parseBlockData,
-  reauthorPageData,
+  rekindPageData,
   rewriteBlockData,
 } from "./parse-block-data";
 
@@ -174,7 +174,7 @@ test("a void type with an injected string text key is still a 400", () => {
 // /api/blocks/:id`, history restore — refuses the same thing here: a data write
 // that changes whose words the row holds. The row that decides it per row today
 // is a page (`data.author === "agent"`), and its author changes only through
-// `reauthorPageData`, below.
+// `rekindPageData`, below.
 
 function registerPage(): void {
   collectContributions([
@@ -267,10 +267,10 @@ test("it still validates like parseBlockData — a malformed payload is a 400", 
   );
 });
 
-// ── reauthorPageData: the author change, and nothing else ────────────────────
+// ── rekindPageData: the kind change, and nothing else ────────────────────────
 //
-// The brand's other minter — the whole write of `setPageAuthor`. It takes no
-// payload, only the stored row and the author to give it, so the flip cannot
+// The brand's other minter — the whole write of `setPageKind`. It takes no
+// payload, only the stored row and the kind to give it, so the flip cannot
 // carry any other edit.
 
 /** A page carrying every optional key, so "verbatim" is a real check. */
@@ -287,19 +287,21 @@ const decoratedPage = {
 test("human → agent writes the marker and copies every other key verbatim", () => {
   registerPage();
   expect(
-    asRecord(reauthorPageData({ before: decoratedPage, author: "agent" })),
+    asRecord(
+      rekindPageData({ before: decoratedPage, kind: { kind: "agent-page" } }),
+    ),
   ).toEqual({ ...decoratedPage.data, author: "agent" });
 });
 
 test("agent → human REMOVES the key rather than writing a value", () => {
   registerPage();
   const data = asRecord(
-    reauthorPageData({
+    rekindPageData({
       before: {
         type: "page",
         data: { ...decoratedPage.data, author: "agent" },
       },
-      author: "human",
+      kind: { kind: "page" },
     }),
   );
   expect(data).toEqual(decoratedPage.data);
@@ -309,10 +311,12 @@ test("agent → human REMOVES the key rather than writing a value", () => {
 test("setting the author a page already has is an identity on its data", () => {
   registerPage();
   expect(
-    asRecord(reauthorPageData({ before: agentPage, author: "agent" })),
+    asRecord(
+      rekindPageData({ before: agentPage, kind: { kind: "agent-page" } }),
+    ),
   ).toEqual(agentPage.data);
   expect(
-    asRecord(reauthorPageData({ before: humanPage, author: "human" })),
+    asRecord(rekindPageData({ before: humanPage, kind: { kind: "page" } })),
   ).toEqual(humanPage.data);
 });
 
@@ -320,31 +324,119 @@ test("a non-page row is refused (400), never written", () => {
   registerPage();
   expectStatus(
     () =>
-      reauthorPageData({
+      rekindPageData({
         before: { type: "__note__", data: { title: "x", pinned: false } },
-        author: "agent",
+        kind: { kind: "agent-page" },
       }),
     400,
   );
 });
 
 test("the flip still cannot ride a data edit — rewriteBlockData refuses it both ways", () => {
-  // The pair keeps the two changes apart: what `reauthorPageData` produces is
+  // The pair keeps the two changes apart: what `rekindPageData` produces is
   // exactly what a data edit may NOT say.
   registerPage();
   const flipped = asRecord(
-    reauthorPageData({ before: humanPage, author: "agent" }),
+    rekindPageData({ before: humanPage, kind: { kind: "agent-page" } }),
   );
   expectStatus(
     () => rewriteBlockData({ type: "page", before: humanPage, next: flipped }),
     409,
   );
   const unflipped = asRecord(
-    reauthorPageData({ before: agentPage, author: "human" }),
+    rekindPageData({ before: agentPage, kind: { kind: "page" } }),
   );
   expectStatus(
     () =>
       rewriteBlockData({ type: "page", before: agentPage, next: unflipped }),
     409,
   );
+});
+
+// ── instructions pages: a third kind, exclusive with the agent's ─────────────
+
+const instructionsPage = {
+  type: "page",
+  data: { title: "Track rules", icon: null, instructions: true },
+};
+
+test("turning a human's page into an instructions page by a data edit is a 409", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      rewriteBlockData({
+        type: "page",
+        before: humanPage,
+        next: { ...humanPage.data, instructions: true },
+      }),
+    409,
+  );
+});
+
+test("dropping `instructions` by a data edit is a 409 too", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      rewriteBlockData({
+        type: "page",
+        before: instructionsPage,
+        next: { title: "Track rules", icon: null },
+      }),
+    409,
+  );
+});
+
+test("a title edit on an instructions page carries the marker and passes", () => {
+  registerPage();
+  expect(
+    asRecord(
+      rewriteBlockData({
+        type: "page",
+        before: instructionsPage,
+        next: { ...instructionsPage.data, title: "Renamed" },
+      }),
+    ),
+  ).toEqual({ ...instructionsPage.data, title: "Renamed" });
+});
+
+test("an agent page that is also an instructions page is refused at the boundary (400)", () => {
+  registerPage();
+  expectStatus(
+    () =>
+      parseBlockData("page", {
+        title: "x",
+        icon: null,
+        author: "agent",
+        instructions: true,
+      }),
+    400,
+  );
+});
+
+test("`global` without `instructions` is refused at the boundary (400)", () => {
+  registerPage();
+  expectStatus(
+    () => parseBlockData("page", { title: "x", icon: null, global: true }),
+    400,
+  );
+});
+
+test("rekind to instructions replaces the author and writes `global` only when true", () => {
+  registerPage();
+  expect(
+    asRecord(
+      rekindPageData({
+        before: agentPage,
+        kind: { kind: "instructions", global: false },
+      }),
+    ),
+  ).toEqual({ title: "Findings", icon: null, instructions: true });
+  expect(
+    asRecord(
+      rekindPageData({
+        before: humanPage,
+        kind: { kind: "instructions", global: true },
+      }),
+    ),
+  ).toEqual({ ...humanPage.data, instructions: true, global: true });
 });

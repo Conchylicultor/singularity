@@ -3424,6 +3424,14 @@
       "name": "@singularity/plugin-page-annotations-human-notes",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/annotations/plugins/instructions": {
+      "name": "@singularity/plugin-page-annotations-instructions",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/annotations/plugins/instructions/plugins/instructions-page": {
+      "name": "@singularity/plugin-page-annotations-instructions-instructions-page",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/annotations/plugins/private-notes": {
       "name": "@singularity/plugin-page-annotations-private-notes",
       "version": "0.0.1",
@@ -7641,6 +7649,10 @@
     "@singularity/plugin-page-annotations-agent-notes-authorship": ["@singularity/plugin-page-annotations-agent-notes-authorship@workspace:plugins/page/plugins/annotations/plugins/agent-notes/plugins/authorship"],
 
     "@singularity/plugin-page-annotations-human-notes": ["@singularity/plugin-page-annotations-human-notes@workspace:plugins/page/plugins/annotations/plugins/human-notes"],
+
+    "@singularity/plugin-page-annotations-instructions": ["@singularity/plugin-page-annotations-instructions@workspace:plugins/page/plugins/annotations/plugins/instructions"],
+
+    "@singularity/plugin-page-annotations-instructions-instructions-page": ["@singularity/plugin-page-annotations-instructions-instructions-page@workspace:plugins/page/plugins/annotations/plugins/instructions/plugins/instructions-page"],
 
     "@singularity/plugin-page-annotations-private-notes": ["@singularity/plugin-page-annotations-private-notes@workspace:plugins/page/plugins/annotations/plugins/private-notes"],
 

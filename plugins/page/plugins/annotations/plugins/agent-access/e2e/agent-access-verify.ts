@@ -40,7 +40,7 @@
 //      `write_agent_note` on the page's own id reach its whole content. The page
 //      is stamped with the creating conversation, and carries NO agent-origin
 //      marker (the 24h e2e sweep must never see it). An empty agent page a human
-//      inserts (`turn-into-page` with `author: "agent"`) is stamped by its first
+//      inserts (`turn-into-page` with `kind: agent-page`) is stamped by its first
 //      writer. Every refusal — a pointer given a body or an extra attribute, a
 //      pointer claiming a human's page is the agent's, renaming a HUMAN's page
 //      through its `# Title` line, a PATCH flipping the marker — leaves both
@@ -50,8 +50,17 @@
 //      title changes, the result says `renamed_to`, the page's content is not
 //      touched, and the parent's pointer follows. A formatted title is refused
 //      with nothing written. Flipped to the human's with the header toggle's
-//      endpoint (`POST /api/blocks/:id/page-author`), the same rename is refused
+//      endpoint (`POST /api/blocks/:id/page-kind`), the same rename is refused
 //      and so is a body write; flipped back, writes are accepted again.
+// P11. **Instructions** (`research/2026-09-17-page-agent-instructions.md`). A
+//      Tracks page holding an instructions page, and a Track page beside it:
+//      `read_page` on the Track opens with a `<received-instructions>` block
+//      carrying the rules, and a second read does not. A conversation that never
+//      read them has its `write_agent_note` refused with the rules in the
+//      message and nothing written, and the retry goes through. Once the rules
+//      are edited, both conversations get them again: the writer is refused
+//      once more, and the reader's next read carries them. An MCP `initialize`
+//      carries the page-instructions section.
 //
 // Engine, through the notes-only surface:
 //  E1. Every prose block on the page keeps its id across a write — which is what
@@ -141,8 +150,12 @@ interface ToolCall {
  * ABOUT refusals, and a refusal that reads as a transport failure would be
  * indistinguishable from the tool not existing.
  */
-async function callTool(name: string, args: unknown): Promise<ToolCall> {
-  const res = await agentFetch(`/api/mcp/${CONVERSATION}`, {
+async function callTool(
+  name: string,
+  args: unknown,
+  conversation: string = CONVERSATION,
+): Promise<ToolCall> {
+  const res = await agentFetch(`/api/mcp/${conversation}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -180,8 +193,12 @@ async function callTool(name: string, args: unknown): Promise<ToolCall> {
 }
 
 /** A tool call that must succeed; its text, or a bail. */
-async function mustCall(name: string, args: unknown): Promise<string> {
-  const call = await callTool(name, args);
+async function mustCall(
+  name: string,
+  args: unknown,
+  conversation: string = CONVERSATION,
+): Promise<string> {
+  const call = await callTool(name, args, conversation);
   if (!call.ok) return await bail(`${name} succeeds`, call.text);
   return call.text;
 }
@@ -203,8 +220,12 @@ interface ApplySummary {
 }
 
 /** A write that must succeed, with its summary parsed. */
-async function mustWrite(name: string, args: unknown): Promise<ApplySummary> {
-  return JSON.parse(await mustCall(name, args)) as ApplySummary;
+async function mustWrite(
+  name: string,
+  args: unknown,
+  conversation: string = CONVERSATION,
+): Promise<ApplySummary> {
+  return JSON.parse(await mustCall(name, args, conversation)) as ApplySummary;
 }
 
 /** `{created, deleted, moved, text_edited}` — the four numbers a fixed point zeroes. */
@@ -420,7 +441,7 @@ async function seedSubPage(
       await call(`/api/blocks/${line.id}/turn-into-page`, {
         title: name,
         seedChild: { type: "text", data: { text: [] } },
-        ...(who === undefined ? {} : { author: who }),
+        ...(who === undefined ? {} : { kind: { kind: "agent-page" } }),
       });
       return line.id;
     },
@@ -448,7 +469,7 @@ async function patchBlockStatus(
 }
 
 /**
- * `POST /api/blocks/:id/page-author` from the browser — the page header's
+ * `POST /api/blocks/:id/page-kind` from the browser — the page header's
  * agent-page toggle, and the one way a page's author changes after it is born.
  * The HTTP status it answered.
  *
@@ -463,14 +484,88 @@ async function setPageAuthorStatus(
   return page.evaluate(
     async ({ id, who }) =>
       (
-        await fetch(`/api/blocks/${id}/page-author`, {
+        await fetch(`/api/blocks/${id}/page-kind`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ author: who }),
+          body: JSON.stringify({
+            kind: { kind: who === "agent" ? "agent-page" : "page" },
+          }),
         })
       ).status,
     { id: pageId, who: author },
   );
+}
+
+/**
+ * Make a page an instructions page (not global) through the page header's kind
+ * control. The HTTP status it answered.
+ */
+async function makeInstructionsPage(
+  page: Page,
+  pageId: string,
+): Promise<number> {
+  return page.evaluate(
+    async (id) =>
+      (
+        await fetch(`/api/blocks/${id}/page-kind`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            kind: { kind: "instructions", global: false },
+          }),
+        })
+      ).status,
+    pageId,
+  );
+}
+
+/** Add one text line at the end of a page (or block), through the write boundary. */
+async function appendLine(
+  page: Page,
+  parentId: string,
+  line: string,
+): Promise<void> {
+  await page.evaluate(
+    async ({ parent, text }) => {
+      const res = await fetch("/api/blocks", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          parentId: parent,
+          type: "text",
+          data: { text: [{ text }] },
+        }),
+      });
+      if (!res.ok)
+        throw new Error(`POST /api/blocks ${res.status}: ${await res.text()}`);
+    },
+    { parent: parentId, text: line },
+  );
+}
+
+/** The `instructions` string of an MCP `initialize` result for one conversation. */
+async function initializeInstructions(conversation: string): Promise<string> {
+  const res = await agentFetch(`/api/mcp/${conversation}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        clientInfo: { name: "agent-access-verify", version: "0.0.0" },
+      },
+    }),
+  });
+  const raw = await res.text();
+  if (!res.ok) throw new Error(`MCP initialize: HTTP ${res.status} — ${raw}`);
+  const body = JSON.parse(raw) as { result?: { instructions?: string } };
+  return body.result?.instructions ?? "";
 }
 
 /** A page row's stored `data.title` and `data.author`, read off its parent's rows. */
@@ -1266,7 +1361,7 @@ await withBrowser(async (h) => {
     );
   }
   // The marker is the page's KIND, never changed by a data edit (only the header
-  // toggle's `setPageAuthor` changes it): a PATCH restating the page's data
+  // control's `setPageKind` changes it): a PATCH restating the page's data
   // without it would hand the page back to the human.
   const flipStatus = await patchBlockStatus(page, agentPageId, {
     data: { title: AGENT_PAGE_TITLE, icon: null },
@@ -1449,6 +1544,111 @@ await withBrowser(async (h) => {
     moved: 0,
     text_edited: 1,
   });
+
+  // --- P11. instructions are delivered with a read, and gate a write ---------
+  // Two fresh conversations per run, so an earlier run's deliveries cannot make
+  // a refusal disappear.
+  const run = Date.now().toString(36);
+  const READER = `e2e-agent-access-reader-${run}`;
+  const WRITER = `e2e-agent-access-writer-${run}`;
+  const RULE = "a track is a page under Tracks";
+  const RULE_ADDED = "a track always names its owner";
+
+  const tracksId = await seedSubPage(page, pageId, "Tracks");
+  const rulesId = await seedSubPage(page, tracksId, "Track rules");
+  await appendLine(page, rulesId, RULE);
+  r.ok(
+    "P11: the kind control makes a page an instructions page",
+    (await makeInstructionsPage(page, rulesId)) === 200,
+  );
+  const trackId = await seedSubPage(page, tracksId, "A track", "agent");
+
+  const firstRead = await mustCall("read_page", { block_id: trackId }, READER);
+  r.ok(
+    "P11: read_page under the instructions opens with them",
+    firstRead.startsWith("<received-instructions>") &&
+      firstRead.includes(`id="${rulesId}"`) &&
+      firstRead.includes(RULE),
+    firstRead,
+  );
+  const secondRead = await mustCall("read_page", { block_id: trackId }, READER);
+  r.ok(
+    "P11: …and a second read does not repeat them",
+    !secondRead.includes("<received-instructions>") &&
+      secondRead.startsWith("# A track"),
+    secondRead,
+  );
+  const readerWrite = await callTool(
+    "write_agent_note",
+    { block_id: trackId, content: "reader note" },
+    READER,
+  );
+  r.ok("P11: the reader may write at once", readerWrite.ok, readerWrite.text);
+
+  const beforeRefusal = await snapshot(trackId);
+  const refused = await callTool(
+    "write_agent_note",
+    { block_id: trackId, content: "writer note" },
+    WRITER,
+  );
+  r.ok(
+    "P11: a conversation that never read them is refused, with the rules in the refusal",
+    !refused.ok &&
+      /nothing was written/.test(refused.text) &&
+      refused.text.includes(RULE),
+    refused.text,
+  );
+  r.ok(
+    "P11: …and the refusal wrote nothing",
+    snapshotDiff(beforeRefusal, await snapshot(trackId)).length === 0,
+    JSON.stringify(snapshotDiff(beforeRefusal, await snapshot(trackId))),
+  );
+  const retried = await callTool(
+    "write_agent_note",
+    { block_id: trackId, content: "writer note" },
+    WRITER,
+  );
+  r.ok("P11: …and the retry goes through", retried.ok, retried.text);
+
+  await appendLine(page, rulesId, RULE_ADDED);
+  const staleWrite = await callTool(
+    "edit_page",
+    {
+      block_id: trackId,
+      old_string: "writer note",
+      new_string: "writer note, revised",
+    },
+    WRITER,
+  );
+  r.ok(
+    "P11: edited instructions refuse the writer again, carrying the edit",
+    !staleWrite.ok && staleWrite.text.includes(RULE_ADDED),
+    staleWrite.text,
+  );
+  const staleRetry = await callTool(
+    "edit_page",
+    {
+      block_id: trackId,
+      old_string: "writer note",
+      new_string: "writer note, revised",
+    },
+    WRITER,
+  );
+  r.ok("P11: …and its retry goes through", staleRetry.ok, staleRetry.text);
+  const staleRead = await mustCall("read_page", { block_id: trackId }, READER);
+  r.ok(
+    "P11: the reader's next read carries the edited instructions",
+    staleRead.startsWith("<received-instructions>") &&
+      staleRead.includes(RULE_ADDED),
+    staleRead,
+  );
+
+  const initInstructions = await initializeInstructions(READER);
+  r.ok(
+    "P11: an MCP initialize carries the page-instructions section",
+    initInstructions.includes("## Page instructions"),
+    initInstructions,
+  );
 
   await snap(page, out, "after-notes");
   await r.finish();

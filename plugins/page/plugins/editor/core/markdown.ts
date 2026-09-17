@@ -253,6 +253,20 @@ export interface BlockTag<T> {
    */
   identified?: true;
   /**
+   * This tag only ever POINTS at an existing row: a parse of it without its
+   * reserved `id` — the tagless form, which is how a document asks for a row to
+   * be MINTED — is refused loudly, with `reason` appended to the message.
+   * Requires {@link identified} (without an id attribute there is nothing to
+   * point with), and resolution refuses the pair otherwise.
+   *
+   * It exists for a row kind only a person may create, while an agent must still
+   * be able to echo a pointer at one back through markdown: `page`'s
+   * `<instructions-page>` spelling (the human's standing instructions to agents).
+   * `serializeOnly` would be the wrong tool — it gives up the name on parse, so
+   * the echoed pointer would not read back at all.
+   */
+  pointerOnly?: { reason: string };
+  /**
    * Attribute names this tag carries whose values are supplied from OUTSIDE the
    * block's `data`, reserved in BOTH directions. It is the generalization of
    * {@link identified}, whose reserved `id` is the one such name the walk itself
@@ -447,6 +461,8 @@ interface ResolvedTag {
   serializeOnly: boolean;
   /** The reserved `id` attribute is this tag's row ref — see {@link BlockTag.identified}. */
   identified: boolean;
+  /** Why an id-less parse of this tag is refused, or null — see {@link BlockTag.pointerOnly}. */
+  pointerOnly: string | null;
   /**
    * Attribute names supplied from outside `data`, reserved both ways — see
    * {@link BlockTag.annotated}. Empty for a tag that declares none, so both the
@@ -570,6 +586,12 @@ function resolveTag(
         "row ref with the payload's. Rename the schema field; the attribute name is reserved.",
     );
   }
+  if (spec.pointerOnly !== undefined && spec.identified !== true) {
+    throw new Error(
+      `defineBlock("${h.type}"): markdown.tag.pointerOnly on <${name}> needs \`identified\` — ` +
+        "a tag that carries no row id has nothing to point with, so every parse of it would be refused.",
+    );
+  }
   const annotated = spec.annotated ?? [];
   for (const annotation of annotated) {
     // Each of the three is a name that ALREADY has a meaning on this tag, so
@@ -632,6 +654,7 @@ function resolveTag(
       : (a, inner, ctx) => derivedTagData(h, a, inner, ctx, body, preset),
     serializeOnly: preset === null && spec.serializeOnly === true,
     identified: spec.identified === true,
+    pointerOnly: spec.pointerOnly?.reason ?? null,
     annotated,
     preset,
   };
@@ -1304,6 +1327,12 @@ function claimTag(
   // never hears it, so alignment is free to re-pair a card with another card's
   // row and detach its authorship.
   const ref = tag.identified ? takeRef(open.attrs) : undefined;
+  if (tag.pointerOnly !== null && ref === undefined) {
+    throw new Error(
+      `markdown: <${open.name}> without an \`id\` would create a new one, and this tag can ` +
+        `only point at an existing row. ${tag.pointerOnly}`,
+    );
+  }
 
   // The `annotated` attributes come off here for the SAME reason and in the same
   // place: they were supplied from outside `data` on the way out, so they are not

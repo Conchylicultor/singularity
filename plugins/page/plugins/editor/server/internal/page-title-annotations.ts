@@ -1,5 +1,10 @@
-import { blockAuthorOf } from "../../core/define-block";
-import { PAGE_BLOCK_TYPE, pageBlockHandle, pageData } from "../../core/schemas";
+import { markdownTagNameOf } from "../../core/markdown";
+import {
+  PAGE_BLOCK_TYPE,
+  pageBlockHandle,
+  pageBlockMarkdown,
+  pageData,
+} from "../../core/schemas";
 
 /**
  * The `title` of every HUMAN sub-page among `rows` — the value of the annotated
@@ -13,10 +18,12 @@ import { PAGE_BLOCK_TYPE, pageBlockHandle, pageData } from "../../core/schemas";
  * means. `page-link/server` answers for the link rows; this answers for the
  * shells, whose title is simply their own.
  *
- * An agent-authored page is skipped: its `<agent-page>` spelling emits `title`
- * from `data` itself, and does not reserve the name — so supplying it here too
- * would be a loud serialize error, not a duplicate. That throw is also what
- * keeps this skip honest if the spellings ever change.
+ * Every page written under another spelling is skipped — an agent-authored
+ * `<agent-page>`, an `<instructions-page>`: those spellings emit `title` from
+ * `data` themselves and do not reserve the name, so supplying it here too would
+ * be a loud serialize error, not a duplicate. The test is "is this row written
+ * as the primary `<page>`", the serializer's own selection, so a future page
+ * kind needs no edit here; the throw keeps the skip honest.
  *
  * No query: the answer is in the rows the read already holds.
  */
@@ -26,7 +33,12 @@ export function resolvePageTitleAnnotations(
   const byBlock = new Map<string, Record<string, string>>();
   for (const row of rows) {
     if (row.type !== PAGE_BLOCK_TYPE) continue;
-    if (blockAuthorOf(pageBlockHandle, row.data) === "agent") continue;
+    if (
+      markdownTagNameOf(pageBlockHandle, row.data) !==
+      (pageBlockMarkdown.tag?.name ?? PAGE_BLOCK_TYPE)
+    ) {
+      continue;
+    }
     byBlock.set(row.id, { title: pageData(row).title });
   }
   return Promise.resolve(byBlock);

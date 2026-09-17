@@ -1,4 +1,4 @@
-// @hash 03bf40503ad8
+// @hash 1a3493eca9ad
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   "items": [
     "page.annotations.agent-notes:agent-note",
     "page.annotations.human-notes:context",
+    "page.annotations.instructions:instructions",
     "page.annotations.private-notes:private-note",
     "page.annotations.todo:todo",
     "page.audio:audio",

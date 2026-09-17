@@ -308,7 +308,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `infra/query-resource`
     - `infra/retention`
     - `infra/trash`
+    - `page/annotations/agent-access`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/instructions`
     - `page/annotations/todo/task-link`
     - `page/attachment-block`
     - `page/block-text-write`

@@ -2,6 +2,10 @@ export {
   BlockSchema,
   PageRowSchema,
   PageDataSchema,
+  PageKindSchema,
+  pageKindOf,
+  samePageKind,
+  withPageKind,
   PageCoverSchema,
   SvgNodeSchema,
   PAGE_BLOCK_TYPE,
@@ -12,7 +16,14 @@ export {
   pageBlockMarkdown,
   pageBlockAuthor,
 } from "./schemas";
-export type { Block, PageRow, PageData, PageCover, BlockData } from "./schemas";
+export type {
+  Block,
+  PageRow,
+  PageData,
+  PageKind,
+  PageCover,
+  BlockData,
+} from "./schemas";
 
 export { pagesResource, blocksResource } from "./resources";
 
@@ -26,14 +37,14 @@ export {
   deleteBlock,
   moveBlock,
   turnIntoPage,
-  setPageAuthor,
+  setPageKind,
   applyBlockOpEndpoint,
   patchBlocks,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
   TurnIntoPageBodySchema,
-  SetPageAuthorBodySchema,
+  SetPageKindBodySchema,
 } from "./endpoints";
 export type {
   BlockPage,
@@ -41,7 +52,7 @@ export type {
   UpdateBlockBody,
   MoveBlockBody,
   TurnIntoPageBody,
-  SetPageAuthorBody,
+  SetPageKindBody,
 } from "./endpoints";
 
 export {

@@ -59,7 +59,7 @@ import {
   serializePageContent,
   type PageContentSnapshot,
 } from "./page-content";
-import { setPageAuthorOf } from "./handle-set-page-author";
+import { setPageKindOf } from "./handle-set-page-kind";
 
 // Stand-ins for `page/text` and `page/divider` (the concrete block plugins
 // import this one, so importing them back would be a cycle). One text-bearing,
@@ -1173,7 +1173,7 @@ describe("a version never changes whose page it is", () => {
     const v1 = await seedAndSnapshot();
     expect(v1.page.author).toBeUndefined();
 
-    await setPageAuthorOf("P", "agent", t.db);
+    await setPageKindOf("P", { kind: "agent-page" }, t.db);
     await setRow("P", {
       data: parseBlockData("page", {
         title: "Renamed",
@@ -1196,15 +1196,30 @@ describe("a version never changes whose page it is", () => {
 
   test("a version taken while the page was the agent's restores onto a human's page without re-marking it", async () => {
     await seedPage("P");
-    await setPageAuthorOf("P", "agent", t.db);
+    await setPageKindOf("P", { kind: "agent-page" }, t.db);
     const v1 = await snapshot("P");
     expect(v1.page.author).toBe("agent");
 
-    await setPageAuthorOf("P", "human", t.db);
+    await setPageKindOf("P", { kind: "page" }, t.db);
     await restore("P", v1);
 
     const data = pageData(await row("P"));
     expect(data).toEqual({ title: "P", icon: null });
     expect("author" in data).toBe(false);
+  });
+
+  test("a restore keeps the page's CURRENT instructions kind, global included", async () => {
+    await seedPage("P");
+    const v1 = await snapshot("P");
+
+    await setPageKindOf("P", { kind: "instructions", global: true }, t.db);
+    await restore("P", v1);
+
+    expect(pageData(await row("P"))).toEqual({
+      title: "P",
+      icon: null,
+      instructions: true,
+      global: true,
+    });
   });
 });

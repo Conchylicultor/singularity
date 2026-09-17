@@ -140,18 +140,93 @@ export type PageCover = z.infer<typeof PageCoverSchema>;
 // content an agent may write (`<agent-page>` in markdown). Absent means the
 // human's, the fail-safe reading, exactly as for every block that declares no
 // author; it is read through `blockAuthorOf` (`pageBlockAuthor` below), never
-// directly. The marker is the page's KIND, changed only by the `setPageAuthor`
+// directly. The marker is the page's KIND, changed only by the `setPageKind`
 // op: the server refuses a data write that flips it (`rewriteBlockData`). Not
 // to be confused with `apps/pages/agent-origin`'s "agent pages" (e2e-created, swept after 24h) —
 // see research/2026-09-11-page-agent-pages.md.
+//
+// `instructions: true` marks an INSTRUCTIONS page — the human's standing
+// instructions to every agent working under the page it sits in
+// (`<instructions-page>` in markdown; research/2026-09-17-page-agent-instructions.md),
+// and `global: true` on one says they are handed to every conversation at its
+// start. Both keys, with `author`, are the page's KIND (`pageKindOf`), changed
+// only by the `setPageKind` op. The two kinds are exclusive and `global` belongs
+// to an instructions page alone — `pageBlockAuthor.refine` states that, because a
+// zod 3 `.refine` would turn this object into a schema without `.shape`.
+//
+// Flat keys rather than `instructions: { global }`, deliberately: a markdown
+// spelling is selected by a PRESET of literal discriminator values
+// (`BlockTag.spellings`), so `instructions: true` is what `<instructions-page>`
+// can be chosen by, where a nested object could not be.
 export const PageDataSchema = z.object({
   title: z.string(),
   icon: z.string().nullable(),
   iconSvgNodes: z.array(SvgNodeSchema).nullable().optional(),
   cover: PageCoverSchema.nullable().optional(),
   author: z.literal("agent").optional(),
+  instructions: z.literal(true).optional(),
+  global: z.boolean().optional(),
 });
 export type PageData = z.infer<typeof PageDataSchema>;
+
+/**
+ * What a page IS to the agents working on it — the three kinds a page row can
+ * be, as one value. Stored as flat keys on `PageData` (`author`,
+ * `instructions`, `global`); this is the one reading and the one writing of
+ * those keys ({@link pageKindOf} / {@link withPageKind}), so no writer can set
+ * one and forget the others.
+ *
+ * - `page` — an ordinary page, the human's;
+ * - `agent-page` — an agent may write all of it (`<agent-page>`);
+ * - `instructions` — the human's standing instructions to agents working under
+ *   the parent page (`<instructions-page>`); `global` hands them to every
+ *   conversation at its start.
+ */
+export const PageKindSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("page") }),
+  z.object({ kind: z.literal("agent-page") }),
+  z.object({ kind: z.literal("instructions"), global: z.boolean() }),
+]);
+export type PageKind = z.infer<typeof PageKindSchema>;
+
+/** The stored keys that together say a page's {@link PageKind}. */
+const PAGE_KIND_KEYS = ["author", "instructions", "global"] as const;
+
+/** A page's kind, read off its data. */
+export function pageKindOf(
+  data: Pick<PageData, "author" | "instructions" | "global">,
+): PageKind {
+  if (data.instructions === true) {
+    return { kind: "instructions", global: data.global === true };
+  }
+  if (data.author === "agent") return { kind: "agent-page" };
+  return { kind: "page" };
+}
+
+/** Whether two kinds are the same kind (and, for instructions, the same `global`). */
+export function samePageKind(a: PageKind, b: PageKind): boolean {
+  if (a.kind !== b.kind) return false;
+  return a.kind !== "instructions" || a.global === (b as typeof a).global;
+}
+
+/**
+ * `data` with its kind keys replaced by `kind`'s, every other key copied
+ * verbatim. An ordinary page carries none of the keys (every page a human ever
+ * made was stored without them), and `global` is written only when true.
+ */
+export function withPageKind(
+  data: Readonly<Record<string, unknown>>,
+  kind: PageKind,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...data };
+  for (const key of PAGE_KIND_KEYS) delete next[key];
+  if (kind.kind === "agent-page") next.author = "agent";
+  if (kind.kind === "instructions") {
+    next.instructions = true;
+    if (kind.global) next.global = true;
+  }
+  return next;
+}
 
 // Parse a page block's `data` into its typed `{ title, icon }`. Use on rows
 // known to be `type="page"`. Only the `data` field is read, so any row-like
@@ -165,6 +240,9 @@ export function pageData(block: Pick<Block, "data">): PageData {
  * parse lifts it off as the node's `ref` before these are read.
  */
 const AGENT_PAGE_ATTRS = new Set(["title"]);
+
+/** The attributes `<instructions-page>` accepts (`id` is lifted off first). */
+const INSTRUCTIONS_PAGE_ATTRS = new Set(["title", "global"]);
 
 /**
  * The `page` row's markdown mapping, declared ONCE and shared by BOTH handles
@@ -250,6 +328,54 @@ export const pageBlockMarkdown: BlockMarkdown<PageData> = {
           return { title: attrs.title ?? "", icon: null };
         },
       },
+      {
+        // An instructions page: the human's standing instructions to agents
+        // working under the page it sits in. Emitted with its id (the pointer an
+        // agent reads it by) and `global` when it is delivered to every
+        // conversation at start.
+        name: "instructions-page",
+        data: { instructions: true },
+        identified: true,
+        // Its words are the human's (`pageBlockAuthor`), so no agent mints one:
+        // the tagless form is refused at the parse, before any plan. A pointer
+        // WITH its id still reads back, which is what lets an agent echo the
+        // page's row unchanged while editing the page around it.
+        pointerOnly: {
+          reason:
+            "An instructions page holds a person's standing instructions to agents, so only a " +
+            "person creates one, from the page editor. To leave notes for the page's author, " +
+            "write an <agent-inline> card instead.",
+        },
+        body: "children-when-expanded",
+        attrs: (data) => ({
+          title: data.title,
+          global: data.global === true ? "true" : undefined,
+        }),
+        // A pointer's content is the page's own, so a changed title or `global`
+        // on it is not an edit the planner honours (it compares only the
+        // spelling); both are parsed only so the payload is a valid page.
+        parseAttrs: (attrs) => {
+          for (const name of Object.keys(attrs)) {
+            if (!INSTRUCTIONS_PAGE_ATTRS.has(name)) {
+              throw new Error(
+                `markdown: <instructions-page> takes only \`id\`, \`title\` and \`global\`, but was ` +
+                  `given \`${name}\`. Hand the pointer back exactly as read_page showed it.`,
+              );
+            }
+          }
+          const global = attrs.global;
+          if (global !== undefined && global !== "true" && global !== "false") {
+            throw new Error(
+              `markdown: <instructions-page global="${global}"> — \`global\` is "true" or absent.`,
+            );
+          }
+          return {
+            title: attrs.title ?? "",
+            icon: null,
+            ...(global === "true" ? { global: true } : {}),
+          };
+        },
+      },
     ],
   },
 };
@@ -261,8 +387,32 @@ export const pageBlockMarkdown: BlockMarkdown<PageData> = {
  * twin of an annotation's static `author` (`BlockHandle.authorFromData`).
  */
 export const pageBlockAuthor = {
+  // An instructions page declares the HUMAN explicitly, where an ordinary page
+  // declares nothing: the write walk stops at the nearest row that declares
+  // anything, so this is what keeps an instructions page nested inside an
+  // agent-authored page closed to the agent writing that page.
   authorFromData: (data: Partial<PageData>): BlockAuthor | undefined =>
-    data.author,
+    data.instructions === true ? "human" : data.author,
+  // The kinds are exclusive, and `global` belongs to an instructions page — the
+  // invariant `PageDataSchema` cannot state (see there). `BlockHandle.refine`.
+  refine: (data: PageData, ctx: z.RefinementCtx): void => {
+    if (data.instructions === true && data.author !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["instructions"],
+        message:
+          "a page is an agent-authored page or an instructions page, never both — " +
+          "instructions are the human's words",
+      });
+    }
+    if (data.global !== undefined && data.instructions !== true) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["global"],
+        message: "`global` belongs to an instructions page only",
+      });
+    }
+  },
 };
 
 // The block handle for the reserved `type="page"` node. Owned by `editor/core` —

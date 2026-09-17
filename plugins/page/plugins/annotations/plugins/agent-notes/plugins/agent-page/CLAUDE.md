@@ -34,10 +34,10 @@ It contributes to two generic seams and names nothing else:
   apply it without naming "agent".
 - **`Editor.InsertAction`** (`page/editor`) — the `/agent-page` entry, listed
   right after the agent-notes card (`after: agentNotesBlock.type`). It calls the
-  server's turn-into-page op with `author: "agent"`, which chooses the author at
-  birth. Every later data write keeps it; only the page header's toggle
+  server's turn-into-page op with `kind: agent-page`, which chooses the author at
+  birth. Every later data write keeps it; only the page header's kind control
   ([`apps/pages/page-author`](../../../../../../../apps/plugins/pages/plugins/page-author/CLAUDE.md),
-  the `setPageAuthor` op) changes it afterwards. That toggle is also the only
+  the `setPageKind` op) changes it afterwards. That control is also the only
   mark on the OPEN page — by the user's choice there is no banner.
 
 ## The chip is the FIRST authorship record

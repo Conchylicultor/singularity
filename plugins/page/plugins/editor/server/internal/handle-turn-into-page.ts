@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { turnIntoPage } from "../../core/endpoints";
 import { newBlockId } from "../../core/block-id";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { BlockSchema, PAGE_BLOCK_TYPE, withPageKind } from "../../core/schemas";
 import { liveBlocks } from "./live-blocks";
 import { recomputePageIdSubtree } from "./page-id";
 import { withPageForest } from "./page-forest";
@@ -69,17 +69,17 @@ export const handleTurnIntoPage = implement(
       await updateBlockFields(ctx.tx, params.id, {
         type: PAGE_BLOCK_TYPE,
         // A TYPE change, so `rewriteBlockData` validates and judges no author:
-        // this is where a page is born, and the one place its author is chosen
-        // — `author: "agent"` is the `/agent-page` insert, an agent-authored page
-        // a human made for an agent to fill. Absent is a human's page, as ever.
+        // this is where a page is born, and the one place its KIND is chosen
+        // at birth — `agent-page` is the `/agent-page` insert (a page a human
+        // made for an agent to fill), `instructions` the `/instructions page`
+        // insert. Absent is a human's page, as ever.
         data: rewriteBlockData({
           type: PAGE_BLOCK_TYPE,
           before: current,
-          next: {
-            title: body.title,
-            icon: null,
-            ...(body.author === undefined ? {} : { author: body.author }),
-          },
+          next: withPageKind(
+            { title: body.title, icon: null },
+            body.kind ?? { kind: "page" },
+          ),
         }),
         // Turn into → Page folds deterministically, rather than inheriting
         // whatever the block had (e.g. an expanded toggle). A sub-page reads as

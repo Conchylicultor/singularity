@@ -358,6 +358,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `integrations/hooktheory`
     - `page/annotations/agent-access`
     - `page/annotations/agent-notes/agent-page`
+    - `page/annotations/instructions/instructions-page`
     - `page/annotations/todo/task-link`
     - `page/bookmark`
     - `page/editor`

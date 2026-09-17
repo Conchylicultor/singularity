@@ -621,6 +621,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `apps-core/surface`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/settings`
+    - `apps/pages/page-author`
     - `apps/pages/page-tree`
     - `apps/sonata/audio/metronome`
     - `apps/sonata/piano-roll`
@@ -630,6 +631,7 @@ The primitive needs **no** new lint exemptions: it inherits the
     - `conversations/conversation-category`
     - `fields/date/filter`
     - `fullscreen`
+    - `page/annotations/instructions`
     - `page/callout`
     - `page/container`
     - `page/editor`

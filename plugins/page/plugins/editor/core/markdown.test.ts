@@ -1553,7 +1553,10 @@ describe("page spellings: `<page>` and `<agent-page>` are one row type", () => {
   });
 
   test("the registry answers per spelling: names, the row's name, identity, authorship", () => {
-    expect(markdownParseTagNames(page)).toEqual(["agent-page"]);
+    expect(markdownParseTagNames(page)).toEqual([
+      "agent-page",
+      "instructions-page",
+    ]);
     expect(markdownParseTagNames(pageLink)).toEqual(["page"]);
     expect(markdownTagNameOf(page, human)).toBe("page");
     expect(markdownTagNameOf(page, agent)).toBe("agent-page");
@@ -1562,6 +1565,72 @@ describe("page spellings: `<page>` and `<agent-page>` are one row type", () => {
     const agentTags = markdownTagNamesAuthoredBy(handles, "agent");
     expect(agentTags).toContain("agent-page");
     expect(agentTags).not.toContain("page");
+  });
+});
+
+describe("page spellings: `<instructions-page>` is a pointer an agent cannot mint", () => {
+  const instructions = {
+    title: "Track rules",
+    icon: null,
+    instructions: true as const,
+  };
+
+  test("an instructions page serializes under its own spelling, `global` only when true", () => {
+    const n = (data: unknown): MarkdownNode => ({
+      id: "p3",
+      type: "page",
+      data,
+      expanded: false,
+      children: [],
+    });
+    expect(serializeForestToMarkdown([n(instructions)], mdCtx)).toBe(
+      '<instructions-page id="p3" title="Track rules"/>',
+    );
+    expect(
+      serializeForestToMarkdown([n({ ...instructions, global: true })], mdCtx),
+    ).toBe('<instructions-page id="p3" title="Track rules" global="true"/>');
+  });
+
+  test("a POINTER reads back as the same page row, `global` included", () => {
+    expect(
+      parse('<instructions-page id="p3" title="Track rules" global="true"/>'),
+    ).toEqual([
+      { ...node("page", { ...instructions, global: true }), ref: "p3" },
+    ]);
+  });
+
+  test("the tagless MINT form is a loud refusal — only a person makes one", () => {
+    expect(() => parse('<instructions-page title="x"/>')).toThrow(
+      /without an `id`[\s\S]*only a person creates one/,
+    );
+    expect(() =>
+      parse(
+        [
+          '<instructions-page title="x">',
+          "  body",
+          "</instructions-page>",
+        ].join("\n"),
+      ),
+    ).toThrow(/without an `id`/);
+  });
+
+  test("an instructions page declares the HUMAN, so it is closed inside an agent page", () => {
+    expect(markdownTagNameOf(page, instructions)).toBe("instructions-page");
+    expect(markdownTagNamesAuthoredBy(handles, "human")).toContain(
+      "instructions-page",
+    );
+    expect(markdownTagNamesAuthoredBy(handles, "agent")).not.toContain(
+      "instructions-page",
+    );
+  });
+
+  test("unknown attributes and a non-boolean `global` are refused", () => {
+    expect(() =>
+      parse('<instructions-page id="p3" title="x" icon="rocket"/>'),
+    ).toThrow(/takes only `id`, `title` and `global`/);
+    expect(() =>
+      parse('<instructions-page id="p3" title="x" global="yes"/>'),
+    ).toThrow(/`global` is "true" or absent/);
   });
 });
 

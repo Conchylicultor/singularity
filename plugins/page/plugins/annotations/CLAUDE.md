@@ -5,7 +5,7 @@ block types. An annotation is a [void container](../container/CLAUDE.md) — it 
 no text; its content IS its children — whose soft tint says *this run of blocks
 is not the page's prose, it is addressed to (or withheld from) an agent*.
 
-Four of them, and the family is a two-axis matrix rather than a list: each card
+Five of them, and the family is a two-axis matrix rather than a list: each card
 declares who may RECEIVE it (`audience`) and whose words it holds (`author`),
 and the second answer is also who may WRITE it.
 
@@ -13,6 +13,7 @@ and the second answer is also who may WRITE it.
 |---|---|---|---|
 | `/human` | `agent` | `human` | The page author's own words for an agent: conventions, glossary, "always run X first", or a correction typed into an agent's own note. Aliases `/context`, `/user`. |
 | `/todo` | `agent` | `human` | Work an agent still has to do. Also minted by typing `TODO ` at the start of a line. |
+| `/instructions` | `agent` | `human` | Standing instructions for every agent working under this page, like a `CLAUDE.md` for a folder. Delivered to an agent automatically (see below). Aliases `/rules`, `/guidance`, `/conventions`. |
 | `/agent` | `agent` | **`agent`** | Notes an agent wrote back: what it found, what it assumed, what it left. |
 | `/private` | `human` | `human` | Withheld from agents. The one block whose contents an agent must never receive. |
 
@@ -31,7 +32,7 @@ answer through the one resolver, `blockAuthorOf(handle, data)` (`page/editor`
 core), never off `handle.author` directly — a consumer that did would read an
 agent-authored page as the human's.
 
-They are siblings under one umbrella rather than four entries in the flat
+They are siblings under one umbrella rather than five entries in the flat
 `page/plugins/` list because a consumer of this family always wants the SET — the
 delivery step below has to ask "which annotations does this page carry, and who
 is each one for?", never "is there a human card?".
@@ -83,8 +84,8 @@ says yes. So:
   page's own id hears that through the scope's ENCLOSURE — what the root sits
   inside — which is how every block of the page is the agent's. That marker is
   set when the page is born and changed afterwards only by the human's header
-  toggle (`setPageAuthor`, whose write is `reauthorPageData`) — never by a data
-  edit, and never by a history restore, which keeps the page's current author;
+  kind control (`setPageKind`, whose write is `rekindPageData`) — never by a data
+  edit, and never by a history restore, which keeps the page's current kind;
 - inside a `<human>` or `<todo>` card **nested in either**: refused. The nested
   card declares `human` first, and it is a hole in the agent's own region. This
   is what makes answering an agent inside its own note survive the next
@@ -99,6 +100,31 @@ Minting counts as writing at the new card's own row, so an agent cannot create a
 page. It CAN mint an `<agent-page>` wherever it could mint an `<agent-inline>`
 card: the new page's row declares `agent` from its own data. Filing work is
 `add_task`.
+
+### Instructions: who receives them, and when
+
+`/instructions` is a card, but it is also a page kind: a page whose data says
+`instructions: true` is an instructions page (`<instructions-page>`). Both are the
+human's words, so the write rule above already keeps agents out of them. What is
+new is that they are **delivered**, not just readable. See
+[`plugins/instructions`](plugins/instructions/CLAUDE.md).
+
+- **Scope.** A card covers the page it sits on and every page below it. An
+  instructions page covers its PARENT page and every page below it, itself
+  included, the way a `CLAUDE.md` covers the folder it sits in. A card or page
+  inside a `/private` card covers nothing.
+- **On a read.** `read_page` opens with a `<received-instructions>` block holding
+  every covering instructions block this conversation has not received yet, or
+  whose content changed since it did. A block the read already shows in full is
+  not repeated.
+- **On a write.** `edit_page` and `write_agent_note` refuse (409, nothing written)
+  while any covering instructions are undelivered, and the refusal carries them.
+  The refusal counts as the delivery, so the retry goes through.
+- **At conversation start.** Instructions marked global go into the MCP server
+  instructions: cards in full, pages as a pointer to read.
+
+Delivery is recorded per conversation at a hash of the rendered markdown, so
+editing the instructions makes every conversation receive them again.
 
 **The markdown serializer keeps emitting private children**, deliberately: it
 runs for the CLIPBOARD, and a human copying their own page must get their own
@@ -115,12 +141,14 @@ own. It reaches it through this umbrella's `defineAnnotationBlock`, never
 `defineContainerBlock` directly — that is the two declarations above, and the
 check enforces it.
 
-**No annotation has per-instance appearance** — every payload is `z.object({})`,
-and must stay so. The structural actions (Collapse / Remove `<label>` / Delete)
+**No annotation has per-instance appearance.** Every payload is `z.object({})`
+except `/instructions`, whose one field, `global`, is the card's reach rather than
+its look. Keep it that way: a field that changes how a card looks does not belong
+in its data. The structural actions (Collapse / Remove `<label>` / Delete)
 are never contributed either: they come from the rail on the line the card
 BORROWS, whose menu arm keys on the core `BlockHandle.anchor` fact.
 
-Two of the four still put something behind their NAME, and neither breaks that
+Two of the five still put something behind their NAME, and neither breaks that
 rule, because what they show is per-instance STATE held in a side-table keyed on
 the block id — not per-instance *data*:
 
@@ -138,11 +166,15 @@ the block id — not per-instance *data*:
   the bottom of its box. See
   [`todo/plugins/task-link`](plugins/todo/plugins/task-link/CLAUDE.md).
 
+`instructions` passes its name (`Instructions`, or `Global instructions`) and a
+`BlockFrameMeta.menu` holding one switch, **Global**, which writes the card's one
+data field.
+
 `human` and `private-note` pass a bare name — plain and non-interactive on both
 surfaces.
 
 Per-block, and deliberately: its identity (`type`, label, aliases), its
-tint, and its markdown marker. Those are four separate `Editor.Block` /
+tint, and its markdown marker. Those are five separate `Editor.Block` /
 `Editor.BlockFrame` registrations rather than one parameterized helper, for the
 reason `page/container` already records — containerhood is derived from *who
 actually paints a box*, so a registration made on a plugin's behalf would move
@@ -210,7 +242,10 @@ rest. Don't reinstate it: two renderings of one status drift.
 
 ## Plugin reference
 
-- Description: Umbrella for the page editor's annotation containers — the party-scoped boxes that carry the human↔agent side-channel of a page: human notes, agent notes, private notes, TODO.
+- Description: The annotation family's server-side reading of its audience axis: humanAudienceTypes(), the block types withheld from agents, read off the Editor.BlockData registry at call time.
+- Server:
+  - Uses: `page/editor.Editor`
+  - Exports (values): `humanAudienceTypes`
 - Core:
   - Uses:
     - `page/container.ContainerBlockOptions`
@@ -222,14 +257,17 @@ rest. Don't reinstate it: two renderings of one status drift.
   - Exports (values): `defineAnnotationBlock`
 - Cross-plugin:
   - Imported by:
+    - `page/annotations/agent-access`
     - `page/annotations/agent-notes`
     - `page/annotations/human-notes`
+    - `page/annotations/instructions`
     - `page/annotations/private-notes`
     - `page/annotations/todo`
 - Sub-plugins:
   - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine.
   - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`human-notes`** — Human block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding the page author's own words addressed to agents rather than to the reader — and, being the author's, the one an agent may read but never write. Human block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
+  - **`instructions`** — Instructions block type: a void CONTAINER whose soft-tinted box wraps blocks of any type, holding the human's standing instructions to agents working under the page it sits on — delivered to them with their reads, and to every conversation at its start when the card's Global switch is on. Instructions: registers the card's `data` schema ({ global? }) at the server write boundary, and owns page_instructions_deliveries — which instructions each conversation has received, at which content hash — with the scope queries (instructionsInScope, globalInstructions) and the render-hash-compare delivery helpers the agent-facing page tools and the MCP connect-time instructions consume.
   - **`private-notes`** — Private-note block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding notes withheld from agents. Private-note block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
   - **`todo`** — TODO block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, marking a region of work agents still have to do. Also minted by typing `TODO ` at the start of a line. Its corner name and its rail menu open the dispatch panel, its box follows the dispatched task's live status, and its foot carries a chip per run the card has launched. TODO block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
 

@@ -159,6 +159,7 @@ check would have been a patch on a footgun.
     - `infra/jobs/supervised-job`
     - `infra/trash`
     - `page/annotations/agent-notes/authorship`
+    - `page/annotations/instructions`
     - `page/annotations/todo/task-link`
     - `primitives/usage-rank`
     - `reports`

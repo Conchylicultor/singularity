@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { TrashOutcomeSchema } from "@plugins/infra/plugins/trash/core";
-import { BlockSchema, PageRowSchema } from "./schemas";
+import { BlockSchema, PageKindSchema, PageRowSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
 
@@ -129,13 +129,14 @@ export const TurnIntoPageBodySchema = z.object({
    */
   seedChild: z.object({ type: z.string(), data: z.unknown().optional() }),
   /**
-   * `"agent"` makes the new page AGENT-AUTHORED (`PageData.author`) — the
-   * `/agent-page` insert: a human makes an empty page for an agent to fill, and
-   * its first writer counts as its creator. Absent is an ordinary page, the
-   * human's. Chosen here at birth; afterwards only {@link setPageAuthor} changes
-   * it (`rewriteBlockData` refuses a data write that flips it).
+   * The new page's KIND (`PageKind`) — `agent-page` is the `/agent-page` insert (a
+   * human makes an empty page for an agent to fill, and its first writer counts
+   * as its creator); `instructions` is the `/instructions page` insert. Absent is
+   * an ordinary page, the human's. Chosen here at birth; afterwards only
+   * {@link setPageKind} changes it (`rewriteBlockData` refuses a data write that
+   * flips it).
    */
-  author: z.literal("agent").optional(),
+  kind: PageKindSchema.optional(),
 });
 export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
 
@@ -150,24 +151,22 @@ export const turnIntoPage = defineEndpoint({
 });
 
 /**
- * Whose page this is, as the whole of the request: `"agent"` makes it an
- * agent-authored page (agents may write all of it), `"human"` makes it an
- * ordinary one. The same two values as `BlockAuthor`, where the absent marker
- * reads as the human's.
+ * What the page becomes, as the whole of the request — see `PageKind`: an
+ * ordinary page, an agent-authored page (agents may write all of it), or an
+ * instructions page (the human's standing instructions to agents working under
+ * its parent page), `global` when they are handed to every conversation at start.
  */
-export const SetPageAuthorBodySchema = z.object({
-  author: z.enum(["agent", "human"]),
-});
-export type SetPageAuthorBody = z.infer<typeof SetPageAuthorBodySchema>;
+export const SetPageKindBodySchema = z.object({ kind: PageKindSchema });
+export type SetPageKindBody = z.infer<typeof SetPageKindBodySchema>;
 
-// Flip a page between agent-authored and ordinary — the page header's toggle,
-// and the ONE way a page's author changes after it is born. A data write cannot
-// carry the flip (`rewriteBlockData` refuses it), and this op carries nothing
-// else: title, icon, cover and every other key are copied from the stored row.
-// Setting the author a page already has is a no-op that returns the row.
-export const setPageAuthor = defineEndpoint({
-  route: "POST /api/blocks/:id/page-author",
-  body: SetPageAuthorBodySchema,
+// Change a page's kind — the page header's kind control, and the ONE way a
+// page's kind changes after it is born. A data write cannot carry the change
+// (`rewriteBlockData` refuses it), and this op carries nothing else: title, icon,
+// cover and every other key are copied from the stored row. Setting the kind a
+// page already has is a no-op that returns the row.
+export const setPageKind = defineEndpoint({
+  route: "POST /api/blocks/:id/page-kind",
+  body: SetPageKindBodySchema,
   response: BlockSchema,
 });
 

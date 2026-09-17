@@ -85,19 +85,15 @@ export const humanNotesBlock = defineAnnotationBlock({
   // carrying the old spellings costs the rename nothing.
   //
   // NOT "agent" / "agents" / "ai": those belong to the sibling `/agent` block
-  // (notes an agent wrote back). This card is what a human tells an agent, so its
-  // remaining aliases are the instruction words — otherwise `/agent` would
-  // surface two opposite-direction cards with no way to tell which is which.
-  aliases: [
-    "context",
-    "user",
-    "me",
-    "mine",
-    "instructions",
-    "guidance",
-    "conventions",
-    "rules",
-  ],
+  // (notes an agent wrote back) — otherwise `/agent` would surface two
+  // opposite-direction cards with no way to tell which is which.
+  //
+  // The instruction words (`instructions`, `rules`, `guidance`, `conventions`)
+  // used to be aliases here too. They moved to the `/instructions` card
+  // (`annotations/instructions`), whose words ARE delivered as standing
+  // instructions — a person typing `/rules` wants that card, and one palette
+  // entry per word is what keeps the choice unambiguous.
+  aliases: ["context", "user", "me", "mine"],
   empty: () => ({}),
   // `<human>…</human>` — a real round-tripping syntax, replacing the one-way
   // `**[Agent context]**` marker. The point of the marker survives (an agent

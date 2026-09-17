@@ -14,8 +14,10 @@ Human              ← the anchor: its name in the corner, no line of its own
 └── Code block
 ```
 
-Inserted with `/human` — or `/context`, `/user`, and the instruction words
-(`/instructions`, `/rules`, …), which are aliases onto the same card.
+Inserted with `/human` — or `/context` and `/user`, which are aliases onto the
+same card. The instruction words (`/instructions`, `/rules`, `/guidance`,
+`/conventions`) belong to the sibling [`instructions`](../instructions/CLAUDE.md)
+card, whose content is delivered to agents as standing instructions.
 
 ## What the card is FOR is not what it is NAMED for
 

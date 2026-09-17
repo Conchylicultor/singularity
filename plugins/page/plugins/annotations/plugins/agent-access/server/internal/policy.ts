@@ -8,6 +8,7 @@ import {
   type BlockHandle,
 } from "@plugins/page/plugins/editor/core";
 import { agentNotesBlock } from "@plugins/page/plugins/annotations/plugins/agent-notes/core";
+import { humanAudienceTypes } from "@plugins/page/plugins/annotations/server";
 import {
   boundaryViolations,
   touchedBlocks,
@@ -103,23 +104,6 @@ import type {
  * declaration above it is the agent's own. The affordance, not the workaround, is
  * to put the answer in a `<human>` card.
  */
-
-/**
- * Block types whose handle declares `audience: "human"`.
- *
- * Read at CALL time, never memoized — the same rule `blockTextProtectedSpans()`
- * and `serverMarkdownContext()` state for the same reason: a snapshot taken
- * before `collectContributions` silently degrades to the EMPTY set, and here the
- * empty set means "redact nothing", i.e. leak. There is no cheap way to notice
- * that, and the leak is in the direction that cannot be undone.
- */
-function humanAudienceTypes(): Set<string> {
-  return new Set(
-    Editor.BlockData.getContributions()
-      .filter((h) => h.audience === "human")
-      .map((h) => h.type),
-  );
-}
 
 /**
  * The registered handles by type, read at CALL time for

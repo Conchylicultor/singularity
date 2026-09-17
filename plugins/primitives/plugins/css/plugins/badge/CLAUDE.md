@@ -157,6 +157,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `fields/tags/inline`
     - `fields/tags/table`
     - `infra/events-test`
+    - `page/annotations/instructions/instructions-page`
     - `page/editor`
     - `page/place`
     - `plugin-meta/facets/exports/render-contributions`
